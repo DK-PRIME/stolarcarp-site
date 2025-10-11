@@ -97,3 +97,85 @@ h2 {
   border-radius: 10px;
   box-shadow: 0 0 15px rgba(0,0,0,0.6);
 }
+/* --- Register page polish --- */
+.section--narrow { max-width: 880px; }
+
+.page-title {
+  text-align: center;
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 8px auto 18px;
+  font-size: clamp(28px, 4.6vw, 44px);
+  letter-spacing: .3px;
+}
+.title-gradient {
+  background: linear-gradient(90deg, #f6c34c 0%, #cc6a2b 35%, #7a0f2b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lead {
+  text-align: center;
+  color: var(--muted, #b7b7b7);
+  margin: 6px auto 22px;
+  max-width: 680px;
+}
+
+.banner {
+  display: block;
+  width: 100%;
+  max-width: 880px;
+  margin: 14px auto 18px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+}
+
+/* форма */
+.form-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 18px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field label, .field legend { font-weight: 600; }
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="tel"] {
+  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #fff;
+}
+.field input::placeholder { color: #9aa0a6; }
+.field .hint { color:#9aa0a6; font-size: 12px; }
+.field--disabled { opacity: .55; }
+
+.radio { display:inline-flex; align-items:center; gap:8px; margin-right:14px; }
+
+.checkbox input { margin-right: 8px; }
+
+.form-actions { display:flex; align-items:center; gap:12px; }
+.btn { cursor:pointer; border:0; border-radius:12px; padding:11px 16px; font-weight:700; }
+.btn--primary { background:#6d4aff; color:#fff; }
+.btn[disabled]{ opacity:.6; pointer-events:none; }
+
+.spinner { width:18px; height:18px; border-radius:50%;
+  border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff; display:none;
+}
+.spinner--on { display:inline-block; animation:spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.form-msg { margin-top:8px; font-weight:600; }
+.form-msg.ok  { color:#43d18a; }
+.form-msg.err { color:#ff6c6c; }
+
+/* дрібні адаптації */
+@media (max-width: 560px){
+  .form-card { padding:14px; }
+}

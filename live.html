@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live — STOLAR CARP</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+</head>
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link nav__link--active">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+<section class="container section">
+  <h2>Live-протокол</h2>
+
+  <div class="card">
+    <h3>Швидке оновлення</h3>
+    <p class="form__hint">Варіант 1: встав CSV (Google Sheets → Копіювати → Спеціальна вставка → Значення) та натисни «Побудувати таблицю».</p>
+    <textarea id="csv-paste" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг"></textarea>
+    <div class="cta-row" style="margin-top:8px">
+      <button class="btn btn--primary" id="render-csv">Побудувати таблицю</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Автооновлення з посилання</h3>
+    <p class="form__hint">Варіант 2: вкажи <b>публічне</b> посилання на CSV/TSV/Values-експорт (без авторизації). Можна Apps Script або «Publish to web».</p>
+    <div class="row">
+      <input id="csv-url" class="input" placeholder="https://.../export?format=csv">
+      <div class="cta-row">
+        <button class="btn btn--ghost" id="fetch-csv">Завантажити зараз</button>
+        <label class="btn"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <table class="table">
+      <thead>
+        <tr><th>Команда</th><th>Зона</th><th>Сектор</th><th>К-сть</th><th>Вага, кг</th><th>Середня, кг</th><th>Big Fish, кг</th></tr>
+      </thead>
+      <tbody id="live-body"></tbody>
+    </table>
+  </div>
+  <p class="form__hint">Оновлюється без перезавантаження сторінки.</p>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львівщина</div>
+    <div class="footer__links">
+      <a href="https://t.me/">Telegram</a>
+      <a href="https://www.youtube.com/">YouTube</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

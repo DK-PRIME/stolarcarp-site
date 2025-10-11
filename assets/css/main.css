@@ -179,3 +179,29 @@ h2 {
 @media (max-width: 560px){
   .form-card { padding:14px; }
 }
+/* === Flag-style brand in header === */
+.logo.logo--flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo__fish {
+  width: 34px;
+  height: 34px;
+  transform: translateY(1px) rotate(-10deg);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.35));
+  flex: 0 0 auto;
+}
+
+.logo__text--grad {
+  background: linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-weight: 800;
+  letter-spacing: .4px;
+  font-size: clamp(16px, 2.6vw, 22px);
+  line-height: 1;
+  white-space: nowrap;
+}

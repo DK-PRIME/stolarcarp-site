@@ -76,3 +76,24 @@ img{max-width:100%;height:auto;display:block}
 .footer__links{display:flex;gap:12px}
 .notice{border-left:4px solid var(--accent);padding:12px;border-radius:12px;background:#12121a}
 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"DejaVu Sans Mono",monospace;background:#0a0a0f;border:1px solid #242434;border-radius:12px;padding:8px 10px;display:inline-block}
+/* Заголовок "Реєстрація команд" */
+h2 {
+  text-align: center;
+  font-size: 2.4em;
+  font-weight: 900;
+  background: linear-gradient(90deg, #FFD700, #A00030);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+  margin: 40px 0 25px 0;
+  letter-spacing: 1.5px;
+}
+
+/* Відступ для фото */
+.section img {
+  display: block;
+  margin: 30px auto 40px auto;
+  max-width: 95%;
+  border-radius: 10px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.6);
+}

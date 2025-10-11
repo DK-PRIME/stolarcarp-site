@@ -6,54 +6,7 @@
   <title>Реєстрація — STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
-
-  <style>
-    .image-banner {
-      text-align: center;
-      margin: 24px 0;
-    }
-    .image-banner img {
-      max-width: 100%;
-      border-radius: 16px;
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
-      opacity: 0;
-      transition: opacity 1s ease;
-    }
-    .image-banner img.loaded {
-      opacity: 1;
-    }
-
-    .sc-form-wrap {
-      background: #111;
-      padding: 24px;
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-      overflow: hidden;
-      border: 1px solid #222;
-      max-width: 980px;
-      margin: 0 auto 28px;
-    }
-
-    .sc-form-frame {
-      display: block;
-      width: 100%;
-      height: 1700px;
-      border: 0;
-      margin: 0;
-      transform: translateY(-36px);
-      background: #111;
-      border-radius: 12px;
-    }
-
-    @media (max-width: 768px) {
-      .sc-form-frame {
-        height: 1900px;
-        transform: translateY(-42px);
-      }
-    }
-  </style>
 </head>
-
 <body>
 <header class="header">
   <div class="container header__row">
@@ -75,24 +28,68 @@
 </header>
 
 <main class="main">
-  <section class="container section">
-    <h2>Реєстрація команд</h2>
+  <section class="container section section--narrow">
+    <h1 class="page-title title-gradient">Реєстрація команд</h1>
 
-    <!-- Фото-банер -->
-    <div class="image-banner">
-      <img src="assets/dk-dva-kuma-banner.jpg" alt="DK Dva Kuma Banner" onload="this.classList.add('loaded')">
-    </div>
+    <img class="banner" src="assets/dk-dva-kuma-banner.jpg" alt="DK Два Кума — STOLAR CARP">
 
-    <p>Будь ласка, заповніть форму нижче для участі у змаганнях STOLAR CARP 2026.</p>
+    <p class="lead">
+      Будь ласка, заповніть форму нижче для участі у змаганнях STOLAR CARP 2026.
+    </p>
 
-    <!-- Темна форма без підпису Google -->
-    <div class="sc-form-wrap">
-      <iframe
-        class="sc-form-frame"
-        src="https://docs.google.com/forms/d/e/1FAIpQLSexMHWGxNNqbxnSH8sfHFkej1yrE-zBdXKHxYHGq_L3oaJuCg/viewform?embedded=true"
-        allowfullscreen>
-      </iframe>
-    </div>
+    <!-- КАРТКА-ФОРМА -->
+    <form id="regForm" class="form-card" novalidate>
+      <div class="field">
+        <label for="team_name">Назва команди *</label>
+        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума">
+      </div>
+
+      <div class="field">
+        <label for="members_count">Кількість учасників *</label>
+        <input id="members_count" name="members_count" type="number" required min="2" max="4" inputmode="numeric" placeholder="2–4">
+      </div>
+
+      <div class="field">
+        <label for="captain">Капітан команди *</label>
+        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище">
+      </div>
+
+      <div class="field">
+        <label for="phone">Номер телефону *</label>
+        <input id="phone" name="phone" type="tel" required
+               placeholder="+380 (__) ___-__-__" autocomplete="tel" inputmode="tel">
+        <small class="hint">Формат: +380 (12) 345-67-89</small>
+      </div>
+
+      <fieldset class="field">
+        <legend>Харчування *</legend>
+        <label class="radio">
+          <input type="radio" name="food" value="Ні" required> Ні
+        </label>
+        <label class="radio">
+          <input type="radio" name="food" value="Так" required> Так
+        </label>
+      </fieldset>
+
+      <div class="field" id="foodQtyField">
+        <label for="food_qty">Кількість порцій</label>
+        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?">
+      </div>
+
+      <div class="field checkbox">
+        <label>
+          <input id="agree" name="agree" type="checkbox" required>
+          Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
+        <span id="spinner" class="spinner" aria-hidden="true"></span>
+      </div>
+
+      <div id="msg" class="form-msg" role="status" aria-live="polite"></div>
+    </form>
   </section>
 </main>
 
@@ -107,10 +104,88 @@
 </footer>
 
 <script>
-  const banner = document.querySelector('.image-banner img');
-  if(banner){
-    banner.addEventListener('load', ()=>banner.classList.add('loaded'));
+  // === ТВОЙ ENDPOINT GAS ===
+  const ENDPOINT = "https://script.google.com/macros/s/AKfycbywE9E10MmY7VyBM0Ifo0Opcws5et2bvFwffa-HhubOacEJc9cIvH7Xb7gKRlG674g8jg/exec";
+
+  const form = document.getElementById('regForm');
+  const btn  = document.getElementById('submitBtn');
+  const msg  = document.getElementById('msg');
+  const spinner = document.getElementById('spinner');
+
+  // поля харчування
+  const foodRadios = [...form.querySelectorAll('input[name="food"]')];
+  const qtyInput   = document.getElementById('food_qty');
+  const qtyField   = document.getElementById('foodQtyField');
+
+  function updateQtyState() {
+    const needQty = (foodRadios.find(r => r.checked)?.value === 'Так');
+    qtyInput.disabled = !needQty;
+    qtyInput.required = needQty;
+    if (!needQty) qtyInput.value = '';
+    qtyField.classList.toggle('field--disabled', !needQty);
   }
+  foodRadios.forEach(r => r.addEventListener('change', updateQtyState));
+  updateQtyState();
+
+  // Маска телефону (легка, без бібліотек)
+  const phone = document.getElementById('phone');
+  phone.addEventListener('input', () => {
+    let v = phone.value.replace(/[^\d+]/g, '');
+    if (!v.startsWith('+')) v = '+'.concat(v.replace(/^\+/, ''));
+    v = v.replace(/^(\+380)(\d{0,2})(\d{0,3})(\d{0,2})(\d{0,2}).*/,
+                  (m, a, b, c, d, e) =>
+                    a + (b?` (${b}`:'') + (b?.length===2?') ':'') +
+                    (c?c:'') + (c?.length===3?'-':'') +
+                    (d?d:'') + (d?.length===2?'-':'') +
+                    (e?e:''));
+    phone.value = v;
+  });
+
+  function setBusy(b) {
+    btn.disabled = b;
+    spinner.classList.toggle('spinner--on', b);
+  }
+  function flash(type, text) {
+    msg.className = 'form-msg ' + type;
+    msg.textContent = text;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    flash('', '');
+    setBusy(true);
+
+    // базова HTML5 валідація
+    if (!form.checkValidity()) {
+      setBusy(false);
+      flash('err', 'Перевірте обов’язкові поля форми.');
+      return;
+    }
+    // дод. перевірка: якщо "Так", то кількість обов'язково
+    if (form.food.value === 'Так' && !form.food_qty.value) {
+      setBusy(false);
+      flash('err', 'Вкажіть кількість порцій для харчування.');
+      return;
+    }
+
+    try {
+      const fd = new FormData(form);
+      const res = await fetch(ENDPOINT, { method: 'POST', body: fd });
+      const data = await res.json();
+
+      if (data.ok) {
+        flash('ok', 'Дякуємо! Заявку надіслано та збережено у таблиці.');
+        form.reset();
+        updateQtyState();
+      } else {
+        throw new Error(data.error || 'Сталася помилка при надсиланні.');
+      }
+    } catch (err) {
+      flash('err', 'Не вдалося надіслати форму: ' + err.message);
+    } finally {
+      setBusy(false);
+    }
+  });
 </script>
 </body>
 </html>

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ук">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Реєстрація — STOLAR CARP</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+</head>
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link nav__link--active">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+<section class="container section">
+  <h2>Реєстрація команди</h2>
+  <form id="register-form" class="form card">
+    <div class="row">
+      <div><label>Назва команди<input class="input" required name="team" placeholder="DK Два Кума"></label></div>
+      <div><label>Капітан<input class="input" required name="captain" placeholder="Прізвище Ім'я"></label></div>
+    </div>
+    <div class="row">
+      <div><label>Телефон<input class="input" required name="phone" placeholder="+380..."></label></div>
+      <div><label>Email<input type="email" class="input" name="email" placeholder="you@example.com"></label></div>
+    </div>
+    <div class="row">
+      <div><label>Склад команди<textarea class="textarea" name="members" placeholder="2–3 учасники + тренер (за наявності)"></textarea></label></div>
+      <div><label>Побажання по зоні<select class="select" name="zone">
+        <option value="">Без різниці</option>
+        <option>A</option><option>B</option><option>C</option>
+      </select></label></div>
+    </div>
+    <label><input type="checkbox" name="agree" required> Погоджуюсь з регламентом</label>
+    <button class="btn btn--primary" type="submit">Надіслати заявку</button>
+    <p class="form__hint">Після відправки вас перекине на сторінку подяки. Дані збережуться локально у вашому браузері (для експорту).</p>
+  </form>
+</section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львівщина</div>
+    <div class="footer__links">
+      <a href="https://t.me/">Telegram</a>
+      <a href="https://www.youtube.com/">YouTube</a>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

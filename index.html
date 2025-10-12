@@ -3,38 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>Головна — STOLAR CARP</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
+  <title>STOLAR CARP — офіційний сайт турнірів</title>
+
+  <!-- Основні стилі -->
+  <link rel="stylesheet" href="/stolarcarp-site/assets/css/main.css">
+
+  <!-- Конфігурація сайту -->
+  <script defer src="/stolarcarp-site/assets/js/config.js"></script>
+
+  <!-- Автоматичне підключення хедера та футера -->
+  <script defer src="/stolarcarp-site/assets/js/partials.js"></script>
 </head>
+
 <body>
-<header class="header">
-  <div class="container header__row">
-    <a class="logo logo--flag" href="index.html" aria-label="STOLAR CARP — на головну">
-  <svg class="logo__fish" viewBox="0 0 64 32" aria-hidden="true">
-    <defs>
-      <linearGradient id="gradFlag" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="#f6c34c"/>
-        <stop offset="35%" stop-color="#cc6a2b"/>
-        <stop offset="100%" stop-color="#7a0f2b"/>
-      </linearGradient>
-    </defs>
-    <path fill="url(#gradFlag)" d="M6 17c7-6 16-9 26-8 3 0 6 1 9 3 3 2 5 4 8 4-3 2-5 4-8 6-3 2-6 3-9 3-10 1-19-2-26-8zM6 17l-4 2 4 2c1 0 2-1 2-2s-1-2-2-2zm34-4c-2 0-3 1-3 2s1 2 3 2 3-1 3-2-1-2-3-2z"/>
-  </svg>
-  <span class="logo__text logo__text--grad">STOLAR&nbsp;CARP</span>
-</a>
-    <nav class="nav" id="nav">
-      <a href="index.html" class="nav__link nav__link--active">Головна</a>
-      <a href="rules.html" class="nav__link">Регламент</a>
-      <a href="register.html" class="nav__link">Реєстрація</a>
-      <a href="live.html" class="nav__link">Live</a>
-      <a href="rating.html" class="nav__link">Рейтинг</a>
-      <a href="lakes.html" class="nav__link">Водойми</a>
-      <a href="sponsors.html" class="nav__link">Спонсори</a>
+  <!-- HEADER автоматично підтягується -->
+  <div id="app-header"></div>
+
+  <main class="main">
+    <section class="container section section--narrow">
+      <h1 class="page-title title-gradient">STOLAR CARP 2025</h1>
+      <p class="lead">
+        Офіційний сайт серії турнірів з карпфішингу у Львівській області.  
+        Реєстрація, регламент, live-протоколи, рейтинг команд та події сезону.
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn--primary" href="/stolarcarp-site/register.html">Подати заявку</a>
+        <a class="btn btn--ghost" href="/stolarcarp-site/rules.html">Переглянути регламент</a>
+        <a class="btn btn--danger" href="/stolarcarp-site/live.html">Live протокол</a>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:40px">
+        <div class="card">
+          <div class="kpi">
+            <span class="num">Лелехівка</span>
+            <a href="/stolarcarp-site/events/осінній-короп-2025.html" class="badge badge--warn">Осінній короп</a>
+          </div>
+          <p class="form__hint">Оновлено: 24.10.2025</p>
+        </div>
+
+        <div class="card">
+          <h3>Благодійність</h3>
+          <p>Частину внесків спрямовуємо на підтримку захисників України 🇺🇦</p>
+          <span class="badge badge--success">Підтримаймо разом</span>
+        </div>
+
+        <div class="card">
+          <h3>Швидкі протоколи</h3>
+          <p>Оновлення результатів до 5 хв після зважування</p>
+          <span class="badge badge--warn">LIVE</span>
+        </div>
+
+        <div class="card">
+          <h3>Спонсори</h3>
+          <p>Trinity Baits, Puhach Baits, DK Baits, VKK</p>
+        </div>
+      </div>
+
+      <hr style="margin:40px 0; opacity:0.2">
+
+      <div class="card highlight" style="text-align:center;">
+        <h2 class="title-gradient">🏆 Турнір STOLAR CARP 2026</h2>
+        <p>
+          Новий сезон із 5 етапів та фіналом!  
+          Всі результати і рейтинг оновлюються автоматично.
+        </p>
+        <a href="/stolarcarp-site/turnir-2026.html" class="btn btn--primary">Переглянути сезон 2026</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER автоматично підтягується -->
+  <div id="app-footer"></div>
+</body>
+</html>      <a href="sponsors.html" class="nav__link">Спонсори</a>
     </nav>
     <button class="burger" id="burger" aria-label="Меню">
       <span></span><span></span><span></span>

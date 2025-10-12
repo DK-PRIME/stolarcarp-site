@@ -6,6 +6,23 @@
   <title>Рейтинг — STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+  <style>
+    :root{ --line:rgba(255,255,255,.08); --panel:#111215; }
+    .hint{opacity:.75}
+    .textarea{width:100%}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    @media (max-width:960px){ .grid-3{grid-template-columns:1fr} }
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);opacity:.9}
+    .badge--zone{background:#171822}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+    .input{background:var(--panel);border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
+    .btn{padding:10px 14px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);color:#fff;text-decoration:none;font-weight:600;cursor:pointer}
+    .btn:hover{filter:brightness(1.08)}
+    .state{display:inline-flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:#f59e0b}
+    .dot.ok{background:#16a34a} .dot.err{background:#ef4444}
+    .card .table th,.card .table td{white-space:nowrap}
+  </style>
 </head>
 <body>
 <header class="header">
@@ -15,15 +32,14 @@
       <span class="logo__text">STOLAR CARP</span>
     </a>
     <nav class="nav" id="nav">
-    <nav class="nav" id="nav">
-  <a href="index.html" class="nav__link">Головна</a>
-  <a href="rules.html" class="nav__link">Регламент</a>
-  <a href="register.html" class="nav__link">Реєстрація</a>
-  <a href="live.html" class="nav__link">Live</a>
-  <a href="rating.html" class="nav__link">Рейтинг</a>
-  <a href="lakes.html" class="nav__link">Водойми</a>
-  <a href="sponsors.html" class="nav__link">Спонсори</a>
-  <a href="turnir-2026.html" class="nav__link">Турнір 2026</a>
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link nav__link--active">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="turnir-2026.html" class="nav__link">Турнір 2026</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -31,31 +47,40 @@
 
 <main class="main">
 <section class="container section">
-  <h2>Рейтинг та нагородження</h2>
+  <h2 class="title-gradient">Рейтинг та нагородження</h2>
 
+  <!-- Панель керування джерелом -->
   <div class="card">
-    <h3>Встав CSV (загальний протокол)</h3>
-    <p class="form__hint">Колонки у такому порядку: <span class="code">Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг</span>.</p>
-    <textarea id="rating-csv" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг"></textarea>
-    <div class="cta-row" style="margin-top:8px">
-      <button class="btn btn--primary" id="calc-awards">Розрахувати нагородження</button>
+    <h3>Джерело даних (Google Sheets GViz)</h3>
+    <div class="toolbar">
+      <input id="sheetId" class="input" placeholder="SHEET_ID" />
+      <input id="gid"     class="input" placeholder="gid (номер аркуша, зазвичай 0)" />
+      <button id="loadBtn" class="btn">Завантажити</button>
+      <label class="state"><span id="dot" class="dot"></span><span id="st">Очікування…</span></label>
+      <label><input type="checkbox" id="auto" /> Авто 60с</label>
     </div>
+    <p class="form__hint hint">
+      Таблиця має містити колонки в порядку: <span class="code">Команда; Зона; Сектор; К-сть; Вага, кг; Середня, кг; Big Fish, кг</span>.<br>
+      Використовується публічний GViz-ендпоїнт: <span class="code">https://docs.google.com/spreadsheets/d/&lt;SHEET_ID&gt;/gviz/tq?tqx=out:json&gid=&lt;gid&gt;</span>
+    </p>
   </div>
 
+  <!-- Результати -->
   <div id="awards-ready" style="display:none">
     <div class="section card">
       <h3>Топ озера (серед переможців зон)</h3>
       <table class="table">
-        <thead><tr><th>Місце</th><th>Команда</th><th>Вага, кг</th></tr></thead>
+        <thead><tr><th>Місце</th><th>Команда</th><th>Зона</th><th>Вага, кг</th><th>Big Fish, кг</th></tr></thead>
         <tbody id="top-lake"></tbody>
       </table>
-      <p class="form__hint">Топ озера визначається між переможцями зон A, B, C за найбільшою вагою.</p>
+      <p class="form__hint hint">Визначається між переможцями зон A, B, C за найбільшою вагою (тай-брейк: Big Fish → середня).</p>
     </div>
 
-    <div class="section grid grid-3" id="zones-awards">
-      <!-- Зони A/B/C будуть згенеровані тут -->
+    <div class="section grid-3" id="zones-awards">
+      <!-- A/B/C тут -->
     </div>
-    <p class="form__hint">Формат: <b>2 місце</b> у зоні піднімається на <b>1</b>, <b>3 → 2</b>, <b>4 → 3</b>.</p>
+
+    <p class="form__hint hint">Потрібен «зсув місць» (2→1, 3→2, 4→3) для церемонії? Напиши — додам перемапінг у рендері.</p>
   </div>
 </section>
 </main>
@@ -69,5 +94,223 @@
     </div>
   </div>
 </footer>
+
+<script>
+/* ===== НАЛАШТУВАННЯ З URL або дефолт ===== */
+// Можеш передати ?sheet=<ID>&gid=<gid> у адресному рядку
+const qp = new URLSearchParams(location.search);
+const DEFAULT_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни на свій, якщо інший
+const DEFAULT_GID      = "0";
+
+const sheetIdInput = document.getElementById('sheetId');
+const gidInput     = document.getElementById('gid');
+sheetIdInput.value = qp.get('sheet') || localStorage.getItem('rating_sheet') || DEFAULT_SHEET_ID;
+gidInput.value     = qp.get('gid')    || localStorage.getItem('rating_gid')   || DEFAULT_GID;
+
+/* ===== Утиліти ===== */
+const dot = document.getElementById('dot');
+const st  = document.getElementById('st');
+
+const toNum = v => {
+  if (v == null) return 0;
+  const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
+  const x = parseFloat(s);
+  return Number.isFinite(x) ? x : 0;
+};
+const kg = v => toNum(v).toFixed(3);
+
+function parseGViz(text){
+  const start = text.indexOf('{');
+  const end   = text.lastIndexOf(')');
+  return JSON.parse(text.substring(start, end));
+}
+
+/* ===== Агрегація по команді: прибираємо дублікати =====
+   - сумуємо Вага, К-сть; Big Fish = max; середню рахуємо як середнє по рядках;
+   - "основна" зона команди = де найбільша вага цієї команди. */
+function aggregate(rows){
+  const byTeam = new Map();
+  for (const r of rows){
+    const team   = (r[0] ?? '').toString().trim();
+    const zone   = (r[1] ?? '').toString().trim().toUpperCase();
+    const sector = r[2] ?? '';
+    const cnt    = toNum(r[3]);
+    const weight = toNum(r[4]);
+    const avg    = toNum(r[5]);
+    const big    = toNum(r[6]);
+
+    if (!team) continue;
+    if (!byTeam.has(team)){
+      byTeam.set(team, {
+        team, zones:new Map(), totalCnt:0, totalWeight:0, totalAvgSum:0, rows:0, big:0, sector
+      });
+    }
+    const t = byTeam.get(team);
+    t.totalCnt    += cnt;
+    t.totalWeight += weight;
+    t.totalAvgSum += avg;
+    t.rows        += 1;
+    t.big          = Math.max(t.big, big);
+    if (zone){
+      const z = t.zones.get(zone) || { weight:0, cnt:0, big:0 };
+      z.weight += weight; z.cnt += cnt; z.big = Math.max(z.big, big);
+      t.zones.set(zone, z);
+    }
+  }
+  const out = [];
+  for (const t of byTeam.values()){
+    let mainZone = '', bestW = -1, bestBig = -1;
+    for (const [z,agg] of t.zones.entries()){
+      if (agg.weight > bestW || (agg.weight===bestW && agg.big>bestBig)){
+        bestW = agg.weight; bestBig = agg.big; mainZone = z;
+      }
+    }
+    out.push({
+      team: t.team,
+      zone: mainZone,
+      sector: t.sector,
+      cnt: t.totalCnt,
+      weight: t.totalWeight,
+      avg: t.rows ? (t.totalAvgSum / t.rows) : 0,
+      big: t.big
+    });
+  }
+  return out;
+}
+
+function rankZone(items, zoneLetter){
+  const arr = items.filter(x => x.zone === zoneLetter);
+  arr.sort((a,b)=>{
+    if (b.weight !== a.weight) return b.weight - a.weight; // вага
+    if (b.big !== a.big)       return b.big - a.big;       // big fish
+    if (b.avg !== a.avg)       return b.avg - a.avg;       // середня
+    return a.team.localeCompare(b.team, 'uk', {sensitivity:'base'});
+  });
+  return arr.map((x,i)=>({...x, place:i+1}));
+}
+
+function topLake(zA, zB, zC){
+  const winners = [zA[0], zB[0], zC[0]].filter(Boolean);
+  winners.sort((a,b)=>{
+    if (b.weight !== a.weight) return b.weight - a.weight;
+    if (b.big !== a.big)       return b.big - a.big;
+    if (b.avg !== a.avg)       return b.avg - a.avg;
+    return a.team.localeCompare(b.team, 'uk', {sensitivity:'base'});
+  });
+  return winners.map((x,i)=>({...x, place:i+1}));
+}
+
+/* ===== Рендер ===== */
+const awardsWrap   = document.getElementById('awards-ready');
+const zonesWrap    = document.getElementById('zones-awards');
+const topLakeTbody = document.getElementById('top-lake');
+
+function renderZoneTable(container, zoneLetter, rows){
+  const title = `Нагородження — ${zoneLetter}`;
+  const html = `
+    <div class="card">
+      <h3>${title} <span class="badge badge--zone">Зона ${zoneLetter}</span></h3>
+      <table class="table">
+        <thead><tr><th>Місце</th><th>Команда</th><th>Вага, кг</th><th>Big Fish, кг</th><th>Середня, кг</th></tr></thead>
+        <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${r.place}</td>
+              <td>${r.team}</td>
+              <td>${kg(r.weight)}</td>
+              <td>${kg(r.big)}</td>
+              <td>${kg(r.avg)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+function renderTopLake(rows){
+  topLakeTbody.innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.place}</td>
+      <td>${r.team}</td>
+      <td>${r.zone || '-'}</td>
+      <td>${kg(r.weight)}</td>
+      <td>${kg(r.big)}</td>
+    </tr>
+  `).join('');
+}
+
+/* ===== Завантаження з GViz ===== */
+async function loadFromGViz(sheetId, gid){
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
+  dot.classList.remove('ok','err');
+  st.textContent = 'Завантаження…';
+  const res = await fetch(url, { cache:'no-store' });
+  const text = await res.text();
+  const json = parseGViz(text);
+  const rows = (json.table.rows || []).map(r => [
+    r.c?.[0]?.v ?? '', // Команда
+    r.c?.[1]?.v ?? '', // Зона
+    r.c?.[2]?.v ?? '', // Сектор
+    r.c?.[3]?.v ?? '', // К-сть
+    r.c?.[4]?.v ?? '', // Вага
+    r.c?.[5]?.v ?? '', // Середня
+    r.c?.[6]?.v ?? ''  // Big Fish
+  ]);
+  return rows;
+}
+
+/* ===== Події та цикл автооновлення ===== */
+const loadBtn = document.getElementById('loadBtn');
+const autoChk = document.getElementById('auto');
+let timer = null;
+
+async function refresh(){
+  try{
+    const sheetId = sheetIdInput.value.trim();
+    const gid     = gidInput.value.trim() || '0';
+    if (!sheetId) { st.textContent='Вкажіть SHEET_ID'; dot.classList.add('err'); return; }
+
+    localStorage.setItem('rating_sheet', sheetId);
+    localStorage.setItem('rating_gid', gid);
+
+    const raw = await loadFromGViz(sheetId, gid);
+    const agg = aggregate(raw);
+
+    const zA = rankZone(agg, 'A');
+    const zB = rankZone(agg, 'B');
+    const zC = rankZone(agg, 'C');
+
+    zonesWrap.innerHTML = '';
+    renderZoneTable(zonesWrap, 'A', zA);
+    renderZoneTable(zonesWrap, 'B', zB);
+    renderZoneTable(zonesWrap, 'C', zC);
+
+    renderTopLake(topLake(zA, zB, zC));
+
+    awardsWrap.style.display = 'block';
+    dot.classList.add('ok');
+    st.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
+  } catch (e){
+    dot.classList.add('err');
+    st.textContent = 'Помилка: ' + e.message;
+    console.error(e);
+  }
+}
+
+loadBtn.addEventListener('click', refresh);
+autoChk.addEventListener('change', ()=>{
+  if (autoChk.checked){
+    refresh();
+    timer = setInterval(refresh, 60000);
+  } else {
+    clearInterval(timer);
+  }
+});
+
+/* Автозапуск при завантаженні сторінки */
+(function init(){
+  if (sheetIdInput.value) refresh();
+})();
+</script>
 </body>
 </html>

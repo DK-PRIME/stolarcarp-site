@@ -5,36 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STOLAR CARP — офіційний сайт турнірів</title>
 
-  <!-- Основні стилі -->
-  <link rel="stylesheet" href="/stolarcarp-site/assets/css/main.css">
-
-  <!-- Конфігурація сайту -->
-  <script defer src="/stolarcarp-site/assets/js/config.js"></script>
-
-  <!-- Автоматичне підключення хедера та футера -->
-  <script defer src="/stolarcarp-site/assets/js/partials.js"></script>
+  <!-- Стилі та скрипт меню -->
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
 </head>
-
 <body>
+
+<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
-      <img src="assets/DK-PRIME/dk-dva-kuma-banner.jpg" alt="STOLAR CARP Logo" class="logo__img" />
+      <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
     <nav class="nav" id="nav">
-      <a href="index.html" class="nav__link">Головна</a>
+      <a href="index.html" class="nav__link nav__link--active">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
       <a href="register.html" class="nav__link">Реєстрація</a>
       <a href="live.html" class="nav__link">Live</a>
       <a href="rating.html" class="nav__link">Рейтинг</a>
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="turnir-2026.html" class="nav__link">Турнір 2026</a>
     </nav>
-    <button class="burger" id="burger">
-      <span></span>
-      <span></span>
-      <span></span>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <section class="container section">
+    <h1 class="title-gradient">STOLAR CARP 2025</h1>
+    <p class="lead">
+      Офіційний сайт серії турнірів з карпфішингу у Львівській області.
+      Реєстрація, регламент, live-протоколи, рейтинг команд та події сезону.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn btn--primary" href="register.html">Подати заявку</a>
+      <a class="btn btn--ghost" href="rules.html">Переглянути регламент</a>
+      <a class="btn btn--danger" href="live.html">Live протокол</a>
+    </div>
+
+    <div class="grid grid-2" style="margin-top:40px">
+      <div class="card">
+        <div class="kpi">
+          <span class="num">Лелехівка</span>
+          <a href="events/осінній-короп-2025.html" class="badge badge--warn">Осінній короп</a>
+        </div>
+        <p class="form__hint">Оновлено: 24.10.2025</p>
+      </div>
+
+      <div class="card">
+        <h3>Благодійність</h3>
+        <p>Частину внесків спрямовуємо на підтримку захисників України 🇺🇦</p>
+        <span class="badge badge--success">Підтримаймо разом</span>
+      </div>
+
+      <div class="card">
+        <h3>Швидкі протоколи</h3>
+        <p>Оновлення результатів до 5 хв після зважування.</p>
+        <span class="badge badge--warn">LIVE</span>
+      </div>
+
+      <div class="card">
+        <h3>Спонсори</h3>
+        <p>Trinity Baits, Robin, Puhach Baits, Charbaits, Ібіс, VKK та інші.</p>
+      </div>
+    </div>
+
+    <hr style="margin:40px 0; opacity:.2">
+
+    <div class="card highlight" style="text-align:center">
+      <h2 class="title-gradient">🏆 Турнір STOLAR CARP 2026</h2>
+      <p>Сезон із 5 етапів і Фіналом. Результати та рейтинг оновлюються автоматично.</p>
+      <a href="turnir-2026.html" class="btn btn--primary">Переглянути сезон 2026</a>
+    </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львівщина</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>      <span></span>
     </button>
   </div>
 </header>

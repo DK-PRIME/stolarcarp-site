@@ -7,13 +7,43 @@
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
   <style>
-    body { color:#fff; background:#0d0d0f; }
-    .table{width:100%; border-collapse:separate; border-spacing:0 8px; font-size:1rem;}
-    th, td{padding:10px 12px; text-align:left;}
-    th{opacity:.8; font-weight:600;}
-    td{background:#16171c; border-radius:10px;}
-    .num{opacity:.6; width:30px;}
-    .muted{opacity:.7;}
+    :root{
+      --bg:#0d0d0f;
+      --card:#14151a;
+      --row:#16171c;
+      --text:#fff;
+      --muted:rgba(255,255,255,.65);
+      --line:rgba(255,255,255,.06);
+    }
+    body{background:var(--bg);color:var(--text);}
+    .muted{color:var(--muted)}
+    .table-wrap{background:var(--card);border-radius:14px;padding:10px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:separate;border-spacing:0}
+    thead th{
+      position:sticky;top:0;z-index:2;
+      background:var(--card);
+      text-align:left;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);
+      font-size:.95rem;letter-spacing:.02em
+    }
+    tbody td{
+      background:var(--row);
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      font-size:0.98rem;
+      vertical-align:middle;
+    }
+    tbody tr:first-child td{border-top-left-radius:10px;border-top-right-radius:10px}
+    tbody tr:last-child td{border-bottom-left-radius:10px;border-bottom-right-radius:10px;border-bottom:none}
+    .num{width:3.5rem;opacity:.7}
+    .food-badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.9rem;line-height:1;border:1px solid var(--line)}
+    .food-yes{background:#1d2a18}
+    .food-no{background:#2a1918}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+    .meta .muted{font-size:.9rem}
+    @media (max-width:640px){
+      thead th, tbody td{padding:8px 10px}
+      .num{width:2.5rem}
+    }
   </style>
 </head>
 <body>
@@ -35,18 +65,24 @@
   <section class="container section section--narrow">
     <h1 class="page-title title-gradient">Список зареєстрованих команд</h1>
     <p class="lead muted">Оновлюється автоматично після відправки заявки.</p>
-    <table>
-  <thead>
-    <tr>
-      <th>№</th>
-      <th>Назва команди</th>
-      <th>Капітан</th>
-      <th>Харчування</th>
-    </tr>
-  </thead>
-  <tbody id="teamList"></tbody>
-    </table>
-    <p id="state" class="muted">Завантаження…</p>
+
+    <div class="table-wrap">
+      <table id="teamTable" aria-describedby="state">
+        <thead>
+          <tr>
+            <th class="num">№</th>
+            <th>Назва команди</th>
+            <th>Капітан</th>
+            <th>Харчування</th>
+          </tr>
+        </thead>
+        <tbody id="teamList"></tbody>
+      </table>
+      <div class="meta">
+        <p id="state" class="muted">Завантаження…</p>
+        <p id="total" class="muted"></p>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -57,29 +93,57 @@
 </footer>
 
 <script>
-const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo";
-const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
-const tbody = document.querySelector('#tbl tbody');
-const state = document.getElementById('state');
+  // ID твоєї таблиці (залишив той самий)
+  const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo";
+  // gid=0 якщо перший аркуш; зміни, якщо інший
+  const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
 
-fetch(GVIZ)
-  .then(r => r.text())
-  .then(txt => {
-    const json = JSON.parse(txt.substring(txt.indexOf('{'), txt.lastIndexOf(')')));
-    const rows = json.table.rows.map(r => ({
-      team: r.c[1]?.v || '',
-      captain: r.c[3]?.v || ''
-    })).filter(r => r.team && r.captain);
+  const tbody = document.getElementById('teamList');
+  const state = document.getElementById('state');
+  const total = document.getElementById('total');
 
-    tbody.innerHTML = rows.map((r,i)=>`
-      <tr>
-        <td class="num">${i+1}</td>
-        <td>${r.team}</td>
-        <td>${r.captain}</td>
-      </tr>`).join('');
-    state.textContent = `Всього команд: ${rows.length}`;
-  })
-  .catch(e => state.textContent = 'Помилка завантаження: ' + e.message);
+  async function loadTeams() {
+    try {
+      state.textContent = 'Завантаження…';
+      const res = await fetch(GVIZ, { cache: 'no-store' });
+      const text = await res.text();
+      // gviz повертає JS, вирізаємо JSON
+      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
+      const rows = (json.table.rows || [])
+        .map(r => ({
+          time:     r.c[0]?.v ?? '',
+          team:     r.c[1]?.v ?? '',
+          captain:  r.c[3]?.v ?? '',
+          food:     r.c[5]?.v ?? '',   // "Так" або "Ні"
+          foodQty:  r.c[6]?.v ?? ''    // кількість
+        }))
+        .filter(r => r.team && r.captain);
+
+      // верстка рядків
+      tbody.innerHTML = rows.map((r, i) => {
+        const foodLabel = (r.food === 'Так')
+          ? `<span class="food-badge food-yes">Так${r.foodQty ? ` (${r.foodQty})` : ''}</span>`
+          : `<span class="food-badge food-no">Ні</span>`;
+        return `
+          <tr>
+            <td class="num">${i + 1}</td>
+            <td>${r.team}</td>
+            <td>${r.captain}</td>
+            <td>${foodLabel}</td>
+          </tr>`;
+      }).join('');
+
+      state.textContent = rows.length ? 'Оновлено' : 'Дані відсутні';
+      total.textContent = `Всього команд: ${rows.length}`;
+    } catch (e) {
+      state.textContent = 'Помилка завантаження: ' + e.message;
+      total.textContent = '';
+    }
+  }
+
+  loadTeams();
+  // автооновлення кожні 30 секунд
+  setInterval(loadTeams, 30000);
 </script>
 </body>
 </html>

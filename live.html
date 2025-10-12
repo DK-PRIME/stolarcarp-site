@@ -6,6 +6,31 @@
   <title>Live — STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+  <style>
+    :root{
+      --line: rgba(255,255,255,.08);
+      --row: #16171c;
+      --ok: #16a34a; --warn:#f59e0b;
+    }
+    .live-wrap{background:#14151a;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    table.live{width:100%;border-collapse:separate;border-spacing:0}
+    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line)}
+    table.live tbody td{background:var(--row);padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    table.live tbody tr:hover td{background:#1a1b21}
+    .num{text-align:right;white-space:nowrap}
+    .zone-chip{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-weight:600}
+    .lead-row td{background:#182216}
+    .totals td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
+    .hint{opacity:.7}
+    .mini{font-size:.95rem}
+    .row-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .input{background:#111215;border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
+    .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+    .switch input{accent-color:var(--warn)}
+    .state{display:inline-flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+    .dot.ok{background:var(--ok)}
+  </style>
 </head>
 <body>
 <header class="header">
@@ -29,38 +54,58 @@
 
 <main class="main">
 <section class="container section">
-  <h2>Live-протокол</h2>
+  <h2 class="title-gradient">Live-протокол</h2>
 
-  <div class="card">
-    <h3>Швидке оновлення</h3>
-    <p class="form__hint">Варіант 1: встав CSV (Google Sheets → Копіювати → Спеціальна вставка → Значення) та натисни «Побудувати таблицю».</p>
-    <textarea id="csv-paste" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг"></textarea>
-    <div class="cta-row" style="margin-top:8px">
-      <button class="btn btn--primary" id="render-csv">Побудувати таблицю</button>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:16px">
-    <h3>Автооновлення з посилання</h3>
-    <p class="form__hint">Варіант 2: вкажи <b>публічне</b> посилання на CSV/TSV/Values-експорт (без авторизації). Можна Apps Script або «Publish to web».</p>
-    <div class="row">
-      <input id="csv-url" class="input" placeholder="https://.../export?format=csv">
-      <div class="cta-row">
-        <button class="btn btn--ghost" id="fetch-csv">Завантажити зараз</button>
-        <label class="btn"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
+  <div class="grid grid-2" style="gap:16px">
+    <div class="card">
+      <h3>Швидка вставка</h3>
+      <p class="form__hint">Встав “значення” із Google Sheets. Допустимі роздільники: <b>;</b>, <b>,</b> або <b>таб</b>.</p>
+      <textarea id="csv-paste" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг"></textarea>
+      <div class="cta-row" style="margin-top:8px">
+        <button class="btn btn--primary" id="render-csv">Побудувати таблицю</button>
+        <button class="btn btn--ghost" id="clear">Очистити</button>
       </div>
     </div>
+
+    <div class="card">
+      <h3>Автооновлення з посилання</h3>
+      <div class="row row-controls">
+        <input id="csv-url" class="input" placeholder="https://docs.google.com/.../export?format=csv">
+        <button class="btn btn--ghost" id="fetch-csv">Завантажити зараз</button>
+        <label class="switch mini"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
+      </div>
+      <p class="form__hint">Підійдуть посилання “Publish to web → CSV/TSV” або Apps Script, що віддає CSV/TSV.</p>
+      <p class="mini state"><span id="statusDot" class="dot"></span><span id="statusText">Очікування…</span></p>
+    </div>
   </div>
 
-  <div class="section">
-    <table class="table">
+  <div class="card live-wrap" style="margin-top:16px">
+    <table class="live">
       <thead>
-        <tr><th>Команда</th><th>Зона</th><th>Сектор</th><th>К-сть</th><th>Вага, кг</th><th>Середня, кг</th><th>Big Fish, кг</th></tr>
+        <tr>
+          <th>Команда</th>
+          <th>Зона</th>
+          <th>Сектор</th>
+          <th class="num">К-сть</th>
+          <th class="num">Вага, кг</th>
+          <th class="num">Середня, кг</th>
+          <th class="num">Big Fish, кг</th>
+        </tr>
       </thead>
       <tbody id="live-body"></tbody>
+      <tfoot>
+        <tr class="totals">
+          <td colspan="3">Разом</td>
+          <td class="num" id="tCount">0</td>
+          <td class="num" id="tWeight">0.000</td>
+          <td class="num" id="tAvg">0.000</td>
+          <td class="num" id="tBig">0.000</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
-  <p class="form__hint">Оновлюється без перезавантаження сторінки.</p>
+
+  <p class="form__hint">Порада: тримайте колонки у порядку: Команда · Зона · Сектор · Кількість · Вага · Середня · Big Fish.</p>
 </section>
 </main>
 
@@ -73,5 +118,139 @@
     </div>
   </div>
 </footer>
+
+<script>
+/* ===== утиліти форматування ===== */
+const n = v => isFinite(+v) ? +v : 0;
+const kg = v => n(v).toFixed(3);
+
+/* ===== простий, але стійкий CSV/TSV-парсер =====
+   Підтримує ; , \t та змішані роздільники у межах рядка.
+   У випадку лапок — прибирає їх. */
+function parseCSV(text){
+  const rows = [];
+  const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
+  for (const line of lines){
+    // якщо є таби — пріоритет таба; інакше — крапка з комою; інакше — кома
+    const sep = line.includes('\t') ? '\t' : (line.includes(';') ? ';' : ',');
+    const parts = line.split(sep).map(s=>s.trim().replace(/^"(.*)"$/,'$1'));
+    rows.push(parts);
+  }
+  return rows;
+}
+
+/* ===== логіка рендеру ===== */
+const bodyEl = document.getElementById('live-body');
+const tCount = document.getElementById('tCount');
+const tWeight = document.getElementById('tWeight');
+const tAvg = document.getElementById('tAvg');
+const tBig = document.getElementById('tBig');
+
+function renderTable(data){
+  // нормалізація в об’єкти
+  const items = data.map(r => ({
+    team:   r[0] ?? '',
+    zone:   (r[1] ?? '').toUpperCase(),
+    sector: r[2] ?? '',
+    cnt:    n(r[3]),
+    weight: n(r[4]),
+    avg:    n(r[5]),
+    big:    n(r[6])
+  })).filter(x => x.team);
+
+  // сортування за зоною (A,B,C) і вагою (спад)
+  const zoneOrder = {A:1,B:2,C:3};
+  items.sort((a,b)=>{
+    const z = (zoneOrder[a.zone]||9) - (zoneOrder[b.zone]||9);
+    if (z !== 0) return z;
+    return b.weight - a.weight;
+  });
+
+  // визначення лідерів по зонах
+  const leadByZone = {};
+  for (const it of items){
+    if (!leadByZone[it.zone]) leadByZone[it.zone] = it.team;
+  }
+
+  // рендер рядків
+  bodyEl.innerHTML = items.map(it => `
+    <tr class="${leadByZone[it.zone]===it.team ? 'lead-row' : ''}">
+      <td>${it.team}</td>
+      <td><span class="zone-chip">${it.zone || '-'}</span></td>
+      <td>${it.sector || '-'}</td>
+      <td class="num">${it.cnt || 0}</td>
+      <td class="num">${kg(it.weight)}</td>
+      <td class="num">${kg(it.avg)}</td>
+      <td class="num">${kg(it.big)}</td>
+    </tr>
+  `).join('');
+
+  // підсумки
+  const totalCnt = items.reduce((s,x)=>s + (x.cnt||0), 0);
+  const totalW   = items.reduce((s,x)=>s + (x.weight||0), 0);
+  const maxBig   = items.reduce((m,x)=>Math.max(m, x.big||0), 0);
+  const avgW     = items.length ? totalW / items.length : 0;
+
+  tCount.textContent  = totalCnt;
+  tWeight.textContent = kg(totalW);
+  tAvg.textContent    = kg(avgW);
+  tBig.textContent    = kg(maxBig);
+}
+
+/* ===== керування UI ===== */
+const txtArea = document.getElementById('csv-paste');
+const renderBtn = document.getElementById('render-csv');
+const clearBtn  = document.getElementById('clear');
+
+renderBtn.addEventListener('click', ()=>{
+  const rows = parseCSV(txtArea.value);
+  renderTable(rows);
+});
+
+clearBtn.addEventListener('click', ()=>{
+  txtArea.value = '';
+  bodyEl.innerHTML = '';
+  tCount.textContent = '0'; tWeight.textContent = '0.000';
+  tAvg.textContent = '0.000'; tBig.textContent = '0.000';
+});
+
+/* ===== завантаження з URL + автооновлення ===== */
+const fetchBtn = document.getElementById('fetch-csv');
+const urlInput = document.getElementById('csv-url');
+const autoChk  = document.getElementById('auto-refresh');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+
+let timer = null;
+
+async function fetchAndRender(){
+  const url = urlInput.value.trim();
+  if (!url) return;
+  statusDot.classList.remove('ok');
+  statusText.textContent = 'Завантаження…';
+  try{
+    const res = await fetch(url, { cache:'no-store' });
+    const text = await res.text();
+    const rows = parseCSV(text);
+    renderTable(rows);
+    statusDot.classList.add('ok');
+    const t = new Date().toLocaleTimeString('uk-UA');
+    statusText.textContent = 'Оновлено: ' + t;
+  }catch(e){
+    statusText.textContent = 'Помилка: ' + e.message;
+  }
+}
+
+fetchBtn.addEventListener('click', fetchAndRender);
+
+autoChk.addEventListener('change', ()=>{
+  if (autoChk.checked){
+    fetchAndRender();
+    timer = setInterval(fetchAndRender, 60000);
+  }else{
+    clearInterval(timer);
+  }
+});
+</script>
 </body>
 </html>

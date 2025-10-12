@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Список команд — STOLAR CARP</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+  <style>
+    body { color:#fff; background:#0d0d0f; }
+    .table{width:100%; border-collapse:separate; border-spacing:0 8px; font-size:1rem;}
+    th, td{padding:10px 12px; text-align:left;}
+    th{opacity:.8; font-weight:600;}
+    td{background:#16171c; border-radius:10px;}
+    .num{opacity:.6; width:30px;}
+    .muted{opacity:.7;}
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="entries.html" class="nav__link nav__link--active">Команди</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+  <section class="container section section--narrow">
+    <h1 class="page-title title-gradient">Список зареєстрованих команд</h1>
+    <p class="lead muted">Оновлюється автоматично після відправки заявки.</p>
+    <table class="table" id="tbl">
+      <thead>
+        <tr><th>№</th><th>Назва команди</th><th>Капітан</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <p id="state" class="muted">Завантаження…</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+  </div>
+</footer>
+
+<script>
+const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo";
+const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
+const tbody = document.querySelector('#tbl tbody');
+const state = document.getElementById('state');
+
+fetch(GVIZ)
+  .then(r => r.text())
+  .then(txt => {
+    const json = JSON.parse(txt.substring(txt.indexOf('{'), txt.lastIndexOf(')')));
+    const rows = json.table.rows.map(r => ({
+      team: r.c[1]?.v || '',
+      captain: r.c[3]?.v || ''
+    })).filter(r => r.team && r.captain);
+
+    tbody.innerHTML = rows.map((r,i)=>`
+      <tr>
+        <td class="num">${i+1}</td>
+        <td>${r.team}</td>
+        <td>${r.captain}</td>
+      </tr>`).join('');
+    state.textContent = `Всього команд: ${rows.length}`;
+  })
+  .catch(e => state.textContent = 'Помилка завантаження: ' + e.message);
+</script>
+</body>
+</html>

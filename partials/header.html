@@ -1,0 +1,33 @@
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="/stolarcarp-site/index.html">
+      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
+    </a>
+
+    <nav class="nav" id="nav">
+      <a href="/stolarcarp-site/index.html" class="nav__link">Головна</a>
+      <a href="/stolarcarp-site/rules.html" class="nav__link">Регламент</a>
+      <a href="/stolarcarp-site/register.html" class="nav__link">Реєстрація</a>
+      <a href="/stolarcarp-site/live.html" class="nav__link">Live</a>
+      <a href="/stolarcarp-site/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/stolarcarp-site/lakes.html" class="nav__link">Водойми</a>
+      <a href="/stolarcarp-site/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/stolarcarp-site/turnir-2026.html" class="nav__link">Турнір 2026</a>
+    </nav>
+
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<script>
+(function(){
+  var path = location.pathname.replace(/\/+$/,'');
+  document.querySelectorAll('.nav__link').forEach(function(a){
+    var href = a.getAttribute('href').replace(/\/+$/,'');
+    if (href && path.endsWith(href)) a.classList.add('nav__link--active');
+  });
+  var b = document.getElementById('burger');
+  var n = document.getElementById('nav');
+  if (b && n) b.addEventListener('click', function(){ n.classList.toggle('nav--open'); });
+})();
+</script>

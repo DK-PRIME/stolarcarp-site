@@ -3,50 +3,77 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Список команд — STOLAR CARP</title>
+  <title>Команди — STOLAR CARP</title>
+
+  <!-- Базові стилі сайту + скрипт меню -->
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
   <style>
     :root{
       --bg:#0d0d0f;
-      --card:#14151a;
+      --panel:#111215;
+      --card:#15161a;
       --row:#16171c;
       --text:#fff;
-      --muted:rgba(255,255,255,.65);
-      --line:rgba(255,255,255,.06);
+      --muted:rgba(255,255,255,.7);
+      --line:rgba(255,255,255,.08);
+      --accent:#6b5bff;
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --err:#ef4444;
     }
-    body{background:var(--bg);color:var(--text);}
+    body{background:var(--bg);color:var(--text)}
     .muted{color:var(--muted)}
-    .table-wrap{background:var(--card);border-radius:14px;padding:10px;border:1px solid var(--line)}
+    .section--narrow{max-width:980px;margin-inline:auto}
+
+    /* Панель керування */
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px}
+    .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:.94rem}
+    .chip b{font-weight:700}
+    .input{
+      background:var(--panel);border:1px solid var(--line);color:var(--text);
+      border-radius:10px;padding:10px 12px;font-size:.96rem;min-width:220px;outline:none
+    }
+    .btn-sm{
+      padding:9px 12px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);
+      color:var(--text);text-decoration:none;font-weight:600;cursor:pointer
+    }
+    .btn-sm:hover{filter:brightness(1.1)}
+
+    /* Таблиця */
+    .table-wrap{background:var(--card);border-radius:16px;border:1px solid var(--line);overflow:hidden}
     table{width:100%;border-collapse:separate;border-spacing:0}
     thead th{
-      position:sticky;top:0;z-index:2;
-      background:var(--card);
-      text-align:left;font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);
-      font-size:.95rem;letter-spacing:.02em
+      position:sticky;top:0;z-index:2;background:var(--card);
+      text-align:left;font-weight:700;padding:12px;border-bottom:1px solid var(--line);
+      font-size:.95rem;letter-spacing:.02em;user-select:none
     }
+    thead th.sort{cursor:pointer}
+    thead th.sort .arrow{opacity:.5;margin-left:6px}
     tbody td{
-      background:var(--row);
-      padding:10px 12px;
-      border-bottom:1px solid var(--line);
-      font-size:0.98rem;
-      vertical-align:middle;
+      background:var(--row);padding:12px;border-bottom:1px solid var(--line);
+      font-size:0.98rem;vertical-align:middle
     }
-    tbody tr:first-child td{border-top-left-radius:10px;border-top-right-radius:10px}
-    tbody tr:last-child td{border-bottom-left-radius:10px;border-bottom-right-radius:10px;border-bottom:none}
+    tbody tr:hover td{background:#1a1b21}
     .num{width:3.5rem;opacity:.7}
-    .food-badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.9rem;line-height:1;border:1px solid var(--line)}
-    .food-yes{background:#1d2a18}
-    .food-no{background:#2a1918}
-    .meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px}
-    .meta .muted{font-size:.9rem}
+    .food-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:.9rem;line-height:1;border:1px solid var(--line)}
+    .food-yes{background:#1d2a18;color:#d7f7d7;border-color:rgba(22,163,74,.35)}
+    .food-no{background:#2a1918;color:#f5d0d0;border-color:rgba(239,68,68,.35)}
+
+    .table-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace}
+    .state-dot{display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--warn);margin-right:6px}
+    .state-ok{background:var(--ok)} .state-err{background:var(--err)}
     @media (max-width:640px){
-      thead th, tbody td{padding:8px 10px}
+      thead th, tbody td{padding:10px}
       .num{width:2.5rem}
     }
   </style>
 </head>
 <body>
+
+<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
@@ -54,95 +81,214 @@
     </a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
       <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
       <a href="entries.html" class="nav__link nav__link--active">Команди</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
 </header>
 
+<!-- MAIN -->
 <main class="main">
   <section class="container section section--narrow">
     <h1 class="page-title title-gradient">Список зареєстрованих команд</h1>
-    <p class="lead muted">Оновлюється автоматично після відправки заявки.</p>
+    <p class="lead muted">Оновлюється автоматично після відправки заявки з форми.</p>
 
+    <!-- Панель керування -->
+    <div class="toolbar">
+      <input id="search" class="input" type="search" placeholder="Пошук: команда або капітан…">
+      <span class="chip">Місць: <b class="mono" id="cap">24</b> • Зайнято: <b class="mono" id="used">0</b> • Вільно: <b class="mono" id="left">24</b></span>
+      <button id="refresh" class="btn-sm">Оновити зараз</button>
+    </div>
+
+    <!-- Таблиця -->
     <div class="table-wrap">
       <table id="teamTable" aria-describedby="state">
         <thead>
           <tr>
-            <th class="num">№</th>
-            <th>Назва команди</th>
-            <th>Капітан</th>
-            <th>Харчування</th>
+            <th class="num sort" data-sort="num">№ <span class="arrow">↕</span></th>
+            <th class="sort" data-sort="team">Назва команди <span class="arrow">↕</span></th>
+            <th class="sort" data-sort="captain">Капітан <span class="arrow">↕</span></th>
+            <th class="sort" data-sort="food">Харчування <span class="arrow">↕</span></th>
           </tr>
         </thead>
         <tbody id="teamList"></tbody>
       </table>
-      <div class="meta">
-        <p id="state" class="muted">Завантаження…</p>
-        <p id="total" class="muted"></p>
+
+      <div class="table-footer">
+        <p id="state" class="muted"><span class="state-dot"></span>Очікування…</p>
+        <p id="updated" class="muted mono"></p>
       </div>
     </div>
   </section>
 </main>
 
+<!-- FOOTER -->
 <footer class="footer">
   <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
+    <div>© 2025 STOLAR CARP · Львівщина</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
+    </div>
   </div>
 </footer>
 
 <script>
-  // ID твоєї таблиці (залишив той самий)
+  // ==== НАЛАШТУВАННЯ ====
   const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo";
-  // gid=0 якщо перший аркуш; зміни, якщо інший
-  const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=0`;
+  // Заміни gid=0 на фактичний аркуш із реєстраціями, якщо треба
+  const GID = new URLSearchParams(location.search).get('gid') || '0';
+  const CAPACITY = 24; // ліміт місць
 
-  const tbody = document.getElementById('teamList');
-  const state = document.getElementById('state');
-  const total = document.getElementById('total');
+  const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
+
+  // ==== ЕЛЕМЕНТИ ====
+  const tbody   = document.getElementById('teamList');
+  const stateEl = document.getElementById('state');
+  const updated = document.getElementById('updated');
+  const search  = document.getElementById('search');
+  const capEl   = document.getElementById('cap');
+  const usedEl  = document.getElementById('used');
+  const leftEl  = document.getElementById('left');
+  const refreshBtn = document.getElementById('refresh');
+
+  const norm = s => (s ?? '').toString().trim();
+  const lower = s => norm(s).toLowerCase();
+
+  function parseGViz(text){
+    const start = text.indexOf('{');
+    const end   = text.lastIndexOf(')');
+    return JSON.parse(text.substring(start, end));
+  }
+
+  function uniqueByTeam(items){
+    const seen = new Set();
+    const out = [];
+    for (const r of items){
+      const key = lower(r.team);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+    }
+    return out;
+  }
+
+  function renderRows(rows){
+    tbody.innerHTML = rows.map((r, i) => {
+      const isYes = lower(r.food) === 'так';
+      const foodLabel = isYes
+        ? `<span class="food-badge food-yes">Так${r.foodQty ? ` (${r.foodQty})` : ''}</span>`
+        : `<span class="food-badge food-no">Ні</span>`;
+      return `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td>${r.team}</td>
+          <td>${r.captain}</td>
+          <td>${foodLabel}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function setState(ok, text){
+    const dot = stateEl.querySelector('.state-dot');
+    dot.classList.toggle('state-ok', ok);
+    dot.classList.toggle('state-err', !ok);
+    stateEl.childNodes[stateEl.childNodes.length-1].nodeValue = text || '';
+  }
+
+  let allRows = [];
+  let sortKey = 'num';
+  let sortDir = 1; // 1 asc, -1 desc
+
+  function applyFilterAndSort(){
+    const q = lower(search.value);
+    let rows = allRows.slice();
+
+    if (q){
+      rows = rows.filter(r =>
+        lower(r.team).includes(q) ||
+        lower(r.captain).includes(q)
+      );
+    }
+
+    rows.sort((a,b)=>{
+      if (sortKey === 'num') return 0; // позицію намалюємо по порядку
+      const A = lower(a[sortKey]);
+      const B = lower(b[sortKey]);
+      return A.localeCompare(B, 'uk', { sensitivity:'base' }) * sortDir;
+    });
+
+    renderRows(rows);
+
+    // Обновити лічильники
+    usedEl.textContent = rows.length;
+    capEl.textContent  = CAPACITY;
+    leftEl.textContent = Math.max(CAPACITY - rows.length, 0);
+  }
 
   async function loadTeams() {
     try {
-      state.textContent = 'Завантаження…';
+      setState(false, ' Завантаження…');
       const res = await fetch(GVIZ, { cache: 'no-store' });
-      const text = await res.text();
-      // gviz повертає JS, вирізаємо JSON
-      const json = JSON.parse(text.substring(text.indexOf('{'), text.lastIndexOf(')')));
+      const json = parseGViz(await res.text());
+
       const rows = (json.table.rows || [])
         .map(r => ({
-          time:     r.c[0]?.v ?? '',
-          team:     r.c[1]?.v ?? '',
-          captain:  r.c[3]?.v ?? '',
-          food:     r.c[5]?.v ?? '',   // "Так" або "Ні"
-          foodQty:  r.c[6]?.v ?? ''    // кількість
+          time:     r.c?.[0]?.v ?? '', // Дата/час (якщо є)
+          team:     r.c?.[1]?.v ?? '', // Назва команди
+          captain:  r.c?.[3]?.v ?? '', // Капітан
+          food:     r.c?.[5]?.v ?? '', // Так/Ні
+          foodQty:  r.c?.[6]?.v ?? ''  // Кількість порцій
         }))
-        .filter(r => r.team && r.captain);
+        .filter(r => norm(r.team) && norm(r.captain));
 
-      // верстка рядків
-      tbody.innerHTML = rows.map((r, i) => {
-        const foodLabel = (r.food === 'Так')
-          ? `<span class="food-badge food-yes">Так${r.foodQty ? ` (${r.foodQty})` : ''}</span>`
-          : `<span class="food-badge food-no">Ні</span>`;
-        return `
-          <tr>
-            <td class="num">${i + 1}</td>
-            <td>${r.team}</td>
-            <td>${r.captain}</td>
-            <td>${foodLabel}</td>
-          </tr>`;
-      }).join('');
+      // Унікальні команди, відсортовані за часом (якщо є), інакше — алфавіт
+      const clean = uniqueByTeam(rows).sort((a,b)=>{
+        if (a.time && b.time) return new Date(a.time) - new Date(b.time);
+        return a.team.localeCompare(b.team, 'uk', { sensitivity:'base' });
+      });
 
-      state.textContent = rows.length ? 'Оновлено' : 'Дані відсутні';
-      total.textContent = `Всього команд: ${rows.length}`;
+      allRows = clean;
+      applyFilterAndSort();
+
+      // мета/стан
+      const now = new Date();
+      updated.textContent = `Останнє оновлення: ${now.toLocaleTimeString('uk-UA')}`;
+      setState(true, ' Дані оновлено');
     } catch (e) {
-      state.textContent = 'Помилка завантаження: ' + e.message;
-      total.textContent = '';
+      allRows = [];
+      renderRows([]);
+      usedEl.textContent = '0';
+      leftEl.textContent = CAPACITY;
+      updated.textContent = '';
+      setState(false, ' Помилка: ' + e.message);
+      console.error(e);
     }
   }
 
+  // Події
+  search.addEventListener('input', applyFilterAndSort);
+  refreshBtn.addEventListener('click', loadTeams);
+  document.querySelectorAll('th.sort').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key = th.dataset.sort;
+      if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+      applyFilterAndSort();
+      // оновити стрілочки (простеньке підсвічування)
+      document.querySelectorAll('th.sort .arrow').forEach(a=>a.textContent='↕');
+      th.querySelector('.arrow').textContent = sortDir===1?'↑':'↓';
+    });
+  });
+
+  // Початкове завантаження + автооновлення
   loadTeams();
-  // автооновлення кожні 30 секунд
   setInterval(loadTeams, 30000);
 </script>
 </body>

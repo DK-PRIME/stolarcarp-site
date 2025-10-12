@@ -11,50 +11,27 @@
 
   <style>
     :root{
-      --bg:#0d0d0f;
-      --panel:#111215;
-      --card:#15161a;
-      --row:#16171c;
-      --text:#fff;
-      --muted:rgba(255,255,255,.7);
-      --line:rgba(255,255,255,.08);
-      --accent:#6b5bff;
-      --ok:#16a34a;
-      --warn:#f59e0b;
-      --err:#ef4444;
+      --bg:#0d0d0f; --panel:#111215; --card:#15161a; --row:#16171c;
+      --text:#fff; --muted:rgba(255,255,255,.7); --line:rgba(255,255,255,.08);
+      --accent:#6b5bff; --ok:#16a34a; --warn:#f59e0b; --err:#ef4444;
     }
     body{background:var(--bg);color:var(--text)}
     .muted{color:var(--muted)}
     .section--narrow{max-width:980px;margin-inline:auto}
 
-    /* Панель керування */
     .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px}
     .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:.94rem}
     .chip b{font-weight:700}
-    .input{
-      background:var(--panel);border:1px solid var(--line);color:var(--text);
-      border-radius:10px;padding:10px 12px;font-size:.96rem;min-width:220px;outline:none
-    }
-    .btn-sm{
-      padding:9px 12px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);
-      color:var(--text);text-decoration:none;font-weight:600;cursor:pointer
-    }
+    .input{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font-size:.96rem;min-width:220px;outline:none}
+    .btn-sm{padding:9px 12px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);color:var(--text);text-decoration:none;font-weight:600;cursor:pointer}
     .btn-sm:hover{filter:brightness(1.1)}
 
-    /* Таблиця */
     .table-wrap{background:var(--card);border-radius:16px;border:1px solid var(--line);overflow:hidden}
     table{width:100%;border-collapse:separate;border-spacing:0}
-    thead th{
-      position:sticky;top:0;z-index:2;background:var(--card);
-      text-align:left;font-weight:700;padding:12px;border-bottom:1px solid var(--line);
-      font-size:.95rem;letter-spacing:.02em;user-select:none
-    }
+    thead th{position:sticky;top:0;z-index:2;background:var(--card);text-align:left;font-weight:700;padding:12px;border-bottom:1px solid var(--line);font-size:.95rem;letter-spacing:.02em;user-select:none}
     thead th.sort{cursor:pointer}
     thead th.sort .arrow{opacity:.5;margin-left:6px}
-    tbody td{
-      background:var(--row);padding:12px;border-bottom:1px solid var(--line);
-      font-size:0.98rem;vertical-align:middle
-    }
+    tbody td{background:var(--row);padding:12px;border-bottom:1px solid var(--line);font-size:0.98rem;vertical-align:middle}
     tbody tr:hover td{background:#1a1b21}
     .num{width:3.5rem;opacity:.7}
     .food-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:.9rem;line-height:1;border:1px solid var(--line)}
@@ -65,15 +42,11 @@
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Courier New",monospace}
     .state-dot{display:inline-block;width:8px;height:8px;border-radius:999px;background:var(--warn);margin-right:6px}
     .state-ok{background:var(--ok)} .state-err{background:var(--err)}
-    @media (max-width:640px){
-      thead th, tbody td{padding:10px}
-      .num{width:2.5rem}
-    }
+    @media (max-width:640px){ thead th, tbody td{padding:10px} .num{width:2.5rem} }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
@@ -93,20 +66,17 @@
   </div>
 </header>
 
-<!-- MAIN -->
 <main class="main">
   <section class="container section section--narrow">
     <h1 class="page-title title-gradient">Список зареєстрованих команд</h1>
     <p class="lead muted">Оновлюється автоматично після відправки заявки з форми.</p>
 
-    <!-- Панель керування -->
     <div class="toolbar">
       <input id="search" class="input" type="search" placeholder="Пошук: команда або капітан…">
       <span class="chip">Місць: <b class="mono" id="cap">24</b> • Зайнято: <b class="mono" id="used">0</b> • Вільно: <b class="mono" id="left">24</b></span>
       <button id="refresh" class="btn-sm">Оновити зараз</button>
     </div>
 
-    <!-- Таблиця -->
     <div class="table-wrap">
       <table id="teamTable" aria-describedby="state">
         <thead>
@@ -128,7 +98,6 @@
   </section>
 </main>
 
-<!-- FOOTER -->
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львівщина</div>
@@ -142,9 +111,8 @@
 <script>
   // ==== НАЛАШТУВАННЯ ====
   const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo";
-  // Заміни gid=0 на фактичний аркуш із реєстраціями, якщо треба
   const GID = new URLSearchParams(location.search).get('gid') || '0';
-  const CAPACITY = 24; // ліміт місць
+  const CAPACITY = 24;
 
   const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
 
@@ -158,7 +126,7 @@
   const leftEl  = document.getElementById('left');
   const refreshBtn = document.getElementById('refresh');
 
-  const norm = s => (s ?? '').toString().trim();
+  const norm  = s => (s ?? '').toString().trim();
   const lower = s => norm(s).toLowerCase();
 
   function parseGViz(text){
@@ -168,13 +136,11 @@
   }
 
   function uniqueByTeam(items){
-    const seen = new Set();
-    const out = [];
+    const seen = new Set(); const out = [];
     for (const r of items){
       const key = lower(r.team);
       if (!key || seen.has(key)) continue;
-      seen.add(key);
-      out.push(r);
+      seen.add(key); out.push(r);
     }
     return out;
   }
@@ -191,16 +157,20 @@
           <td>${r.team}</td>
           <td>${r.captain}</td>
           <td>${foodLabel}</td>
-        </tr>
-      `;
+        </tr>`;
     }).join('');
   }
 
+  // надійне оновлення статусу
   function setState(ok, text){
     const dot = stateEl.querySelector('.state-dot');
     dot.classList.toggle('state-ok', ok);
     dot.classList.toggle('state-err', !ok);
-    stateEl.childNodes[stateEl.childNodes.length-1].nodeValue = text || '';
+    const msg = text || '';
+    const nodes = Array.from(stateEl.childNodes);
+    const textNode = nodes.find(n => n.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.nodeValue = ' ' + msg;
+    else stateEl.append(document.createTextNode(' ' + msg));
   }
 
   let allRows = [];
@@ -219,7 +189,7 @@
     }
 
     rows.sort((a,b)=>{
-      if (sortKey === 'num') return 0; // позицію намалюємо по порядку
+      if (sortKey === 'num') return 0;
       const A = lower(a[sortKey]);
       const B = lower(b[sortKey]);
       return A.localeCompare(B, 'uk', { sensitivity:'base' }) * sortDir;
@@ -227,29 +197,27 @@
 
     renderRows(rows);
 
-    // Обновити лічильники
-    usedEl.textContent = rows.length;
+    // Лічильники показують реальну кількість команд (усі), а не відфільтровані
+    usedEl.textContent = allRows.length;
     capEl.textContent  = CAPACITY;
-    leftEl.textContent = Math.max(CAPACITY - rows.length, 0);
+    leftEl.textContent = Math.max(CAPACITY - allRows.length, 0);
   }
 
   async function loadTeams() {
     try {
-      setState(false, ' Завантаження…');
+      setState(false, 'Завантаження…');
       const res = await fetch(GVIZ, { cache: 'no-store' });
       const json = parseGViz(await res.text());
 
-      const rows = (json.table.rows || [])
-        .map(r => ({
-          time:     r.c?.[0]?.v ?? '', // Дата/час (якщо є)
-          team:     r.c?.[1]?.v ?? '', // Назва команди
-          captain:  r.c?.[3]?.v ?? '', // Капітан
-          food:     r.c?.[5]?.v ?? '', // Так/Ні
-          foodQty:  r.c?.[6]?.v ?? ''  // Кількість порцій
-        }))
-        .filter(r => norm(r.team) && norm(r.captain));
+      const rows = (json.table.rows || []).map(r => ({
+        time:     r.c?.[0]?.v ?? '',
+        team:     r.c?.[1]?.v ?? '',
+        captain:  r.c?.[3]?.v ?? '',
+        food:     r.c?.[5]?.v ?? '',
+        foodQty:  r.c?.[6]?.v ?? ''
+      }))
+      .filter(r => norm(r.team) && norm(r.captain));
 
-      // Унікальні команди, відсортовані за часом (якщо є), інакше — алфавіт
       const clean = uniqueByTeam(rows).sort((a,b)=>{
         if (a.time && b.time) return new Date(a.time) - new Date(b.time);
         return a.team.localeCompare(b.team, 'uk', { sensitivity:'base' });
@@ -258,22 +226,20 @@
       allRows = clean;
       applyFilterAndSort();
 
-      // мета/стан
       const now = new Date();
       updated.textContent = `Останнє оновлення: ${now.toLocaleTimeString('uk-UA')}`;
-      setState(true, ' Дані оновлено');
+      setState(true, 'Дані оновлено');
     } catch (e) {
       allRows = [];
       renderRows([]);
       usedEl.textContent = '0';
       leftEl.textContent = CAPACITY;
       updated.textContent = '';
-      setState(false, ' Помилка: ' + e.message);
+      setState(false, 'Помилка: ' + e.message);
       console.error(e);
     }
   }
 
-  // Події
   search.addEventListener('input', applyFilterAndSort);
   refreshBtn.addEventListener('click', loadTeams);
   document.querySelectorAll('th.sort').forEach(th=>{
@@ -281,15 +247,14 @@
       const key = th.dataset.sort;
       if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
       applyFilterAndSort();
-      // оновити стрілочки (простеньке підсвічування)
       document.querySelectorAll('th.sort .arrow').forEach(a=>a.textContent='↕');
       th.querySelector('.arrow').textContent = sortDir===1?'↑':'↓';
     });
   });
 
-  // Початкове завантаження + автооновлення
   loadTeams();
   setInterval(loadTeams, 30000);
 </script>
 </body>
 </html>
+```0

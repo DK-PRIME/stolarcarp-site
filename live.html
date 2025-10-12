@@ -10,26 +10,38 @@
     :root{
       --line: rgba(255,255,255,.08);
       --row: #16171c;
-      --ok: #16a34a; --warn:#f59e0b;
+      --ok: #16a34a; --warn:#f59e0b; --err:#ef4444;
     }
-    .live-wrap{background:#14151a;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+    .input{background:#111215;border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
+    .btn, .btn-sm{
+      padding:10px 14px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);
+      color:#fff;text-decoration:none;font-weight:600;cursor:pointer
+    }
+    .btn:hover,.btn-sm:hover{filter:brightness(1.08)}
+    .btn-sm{padding:8px 12px}
+    .seg{display:flex;gap:6px;background:#101114;border:1px solid var(--line);border-radius:12px;padding:4px}
+    .seg button{background:transparent;border:0;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer}
+    .seg button.active{background:#1b1c20}
+    .state{display:inline-flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+    .dot.ok{background:var(--ok)} .dot.err{background:var(--err)}
+    .hint{opacity:.75}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){ .grid-2{grid-template-columns:1fr} }
+    .card.live-wrap{background:#14151a;border:1px solid var(--line);border-radius:16px;overflow:hidden}
     table.live{width:100%;border-collapse:separate;border-spacing:0}
-    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line)}
+    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line);user-select:none}
+    table.live thead th.sort{cursor:pointer}
+    table.live thead th .arrow{opacity:.5;margin-left:6px}
     table.live tbody td{background:var(--row);padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
     table.live tbody tr:hover td{background:#1a1b21}
     .num{text-align:right;white-space:nowrap}
     .zone-chip{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-weight:600}
     .lead-row td{background:#182216}
-    .totals td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
-    .hint{opacity:.7}
+    tfoot td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
     .mini{font-size:.95rem}
-    .row-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .input{background:#111215;border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
-    .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
-    .switch input{accent-color:var(--warn)}
-    .state{display:inline-flex;align-items:center;gap:8px}
-    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
-    .dot.ok{background:var(--ok)}
+    .textarea{width:100%}
   </style>
 </head>
 <body>
@@ -56,10 +68,22 @@
 <section class="container section">
   <h2 class="title-gradient">Live-протокол</h2>
 
-  <div class="grid grid-2" style="gap:16px">
+  <!-- Верхня панель керування -->
+  <div class="toolbar">
+    <div class="seg" id="zoneSeg">
+      <button data-zone="ALL" class="active">Усі</button>
+      <button data-zone="A">Зона A</button>
+      <button data-zone="B">Зона B</button>
+      <button data-zone="C">Зона C</button>
+    </div>
+    <button id="exportCsv" class="btn-sm">Експорт CSV</button>
+    <span class="mini state"><span id="statusDot" class="dot"></span><span id="statusText">Очікування…</span></span>
+  </div>
+
+  <div class="grid-2">
     <div class="card">
       <h3>Швидка вставка</h3>
-      <p class="form__hint">Встав “значення” із Google Sheets. Допустимі роздільники: <b>;</b>, <b>,</b> або <b>таб</b>.</p>
+      <p class="form__hint">Встав “значення” із Google Sheets. Допустимі роздільники: <b>;</b>, <b>,</b> або <b>таб</b>. Десяткові: кома або крапка.</p>
       <textarea id="csv-paste" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага, кг;Середня, кг;Big Fish, кг"></textarea>
       <div class="cta-row" style="margin-top:8px">
         <button class="btn btn--primary" id="render-csv">Побудувати таблицю</button>
@@ -69,13 +93,12 @@
 
     <div class="card">
       <h3>Автооновлення з посилання</h3>
-      <div class="row row-controls">
+      <div class="toolbar" style="margin:0 0 6px">
         <input id="csv-url" class="input" placeholder="https://docs.google.com/.../export?format=csv">
         <button class="btn btn--ghost" id="fetch-csv">Завантажити зараз</button>
-        <label class="switch mini"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
+        <label class="mini"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
       </div>
-      <p class="form__hint">Підійдуть посилання “Publish to web → CSV/TSV” або Apps Script, що віддає CSV/TSV.</p>
-      <p class="mini state"><span id="statusDot" class="dot"></span><span id="statusText">Очікування…</span></p>
+      <p class="form__hint">Підійдуть «Publish to web → CSV/TSV» або Apps Script, що віддає CSV/TSV. URL і автопул запам’ятовуються.</p>
     </div>
   </div>
 
@@ -86,15 +109,15 @@
           <th>Команда</th>
           <th>Зона</th>
           <th>Сектор</th>
-          <th class="num">К-сть</th>
-          <th class="num">Вага, кг</th>
-          <th class="num">Середня, кг</th>
-          <th class="num">Big Fish, кг</th>
+          <th class="num sort" data-sort="cnt">К-сть <span class="arrow">↕</span></th>
+          <th class="num sort" data-sort="weight">Вага, кг <span class="arrow">↕</span></th>
+          <th class="num sort" data-sort="avg">Середня, кг <span class="arrow">↕</span></th>
+          <th class="num sort" data-sort="big">Big Fish, кг <span class="arrow">↕</span></th>
         </tr>
       </thead>
       <tbody id="live-body"></tbody>
       <tfoot>
-        <tr class="totals">
+        <tr>
           <td colspan="3">Разом</td>
           <td class="num" id="tCount">0</td>
           <td class="num" id="tWeight">0.000</td>
@@ -105,7 +128,7 @@
     </table>
   </div>
 
-  <p class="form__hint">Порада: тримайте колонки у порядку: Команда · Зона · Сектор · Кількість · Вага · Середня · Big Fish.</p>
+  <p class="form__hint">Порада: порядок колонок — Команда · Зона · Сектор · Кількість · Вага · Середня · Big Fish.</p>
 </section>
 </main>
 
@@ -120,60 +143,91 @@
 </footer>
 
 <script>
-/* ===== утиліти форматування ===== */
-const n = v => isFinite(+v) ? +v : 0;
-const kg = v => n(v).toFixed(3);
+/* ===== Утиліти ===== */
+const toNum = v => {
+  if (v == null) return 0;
+  // приймаємо "1,25" або "1.25"
+  const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
+  const x = parseFloat(s);
+  return Number.isFinite(x) ? x : 0;
+};
+const kg = v => toNum(v).toFixed(3);
 
-/* ===== простий, але стійкий CSV/TSV-парсер =====
-   Підтримує ; , \t та змішані роздільники у межах рядка.
-   У випадку лапок — прибирає їх. */
+/* ===== CSV/TSV парсер ===== */
 function parseCSV(text){
-  const rows = [];
-  const lines = text.replace(/\r/g,'').split('\n').filter(Boolean);
+  const out = [];
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
   for (const line of lines){
-    // якщо є таби — пріоритет таба; інакше — крапка з комою; інакше — кома
     const sep = line.includes('\t') ? '\t' : (line.includes(';') ? ';' : ',');
-    const parts = line.split(sep).map(s=>s.trim().replace(/^"(.*)"$/,'$1'));
-    rows.push(parts);
+    const cols = line.split(sep).map(s => s.trim().replace(/^"(.*)"$/,'$1'));
+    out.push(cols);
   }
-  return rows;
+  // якщо перший рядок схожий на заголовок — прибираємо
+  if (out.length && /команда/i.test(out[0][0]||'')) out.shift();
+  return out;
 }
 
-/* ===== логіка рендеру ===== */
+/* ===== Стан + дані ===== */
+let rawRows = [];       // сирі масиви масивів
+let items = [];         // нормалізовані об'єкти
+let zoneFilter = 'ALL';
+let sortKey = 'weight';
+let sortDir = -1;       // -1: спадання, 1: зростання
+let timer = null;
+
+/* ===== Елементи DOM ===== */
 const bodyEl = document.getElementById('live-body');
 const tCount = document.getElementById('tCount');
 const tWeight = document.getElementById('tWeight');
 const tAvg = document.getElementById('tAvg');
 const tBig = document.getElementById('tBig');
 
-function renderTable(data){
-  // нормалізація в об’єкти
-  const items = data.map(r => ({
-    team:   r[0] ?? '',
-    zone:   (r[1] ?? '').toUpperCase(),
-    sector: r[2] ?? '',
-    cnt:    n(r[3]),
-    weight: n(r[4]),
-    avg:    n(r[5]),
-    big:    n(r[6])
-  })).filter(x => x.team);
+const txtArea = document.getElementById('csv-paste');
+const renderBtn = document.getElementById('render-csv');
+const clearBtn  = document.getElementById('clear');
 
-  // сортування за зоною (A,B,C) і вагою (спад)
+const fetchBtn = document.getElementById('fetch-csv');
+const urlInput = document.getElementById('csv-url');
+const autoChk  = document.getElementById('auto-refresh');
+
+const statusDot  = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const zoneSeg    = document.getElementById('zoneSeg');
+
+/* ===== Рендер ===== */
+function normalize(rows){
+  return rows.map(r => ({
+    team:   r[0] ?? '',
+    zone:   (r[1] ?? '').toString().trim().toUpperCase(),
+    sector: r[2] ?? '',
+    cnt:    toNum(r[3]),
+    weight: toNum(r[4]),
+    avg:    toNum(r[5]),
+    big:    toNum(r[6]),
+  })).filter(x => x.team);
+}
+
+function render(){
+  // фільтр по зоні
+  let arr = items.filter(x => zoneFilter==='ALL' ? true : x.zone === zoneFilter);
+
+  // сортування: всередині зони — за ключем; між зонами — A,B,C
   const zoneOrder = {A:1,B:2,C:3};
-  items.sort((a,b)=>{
+  arr.sort((a,b)=>{
     const z = (zoneOrder[a.zone]||9) - (zoneOrder[b.zone]||9);
     if (z !== 0) return z;
-    return b.weight - a.weight;
+    const A = a[sortKey], B = b[sortKey];
+    return (A === B ? 0 : (A > B ? 1 : -1)) * sortDir;
   });
 
-  // визначення лідерів по зонах
+  // лідери зон
   const leadByZone = {};
-  for (const it of items){
+  for (const it of arr){
     if (!leadByZone[it.zone]) leadByZone[it.zone] = it.team;
   }
 
-  // рендер рядків
-  bodyEl.innerHTML = items.map(it => `
+  // рядки
+  bodyEl.innerHTML = arr.map(it => `
     <tr class="${leadByZone[it.zone]===it.team ? 'lead-row' : ''}">
       <td>${it.team}</td>
       <td><span class="zone-chip">${it.zone || '-'}</span></td>
@@ -185,11 +239,11 @@ function renderTable(data){
     </tr>
   `).join('');
 
-  // підсумки
-  const totalCnt = items.reduce((s,x)=>s + (x.cnt||0), 0);
-  const totalW   = items.reduce((s,x)=>s + (x.weight||0), 0);
-  const maxBig   = items.reduce((m,x)=>Math.max(m, x.big||0), 0);
-  const avgW     = items.length ? totalW / items.length : 0;
+  // підсумки (по відфільтрованих)
+  const totalCnt = arr.reduce((s,x)=>s + (x.cnt||0), 0);
+  const totalW   = arr.reduce((s,x)=>s + (x.weight||0), 0);
+  const maxBig   = arr.reduce((m,x)=>Math.max(m, x.big||0), 0);
+  const avgW     = arr.length ? totalW / arr.length : 0;
 
   tCount.textContent  = totalCnt;
   tWeight.textContent = kg(totalW);
@@ -197,60 +251,112 @@ function renderTable(data){
   tBig.textContent    = kg(maxBig);
 }
 
-/* ===== керування UI ===== */
-const txtArea = document.getElementById('csv-paste');
-const renderBtn = document.getElementById('render-csv');
-const clearBtn  = document.getElementById('clear');
-
-renderBtn.addEventListener('click', ()=>{
-  const rows = parseCSV(txtArea.value);
-  renderTable(rows);
-});
-
-clearBtn.addEventListener('click', ()=>{
-  txtArea.value = '';
-  bodyEl.innerHTML = '';
-  tCount.textContent = '0'; tWeight.textContent = '0.000';
-  tAvg.textContent = '0.000'; tBig.textContent = '0.000';
-});
-
-/* ===== завантаження з URL + автооновлення ===== */
-const fetchBtn = document.getElementById('fetch-csv');
-const urlInput = document.getElementById('csv-url');
-const autoChk  = document.getElementById('auto-refresh');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
-
-let timer = null;
+/* ===== Джерела даних ===== */
+function buildFromTextarea(){
+  rawRows = parseCSV(txtArea.value);
+  items = normalize(rawRows);
+  render();
+  statusDot.classList.add('ok');
+  statusText.textContent = 'Оновлено з буфера';
+}
 
 async function fetchAndRender(){
   const url = urlInput.value.trim();
   if (!url) return;
-  statusDot.classList.remove('ok');
-  statusText.textContent = 'Завантаження…';
   try{
+    statusDot.classList.remove('ok','err');
+    statusText.textContent = 'Завантаження…';
     const res = await fetch(url, { cache:'no-store' });
     const text = await res.text();
-    const rows = parseCSV(text);
-    renderTable(rows);
+    rawRows = parseCSV(text);
+    items = normalize(rawRows);
+    render();
     statusDot.classList.add('ok');
-    const t = new Date().toLocaleTimeString('uk-UA');
-    statusText.textContent = 'Оновлено: ' + t;
+    statusText.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
+    // пам'ять
+    localStorage.setItem('live_url', url);
   }catch(e){
+    statusDot.classList.add('err');
     statusText.textContent = 'Помилка: ' + e.message;
   }
 }
 
-fetchBtn.addEventListener('click', fetchAndRender);
+/* ===== Експорт CSV ===== */
+function exportCSV(){
+  const header = ['Команда','Зона','Сектор','К-сть','Вага, кг','Середня, кг','Big Fish, кг'];
+  // беремо поточні відфільтровані/відсортовані дані
+  const zoneOrder = {A:1,B:2,C:3};
+  let arr = items.filter(x => zoneFilter==='ALL' ? true : x.zone === zoneFilter);
+  arr.sort((a,b)=>{
+    const z = (zoneOrder[a.zone]||9) - (zoneOrder[b.zone]||9);
+    if (z !== 0) return z;
+    const A = a[sortKey], B = b[sortKey];
+    return (A === B ? 0 : (A > B ? 1 : -1)) * sortDir;
+  });
+  const rows = arr.map(x => [
+    x.team, x.zone, x.sector, x.cnt, x.weight.toFixed(3), x.avg.toFixed(3), x.big.toFixed(3)
+  ]);
+  const csv = [header, ...rows].map(r => r.map(c => String(c).includes(';') ? `"${c}"` : c).join(';')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'stolarcarp-live.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
+/* ===== Події ===== */
+document.querySelectorAll('th.sort').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.sort;
+    if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = -1; }
+    document.querySelectorAll('th.sort .arrow').forEach(a=>a.textContent='↕');
+    th.querySelector('.arrow').textContent = sortDir===1?'↑':'↓';
+    render();
+  });
+});
+
+zoneSeg.addEventListener('click', (e)=>{
+  if (e.target.tagName !== 'BUTTON') return;
+  zoneFilter = e.target.dataset.zone;
+  zoneSeg.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===e.target));
+  render();
+});
+
+renderBtn.addEventListener('click', buildFromTextarea);
+clearBtn.addEventListener('click', ()=>{
+  txtArea.value = '';
+  rawRows = []; items = [];
+  render();
+  statusText.textContent = 'Очищено';
+});
+
+fetchBtn.addEventListener('click', fetchAndRender);
 autoChk.addEventListener('change', ()=>{
+  localStorage.setItem('live_auto', autoChk.checked ? '1' : '0');
   if (autoChk.checked){
     fetchAndRender();
     timer = setInterval(fetchAndRender, 60000);
-  }else{
+  } else {
     clearInterval(timer);
   }
 });
+document.getElementById('exportCsv').addEventListener('click', exportCSV);
+
+/* ===== Ініціалізація ===== */
+(function init(){
+  // підхоплюємо збережені налаштування
+  const savedUrl = localStorage.getItem('live_url');
+  if (savedUrl) urlInput.value = savedUrl;
+  const savedAuto = localStorage.getItem('live_auto') === '1';
+  autoChk.checked = savedAuto;
+  if (savedUrl && savedAuto){
+    fetchAndRender();
+    timer = setInterval(fetchAndRender, 60000);
+  } else {
+    statusText.textContent = 'Готово до роботи';
+  }
+})();
 </script>
 </body>
 </html>

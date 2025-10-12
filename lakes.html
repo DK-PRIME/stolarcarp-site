@@ -5,41 +5,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Водойми — STOLAR CARP</title>
 
+  <!-- стилі сайту як і раніше -->
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    .lake-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-    @media (max-width: 920px){ .lake-grid{grid-template-columns:repeat(2,1fr);} }
-    @media (max-width: 640px){ .lake-grid{grid-template-columns:1fr;} }
+    /* додатковий стиль для карточок озер */
+    .lakes-grid{display:grid;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr))}
+    @media (max-width:960px){.lakes-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media (max-width:640px){.lakes-grid{grid-template-columns:1fr}}
 
-    .lake-card { overflow:hidden }
-    .lake-card img{
-      width:100%; height:180px; object-fit:cover; border-radius:12px;
-      display:block; margin-bottom:10px; filter:saturate(1.05) contrast(1.03);
+    .lake-card{overflow:hidden;padding:0}
+    .lake-photo{position:relative;aspect-ratio:16/9;overflow:hidden}
+    .lake-photo img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1);transition:transform .35s ease}
+    .lake-card:hover .lake-photo img{transform:scale(1.04)}
+    .lake-label{
+      position:absolute;left:12px;bottom:12px;
+      padding:6px 10px;border-radius:999px;font-weight:700;
+      background:rgba(0,0,0,.55);backdrop-filter:saturate(140%) blur(2px);
+      border:1px solid rgba(255,255,255,.12)
     }
-    .lake-card h3{ margin:6px 0 4px }
-    .lake-card p{ opacity:.85; margin:0 0 8px }
-    .tags{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 10px }
-    .tag{ display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12) }
-    .tag--zones{ background:#171822 }
-    .tag--sectors{ background:#1a1b21 }
-
-    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    .btn-route, .btn-site{
-      padding:8px 12px; border-radius:10px; text-decoration:none; font-weight:600;
-      border:1px solid rgba(255,255,255,.14); background:#1b1c20; color:#fff;
-    }
-    .btn-route:hover, .btn-site:hover{ filter:brightness(1.1) }
+    .lake-body{padding:14px}
+    .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .tag{padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:.9rem;opacity:.9}
+    .actions{margin-top:12px;display:flex;gap:10px}
+    .btn-route{display:inline-block;padding:8px 12px;border-radius:10px;background:#191a1d;color:#fff;text-decoration:none}
   </style>
 </head>
 <body>
-
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
-    </a>
+    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -48,6 +44,7 @@
       <a href="rating.html" class="nav__link">Рейтинг</a>
       <a href="lakes.html" class="nav__link nav__link--active">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="turnir-2026.html" class="nav__link">Турнір 2026</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -56,60 +53,62 @@
 <main class="main">
   <section class="container section">
     <h1 class="page-title title-gradient">Водойми</h1>
-    <p class="lead">Основні водойми, де проводимо етапи STOLAR CARP.</p>
 
-    <div class="lake-grid">
+    <div class="lakes-grid">
       <!-- Лелехівка -->
       <article class="card lake-card">
-        <img src="assets/lakes/lelekhivka.jpg" alt="Водойма Лелехівка" loading="lazy">
-        <h3>Лелехівка</h3>
-        <p>Класична розбивка на зони A/B/C. 16–24 сектори. Зручний під’їзд, стабільний кльов.</p>
-        <div class="tags">
-          <span class="tag tag--zones">Зони: A • B • C</span>
-          <span class="tag tag--sectors">Сектори: 16–24</span>
+        <div class="lake-photo">
+          <img src="активи/ле­лехівка.jpg" alt="Водойма Лелехівка" loading="lazy">
+          <span class="lake-label">Лелехівка</span>
         </div>
-        <div class="actions">
-          <!-- Пошук у картах (працює без координат) -->
-          <a class="btn-route" target="_blank" rel="noopener"
-             href="https://www.google.com/maps/search/?api=1&query=%D0%9B%D0%B5%D0%BB%D0%B5%D1%85%D1%96%D0%B2%D0%BA%D0%B0+%D0%B2%D0%BE%D0%B4%D0%BE%D0%B9%D0%BC%D0%B0+%D0%9B%D1%8C%D0%B2%D1%96%D0%B2%D1%81%D1%8C%D0%BA%D0%B0+%D0%BE%D0%B1%D0%BB%D0%B0%D1%81%D1%82%D1%8C">
-            Маршрут
-          </a>
-          <!-- Якщо буде офіційний сайт водойми, додай посилання тут -->
-          <!-- <a class="btn-site" href="https://lake-site" target="_blank" rel="noopener">Сайт водойми</a> -->
-        </div>
-      </article>
-
-      <!-- Bounty -->
-      <article class="card lake-card">
-        <img src="assets/lakes/bounty.jpg" alt="Водойма Bounty" loading="lazy">
-        <h3>Bounty</h3>
-        <p>Глибокі бровки, високий потенціал Big Fish. Потрібна точність у підгодівлі.</p>
-        <div class="tags">
-          <span class="tag tag--zones">Зони: A • B</span>
-          <span class="tag tag--sectors">Сектори: 12–18</span>
-        </div>
-        <div class="actions">
-          <a class="btn-route" target="_blank" rel="noopener"
-             href="https://www.google.com/maps/search/?api=1&query=Bounty+%D0%B2%D0%BE%D0%B4%D0%BE%D0%B9%D0%BC%D0%B0">
-            Маршрут
-          </a>
+        <div class="lake-body">
+          <p>Класична розбивка на зони A/B/C. 16–24 секторів. Зручний під’їзд і стабільний кльов.</p>
+          <div class="tags">
+            <span class="tag">Зони: A • B • C</span>
+            <span class="tag">Сектори: 16–24</span>
+          </div>
+          <div class="actions">
+            <a class="btn-route" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/search/?api=1&query=Лелехівка+Львівська+область">Маршрут</a>
+          </div>
         </div>
       </article>
 
       <!-- Пристань -->
       <article class="card lake-card">
-        <img src="assets/lakes/prystan.jpg" alt="Водойма Пристань" loading="lazy">
-        <h3>Пристань</h3>
-        <p>Комфортна інфраструктура та шанси на білого амура. Добре працюють темні суміші.</p>
-        <div class="tags">
-          <span class="tag tag--zones">Зони: A • B • C</span>
-          <span class="tag tag--sectors">Сектори: 18–24</span>
+        <div class="lake-photo">
+          <img src="активи/пристань.jpg" alt="Водойма Пристань" loading="lazy">
+          <span class="lake-label">Пристань</span>
         </div>
-        <div class="actions">
-          <a class="btn-route" target="_blank" rel="noopener"
-             href="https://www.google.com/maps/search/?api=1&query=%D0%92%D0%BE%D0%B4%D0%BE%D0%B9%D0%BC%D0%B0+%D0%9F%D1%80%D0%B8%D1%81%D1%82%D0%B0%D0%BD%D1%8C">
-            Маршрут
-          </a>
+        <div class="lake-body">
+          <p>Гарні екземпляри білого амура, чисті береги та зручна інфраструктура для команд.</p>
+          <div class="tags">
+            <span class="tag">Зони: A • B • C</span>
+            <span class="tag">Сектори: 18–26</span>
+          </div>
+          <div class="actions">
+            <a class="btn-route" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/search/?api=1&query=Пристань+водойма">Маршрут</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Bounty (тимчасове фото) -->
+      <article class="card lake-card">
+        <div class="lake-photo">
+          <img src="активи/dk-dva-kuma-banner.jpg" alt="Водойма Bounty" loading="lazy">
+          <span class="lake-label">Bounty</span>
+        </div>
+        <div class="lake-body">
+          <p>Глибокі ділянки та потенціал на Big Fish. Рекомендуємо міцні монтажі.</p>
+          <div class="tags">
+            <span class="tag">Зони: A • B • C</span>
+            <span class="tag">Сектори: 14–20</span>
+          </div>
+          <div class="actions">
+            <a class="btn-route" target="_blank" rel="noopener"
+               href="https://www.google.com/maps/search/?api=1&query=Fishing+pond+Bounty">Маршрут</a>
+          </div>
         </div>
       </article>
     </div>
@@ -121,10 +120,9 @@
     <div>© 2025 STOLAR CARP · Львівщина</div>
     <div class="footer__links">
       <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
     </div>
   </div>
 </footer>
-
 </body>
 </html>

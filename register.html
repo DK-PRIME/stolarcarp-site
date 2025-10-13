@@ -51,9 +51,19 @@
       </div>
 
       <div class="field">
-        <label for="phone">Номер телефону *</label>
-        <input id="phone" name="phone" type="tel" required placeholder="+380 (__) ___-__-__" autocomplete="tel" inputmode="tel">
-        <small class="hint">Формат: +380XXXXXXXXX</small>
+  <label for="phone">Номер телефону *</label>
+  <input
+    id="phone"
+    name="phone"
+    type="tel"
+    required
+    inputmode="numeric"
+    autocomplete="tel"
+    placeholder="+380XXXXXXXXX"
+    pattern="^\+380\d{9}$"
+    maxlength="13"
+  />
+  <small class="hint">Формат: +380XXXXXXXXX</small>
       </div>
 
       <fieldset class="field">

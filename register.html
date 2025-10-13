@@ -1,64 +1,174 @@
-function doPost(e) {
-  try {
-    const SHEET_ID   = '1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo'; // <-- ТВОЯ таблиця
-    const SHEET_NAME = 'Реєстрації';                                    // <-- аркуш
-    const CAPACITY   = 24; // null якщо не обмежувати
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Реєстрація — STOLAR CARP</title>
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+</head>
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link nav__link--active">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="events/turnir-2026.html" class="nav__link">Турнір 2026</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
 
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sh = ss.getSheetByName(SHEET_NAME);
-    const p = e.parameter || {};
+<main class="main">
+  <section class="container section section--narrow">
+    <h1 class="page-title title-gradient">Реєстрація команд</h1>
 
-    // honeypot
-    if ((p.hp || '').trim() !== '') return fail('Помилка відправки.', 'SPAM');
+    <p class="lead">Заповніть форму нижче для участі у змаганнях.</p>
 
-    // fingerprint
-    const fp = (p.fp || '').trim();
-    if (!fp) return fail('Не вдалось ідентифікувати пристрій.', 'NO_FP');
+    <form id="regForm" class="form-card" novalidate>
+      <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0">
+      <input type="hidden" name="fp" id="fp">
 
-    // Нормалізація
-    const team    = norm(p.team_name);
-    const members = Number(p.members_count || 0);
-    const captain = norm(p.captain);
-    const phone   = (p.phone || '').replace(/[^\d+]/g,'');
-    const food    = (p.food === 'Так') ? 'Так' : 'Ні';
-    const foodQty = (food === 'Так') ? Number(p.food_qty || 0) : '';
+      <div class="field">
+        <label for="team_name">Назва команди *</label>
+        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума">
+      </div>
 
-    // Валідація
-    if (!team || team.length < 2)               return fail('Невірна назва команди.', 'BAD_TEAM');
-    if (!captain || captain.length < 2)         return fail('Вкажіть капітана.', 'BAD_CAPTAIN');
-    if (!(phone && /^\+380\d{9}$/.test(phone))) return fail('Невірний телефон (+380XXXXXXXXX).', 'BAD_PHONE');
-    if (!(members >= 1 && members <= 4))        return fail('Кількість учасників: від 1 до 4.', 'BAD_MEMBERS');
-    if (food === 'Так' && !(foodQty >= 1 && foodQty <= 20)) return fail('Кількість порцій 1–20.', 'BAD_FOOD_QTY');
+      <div class="field">
+        <label for="members_count">Кількість учасників *</label>
+        <input id="members_count" name="members_count" type="number" required min="1" max="4" inputmode="numeric" placeholder="1–4">
+      </div>
 
-    // Читаємо існуючі рядки
-    const last = sh.getLastRow();
-    const data = last > 1 ? sh.getRange(2, 1, last-1, sh.getLastColumn()).getValues() : [];
+      <div class="field">
+        <label for="captain">Капітан команди *</label>
+        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище">
+      </div>
 
-    // Припускаємо колонковий порядок (якщо інший — підешлю під тебе)
-    // A: Назва команди | B: К-ть | C: Капітан | D: Телефон | E: Харчування | F: Порції | G: timestamp | H: fp
-    const existingTeams  = data.map(r => norm(String(r[0]||'')));
-    const existingPhones = data.map(r => String(r[3]||'').replace(/[^\d+]/g,''));
-    const existingFPs    = data.map(r => String(r[7]||'').trim());
+      <div class="field">
+        <label for="phone">Номер телефону *</label>
+        <input id="phone" name="phone" type="tel" required placeholder="+380 (__) ___-__-__" autocomplete="tel" inputmode="tel">
+        <small class="hint">Формат: +380XXXXXXXXX</small>
+      </div>
 
-    // Ліміт
-    const count = existingTeams.filter(Boolean).length;
-    if (CAPACITY && count >= CAPACITY) return fail('Ліміт місць вичерпано.', 'LIMIT');
+      <fieldset class="field">
+        <legend>Харчування *</legend>
+        <label class="radio"><input type="radio" name="food" value="Ні" required> Ні</label>
+        <label class="radio"><input type="radio" name="food" value="Так" required> Так</label>
+      </fieldset>
 
-    // Дублі
-    const teamSlug = team.toLowerCase();
-    if (existingTeams.some(t => t.toLowerCase() === teamSlug)) return fail('Команда з такою назвою вже зареєстрована.', 'DUPLICATE_TEAM');
-    if (existingPhones.some(ph => ph === phone)) return fail('З цього номера вже подано заявку.', 'DUPLICATE_PHONE');
-    if (existingFPs.some(x => x && x === fp)) return fail('З цього пристрою вже подано заявку.', 'DUPLICATE_DEVICE');
+      <div class="field" id="foodQtyField">
+        <label for="food_qty">Кількість порцій</label>
+        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?">
+      </div>
 
-    // Запис
-    sh.appendRow([ team, members, captain, phone, food, (food === 'Так' ? foodQty : ''), new Date(), fp ]);
+      <div class="field checkbox">
+        <label><input id="agree" name="agree" type="checkbox" required> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
+      </div>
 
-    return ok({ ok:true, message:'Заявку збережено.' });
-  } catch (err) {
-    return fail('Серверна помилка: ' + err.message, 'SERVER');
+      <div class="form-actions">
+        <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
+        <span id="spinner" class="spinner" aria-hidden="true"></span>
+      </div>
+
+      <div id="msg" class="form-msg" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // ===== FP (відбиток пристрою) =====
+  (function setFP(){
+    const src = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width+'x'+screen.height,
+      screen.colorDepth,
+      Intl.DateTimeFormat().resolvedOptions().timeZone
+    ].join('|');
+    let h = 2166136261;
+    for (let i=0;i<src.length;i++){ h ^= src.charCodeAt(i); h = (h*16777619)>>>0; }
+    document.getElementById('fp').value = 'fp_'+h.toString(16);
+  })();
+
+  // ===== Маска телефону (спрощена) =====
+  const phone = document.getElementById('phone');
+  phone.addEventListener('input', () => {
+    let v = phone.value.replace(/[^\d+]/g,'');
+    if (!v.startsWith('+')) v = '+' + v.replace(/^\+/, '');
+    phone.value = v;
+  });
+
+  // ===== Логіка харчування =====
+  const form = document.getElementById('regForm');
+  const foodRadios = [...form.querySelectorAll('input[name="food"]')];
+  const qtyInput   = document.getElementById('food_qty');
+  const qtyField   = document.getElementById('foodQtyField');
+  function updateQtyState(){
+    const need = (foodRadios.find(r=>r.checked)?.value === 'Так');
+    qtyInput.disabled = !need;
+    qtyInput.required = need;
+    if (!need) qtyInput.value = '';
+    qtyField.classList.toggle('field--disabled', !need);
   }
+  foodRadios.forEach(r => r.addEventListener('change', updateQtyState));
+  updateQtyState();
 
-  function norm(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
-  function ok(obj){ return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON); }
-  function fail(error, code){ return ContentService.createTextOutput(JSON.stringify({ ok:false, error, code })).setMimeType(ContentService.MimeType.JSON); }
-}
+  // ===== Надсилання =====
+  const ENDPOINT = "<<< ВСТАВ СЮДИ URL Web App (…/exec) >>>";
+  const btn = document.getElementById('submitBtn');
+  const msg = document.getElementById('msg');
+  const spinner = document.getElementById('spinner');
+
+  function setBusy(b){ btn.disabled = b; spinner.classList.toggle('spinner--on', b); }
+  function flash(type, text){ msg.className = 'form-msg ' + type; msg.textContent = text; }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    flash('', '');
+    setBusy(true);
+
+    if (!form.checkValidity()){
+      setBusy(false);
+      flash('err', 'Перевірте обов’язкові поля форми.');
+      return;
+    }
+    if (form.food.value === 'Так' && !form.food_qty.value){
+      setBusy(false);
+      flash('err', 'Вкажіть кількість порцій.');
+      return;
+    }
+
+    try{
+      const res = await fetch(ENDPOINT, { method:'POST', body:new FormData(form) });
+      const data = await res.json();
+      if (data.ok){
+        flash('ok', 'Дякуємо! Заявку надіслано та збережено.');
+        form.reset(); updateQtyState();
+      }else{
+        flash('err', data.error || 'Сталася помилка при надсиланні.');
+      }
+    }catch(err){
+      flash('err', 'Не вдалося надіслати форму: ' + err.message);
+    }finally{
+      setBusy(false);
+    }
+  });
+</script>
+</body>
+</html>

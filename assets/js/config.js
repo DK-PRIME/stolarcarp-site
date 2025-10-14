@@ -3,6 +3,29 @@
   const burger = document.getElementById('burger');
   const nav = document.getElementById('nav');
   if(burger && nav){ burger.addEventListener('click', () => nav.classList.toggle('open')); }
+  // === Inject favicon & app icon for all pages ===
+  (function injectIcons(){
+    const head = document.head;
+
+    function addLink(rel, href, type){
+      if (![...head.querySelectorAll(`link[rel="${rel}"]`)].length) {
+        const l = document.createElement('link');
+        l.rel = rel;
+        l.href = href;
+        if (type) l.type = type;
+        head.appendChild(l);
+      }
+    }
+    function addMeta(name, content){
+      let m = head.querySelector(`meta[name="${name}"]`);
+      if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); head.appendChild(m); }
+      m.setAttribute('content', content);
+    }
+
+    addLink('icon', 'assets/favicon.png', 'image/png');
+    addLink('apple-touch-icon', 'assets/favicon.png');
+    addMeta('theme-color', '#1a1a1a');
+  })();
 
   function parseCSV(text){
     const rows = text.trim().split(/\r?\n/).map(r => r.split(/;|,/).map(c => c.trim()));

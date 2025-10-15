@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 </head>
-<body>
+
+<body class="register-page">
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
@@ -28,7 +29,6 @@
 <main class="main">
   <section class="container section section--narrow">
     <h1 class="page-title title-gradient">Реєстрація команд</h1>
-
     <p class="lead">Заповніть форму нижче для участі у змаганнях.</p>
 
     <form id="regForm" class="form-card" novalidate>
@@ -51,27 +51,23 @@
       </div>
 
       <div class="field">
-  <label for="phone_rest">Номер телефону *</label>
-
-  <!-- видима частина: префікс +380 + 9 цифр -->
-  <div class="phone-wrap">
-    <span class="phone-prefix">+380</span>
-    <input
-      id="phone_rest"
-      type="text"
-      inputmode="numeric"
-      pattern="\d{9}"
-      maxlength="9"
-      required
-      placeholder="XXXXXXXXX"
-      aria-label="9 цифр після +380"
-    />
-  </div>
-
-  <!-- приховане поле, яке відправляється в форму -->
-  <input type="hidden" id="phone" name="phone" />
-
-  <small class="hint">Введіть 9 цифр після +380 (разом буде +380XXXXXXXXX)</small>
+        <label for="phone_rest">Номер телефону *</label>
+        <div class="phone-wrap">
+          <span class="phone-prefix">+380</span>
+          <input
+            id="phone_rest"
+            type="text"
+            inputmode="numeric"
+            pattern="\d{9}"
+            maxlength="9"
+            required
+            placeholder="XXXXXXXXX"
+            aria-label="9 цифр після +380"
+          />
+        </div>
+        <!-- приховане поле, що відправиться у форму -->
+        <input type="hidden" id="phone" name="phone" />
+        <small class="hint">Введіть 9 цифр після +380 (разом буде +380XXXXXXXXX)</small>
       </div>
 
       <fieldset class="field">
@@ -110,9 +106,9 @@
 </footer>
 
 <script>
-  /* ====== Налаштування антиспаму ====== */
-  const MIN_TIME_ON_PAGE_MS = 4000;          // мінімальний час, який треба провести на сторінці (4с)
-  const LOCAL_COOLDOWN_MIN  = 24 * 60;       // локальний кулдаун після успішної заявки (хвилини)
+  /* ===== Антиспам/таймер ===== */
+  const MIN_TIME_ON_PAGE_MS = 4000;
+  const LOCAL_COOLDOWN_MIN  = 24 * 60;
   const COOLDOWN_KEY        = 'sc_reg_cooldown_until';
   const DONE_FP_KEY         = 'sc_reg_done_fp';
   const PAGE_LOADED_AT      = Date.now();
@@ -131,13 +127,16 @@
     document.getElementById('fp').value = 'fp_'+h.toString(16);
   })();
 
-  /* ===== Маска телефону (спрощена) ===== */
-  const phone = document.getElementById('phone');
-  phone.addEventListener('input', () => {
-    let v = phone.value.replace(/[^\d+]/g,'');
-    if (!v.startsWith('+')) v = '+' + v.replace(/^\+/, '');
-    phone.value = v;
-  });
+  /* ===== Телефон: +380 + 9 цифр (видиме поле -> приховане) ===== */
+  const phoneHidden = document.getElementById('phone');
+  const phoneRest   = document.getElementById('phone_rest');
+  function syncPhone(){
+    const digits = (phoneRest.value || '').replace(/\D+/g,'').slice(0,9);
+    phoneRest.value = digits;
+    phoneHidden.value = digits.length === 9 ? '+380' + digits : '';
+  }
+  phoneRest.addEventListener('input', syncPhone);
+  syncPhone();
 
   /* ===== Логіка харчування ===== */
   const form = document.getElementById('regForm');
@@ -163,24 +162,17 @@
   function setBusy(b){ btn.disabled = b; spinner.classList.toggle('spinner--on', b); }
   function flash(type, text){ msg.className = 'form-msg ' + type; msg.textContent = text; }
 
-  function minsLeft(ts){
-    const ms = (+ts) - Date.now();
-    return Math.max(0, Math.ceil(ms/60000));
-  }
-  function cooldownActive(){
-    const until = localStorage.getItem(COOLDOWN_KEY);
-    return until && Date.now() < +until;
-  }
+  function minsLeft(ts){ const ms = (+ts) - Date.now(); return Math.max(0, Math.ceil(ms/60000)); }
+  function cooldownActive(){ const until = localStorage.getItem(COOLDOWN_KEY); return until && Date.now() < +until; }
 
-  // сопоставлення кодів з твого GAS у дружні повідомлення
   const ERROR_MAP = {
-    LIMIT: 'Ліміт місць вичерпано.',
-    DUPLICATE_TEAM:  'Команда з такою назвою вже зареєстрована.',
-    DUPLICATE_PHONE: 'З цього номера вже подано заявку.',
+    LIMIT:'Ліміт місць вичерпано.',
+    DUPLICATE_TEAM:'Команда з такою назвою вже зареєстрована.',
+    DUPLICATE_PHONE:'З цього номера вже подано заявку.',
     DUPLICATE_DEVICE:'З цього пристрою вже подано заявку.',
-    BAD_TEAM:   'Невірна назва команди.',
+    BAD_TEAM:'Невірна назва команди.',
     BAD_CAPTAIN:'Вкажіть капітана.',
-    BAD_PHONE:  'Невірний телефон. Формат: +380XXXXXXXXX.',
+    BAD_PHONE:'Невірний телефон. Формат: +380XXXXXXXXX.',
     BAD_MEMBERS:'Кількість учасників: від 1 до 4.',
     BAD_FOOD_QTY:'Вкажіть кількість порцій 1–20.'
   };
@@ -191,47 +183,47 @@
     e.preventDefault();
     flash('', '');
 
-    // анти-даблклік
-    if (inFlight){ return; }
+    if (inFlight) return;
 
-    // перевірка мінімального часу на сторінці
     if (Date.now() - PAGE_LOADED_AT < MIN_TIME_ON_PAGE_MS){
-      flash('err', 'Будь ласка, заповніть форму уважно і повторіть через кілька секунд.');
+      flash('err','Будь ласка, заповніть форму уважно і повторіть через кілька секунд.');
       return;
     }
 
-    // локальний кулдаун (м’який замок на клієнті)
     if (cooldownActive()){
       const left = minsLeft(localStorage.getItem(COOLDOWN_KEY));
-      flash('err', `Заявка вже була надіслана. Спробуйте пізніше (прибл. ${left} хв).`);
+      flash('err',`Заявка вже була надіслана. Спробуйте пізніше (прибл. ${left} хв).`);
       return;
     }
 
-    // якщо цей самий пристрій вже реєстрував (після успіху зберігаємо fp)
     const fp = document.getElementById('fp').value;
     if (localStorage.getItem(DONE_FP_KEY) === fp){
-      flash('err', 'З цього пристрою вже подано заявку.');
+      flash('err','З цього пристрою вже подано заявку.');
       return;
     }
 
-    // стандартні HTML5 перевірки
     if (!form.checkValidity()){
-      flash('err', 'Перевірте обов’язкові поля форми.');
+      flash('err','Перевірте обов’язкові поля форми.');
       form.reportValidity?.();
       return;
     }
-    if (form.food.value === 'Так' && !form.food_qty.value){
-      flash('err', 'Вкажіть кількість порцій.');
+
+    // телефон з префіксом
+    syncPhone();
+    if (!/^\+380\d{9}$/.test(phoneHidden.value)){
+      flash('err','Введіть 9 цифр після +380 (разом буде +380XXXXXXXXX)');
       return;
     }
 
-    // honeypot (на всяк випадок заповнимо порожнім рядком)
-    form.hp.value = '';
+    if (form.food.value === 'Так' && !form.food_qty.value){
+      flash('err','Вкажіть кількість порцій.');
+      return;
+    }
 
-    // технічні поля (для аналітики/беку, якщо захочеш читати)
+    form.hp.value = '';
     const fd = new FormData(form);
-    fd.append('ts', Date.now().toString());              // timestamp клієнта
-    fd.append('ua', navigator.userAgent.slice(0,200));   // урізаний UA
+    fd.append('ts', Date.now().toString());
+    fd.append('ua', navigator.userAgent.slice(0,200));
 
     inFlight = true; setBusy(true);
     try{
@@ -239,19 +231,17 @@
       const data = await res.json();
 
       if (data.ok){
-        flash('ok', 'Дякуємо! Заявку надіслано та збережено.');
-        // локально запам’ятати успіх: блок до X хвилин + мітка fp
+        flash('ok','Дякуємо! Заявку надіслано та збережено.');
         const until = Date.now() + LOCAL_COOLDOWN_MIN*60000;
         localStorage.setItem(COOLDOWN_KEY, until.toString());
         localStorage.setItem(DONE_FP_KEY, fp);
-
         form.reset(); updateQtyState();
       }else{
         const nice = ERROR_MAP[data.code] || data.error || 'Сталася помилка при надсиланні.';
         flash('err', nice);
       }
     }catch(err){
-      flash('err', 'Не вдалося надіслати форму: ' + err.message);
+      flash('err','Не вдалося надіслати форму: ' + err.message);
     }finally{
       setBusy(false); inFlight = false;
     }

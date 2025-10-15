@@ -205,3 +205,46 @@ h2 {
   line-height: 1;
   white-space: nowrap;
 }
+/* ===== СТИЛЬ ПОЛЯ ТЕЛЕФОНУ (+380 XXXXXXXX) ===== */
+.phone-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.phone-prefix {
+  background: #181818;
+  color: #f6b700;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 14px;
+  border-radius: 10px;
+  user-select: none;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+#phone_rest {
+  flex: 1;
+  background: #111215;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#phone_rest:focus {
+  border-color: #f6b700;
+  box-shadow: 0 0 8px rgba(246, 183, 0, 0.4);
+}
+
+.hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #aaa;
+}

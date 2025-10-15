@@ -1,30 +1,36 @@
-/* STOLAR CARP helpers */
+/* STOLAR CARP helpers — single source for shared JS across pages */
 (function(){
+  /* ===== Header / favicon ===== */
   const burger = document.getElementById('burger');
   const nav = document.getElementById('nav');
   if (burger && nav) burger.addEventListener('click', () => nav.classList.toggle('open'));
 
-  // === Inject favicon & app icon for all pages ===
+  // Inject favicon & PWA-ish bits once per page
   (function injectIcons(){
     const head = document.head;
-    function addLink(rel, href, type){
+    const addLink = (rel, href, type) => {
       if (!head.querySelector(`link[rel="${rel}"]`)) {
         const l = document.createElement('link');
         l.rel = rel; l.href = href; if (type) l.type = type;
         head.appendChild(l);
       }
-    }
-    function addMeta(name, content){
+    };
+    const addMeta = (name, content) => {
       let m = head.querySelector(`meta[name="${name}"]`);
       if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); head.appendChild(m); }
       m.setAttribute('content', content);
-    }
+    };
     addLink('icon', 'assets/favicon.png', 'image/png');
     addLink('apple-touch-icon', 'assets/favicon.png');
     addMeta('theme-color', '#1a1a1a');
   })();
 
-  /* ===== Helpers ===== */
+  /* ===== Utils ===== */
+  const escapeHTML = s => String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+  // simple CSV/TSV (роздільник: таб/крапка з комою/кома; лапки знімаємо по краях)
   function parseCSV(text){
     const lines = String(text||'').replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
     return lines.map(line=>{
@@ -51,26 +57,28 @@
     const statusDot  = document.getElementById('statusDot');
     let autoTimer = null;
 
-    function setStatus(type, text){
+    const setStatus = (type, text)=>{
       if (!statusText || !statusDot) return;
       statusDot.classList.remove('ok','err');
       if (type==='ok') statusDot.classList.add('ok');
       if (type==='err') statusDot.classList.add('err');
       statusText.textContent = text;
-    }
+    };
 
-    function renderLiveTable(rows){
+    const renderLiveTable = (rows)=>{
       if(!liveBody) return;
-      liveBody.innerHTML = rows.map(r => `<tr>${r.map(c => `<td>${c||''}</td>`).join('')}</tr>`).join('');
-    }
+      liveBody.innerHTML = rows.map(r => `<tr>${
+        r.map(c => `<td>${escapeHTML(c||'')}</td>`).join('')
+      }</tr>`).join('');
+    };
 
-    async function fetchCSV(url){
+    const fetchCSV = async (url)=>{
       const res = await fetch(url, {cache:'no-store'});
       if(!res.ok) throw new Error('HTTP '+res.status);
       return parseCSV(await res.text());
-    }
+    };
 
-    async function tick(){
+    const tick = async ()=>{
       const url = (csvUrlInput?.value||'').trim();
       if (!url) return;
       try{
@@ -81,7 +89,7 @@
       }catch(e){
         setStatus('err', 'Помилка: ' + e.message);
       }
-    }
+    };
 
     if (renderBtn && paste && liveBody){
       renderBtn.addEventListener('click', ()=>{
@@ -121,16 +129,15 @@
     }
   })();
 
-  /* ===== RATING + AWARDS ===== */
+  /* ===== RATING + AWARDS (optional controls present) ===== */
   (function(){
     const rateCSV  = document.getElementById('rating-csv');
     const calcBtn  = document.getElementById('calc-awards');
     const topLake  = document.getElementById('top-lake');
     const zonesWrap= document.getElementById('zones-awards');
-
     if (!calcBtn || !rateCSV) return;
 
-    function groupByZone(rows){
+    const groupByZone = (rows)=>{
       const byZ = {A:[],B:[],C:[]};
       rows.forEach(r=>{
         const team = r[0]||'';
@@ -140,24 +147,24 @@
       });
       ['A','B','C'].forEach(z => byZ[z].sort((a,b)=>b.weight-a.weight));
       return byZ;
-    }
+    };
 
-    function renderTopLake(byZ){
+    const renderTopLake = (byZ)=>{
       if (!topLake) return;
       const winners = ['A','B','C'].map(z => byZ[z][0]).filter(Boolean);
       winners.sort((a,b)=>b.weight-a.weight);
       topLake.innerHTML = winners.length
-        ? winners.map((w,i)=>`<tr><td>${i+1}</td><td>${w.team}</td><td>${kg(w.weight)}</td></tr>`).join('')
+        ? winners.map((w,i)=>`<tr><td>${i+1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join('')
         : `<tr><td colspan="3">Немає даних</td></tr>`;
-    }
+    };
 
-    function renderZonesAwards(byZ){
+    const renderZonesAwards = (byZ)=>{
       if (!zonesWrap) return;
       zonesWrap.innerHTML = ['A','B','C'].map(z=>{
         const arr = byZ[z];
         const awards = [arr[1], arr[2], arr[3]].filter(Boolean);
         const rows = awards.length
-          ? awards.map((w,i)=>`<tr><td>${i+1}</td><td>${w.team}</td><td>${kg(w.weight)}</td></tr>`).join('')
+          ? awards.map((w,i)=>`<tr><td>${i+1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join('')
           : '<tr><td colspan="3">Недостатньо даних</td></tr>';
         return `
           <div class="card">
@@ -169,7 +176,7 @@
           </div>
         `;
       }).join('');
-    }
+    };
 
     calcBtn.addEventListener('click', ()=>{
       try{
@@ -186,14 +193,10 @@
     });
   })();
 
-  /* ===== OPTIONAL localstore registration (opt-in) =====
-     Працює лише якщо форма має data-localstore,
-     і підхоплює #register-form або #regForm.
-  */
+  /* ===== Optional: localstore registration (only if form has data-localstore) ===== */
   (function(){
     const form = document.getElementById('register-form') || document.getElementById('regForm');
     if (!form || !form.hasAttribute('data-localstore')) return;
-
     form.addEventListener('submit', (e)=>{
       e.preventDefault();
       const data = Object.fromEntries(new FormData(form).entries());
@@ -210,7 +213,7 @@
   })();
 })();
 
-/* ====== AUTO REGISTRATION WINDOWS (events/turnir-2026.html) ====== */
+/* ===== AUTO REGISTRATION WINDOWS (turnir-2026.html) ===== */
 (function(){
   const stagesWrap = document.getElementById('stages');
   if(!stagesWrap) return;
@@ -220,8 +223,8 @@
 
   stagesWrap.querySelectorAll('.card[data-id][data-start]').forEach(card=>{
     const id = card.dataset.id;
-    const s  = toDate(card.dataset.start);
-    const e  = toDate(card.dataset.end || card.dataset.start);
+    const s  = toDate(card.dataset.start || '2026-01-01'); // дефолт якщо забудемо
+    const e  = toDate(card.dataset.end   || card.dataset.start || '2026-01-01');
     if (!id || !s){ console.warn('Stage card пропущена (нема id/start):', card); return; }
 
     // дозволяємо перевизначити в HTML

@@ -177,3 +177,53 @@
     });
   }
 })();
+/* ====== AUTO REGISTRATION WINDOWS (events/turnir-2026.html) ====== */
+(function(){
+  const pageIsSeason = document.querySelector('.cards#stages');
+  if(!pageIsSeason) return;
+
+  const DAY = 86400000;
+  const toDate = s => new Date(s + 'T00:00:00');
+
+  document.querySelectorAll('.cards#stages .card[data-id][data-start]').forEach(card=>{
+    const id   = card.dataset.id;
+    const s    = toDate(card.dataset.start);
+    const e    = toDate(card.dataset.end || card.dataset.start);
+
+    // Можеш задати card.dataset.regOpen / regClose в HTML; якщо ні — дефолти:
+    const open = card.dataset.regOpen ? toDate(card.dataset.regOpen) : new Date(s.getTime() - 14*DAY);
+    const close= card.dataset.regClose? toDate(card.dataset.regClose): new Date(s.getTime() - 6*3600*1000);
+
+    // Кнопка «Реєстрація»: шукаємо існуючу або створюємо
+    let regBtn = card.querySelector('[data-reg]');
+    if(!regBtn){
+      const btns = card.querySelector('.btns') || card.appendChild(Object.assign(document.createElement('div'),{className:'btns'}));
+      regBtn = document.createElement('a');
+      regBtn.className = 'btn btn--primary';
+      regBtn.setAttribute('data-reg','');
+      regBtn.href = `register.html?stage=${encodeURIComponent(id)}`;
+      btns.prepend(regBtn); // ставимо першою кнопкою
+    }
+
+    // Статуси
+    const now = new Date();
+    if(now < open){
+      regBtn.textContent = 'Реєстрація скоро';
+      regBtn.setAttribute('aria-disabled','true');
+      regBtn.setAttribute('tabindex','-1');
+      regBtn.setAttribute('title', `Відкриється: ${open.toLocaleDateString('uk-UA')}`);
+      regBtn.style.opacity = '.6'; regBtn.style.pointerEvents = 'none';
+    }else if(now > close){
+      regBtn.textContent = 'Реєстрацію закрито';
+      regBtn.setAttribute('aria-disabled','true');
+      regBtn.setAttribute('tabindex','-1');
+      regBtn.style.opacity = '.6'; regBtn.style.pointerEvents = 'none';
+    }else{
+      regBtn.textContent = 'Реєстрація';
+      regBtn.removeAttribute('aria-disabled');
+      regBtn.removeAttribute('tabindex');
+      regBtn.style.opacity = '';
+      regBtn.style.pointerEvents = '';
+    }
+  });
+})();

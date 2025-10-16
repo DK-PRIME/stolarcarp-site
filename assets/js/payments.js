@@ -1,22 +1,25 @@
-/* assets/js/payments.js */
-
 /* ================================
-   Константи / ключі
+   STOLAR CARP — payments.js
+   - Paywall знімається після "Я оплатив(ла)"
+   - Валідації, анти-спам, відправка у Google Sheets
 ================================ */
-const PAY_OK_KEY   = 'sc_pay_ok_v1';       // оплата підтверджена на цьому пристрої
-const PAY_MARK_KEY = 'sc_pay_mark_ts_v1';  // коли натиснули "Я оплатив(ла)"
+
+/* Константи / ключі */
+const PAY_OK_KEY   = 'sc_pay_ok_v1';
+const PAY_MARK_KEY = 'sc_pay_mark_ts_v1';
 const COOLDOWN_KEY = 'sc_reg_cooldown_until';
 const DONE_FP_KEY  = 'sc_reg_done_fp';
 
-const MIN_TIME_ON_PAGE_MS = 4000; // антиспам
+const MIN_TIME_ON_PAGE_MS = 4000;
 const PAGE_LOADED_AT = Date.now();
 
-/* Якщо захочеш реальну перевірку організатором через Google Sheets —
-   створи Apps Script endpoint і впиши сюди URL,
-   а нижче у checkPayment() розкоментуй fetch. */
-const OPTIONAL_VERIFY_URL = ''; // наприклад: 'https://script.google.com/macros/s/XXXXX/exec'
+/* Ендпоінт Google Apps Script (твій робочий) */
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwfc8-XTU7hXh9ermqg_zxpnqVivWTuTDW_12guSuzU0R-bC4-3R6xp29W12ZOai8B3yg/exec";
 
-/* Глобальні елементи */
+/* Якщо захочеш реальну перевірку платежу — вкажи URL свого Apps Script */
+const OPTIONAL_VERIFY_URL = ""; // напр.: 'https://script.google.com/macros/s/XXXX/exec?action=verify&phone=+380XXXXXXXXX'
+
+/* DOM-елементи */
 const formEl      = document.getElementById('regForm');
 const msgEl       = document.getElementById('msg');
 const spinnerEl   = document.getElementById('spinner');
@@ -28,16 +31,7 @@ const payBtn      = document.getElementById('payButton');
 const iPaidBtn    = document.getElementById('iPaid');
 const checkBtn    = document.getElementById('checkPayment');
 
-/* Поп-ап */
-const modal       = document.getElementById('paymentModal');
-const modalClose  = modal?.querySelector('.close');
-
-/* Google Sheet endpoint для заявки (твій існуючий) */
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbwfc8-XTU7hXh9ermqg_zxpnqVivWTuTDW_12guSuzU0R-bC4-3R6xp29W12ZOai8B3yg/exec";
-
-/* ================================
-   Хелпери
-================================ */
+/* Хелпери UI */
 function flash(type, text) {
   msgEl.className = 'form-msg ' + (type || '');
   msgEl.textContent = text || '';
@@ -47,7 +41,7 @@ function setBusy(b) {
   spinnerEl.classList.toggle('spinner--on', b);
 }
 
-/* Формуємо fingerprint (простий) */
+/* Fingerprint (простий) */
 (function setFP(){
   const src = [
     navigator.userAgent,
@@ -86,9 +80,7 @@ function updateQtyState(){
 foodRadios.forEach(r => r.addEventListener('change', updateQtyState));
 updateQtyState();
 
-/* ================================
-   Paywall UI + дії
-================================ */
+/* Стан paywall */
 function setPayUnlockedUI() {
   paywallEl?.classList.add('paywall--ok');
   payStatusEl.textContent = 'Оплату підтверджено на цьому пристрої. Можете надсилати заявку.';
@@ -97,61 +89,45 @@ function setPayLockedUI() {
   paywallEl?.classList.remove('paywall--ok');
   payStatusEl.textContent = 'Щоб зареєструватись, спочатку оплатіть внесок.';
 }
-
-function isPaidOnThisDevice() {
-  return localStorage.getItem(PAY_OK_KEY) === '1';
-}
+function isPaidOnThisDevice() { return localStorage.getItem(PAY_OK_KEY) === '1'; }
 function markPaidOnThisDevice() {
   localStorage.setItem(PAY_OK_KEY, '1');
   localStorage.setItem(PAY_MARK_KEY, Date.now().toString());
   setPayUnlockedUI();
 }
-
-function initPaywallState() {
+(function initPaywallState(){
   if (isPaidOnThisDevice()) setPayUnlockedUI();
   else setPayLockedUI();
-}
-initPaywallState();
+})();
 
-/* Відкрити поп-ап */
+/* Відкрити поп-ап (логіка у register.html) — тут ніяких дій не треба */
 payBtn?.addEventListener('click', () => {
-  modal.classList.add('open');
-  document.body.classList.add('modal-open');
-  modal.setAttribute('aria-hidden','false');
+  // просто залишаємо подію openModal у HTML
 });
-/* Закрити поп-ап */
-modalClose?.addEventListener('click', closeModal);
-modal?.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeModal(); });
-function closeModal(){
-  modal.classList.remove('open');
-  document.body.classList.remove('modal-open');
-  modal.setAttribute('aria-hidden','true');
-}
 
-/* Натиснув "Я оплатив(ла)" — знімаємо paywall на цьому пристрої */
+/* "Я оплатив(ла)" — розблоковує відправку на цьому пристрої */
 iPaidBtn?.addEventListener('click', () => {
   markPaidOnThisDevice();
   flash('ok','Дякуємо! Статус оплати зафіксовано на цьому пристрої.');
 });
 
-/* "Перевірити оплату" — опційна інтеграція (поки просто підказка) */
+/* "Перевірити оплату" — опційно через Apps Script, поки підказка */
 checkBtn?.addEventListener('click', async () => {
   if (isPaidOnThisDevice()){
     flash('ok','Оплата вже підтверджена на цьому пристрої — надішліть заявку.');
     return;
   }
 
-  // Якщо зробиш Apps Script для перевірки — розкоментуй і заповни OPTIONAL_VERIFY_URL
-  /*
   if (OPTIONAL_VERIFY_URL){
     try{
       const phone = phoneHidden.value;
       if (!/^\+380\d{9}$/.test(phone)) {
-        flash('err','Вкажіть номер телефону (9 цифр після +380) — ми перевіримо по ньому.');
+        flash('err','Вкажіть номер телефону (9 цифр після +380) — перевіримо по ньому.');
         return;
       }
-      const res  = await fetch(OPTIONAL_VERIFY_URL + '?action=verify&phone=' + encodeURIComponent(phone));
+      const url = OPTIONAL_VERIFY_URL.includes('?') ? (OPTIONAL_VERIFY_URL + '&phone=' + encodeURIComponent(phone))
+                                                   : (OPTIONAL_VERIFY_URL + '?phone=' + encodeURIComponent(phone));
+      const res  = await fetch(url);
       const data = await res.json();
       if (data?.paid){
         markPaidOnThisDevice();
@@ -164,15 +140,12 @@ checkBtn?.addEventListener('click', async () => {
     }
     return;
   }
-  */
 
-  // За замовчуванням:
+  // За замовчуванням (без серверної перевірки):
   flash('', 'Після оплати натисніть «Я оплатив(ла)». За потреби — напишіть організатору.');
 });
 
-/* ================================
-   Відправка форми
-================================ */
+/* Відправка форми */
 let inFlight = false;
 
 formEl.addEventListener('submit', async (e) => {
@@ -181,7 +154,7 @@ formEl.addEventListener('submit', async (e) => {
 
   if (inFlight) return;
 
-  // Мінімальний час на сторінці — щоб не бот
+  // Мінімальний час на сторінці — анти-бот
   if (Date.now() - PAGE_LOADED_AT < MIN_TIME_ON_PAGE_MS){
     flash('err','Будь ласка, заповніть форму уважно і повторіть через кілька секунд.');
     return;
@@ -193,7 +166,7 @@ formEl.addEventListener('submit', async (e) => {
     return;
   }
 
-  // Валідація браузером
+  // Базова валідація
   if (!formEl.checkValidity()){
     flash('err','Перевірте обов’язкові поля форми.');
     formEl.reportValidity?.();
@@ -225,7 +198,7 @@ formEl.addEventListener('submit', async (e) => {
     return;
   }
 
-  // Готуємо дані
+  // Дані форми
   formEl.hp.value = ''; // honeypot
   const fd = new FormData(formEl);
   fd.append('ts', Date.now().toString());
@@ -239,8 +212,7 @@ formEl.addEventListener('submit', async (e) => {
 
     if (data.ok){
       flash('ok','Дякуємо! Заявку надіслано та збережено.');
-      // Локальний cooldown: 24 год
-      const cd = Date.now() + 24*60*60000;
+      const cd = Date.now() + 24*60*60000; // 24 год
       localStorage.setItem(COOLDOWN_KEY, cd.toString());
       localStorage.setItem(DONE_FP_KEY, fp);
       formEl.reset(); updateQtyState();

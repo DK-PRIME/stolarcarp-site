@@ -71,14 +71,7 @@
         <label for="food_qty">Кількість порцій</label>
         <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
-<!-- Підказка для коментаря в банку -->
-<div class="notice" id="payNote" style="margin-top:10px">
-  💡 <b>Важливо!</b> Під час оплати у вашому банку в полі
-  <i>«Призначення платежу / Коментар»</i> впишіть назву команди.
-  <br>
-  Приклад: <span class="code" id="payComment">Оплата внеску — [назва команди]</span>
-  <button type="button" class="btn btn--ghost" id="copyPayComment" style="margin-left:8px">Скопіювати</button>
-</div>
+      
 
       <div class="field checkbox">
         <label><input id="agree" name="agree" type="checkbox" required /> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
@@ -132,6 +125,14 @@
         💚 Оплатити 1500 ₴ (Приват24)
       </a>
     </div>
+
+    <!-- 💬 Коментар до оплати -->
+<div class="field">
+  <label for="payment_comment">Коментар до оплати *</label>
+  <textarea id="payment_comment" name="payment_comment" rows="2"
+    placeholder="Вкажіть назву команди, від імені якої здійснено оплату"></textarea>
+  <small class="hint">Наприклад: DK Два Кума</small>
+</div>
 
     <div class="qr-block">
       <img

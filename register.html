@@ -85,9 +85,13 @@
       </div>
 
       <!-- PAYWALL -->
-      <div class="paywall">
+      <div class="paywall" id="paywall">
         <p id="payStatus" class="hint">Щоб зареєструватись, спочатку оплатіть внесок.</p>
-        <button id="payButton" class="btn btn--primary" type="button">Оплатити внесок</button>
+        <div class="paywall__buttons">
+          <button id="payButton" class="btn btn--primary" type="button">Оплатити внесок</button>
+          <button id="iPaid" class="btn btn--ghost" type="button">Я оплатив(ла)</button>
+          <button id="checkPayment" class="btn btn--ghost" type="button">Перевірити оплату</button>
+        </div>
       </div>
 
       <div class="form-actions">
@@ -200,7 +204,7 @@ body.modal-open{ overflow:hidden; }  /* блокуємо скрол фону */
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeModal(); });
 </script>
 
-<!-- Твоя логіка платежів/валідації -->
+<!-- Логіка платежів/валідації -->
 <script src="assets/js/payments.js"></script>
 </body>
 </html>

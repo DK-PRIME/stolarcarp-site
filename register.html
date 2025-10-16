@@ -11,9 +11,7 @@
 <body class="register-page">
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
-    </a>
+    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -74,17 +72,29 @@
       </div>
 
       <p style="margin:10px 0;color:#ffcc00;text-align:center;">
-        💡 Під час оплати впишіть <b>назву команди</b> у коментар.
+        💡 Під час оплати впишіть <b>назву команди</b> у коментар до платежу.
       </p>
+
+      <div class="pay-block" style="text-align:center;margin:20px 0;">
+        <h3>💳 Варіанти оплати</h3>
+        <p style="color:#ccc;">Мінімальний внесок: <b>1500 ₴</b></p>
+        <a href="https://send.monobank.ua/jar/7U9RD9ypvQ"
+           target="_blank" rel="noopener noreferrer"
+           class="btn btn--primary" style="margin:6px;">💜 Monobank</a>
+        <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793"
+           target="_blank" rel="noopener noreferrer"
+           class="btn btn--danger" style="margin:6px;">💚 Приват24</a>
+        <p style="margin-top:12px;color:#aaa;">або переказом на IBAN:<br>
+          <b>UA073220010000026205364735985</b><br>
+          Отримувач: <b>Роман Дячок</b>
+        </p>
+      </div>
 
       <div class="field checkbox">
         <label><input id="agree" name="agree" type="checkbox" required> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
       </div>
 
       <div class="form-actions">
-        <a href="https://send.monobank.ua/jar/7U9RD9ypvQ"
-           target="_blank" rel="noopener noreferrer"
-           class="btn btn--primary">💳 Оплатити внесок 1500 ₴</a>
         <button id="submitBtn" type="submit" class="btn btn--ghost">Надіслати заявку</button>
         <span id="spinner" class="spinner" aria-hidden="true"></span>
       </div>
@@ -105,7 +115,7 @@
 </footer>
 
 <script>
-  // Легка логіка для показу/приховування кількості порцій
+  // Логіка для харчування
   const form = document.getElementById('regForm');
   const radios = form.querySelectorAll('input[name="food"]');
   const qty = document.getElementById('food_qty');
@@ -128,13 +138,13 @@
     phoneHidden.value = '+380' + clean;
   });
 
-  // Імітація відправки (без бекенду)
+  // Імітація відправки
   form.addEventListener('submit', e=>{
     e.preventDefault();
-    alert('✅ Заявку збережено! Не забудьте оплатити внесок 1500 ₴.');
+    alert('✅ Заявку збережено! Оплатіть внесок 1500 ₴ зручним способом і вкажіть назву команди у коментарі.');
     form.reset();
     toggleFood();
   });
 </script>
 </body>
-</html>
+          </html>

@@ -1,43 +1,47 @@
 
-// netlify/functions/create-checkout.js
-import crypto from 'crypto'
-import { Blobs } from '@netlify/blobs'
+export async function handler(event) {
+  try {
+    if (event.httpMethod !== 'POST') {
+      return {
+        statusCode: 405,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ error: 'Method Not Allowed' })
+      };
+    }
 
-export default async (req, context) => {
-  if (req.method !== 'POST')
-    return new Response('Method Not Allowed', { status: 405 })
+    // Безпечне парсення тіла
+    let amount = 0, currency = 'UAH', meta = {};
+    try {
+      const data = JSON.parse(event.body || '{}');
+      amount = data.amount || 0;
+      currency = data.currency || 'UAH';
+      meta = data.meta || {};
+    } catch (e) {
+      console.error('JSON parse error:', e);
+    }
 
-  const { provider, amount, currency, meta } = await req.json()
+    // Створюємо тестову "сесію"
+    const sessionId = 'test_' + Math.random().toString(36).slice(2);
+    const checkoutUrl = `/register.html?return=1&sessionId=${encodeURIComponent(sessionId)}`;
 
-  // Створюємо унікальну сесію
-  const sessionId = crypto.randomUUID()
-  const store = new Blobs({ siteID: context.site.id })
-  await store.set(`payments/${sessionId}.json`, JSON.stringify({
-    provider, amount, currency, meta, paid: false, createdAt: Date.now()
-  }))
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        checkoutUrl,
+        sessionId,
+        amount,
+        currency,
+        meta
+      })
+    };
 
-  let checkoutUrl
-
-  if (provider === 'monobank') {
-    // Підключення Monobank checkout
-    const merchantId = process.env.MONOBANK_MERCHANT_ID
-    const success = new URL('/register.html', req.url)
-    success.searchParams.set('return', '1')
-    success.searchParams.set('sessionId', sessionId)
-
-    checkoutUrl = `https://pay.monobank.ua/checkout?merchant=${encodeURIComponent(
-      merchantId
-    )}&amount=${amount}&ccy=${currency}&reference=${sessionId}&redirectUrl=${encodeURIComponent(
-      success.toString()
-    )}`
-  } else {
-    return new Response(
-      JSON.stringify({ error: 'Unknown provider' }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    )
+  } catch (error) {
+    console.error('Function error:', error);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Internal Server Error', message: error.message })
+    };
   }
-
-  return new Response(JSON.stringify({ checkoutUrl, sessionId }), {
-    headers: { 'Content-Type': 'application/json' }
-  })
 }

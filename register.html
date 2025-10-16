@@ -88,7 +88,6 @@
       <div class="paywall">
         <p id="payStatus" class="hint">Щоб зареєструватись, спочатку оплатіть внесок.</p>
         <button id="payButton" class="btn btn--primary" type="button">Оплатити внесок</button>
-        <button id="checkPayment" class="btn btn--ghost" type="button">Перевірити оплату</button>
       </div>
       <!-- PAYWALL END -->
 
@@ -119,91 +118,92 @@
     <h2>💳 Оплата реєстраційного внеску</h2>
     <p>Сума внеску: <strong>1500 ₴</strong></p>
     <p>Кошти надходять організатору <strong>Роман Д.</strong><br>Решта оплачується під час жеребкування.</p>
+
     <div class="buttons">
-      <a href="https://send.monobank.ua/7U9RD9ypvQ" target="_blank" class="mono">Оплатити через Monobank</a>
-      <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793" target="_blank" class="privat">Оплатити через Приват24</a>
+      <a href="https://send.monobank.ua/7U9RD9ypvQ" target="_blank" class="mono">💜 Monobank</a>
+      <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793" target="_blank" class="privat">💚 Приват24</a>
+    </div>
+
+    <div class="qr-block">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://send.monobank.ua/7U9RD9ypvQ" alt="QR Monobank">
+      <p class="qr-text">Скануй для оплати через Monobank</p>
     </div>
   </div>
 </div>
 
-<!-- 🔸 Стилі popup -->
 <style>
+/* === POPUP стиль із ефектом преміум і QR === */
 .modal {
   display: none;
   position: fixed;
   z-index: 9999;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85);
+  inset: 0;
   justify-content: center;
   align-items: center;
+  backdrop-filter: blur(6px);
+  animation: fadeInBg 0.4s ease;
 }
 .modal-content {
   position: relative;
-  background: #111;
+  background: linear-gradient(145deg, #0f0f0f, #1a1a1a);
   border: 2px solid #ffcc00;
   color: #fff;
-  padding: 25px;
-  border-radius: 15px;
+  padding: 28px 25px 35px;
+  border-radius: 18px;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  box-shadow: 0 0 25px rgba(255,204,0,0.3);
-  animation: fadeIn 0.3s ease;
+  box-shadow: 0 0 35px rgba(255,204,0,0.3);
+  transform: scale(0.9);
+  animation: popupShow 0.35s forwards ease;
 }
-@keyframes fadeIn {
-  from {opacity: 0; transform: scale(0.9);}
-  to {opacity: 1; transform: scale(1);}
-}
-.modal-content h2 {
-  margin-top: 0;
-  color: #ffcc00;
-}
+@keyframes fadeInBg { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popupShow { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+.modal-content h2 { margin-top: 0; color: #ffcc00; font-size: 1.3rem; text-transform: uppercase; }
 .modal-content .buttons a {
-  display: block;
-  margin: 10px 0;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  text-decoration: none;
-  color: #fff;
+  display: block; margin: 12px 0; padding: 14px;
+  border-radius: 12px; font-weight: 600; text-decoration: none;
+  color: #fff; transition: all 0.25s ease; font-size: 1rem;
 }
 .modal-content .buttons .mono {
-  background: #6f42c1;
+  background: linear-gradient(90deg, #6f42c1, #9b59b6);
+  box-shadow: 0 0 10px rgba(155,89,182,0.5);
+}
+.modal-content .buttons .mono:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 18px rgba(155,89,182,0.8);
 }
 .modal-content .buttons .privat {
-  background: #1aa64c;
+  background: linear-gradient(90deg, #1aa64c, #28d16d);
+  box-shadow: 0 0 10px rgba(40,209,109,0.5);
 }
+.modal-content .buttons .privat:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 18px rgba(40,209,109,0.8);
+}
+.qr-block { margin-top: 20px; }
+.qr-block img {
+  width: 180px; height: 180px;
+  border: 2px solid #ffcc00; border-radius: 10px;
+  box-shadow: 0 0 10px rgba(255,204,0,0.4);
+}
+.qr-text { font-size: 0.9rem; color: #ccc; margin-top: 8px; }
 .close {
-  position: absolute;
-  top: 10px; right: 20px;
-  font-size: 26px;
-  cursor: pointer;
-  color: #aaa;
+  position: absolute; top: 10px; right: 18px;
+  font-size: 28px; cursor: pointer; color: #aaa; transition: 0.3s;
 }
-.close:hover {
-  color: #fff;
-}
+.close:hover { color: #fff; transform: scale(1.1); }
 </style>
 
-<!-- ⚙️ Скрипт popup -->
 <script>
 const modal = document.getElementById("paymentModal");
 const btn = document.getElementById("payButton");
 const closeBtn = document.querySelector(".close");
-
 btn.addEventListener("click", () => modal.style.display = "flex");
 closeBtn.addEventListener("click", () => modal.style.display = "none");
-window.onclick = function(event) {
-  if (event.target == modal) modal.style.display = "none";
-};
+window.onclick = (e) => { if (e.target === modal) modal.style.display = "none"; };
 </script>
 
-<!-- Підключення логіки реєстрації -->
 <script src="assets/js/payments.js"></script>
-
-<script>
-/* ...твій існуючий скрипт реєстрації залишається без змін... */
-</script>
 </body>
 </html>

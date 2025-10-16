@@ -72,6 +72,14 @@
         <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
 
+      <!-- 💬 Коментар до оплати -->
+      <div class="field">
+        <label for="payment_comment">Коментар до оплати *</label>
+        <textarea id="payment_comment" name="payment_comment" rows="2" required
+          placeholder="Вкажіть назву команди, від імені якої здійснено оплату"></textarea>
+        <small class="hint">Наприклад: DK Два Кума</small>
+      </div>
+
       <div class="field checkbox">
         <label><input id="agree" name="agree" type="checkbox" required /> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
       </div>
@@ -115,7 +123,6 @@
     <p>Кошти надходять організатору <strong>Роман Д.</strong><br />Решта оплачується під час жеребкування.</p>
 
     <div class="buttons">
-      <!-- ФІКСОВАНА СУМА 1500 ДЛЯ ОБОХ КНОПОК -->
       <a href="https://send.monobank.ua/7U9RD9ypvQ?amount=1500"
          target="_blank" rel="noopener noreferrer" class="mono">
         💜 Оплатити 1500 ₴ (Monobank)
@@ -127,7 +134,6 @@
     </div>
 
     <div class="qr-block">
-      <!-- Той самий Monobank-лінк із сумою, але в QR -->
       <img
         src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fsend.monobank.ua%2F7U9RD9ypvQ%3Famount%3D1500"
         width="180" height="180" alt="QR Monobank (1500 ₴)" />
@@ -136,54 +142,37 @@
   </div>
 </div>
 
-<!-- СТИЛІ МОДАЛКИ (без backdrop-filter) -->
+<!-- СТИЛІ МОДАЛКИ -->
 <style>
-.modal{
-  display:none; position:fixed; inset:0; z-index:9999;
-  background:rgba(0,0,0,.75); justify-content:center; align-items:center;
-}
-.modal.open{ display:flex; }
-body.modal-open{ overflow:hidden; }
-
-.modal-content{
-  position:relative; background:#111; border:2px solid #ffcc00; color:#fff;
-  padding:28px 25px 35px; border-radius:18px; max-width:400px; width:90%;
-  text-align:center; box-shadow:0 0 25px rgba(255,204,0,.3);
-}
-.modal-content h2{ margin:0 0 10px; color:#ffcc00; text-transform:uppercase; font-size:1.2rem; }
-.buttons a{
-  display:block; margin:12px 0; padding:14px; border-radius:12px; font-weight:600;
-  text-decoration:none; color:#fff; transition:transform .2s, box-shadow .2s;
-}
-.buttons .mono{ background:linear-gradient(90deg,#6f42c1,#9b59b6); box-shadow:0 0 10px rgba(155,89,182,.5); }
-.buttons .mono:hover{ transform:scale(1.03); box-shadow:0 0 18px rgba(155,89,182,.8); }
-.buttons .privat{ background:linear-gradient(90deg,#1aa64c,#28d16d); box-shadow:0 0 10px rgba(40,209,109,.5); }
-.buttons .privat:hover{ transform:scale(1.03); box-shadow:0 0 18px rgba(40,209,109,.8); }
-
-.qr-block{ margin-top:18px; }
-.qr-block img{ border:2px solid #ffcc00; border-radius:10px; box-shadow:0 0 10px rgba(255,204,0,.4); }
-.qr-text{ font-size:.9rem; color:#ccc; margin-top:8px; }
-
-.close{ position:absolute; top:10px; right:18px; font-size:28px; line-height:1; cursor:pointer; color:#aaa; background:none; border:none; }
-.close:hover{ color:#fff; }
+.modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);justify-content:center;align-items:center;}
+.modal.open{display:flex;}body.modal-open{overflow:hidden;}
+.modal-content{position:relative;background:#111;border:2px solid #ffcc00;color:#fff;padding:28px 25px 35px;border-radius:18px;max-width:400px;width:90%;text-align:center;box-shadow:0 0 25px rgba(255,204,0,.3);}
+.modal-content h2{margin:0 0 10px;color:#ffcc00;text-transform:uppercase;font-size:1.2rem;}
+.buttons a{display:block;margin:12px 0;padding:14px;border-radius:12px;font-weight:600;text-decoration:none;color:#fff;transition:transform .2s, box-shadow .2s;}
+.buttons .mono{background:linear-gradient(90deg,#6f42c1,#9b59b6);box-shadow:0 0 10px rgba(155,89,182,.5);}
+.buttons .mono:hover{transform:scale(1.03);box-shadow:0 0 18px rgba(155,89,182,.8);}
+.buttons .privat{background:linear-gradient(90deg,#1aa64c,#28d16d);box-shadow:0 0 10px rgba(40,209,109,.5);}
+.buttons .privat:hover{transform:scale(1.03);box-shadow:0 0 18px rgba(40,209,109,.8);}
+.qr-block{margin-top:18px;}
+.qr-block img{border:2px solid #ffcc00;border-radius:10px;box-shadow:0 0 10px rgba(255,204,0,.4);}
+.qr-text{font-size:.9rem;color:#ccc;margin-top:8px;}
+.close{position:absolute;top:10px;right:18px;font-size:28px;line-height:1;cursor:pointer;color:#aaa;background:none;border:none;}
+.close:hover{color:#fff;}
 </style>
 
 <!-- ЛОГІКА МОДАЛКИ -->
 <script>
-  const modal    = document.getElementById('paymentModal');
-  const openBtn  = document.getElementById('payButton');
-  const closeBtn = modal.querySelector('.close');
-
-  function openModal(){ modal.classList.add('open'); document.body.classList.add('modal-open'); modal.setAttribute('aria-hidden','false'); }
-  function closeModal(){ modal.classList.remove('open'); document.body.classList.remove('modal-open'); modal.setAttribute('aria-hidden','true'); }
-
-  openBtn.addEventListener('click', openModal);
-  closeBtn.addEventListener('click', closeModal);
-  modal.addEventListener('click', (e)=>{ if(e.target===modal) closeModal(); });
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && modal.classList.contains('open')) closeModal(); });
+const modal=document.getElementById('paymentModal');
+const openBtn=document.getElementById('payButton');
+const closeBtn=modal.querySelector('.close');
+function openModal(){modal.classList.add('open');document.body.classList.add('modal-open');modal.setAttribute('aria-hidden','false');}
+function closeModal(){modal.classList.remove('open');document.body.classList.remove('modal-open');modal.setAttribute('aria-hidden','true');}
+openBtn.addEventListener('click',openModal);
+closeBtn.addEventListener('click',closeModal);
+modal.addEventListener('click',(e)=>{if(e.target===modal)closeModal();});
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'&&modal.classList.contains('open'))closeModal();});
 </script>
 
-<!-- Логіка платежів/валідації -->
 <script src="assets/js/payments.js"></script>
 </body>
 </html>

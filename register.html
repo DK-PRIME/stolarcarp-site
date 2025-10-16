@@ -1,10 +1,10 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Реєстрація — STOLAR CARP</title>
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script defer src="assets/js/config.js"></script>
 </head>
 
@@ -32,38 +32,30 @@
     <p class="lead">Заповніть форму нижче для участі у змаганнях.</p>
 
     <form id="regForm" class="form-card" novalidate>
-      <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0">
-      <input type="hidden" name="fp" id="fp">
+      <!-- антиспам -->
+      <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" />
+      <input type="hidden" name="fp" id="fp" />
 
       <div class="field">
         <label for="team_name">Назва команди *</label>
-        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума">
+        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума" />
       </div>
 
       <div class="field">
         <label for="members_count">Кількість учасників *</label>
-        <input id="members_count" name="members_count" type="number" required min="1" max="4" inputmode="numeric" placeholder="1–4">
+        <input id="members_count" name="members_count" type="number" required min="1" max="4" inputmode="numeric" placeholder="1–4" />
       </div>
 
       <div class="field">
         <label for="captain">Капітан команди *</label>
-        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище">
+        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище" />
       </div>
 
       <div class="field">
         <label for="phone_rest">Номер телефону *</label>
         <div class="phone-wrap">
           <span class="phone-prefix">+380</span>
-          <input
-            id="phone_rest"
-            type="text"
-            inputmode="numeric"
-            pattern="\d{9}"
-            maxlength="9"
-            required
-            placeholder="XXXXXXXXX"
-            aria-label="9 цифр після +380"
-          />
+          <input id="phone_rest" type="text" inputmode="numeric" pattern="\d{9}" maxlength="9" required placeholder="XXXXXXXXX" aria-label="9 цифр після +380" />
         </div>
         <input type="hidden" id="phone" name="phone" />
         <small class="hint">Введіть 9 цифр після +380 (разом буде +380XXXXXXXXX)</small>
@@ -71,17 +63,17 @@
 
       <fieldset class="field">
         <legend>Харчування *</legend>
-        <label class="radio"><input type="radio" name="food" value="Ні" required> Ні</label>
-        <label class="radio"><input type="radio" name="food" value="Так" required> Так</label>
+        <label class="radio"><input type="radio" name="food" value="Ні" required /> Ні</label>
+        <label class="radio"><input type="radio" name="food" value="Так" required /> Так</label>
       </fieldset>
 
       <div class="field" id="foodQtyField">
         <label for="food_qty">Кількість порцій</label>
-        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?">
+        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
 
       <div class="field checkbox">
-        <label><input id="agree" name="agree" type="checkbox" required> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
+        <label><input id="agree" name="agree" type="checkbox" required /> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
       </div>
 
       <!-- PAYWALL -->
@@ -120,19 +112,25 @@
     <button type="button" class="close" aria-label="Закрити">&times;</button>
     <h2>💳 Оплата реєстраційного внеску</h2>
     <p>Сума внеску: <strong>1500 ₴</strong></p>
-    <p>Кошти надходять організатору <strong>Роман Д.</strong><br>Решта оплачується під час жеребкування.</p>
+    <p>Кошти надходять організатору <strong>Роман Д.</strong><br />Решта оплачується під час жеребкування.</p>
 
     <div class="buttons">
-  <a href="https://send.monobank.ua/7U9RD9ypvQ" target="_blank" rel="noopener" class="mono">
-    💜 Оплатити 1500 ₴ (Monobank)
-  </a>
-  <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793" target="_blank" rel="noopener" class="privat">
-    💚 Оплатити 1500 ₴ (Приват24)
-  </a>
-</div>
+      <!-- ФІКСОВАНА СУМА 1500 ДЛЯ ОБОХ КНОПОК -->
+      <a href="https://send.monobank.ua/jar/7U9RD9ypvQ?amount=1500"
+         target="_blank" rel="noopener noreferrer" class="mono">
+        💜 Оплатити 1500 ₴ (Monobank)
+      </a>
+      <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793"
+         target="_blank" rel="noopener noreferrer" class="privat">
+        💚 Оплатити 1500 ₴ (Приват24)
+      </a>
+    </div>
 
     <div class="qr-block">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://send.monobank.ua/7U9RD9ypvQ" width="180" height="180" alt="QR Monobank">
+      <!-- Той самий Monobank-лінк із сумою, але в QR -->
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fsend.monobank.ua%2Fjar%2F7U9RD9ypvQ%3Famount%3D1500"
+        width="180" height="180" alt="QR Monobank (1500 ₴)" />
       <p class="qr-text">Скануй для оплати через Monobank</p>
     </div>
   </div>
@@ -141,28 +139,16 @@
 <!-- СТИЛІ МОДАЛКИ (без backdrop-filter) -->
 <style>
 .modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  background:rgba(0,0,0,.75); /* стабільне затемнення на Android */
-  justify-content:center;
-  align-items:center;
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:rgba(0,0,0,.75); justify-content:center; align-items:center;
 }
-.modal.open{ display:flex; }         /* показ через клас */
-body.modal-open{ overflow:hidden; }  /* блокуємо скрол фону */
+.modal.open{ display:flex; }
+body.modal-open{ overflow:hidden; }
 
 .modal-content{
-  position:relative;
-  background:#111;
-  border:2px solid #ffcc00;
-  color:#fff;
-  padding:28px 25px 35px;
-  border-radius:18px;
-  max-width:400px;
-  width:90%;
-  text-align:center;
-  box-shadow:0 0 25px rgba(255,204,0,.3);
+  position:relative; background:#111; border:2px solid #ffcc00; color:#fff;
+  padding:28px 25px 35px; border-radius:18px; max-width:400px; width:90%;
+  text-align:center; box-shadow:0 0 25px rgba(255,204,0,.3);
 }
 .modal-content h2{ margin:0 0 10px; color:#ffcc00; text-transform:uppercase; font-size:1.2rem; }
 .buttons a{
@@ -178,10 +164,7 @@ body.modal-open{ overflow:hidden; }  /* блокуємо скрол фону */
 .qr-block img{ border:2px solid #ffcc00; border-radius:10px; box-shadow:0 0 10px rgba(255,204,0,.4); }
 .qr-text{ font-size:.9rem; color:#ccc; margin-top:8px; }
 
-.close{
-  position:absolute; top:10px; right:18px;
-  font-size:28px; line-height:1; cursor:pointer; color:#aaa; background:none; border:none;
-}
+.close{ position:absolute; top:10px; right:18px; font-size:28px; line-height:1; cursor:pointer; color:#aaa; background:none; border:none; }
 .close:hover{ color:#fff; }
 </style>
 
@@ -191,16 +174,8 @@ body.modal-open{ overflow:hidden; }  /* блокуємо скрол фону */
   const openBtn  = document.getElementById('payButton');
   const closeBtn = modal.querySelector('.close');
 
-  function openModal(){
-    modal.classList.add('open');
-    document.body.classList.add('modal-open');
-    modal.setAttribute('aria-hidden','false');
-  }
-  function closeModal(){
-    modal.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    modal.setAttribute('aria-hidden','true');
-  }
+  function openModal(){ modal.classList.add('open'); document.body.classList.add('modal-open'); modal.setAttribute('aria-hidden','false'); }
+  function closeModal(){ modal.classList.remove('open'); document.body.classList.remove('modal-open'); modal.setAttribute('aria-hidden','true'); }
 
   openBtn.addEventListener('click', openModal);
   closeBtn.addEventListener('click', closeModal);

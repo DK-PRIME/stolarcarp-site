@@ -85,6 +85,14 @@
         <label><input id="agree" name="agree" type="checkbox" required> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
       </div>
 
+      <!-- PAYWALL START -->
+      <div class="paywall">
+        <p id="payStatus" class="hint">Щоб зареєструватись, спочатку оплатіть внесок.</p>
+        <button id="payButton" class="btn btn--primary" type="button">Оплатити внесок</button>
+        <button id="checkPayment" class="btn btn--ghost" type="button">Перевірити оплату</button>
+      </div>
+      <!-- PAYWALL END -->
+
       <div class="form-actions">
         <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
         <span id="spinner" class="spinner" aria-hidden="true"></span>
@@ -104,6 +112,9 @@
     </div>
   </div>
 </footer>
+
+<!-- ПІДКЛЮЧЕННЯ PAYWALL-ЛОГІКИ -->
+<script src="assets/js/payments.js"></script>
 
 <script>
   /* ===== Антиспам/таймер ===== */
@@ -179,7 +190,8 @@
 
   let inFlight = false;
 
-  form.addEventListener('submit', async (e) => {
+  const formEl = document.getElementById('regForm');
+  formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     flash('', '');
 
@@ -202,9 +214,9 @@
       return;
     }
 
-    if (!form.checkValidity()){
+    if (!formEl.checkValidity()){
       flash('err','Перевірте обов’язкові поля форми.');
-      form.reportValidity?.();
+      formEl.reportValidity?.();
       return;
     }
 
@@ -215,13 +227,13 @@
       return;
     }
 
-    if (form.food.value === 'Так' && !form.food_qty.value){
+    if (formEl.food.value === 'Так' && !formEl.food_qty.value){
       flash('err','Вкажіть кількість порцій.');
       return;
     }
 
-    form.hp.value = '';
-    const fd = new FormData(form);
+    formEl.hp.value = '';
+    const fd = new FormData(formEl);
     fd.append('ts', Date.now().toString());
     fd.append('ua', navigator.userAgent.slice(0,200));
 
@@ -235,7 +247,7 @@
         const until = Date.now() + LOCAL_COOLDOWN_MIN*60000;
         localStorage.setItem(COOLDOWN_KEY, until.toString());
         localStorage.setItem(DONE_FP_KEY, fp);
-        form.reset(); updateQtyState();
+        formEl.reset(); updateQtyState();
       }else{
         const nice = ERROR_MAP[data.code] || data.error || 'Сталася помилка при надсиланні.';
         flash('err', nice);

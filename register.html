@@ -32,43 +32,44 @@
     <p class="lead">Заповніть форму нижче для участі у змаганнях.</p>
 
     <form id="regForm" class="form-card" novalidate>
-      <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0">
-      <input type="hidden" name="fp" id="fp">
+      <!-- антиспам -->
+      <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" />
+      <input type="hidden" name="fp" id="fp" />
 
       <div class="field">
         <label for="team_name">Назва команди *</label>
-        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума">
+        <input id="team_name" name="team_name" type="text" required minlength="2" maxlength="60" placeholder="DK Два Кума" />
       </div>
 
       <div class="field">
         <label for="members_count">Кількість учасників *</label>
-        <input id="members_count" name="members_count" type="number" required min="1" max="4" inputmode="numeric" placeholder="1–4">
+        <input id="members_count" name="members_count" type="number" required min="1" max="4" inputmode="numeric" placeholder="1–4" />
       </div>
 
       <div class="field">
         <label for="captain">Капітан команди *</label>
-        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище">
+        <input id="captain" name="captain" type="text" required minlength="2" maxlength="60" placeholder="Ім’я та прізвище" />
       </div>
 
       <div class="field">
         <label for="phone_rest">Номер телефону *</label>
         <div class="phone-wrap">
           <span class="phone-prefix">+380</span>
-          <input id="phone_rest" type="text" inputmode="numeric" pattern="\d{9}" maxlength="9" required placeholder="XXXXXXXXX" aria-label="9 цифр після +380">
+          <input id="phone_rest" type="text" inputmode="numeric" pattern="\d{9}" maxlength="9" required placeholder="XXXXXXXXX" aria-label="9 цифр після +380" />
         </div>
-        <input type="hidden" id="phone" name="phone">
+        <input type="hidden" id="phone" name="phone" />
         <small class="hint">Введіть 9 цифр після +380 (разом буде +380XXXXXXXXX)</small>
       </div>
 
       <fieldset class="field">
         <legend>Харчування *</legend>
-        <label class="radio"><input type="radio" name="food" value="Ні" required> Ні</label>
-        <label class="radio"><input type="radio" name="food" value="Так" required> Так</label>
+        <label class="radio"><input type="radio" name="food" value="Ні" required /> Ні</label>
+        <label class="radio"><input type="radio" name="food" value="Так" required /> Так</label>
       </fieldset>
 
       <div class="field" id="foodQtyField">
         <label for="food_qty">Кількість порцій</label>
-        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?">
+        <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
 
       <p style="margin:10px 0;color:#ffcc00;text-align:center;">
@@ -78,24 +79,29 @@
       <div class="pay-block" style="text-align:center;margin:20px 0;">
         <h3>💳 Варіанти оплати</h3>
         <p style="color:#ccc;">Мінімальний внесок: <b>1500 ₴</b></p>
+
+        <!-- Monobank (jar/send) -->
         <a href="https://send.monobank.ua/jar/7U9RD9ypvQ"
            target="_blank" rel="noopener noreferrer"
            class="btn btn--primary" style="margin:6px;">💜 Monobank</a>
-        <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=4874070050688793"
+
+        <!-- Privat24: посилання на оплату карті (можна змінити за потреби) -->
+        <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=5168745146711137"
            target="_blank" rel="noopener noreferrer"
-           class="btn btn--danger" style="margin:6px;">💚 Приват24</a>
-        <p style="margin-top:12px;color:#aaa;">або переказом на IBAN:<br>
-          <b>UA073220010000026205364735985</b><br>
-          Отримувач: <b>Роман Дячок</b>
+           class="btn btn--danger" style="margin:6px;">💚 Приват24 (на карту)</a>
+
+        <p style="margin-top:12px;color:#aaa;">
+          Або переказом на карту:<br>
+          <b>5168 7451 4671 1137</b> (Приватбанк)
         </p>
       </div>
 
       <div class="field checkbox">
-        <label><input id="agree" name="agree" type="checkbox" required> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
+        <label><input id="agree" name="agree" type="checkbox" required /> Погоджуюсь з <a href="rules.html" target="_blank" rel="noopener">регламентом</a> *</label>
       </div>
 
       <div class="form-actions">
-        <button id="submitBtn" type="submit" class="btn btn--ghost">Надіслати заявку</button>
+        <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
         <span id="spinner" class="spinner" aria-hidden="true"></span>
       </div>
 
@@ -108,43 +114,59 @@
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp" rel="noopener">YouTube</a>
     </div>
   </div>
 </footer>
 
 <script>
-  // Логіка для харчування
+  // Логіка харчування
   const form = document.getElementById('regForm');
   const radios = form.querySelectorAll('input[name="food"]');
   const qty = document.getElementById('food_qty');
-  const field = document.getElementById('foodQtyField');
+  const qtyField = document.getElementById('foodQtyField');
   function toggleFood() {
-    const need = form.food.value === 'Так';
+    const need = form.food && form.food.value === 'Так';
     qty.disabled = !need;
     qty.required = need;
-    field.classList.toggle('field--disabled', !need);
+    qtyField.classList.toggle('field--disabled', !need);
   }
   radios.forEach(r => r.addEventListener('change', toggleFood));
   toggleFood();
 
-  // Маска телефону
+  // Маска телефону: користувач вводить лише 9 цифр, приховане поле phone отримує +380...
   const phoneInput = document.getElementById('phone_rest');
   const phoneHidden = document.getElementById('phone');
   phoneInput.addEventListener('input', ()=>{
-    const clean = phoneInput.value.replace(/\D/g,'').slice(0,9);
+    const clean = (phoneInput.value || '').replace(/\D/g,'').slice(0,9);
     phoneInput.value = clean;
-    phoneHidden.value = '+380' + clean;
+    phoneHidden.value = clean.length === 9 ? '+380' + clean : '';
   });
 
-  // Імітація відправки
+  // Просте повідомлення після сабміту (накладний сервер/автоматичне підтвердження — робимо окремо)
   form.addEventListener('submit', e=>{
     e.preventDefault();
-    alert('✅ Заявку збережено! Оплатіть внесок 1500 ₴ зручним способом і вкажіть назву команди у коментарі.');
+    // перевірки перед збереженням
+    if (!form.checkValidity()){
+      document.getElementById('msg').className = 'form-msg err';
+      document.getElementById('msg').textContent = 'Будь ласка, заповніть всі обовʼязкові поля.';
+      form.reportValidity?.();
+      return;
+    }
+    if (!phoneHidden.value) {
+      document.getElementById('msg').className = 'form-msg err';
+      document.getElementById('msg').textContent = 'Вкажіть коректний телефон (9 цифр після +380).';
+      return;
+    }
+
+    // тимчасова локальна симуляція збереження (можемо відправити на твій GAS/Sheets пізніше)
+    // тут просто показуємо повідомлення й очищуємо форму
+    document.getElementById('msg').className = 'form-msg ok';
+    document.getElementById('msg').textContent = 'Заявку збережено. Оплатіть, будь ласка, внесок і вкажіть назву команди в коментарі до платежу.';
     form.reset();
     toggleFood();
   });
 </script>
 </body>
-          </html>
+</html>

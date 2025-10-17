@@ -12,7 +12,8 @@
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
     </a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
@@ -74,29 +75,42 @@
         <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
 
-      <!-- блок оплати -->
-      <p style="margin:10px 0;color:#ffcc00;text-align:center;">
-        💡 Під час оплати впишіть <b>назву команди</b> у коментар до платежу.
-      </p>
-
-      <div class="pay-block" style="text-align:center;margin:20px 0;">
-        <h3>💳 Варіанти оплати</h3>
+      <!-- === Блок оплати === -->
+      <div class="pay-block" style="text-align:center;margin:30px 0;">
+        <h3>💳 Оплата реєстраційного внеску</h3>
         <p style="color:#ccc;">Мінімальний внесок: <b>1500 ₴</b></p>
 
-        <!-- Monobank (універсально з будь-якого банку) -->
         <a href="https://send.monobank.ua/7U9RD9ypvQ?amount=1500"
            target="_blank" rel="noopener noreferrer"
-           class="btn btn--primary" style="margin:6px;">💜 Оплатити через Monobank</a>
+           class="btn btn--primary" style="margin:8px;">
+           💜 Оплатити внесок
+        </a>
 
-        <!-- Privat24 (за бажанням користувача) -->
-        <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=5168745146711137"
-           target="_blank" rel="noopener noreferrer"
-           class="btn btn--danger" style="margin:6px;">💚 Приват24 (на картку)</a>
-
-        <p style="margin-top:12px;color:#aaa;">
-          Або переказом на картку:<br>
-          <b id="cardNum">5168 7451 4671 1137</b> (Приватбанк)
+        <p style="margin-top:8px;color:#aaa;font-size:0.9rem;">
+          Оплатити можна <b>з будь-якого банку</b> — Monobank, Приват24, ПУМБ, Ощад тощо.
         </p>
+
+        <div style="margin-top:18px;">
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https%3A%2F%2Fsend.monobank.ua%2F7U9RD9ypvQ%3Famount%3D1500"
+            width="180" height="180"
+            alt="QR для Monobank (1500 ₴)"
+            style="border-radius:10px;border:2px solid #ffcc00;box-shadow:0 0 12px rgba(255,204,0,0.4);" />
+          <div style="font-size:0.9rem;color:#bbb;margin-top:8px;">Скануйте QR для оплати</div>
+        </div>
+
+        <p style="margin-top:16px;color:#ffcc00;">
+          💡 Під час оплати впишіть у коментар <b>назву вашої команди</b>.
+        </p>
+
+        <p style="margin-top:18px;color:#aaa;">
+          Або вручну переказом на картку:<br>
+          <b id="cardNum" style="font-size:1.1rem;">5168&nbsp;7451&nbsp;4671&nbsp;1137</b>
+        </p>
+
+        <button id="copyCard" type="button" class="btn btn--ghost" style="margin-top:6px;">
+          📋 Скопіювати номер картки
+        </button>
       </div>
 
       <div class="field checkbox">
@@ -105,7 +119,6 @@
 
       <div class="form-actions">
         <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
-        <button id="copyCard" type="button" class="btn btn--ghost" style="margin-left:8px;">Скопіювати картку</button>
         <span id="spinner" class="spinner" aria-hidden="true"></span>
       </div>
 
@@ -125,86 +138,80 @@
 </footer>
 
 <script>
-  // простий fingerprint (для можливих перевірок на бекенді)
-  (function setFP(){
-    const src = [
-      navigator.userAgent,
-      navigator.language,
-      screen.width+'x'+screen.height,
-      screen.colorDepth,
-      Intl.DateTimeFormat().resolvedOptions().timeZone
-    ].join('|');
-    let h = 2166136261;
-    for (let i=0;i<src.length;i++){ h ^= src.charCodeAt(i); h = (h*16777619)>>>0; }
-    document.getElementById('fp').value = 'fp_'+h.toString(16);
-  })();
+/* === Fingerprint для антиспаму === */
+(function(){
+  const src = [
+    navigator.userAgent,
+    navigator.language,
+    screen.width+'x'+screen.height,
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  ].join('|');
+  let h = 2166136261;
+  for (let i=0;i<src.length;i++){ h ^= src.charCodeAt(i); h = (h*16777619)>>>0; }
+  document.getElementById('fp').value = 'fp_'+h.toString(16);
+})();
 
-  // логіка харчування
-  const form = document.getElementById('regForm');
-  const radios = form.querySelectorAll('input[name="food"]');
-  const qty = document.getElementById('food_qty');
-  const qtyField = document.getElementById('foodQtyField');
-  function toggleFood() {
-    const need = form.food && form.food.value === 'Так';
-    qty.disabled = !need;
-    qty.required = need;
-    qtyField.classList.toggle('field--disabled', !need);
-    if (!need) qty.value = '';
-  }
-  radios.forEach(r => r.addEventListener('change', toggleFood));
-  toggleFood();
+/* === Логіка харчування === */
+const form = document.getElementById('regForm');
+const radios = form.querySelectorAll('input[name="food"]');
+const qty = document.getElementById('food_qty');
+const qtyField = document.getElementById('foodQtyField');
+function toggleFood(){
+  const need = form.food?.value === 'Так';
+  qty.disabled = !need;
+  qty.required = need;
+  qtyField.classList.toggle('field--disabled', !need);
+  if (!need) qty.value = '';
+}
+radios.forEach(r => r.addEventListener('change', toggleFood));
+toggleFood();
 
-  // телефон: користувач вводить лише 9 цифр після +380
-  const phoneInput = document.getElementById('phone_rest');
-  const phoneHidden = document.getElementById('phone');
-  function syncPhone(){
-    const clean = (phoneInput.value || '').replace(/\D/g,'').slice(0,9);
-    phoneInput.value = clean;
-    phoneHidden.value = clean.length === 9 ? '+380' + clean : '';
-  }
-  phoneInput.addEventListener('input', syncPhone);
-  syncPhone();
+/* === Телефон (+380...) === */
+const phoneInput = document.getElementById('phone_rest');
+const phoneHidden = document.getElementById('phone');
+phoneInput.addEventListener('input', ()=>{
+  const clean = (phoneInput.value||'').replace(/\D/g,'').slice(0,9);
+  phoneInput.value = clean;
+  phoneHidden.value = clean.length===9 ? '+380'+clean : '';
+});
 
-  // копіювання номера картки
-  document.getElementById('copyCard').addEventListener('click', async ()=>{
-    try{
-      await navigator.clipboard.writeText(document.getElementById('cardNum').textContent.trim());
-      const btn = document.getElementById('copyCard');
-      const old = btn.textContent;
-      btn.textContent = 'Скопійовано';
-      setTimeout(()=>btn.textContent = old, 1200);
-    }catch(_){}
-  });
+/* === Копіювання картки === */
+document.getElementById('copyCard').addEventListener('click', async ()=>{
+  try{
+    const card = document.getElementById('cardNum').textContent.replace(/\s+/g,'').trim();
+    await navigator.clipboard.writeText(card);
+    const btn = document.getElementById('copyCard');
+    const old = btn.textContent;
+    btn.textContent = '✅ Скопійовано';
+    setTimeout(()=>btn.textContent = old, 1500);
+  }catch{ alert('Скопіюйте вручну: 5168745146711137'); }
+});
 
-  // сабміт форми (локальна підтверджуюча логіка; бекенд можна під’єднати пізніше)
-  form.addEventListener('submit', e=>{
-    e.preventDefault();
+/* === Сабміт форми (поки без бекенду) === */
+form.addEventListener('submit', e=>{
+  e.preventDefault();
 
-    // HTML5 валідації
-    if (!form.checkValidity()){
-      const m = document.getElementById('msg');
-      m.className = 'form-msg err';
-      m.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';
-      form.reportValidity?.();
-      return;
-    }
-    if (!/^\+380\d{9}$/.test(phoneHidden.value)){
-      const m = document.getElementById('msg');
-      m.className = 'form-msg err';
-      m.textContent = 'Вкажіть коректний телефон (9 цифр після +380).';
-      return;
-    }
-
-    // повідомлення користувачу
+  if (!form.checkValidity()){
     const msg = document.getElementById('msg');
-    msg.className = 'form-msg ok';
-    msg.textContent = 'Заявку збережено локально. Оплатіть, будь ласка, 1500 ₴ та вкажіть назву команди в коментарі до платежу. Після оплати напишіть у Viber.';
+    msg.className = 'form-msg err';
+    msg.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';
+    form.reportValidity?.();
+    return;
+  }
 
-    // очистка
-    form.reset();
-    toggleFood();
-    syncPhone();
-  });
+  if (!/^\+380\d{9}$/.test(phoneHidden.value)){
+    const msg = document.getElementById('msg');
+    msg.className = 'form-msg err';
+    msg.textContent = 'Невірний номер телефону.';
+    return;
+  }
+
+  const msg = document.getElementById('msg');
+  msg.className = 'form-msg ok';
+  msg.textContent = '✅ Заявку збережено локально. Оплатіть 1500 ₴ та вкажіть назву команди у коментарі до платежу. Після оплати напишіть у Viber.';
+  form.reset();
+  toggleFood();
+});
 </script>
 </body>
 </html>

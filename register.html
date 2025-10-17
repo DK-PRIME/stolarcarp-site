@@ -1,17 +1,19 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Реєстрація — STOLAR CARP</title>
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script defer src="assets/js/config.js"></script>
 </head>
 
 <body class="register-page">
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
+    </a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -72,6 +74,7 @@
         <input id="food_qty" name="food_qty" type="number" min="1" max="20" inputmode="numeric" placeholder="скільки порцій?" />
       </div>
 
+      <!-- блок оплати -->
       <p style="margin:10px 0;color:#ffcc00;text-align:center;">
         💡 Під час оплати впишіть <b>назву команди</b> у коментар до платежу.
       </p>
@@ -80,19 +83,19 @@
         <h3>💳 Варіанти оплати</h3>
         <p style="color:#ccc;">Мінімальний внесок: <b>1500 ₴</b></p>
 
-        <!-- Monobank (jar/send) -->
-        <a href="https://send.monobank.ua/jar/7U9RD9ypvQ"
+        <!-- Monobank (універсально з будь-якого банку) -->
+        <a href="https://send.monobank.ua/7U9RD9ypvQ?amount=1500"
            target="_blank" rel="noopener noreferrer"
-           class="btn btn--primary" style="margin:6px;">💜 Monobank</a>
+           class="btn btn--primary" style="margin:6px;">💜 Оплатити через Monobank</a>
 
-        <!-- Privat24: посилання на оплату карті (можна змінити за потреби) -->
+        <!-- Privat24 (за бажанням користувача) -->
         <a href="https://next.privat24.ua/money-transfer/card?amount=1500&receiver=5168745146711137"
            target="_blank" rel="noopener noreferrer"
-           class="btn btn--danger" style="margin:6px;">💚 Приват24 (на карту)</a>
+           class="btn btn--danger" style="margin:6px;">💚 Приват24 (на картку)</a>
 
         <p style="margin-top:12px;color:#aaa;">
-          Або переказом на карту:<br>
-          <b>5168 7451 4671 1137</b> (Приватбанк)
+          Або переказом на картку:<br>
+          <b id="cardNum">5168 7451 4671 1137</b> (Приватбанк)
         </p>
       </div>
 
@@ -102,6 +105,7 @@
 
       <div class="form-actions">
         <button id="submitBtn" type="submit" class="btn btn--primary">Надіслати заявку</button>
+        <button id="copyCard" type="button" class="btn btn--ghost" style="margin-left:8px;">Скопіювати картку</button>
         <span id="spinner" class="spinner" aria-hidden="true"></span>
       </div>
 
@@ -121,7 +125,21 @@
 </footer>
 
 <script>
-  // Логіка харчування
+  // простий fingerprint (для можливих перевірок на бекенді)
+  (function setFP(){
+    const src = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width+'x'+screen.height,
+      screen.colorDepth,
+      Intl.DateTimeFormat().resolvedOptions().timeZone
+    ].join('|');
+    let h = 2166136261;
+    for (let i=0;i<src.length;i++){ h ^= src.charCodeAt(i); h = (h*16777619)>>>0; }
+    document.getElementById('fp').value = 'fp_'+h.toString(16);
+  })();
+
+  // логіка харчування
   const form = document.getElementById('regForm');
   const radios = form.querySelectorAll('input[name="food"]');
   const qty = document.getElementById('food_qty');
@@ -131,41 +149,61 @@
     qty.disabled = !need;
     qty.required = need;
     qtyField.classList.toggle('field--disabled', !need);
+    if (!need) qty.value = '';
   }
   radios.forEach(r => r.addEventListener('change', toggleFood));
   toggleFood();
 
-  // Маска телефону: користувач вводить лише 9 цифр, приховане поле phone отримує +380...
+  // телефон: користувач вводить лише 9 цифр після +380
   const phoneInput = document.getElementById('phone_rest');
   const phoneHidden = document.getElementById('phone');
-  phoneInput.addEventListener('input', ()=>{
+  function syncPhone(){
     const clean = (phoneInput.value || '').replace(/\D/g,'').slice(0,9);
     phoneInput.value = clean;
     phoneHidden.value = clean.length === 9 ? '+380' + clean : '';
+  }
+  phoneInput.addEventListener('input', syncPhone);
+  syncPhone();
+
+  // копіювання номера картки
+  document.getElementById('copyCard').addEventListener('click', async ()=>{
+    try{
+      await navigator.clipboard.writeText(document.getElementById('cardNum').textContent.trim());
+      const btn = document.getElementById('copyCard');
+      const old = btn.textContent;
+      btn.textContent = 'Скопійовано';
+      setTimeout(()=>btn.textContent = old, 1200);
+    }catch(_){}
   });
 
-  // Просте повідомлення після сабміту (накладний сервер/автоматичне підтвердження — робимо окремо)
+  // сабміт форми (локальна підтверджуюча логіка; бекенд можна під’єднати пізніше)
   form.addEventListener('submit', e=>{
     e.preventDefault();
-    // перевірки перед збереженням
+
+    // HTML5 валідації
     if (!form.checkValidity()){
-      document.getElementById('msg').className = 'form-msg err';
-      document.getElementById('msg').textContent = 'Будь ласка, заповніть всі обовʼязкові поля.';
+      const m = document.getElementById('msg');
+      m.className = 'form-msg err';
+      m.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';
       form.reportValidity?.();
       return;
     }
-    if (!phoneHidden.value) {
-      document.getElementById('msg').className = 'form-msg err';
-      document.getElementById('msg').textContent = 'Вкажіть коректний телефон (9 цифр після +380).';
+    if (!/^\+380\d{9}$/.test(phoneHidden.value)){
+      const m = document.getElementById('msg');
+      m.className = 'form-msg err';
+      m.textContent = 'Вкажіть коректний телефон (9 цифр після +380).';
       return;
     }
 
-    // тимчасова локальна симуляція збереження (можемо відправити на твій GAS/Sheets пізніше)
-    // тут просто показуємо повідомлення й очищуємо форму
-    document.getElementById('msg').className = 'form-msg ok';
-    document.getElementById('msg').textContent = 'Заявку збережено. Оплатіть, будь ласка, внесок і вкажіть назву команди в коментарі до платежу.';
+    // повідомлення користувачу
+    const msg = document.getElementById('msg');
+    msg.className = 'form-msg ok';
+    msg.textContent = 'Заявку збережено локально. Оплатіть, будь ласка, 1500 ₴ та вкажіть назву команди в коментарі до платежу. Після оплати напишіть у Viber.';
+
+    // очистка
     form.reset();
     toggleFood();
+    syncPhone();
   });
 </script>
 </body>

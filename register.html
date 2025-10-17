@@ -35,7 +35,6 @@
     <p class="lead">Заповніть форму нижче для участі у змаганнях.</p>
 
     <form id="regForm" class="form-card" novalidate>
-      <!-- антиспам -->
       <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" />
       <input type="hidden" name="fp" id="fp" />
 
@@ -105,7 +104,7 @@
 
         <p style="margin-top:18px;color:#aaa;">
           Або вручну переказом на картку:<br>
-          <b id="cardNum" style="font-size:1.1rem;">5168&nbsp;7451&nbsp;4671&nbsp;1137</b>
+          <b id="cardNum" style="font-size:1.1rem;">4874&nbsp;0700&nbsp;5068&nbsp;8793</b>
         </p>
 
         <button id="copyCard" type="button" class="btn btn--ghost" style="margin-top:6px;">
@@ -138,80 +137,45 @@
 </footer>
 
 <script>
-/* === Fingerprint для антиспаму === */
+/* === Fingerprint === */
 (function(){
-  const src = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width+'x'+screen.height,
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  ].join('|');
-  let h = 2166136261;
-  for (let i=0;i<src.length;i++){ h ^= src.charCodeAt(i); h = (h*16777619)>>>0; }
-  document.getElementById('fp').value = 'fp_'+h.toString(16);
+  const src=[navigator.userAgent,navigator.language,screen.width+'x'+screen.height,Intl.DateTimeFormat().resolvedOptions().timeZone].join('|');
+  let h=2166136261; for(let i=0;i<src.length;i++){h^=src.charCodeAt(i);h=(h*16777619)>>>0;}
+  document.getElementById('fp').value='fp_'+h.toString(16);
 })();
 
 /* === Логіка харчування === */
-const form = document.getElementById('regForm');
-const radios = form.querySelectorAll('input[name="food"]');
-const qty = document.getElementById('food_qty');
-const qtyField = document.getElementById('foodQtyField');
-function toggleFood(){
-  const need = form.food?.value === 'Так';
-  qty.disabled = !need;
-  qty.required = need;
-  qtyField.classList.toggle('field--disabled', !need);
-  if (!need) qty.value = '';
-}
-radios.forEach(r => r.addEventListener('change', toggleFood));
-toggleFood();
+const form=document.getElementById('regForm');
+const radios=form.querySelectorAll('input[name="food"]');
+const qty=document.getElementById('food_qty');
+const qtyField=document.getElementById('foodQtyField');
+function toggleFood(){const need=form.food?.value==='Так';qty.disabled=!need;qty.required=need;qtyField.classList.toggle('field--disabled',!need);if(!need)qty.value='';}
+radios.forEach(r=>r.addEventListener('change',toggleFood));toggleFood();
 
-/* === Телефон (+380...) === */
-const phoneInput = document.getElementById('phone_rest');
-const phoneHidden = document.getElementById('phone');
-phoneInput.addEventListener('input', ()=>{
-  const clean = (phoneInput.value||'').replace(/\D/g,'').slice(0,9);
-  phoneInput.value = clean;
-  phoneHidden.value = clean.length===9 ? '+380'+clean : '';
-});
+/* === Телефон === */
+const phoneInput=document.getElementById('phone_rest');
+const phoneHidden=document.getElementById('phone');
+phoneInput.addEventListener('input',()=>{const clean=(phoneInput.value||'').replace(/\D/g,'').slice(0,9);phoneInput.value=clean;phoneHidden.value=clean.length===9?'+380'+clean:'';});
 
 /* === Копіювання картки === */
-document.getElementById('copyCard').addEventListener('click', async ()=>{
-  try{
-    const card = document.getElementById('cardNum').textContent.replace(/\s+/g,'').trim();
-    await navigator.clipboard.writeText(card);
-    const btn = document.getElementById('copyCard');
-    const old = btn.textContent;
-    btn.textContent = '✅ Скопійовано';
-    setTimeout(()=>btn.textContent = old, 1500);
-  }catch{ alert('Скопіюйте вручну: 5168745146711137'); }
-});
+document.getElementById('copyCard').addEventListener('click',async()=>{try{const card=document.getElementById('cardNum').textContent.replace(/\s+/g,'').trim();await navigator.clipboard.writeText(card);const btn=document.getElementById('copyCard');const old=btn.textContent;btn.textContent='✅ Скопійовано';setTimeout(()=>btn.textContent=old,1500);}catch{alert('Скопіюйте вручну: 4874070050688793');}});
 
-/* === Сабміт форми (поки без бекенду) === */
-form.addEventListener('submit', e=>{
+/* === Сабміт форми === */
+form.addEventListener('submit',e=>{
   e.preventDefault();
+  if(!form.checkValidity()){const msg=document.getElementById('msg');msg.className='form-msg err';msg.textContent='Будь ласка, заповніть усі обовʼязкові поля.';form.reportValidity?.();return;}
+  if(!/^\+380\d{9}$/.test(phoneHidden.value)){const msg=document.getElementById('msg');msg.className='form-msg err';msg.textContent='Невірний номер телефону.';return;}
 
-  if (!form.checkValidity()){
-    const msg = document.getElementById('msg');
-    msg.className = 'form-msg err';
-    msg.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';
-    form.reportValidity?.();
-    return;
-  }
-
-  if (!/^\+380\d{9}$/.test(phoneHidden.value)){
-    const msg = document.getElementById('msg');
-    msg.className = 'form-msg err';
-    msg.textContent = 'Невірний номер телефону.';
-    return;
-  }
-
-  const msg = document.getElementById('msg');
-  msg.className = 'form-msg ok';
-  msg.textContent = '✅ Заявку збережено локально. Оплатіть 1500 ₴ та вкажіть назву команди у коментарі до платежу. Після оплати напишіть у Viber.';
-  form.reset();
-  toggleFood();
+  const msg=document.getElementById('msg');
+  msg.className='form-msg ok';
+  msg.innerHTML=`
+    ✅ Заявку прийнято! Оплатіть, будь ласка, <b>1500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
+    <span style="color:#f87171;font-weight:600;">
+      ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.
+    </span>
+  `;
+  form.reset(); toggleFood();
 });
 </script>
 </body>
-</html>
+  </html>

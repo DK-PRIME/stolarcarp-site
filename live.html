@@ -1,62 +1,48 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Live — STOLAR CARP</title>
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/main.css" />
   <script defer src="assets/js/config.js"></script>
   <style>
     :root{
       --line: rgba(255,255,255,.10);
       --row: #16171c;
-      --ok: #16a34a; --warn:#f59e0b; --err:#ef4444;
+      --ok:#16a34a; --warn:#f59e0b; --err:#ef4444;
       --grad: linear-gradient(90deg,#f6c34c 0%, #cc6a2b 35%, #7a0f2b 100%);
     }
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
-    .input{background:#111215;border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
-    .btn, .btn-sm{
-      padding:10px 14px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);
-      color:#fff;text-decoration:none;font-weight:600;cursor:pointer
-    }
-    .btn:hover,.btn-sm:hover{filter:brightness(1.08)}
-    .btn-sm{padding:8px 12px}
-    .seg{display:flex;gap:6px;background:#101114;border:1px solid var(--line);border-radius:12px;padding:4px}
-    .seg button{background:transparent;border:0;color:#fff;padding:6px 10px;border-radius:8px;cursor:pointer}
-    .seg button.active{background:#1b1c20}
-    .state{display:inline-flex;align-items:center;gap:8px}
-    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
-    .dot.ok{background:var(--ok)} .dot.err{background:var(--err)}
-    .hint{opacity:.75}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media (max-width:900px){ .grid-2{grid-template-columns:1fr} }
-    .card{background:#14151a;border:1px solid var(--line);border-radius:16px;overflow:hidden;padding:16px}
-    .card.live-wrap{padding:0}
     .title-gradient{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .section h2{margin:0 0 12px}
-    .subhead{margin:16px 0 8px;font-weight:800}
-    .zone-title{margin:22px 0 8px;font-weight:900;font-size:20px}
+    .card{background:#14151a;border:1px solid var(--line);border-radius:16px;padding:16px}
+    .card.live{padding:0;overflow:hidden}
+    .subhead{margin:0 0 8px;font-weight:800}
+    .muted{opacity:.8}
+    .zone-title{margin:22px 16px 8px;font-weight:900;font-size:20px}
     .zone-title span{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--line)}
     .pending{border:1px dashed var(--line)}
-    /* tables */
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media (max-width:900px){ .grid-2{grid-template-columns:1fr} }
     table.live{width:100%;border-collapse:separate;border-spacing:0}
-    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line);user-select:none}
-    table.live tbody td{background:#16171c;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line)}
+    table.live tbody td{background:#16171c;padding:10px 12px;border-bottom:1px solid var(--line)}
     table.live tbody tr:hover td{background:#1a1b21}
+    .foot td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
     .num{text-align:right;white-space:nowrap}
     .lead-row td{background:#182216}
-    .foot td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
     .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
     .paid{background:#0e2b1b;border-color:#124d2e;color:#9ff0bf}
     .notpaid{opacity:.6}
-    .mini{font-size:.95rem}
-    .textarea{width:100%}
-    .muted{opacity:.8}
-    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    @media (max-width:900px){ .grid-3{grid-template-columns:1fr} }
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 0}
+    @media (max-width:900px){ .kpis{grid-template-columns:1fr} }
     .kpi{background:#111215;border:1px solid var(--line);border-radius:14px;padding:14px}
-    .kpi h4{margin:0 0 8px;font-size:14px;opacity:.85}
-    .kpi b{font-size:22px}
+    .kpi h4{margin:0 0 6px;font-size:14px;opacity:.85}
+    .kpi .val{font-weight:900;font-size:20px}
+    .winner{border-left:3px solid #f6c34c}
+    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+    .state{display:inline-flex;align-items:center;gap:8px}
+    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
+    .dot.ok{background:var(--ok)} .dot.err{background:var(--err)}
   </style>
 </head>
 <body>
@@ -81,59 +67,25 @@
 
 <main class="main">
 <section class="container section">
-  <h2 class="title-gradient">Live-протокол</h2>
-
-  <!-- Верхня панель керування -->
   <div class="toolbar">
-    <div class="seg" id="zoneSeg">
-      <button data-zone="ALL" class="active">Усі</button>
-      <button data-zone="A">Зона A</button>
-      <button data-zone="B">Зона B</button>
-      <button data-zone="C">Зона C</button>
-    </div>
-    <button id="exportCsv" class="btn-sm">Експорт CSV</button>
-    <span class="mini state"><span id="statusDot" class="dot"></span><span id="statusText">Готово до роботи</span></span>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <h3>Швидка вставка</h3>
-      <p class="form__hint">Встав із Google Sheets (роздільники: <b>;</b>, <b>,</b> або <b>таб</b> · десяткові: <b>,</b> або <b>.</b>)</p>
-      <textarea id="csv-paste" class="textarea" rows="6" placeholder="Команда;Зона;Сектор;К-сть;Вага;Big;BigD1;BigD2;PaidD1;PaidD2;PaidOverall"></textarea>
-      <div class="cta-row" style="margin-top:8px">
-        <button class="btn btn--primary" id="render-csv">Побудувати таблицю</button>
-        <button class="btn btn--ghost" id="clear">Очистити</button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Автооновлення з посилання</h3>
-      <div class="toolbar" style="margin:0 0 6px">
-        <input id="csv-url" class="input" placeholder="https://docs.google.com/.../export?format=csv">
-        <button class="btn btn--ghost" id="fetch-csv">Завантажити зараз</button>
-        <label class="mini"><input type="checkbox" id="auto-refresh"> Авто 60с</label>
-      </div>
-      <p class="form__hint">Підійдуть “Publish to web → CSV/TSV” або Apps Script, що віддає CSV/TSV. URL і автопул запам’ятовуються.</p>
-    </div>
+    <h2 class="title-gradient" style="margin:0;">Live-протокол</h2>
+    <span class="state" style="margin-left:auto;"><span id="statusDot" class="dot"></span><span id="statusText">Оновлення...</span></span>
   </div>
 
   <!-- Блок 1: Очікують жеребкування -->
-  <div class="card pending" style="margin-top:18px">
+  <div class="card pending">
     <h3 class="subhead">Зареєстровані команди — <span class="muted">очікують жеребкування</span></h3>
-    <table class="live" id="tbl-pending">
+    <table class="live">
       <thead>
-        <tr>
-          <th>Команда</th>
-          <th>Статус</th>
-        </tr>
+        <tr><th>Команда</th><th>Статус</th></tr>
       </thead>
-      <tbody id="pending-body"><tr><td colspan="2" class="muted">Порожньо</td></tr></tbody>
+      <tbody id="pendingBody"><tr><td colspan="2" class="muted">Порожньо</td></tr></tbody>
     </table>
   </div>
 
-  <!-- Блок 2: Зони A/B/C -->
-  <div class="card live-wrap" style="margin-top:18px">
-    <div style="padding:16px 16px 0"><div class="zone-title">Зона <span>A</span></div></div>
+  <!-- Блок 2: Зони -->
+  <div class="card live" style="margin-top:16px">
+    <div class="zone-title">Зона <span>A</span></div>
     <table class="live">
       <thead>
         <tr>
@@ -145,11 +97,11 @@
           <th class="num">Місце</th>
         </tr>
       </thead>
-      <tbody id="zoneA-body"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneA-cnt">0</td><td class="num" id="zoneA-kg">0.000</td><td class="num" id="zoneA-big">0.000</td><td></td><td></td></tr></tbody>
+      <tbody id="zoneA"></tbody>
+      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneA_cnt">0</td><td class="num" id="zoneA_kg">0.000</td><td class="num" id="zoneA_big">0.000</td><td></td><td></td></tr></tbody>
     </table>
 
-    <div style="padding:16px 16px 0"><div class="zone-title">Зона <span>B</span></div></div>
+    <div class="zone-title">Зона <span>B</span></div>
     <table class="live">
       <thead>
         <tr>
@@ -161,11 +113,11 @@
           <th class="num">Місце</th>
         </tr>
       </thead>
-      <tbody id="zoneB-body"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneB-cnt">0</td><td class="num" id="zoneB-kg">0.000</td><td class="num" id="zoneB-big">0.000</td><td></td><td></td></tr></tbody>
+      <tbody id="zoneB"></tbody>
+      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneB_cnt">0</td><td class="num" id="zoneB_kg">0.000</td><td class="num" id="zoneB_big">0.000</td><td></td><td></td></tr></tbody>
     </table>
 
-    <div style="padding:16px 16px 0"><div class="zone-title">Зона <span>C</span></div></div>
+    <div class="zone-title">Зона <span>C</span></div>
     <table class="live">
       <thead>
         <tr>
@@ -177,35 +129,35 @@
           <th class="num">Місце</th>
         </tr>
       </thead>
-      <tbody id="zoneC-body"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneC-cnt">0</td><td class="num" id="zoneC-kg">0.000</td><td class="num" id="zoneC-big">0.000</td><td></td><td></td></tr></tbody>
+      <tbody id="zoneC"></tbody>
+      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneC_cnt">0</td><td class="num" id="zoneC_kg">0.000</td><td class="num" id="zoneC_big">0.000</td><td></td><td></td></tr></tbody>
     </table>
   </div>
 
-  <!-- Блок 3: Фінансовий тотал -->
-  <div class="card" style="margin-top:18px">
-    <h3 class="subhead">Фінансовий тотал</h3>
-    <div class="grid-3">
-      <div class="kpi">
-        <h4>Біг 1 доби (зваж. 1–2)</h4>
-        <div><b id="totD1Team">—</b></div>
-        <div class="muted">Вага: <b id="totD1Val">0.000</b> кг</div>
-      </div>
-      <div class="kpi">
-        <h4>Біг 2 доби (зваж. 3–4)</h4>
-        <div><b id="totD2Team">—</b></div>
-        <div class="muted">Вага: <b id="totD2Val">0.000</b> кг</div>
-      </div>
-      <div class="kpi">
-        <h4>Біг змагань</h4>
-        <div><b id="totOverallTeam">—</b></div>
-        <div class="muted">Вага: <b id="totOverallVal">0.000</b> кг</div>
-      </div>
+  <!-- Блок 3: Фінансовий тотал (прозорий список) -->
+  <div class="card" style="margin-top:16px">
+    <h3 class="subhead">Фінансовий тотал (лише оплачені)</h3>
+
+    <div class="kpis">
+      <div class="kpi" id="kpiD1"><h4>Біг 1 доби</h4><div class="val" id="kpiD1Team">—</div><div class="muted">Вага: <b id="kpiD1Val">0.000</b> кг</div></div>
+      <div class="kpi" id="kpiD2"><h4>Біг 2 доби</h4><div class="val" id="kpiD2Team">—</div><div class="muted">Вага: <b id="kpiD2Val">0.000</b> кг</div></div>
+      <div class="kpi" id="kpiAll"><h4>Біг змагань</h4><div class="val" id="kpiAllTeam">—</div><div class="muted">Вага: <b id="kpiAllVal">0.000</b> кг</div></div>
     </div>
-    <p class="form__hint" style="margin-top:10px">
-      У розрахунок беруться лише команди, де <code>PaidD1 / PaidD2 / PaidOverall = 1</code>.
-      Для “Біг 1 доби” використовується колонка <code>BigD1</code> (найбільша риба за зважування 1–2), для “Біг 2 доби” — <code>BigD2</code>.
-    </p>
+
+    <table class="live" style="margin-top:14px">
+      <thead>
+        <tr>
+          <th>Команда</th>
+          <th class="num">BigD1</th>
+          <th class="num">BigD2</th>
+          <th class="num">Big</th>
+          <th class="num">D1</th>
+          <th class="num">D2</th>
+          <th class="num">Overall</th>
+        </tr>
+      </thead>
+      <tbody id="totalsBody"><tr><td colspan="7" class="muted">Немає оплачених учасників</td></tr></tbody>
+    </table>
   </div>
 </section>
 </main>
@@ -214,14 +166,16 @@
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp" rel="noopener">YouTube</a>
     </div>
   </div>
 </footer>
 
 <script>
-/* ====== УТИЛІТИ ====== */
+/* ===== Утиліти ===== */
+const CSV_URL = 'assets/data/live.csv';
+const REFRESH_MS = 60000;
 const toNum = v => {
   if (v == null) return 0;
   const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
@@ -231,23 +185,20 @@ const toNum = v => {
 const kg = v => toNum(v).toFixed(3);
 const yes = v => /^(1|y|yes|true|так|ok)$/i.test(String(v||'').trim());
 
-/* ====== ПАРСЕР з адаптивними хедерами ====== */
+/* ===== Парсер CSV з авто-визначенням роздільника + маппер заголовків ===== */
 function parseCSV(text){
   const lines = String(text||'').replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
   if (!lines.length) return [];
   const sniff = (line) => line.includes('\t') ? '\t' : (line.includes(';') ? ';' : ',');
   const sep = sniff(lines[0]);
-  const rows = lines.map(l => l.split(sep).map(s => s.trim().replace(/^"(.*)"$/,'$1')));
-  return rows;
+  return lines.map(l => l.split(sep).map(s => s.trim().replace(/^"(.*)"$/,'$1')));
 }
-
 function headerIndexMap(headerRow){
   const map = {};
   headerRow.forEach((h,i)=>{
     const k = String(h||'').toLowerCase().replace(/\s+/g,'').replace(/[,._-]/g,'');
     map[k] = i;
   });
-  // очікувані ключі -> можливі варіанти назв
   const want = {
     team: ['команда','team'],
     zone: ['зона','zone'],
@@ -263,19 +214,17 @@ function headerIndexMap(headerRow){
   };
   const idx = {};
   for (const key in want){
-    const match = want[key].find(alias => map.hasOwnProperty(alias));
-    idx[key] = match ? map[match] : -1;
+    const alias = want[key].find(a => map.hasOwnProperty(a));
+    idx[key] = alias ? map[alias] : -1;
   }
   return idx;
 }
-
 function normalize(rows){
   if (!rows.length) return [];
-  let header = rows[0].map(x=>String(x||'').toLowerCase());
-  let data = rows;
-  // якщо перший стовпчик виглядає як "команда" — це хедер
-  if (/команда|team/i.test(rows[0][0]||'')) data = rows.slice(1);
-  const idx = headerIndexMap(rows[0]);
+  const hasHeader = /команда|team/i.test(rows[0][0]||'');
+  const header = hasHeader ? rows[0] : ['Команда','Зона','Сектор','К-сть','Вага','Big','BigD1','BigD2','PaidD1','PaidD2','PaidOverall'];
+  const idx = headerIndexMap(header);
+  const data = hasHeader ? rows.slice(1) : rows;
   return data.map(r => ({
     team:   r[idx.team] ?? '',
     zone:   (r[idx.zone] ?? '').toString().trim().toUpperCase(),
@@ -291,66 +240,37 @@ function normalize(rows){
   })).filter(x => x.team);
 }
 
-/* ====== СТАН ====== */
-let items = [];
-let zoneFilter = 'ALL';
-let timer = null;
-
-/* ====== ЕЛЕМЕНТИ ====== */
-const txtArea = document.getElementById('csv-paste');
-const renderBtn = document.getElementById('render-csv');
-const clearBtn  = document.getElementById('clear');
-
-const fetchBtn = document.getElementById('fetch-csv');
-const urlInput = document.getElementById('csv-url');
-const autoChk  = document.getElementById('auto-refresh');
-
-const statusDot  = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
-
-const pendingBody = document.getElementById('pending-body');
-
-const zoneBodies = {
-  A: document.getElementById('zoneA-body'),
-  B: document.getElementById('zoneB-body'),
-  C: document.getElementById('zoneC-body'),
-};
+/* ===== Рендер ===== */
+const $ = sel => document.querySelector(sel);
+const pendingBody = $('#pendingBody');
+const zoneBodies = { A: $('#zoneA'), B: $('#zoneB'), C: $('#zoneC') };
 const zoneFoot = {
-  A: { cnt: document.getElementById('zoneA-cnt'), kg: document.getElementById('zoneA-kg'), big: document.getElementById('zoneA-big') },
-  B: { cnt: document.getElementById('zoneB-cnt'), kg: document.getElementById('zoneB-kg'), big: document.getElementById('zoneB-big') },
-  C: { cnt: document.getElementById('zoneC-cnt'), kg: document.getElementById('zoneC-kg'), big: document.getElementById('zoneC-big') },
+  A: { cnt: $('#zoneA_cnt'), kg: $('#zoneA_kg'), big: $('#zoneA_big') },
+  B: { cnt: $('#zoneB_cnt'), kg: $('#zoneB_kg'), big: $('#zoneB_big') },
+  C: { cnt: $('#zoneC_cnt'), kg: $('#zoneC_kg'), big: $('#zoneC_big') }
 };
+const kpi = {
+  d1Team: $('#kpiD1Team'), d1Val: $('#kpiD1Val'),
+  d2Team: $('#kpiD2Team'), d2Val: $('#kpiD2Val'),
+  allTeam: $('#kpiAllTeam'), allVal: $('#kpiAllVal')
+};
+const totalsBody = $('#totalsBody');
+const statusDot = $('#statusDot');
+const statusText = $('#statusText');
 
-const totD1Team = document.getElementById('totD1Team');
-const totD1Val  = document.getElementById('totD1Val');
-const totD2Team = document.getElementById('totD2Team');
-const totD2Val  = document.getElementById('totD2Val');
-const totOTeam  = document.getElementById('totOverallTeam');
-const totOVal   = document.getElementById('totOverallVal');
-
-/* ====== РЕНДЕР ====== */
-function render(){
-  // 1) Очікують жеребкування (нема зони або сектора)
+function renderAll(items){
+  // 1) Pending (нема зони або сектора)
   const pending = items.filter(x => !x.zone || !x.sector);
   pendingBody.innerHTML = pending.length
     ? pending.map(x => `<tr><td>${x.team}</td><td class="muted">Очікує жеребкування</td></tr>`).join('')
     : `<tr><td colspan="2" class="muted">Порожньо</td></tr>`;
 
-  // 2) Зони: беремо лише з валідною зоною (A/B/C)
+  // 2) Зони
   const zones = {A:[],B:[],C:[]};
-  items.forEach(x=>{
-    const z = (x.zone||'').toUpperCase();
-    if (['A','B','C'].includes(z)) zones[z].push(x);
-  });
-
-  // по кожній зоні: сортуємо за вагою (desc), призначаємо місце
+  items.forEach(x => { if (['A','B','C'].includes(x.zone)) zones[x.zone].push(x); });
   for (const z of ['A','B','C']){
-    const arr = zones[z]
-      .filter(x => (zoneFilter==='ALL' ? true : x.zone===zoneFilter))
-      .slice()
-      .sort((a,b)=> b.weight - a.weight);
-    // місце (1..n) за total weight; при рівності — однакове місце
-    let place = 0, lastW = null, lastPlace = 0;
+    const arr = zones[z].slice().sort((a,b)=> b.weight - a.weight);
+    let lastW=null, place=0, lastPlace=0;
     const rows = arr.map((x,i)=>{
       if (lastW===null || x.weight !== lastW){ place = i+1; lastPlace = place; lastW = x.weight; }
       const paid = (x.paidd1||x.paidd2||x.paido);
@@ -363,115 +283,75 @@ function render(){
           <td class="num">${paid ? '<span class="pill paid">так</span>' : '<span class="pill notpaid">—</span>'}</td>
           <td class="num"><b>${lastPlace}</b></td>
         </tr>`,
-        cnt: x.cnt||0, w: x.weight||0, big: x.big||0
+        cnt:x.cnt||0, w:x.weight||0, big:x.big||0
       };
     });
     zoneBodies[z].innerHTML = rows.map(r=>r.html).join('') || `<tr><td colspan="6" class="muted">Немає даних для зони ${z}</td></tr>`;
-    // підсумки
-    const totalCnt = rows.reduce((s,r)=>s+r.cnt,0);
-    const totalW   = rows.reduce((s,r)=>s+r.w,0);
-    const maxBig   = rows.reduce((m,r)=>Math.max(m,r.big),0);
-    zoneFoot[z].cnt.textContent = totalCnt;
-    zoneFoot[z].kg.textContent  = kg(totalW);
-    zoneFoot[z].big.textContent = kg(maxBig);
+    zoneFoot[z].cnt.textContent = rows.reduce((s,r)=>s+r.cnt,0);
+    zoneFoot[z].kg.textContent  = kg(rows.reduce((s,r)=>s+r.w,0));
+    zoneFoot[z].big.textContent = kg(rows.reduce((m,r)=>Math.max(m,r.big),0));
   }
 
   // 3) Фінансовий тотал
-  const d1 = items.filter(x => x.paidd1).sort((a,b)=> b.bigd1 - a.bigd1)[0];
-  const d2 = items.filter(x => x.paidd2).sort((a,b)=> b.bigd2 - a.bigd2)[0];
-  const ov = items.filter(x => x.paido).sort((a,b)=> b.big - a.big)[0]; // “біг змагань” = загальний Big
+  const paidAny = items.filter(x => x.paidd1 || x.paidd2 || x.paido);
+  if (!paidAny.length){
+    totalsBody.innerHTML = `<tr><td colspan="7" class="muted">Немає оплачених учасників</td></tr>`;
+    kpi.d1Team.textContent = '—'; kpi.d1Val.textContent = '0.000';
+    kpi.d2Team.textContent = '—'; kpi.d2Val.textContent = '0.000';
+    kpi.allTeam.textContent= '—'; kpi.allVal.textContent= '0.000';
+  } else {
+    // winners
+    const winD1 = paidAny.filter(x=>x.paidd1).sort((a,b)=> b.bigd1 - a.bigd1)[0];
+    const winD2 = paidAny.filter(x=>x.paidd2).sort((a,b)=> b.bigd2 - a.bigd2)[0];
+    const winAll= paidAny.filter(x=>x.paido ).sort((a,b)=> b.big   - a.big  )[0];
 
-  totD1Team.textContent = d1 ? d1.team : '—';
-  totD1Val.textContent  = kg(d1 ? d1.bigd1 : 0);
-  totD2Team.textContent = d2 ? d2.team : '—';
-  totD2Val.textContent  = kg(d2 ? d2.bigd2 : 0);
-  totOTeam.textContent  = ov ? ov.team : '—';
-  totOVal.textContent   = kg(ov ? ov.big : 0);
-}
+    kpi.d1Team.textContent = winD1 ? winD1.team : '—';
+    kpi.d1Val.textContent  = kg(winD1 ? winD1.bigd1 : 0);
+    kpi.d2Team.textContent = winD2 ? winD2.team : '—';
+    kpi.d2Val.textContent  = kg(winD2 ? winD2.bigd2 : 0);
+    kpi.allTeam.textContent= winAll? winAll.team : '—';
+    kpi.allVal.textContent = kg(winAll? winAll.big  : 0);
 
-/* ====== ДЖЕРЕЛА ДАНИХ ====== */
-function buildFromTextarea(){
-  const rows = parseCSV(txtArea.value);
-  items = normalize(rows);
-  render();
-  statusDot.classList.add('ok'); statusDot.classList.remove('err');
-  statusText.textContent = 'Оновлено з буфера';
-}
-
-async function fetchAndRender(){
-  const url = urlInput.value.trim();
-  if (!url) return;
-  try{
-    statusDot.classList.remove('ok','err');
-    statusText.textContent = 'Завантаження…';
-    const res = await fetch(url, { cache:'no-store' });
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    items = normalize(rows);
-    render();
-    statusDot.classList.add('ok');
-    statusText.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
-    localStorage.setItem('live_url', url);
-  }catch(e){
-    statusDot.classList.add('err');
-    statusText.textContent = 'Помилка: ' + e.message;
+    totalsBody.innerHTML = paidAny
+      .sort((a,b)=> (b.paido-b.paido) || (b.paidd2-b.paidd2) || (b.paidd1-b.paidd1) || (b.big - a.big))
+      .map(x=>{
+        const rowClass =
+          (winAll && x.team===winAll.team) ? 'winner' :
+          (winD2 && x.team===winD2.team) ? 'winner' :
+          (winD1 && x.team===winD1.team) ? 'winner' : '';
+        return `<tr class="${rowClass}">
+          <td>${x.team}</td>
+          <td class="num">${kg(x.bigd1)}</td>
+          <td class="num">${kg(x.bigd2)}</td>
+          <td class="num">${kg(x.big)}</td>
+          <td class="num">${x.paidd1?'<span class="pill paid">так</span>':'—'}</td>
+          <td class="num">${x.paidd2?'<span class="pill paid">так</span>':'—'}</td>
+          <td class="num">${x.paido ?'<span class="pill paid">так</span>':'—'}</td>
+        </tr>`;
+      }).join('');
   }
 }
 
-/* ====== ЕКСПОРТ ====== */
-function exportCSV(){
-  const header = ['Команда','Зона','Сектор','К-сть','Вага','Big','BigD1','BigD2','PaidD1','PaidD2','PaidOverall'];
-  const rows = items.map(x => [
-    x.team, x.zone, x.sector, x.cnt||0, kg(x.weight), kg(x.big), kg(x.bigd1), kg(x.bigd2),
-    x.paidd1?1:0, x.paidd2?1:0, x.paido?1:0
-  ]);
-  const csv = [header, ...rows].map(r => r.map(c => {
-    const s = String(c);
-    return /[;,]/.test(s) ? `"${s}"` : s;
-  }).join(';')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'stolarcarp-live.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
+/* ===== Завантаження + автооновлення ===== */
+async function loadAndRender(){
+  try{
+    statusDot.classList.remove('ok','err');
+    statusText.textContent = 'Оновлення...';
+    const res = await fetch(CSV_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const items = normalize(rows);
+    renderAll(items);
+    statusDot.classList.add('ok');
+    statusText.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
+  }catch(err){
+    statusDot.classList.add('err');
+    statusText.textContent = 'Помилка: ' + err.message;
+  }
 }
-
-/* ====== ПОДІЇ ====== */
-document.getElementById('exportCsv').addEventListener('click', exportCSV);
-document.getElementById('render-csv').addEventListener('click', buildFromTextarea);
-document.getElementById('clear').addEventListener('click', ()=>{
-  txtArea.value=''; items=[]; render(); statusText.textContent='Очищено';
-});
-document.getElementById('fetch-csv').addEventListener('click', fetchAndRender);
-
-const zoneSeg = document.getElementById('zoneSeg');
-zoneSeg.addEventListener('click', e=>{
-  if (e.target.tagName!=='BUTTON') return;
-  zoneFilter = e.target.dataset.zone;
-  zoneSeg.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===e.target));
-  render();
-});
-
-const autoChk = document.getElementById('auto-refresh');
-let timer = null;
-autoChk.addEventListener('change', ()=>{
-  localStorage.setItem('live_auto', autoChk.checked ? '1' : '0');
-  if (autoChk.checked){
-    fetchAndRender();
-    timer = setInterval(fetchAndRender, 60000);
-  } else if (timer){ clearInterval(timer); timer = null; }
-});
-
-/* ====== INIT ====== */
-(function init(){
-  const savedUrl = localStorage.getItem('live_url');
-  if (savedUrl) urlInput.value = savedUrl;
-  const savedAuto = localStorage.getItem('live_auto')==='1';
-  autoChk.checked = savedAuto;
-  if (savedUrl && savedAuto){ fetchAndRender(); timer = setInterval(fetchAndRender, 60000); }
-})();
+loadAndRender();
+setInterval(loadAndRender, REFRESH_MS);
 </script>
 </body>
 </html>

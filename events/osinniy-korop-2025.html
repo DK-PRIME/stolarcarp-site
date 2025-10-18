@@ -73,7 +73,7 @@
         </tr>
       </thead>
       <tbody id="teamsTableBody">
-        <!-- Дані підтягуватимуться автоматично з config.js -->
+        <tr><td colspan="5" style="opacity:0.6;">Завантаження...</td></tr>
       </tbody>
     </table>
   </section>
@@ -90,27 +90,66 @@
 </footer>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Дані можна буде підтягувати з config.js або вбудувати вручну
-    const teams = [
-      { num: 1, name: "Два Кума", captain: "Роман Дячок", zone: "A", sector: "7" },
-      { num: 2, name: "Мебленс", captain: "Андрій Ілюк", zone: "B", sector: "3" },
-      { num: 3, name: "Ягелон", captain: "Петро Ягелло", zone: "C", sector: "2" },
-      { num: 4, name: "Crazy Carp", captain: "Ігор Коваль", zone: "B", sector: "5" }
-    ];
-    const tableBody = document.getElementById('teamsTableBody');
-    teams.forEach(t => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${t.num}</td>
-        <td>${t.name}</td>
-        <td>${t.captain}</td>
-        <td>${t.zone}</td>
-        <td>${t.sector}</td>
-      `;
-      tableBody.appendChild(row);
-    });
-  });
+  // === Підключення до таблиці Google ===
+  const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // ID твоєї таблиці
+  const GID = "0"; // номер аркуша (змінюй якщо інший)
+  const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
+  const tableBody = document.getElementById('teamsTableBody');
+
+  function parseGViz(text) {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf(')');
+    return JSON.parse(text.substring(start, end));
+  }
+
+  const norm = s => (s ?? '').toString().trim();
+  const lower = s => norm(s).toLowerCase();
+
+  async function loadTeams() {
+    try {
+      const res = await fetch(GVIZ, { cache: 'no-store' });
+      const json = parseGViz(await res.text());
+
+      // Підлаштовуємо під твою структуру
+      const rows = (json.table.rows || []).map(r => ({
+        time: r.c?.[0]?.v ?? '',
+        team: r.c?.[1]?.v ?? '',
+        captain: r.c?.[3]?.v ?? '',
+        zone: r.c?.[4]?.v ?? '',
+        sector: r.c?.[5]?.v ?? ''
+      }))
+      .filter(r => norm(r.team) && norm(r.captain));
+
+      const seen = new Set();
+      const uniq = [];
+      for (const r of rows) {
+        const key = lower(r.team);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        uniq.push(r);
+      }
+
+      uniq.sort((a, b) => {
+        if (a.time && b.time) return new Date(a.time) - new Date(b.time);
+        return a.team.localeCompare(b.team, 'uk', { sensitivity: 'base' });
+      });
+
+      tableBody.innerHTML = uniq.map((r, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${r.team}</td>
+          <td>${r.captain}</td>
+          <td>${r.zone || ''}</td>
+          <td>${r.sector || ''}</td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      tableBody.innerHTML = `<tr><td colspan="5" style="opacity:.6;">Не вдалося завантажити список команд</td></tr>`;
+    }
+  }
+
+  loadTeams();
 </script>
 </body>
 </html>

@@ -22,7 +22,6 @@
     .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 16px}
     .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:.94rem}
     .chip b{font-weight:700}
-    .input{background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font-size:.96rem;min-width:220px;outline:none}
     .btn-sm{padding:9px 12px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);color:var(--text);text-decoration:none;font-weight:600;cursor:pointer}
     .btn-sm:hover{filter:brightness(1.1)}
 
@@ -71,8 +70,8 @@
     <h1 class="page-title title-gradient">Список зареєстрованих команд</h1>
     <p class="lead muted">Оновлюється автоматично після відправки заявки з форми.</p>
 
+    <!-- toolbar без пошуку -->
     <div class="toolbar">
-      <input id="search" class="input" type="search" placeholder="Пошук: команда або капітан…">
       <span class="chip">Місць: <b class="mono" id="cap">24</b> • Зайнято: <b class="mono" id="used">0</b> • Вільно: <b class="mono" id="left">24</b></span>
       <button id="refresh" class="btn-sm">Оновити зараз</button>
     </div>
@@ -120,7 +119,6 @@
   const tbody   = document.getElementById('teamList');
   const stateEl = document.getElementById('state');
   const updated = document.getElementById('updated');
-  const search  = document.getElementById('search');
   const capEl   = document.getElementById('cap');
   const usedEl  = document.getElementById('used');
   const leftEl  = document.getElementById('left');
@@ -161,7 +159,7 @@
     }).join('');
   }
 
-  // надійне оновлення статусу
+  // статус
   function setState(ok, text){
     const dot = stateEl.querySelector('.state-dot');
     dot.classList.toggle('state-ok', ok);
@@ -177,19 +175,11 @@
   let sortKey = 'num';
   let sortDir = 1; // 1 asc, -1 desc
 
-  function applyFilterAndSort(){
-    const q = lower(search.value);
-    let rows = allRows.slice();
-
-    if (q){
-      rows = rows.filter(r =>
-        lower(r.team).includes(q) ||
-        lower(r.captain).includes(q)
-      );
-    }
+  function applySort(){
+    const rows = allRows.slice();
 
     rows.sort((a,b)=>{
-      if (sortKey === 'num') return 0;
+      if (sortKey === 'num') return 0; // відображаємо у порядку завантаження
       const A = lower(a[sortKey]);
       const B = lower(b[sortKey]);
       return A.localeCompare(B, 'uk', { sensitivity:'base' }) * sortDir;
@@ -197,7 +187,6 @@
 
     renderRows(rows);
 
-    // Лічильники показують реальну кількість команд (усі), а не відфільтровані
     usedEl.textContent = allRows.length;
     capEl.textContent  = CAPACITY;
     leftEl.textContent = Math.max(CAPACITY - allRows.length, 0);
@@ -224,7 +213,7 @@
       });
 
       allRows = clean;
-      applyFilterAndSort();
+      applySort();
 
       const now = new Date();
       updated.textContent = `Останнє оновлення: ${now.toLocaleTimeString('uk-UA')}`;
@@ -240,13 +229,12 @@
     }
   }
 
-  search.addEventListener('input', applyFilterAndSort);
   refreshBtn.addEventListener('click', loadTeams);
   document.querySelectorAll('th.sort').forEach(th=>{
     th.addEventListener('click', ()=>{
       const key = th.dataset.sort;
       if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
-      applyFilterAndSort();
+      applySort();
       document.querySelectorAll('th.sort .arrow').forEach(a=>a.textContent='↕');
       th.querySelector('.arrow').textContent = sortDir===1?'↑':'↓';
     });
@@ -257,4 +245,3 @@
 </script>
 </body>
 </html>
-

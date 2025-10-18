@@ -3,20 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Осінній короп STOLAR CARP — Подія</title>
+  <title>Список команд — Осінній короп STOLAR CARP</title>
   <link rel="stylesheet" href="../assets/css/main.css">
   <script defer src="../assets/js/config.js"></script>
   <style>
-    .event-info ul { list-style:none; padding:0; }
-    .event-info li { margin-bottom:8px; font-size:1rem; }
-    .event-actions { margin-top:20px; display:flex; gap:10px; flex-wrap:wrap; }
-    .btn { padding:10px 18px; border-radius:10px; font-weight:600; text-decoration:none; }
-    .btn--primary { background:#6b5bff; color:#fff; }
-    .btn--accent { background:#d23b3b; color:#fff; }
-    .btn--dark { background:#191a1d; color:#fff; }
-    .banner { width:100%; border-radius:16px; margin:20px 0; }
+    .teams-list { 
+      margin-top: 20px; 
+      border-collapse: collapse; 
+      width: 100%; 
+      background: #111; 
+      border-radius: 10px; 
+      overflow: hidden; 
+    }
+    .teams-list th, .teams-list td {
+      padding: 12px 15px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      text-align: left;
+    }
+    .teams-list th {
+      background: linear-gradient(90deg, #ffb300, #a11b1b);
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 0.9rem;
+    }
+    .teams-list td {
+      color: #eaeaea;
+      font-size: 0.95rem;
+    }
+    .teams-list tr:hover td {
+      background: rgba(255,255,255,0.05);
+    }
   </style>
 </head>
+
 <body>
 <header class="header">
   <div class="container header__row">
@@ -30,6 +50,7 @@
       <a href="../live.html" class="nav__link">Live</a>
       <a href="../rating.html" class="nav__link">Рейтинг</a>
       <a href="../sponsors.html" class="nav__link">Спонсори</a>
+      <a href="../events/korop2025.html" class="nav__link nav__link--active">Турнір 2025</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -37,42 +58,24 @@
 
 <main class="main">
   <section class="container section section--narrow">
-    <h1 class="page-title title-gradient">Осінній короп STOLAR CARP</h1>
+    <h1 class="page-title title-gradient">Список команд — Осінній короп 2025</h1>
+    <p class="lead">Учасники головного осіннього турніру STOLAR CARP на водоймі Лелехівка.</p>
 
-    <p class="lead">
-      Головний турнір сезону 2025 року. Формат — <strong>Командні змагання</strong>.  
-      Подія пройде на водоймі <strong>Лелехівка</strong> з 24 по 26 жовтня 2025 року.
-    </p>
-
-    <img class="banner" src="../assets/lelekhivka-logo.jpg" alt="Лелехівка — Осінній короп STOLAR CARP">
-
-    <div class="event-info">
-      <ul>
-        <li>📅 <strong>Дати проведення:</strong> 24–26 жовтня 2025</li>
-        <li>📍 <strong>Локація:</strong> Водойма Лелехівка, Львівська обл.</li>
-        <li>🎯 <strong>Формат:</strong> Командні змагання</li>
-        <li>👥 <strong>Ліміт:</strong> 24 команди</li>
-        <li>💸 <strong>Вступний внесок:</strong> 3500 грн з команди</li>
-        <li>💬 <strong>Статус:</strong> Реєстрація відкрита</li>
-      </ul>
-    </div>
-
-    <div class="event-actions">
-      <a href="../register.html" class="btn btn--primary">Подати заявку</a>
-      <a href="../live.html" class="btn btn--accent">Live-протокол</a>
-      <a href="../entries.html" class="btn btn--dark">Список команд</a>
-    </div>
-
-    <hr style="margin:30px 0; opacity:0.2;">
-
-    <p class="muted">
-      🎣 Осінній короп STOLAR CARP 2025
-
-Головний турнір осені, який проводиться спільно з водоймою Лелехівка!
-Попереду — 2 дні азарту, боротьби й справжніх емоцій на одному з найкращих озер Львівщини.
-
-🏆 На учасників чекають кубки, призи та подарунки від наших спонсорів і партнерів озера Лелехівка.
-    </p>
+    <!-- Таблиця команд -->
+    <table class="teams-list">
+      <thead>
+        <tr>
+          <th>№</th>
+          <th>Назва команди</th>
+          <th>Капітан</th>
+          <th>Зона</th>
+          <th>Сектор</th>
+        </tr>
+      </thead>
+      <tbody id="teamsTableBody">
+        <!-- Дані підтягуватимуться автоматично з config.js -->
+      </tbody>
+    </table>
   </section>
 </main>
 
@@ -85,5 +88,29 @@
     </div>
   </div>
 </footer>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Дані можна буде підтягувати з config.js або вбудувати вручну
+    const teams = [
+      { num: 1, name: "Два Кума", captain: "Роман Дячок", zone: "A", sector: "7" },
+      { num: 2, name: "Мебленс", captain: "Андрій Ілюк", zone: "B", sector: "3" },
+      { num: 3, name: "Ягелон", captain: "Петро Ягелло", zone: "C", sector: "2" },
+      { num: 4, name: "Crazy Carp", captain: "Ігор Коваль", zone: "B", sector: "5" }
+    ];
+    const tableBody = document.getElementById('teamsTableBody');
+    teams.forEach(t => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${t.num}</td>
+        <td>${t.name}</td>
+        <td>${t.captain}</td>
+        <td>${t.zone}</td>
+        <td>${t.sector}</td>
+      `;
+      tableBody.appendChild(row);
+    });
+  });
+</script>
 </body>
 </html>

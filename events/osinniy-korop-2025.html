@@ -26,6 +26,7 @@
     .food-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:.9rem;line-height:1;border:1px solid rgba(255,255,255,.15)}
     .food-yes{background:#1d2a18;color:#d7f7d7;border-color:rgba(22,163,74,.35)}
     .food-no{background:#2a1918;color:#f5d0d0;border-color:rgba(239,68,68,.35)}
+    .updated{margin-top:10px;opacity:.6;font-size:.9rem;text-align:right;}
   </style>
 </head>
 
@@ -65,6 +66,8 @@
         <tr><td colspan="3" style="opacity:.6">Завантаження…</td></tr>
       </tbody>
     </table>
+
+    <p class="updated" id="updated">Оновлення...</p>
   </section>
 </main>
 
@@ -80,11 +83,12 @@
 
 <script>
   // === Налаштування аркуша ===
-  const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // твій ID таблиці
-  const GID      = "0"; // gid аркуша Осіннього коропа
+  const SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // ID таблиці
+  const GID      = "0"; // gid аркуша Осінній короп
   const GVIZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
 
   const tbody = document.getElementById('teamsTableBody');
+  const updated = document.getElementById('updated');
   const norm  = s => (s ?? '').toString().trim();
   const lower = s => norm(s).toLowerCase();
 
@@ -134,13 +138,16 @@
       });
 
       render(uniq);
+      updated.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
     }catch(e){
       console.error(e);
       tbody.innerHTML = `<tr><td colspan="3" style="opacity:.7">Не вдалося завантажити список</td></tr>`;
+      updated.textContent = 'Помилка під час оновлення';
     }
   }
 
   loadTeams();
+  setInterval(loadTeams, 30000); // автооновлення кожні 30 секунд
 </script>
 </body>
 </html>

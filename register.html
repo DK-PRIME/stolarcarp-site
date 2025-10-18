@@ -6,6 +6,14 @@
   <title>Реєстрація — STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css" />
   <script defer src="assets/js/config.js"></script>
+  <style>
+    /* стиль для вибору події */
+    .event-options{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+    .event-item{background:#15161a;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;color:#fff;display:flex;align-items:center;gap:10px;font-size:1rem;cursor:pointer;transition:.2s}
+    .event-item:hover{background:#1c1d22}
+    .event-item input[type="radio"]{accent-color:#ffb300;transform:scale(1.2)}
+    .field--disabled{opacity:.6}
+  </style>
 </head>
 
 <body class="register-page">
@@ -37,6 +45,37 @@
     <form id="regForm" class="form-card" novalidate>
       <input type="text" name="hp" autocomplete="off" style="position:absolute;left:-9999px;opacity:0" />
       <input type="hidden" name="fp" id="fp" />
+
+      <!-- === ВИБІР ПОДІЇ/ЕТАПУ === -->
+      <div class="field">
+        <label class="form-label">Оберіть турнір або етап *</label>
+        <div class="event-options" id="eventOptions">
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Етап I — Лелехівка" required>
+            <span>🏆 STOLAR CARP 2026 — Етап I — Лелехівка</span>
+          </label>
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Етап II — Bounty">
+            <span>🏆 STOLAR CARP 2026 — Етап II — Bounty</span>
+          </label>
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Етап III — Пристань">
+            <span>🏆 STOLAR CARP 2026 — Етап III — Пристань</span>
+          </label>
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Етап IV — Trophy Valley">
+            <span>🏆 STOLAR CARP 2026 — Етап IV — Trophy Valley</span>
+          </label>
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Етап V — (вкажемо пізніше)">
+            <span>🏆 STOLAR CARP 2026 — Етап V — (вкажемо пізніше)</span>
+          </label>
+          <label class="event-item">
+            <input type="radio" name="event" value="STOLAR CARP 2026 — Фінал — Лелехівка">
+            <span>🥇 STOLAR CARP 2026 — Фінал — Лелехівка</span>
+          </label>
+        </div>
+      </div>
 
       <div class="field">
         <label for="team_name">Назва команди *</label>
@@ -144,6 +183,15 @@
   document.getElementById('fp').value='fp_'+h.toString(16);
 })();
 
+/* === Автопрефіл з ?event=... (якщо прийшли з кнопки події) === */
+(function(){
+  const p=new URLSearchParams(location.search).get('event');
+  if(!p) return;
+  const radios=[...document.querySelectorAll('input[name="event"]')];
+  const found=radios.find(r=>r.value.toLowerCase().includes(p.toLowerCase()));
+  if(found){found.checked=true;}
+})();
+
 /* === Логіка харчування === */
 const form=document.getElementById('regForm');
 const radios=form.querySelectorAll('input[name="food"]');
@@ -163,19 +211,42 @@ document.getElementById('copyCard').addEventListener('click',async()=>{try{const
 /* === Сабміт форми === */
 form.addEventListener('submit',e=>{
   e.preventDefault();
-  if(!form.checkValidity()){const msg=document.getElementById('msg');msg.className='form-msg err';msg.textContent='Будь ласка, заповніть усі обовʼязкові поля.';form.reportValidity?.();return;}
-  if(!/^\+380\d{9}$/.test(phoneHidden.value)){const msg=document.getElementById('msg');msg.className='form-msg err';msg.textContent='Невірний номер телефону.';return;}
+
+  // Перевіряємо вибір події
+  if(!form.querySelector('input[name="event"]:checked')){
+    const msg=document.getElementById('msg');
+    msg.className='form-msg err';
+    msg.textContent='Оберіть, будь ласка, етап/подію.';
+    return;
+  }
+
+  if(!form.checkValidity()){
+    const msg=document.getElementById('msg');
+    msg.className='form-msg err';
+    msg.textContent='Будь ласка, заповніть усі обовʼязкові поля.';
+    form.reportValidity?.();
+    return;
+  }
+  if(!/^\+380\d{9}$/.test(phoneHidden.value)){
+    const msg=document.getElementById('msg');
+    msg.className='form-msg err';
+    msg.textContent='Невірний номер телефону.';
+    return;
+  }
+
+  const selectedEvent=form.querySelector('input[name="event"]:checked')?.value || '';
 
   const msg=document.getElementById('msg');
   msg.className='form-msg ok';
   msg.innerHTML=`
-    ✅ Заявку прийнято! Оплатіть, будь ласка, <b>1500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
+    ✅ Заявку на <b>${selectedEvent}</b> прийнято! Оплатіть, будь ласка, <b>1500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
     <span style="color:#f87171;font-weight:600;">
       ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.
     </span>
   `;
-  form.reset(); toggleFood();
+  form.reset(); 
+  toggleFood();
 });
 </script>
 </body>
-  </html>
+</html>

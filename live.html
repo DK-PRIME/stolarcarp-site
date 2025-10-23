@@ -134,7 +134,7 @@
     </table>
   </div>
 
-  <!-- Блок 3: Фінансовий тотал (прозорий список) -->
+  <!-- Блок 3: Фінансовий тотал (лише D1/D2/Big) -->
   <div class="card" style="margin-top:16px">
     <h3 class="subhead">Фінансовий тотал (лише оплачені)</h3>
 
@@ -148,15 +148,12 @@
       <thead>
         <tr>
           <th>Команда</th>
-          <th class="num">BigD1</th>
-          <th class="num">BigD2</th>
-          <th class="num">Big</th>
           <th class="num">D1</th>
           <th class="num">D2</th>
-          <th class="num">Overall</th>
+          <th class="num">Big</th>
         </tr>
       </thead>
-      <tbody id="totalsBody"><tr><td colspan="7" class="muted">Немає оплачених учасників</td></tr></tbody>
+      <tbody id="totalsBody"><tr><td colspan="4" class="muted">Немає оплачених учасників</td></tr></tbody>
     </table>
   </div>
 </section>
@@ -173,9 +170,11 @@
 </footer>
 
 <script>
-/* ===== Утиліти ===== */
-const CSV_URL = 'assets/data/live.csv';
+/* ===== НАЛАШТУВАННЯ ДЖЕРЕЛА ДАНИХ (GAS) ===== */
+const CSV_URL = 'https://script.google.com/macros/s/AKfycbxhOzDKHt85UzBeH4_3lrW5XWYdL0O3fTrM_BHAf0STvly0M5dMTwcmB49fCnFl4YMMZw/exec?type=live';
 const REFRESH_MS = 60000;
+
+/* ===== Утиліти ===== */
 const toNum = v => {
   if (v == null) return 0;
   const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
@@ -183,7 +182,7 @@ const toNum = v => {
   return Number.isFinite(x) ? x : 0;
 };
 const kg = v => toNum(v).toFixed(3);
-const yes = v => /^(1|y|yes|true|так|ok)$/i.test(String(v||'').trim());
+const yes = v => /^(1|y|yes|true|так|ok|✔|✓)$/i.test(String(v||'').trim());
 
 /* ===== Парсер CSV з авто-визначенням роздільника + маппер заголовків ===== */
 function parseCSV(text){
@@ -208,9 +207,9 @@ function headerIndexMap(headerRow){
     big: ['big','bigfish','bigkg','bigfishкг','біг','бігфіш'],
     bigd1: ['bigd1','bigday1','бігд1'],
     bigd2: ['bigd2','bigday2','бігд2'],
-    paidd1: ['paidd1','paidday1','оплатад1'],
-    paidd2: ['paidd2','paidday2','оплатад2'],
-    paidoverall: ['paidoverall','paido','paidbig','оплатабіг','оплабіг','оплатазмагань']
+    paidd1: ['paidd1','paidday1','оплатад1','оплатадоба1','платіжд1'],
+    paidd2: ['paidd2','paidday2','оплатад2','оплатадоба2','платіжд2'],
+    paidoverall: ['paidoverall','paido','paidbig','оплатабіг','оплатазмагань','платіжбіг']
   };
   const idx = {};
   for (const key in want){
@@ -270,6 +269,7 @@ function renderAll(items){
   items.forEach(x => { if (['A','B','C'].includes(x.zone)) zones[x.zone].push(x); });
   for (const z of ['A','B','C']){
     const arr = zones[z].slice().sort((a,b)=> b.weight - a.weight);
+    // місця з урахуванням однакової ваги
     let lastW=null, place=0, lastPlace=0;
     const rows = arr.map((x,i)=>{
       if (lastW===null || x.weight !== lastW){ place = i+1; lastPlace = place; lastW = x.weight; }
@@ -292,43 +292,39 @@ function renderAll(items){
     zoneFoot[z].big.textContent = kg(rows.reduce((m,r)=>Math.max(m,r.big),0));
   }
 
-  // 3) Фінансовий тотал
+  // 3) Фінансовий тотал (лише D1/D2/Big)
   const paidAny = items.filter(x => x.paidd1 || x.paidd2 || x.paido);
+
+  const winD1 = items.filter(x => x.paidd1).sort((a,b)=> b.bigd1 - a.bigd1)[0] || null;
+  const winD2 = items.filter(x => x.paidd2).sort((a,b)=> b.bigd2 - a.bigd2)[0] || null;
+  const winAll= items.filter(x => x.paido ).sort((a,b)=> b.big   - a.big  )[0] || null;
+
+  kpi.d1Team.textContent = winD1 ? winD1.team : '—';
+  kpi.d1Val.textContent  = kg(winD1 ? winD1.bigd1 : 0);
+  kpi.d2Team.textContent = winD2 ? winD2.team : '—';
+  kpi.d2Val.textContent  = kg(winD2 ? winD2.bigd2 : 0);
+  kpi.allTeam.textContent= winAll? winAll.team : '—';
+  kpi.allVal.textContent = kg(winAll? winAll.big  : 0);
+
   if (!paidAny.length){
-    totalsBody.innerHTML = `<tr><td colspan="7" class="muted">Немає оплачених учасників</td></tr>`;
-    kpi.d1Team.textContent = '—'; kpi.d1Val.textContent = '0.000';
-    kpi.d2Team.textContent = '—'; kpi.d2Val.textContent = '0.000';
-    kpi.allTeam.textContent= '—'; kpi.allVal.textContent= '0.000';
+    totalsBody.innerHTML = `<tr><td colspan="4" class="muted">Немає оплачених учасників</td></tr>`;
   } else {
-    // winners
-    const winD1 = paidAny.filter(x=>x.paidd1).sort((a,b)=> b.bigd1 - a.bigd1)[0];
-    const winD2 = paidAny.filter(x=>x.paidd2).sort((a,b)=> b.bigd2 - a.bigd2)[0];
-    const winAll= paidAny.filter(x=>x.paido ).sort((a,b)=> b.big   - a.big  )[0];
-
-    kpi.d1Team.textContent = winD1 ? winD1.team : '—';
-    kpi.d1Val.textContent  = kg(winD1 ? winD1.bigd1 : 0);
-    kpi.d2Team.textContent = winD2 ? winD2.team : '—';
-    kpi.d2Val.textContent  = kg(winD2 ? winD2.bigd2 : 0);
-    kpi.allTeam.textContent= winAll? winAll.team : '—';
-    kpi.allVal.textContent = kg(winAll? winAll.big  : 0);
-
-    totalsBody.innerHTML = paidAny
-      .sort((a,b)=> (b.paido-b.paido) || (b.paidd2-b.paidd2) || (b.paidd1-b.paidd1) || (b.big - a.big))
+    const rowsHtml = paidAny
+      .slice()
+      .sort((a,b)=> b.big - a.big || b.bigd2 - a.bigd2 || b.bigd1 - a.bigd1)
       .map(x=>{
-        const rowClass =
-          (winAll && x.team===winAll.team) ? 'winner' :
-          (winD2 && x.team===winD2.team) ? 'winner' :
-          (winD1 && x.team===winD1.team) ? 'winner' : '';
-        return `<tr class="${rowClass}">
+        const highlight =
+          (winAll && x.team===winAll.team) ||
+          (winD2 && x.team===winD2.team) ||
+          (winD1 && x.team===winD1.team);
+        return `<tr class="${highlight?'winner':''}">
           <td>${x.team}</td>
           <td class="num">${kg(x.bigd1)}</td>
           <td class="num">${kg(x.bigd2)}</td>
           <td class="num">${kg(x.big)}</td>
-          <td class="num">${x.paidd1?'<span class="pill paid">так</span>':'—'}</td>
-          <td class="num">${x.paidd2?'<span class="pill paid">так</span>':'—'}</td>
-          <td class="num">${x.paido ?'<span class="pill paid">так</span>':'—'}</td>
         </tr>`;
       }).join('');
+    totalsBody.innerHTML = rowsHtml;
   }
 }
 

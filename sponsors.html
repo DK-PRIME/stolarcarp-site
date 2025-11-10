@@ -9,42 +9,42 @@
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    /* Картки спонсорів */
-    .grid {
-      display: grid;
-      gap: 24px;
-      margin-top: 24px;
+    .grid{display:grid;gap:24px;margin-top:24px}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+
+    .card{
+      background:#14151a;
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:0;
+      overflow:hidden;
+      height:220px;             /* базова висота */
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:transform .2s ease,border-color .2s ease;
     }
-    .grid-3 {
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    @media (min-width:900px){
+      .card{height:260px}       /* трохи вища на десктопі */
+    }
+    .card:hover{
+      transform:scale(1.02);
+      border-color:rgba(255,255,255,.22);
     }
 
-    .card {
-      background: #14151a;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 18px;
-      padding: 0;
-      overflow: hidden;
-      height: 220px;        /* Висота картки */
-      display: block;
-      transition: 0.2s ease;
+    /* Лого не обрізаємо: вміщаємо всередину й центруємо */
+    .s-logo{
+      max-width:100%;
+      max-height:100%;
+      width:auto;
+      height:auto;
+      object-fit:contain;       /* ключ: показує весь логотип */
+      display:block;
+      padding:16px;             /* невелике поле навколо логотипу */
+      background:#0f1014;       /* легкий фон під лого */
     }
 
-    .card:hover {
-      transform: scale(1.02);
-      border-color: rgba(255,255,255,.2);
-    }
-
-    .s-logo {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;    /* Заповнює картку */
-      display: block;
-    }
-
-    .section h2 {
-      margin-bottom: 18px;
-    }
+    .section h2{margin-bottom:18px}
   </style>
 </head>
 
@@ -78,22 +78,20 @@
     <div class="grid grid-3">
 
       <!-- Pugach -->
-      <a class="card" href="https://puhach.com" target="_blank">
+      <a class="card" href="https://puhach.com" target="_blank" rel="noopener">
         <img class="s-logo" src="assets/sponsors/pugach.png" alt="Pugach Baits">
       </a>
 
       <!-- Винниківський Короповий Клуб -->
-      <a class="card" href="https://vkk.in.ua" target="_blank">
+      <a class="card" href="https://vkk.in.ua" target="_blank" rel="noopener">
         <img class="s-logo" src="assets/sponsors/vkk.png" alt="Винниківський Короповий Клуб">
       </a>
 
-      <!-- Місце під майбутніх спонсорів -->
-      <!-- Просто додаси нову картку ось так:
-      <a class="card" href="https://example.com" target="_blank">
-        <img class="s-logo" src="assets/sponsors/logo-name.png" alt="Sponsor Name">
+      <!-- Приклад для додавання нового спонсора:
+      <a class="card" href="https://example.com" target="_blank" rel="noopener">
+        <img class="s-logo" src="assets/sponsors/example.png" alt="Назва спонсора">
       </a>
       -->
-
     </div>
   </section>
 </main>
@@ -101,13 +99,11 @@
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
-
     <div class="footer__links">
       <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
       <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
     </div>
   </div>
 </footer>
-
 </body>
 </html>

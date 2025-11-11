@@ -194,3 +194,8 @@ body.register-page .section img{
 @media (max-width:560px){
   body.register-page .form-card{padding:14px}
 }
+.floating-fish {
+    opacity: 0.9;
+    filter: drop-shadow(0 0 6px rgba(255, 180, 0, 0.8));
+    transition: left 5s linear, top 5s linear, transform 1s ease;
+}

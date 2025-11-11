@@ -109,6 +109,29 @@
     </div>
   </div>
 </footer>
+<!-- Goldfish floating animation -->
+<img src="assets/fish/goldfish.png" class="floating-fish" id="goldfish">
 
+<script>
+  const fish = document.getElementById("goldfish");
+
+  function moveFish() {
+    const x = Math.random() * 80; 
+    const y = Math.random() * 80; 
+    const scale = 0.4 + Math.random() * 0.6; 
+    const flip = Math.random() > 0.5 ? "scaleX(-1)" : "scaleX(1)";
+
+    fish.style.position = "fixed";
+    fish.style.zIndex = "9999";
+    fish.style.width = "160px";
+    fish.style.left = x + "%";
+    fish.style.top = y + "%";
+    fish.style.transform = `${flip} scale(${scale})`;
+    fish.style.transition = "all 3.8s ease-in-out";
+  }
+
+  moveFish();
+  setInterval(moveFish, 4000);
+</script>
 </body>
 </html>

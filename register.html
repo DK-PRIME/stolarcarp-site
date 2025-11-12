@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = document.getElementById('submitBtn');
   const spinner = document.getElementById('spinner');
 
-  // !!! ВАШ АКТУАЛЬНИЙ ТА ПЕРЕВІРЕНИЙ API URL !!!
-  const apiUrl = 'https://script.google.com/macros/s/AKfycbwmL_waJIehJG1N3PfDtpO9QLUS-DWEgEUjpMNzP6ioAs-0ObnOki8WQtAMzjeHrLKg/exec'; 
+  // !!! НОВА АКТУАЛЬНА API URL !!!
+  const apiUrl = 'https://script.google.com/macros/s/AKfycbzlJBi2eA8K2DpcJMcIBBbLFnX4YvDR11qy_UGKPYS2slzjHQ91jpYQBlT87fK1iVH2/exec'; 
 
   // Допоміжна функція для керування станом завантаження
   const toggleLoading = (isLoading) => {
@@ -102,7 +102,6 @@ document.addEventListener('DOMContentLoaded', () => {
   phoneInput.addEventListener('input', () => {
     const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);
     phoneInput.value = clean;
-    // Навіть якщо довжина не 9, зберігаємо те, що є, щоб сервер міг перевірити
     phoneHidden.value = '+380' + clean; 
   });
 
@@ -119,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- 2.7. Сабміт форми (ОНОВЛЕНО: Тепер з POST-запитом) ---
+  // --- 2.7. Сабміт форми ---
   form.addEventListener('submit', async e => {
     e.preventDefault();
     msg.className = 'form-msg';
@@ -150,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
             body: formData,
         });
 
-        // GAS завжди повертає JSON
         const result = await response.json(); 
 
         if (result.success) {

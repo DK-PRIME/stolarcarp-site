@@ -1,55 +1,133 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Live — STOLAR CARP</title>
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live результати — STOLAR CARP</title>
+
+  <!-- Favicon & App Icon -->
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <meta name="theme-color" content="#1a1a1a">
+
+  <!-- Стилі та скрипт меню -->
+  <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
+  <!-- Локальні стилі тільки для live-сторінки -->
   <style>
-    :root{
-      --line: rgba(255,255,255,.10);
-      --row: #16171c;
-      --ok:#16a34a; --warn:#f59e0b; --err:#ef4444;
-      --grad: linear-gradient(90deg,#f6c34c 0%, #cc6a2b 35%, #7a0f2b 100%);
+    .live-header {
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:18px;
     }
-    .title-gradient{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-    .card{background:#14151a;border:1px solid var(--line);border-radius:16px;padding:16px}
-    .card.live{padding:0;overflow:hidden}
-    .subhead{margin:0 0 8px;font-weight:800}
-    .muted{opacity:.8}
-    .zone-title{margin:22px 16px 8px;font-weight:900;font-size:20px}
-    .zone-title span{display:inline-block;padding:2px 10px;border-radius:999px;border:1px solid var(--line)}
-    .pending{border:1px dashed var(--line)}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    @media (max-width:900px){ .grid-2{grid-template-columns:1fr} }
-    table.live{width:100%;border-collapse:separate;border-spacing:0}
-    table.live thead th{position:sticky;top:0;background:#15161a;padding:12px;text-align:left;border-bottom:1px solid var(--line)}
-    table.live tbody td{background:#16171c;padding:10px 12px;border-bottom:1px solid var(--line)}
-    table.live tbody tr:hover td{background:#1a1b21}
-    .foot td{background:#101114;font-weight:700;border-top:2px solid var(--line)}
-    .num{text-align:right;white-space:nowrap}
-    .lead-row td{background:#182216}
-    .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
-    .paid{background:#0e2b1b;border-color:#124d2e;color:#9ff0bf}
-    .notpaid{opacity:.6}
-    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 0}
-    @media (max-width:900px){ .kpis{grid-template-columns:1fr} }
-    .kpi{background:#111215;border:1px solid var(--line);border-radius:14px;padding:14px}
-    .kpi h4{margin:0 0 6px;font-size:14px;opacity:.85}
-    .kpi .val{font-weight:900;font-size:20px}
-    .winner{border-left:3px solid #f6c34c}
-    .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:10px}
-    .state{display:inline-flex;align-items:center;gap:8px}
-    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
-    .dot.ok{background:var(--ok)} .dot.err{background:var(--err)}
+    .live-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#fcd34d;
+      background:rgba(252,211,77,0.08);
+      border-radius:999px;
+      padding:4px 10px;
+      border:1px solid rgba(252,211,77,0.35);
+      width:fit-content;
+    }
+    .live-kicker span.live-dot{
+      width:8px;height:8px;border-radius:50%;
+      background:#ef4444;
+      box-shadow:0 0 10px rgba(239,68,68,0.9);
+    }
+    .live-stage-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .live-stage-pill span{
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid #262636;
+      background:#0d0d14;
+      font-size:12px;
+    }
+
+    .title-gradient{
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    .live-layout{
+      display:grid;
+      grid-template-columns:2fr 1.2fr;
+      gap:18px;
+    }
+    @media (max-width:900px){
+      .live-layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .live-zones-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
+    }
+    @media (max-width:900px){
+      .live-zones-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .live-zone-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+    }
+    .live-zone-title span.badge{
+      font-size:11px;
+      padding:3px 8px;
+    }
+
+    .table-sm{
+      font-size:13px;
+    }
+    .table-sm th,
+    .table-sm td{
+      padding:6px 8px;
+      white-space:nowrap;
+    }
+    .table-sm td.team-col{
+      max-width:180px;
+      white-space:normal;
+    }
+
+    .live-note{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+
+    .bigfish-row--max{
+      background:rgba(250,204,21,0.08);
+    }
   </style>
 </head>
 <body>
+
+<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span>
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
     </a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
@@ -65,289 +143,243 @@
   </div>
 </header>
 
+<!-- MAIN -->
 <main class="main">
-<section class="container section">
-  <div class="toolbar">
-    <h2 class="title-gradient" style="margin:0;">Live-протокол</h2>
-    <span class="state" style="margin-left:auto;"><span id="statusDot" class="dot"></span><span id="statusText">Оновлення...</span></span>
-  </div>
-
-  <!-- Блок 1: Очікують жеребкування -->
-  <div class="card pending">
-    <h3 class="subhead">Зареєстровані команди — <span class="muted">очікують жеребкування</span></h3>
-    <table class="live">
-      <thead>
-        <tr><th>Команда</th><th>Статус</th></tr>
-      </thead>
-      <tbody id="pendingBody"><tr><td colspan="2" class="muted">Порожньо</td></tr></tbody>
-    </table>
-  </div>
-
-  <!-- Блок 2: Зони -->
-  <div class="card live" style="margin-top:16px">
-    <div class="zone-title">Зона <span>A</span></div>
-    <table class="live">
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th class="num">К-сть</th>
-          <th class="num">Вага, кг</th>
-          <th class="num">Big, кг</th>
-          <th class="num">💰 Тотал</th>
-          <th class="num">Місце</th>
-        </tr>
-      </thead>
-      <tbody id="zoneA"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneA_cnt">0</td><td class="num" id="zoneA_kg">0.000</td><td class="num" id="zoneA_big">0.000</td><td></td><td></td></tr></tbody>
-    </table>
-
-    <div class="zone-title">Зона <span>B</span></div>
-    <table class="live">
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th class="num">К-сть</th>
-          <th class="num">Вага, кг</th>
-          <th class="num">Big, кг</th>
-          <th class="num">💰 Тотал</th>
-          <th class="num">Місце</th>
-        </tr>
-      </thead>
-      <tbody id="zoneB"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneB_cnt">0</td><td class="num" id="zoneB_kg">0.000</td><td class="num" id="zoneB_big">0.000</td><td></td><td></td></tr></tbody>
-    </table>
-
-    <div class="zone-title">Зона <span>C</span></div>
-    <table class="live">
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th class="num">К-сть</th>
-          <th class="num">Вага, кг</th>
-          <th class="num">Big, кг</th>
-          <th class="num">💰 Тотал</th>
-          <th class="num">Місце</th>
-        </tr>
-      </thead>
-      <tbody id="zoneC"></tbody>
-      <tbody class="foot"><tr><td>Разом</td><td class="num" id="zoneC_cnt">0</td><td class="num" id="zoneC_kg">0.000</td><td class="num" id="zoneC_big">0.000</td><td></td><td></td></tr></tbody>
-    </table>
-  </div>
-
-  <!-- Блок 3: Фінансовий тотал (лише D1/D2/Big) -->
-  <div class="card" style="margin-top:16px">
-    <h3 class="subhead">Фінансовий тотал (лише оплачені)</h3>
-
-    <div class="kpis">
-      <div class="kpi" id="kpiD1"><h4>Біг 1 доби</h4><div class="val" id="kpiD1Team">—</div><div class="muted">Вага: <b id="kpiD1Val">0.000</b> кг</div></div>
-      <div class="kpi" id="kpiD2"><h4>Біг 2 доби</h4><div class="val" id="kpiD2Team">—</div><div class="muted">Вага: <b id="kpiD2Val">0.000</b> кг</div></div>
-      <div class="kpi" id="kpiAll"><h4>Біг змагань</h4><div class="val" id="kpiAllTeam">—</div><div class="muted">Вага: <b id="kpiAllVal">0.000</b> кг</div></div>
+  <section class="container section">
+    <div class="live-header">
+      <div class="live-kicker">
+        <span class="live-dot"></span>
+        <span>Live протокол</span>
+      </div>
+      <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
+        Результати активного етапу
+      </h1>
+      <div class="live-stage-pill">
+        <span>Поточний етап: <strong id="liveStageName">...</strong></span>
+      </div>
+      <p class="lead" style="max-width:640px;margin:4px 0 0;">
+        Дані оновлюються з Google-таблиці. Підсумки формуються автоматично по зонах A/B/C, 
+        загальній вазі та Big Fish.
+      </p>
     </div>
 
-    <table class="live" style="margin-top:14px">
-      <thead>
-        <tr>
-          <th>Команда</th>
-          <th class="num">D1</th>
-          <th class="num">D2</th>
-          <th class="num">Big</th>
-        </tr>
-      </thead>
-      <tbody id="totalsBody"><tr><td colspan="4" class="muted">Немає оплачених учасників</td></tr></tbody>
-    </table>
-  </div>
-</section>
+    <div id="liveError" class="form-msg err" style="display:none;"></div>
+
+    <div id="liveContent" class="live-layout" style="display:none;">
+      <!-- Ліва колонка: зони + загальний протокол -->
+      <div class="live-left">
+        <div class="card" style="margin-bottom:16px;">
+          <h2 style="margin-top:0;margin-bottom:10px;">Зони A / B / C</h2>
+          <div class="live-zones-grid" id="zonesContainer">
+            <!-- JS вставить 3 картки зон -->
+          </div>
+          <p class="live-note">
+            Сортування по вазі, при рівній вазі — за найбільшою рибою (BIG).
+          </p>
+        </div>
+
+        <div class="card">
+          <h2 style="margin-top:0;margin-bottom:10px;">Загальна таблиця</h2>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table class="table table-sm" id="totalTable">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Команда</th>
+                  <th>Зона</th>
+                  <th>К-сть</th>
+                  <th>BIG</th>
+                  <th>Вага</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Права колонка: Big Fish Total -->
+      <div class="live-right">
+        <div class="card">
+          <h2 style="margin-top:0;margin-bottom:10px;">Big Fish — підсумок</h2>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table class="table table-sm" id="bigFishTable">
+              <thead>
+                <tr>
+                  <th>Команда</th>
+                  <th>BIG 1 доба</th>
+                  <th>BIG 2 доба</th>
+                  <th>MAX BIG</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- JS -->
+              </tbody>
+            </table>
+          </div>
+          <p class="live-note">
+            Рядок, виділений фоном — поточний абсолютний Big Fish етапу.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div id="liveLoading" class="form__hint" style="margin-top:12px;">
+      Завантаження результатів...
+    </div>
+  </section>
 </main>
 
+<!-- FOOTER -->
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp" rel="noopener">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
     </div>
   </div>
 </footer>
 
+<!-- СКРИПТ LIVE-ПІДТЯГУВАННЯ -->
 <script>
-/* ===== НАЛАШТУВАННЯ ДЖЕРЕЛА ДАНИХ (GAS) ===== */
-const CSV_URL = 'https://script.google.com/macros/s/AKfycbxhOzDKHt85UzBeH4_3lrW5XWYdL0O3fTrM_BHAf0STvly0M5dMTwcmB49fCnFl4YMMZw/exec?type=live';
-const REFRESH_MS = 60000;
+document.addEventListener('DOMContentLoaded', () => {
+  const apiUrl = 'https://script.google.com/macros/s/AKfycbzlJBi2eA8K2DpcJMcIBBbLFnX4YvDR11qy_UGKPYS2slzjHQ91jpYQBlT87fK1iVH2/exec?action=live';
 
-/* ===== Утиліти ===== */
-const toNum = v => {
-  if (v == null) return 0;
-  const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
-  const x = parseFloat(s);
-  return Number.isFinite(x) ? x : 0;
-};
-const kg = v => toNum(v).toFixed(3);
-const yes = v => /^(1|y|yes|true|так|ok|✔|✓)$/i.test(String(v||'').trim());
+  const stageEl   = document.getElementById('liveStageName');
+  const zonesWrap = document.getElementById('zonesContainer');
+  const totalTbody = document.querySelector('#totalTable tbody');
+  const bigFishTbody = document.querySelector('#bigFishTable tbody');
+  const loadingEl = document.getElementById('liveLoading');
+  const contentEl = document.getElementById('liveContent');
+  const errorEl   = document.getElementById('liveError');
 
-/* ===== Парсер CSV з авто-визначенням роздільника + маппер заголовків ===== */
-function parseCSV(text){
-  const lines = String(text||'').replace(/\r/g,'').split('\n').filter(l=>l.trim().length);
-  if (!lines.length) return [];
-  const sniff = (line) => line.includes('\t') ? '\t' : (line.includes(';') ? ';' : ',');
-  const sep = sniff(lines[0]);
-  return lines.map(l => l.split(sep).map(s => s.trim().replace(/^"(.*)"$/,'$1')));
-}
-function headerIndexMap(headerRow){
-  const map = {};
-  headerRow.forEach((h,i)=>{
-    const k = String(h||'').toLowerCase().replace(/\s+/g,'').replace(/[,._-]/g,'');
-    map[k] = i;
-  });
-  const want = {
-    team: ['команда','team'],
-    zone: ['зона','zone'],
-    sector: ['сектор','sector'],
-    cnt: ['ксть','к-сть','кількість','count','qty'],
-    weight: ['вага','вагакг','weight','weightkg'],
-    big: ['big','bigfish','bigkg','bigfishкг','біг','бігфіш'],
-    bigd1: ['bigd1','bigday1','бігд1'],
-    bigd2: ['bigd2','bigday2','бігд2'],
-    paidd1: ['paidd1','paidday1','оплатад1','оплатадоба1','платіжд1'],
-    paidd2: ['paidd2','paidday2','оплатад2','оплатадоба2','платіжд2'],
-    paidoverall: ['paidoverall','paido','paidbig','оплатабіг','оплатазмагань','платіжбіг']
+  const fmt = (v) => {
+    if (v === null || v === undefined || v === '') return '-';
+    return String(v);
   };
-  const idx = {};
-  for (const key in want){
-    const alias = want[key].find(a => map.hasOwnProperty(a));
-    idx[key] = alias ? map[alias] : -1;
-  }
-  return idx;
-}
-function normalize(rows){
-  if (!rows.length) return [];
-  const hasHeader = /команда|team/i.test(rows[0][0]||'');
-  const header = hasHeader ? rows[0] : ['Команда','Зона','Сектор','К-сть','Вага','Big','BigD1','BigD2','PaidD1','PaidD2','PaidOverall'];
-  const idx = headerIndexMap(header);
-  const data = hasHeader ? rows.slice(1) : rows;
-  return data.map(r => ({
-    team:   r[idx.team] ?? '',
-    zone:   (r[idx.zone] ?? '').toString().trim().toUpperCase(),
-    sector: r[idx.sector] ?? '',
-    cnt:    toNum(r[idx.cnt]),
-    weight: toNum(r[idx.weight]),
-    big:    toNum(r[idx.big]),
-    bigd1:  toNum(r[idx.bigd1]),
-    bigd2:  toNum(r[idx.bigd2]),
-    paidd1: yes(r[idx.paidd1]),
-    paidd2: yes(r[idx.paidd2]),
-    paido:  yes(r[idx.paidoverall]),
-  })).filter(x => x.team);
-}
 
-/* ===== Рендер ===== */
-const $ = sel => document.querySelector(sel);
-const pendingBody = $('#pendingBody');
-const zoneBodies = { A: $('#zoneA'), B: $('#zoneB'), C: $('#zoneC') };
-const zoneFoot = {
-  A: { cnt: $('#zoneA_cnt'), kg: $('#zoneA_kg'), big: $('#zoneA_big') },
-  B: { cnt: $('#zoneB_cnt'), kg: $('#zoneB_kg'), big: $('#zoneB_big') },
-  C: { cnt: $('#zoneC_cnt'), kg: $('#zoneC_kg'), big: $('#zoneC_big') }
-};
-const kpi = {
-  d1Team: $('#kpiD1Team'), d1Val: $('#kpiD1Val'),
-  d2Team: $('#kpiD2Team'), d2Val: $('#kpiD2Val'),
-  allTeam: $('#kpiAllTeam'), allVal: $('#kpiAllVal')
-};
-const totalsBody = $('#totalsBody');
-const statusDot = $('#statusDot');
-const statusText = $('#statusText');
+  const renderZones = (zones) => {
+    const zoneNames = ['A','B','C'];
+    zonesWrap.innerHTML = zoneNames.map(z => {
+      const list = zones[z] || [];
+      if (!list.length){
+        return `
+          <div class="live-zone card">
+            <div class="live-zone-title">
+              <h3 style="margin:0;">Зона ${z}</h3>
+              <span class="badge">немає даних</span>
+            </div>
+            <p class="form__hint">Результати для цієї зони ще не заповнені.</p>
+          </div>
+        `;
+      }
 
-function renderAll(items){
-  // 1) Pending (нема зони або сектора)
-  const pending = items.filter(x => !x.zone || !x.sector);
-  pendingBody.innerHTML = pending.length
-    ? pending.map(x => `<tr><td>${x.team}</td><td class="muted">Очікує жеребкування</td></tr>`).join('')
-    : `<tr><td colspan="2" class="muted">Порожньо</td></tr>`;
+      const rowsHtml = list.map(row => `
+        <tr>
+          <td>${fmt(row.place)}</td>
+          <td class="team-col">${fmt(row.team)}</td>
+          <td>${fmt(row.count)}</td>
+          <td>${fmt(row.big)}</td>
+          <td>${fmt(row.weight)}</td>
+        </tr>
+      `).join('');
 
-  // 2) Зони
-  const zones = {A:[],B:[],C:[]};
-  items.forEach(x => { if (['A','B','C'].includes(x.zone)) zones[x.zone].push(x); });
-  for (const z of ['A','B','C']){
-    const arr = zones[z].slice().sort((a,b)=> b.weight - a.weight);
-    // місця з урахуванням однакової ваги
-    let lastW=null, place=0, lastPlace=0;
-    const rows = arr.map((x,i)=>{
-      if (lastW===null || x.weight !== lastW){ place = i+1; lastPlace = place; lastW = x.weight; }
-      const paid = (x.paidd1||x.paidd2||x.paido);
-      return {
-        html: `<tr class="${i===0?'lead-row':''}">
-          <td>${x.team}${x.sector?` <span class="muted">(${x.sector})</span>`:''}</td>
-          <td class="num">${x.cnt||0}</td>
-          <td class="num">${kg(x.weight)}</td>
-          <td class="num">${kg(x.big)}</td>
-          <td class="num">${paid ? '<span class="pill paid">так</span>' : '<span class="pill notpaid">—</span>'}</td>
-          <td class="num"><b>${lastPlace}</b></td>
-        </tr>`,
-        cnt:x.cnt||0, w:x.weight||0, big:x.big||0
-      };
-    });
-    zoneBodies[z].innerHTML = rows.map(r=>r.html).join('') || `<tr><td colspan="6" class="muted">Немає даних для зони ${z}</td></tr>`;
-    zoneFoot[z].cnt.textContent = rows.reduce((s,r)=>s+r.cnt,0);
-    zoneFoot[z].kg.textContent  = kg(rows.reduce((s,r)=>s+r.w,0));
-    zoneFoot[z].big.textContent = kg(rows.reduce((m,r)=>Math.max(m,r.big),0));
-  }
+      return `
+        <div class="live-zone card">
+          <div class="live-zone-title">
+            <h3 style="margin:0;">Зона ${z}</h3>
+            <span class="badge badge--warn">команд: ${list.length}</span>
+          </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Команда</th>
+                  <th>К-сть</th>
+                  <th>BIG</th>
+                  <th>Вага</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
 
-  // 3) Фінансовий тотал (лише D1/D2/Big)
-  const paidAny = items.filter(x => x.paidd1 || x.paidd2 || x.paido);
+  const renderTotal = (total) => {
+    if (!total || !total.length){
+      totalTbody.innerHTML = '<tr><td colspan="6">Дані ще не заповнені.</td></tr>';
+      return;
+    }
 
-  const winD1 = items.filter(x => x.paidd1).sort((a,b)=> b.bigd1 - a.bigd1)[0] || null;
-  const winD2 = items.filter(x => x.paidd2).sort((a,b)=> b.bigd2 - a.bigd2)[0] || null;
-  const winAll= items.filter(x => x.paido ).sort((a,b)=> b.big   - a.big  )[0] || null;
+    totalTbody.innerHTML = total.map(row => `
+      <tr>
+        <td>${fmt(row.place)}</td>
+        <td class="team-col">${fmt(row.team)}</td>
+        <td>${fmt(row.zone)}</td>
+        <td>${fmt(row.count)}</td>
+        <td>${fmt(row.big)}</td>
+        <td>${fmt(row.weight)}</td>
+      </tr>
+    `).join('');
+  };
 
-  kpi.d1Team.textContent = winD1 ? winD1.team : '—';
-  kpi.d1Val.textContent  = kg(winD1 ? winD1.bigd1 : 0);
-  kpi.d2Team.textContent = winD2 ? winD2.team : '—';
-  kpi.d2Val.textContent  = kg(winD2 ? winD2.bigd2 : 0);
-  kpi.allTeam.textContent= winAll? winAll.team : '—';
-  kpi.allVal.textContent = kg(winAll? winAll.big  : 0);
+  const renderBigFish = (list) => {
+    if (!list || !list.length){
+      bigFishTbody.innerHTML = '<tr><td colspan="4">Поки що немає зафіксованих результатів Big Fish.</td></tr>';
+      return;
+    }
 
-  if (!paidAny.length){
-    totalsBody.innerHTML = `<tr><td colspan="4" class="muted">Немає оплачених учасників</td></tr>`;
-  } else {
-    const rowsHtml = paidAny
-      .slice()
-      .sort((a,b)=> b.big - a.big || b.bigd2 - a.bigd2 || b.bigd1 - a.bigd1)
-      .map(x=>{
-        const highlight =
-          (winAll && x.team===winAll.team) ||
-          (winD2 && x.team===winD2.team) ||
-          (winD1 && x.team===winD1.team);
-        return `<tr class="${highlight?'winner':''}">
-          <td>${x.team}</td>
-          <td class="num">${kg(x.bigd1)}</td>
-          <td class="num">${kg(x.bigd2)}</td>
-          <td class="num">${kg(x.big)}</td>
-        </tr>`;
-      }).join('');
-    totalsBody.innerHTML = rowsHtml;
-  }
-}
+    bigFishTbody.innerHTML = list.map(row => `
+      <tr class="${row.isMax ? 'bigfish-row--max' : ''}">
+        <td>${fmt(row.team)}</td>
+        <td>${fmt(row.big1Day)}</td>
+        <td>${fmt(row.big2Day)}</td>
+        <td><strong>${fmt(row.teamMaxBig)}</strong>${row.isMax ? ' 🏆' : ''}</td>
+      </tr>
+    `).join('');
+  };
 
-/* ===== Завантаження + автооновлення ===== */
-async function loadAndRender(){
-  try{
-    statusDot.classList.remove('ok','err');
-    statusText.textContent = 'Оновлення...';
-    const res = await fetch(CSV_URL, {cache:'no-store'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    const items = normalize(rows);
-    renderAll(items);
-    statusDot.classList.add('ok');
-    statusText.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
-  }catch(err){
-    statusDot.classList.add('err');
-    statusText.textContent = 'Помилка: ' + err.message;
-  }
-}
-loadAndRender();
-setInterval(loadAndRender, REFRESH_MS);
+  const loadLive = async () => {
+    try {
+      const res = await fetch(apiUrl);
+      const json = await res.json();
+
+      if (json && json.stage) {
+        stageEl.textContent = json.stage;
+      } else {
+        stageEl.textContent = '—';
+      }
+
+      const data = json && json.data ? json.data : { zones:{A:[],B:[],C:[]}, total:[], bigFishTotal:[] };
+
+      renderZones(data.zones || {A:[],B:[],C:[]});
+      renderTotal(data.total || []);
+      renderBigFish(data.bigFishTotal || []);
+
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (contentEl) contentEl.style.display = 'grid';
+    } catch (err) {
+      console.error('Live fetch error:', err);
+      if (errorEl){
+        errorEl.style.display = 'block';
+        errorEl.textContent = '❌ Не вдалося завантажити live-дані. Перевірте налаштування ACTIVE_STAGE або спробуйте пізніше.';
+      }
+      if (loadingEl) loadingEl.style.display = 'none';
+    }
+  };
+
+  loadLive();
+});
 </script>
+
 </body>
 </html>

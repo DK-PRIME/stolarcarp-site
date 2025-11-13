@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Реєстрація — STOLAR CARP</title>
 
-  <!-- Favicon & App Icon (як на index) -->
+  <!-- Favicon & App Icon -->
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
@@ -14,105 +14,21 @@
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
-  <!-- ЛОКАЛЬНІ СТИЛІ ТІЛЬКИ ДЛЯ ФОРМИ, НЕ ЧІПАЮТЬ МЕНЮ/КНОПКИ -->
+  <!-- Локальні стилі тільки для цієї сторінки -->
   <style>
     .register-intro {
-      margin-bottom: 24px;
-    }
-
-    .register-intro .lead {
-      margin-top: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+      position: relative;
     }
 
     .register-card {
       margin-top: 18px;
+      margin-bottom: 16px;
     }
 
     .register-form-card {
-      margin-top: 18px;
-    }
-
-    .form-register {
       margin-top: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .form-label {
-      font-size: 0.9rem;
-      color: #e5e7eb;
-    }
-
-    .form-label .req {
-      color: #fbbf24;
-      font-weight: 700;
-    }
-
-    .form-input,
-    .phone-wrapper input,
-    #food_qty {
-      width: 100%;
-      padding: 8px 11px;
-      border-radius: 10px;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #f9fafb;
-      font-size: 0.95rem;
-      outline: none;
-      transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
-    }
-
-    .form-input::placeholder,
-    .phone-wrapper input::placeholder {
-      color: #6b7280;
-    }
-
-    .form-input:focus,
-    .phone-wrapper input:focus,
-    #food_qty:focus {
-      border-color: #facc15;
-      box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.6);
-      background: #020617;
-    }
-
-    .phone-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .phone-prefix {
-      padding: 8px 11px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, #f59e0b, #f97316);
-      color: #111827;
-      font-weight: 700;
-      font-size: 0.9rem;
-      white-space: nowrap;
-    }
-
-    .radio-group {
-      display: flex;
-      gap: 16px;
-      font-size: 0.95rem;
-    }
-
-    .radio-group label {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-    }
-
-    #foodQtyField.field--disabled {
-      opacity: 0.5;
     }
 
     .event-options {
@@ -128,96 +44,111 @@
       gap: 6px;
       padding: 6px 9px;
       border-radius: 10px;
-      background: #020617;
-      border: 1px solid transparent;
+      background: #0d0d14;
+      border: 1px solid #262636;
       cursor: pointer;
       font-size: 0.95rem;
     }
 
     .event-item:hover {
-      border-color: rgba(250, 204, 21, 0.7);
+      border-color: rgba(250, 204, 21, 0.8);
     }
 
     .event-item input {
       accent-color: #facc15;
     }
 
-    .form-actions {
+    .radio-row {
       display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .radio-row label {
+      display: inline-flex;
       align-items: center;
-      gap: 10px;
-      margin-top: 4px;
+      gap: 6px;
+      cursor: pointer;
     }
 
-    .spinner {
-      width: 18px;
-      height: 18px;
-      border-radius: 999px;
-      border: 2px solid rgba(249, 250, 251, 0.25);
-      border-top-color: #facc15;
-      animation: spin 0.8s linear infinite;
-      opacity: 0;
-      transform: scale(0.5);
-      transition: opacity 0.15s ease, transform 0.15s ease;
+    #foodQtyField.field--disabled {
+      opacity: 0.55;
     }
 
-    .spinner--visible {
-      opacity: 1;
-      transform: scale(1);
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .form-note {
-      font-size: 0.85rem;
-      color: #e5e7eb;
-      margin-top: 2px;
-    }
-
-    .form-msg {
-      margin: 0 0 10px;
-      padding: 7px 10px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    .form-msg.ok {
+    /* Стиль заголовка */
+    .page-title span {
       display: block;
-      background: rgba(22, 163, 74, 0.14);
-      border: 1px solid rgba(34, 197, 94, 0.7);
-      color: #bbf7d0;
     }
 
-    .form-msg.err {
-      display: block;
-      background: rgba(248, 113, 113, 0.12);
-      border: 1px solid rgba(248, 113, 113, 0.9);
-      color: #fee2e2;
+    .page-title span:nth-child(1),
+    .page-title span:nth-child(2) {
+      font-size: clamp(26px,4vw,32px);
+      text-transform: uppercase;
+      letter-spacing: .08em;
     }
 
-    .card-payment-title {
-      font-weight: 600;
+    .page-title span:nth-child(3) {
+      font-size: clamp(30px,4.6vw,40px);
+      font-weight: 900;
+    }
+
+    /* Градієнт + glow + легке "дихання" */
+    .register-page .page-title.title-gradient {
+      animation: scGlowPulse 3.6s ease-in-out infinite;
+      text-shadow:
+        0 0 10px rgba(246,195,76,0.55),
+        0 0 22px rgba(122,15,43,0.55),
+        0 0 40px rgba(0,0,0,0.8);
       margin-bottom: 4px;
     }
 
-    .card-number {
-      font-weight: 600;
-      letter-spacing: 0.12em;
+    @keyframes scGlowPulse {
+      0% {
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform: translateY(0);
+      }
+      50% {
+        text-shadow:
+          0 0 14px rgba(246,195,76,0.85),
+          0 0 30px rgba(122,15,43,0.85),
+          0 0 46px rgba(0,0,0,0.9);
+        transform: translateY(-1px);
+      }
+      100% {
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform: translateY(0);
+      }
     }
 
-    .card .form__hint {
-      margin-top: 4px;
-      font-size: 0.8rem;
-      opacity: 0.9;
+    /* Тонка лінія під заголовком */
+    .register-intro::after {
+      content: "";
+      display: block;
+      margin: 14px auto 0;
+      width: 120px;
+      height: 2px;
+      border-radius: 999px;
+      background: linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
+      box-shadow: 0 0 12px rgba(246,195,76,0.6);
+      opacity: .9;
+    }
+
+    @media (max-width: 520px) {
+      .register-intro::after {
+        width: 90px;
+      }
     }
   </style>
 </head>
-<body>
+<body class="register-page">
 
-<!-- HEADER (як на index, тільки активна "Реєстрація") -->
+<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
@@ -240,34 +171,28 @@
 
 <!-- MAIN -->
 <main class="main">
-  <section class="container section">
+  <section class="container section section--narrow">
     <div class="register-intro">
-      <h1 class="title-gradient">Реєстрація команди на етап STOLAR CARP 2026</h1>
+      <h1 class="page-title title-gradient">
+        <span>Реєстрація</span>
+        <span>Турнір</span>
+        <span>STOLAR CARP 2026</span>
+      </h1>
       <p class="lead">
-        Заповніть форму нижче. Після відправки заявки здійсніть оплату та вкажіть <b>назву команди</b> у коментарі до платежу.
+        Подайте заявку на участь у турнірі STOLAR CARP 2026. Після відправки заявки здійсніть оплату
+        та вкажіть <b>назву команди</b> у коментарі до платежу.
       </p>
-    </div>
-
-    <!-- Картка з оплатою -->
-    <div class="card register-card">
-      <div class="card-payment-title">Оплата внеску</div>
-      <p>Сума внеску: <b>3500 ₴</b> на картку</p>
-      <p>Номер картки: <span id="cardNum" class="card-number">4874 0700 5068 8793</span></p>
-      <button type="button" id="copyCard" class="btn btn--secondary" style="margin-top:6px;">
-        Скопіювати картку
-      </button>
-      <p class="form__hint">У коментарі до платежу обовʼязково вкажіть назву команди.</p>
     </div>
 
     <!-- Повідомлення форми -->
     <div id="msg" class="form-msg"></div>
 
-    <!-- Форма в картці -->
-    <div class="card register-form-card">
+    <!-- Форма -->
+    <div class="form-card register-form-card">
       <h2>Форма реєстрації</h2>
-      <p class="form__hint">Поля з позначкою * є обовʼязковими для заповнення.</p>
+      <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>
 
-      <form id="regForm" class="form-register" novalidate>
+      <form id="regForm" class="form" novalidate>
         <!-- honeypot (антибот) -->
         <input
           type="text"
@@ -280,24 +205,26 @@
         <!-- fingerprint -->
         <input type="hidden" id="fp" name="fp" />
 
-        <!-- Подія / етап -->
-        <div class="form-group">
-          <label class="form-label">Оберіть етап турніру <span class="req">*</span></label>
+        <!-- Етап -->
+        <div class="field">
+          <label>
+            Оберіть етап турніру <span style="color:var(--accent);">*</span>
+          </label>
           <div id="eventOptions" class="event-options">
             <p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>
           </div>
         </div>
 
         <!-- Назва команди -->
-        <div class="form-group">
-          <label for="team_name" class="form-label">
-            Назва команди <span class="req">*</span>
+        <div class="field">
+          <label for="team_name">
+            Назва команди <span style="color:var(--accent);">*</span>
           </label>
           <input
             type="text"
             id="team_name"
             name="team_name"
-            class="form-input"
+            class="input"
             required
             minlength="2"
             maxlength="100"
@@ -306,15 +233,15 @@
         </div>
 
         <!-- Капітан -->
-        <div class="form-group">
-          <label for="captain" class="form-label">
-            Капітан команди <span class="req">*</span>
+        <div class="field">
+          <label for="captain">
+            Капітан команди <span style="color:var(--accent);">*</span>
           </label>
           <input
             type="text"
             id="captain"
             name="captain"
-            class="form-input"
+            class="input"
             required
             minlength="2"
             maxlength="100"
@@ -323,30 +250,32 @@
         </div>
 
         <!-- Телефон -->
-        <div class="form-group">
-          <label for="phone_rest" class="form-label">
-            Номер телефону (формат: +380XXXXXXXXX) <span class="req">*</span>
+        <div class="field">
+          <label for="phone_rest">
+            Номер телефону (формат: +380XXXXXXXXX) <span style="color:var(--accent);">*</span>
           </label>
-          <div class="phone-wrapper">
+          <div class="phone-wrap">
             <span class="phone-prefix">+380</span>
             <input
               type="tel"
               id="phone_rest"
-              class="form-input"
               inputmode="numeric"
               placeholder="XXXXXXXXX"
               required
             />
           </div>
           <input type="hidden" id="phone" name="phone" />
+          <div class="hint" style="font-size:12px;color:var(--muted);">
+            Вказуйте номер капітана для звʼязку по турніру.
+          </div>
         </div>
 
         <!-- Харчування -->
-        <div class="form-group">
-          <label class="form-label">
-            Харчування від організаторів? <span class="req">*</span>
+        <div class="field">
+          <label>
+            Харчування від організаторів? <span style="color:var(--accent);">*</span>
           </label>
-          <div class="radio-group">
+          <div class="radio-row">
             <label>
               <input type="radio" name="food" value="Так" required />
               <span>Так</span>
@@ -359,23 +288,24 @@
         </div>
 
         <!-- Кількість харчуючих -->
-        <div class="form-group" id="foodQtyField">
-          <label for="food_qty" class="form-label">
-            Кількість харчуючих (1–6)
-          </label>
+        <div class="field field--disabled" id="foodQtyField">
+          <label for="food_qty">Кількість харчуючих (1–6)</label>
           <input
             type="number"
             id="food_qty"
             name="food_qty"
-            class="form-input"
+            class="input"
             min="1"
             max="6"
             inputmode="numeric"
             placeholder="Вкажіть кількість, якщо замовляєте харчування"
           />
+          <div class="hint" style="font-size:12px;color:var(--muted);">
+            Якщо харчування не потрібне — залиште поле порожнім.
+          </div>
         </div>
 
-        <!-- Кнопка відправки -->
+        <!-- Дія -->
         <div class="form-actions">
           <button type="submit" id="submitBtn" class="btn btn--primary">
             Подати заявку
@@ -383,16 +313,30 @@
           <div id="spinner" class="spinner" aria-hidden="true"></div>
         </div>
 
-        <p class="form-note">
+        <p class="form__hint" style="margin-top:6px;">
           ⚠️ Після відправки заявки у вас є <b>24 години</b>, щоб здійснити оплату.
           Якщо оплата не буде зарахована — заявка буде автоматично анульована.
         </p>
       </form>
     </div>
+
+    <!-- Картка з оплатою (нижче форми) -->
+    <div class="card register-card">
+      <div class="card-payment-title" style="font-weight:600;margin-bottom:4px;">
+        Оплата благодійного внеску
+      </div>
+      <p>Сума внеску: <b>3500 ₴</b> на картку</p>
+      <p>Номер картки: <span id="cardNum" class="card-number" style="font-weight:600;letter-spacing:0.12em;">4874 0700 5068 8793</span></p>
+      <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
+        Скопіювати картку
+      </button>
+      <p class="form__hint">У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.</p>
+    </div>
+
   </section>
 </main>
 
-<!-- FOOTER (як на index) -->
+<!-- FOOTER -->
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
@@ -422,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!form) return;
 
-  // Fingerprint
+  // === Fingerprint ===
   (function makeFingerprint(){
     if (!fpInput) return;
     try {
@@ -444,13 +388,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   })();
 
+  // === Helpers ===
   const toggleLoading = (isLoading) => {
     if (submitBtn) {
       submitBtn.disabled = isLoading;
       submitBtn.textContent = isLoading ? 'Відправлення...' : 'Подати заявку';
     }
     if (spinner) {
-      spinner.classList.toggle('spinner--visible', isLoading);
+      spinner.classList.toggle('spinner--on', isLoading);
     }
   };
 
@@ -463,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (found) found.checked = true;
   };
 
+  // === Завантаження відкритих етапів ===
   const loadEvents = async () => {
     if (!eventOptionsContainer) return;
     eventOptionsContainer.innerHTML = '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';
@@ -503,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadEvents();
 
+  // === Логіка харчування ===
   const foodRadios = form.querySelectorAll('input[name="food"]');
   const toggleFood = () => {
     const need = form.food && form.food.value === 'Так';
@@ -519,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
   foodRadios.forEach(r => r.addEventListener('change', toggleFood));
   toggleFood();
 
+  // === Телефон ===
   if (phoneInput && phoneHidden) {
     phoneInput.addEventListener('input', () => {
       const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);
@@ -527,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // === Копіювання картки ===
   if (copyCardBtn) {
     copyCardBtn.addEventListener('click', async () => {
       try {
@@ -542,6 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // === Сабміт ===
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (msg) {
@@ -584,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (msg) {
           msg.className = 'form-msg ok';
           msg.innerHTML = `
-            ✅ Заявку на <b>${selectedEvent}</b> прийнято! Оплатіть, будь ласка, <b>1500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
+            ✅ Заявку на <b>${selectedEvent}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
             <span style="color:#f97373;font-weight:600;">
               ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.
             </span>

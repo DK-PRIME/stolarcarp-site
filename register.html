@@ -5,12 +5,263 @@
   <title>Реєстрація — STOLAR CARP 2026</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="assets/css/main.css" />
-  <!-- Підключення конфіг-скрипта (favicon, тощо) -->
   <script src="assets/js/config.js" defer></script>
+
+  <!-- ДОДАТКОВИЙ СТИЛЬ САМЕ ДЛЯ ЦІЄЇ СТОРІНКИ -->
+  <style>
+    body.page-register {
+      background: #050505;
+      color: #f9fafb;
+    }
+
+    .section-register .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .section-register h1 {
+      font-size: 1.9rem;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .section-register .section-subtitle {
+      color: #d1d5db;
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+
+    .card.card-payment {
+      background: radial-gradient(circle at top left, #1f2933, #020617);
+      border-radius: 18px;
+      padding: 16px 18px;
+      margin-bottom: 1.8rem;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+      border: 1px solid rgba(248, 250, 252, 0.08);
+    }
+
+    .card-payment p {
+      margin: 0.25rem 0;
+    }
+
+    .card-number {
+      font-weight: 600;
+      letter-spacing: 0.12em;
+    }
+
+    .btn {
+      cursor: pointer;
+      border-radius: 999px;
+      border: none;
+      font-weight: 600;
+      padding: 0.55rem 1.3rem;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(90deg, #f59e0b, #f97316);
+      color: #0b0f19;
+      box-shadow: 0 10px 25px rgba(248, 181, 0, 0.35);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px rgba(248, 181, 0, 0.45);
+    }
+
+    .btn-secondary {
+      background: #f9fafb;
+      color: #111827;
+    }
+    .btn-secondary:hover {
+      background: #e5e7eb;
+      transform: translateY(-1px);
+    }
+
+    .form-register {
+      background: rgba(15, 23, 42, 0.85);
+      border-radius: 20px;
+      padding: 18px 16px 20px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.65);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      backdrop-filter: blur(10px);
+    }
+
+    @media (min-width: 640px) {
+      .form-register {
+        padding: 22px 22px 24px;
+      }
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+      color: #e5e7eb;
+    }
+
+    .req {
+      color: #fbbf24;
+      font-weight: 700;
+    }
+
+    .form-input,
+    .phone-wrapper input,
+    #food_qty {
+      width: 100%;
+      background: #020617;
+      border-radius: 999px;
+      border: 1px solid #374151;
+      padding: 0.55rem 0.9rem;
+      color: #f9fafb;
+      font-size: 0.95rem;
+      outline: none;
+      box-shadow: inset 0 0 0 1px rgba(15,23,42,0.7);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .form-input::placeholder,
+    .phone-wrapper input::placeholder {
+      color: #6b7280;
+    }
+
+    .form-input:focus,
+    .phone-wrapper input:focus,
+    #food_qty:focus {
+      border-color: #facc15;
+      box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.7);
+      background: #020617;
+    }
+
+    .phone-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .phone-prefix {
+      padding: 0.55rem 0.9rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #f59e0b, #f97316);
+      color: #111827;
+      font-weight: 700;
+      font-size: 0.95rem;
+      white-space: nowrap;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    .radio-group label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      cursor: pointer;
+    }
+
+    #foodQtyField.field--disabled {
+      opacity: 0.4;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 10px;
+      margin-bottom: 8px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 2px solid rgba(249, 250, 251, 0.25);
+      border-top-color: #facc15;
+      animation: spin 0.8s linear infinite;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .spinner--visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .form-note {
+      font-size: 0.85rem;
+      color: #e5e7eb;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+
+    .form-msg {
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .form-msg.ok {
+      display: block;
+      background: rgba(22, 163, 74, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.7);
+      color: #bbf7d0;
+    }
+
+    .form-msg.err {
+      display: block;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.9);
+      color: #fee2e2;
+    }
+
+    .event-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.4rem 0;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.55rem;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+
+    .event-item input {
+      accent-color: #facc15;
+    }
+
+    .event-item span {
+      font-size: 0.95rem;
+    }
+
+    .event-item:hover {
+      border-color: rgba(250, 204, 21, 0.7);
+    }
+  </style>
 </head>
 <body class="page page-register">
 
-  <!-- Хедер / меню -->
+  <!-- Хедер / меню (як на інших сторінках) -->
   <header class="site-header">
     <div class="container">
       <div class="logo">STOLAR CARP</div>
@@ -70,7 +321,6 @@
           <div class="form-group">
             <label class="form-label">Оберіть етап турніру <span class="req">*</span></label>
             <div id="eventOptions" class="event-options">
-              <!-- Сюди підтягуються етапи з API -->
               <p id="loading-events">Завантаження актуальних етапів...</p>
             </div>
           </div>
@@ -125,7 +375,6 @@
                 required
               />
             </div>
-            <!-- приховане поле з повним телефоном -->
             <input type="hidden" id="phone" name="phone" />
           </div>
 
@@ -180,13 +429,11 @@
     </section>
   </main>
 
-  <!-- Головний скрипт реєстрації -->
+  <!-- Скрипт реєстрації -->
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // ==== 0. Актуальний API URL (веб-додаток Apps Script) ====
     const apiUrl = 'https://script.google.com/macros/s/AKfycbzlJBi2eA8K2DpcJMcIBBbLFnX4YvDR11qy_UGKPYS2slzjHQ91jpYQBlT87fK1iVH2/exec';
 
-    // ==== 1. Елементи DOM ====
     const form = document.getElementById('regForm');
     const qty = document.getElementById('food_qty');
     const qtyField = document.getElementById('foodQtyField');
@@ -199,12 +446,8 @@
     const spinner = document.getElementById('spinner');
     const fpInput = document.getElementById('fp');
 
-    if (!form) {
-      console.error('Форма реєстрації (#regForm) не знайдена в DOM.');
-      return;
-    }
+    if (!form) return;
 
-    // ==== 2. Fingerprint (безпечний, не ламає сторінку) ====
     (function makeFingerprint(){
       if (!fpInput) return;
       try {
@@ -226,7 +469,6 @@
       }
     })();
 
-    // ==== 3. Хелпер для індикатора завантаження ====
     const toggleLoading = (isLoading) => {
       if (submitBtn) {
         submitBtn.disabled = isLoading;
@@ -237,7 +479,6 @@
       }
     };
 
-    // ==== 4. Підтягування відкритих етапів з API ====
     const prefillEvent = () => {
       if (!eventOptionsContainer) return;
       const p = new URLSearchParams(location.search).get('event');
@@ -287,7 +528,6 @@
 
     loadEvents();
 
-    // ==== 5. Логіка харчування ====
     const foodRadios = form.querySelectorAll('input[name="food"]');
     const toggleFood = () => {
       const need = form.food && form.food.value === 'Так';
@@ -304,7 +544,6 @@
     foodRadios.forEach(r => r.addEventListener('change', toggleFood));
     toggleFood();
 
-    // ==== 6. Телефон (збираємо +380XXXXXXXXX) ====
     if (phoneInput && phoneHidden) {
       phoneInput.addEventListener('input', () => {
         const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);
@@ -313,7 +552,6 @@
       });
     }
 
-    // ==== 7. Копіювання картки ====
     if (copyCardBtn) {
       copyCardBtn.addEventListener('click', async () => {
         try {
@@ -329,7 +567,6 @@
       });
     }
 
-    // ==== 8. Сабміт форми ====
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (msg) {
@@ -337,7 +574,6 @@
         msg.textContent = '';
       }
 
-      // HTML5 валідація
       if (!form.checkValidity()) {
         if (msg) {
           msg.className = 'form-msg err';
@@ -347,7 +583,6 @@
         return;
       }
 
-      // Перевірка телефону
       if (phoneHidden && !/^\+380\d{9}$/.test(phoneHidden.value || '')) {
         if (msg) {
           msg.className = 'form-msg err';

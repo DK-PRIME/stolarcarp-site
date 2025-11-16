@@ -54,8 +54,12 @@
       border-color: rgba(250, 204, 21, 0.8);
     }
 
-    .event-item input {
-      accent-color: #facc15;
+    /* зелена більша крапка вибору етапу */
+    .event-item input[type="radio"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #22c55e; /* зелений */
+      transform: scale(1.15);
     }
 
     .radio-row {
@@ -143,6 +147,31 @@
       .register-intro::after {
         width: 90px;
       }
+    }
+
+    /* Темні, преміальні інпути на цій сторінці */
+    .register-page .input,
+    .register-page input[type="text"],
+    .register-page input[type="tel"],
+    .register-page input[type="number"] {
+      background: #0f0f14 !important;
+      border: 1px solid #2a2a39 !important;
+      color: #fff !important;
+      padding: 10px 14px !important;
+      border-radius: 10px !important;
+      font-size: 1rem;
+    }
+
+    .register-page .input::placeholder,
+    .register-page input::placeholder {
+      color: #6b7280;
+    }
+
+    .register-page .input:focus,
+    .register-page input:focus {
+      outline: none;
+      border-color: #f6c34c !important;
+      box-shadow: 0 0 6px rgba(246,195,76,0.5);
     }
   </style>
 </head>
@@ -305,6 +334,18 @@
           </div>
         </div>
 
+        <!-- Підтвердження регламенту -->
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">
+            <span>Підтверджую, що ознайомлений із
+              <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">
+                регламентом турніру
+              </a>
+            </span>
+          </label>
+        </div>
+
         <!-- Дія -->
         <div class="form-actions">
           <button type="submit" id="submitBtn" class="btn btn--primary">
@@ -401,9 +442,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const prefillEvent = () => {
     if (!eventOptionsContainer) return;
-    const p = new URLSearchParams(location.search).get('event');
+    const params = new URLSearchParams(location.search);
+    const p = params.get('stage') || params.get('event');
     if (!p) return;
-    const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');
+    const radios = eventOptionsContainer.querySelectorAll('input[name="stage"]');
     const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));
     if (found) found.checked = true;
   };
@@ -430,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';
         html += `
           <label class="event-item">
-            <input type="radio" name="event" value="${val}" required>
+            <input type="radio" name="stage" value="${val}" required>
             <span>${icon} ${val}</span>
           </label>
         `;
@@ -529,12 +571,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await response.json();
 
       if (result && result.success) {
-        const selectedEvent = formData.get('event') || 'обраний етап';
+        const selectedStage = formData.get('stage') || 'обраний етап';
 
         if (msg) {
           msg.className = 'form-msg ok';
           msg.innerHTML = `
-            ✅ Заявку на <b>${selectedEvent}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
+            ✅ Заявку на <b>${selectedStage}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
             <span style="color:#f97373;font-weight:600;">
               ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.
             </span>

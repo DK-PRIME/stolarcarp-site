@@ -391,7 +391,7 @@
 <!-- СКРИПТ РЕЄСТРАЦІЇ -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const apiUrl = 'https://script.google.com/macros/s/AKfycbzdSGNNJmaw80JtvhClYwCJetg6HqanKLNCLFNFmGRA479olUf889UuOFirzv_2mJi1/exec';
+  const apiUrl = 'https://script.google.com/macros/s/AKfycbx5ye8HzQIuyRkUzumciIzY5jkY-Pe5Cl5kh3DVfpRdow7xYiCisZ9FmPYz522Q4Hqo/exec';
 
   const form = document.getElementById('regForm');
   const qty = document.getElementById('food_qty');
@@ -445,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(location.search);
     const p = params.get('stage') || params.get('event');
     if (!p) return;
-    const radios = eventOptionsContainer.querySelectorAll('input[name="stage"]');
+    const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');
     const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));
     if (found) found.checked = true;
   };
@@ -472,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';
         html += `
           <label class="event-item">
-            <input type="radio" name="stage" value="${val}" required>
+            <input type="radio" name="event" value="${val}" required>
             <span>${icon} ${val}</span>
           </label>
         `;
@@ -571,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await response.json();
 
       if (result && result.success) {
-        const selectedStage = formData.get('stage') || 'обраний етап';
+        const selectedStage = formData.get('event') || 'обраний етап';
 
         if (msg) {
           msg.className = 'form-msg ok';

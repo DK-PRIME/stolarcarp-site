@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleLoading(true);
 
     try {
-      const response = await fetch(apiUrl);
+      const response = await fetch(API_URL);
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
@@ -562,7 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const formData = new FormData(form);
 
-      const response = await fetch(apiUrl, {
+      const response = await fetch(API_URL, {
         method: 'POST',
         body: formData
       });

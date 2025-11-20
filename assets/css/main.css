@@ -22,42 +22,45 @@ a{color:var(--accent);text-decoration:none}
 img{max-width:100%;height:auto;display:block}
 .container{width:min(1100px,92%);margin-inline:auto}
 
-/* === HEADER (оригінальний) === */
+/* === HEADER === */
 .header{
   position:sticky;
   top:0;
   z-index:1000;
-
-  background:rgba(11,11,15,.75); /* твоя прозорість */
+  background:rgba(11,11,15,.75);
   backdrop-filter:blur(10px);
-
-  border-bottom:1px solid #222; /* оригінально було так */
+  border-bottom:1px solid #222;
 }
-
-.header__row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 0;
+.header__row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);font-weight:800;letter-spacing:.5px}
+.logo__mark{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  padding:8px 10px;
+  border-radius:12px;
+  color:#000;
+  box-shadow:var(--shadow)
 }
-
-.logo{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  text-decoration:none;
-  color:var(--text);
-  font-weight:800;
-  letter-spacing:.5px;
-}
-
-.burger span{
-  display:block;
-  width:24px;
-  height:2px;
-  background:#fff;
-  margin:5px 0;
-  border-radius:2px;
+.logo__text{font-weight:900}
+.nav{display:flex;gap:16px;align-items:center}
+.nav__link{padding:10px 12px;border-radius:12px;color:var(--text);opacity:.9;border:1px solid transparent}
+.nav__link:hover{opacity:1;background:var(--panel)}
+.nav__link--active{border-color:#333;background:linear-gradient(180deg,#14141c,#0f0f15)}
+.burger{display:none;background:none;border:0;cursor:pointer;padding:8px;border-radius:12px}
+.burger span{display:block;width:24px;height:2px;background:#fff;margin:5px 0;border-radius:2px}
+@media (max-width:860px){
+  .nav{
+    position:fixed;
+    inset:60px 0 auto 0;
+    flex-direction:column;
+    background:var(--panel);
+    padding:16px;
+    border-bottom-left-radius:var(--radius);
+    border-bottom-right-radius:var(--radius);
+    transform:translateY(-120%);
+    transition:transform .25s ease
+  }
+  .nav.open{transform:translateY(0)}
+  .burger{display:block}
 }
 
 /* === LAYOUT (спільне) === */
@@ -100,50 +103,49 @@ img{max-width:100%;height:auto;display:block}
 .notice{border-left:4px solid var(--accent);padding:12px;border-radius:12px;background:#12121a}
 .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"DejaVu Sans Mono",monospace;background:#0a0a0f;border:1px solid #242434;border-radius:12px;padding:8px 10px;display:inline-block}
 
-/* === ГЕРОЙ (тільки головна) — залишаю базові, якщо треба === */
+/* === HERO === */
 .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:26px;align-items:center;margin-top:18px}
 .hero__card{background:linear-gradient(180deg,#161620,#0d0d13);border:1px solid #262636;border-radius:20px;padding:26px;box-shadow:var(--shadow)}
-.hero__kicker{display:inline-block;font-weight:700;letter-spacing:.08em;color:#000;background:linear-gradient(135deg,var(--accent),var(--accent-2));padding:6px 10px;border-radius:999px;margin-bottom:12px}
+.hero__kicker{
+  display:inline-block;font-weight:700;letter-spacing:.08em;
+  color:#000;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  padding:6px 10px;border-radius:999px;margin-bottom:12px
+}
 .hero h1{font-size:40px;line-height:1.1;margin:0 0 12px}
 .hero p{color:var(--muted);margin:0 0 18px}
 .cta-row{display:flex;gap:12px;flex-wrap:wrap}
 
-/* === BRAND (опціонально) === */
+/* === BRAND === */
 .logo.logo--flag{display:inline-flex;align-items:center;gap:10px}
 .logo__fish{width:34px;height:34px;transform:translateY(1px) rotate(-10deg);filter:drop-shadow(0 2px 6px rgba(0,0,0,.35));flex:0 0 auto}
 .logo__text--grad{
   background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
-  font-weight:800;letter-spacing:.4px;font-size:clamp(16px,2.6vw,22px);line-height:1;white-space:nowrap;
+  font-weight:800;letter-spacing:.4px;font-size:clamp(16px,2.6vw,22px);line-height:1;white-space:nowrap
 }
 
-/* ===========================
-   REGISTER PAGE (scoped)
-   =========================== */
+/* === REGISTER PAGE === */
 body.register-page .section--narrow{max-width:880px;margin:auto}
-
-/* титул */
 body.register-page .page-title{
   text-align:center;font-weight:800;line-height:1.15;margin:8px auto 18px;
-  font-size:clamp(28px,4.6vw,44px);letter-spacing:.3px;
+  font-size:clamp(28px,4.6vw,44px);letter-spacing:.3px
 }
 body.register-page .title-gradient{
   background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
+  -webkit-background-clip:text;background-clip:text;color:transparent
 }
 body.register-page .lead{
   text-align:center;color:var(--muted,#b7b7b7);
-  margin:6px auto 22px;max-width:680px;
+  margin:6px auto 22px;max-width:680px
 }
 
-/* форма */
 body.register-page .form-card{
   background:rgba(255,255,255,0.02);
   border:1px solid rgba(255,255,255,0.08);
   border-radius:16px;
   padding:18px;
   backdrop-filter:blur(4px);
-  box-shadow:0 8px 24px rgba(0,0,0,.25);
+  box-shadow:0 8px 24px rgba(0,0,0,.25)
 }
 body.register-page .field{display:grid;gap:6px;margin-bottom:14px}
 body.register-page .field label,
@@ -155,25 +157,11 @@ body.register-page .field input[type="tel"]{
   border:1px solid rgba(255,255,255,.08);
   border-radius:10px;
   padding:10px 12px;
-  color:#fff;
+  color:#fff
 }
 body.register-page .field input::placeholder{color:#9aa0a6}
-body.register-page .field .hint{color:#9aa0a6;font-size:12px}
 body.register-page .field--disabled{opacity:.55}
-body.register-page .radio{display:inline-flex;align-items:center;gap:8px;margin-right:14px}
 
-body.register-page .checkbox input{margin-right:8px}
-
-body.register-page .form-actions{display:flex;align-items:center;gap:12px;margin-top:8px}
-body.register-page .form-card .btn{
-  cursor:pointer;border:0;border-radius:12px;padding:11px 16px;font-weight:700;
-  transition:background .25s;
-}
-body.register-page .form-card .btn--primary{background:#6d4aff;color:#fff;}
-body.register-page .form-card .btn:hover:not([disabled]){background:#7b5cff;}
-body.register-page .form-card .btn[disabled]{opacity:.6;pointer-events:none}
-
-/* спінер + повідомлення */
 .spinner{width:18px;height:18px;border-radius:50%;border:3px solid rgba(255,255,255,.2);border-top-color:#fff;display:none}
 .spinner--on{display:inline-block;animation:spin .9s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -181,41 +169,22 @@ body.register-page .form-card .btn[disabled]{opacity:.6;pointer-events:none}
 .form-msg.ok{color:#43d18a}
 .form-msg.err{color:#ff6c6c}
 
-/* поле телефону */
-body.register-page .phone-wrap{display:flex;align-items:center;gap:8px;margin-top:4px}
-body.register-page .phone-prefix{
-  background:#181818;color:#f6b700;font-weight:600;
-  border:1px solid rgba(255,255,255,0.1);
-  padding:10px 14px;border-radius:10px;user-select:none;
-  font-size:16px;letter-spacing:.5px;
-}
-body.register-page #phone_rest{
-  flex:1;background:#111215;border:1px solid rgba(255,255,255,0.15);
-  border-radius:10px;padding:10px 14px;color:#fff;font-size:16px;
-  outline:none;transition:border-color .2s, box-shadow .2s;
-}
-body.register-page #phone_rest:focus{
-  border-color:#f6b700;box-shadow:0 0 8px rgba(246,183,0,.4);
-}
-/* feedback */
-body.register-page #phone_rest:invalid{
-  border-color:#ff6c6c;box-shadow:0 0 8px rgba(255,108,108,.25);
-}
-body.register-page #phone_rest:valid{
-  border-color:#43d18a;box-shadow:0 0 8px rgba(67,209,138,.25);
-}
-
-/* картинки в секції (збережено, але без впливу на інші) */
-body.register-page .section img{
-  display:block;margin:30px auto 40px auto;max-width:95%;
-  border-radius:10px;box-shadow:0 0 15px rgba(0,0,0,0.6);
-}
-
 @media (max-width:560px){
   body.register-page .form-card{padding:14px}
 }
-.floating-fish {
-    opacity: 0.9;
-    filter: drop-shadow(0 0 6px rgba(255, 180, 0, 0.8));
-    transition: left 5s linear, top 5s linear, transform 1s ease;
+
+.floating-fish{
+  opacity:.9;
+  filter:drop-shadow(0 0 6px rgba(255,180,0,0.8));
+  transition:left 5s linear, top 5s linear, transform 1s ease
+}
+
+/* === FIX: прибираємо дві білі лінії в хедері === */
+.header *:focus,
+.header *:focus-visible,
+.header a:focus,
+.header a:focus-visible,
+.header button:focus,
+.header button:focus-visible{
+  outline:none !important;
 }

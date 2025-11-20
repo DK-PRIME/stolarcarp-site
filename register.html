@@ -1,225 +1,610 @@
-<!-- СКРИПТ РЕЄСТРАЦІЇ -->
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // ✅ ЄДИНА правка: правильно названа змінна з веб-адресою
-  const API_URL = "https://script.google.com/macros/s/AKfycbzavsHNwfQQ_5P3ciP19G7vOJjRdo3jr1GgHEi1oSDXNY5QT0ek4wwXubygTtEQoqFM/exec";
+<!doctype html>
+<html lang="uk">  
+<head>  
+  <meta charset="utf-8">  
+  <meta name="viewport" content="width=device-width, initial-scale=1">  
+  <title>Реєстрація — STOLAR CARP</title>
 
-  const form = document.getElementById('regForm');
-  const qty = document.getElementById('food_qty');
-  const qtyField = document.getElementById('foodQtyField');
-  const phoneInput = document.getElementById('phone_rest');
-  const phoneHidden = document.getElementById('phone');
-  const copyCardBtn = document.getElementById('copyCard');
-  const msg = document.getElementById('msg');
-  const eventOptionsContainer = document.getElementById('eventOptions');
-  const submitBtn = document.getElementById('submitBtn');
-  const spinner = document.getElementById('spinner');
-  const fpInput = document.getElementById('fp');
+  <!-- Favicon & App Icon -->
+  <link rel="icon" type="image/png" href="assets/favicon.png">  
+  <link rel="apple-touch-icon" href="assets/favicon.png">  
+  <meta name="theme-color" content="#1a1a1a">
 
-  if (!form) return;
+  <!-- Стилі та скрипт меню -->
+  <link rel="stylesheet" href="assets/css/main.css">  
+  <script defer src="assets/js/config.js"></script>
 
-  // === Fingerprint ===
-  (function makeFingerprint(){
-    if (!fpInput) return;
-    try {
-      const src = [
-        navigator.userAgent,
-        navigator.language,
-        (screen && (screen.width + 'x' + screen.height)) || '',
-        (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || ''
-      ].join('|');
+  <!-- Локальні стилі тільки для цієї сторінки -->
+  <style>  
+    .register-intro {  
+      margin-bottom: 20px;  
+      text-align: center;  
+      position: relative;  
+    }  
 
-      let h = 2166136261;
-      for (let i = 0; i < src.length; i++) {
-        h ^= src.charCodeAt(i);
-        h = (h * 16777619) >>> 0;
-      }
-      fpInput.value = 'fp_' + h.toString(16);
-    } catch (err) {
-      console.warn('Fingerprint error:', err);
-    }
-  })();
+    .register-card {  
+      margin-top: 18px;  
+      margin-bottom: 16px;  
+    }  
 
-  // === Helpers ===
-  const toggleLoading = (isLoading) => {
-    if (submitBtn) {
-      submitBtn.disabled = isLoading;
-      submitBtn.textContent = isLoading ? 'Відправлення...' : 'Подати заявку';
-    }
-    if (spinner) {
-      spinner.classList.toggle('spinner--on', isLoading);
-    }
-  };
+    .register-form-card {  
+      margin-top: 10px;  
+    }  
 
-  const prefillEvent = () => {
-    if (!eventOptionsContainer) return;
-    const params = new URLSearchParams(location.search);
-    const p = params.get('stage') || params.get('event');
-    if (!p) return;
-    const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');
-    const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));
-    if (found) found.checked = true;
-  };
+    .event-options {  
+      display: flex;  
+      flex-direction: column;  
+      gap: 6px;  
+      padding-top: 4px;  
+    }  
 
-  // === Завантаження відкритих етапів ===
-  const loadEvents = async () => {
-    if (!eventOptionsContainer) return;
-    eventOptionsContainer.innerHTML =
-      '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';
-    toggleLoading(true);
+    .event-item {  
+      display: flex;  
+      align-items: center;  
+      gap: 6px;  
+      padding: 6px 9px;  
+      border-radius: 10px;  
+      background: #0d0d14;  
+      border: 1px solid #262636;  
+      cursor: pointer;  
+      font-size: 0.95rem;  
+    }  
 
-    try {
-      const response = await fetch(API_URL);
-      const data = await response.json();
+    .event-item:hover {  
+      border-color: rgba(250, 204, 21, 0.8);  
+    }  
 
-      if (!Array.isArray(data) || data.length === 0) {
-        eventOptionsContainer.innerHTML =
-          '<p class="form-msg err" style="display:block;">❌ Немає відкритих етапів або не вдалося їх завантажити.</p>';
-        return;
-      }
+    /* зелена більша крапка вибору етапу */  
+    .event-item input[type="radio"] {  
+      width: 20px;  
+      height: 20px;  
+      accent-color: #22c55e; /* зелений */  
+      transform: scale(1.15);  
+    }  
 
-      let html = '';
-      data.forEach(eventValue => {
-        const val = String(eventValue || '').trim();
-        if (!val) return;
-        const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';
-        html += `
-          <label class="event-item">
-            <input type="radio" name="event" value="${val}" required>
-            <span>${icon} ${val}</span>
-          </label>
-        `;
-      });
+    .radio-row {  
+      display: flex;  
+      gap: 16px;  
+      flex-wrap: wrap;  
+    }  
 
-      eventOptionsContainer.innerHTML =
-        html || '<p class="form-msg err" style="display:block;">❌ Немає актуальних етапів для реєстрації.</p>';
-      prefillEvent();
+    .radio-row label {  
+      display: inline-flex;  
+      align-items: center;  
+      gap: 6px;  
+      cursor: pointer;  
+    }  
 
-    } catch (error) {
-      console.error('Помилка під час завантаження етапів:', error);
-      eventOptionsContainer.innerHTML =
-        '<p class="form-msg err" style="display:block;">❌ Помилка при завантаженні даних. Оновіть сторінку або спробуйте пізніше.</p>';
-    } finally {
-      toggleLoading(false);
-    }
-  };
+    #foodQtyField.field--disabled {  
+      opacity: 0.55;  
+    }  
 
-  loadEvents();
+    /* Стиль заголовка */  
+    .page-title span {  
+      display: block;  
+    }  
 
-  // === Логіка харчування ===
-  const foodRadios = form.querySelectorAll('input[name="food"]');
-  const toggleFood = () => {
-    const need = form.food && form.food.value === 'Так';
-    if (qty) {
-      qty.disabled = !need;
-      qty.required = need;
-      if (!need) qty.value = '';
-    }
-    if (qtyField) {
-      qtyField.classList.toggle('field--disabled', !need);
-    }
-  };
+    .page-title span:nth-child(1),  
+    .page-title span:nth-child(2) {  
+      font-size: clamp(26px,4vw,32px);  
+      text-transform: uppercase;  
+      letter-spacing: .08em;  
+    }  
 
-  foodRadios.forEach(r => r.addEventListener('change', toggleFood));
-  toggleFood();
+    .page-title span:nth-child(3) {  
+      font-size: clamp(30px,4.6vw,40px);  
+      font-weight: 900;  
+    }  
 
-  // === Телефон ===
-  if (phoneInput && phoneHidden) {
-    phoneInput.addEventListener('input', () => {
-      const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);
-      phoneInput.value = clean;
-      phoneHidden.value = clean ? ('+380' + clean) : '';
-    });
-  }
+    /* Градієнт + glow + легке "дихання" */  
+    .register-page .page-title.title-gradient {  
+      animation: scGlowPulse 3.6s ease-in-out infinite;  
+      text-shadow:  
+        0 0 10px rgba(246,195,76,0.55),  
+        0 0 22px rgba(122,15,43,0.55),  
+        0 0 40px rgba(0,0,0,0.8);  
+      margin-bottom: 4px;  
+    }  
 
-  // === Копіювання картки ===
-  if (copyCardBtn) {
-    copyCardBtn.addEventListener('click', async () => {
-      try {
-        const cardEl = document.getElementById('cardNum');
-        const num = (cardEl?.textContent || '').replace(/\s+/g, '').trim() || '4874070050688793';
-        await navigator.clipboard.writeText(num);
-        const old = copyCardBtn.textContent;
-        copyCardBtn.textContent = '✅ Скопійовано';
-        setTimeout(() => copyCardBtn.textContent = old, 1500);
-      } catch (err) {
-        alert('Скопіюйте вручну: 4874070050688793');
-      }
-    });
-  }
+    @keyframes scGlowPulse {  
+      0% {  
+        text-shadow:  
+          0 0 6px rgba(246,195,76,0.35),  
+          0 0 16px rgba(122,15,43,0.35),  
+          0 0 30px rgba(0,0,0,0.6);  
+        transform: translateY(0);  
+      }  
+      50% {  
+        text-shadow:  
+          0 0 14px rgba(246,195,76,0.85),  
+          0 0 30px rgba(122,15,43,0.85),  
+          0 0 46px rgba(0,0,0,0.9);  
+        transform: translateY(-1px);  
+      }  
+      100% {  
+        text-shadow:  
+          0 0 6px rgba(246,195,76,0.35),  
+          0 0 16px rgba(122,15,43,0.35),  
+          0 0 30px rgba(0,0,0,0.6);  
+        transform: translateY(0);  
+      }  
+    }  
 
-  // === Сабміт ===
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (msg) {
-      msg.className = 'form-msg';
-      msg.textContent = '';
-    }
+    /* Тонка лінія під заголовком */  
+    .register-intro::after {  
+      content: "";  
+      display: block;  
+      margin: 14px auto 0;  
+      width: 120px;  
+      height: 2px;  
+      border-radius: 999px;  
+      background: linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);  
+      box-shadow: 0 0 12px rgba(246,195,76,0.6);  
+      opacity: .9;  
+    }  
 
-    if (!form.checkValidity()) {
-      if (msg) {
-        msg.className = 'form-msg err';
-        msg.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';
-      }
-      form.reportValidity?.();
-      return;
-    }
+    @media (max-width: 520px) {  
+      .register-intro::after {  
+        width: 90px;  
+      }  
+    }  
 
-    if (phoneHidden && !/^\+380\d{9}$/.test(phoneHidden.value || '')) {
-      if (msg) {
-        msg.className = 'form-msg err';
-        msg.textContent = 'Невірний номер телефону. Потрібно 9 цифр після +380.';
-      }
-      return;
-    }
+    /* Темні, преміальні інпути на цій сторінці */  
+    .register-page .input,  
+    .register-page input[type="text"],  
+    .register-page input[type="tel"],  
+    .register-page input[type="number"] {  
+      background: #0f0f14 !important;  
+      border: 1px solid #2a2a39 !important;  
+      color: #fff !important;  
+      padding: 10px 14px !important;  
+      border-radius: 10px !important;  
+      font-size: 1rem;  
+    }  
 
-    toggleLoading(true);
+    .register-page .input::placeholder,  
+    .register-page input::placeholder {  
+      color: #6b7280;  
+    }  
 
-    try {
-      const formData = new FormData(form);
+    .register-page .input:focus,  
+    .register-page input:focus {  
+      outline: none;  
+      border-color: #f6c34c !important;  
+      box-shadow: 0 0 6px rgba(246,195,76,0.5);  
+    }  
+  </style>
+</head>  
 
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: formData
-      });
+<body class="register-page">
+  <!-- HEADER -->
+  <header class="header">  
+    <div class="container header__row">  
+      <a class="logo" href="index.html">  
+        <span class="logo__mark">SC</span>  
+        <span class="logo__text">STOLAR CARP</span>  
+      </a>  
+      <nav class="nav" id="nav">  
+        <a href="index.html" class="nav__link">Головна</a>  
+        <a href="rules.html" class="nav__link">Регламент</a>  
+        <a href="register.html" class="nav__link nav__link--active">Реєстрація</a>  
+        <a href="live.html" class="nav__link">Live</a>  
+        <a href="rating.html" class="nav__link">Рейтинг</a>  
+        <a href="lakes.html" class="nav__link">Водойми</a>  
+        <a href="sponsors.html" class="nav__link">Спонсори</a>  
+        <a href="events/turnir-2026.html" class="nav__link">Турнір 2026</a>  
+      </nav>  
+      <button class="burger" id="burger"><span></span><span></span><span></span></button>  
+    </div>  
+  </header>
 
-      const result = await response.json();
+  <!-- MAIN -->
+  <main class="main">  
+    <section class="container section section--narrow">  
+      <div class="register-intro">  
+        <h1 class="page-title title-gradient">  
+          <span>Реєстрація</span>  
+          <span>Турнір</span>  
+          <span>STOLAR CARP 2026</span>  
+        </h1>  
+        <p class="lead">  
+          Подайте заявку на участь у турнірі STOLAR CARP 2026. Після відправки заявки здійсніть оплату  
+          та вкажіть <b>назву команди</b> у коментарі до платежу.  
+        </p>  
+      </div>
 
-      if (result && result.success) {
-        const selectedStage = formData.get('event') || 'обраний етап';
+      <!-- Повідомлення форми -->  
+      <div id="msg" class="form-msg"></div>  
 
-        if (msg) {
-          msg.className = 'form-msg ok';
-          msg.innerHTML = `
-            ✅ Заявку на <b>${selectedStage}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>
-            <span style="color:#f97373;font-weight:600;">
-              ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.
-            </span>
-          `;
-        }
+      <!-- Форма -->  
+      <div class="form-card register-form-card">  
+        <h2>Форма реєстрації</h2>  
+        <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>  
 
-        form.reset();
-        if (phoneHidden) phoneHidden.value = '';
-        toggleFood();
+        <form id="regForm" class="form" novalidate>  
+          <!-- honeypot (антибот) -->  
+          <input  
+            type="text"  
+            name="hp"  
+            id="hp"  
+            autocomplete="off"  
+            style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"  
+          />  
 
-      } else {
-        console.error('Помилка відправки заявки:', result);
-        if (msg) {
-          msg.className = 'form-msg err';
-          msg.textContent =
-            `❌ Помилка: ${result?.error || 'Не вдалося надіслати дані. Спробуйте пізніше.'}`;
-        }
-      }
-    } catch (error) {
-      console.error('Fetch error:', error);
-      if (msg) {
-        msg.className = 'form-msg err';
-        msg.textContent =
-          '❌ Помилка з’єднання із сервером. Перевірте інтернет або спробуйте пізніше.';
-      }
-    } finally {
-      toggleLoading(false);
-    }
-  });
-});
-</script>
+          <!-- fingerprint -->  
+          <input type="hidden" id="fp" name="fp" />  
+
+          <!-- Етап -->  
+          <div class="field">  
+            <label>  
+              Оберіть етап турніру <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div id="eventOptions" class="event-options">  
+              <p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>  
+            </div>  
+          </div>  
+
+          <!-- Назва команди -->  
+          <div class="field">  
+            <label for="team_name">  
+              Назва команди <span style="color:var(--accent);">*</span>  
+            </label>  
+            <input  
+              type="text"  
+              id="team_name"  
+              name="team_name"  
+              class="input"  
+              required  
+              minlength="2"  
+              maxlength="100"  
+              placeholder="Введіть назву команди"  
+            />  
+          </div>  
+
+          <!-- Капітан -->  
+          <div class="field">  
+            <label for="captain">  
+              Капітан команди <span style="color:var(--accent);">*</span>  
+            </label>  
+            <input  
+              type="text"  
+              id="captain"  
+              name="captain"  
+              class="input"  
+              required  
+              minlength="2"  
+              maxlength="100"  
+              placeholder="Ім'я та прізвище капітана"  
+            />  
+          </div>  
+
+          <!-- Телефон -->  
+          <div class="field">  
+            <label for="phone_rest">  
+              Номер телефону (формат: +380XXXXXXXXX) <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div class="phone-wrap">  
+              <span class="phone-prefix">+380</span>  
+              <input  
+                type="tel"  
+                id="phone_rest"  
+                inputmode="numeric"  
+                placeholder="XXXXXXXXX"  
+                required  
+              />  
+            </div>  
+            <input type="hidden" id="phone" name="phone" />  
+            <div class="hint" style="font-size:12px;color:var(--muted);">  
+              Вказуйте номер капітана для звʼязку по турніру.  
+            </div>  
+          </div>  
+
+          <!-- Харчування -->  
+          <div class="field">  
+            <label>  
+              Харчування від організаторів? <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div class="radio-row">  
+              <label>  
+                <input type="radio" name="food" value="Так" required />  
+                <span>Так</span>  
+              </label>  
+              <label>  
+                <input type="radio" name="food" value="Ні" />  
+                <span>Ні</span>  
+              </label>  
+            </div>  
+          </div>  
+
+          <!-- Кількість харчуючих -->  
+          <div class="field field--disabled" id="foodQtyField">  
+            <label for="food_qty">Кількість харчуючих (1–6)</label>  
+            <input  
+              type="number"  
+              id="food_qty"  
+              name="food_qty"  
+              class="input"  
+              min="1"  
+              max="6"  
+              inputmode="numeric"  
+              placeholder="Вкажіть кількість, якщо замовляєте харчування"  
+            />  
+            <div class="hint" style="font-size:12px;color:var(--muted);">  
+              Якщо харчування не потрібне — залиште поле порожнім.  
+            </div>  
+          </div>  
+
+          <!-- Підтвердження регламенту -->  
+          <div class="field">  
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">  
+              <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">  
+              <span>Підтверджую, що ознайомлений із  
+                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">  
+                  регламентом турніру  
+                </a>  
+              </span>  
+            </label>  
+          </div>  
+
+          <!-- Дія -->  
+          <div class="form-actions">  
+            <button type="submit" id="submitBtn" class="btn btn--primary">  
+              Подати заявку  
+            </button>  
+            <div id="spinner" class="spinner" aria-hidden="true"></div>  
+          </div>  
+
+          <p class="form__hint" style="margin-top:6px;">  
+            ⚠️ Після відправки заявки у вас є <b>24 години</b>, щоб здійснити оплату.  
+            Якщо оплата не буде зарахована — заявка буде автоматично анульована.  
+          </p>  
+        </form>  
+      </div>  
+
+      <!-- Картка з оплатою (нижче форми) -->  
+      <div class="card register-card">  
+        <div class="card-payment-title" style="font-weight:600;margin-bottom:4px;">  
+          Оплата внеску  
+        </div>  
+        <p>Сума внеску: <b>3500 ₴</b> на картку</p>  
+        <p>Номер картки: <span id="cardNum" class="card-number" style="font-weight:600;letter-spacing:0.12em;">4874 0700 5068 8793</span></p>  
+        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">  
+          Скопіювати картку  
+        </button>  
+        <p class="form__hint">У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.</p>  
+      </div>
+    </section>  
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">  
+    <div class="container footer__row">  
+      <div>© 2025 STOLAR CARP · Львів</div>  
+      <div class="footer__links">  
+        <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>  
+        <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>  
+      </div>  
+    </div>  
+  </footer>
+
+  <!-- СКРИПТ РЕЄСТРАЦІЇ -->
+  <script>  
+  document.addEventListener('DOMContentLoaded', () => {  
+    const API = "https://script.google.com/macros/s/AKfycbzavsHNwfQQ_5P3ciP19G7vOJjRdo3jr1GgHEi1oSDXNY5QT0ek4wwXubygTtEQoqFM/exec";  
+    const API_URL = API; // 🔴 ДОДАНО, щоб працював fetch(API_URL)
+
+    const form = document.getElementById('regForm');  
+    const qty = document.getElementById('food_qty');  
+    const qtyField = document.getElementById('foodQtyField');  
+    const phoneInput = document.getElementById('phone_rest');  
+    const phoneHidden = document.getElementById('phone');  
+    const copyCardBtn = document.getElementById('copyCard');  
+    const msg = document.getElementById('msg');  
+    const eventOptionsContainer = document.getElementById('eventOptions');  
+    const submitBtn = document.getElementById('submitBtn');  
+    const spinner = document.getElementById('spinner');  
+    const fpInput = document.getElementById('fp');  
+
+    if (!form) return;  
+
+    // === Fingerprint ===  
+    (function makeFingerprint(){  
+      if (!fpInput) return;  
+      try {  
+        const src = [  
+          navigator.userAgent,  
+          navigator.language,  
+          (screen && (screen.width + 'x' + screen.height)) || '',  
+          (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || ''  
+        ].join('|');  
+
+        let h = 2166136261;  
+        for (let i = 0; i < src.length; i++) {  
+          h ^= src.charCodeAt(i);  
+          h = (h * 16777619) >>> 0;  
+        }  
+        fpInput.value = 'fp_' + h.toString(16);  
+      } catch (err) {  
+        console.warn('Fingerprint error:', err);  
+      }  
+    })();  
+
+    // === Helpers ===  
+    const toggleLoading = (isLoading) => {  
+      if (submitBtn) {  
+        submitBtn.disabled = isLoading;  
+        submitBtn.textContent = isLoading ? 'Відправлення...' : 'Подати заявку';  
+      }  
+      if (spinner) {  
+        spinner.classList.toggle('spinner--on', isLoading);  
+      }  
+    };  
+
+    const prefillEvent = () => {  
+      if (!eventOptionsContainer) return;  
+      const params = new URLSearchParams(location.search);  
+      const p = params.get('stage') || params.get('event');  
+      if (!p) return;  
+      const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');  
+      const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));  
+      if (found) found.checked = true;  
+    };  
+
+    // === Завантаження відкритих етапів ===  
+    const loadEvents = async () => {  
+      if (!eventOptionsContainer) return;  
+      eventOptionsContainer.innerHTML = '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';  
+      toggleLoading(true);  
+
+      try {  
+        const response = await fetch(API_URL);  
+        const data = await response.json();  
+
+        if (!Array.isArray(data) || data.length === 0) {  
+          eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Немає відкритих етапів або не вдалося їх завантажити.</p>';  
+          return;  
+        }  
+
+        let html = '';  
+        data.forEach(eventValue => {  
+          const val = String(eventValue || '').trim();  
+          if (!val) return;  
+          const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';  
+          html += `  
+            <label class="event-item">  
+              <input type="radio" name="event" value="${val}" required>  
+              <span>${icon} ${val}</span>  
+            </label>  
+          `;  
+        });  
+
+        eventOptionsContainer.innerHTML = html || '<p class="form-msg err" style="display:block;">❌ Немає актуальних етапів для реєстрації.</p>';  
+        prefillEvent();  
+
+      } catch (error) {  
+        console.error('Помилка під час завантаження етапів:', error);  
+        eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Помилка при завантаженні даних. Оновіть сторінку або спробуйте пізніше.</p>';  
+      } finally {  
+        toggleLoading(false);  
+      }  
+    };  
+
+    loadEvents();  
+
+    // === Логіка харчування ===  
+    const foodRadios = form.querySelectorAll('input[name="food"]');  
+    const toggleFood = () => {  
+      const need = form.food && form.food.value === 'Так';  
+      if (qty) {  
+        qty.disabled = !need;  
+        qty.required = need;  
+        if (!need) qty.value = '';  
+      }  
+      if (qtyField) {  
+        qtyField.classList.toggle('field--disabled', !need);  
+      }  
+    };  
+
+    foodRadios.forEach(r => r.addEventListener('change', toggleFood));  
+    toggleFood();  
+
+    // === Телефон ===  
+    if (phoneInput && phoneHidden) {  
+      phoneInput.addEventListener('input', () => {  
+        const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);  
+        phoneInput.value = clean;  
+        phoneHidden.value = clean ? ('+380' + clean) : '';  
+      });  
+    }  
+
+    // === Копіювання картки ===  
+    if (copyCardBtn) {  
+      copyCardBtn.addEventListener('click', async () => {  
+        try {  
+          const cardEl = document.getElementById('cardNum');  
+          const num = (cardEl?.textContent || '').replace(/\s+/g, '').trim() || '4874070050688793';  
+          await navigator.clipboard.writeText(num);  
+          const old = copyCardBtn.textContent;  
+          copyCardBtn.textContent = '✅ Скопійовано';  
+          setTimeout(() => copyCardBtn.textContent = old, 1500);  
+        } catch (err) {  
+          alert('Скопіюйте вручну: 4874070050688793');  
+        }  
+      });  
+    }  
+
+    // === Сабміт ===  
+    form.addEventListener('submit', async (e) => {  
+      e.preventDefault();  
+      if (msg) {  
+        msg.className = 'form-msg';  
+        msg.textContent = '';  
+      }  
+
+      if (!form.checkValidity()) {  
+        if (msg) {  
+          msg.className = 'form-msg err';  
+          msg.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';  
+        }  
+        form.reportValidity?.();  
+        return;  
+      }  
+
+      if (phoneHidden && !/^\+380\d{9}$/.test(phoneHidden.value || '')) {  
+        if (msg) {  
+          msg.className = 'form-msg err';  
+          msg.textContent = 'Невірний номер телефону. Потрібно 9 цифр після +380.';  
+        }  
+        return;  
+      }  
+
+      toggleLoading(true);  
+
+      try {  
+        const formData = new FormData(form);  
+
+        const response = await fetch(API_URL, {  
+          method: 'POST',  
+          body: formData  
+        });  
+
+        const result = await response.json();  
+
+        if (result && result.success) {  
+          const selectedStage = formData.get('event') || 'обраний етап';  
+
+          if (msg) {  
+            msg.className = 'form-msg ok';  
+            msg.innerHTML = `  
+              ✅ Заявку на <b>${selectedStage}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>  
+              <span style="color:#f97373;font-weight:600;">  
+                ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.  
+              </span>  
+            `;  
+          }  
+
+          form.reset();  
+          if (phoneHidden) phoneHidden.value = '';  
+          toggleFood();  
+
+        } else {  
+          console.error('Помилка відправки заявки:', result);  
+          if (msg) {  
+            msg.className = 'form-msg err';  
+            msg.textContent = `❌ Помилка: ${result?.error || 'Не вдалося надіслати дані. Спробуйте пізніше.'}`;  
+          }  
+        }  
+      } catch (error) {  
+        console.error('Fetch error:', error);  
+        if (msg) {  
+          msg.className = 'form-msg err';  
+          msg.textContent = '❌ Помилка з’єднання із сервером. Перевірте інтернет або спробуйте пізніше.';  
+        }  
+      } finally {  
+        toggleLoading(false);  
+      }  
+    });  
+  });  
+  </script>
+</body>  
+</html>

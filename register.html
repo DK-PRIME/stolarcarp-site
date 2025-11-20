@@ -390,224 +390,182 @@
 </footer>  
 
 <!-- СКРИПТ РЕЄСТРАЦІЇ -->
-<script>  
-document.addEventListener('DOMContentLoaded', () => {  
-  // 🔥 ГОЛОВНА ПРАВКА: єдина правильна константа
-  const API_URL = "https://script.google.com/macros/s/AKfycbzavsHNwfQQ_5P3ciP19G7vOJjRdo3jr1GgHEi1oSDXNY5QT0ek4wwXubygTtEQoqFM/exec";  
+ <script>
+document.addEventListener('DOMContentLoaded', () => {
 
-  const form = document.getElementById('regForm');  
-  const qty = document.getElementById('food_qty');  
-  const qtyField = document.getElementById('foodQtyField');  
-  const phoneInput = document.getElementById('phone_rest');  
-  const phoneHidden = document.getElementById('phone');  
-  const copyCardBtn = document.getElementById('copyCard');  
-  const msg = document.getElementById('msg');  
-  const eventOptionsContainer = document.getElementById('eventOptions');  
-  const submitBtn = document.getElementById('submitBtn');  
-  const spinner = document.getElementById('spinner');  
-  const fpInput = document.getElementById('fp');  
-  
-  if (!form) return;  
-  
-  // === Fingerprint ===  
-  (function makeFingerprint(){  
-    if (!fpInput) return;  
-    try {  
-      const src = [  
-        navigator.userAgent,  
-        navigator.language,  
-        (screen && (screen.width + 'x' + screen.height)) || '',  
-        (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || ''  
-      ].join('|');  
-  
-      let h = 2166136261;  
-      for (let i = 0; i < src.length; i++) {  
-        h ^= src.charCodeAt(i);  
-        h = (h * 16777619) >>> 0;  
-      }  
-      fpInput.value = 'fp_' + h.toString(16);  
-    } catch (err) {  
-      console.warn('Fingerprint error:', err);  
-    }  
-  })();  
-  
-  // === Helpers ===  
-  const toggleLoading = (isLoading) => {  
-    if (submitBtn) {  
-      submitBtn.disabled = isLoading;  
-      submitBtn.textContent = isLoading ? 'Відправлення...' : 'Подати заявку';  
-    }  
-    if (spinner) {  
-      spinner.classList.toggle('spinner--on', isLoading);  
-    }  
-  };  
-  
-  const prefillEvent = () => {  
-    if (!eventOptionsContainer) return;  
-    const params = new URLSearchParams(location.search);  
-    const p = params.get('stage') || params.get('event');  
-    if (!p) return;  
-    const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');  
-    const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));  
-    if (found) found.checked = true;  
-  };  
-  
-  // === Завантаження відкритих етапів ===  
-  const loadEvents = async () => {  
-    if (!eventOptionsContainer) return;  
-    eventOptionsContainer.innerHTML = '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';  
-    toggleLoading(true);  
-  
-    try {  
-      const response = await fetch(API_URL);  
-      const data = await response.json();  
-  
-      if (!Array.isArray(data) || data.length === 0) {  
-        eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Немає відкритих етапів або не вдалося їх завантажити.</p>';  
-        return;  
-      }  
-  
-      let html = '';  
-      data.forEach(eventValue => {  
-        const val = String(eventValue || '').trim();  
-        if (!val) return;  
-        const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';  
-        html += `  
-          <label class="event-item">  
-            <input type="radio" name="event" value="${val}" required>  
-            <span>${icon} ${val}</span>  
-          </label>  
-        `;  
-      });  
-  
-      eventOptionsContainer.innerHTML = html || '<p class="form-msg err" style="display:block;">❌ Немає актуальних етапів для реєстрації.</p>';  
-      prefillEvent();  
-  
-    } catch (error) {  
-      console.error('Помилка під час завантаження етапів:', error);  
-      eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Помилка при завантаженні даних. Оновіть сторінку або спробуйте пізніше.</p>';  
-    } finally {  
-      toggleLoading(false);  
-    }  
-  };  
-  
-  loadEvents();  
-  
-  // === Логіка харчування ===  
-  const foodRadios = form.querySelectorAll('input[name="food"]');  
-  const toggleFood = () => {  
-    const need = form.food && form.food.value === 'Так';  
-    if (qty) {  
-      qty.disabled = !need;  
-      qty.required = need;  
-      if (!need) qty.value = '';  
-    }  
-    if (qtyField) {  
-      qtyField.classList.toggle('field--disabled', !need);  
-    }  
-  };  
-  
-  foodRadios.forEach(r => r.addEventListener('change', toggleFood));  
-  toggleFood();  
-  
-  // === Телефон ===  
-  if (phoneInput && phoneHidden) {  
-    phoneInput.addEventListener('input', () => {  
-      const clean = (phoneInput.value || '').replace(/\D/g, '').slice(0, 9);  
-      phoneInput.value = clean;  
-      phoneHidden.value = clean ? ('+380' + clean) : '';  
-    });  
-  }  
-  
-  // === Копіювання картки ===  
-  if (copyCardBtn) {  
-    copyCardBtn.addEventListener('click', async () => {  
-      try {  
-        const cardEl = document.getElementById('cardNum');  
-        const num = (cardEl?.textContent || '').replace(/\s+/g, '').trim() || '4874070050688793';  
-        await navigator.clipboard.writeText(num);  
-        const old = copyCardBtn.textContent;  
-        copyCardBtn.textContent = '✅ Скопійовано';  
-        setTimeout(() => copyCardBtn.textContent = old, 1500);  
-      } catch (err) {  
-        alert('Скопіюйте вручну: 4874070050688793');  
-      }  
-    });  
-  }  
-  
-  // === Сабміт ===  
-  form.addEventListener('submit', async (e) => {  
-    e.preventDefault();  
-    if (msg) {  
-      msg.className = 'form-msg';  
-      msg.textContent = '';  
-    }  
-  
-    if (!form.checkValidity()) {  
-      if (msg) {  
-        msg.className = 'form-msg err';  
-        msg.textContent = 'Будь ласка, заповніть усі обовʼязкові поля.';  
-      }  
-      form.reportValidity?.();  
-      return;  
-    }  
-  
-    if (phoneHidden && !/^\+380\d{9}$/.test(phoneHidden.value || '')) {  
-      if (msg) {  
-        msg.className = 'form-msg err';  
-        msg.textContent = 'Невірний номер телефону. Потрібно 9 цифр після +380.';  
-      }  
-      return;  
-    }  
-  
-    toggleLoading(true);  
-  
-    try {  
-      const formData = new FormData(form);  
-  
-      const response = await fetch(API_URL, {  
-        method: 'POST',  
-        body: formData  
-      });  
-  
-      const result = await response.json();  
-  
-      if (result && result.success) {  
-        const selectedStage = formData.get('event') || 'обраний етап';  
-  
-        if (msg) {  
-          msg.className = 'form-msg ok';  
-          msg.innerHTML = `  
-            ✅ Заявку на <b>${selectedStage}</b> прийнято! Оплатіть, будь ласка, <b>3500 ₴</b> та вкажіть <b>назву команди</b> у коментарі до платежу.<br><br>  
-            <span style="color:#f97373;font-weight:600;">  
-              ⚠️ Якщо оплата не буде здійснена протягом <b>24 годин</b> після подання заявки — вона автоматично <b>анулюється</b>.  
-            </span>  
-          `;  
-        }  
-  
-        form.reset();  
-        if (phoneHidden) phoneHidden.value = '';  
-        toggleFood();  
-  
-      } else {  
-        console.error('Помилка відправки заявки:', result);  
-        if (msg) {  
-          msg.className = 'form-msg err';  
-          msg.textContent = `❌ Помилка: ${result?.error || 'Не вдалося надіслати дані. Спробуйте пізніше.'}`;  
-        }  
-      }  
-    } catch (error) {  
-      console.error('Fetch error:', error);  
-      if (msg) {  
-        msg.className = 'form-msg err';  
-        msg.textContent = '❌ Помилка з’єднання із сервером. Перевірте інтернет або спробуйте пізніше.';  
-      }  
-    } finally {  
-      toggleLoading(false);  
-    }  
-  });  
-});  
-</script>  
+  // Твоя робоча вебка
+  const API = "https://script.google.com/macros/s/AKfycbzavsHNwfQQ_5P3ciP19G7vOJjRdo3jr1GgHEi1oSDXNY5QT0ek4wwXubygTtEQoqFM/exec";
+
+  const form = document.getElementById('regForm');
+  const qty = document.getElementById('food_qty');
+  const qtyField = document.getElementById('foodQtyField');
+  const phoneInput = document.getElementById('phone_rest');
+  const phoneHidden = document.getElementById('phone');
+  const copyCardBtn = document.getElementById('copyCard');
+  const msg = document.getElementById('msg');
+  const eventOptionsContainer = document.getElementById('eventOptions');
+  const submitBtn = document.getElementById('submitBtn');
+  const spinner = document.getElementById('spinner');
+  const fpInput = document.getElementById('fp');
+
+  if (!form) return;
+
+  // === Fingerprint ===
+  (function makeFingerprint(){
+    if (!fpInput) return;
+    try {
+      const src = [
+        navigator.userAgent,
+        navigator.language,
+        (screen && (screen.width + 'x' + screen.height)) || '',
+        (Intl && Intl.DateTimeFormat().resolvedOptions().timeZone) || ''
+      ].join('|');
+
+      let h = 2166136261;
+      for (let i = 0; i < src.length; i++) {
+        h ^= src.charCodeAt(i);
+        h = (h * 16777619) >>> 0;
+      }
+      fpInput.value = 'fp_' + h.toString(16);
+    } catch (err) {
+      console.warn('Fingerprint error:', err);
+    }
+  })();
+
+  // === Helpers ===
+  const toggleLoading = (isLoading) => {
+    submitBtn.disabled = isLoading;
+    submitBtn.textContent = isLoading ? 'Відправлення...' : 'Подати заявку';
+    spinner.classList.toggle('spinner--on', isLoading);
+  };
+
+  const prefillEvent = () => {
+    const params = new URLSearchParams(location.search);
+    const p = params.get('stage') || params.get('event');
+    if (!p) return;
+    const radios = eventOptionsContainer.querySelectorAll('input[name="event"]');
+    const found = Array.from(radios).find(r => (r.value || '').toLowerCase().includes(p.toLowerCase()));
+    if (found) found.checked = true;
+  };
+
+  // === Завантаження відкритих етапів ===
+  const loadEvents = async () => {
+    eventOptionsContainer.innerHTML = '<p class="form__hint">Завантаження актуальних етапів...</p>';
+    toggleLoading(true);
+
+    try {
+      const response = await fetch(API);
+      const data = await response.json();
+
+      if (!Array.isArray(data) || data.length === 0) {
+        eventOptionsContainer.innerHTML = '<p class="form-msg err">❌ Немає відкритих етапів.</p>';
+        return;
+      }
+
+      let html = '';
+      data.forEach(eventValue => {
+        const val = String(eventValue || '').trim();
+        if (!val) return;
+        const icon = val.toLowerCase().includes('фінал') ? '🥇' : '🏆';
+        html += `
+          <label class="event-item">
+            <input type="radio" name="event" value="${val}" required>
+            <span>${icon} ${val}</span>
+          </label>
+        `;
+      });
+
+      eventOptionsContainer.innerHTML = html;
+      prefillEvent();
+
+    } catch (error) {
+      console.error(error);
+      eventOptionsContainer.innerHTML = '<p class="form-msg err">❌ Помилка завантаження.</p>';
+    } finally {
+      toggleLoading(false);
+    }
+  };
+
+  loadEvents();
+
+  // === Харчування ===
+  const foodRadios = form.querySelectorAll('input[name="food"]');
+  const toggleFood = () => {
+    const need = form.food.value === 'Так';
+    qty.disabled = !need;
+    qty.required = need;
+    if (!need) qty.value = '';
+    qtyField.classList.toggle('field--disabled', !need);
+  };
+
+  foodRadios.forEach(r => r.addEventListener('change', toggleFood));
+  toggleFood();
+
+  // === Телефон ===
+  phoneInput.addEventListener('input', () => {
+    const clean = phoneInput.value.replace(/\D/g, '').slice(0, 9);
+    phoneInput.value = clean;
+    phoneHidden.value = clean ? '+380' + clean : '';
+  });
+
+  // === Копіювання картки ===
+  copyCardBtn.addEventListener('click', async () => {
+    try {
+      const num = document.getElementById('cardNum').textContent.replace(/\s+/g, '');
+      await navigator.clipboard.writeText(num);
+      const old = copyCardBtn.textContent;
+      copyCardBtn.textContent = '✅ Скопійовано';
+      setTimeout(() => copyCardBtn.textContent = old, 1500);
+    } catch {
+      alert('Скопіюйте вручну.');
+    }
+  });
+
+  // === Сабміт ===
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!form.checkValidity()) {
+      msg.className = 'form-msg err';
+      msg.textContent = 'Будь ласка, заповніть всі поля.';
+      form.reportValidity();
+      return;
+    }
+
+    if (!/^\+380\d{9}$/.test(phoneHidden.value)) {
+      msg.className = 'form-msg err';
+      msg.textContent = 'Невірний номер телефону.';
+      return;
+    }
+
+    toggleLoading(true);
+
+    try {
+      const formData = new FormData(form);
+      const response = await fetch(API, { method: 'POST', body: formData });
+      const result = await response.json();
+
+      if (result.success) {
+        msg.className = 'form-msg ok';
+        msg.innerHTML = `✅ Заявку на <b>${formData.get('event')}</b> прийнято!`;
+        form.reset();
+        phoneHidden.value = '';
+        toggleFood();
+      } else {
+        msg.className = 'form-msg err';
+        msg.textContent = '❌ Помилка з боку сервера.';
+      }
+
+    } catch (err) {
+      msg.className = 'form-msg err';
+      msg.textContent = '❌ Проблема з підключенням.';
+    } finally {
+      toggleLoading(false);
+    }
+  });
+
+});
+</script>
 
 </body>  
 </html>

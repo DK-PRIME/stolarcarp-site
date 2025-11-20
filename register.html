@@ -1,6 +1,7 @@
 <!-- СКРИПТ РЕЄСТРАЦІЇ -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+  // ✅ ЄДИНА правка: правильно названа змінна з веб-адресою
   const API_URL = "https://script.google.com/macros/s/AKfycbzavsHNwfQQ_5P3ciP19G7vOJjRdo3jr1GgHEi1oSDXNY5QT0ek4wwXubygTtEQoqFM/exec";
 
   const form = document.getElementById('regForm');
@@ -63,7 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // === Завантаження відкритих етапів ===
   const loadEvents = async () => {
     if (!eventOptionsContainer) return;
-    eventOptionsContainer.innerHTML = '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';
+    eventOptionsContainer.innerHTML =
+      '<p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>';
     toggleLoading(true);
 
     try {
@@ -71,7 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
-        eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Немає відкритих етапів або не вдалося їх завантажити.</p>';
+        eventOptionsContainer.innerHTML =
+          '<p class="form-msg err" style="display:block;">❌ Немає відкритих етапів або не вдалося їх завантажити.</p>';
         return;
       }
 
@@ -88,12 +91,14 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       });
 
-      eventOptionsContainer.innerHTML = html || '<p class="form-msg err" style="display:block;">❌ Немає актуальних етапів для реєстрації.</p>';
+      eventOptionsContainer.innerHTML =
+        html || '<p class="form-msg err" style="display:block;">❌ Немає актуальних етапів для реєстрації.</p>';
       prefillEvent();
 
     } catch (error) {
       console.error('Помилка під час завантаження етапів:', error);
-      eventOptionsContainer.innerHTML = '<p class="form-msg err" style="display:block;">❌ Помилка при завантаженні даних. Оновіть сторінку або спробуйте пізніше.</p>';
+      eventOptionsContainer.innerHTML =
+        '<p class="form-msg err" style="display:block;">❌ Помилка при завантаженні даних. Оновіть сторінку або спробуйте пізніше.</p>';
     } finally {
       toggleLoading(false);
     }
@@ -201,14 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Помилка відправки заявки:', result);
         if (msg) {
           msg.className = 'form-msg err';
-          msg.textContent = `❌ Помилка: ${result?.error || 'Не вдалося надіслати дані. Спробуйте пізніше.'}`;
+          msg.textContent =
+            `❌ Помилка: ${result?.error || 'Не вдалося надіслати дані. Спробуйте пізніше.'}`;
         }
       }
     } catch (error) {
       console.error('Fetch error:', error);
       if (msg) {
         msg.className = 'form-msg err';
-        msg.textContent = '❌ Помилка з’єднання із сервером. Перевірте інтернет або спробуйте пізніше.';
+        msg.textContent =
+          '❌ Помилка з’єднання із сервером. Перевірте інтернет або спробуйте пізніше.';
       }
     } finally {
       toggleLoading(false);

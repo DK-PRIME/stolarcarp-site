@@ -75,14 +75,22 @@
       margin:0 0 10px;
     }
 
+    /* ===== Обгортка таблиці (щоб нічого не стирчало) ===== */
+    .season-table-wrapper{
+      margin-top:6px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:#05060a;
+      overflow-x:auto;                 /* горизонтальний скрол при потребі */
+      -webkit-overflow-scrolling:touch;
+    }
+
     /* ===== Таблиця рейтингу сезону ===== */
     .table--season{
       width:100%;
+      min-width:720px;                 /* щоб колонки не злипались */
       border-collapse:collapse;
       font-size:.9rem;
-      border-radius:12px;
-      table-layout:fixed;          /* важливо: нічого не вилазить */
-      overflow:hidden;
     }
     .table--season thead{
       background:linear-gradient(90deg,#181920,#14151d);
@@ -110,7 +118,7 @@
       background:#11121a;
     }
     .table--season tbody tr:hover{
-      background:#191b25;          /* без transform, щоб рядок не стрибав */
+      background:#191b25;
     }
     .table--season tbody td{
       padding:5px 6px;
@@ -130,10 +138,10 @@
     /* === Компактні колонки === */
     .col-place{width:70px}
     .col-team{min-width:170px}
-    .col-stage{width:52px}
+    .col-stage{width:60px}
     .col-points{width:90px}
-    .col-weight{width:100px}
-    .col-big{width:100px}
+    .col-weight{width:110px}
+    .col-big{width:110px}
 
     /* Блок місця / руху */
     .place-wrap{
@@ -206,7 +214,7 @@
     /* Акценти в числах */
     .col-points b{
       color:var(--accent-gold);
-      letter-spacing:.02em;
+      letter-spacing:.02ем;
     }
     .col-weight{color:#e5e7eb;}
     .col-big{
@@ -218,11 +226,6 @@
       margin-top:8px;
       font-size:.8rem;
       opacity:.7;
-    }
-
-    @media (max-width:960px){
-      .table--season thead{ font-size:.78rem; }
-      .col-weight,.col-big{display:none;}
     }
   </style>
 </head>
@@ -271,77 +274,81 @@
     <!-- Основна таблиця рейтингу сезону -->
     <div class="card card--season" id="season-wrap">
       <h3>Рейтинг команд сезону 2026</h3>
-      <table class="table table--season">
-        <thead>
-          <tr>
-            <th class="col-place">Місце / рух</th>
-            <th class="col-team">Команда</th>
-            <th class="col-stage">Е1 м/б</th>
-            <th class="col-stage">Е2 м/б</th>
-            <th class="col-stage">Е3 м/б</th>
-            <th class="col-stage">Е4 м/б</th>
-            <th class="col-stage">Е5 м/б</th>
-            <th class="col-stage">Фінал м/б</th>
-            <th class="col-points">Бали сезону</th>
-            <th class="col-weight">Загальна вага, кг</th>
-            <th class="col-big">Big Fish сезону, кг</th>
-          </tr>
-        </thead>
-        <tbody id="season-body">
-          <!-- Демо-рядок, потім JS підтягне реальні дані -->
-          <tr class="row-qualified">
-            <td class="col-place">
-              <div class="place-wrap">
-                <span class="place-num">1</span>
-                <span class="move move--same">–</span>
-              </div>
-            </td>
-            <td class="col-team">Назва команди</td>
 
-            <!-- У кожному етапі: місце / бали -->
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">1</span>
-                <span class="stage-points">/ 5</span>
-              </div>
-            </td>
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">2</span>
-                <span class="stage-points">/ 8</span>
-              </div>
-            </td>
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">3</span>
-                <span class="stage-points">/ 10</span>
-              </div>
-            </td>
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">4</span>
-                <span class="stage-points">/ 12</span>
-              </div>
-            </td>
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">–</span>
-                <span class="stage-points">/ –</span>
-              </div>
-            </td>
-            <td class="col-stage">
-              <div class="stage-cell">
-                <span class="stage-place">1</span>
-                <span class="stage-points">/ 5</span>
-              </div>
-            </td>
+      <div class="season-table-wrapper">
+        <table class="table table--season">
+          <thead>
+            <tr>
+              <th class="col-place">Місце / рух</th>
+              <th class="col-team">Команда</th>
+              <th class="col-stage">Е1 м/б</th>
+              <th class="col-stage">Е2 м/б</th>
+              <th class="col-stage">Е3 м/б</th>
+              <th class="col-stage">Е4 м/б</th>
+              <th class="col-stage">Е5 м/б</th>
+              <th class="col-stage">Фінал м/б</th>
+              <th class="col-points">Бали сезону</th>
+              <th class="col-weight">Загальна вага, кг</th>
+              <th class="col-big">Big Fish сезону, кг</th>
+            </tr>
+          </thead>
+          <tbody id="season-body">
+            <!-- Демо-рядок, потім JS підтягне реальні дані -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">1</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">Назва команди</td>
 
-            <td class="col-points"><b>25</b></td>
-            <td class="col-weight">368.400</td>
-            <td class="col-big">14.875</td>
-          </tr>
-        </tbody>
-      </table>
+              <!-- У кожному етапі: місце / бали -->
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">1</span>
+                  <span class="stage-points">/ 5</span>
+                </div>
+              </td>
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">2</span>
+                  <span class="stage-points">/ 8</span>
+                </div>
+              </td>
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">3</span>
+                  <span class="stage-points">/ 10</span>
+                </div>
+              </td>
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">4</span>
+                  <span class="stage-points">/ 12</span>
+                </div>
+              </td>
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">–</span>
+                  <span class="stage-points">/ –</span>
+                </div>
+              </td>
+              <td class="col-stage">
+                <div class="stage-cell">
+                  <span class="stage-place">1</span>
+                  <span class="stage-points">/ 5</span>
+                </div>
+              </td>
+
+              <td class="col-points"><b>25</b></td>
+              <td class="col-weight">368.400</td>
+              <td class="col-big">14.875</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <p class="form__hint hint">
         Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу.
         В етапах вказано <b>місце / набрані бали</b>.

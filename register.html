@@ -16,152 +16,92 @@
 
   <!-- Локальні стилі тільки для сторінки реєстрації -->
   <style>
-    /* Загальний фон та відступи */
+    /* Фон як на рейтингу */
     body.register-page{
-      background:
-        radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+      background:var(--bg);
     }
 
     .section--narrow{
-      max-width: 1100px;
-      margin: 0 auto;
+      max-width:1100px;
+      margin:0 auto;
     }
 
-    /* Верхній блок з заголовком */
-    .register-intro{
-      margin-top: 10px;
-      margin-bottom: 26px;
-      text-align: center;
-      position: relative;
+    /* HERO / заголовок — в стилі шапки рейтингу */
+    .register-hero{
+      margin-top:14px;
+      margin-bottom:22px;
+      padding:18px 16px 16px;
+      border-radius:16px;
+      background:linear-gradient(145deg,#14141d,#08080d);
+      border:1px solid #262636;
+      box-shadow:var(--shadow);
     }
 
-    .register-kicker{
-      display:inline-flex;
+    .register-hero__kicker{
+      font-size:.72rem;
+      text-transform:uppercase;
+      letter-spacing:.18em;
+      color:var(--muted);
+      margin-bottom:6px;
+      display:flex;
       align-items:center;
       gap:8px;
-      padding:4px 10px;
-      border-radius:999px;
-      font-size:.78rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      background:rgba(0,0,0,.45);
-      border:1px solid rgba(248,250,252,.18);
-      color:#e5e7eb;
-      margin-bottom:10px;
     }
 
-    .register-kicker span{
+    .register-hero__kicker-tag{
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      width:18px;
-      height:18px;
-      border-radius:50%;
-      background:linear-gradient(135deg,#f6c34c,#cc6a2b);
-      color:#000;
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
       font-weight:800;
-      font-size:.7rem;
+      font-size:.75rem;
+      color:#000;
+      box-shadow:0 0 8px rgba(0,0,0,.7);
     }
 
-    .page-title span{
-      display:block;
-    }
-
-    .page-title span:nth-child(1),
-    .page-title span:nth-child(2){
-      font-size:clamp(24px,3.8vw,30px);
+    .register-hero h1{
+      margin:0 0 8px;
+      font-size:clamp(22px,3.4vw,28px);
+      font-weight:800;
+      letter-spacing:.06em;
       text-transform:uppercase;
-      letter-spacing:.08em;
     }
 
-    .page-title span:nth-child(3){
-      font-size:clamp(30px,4.6vw,40px);
-      font-weight:900;
+    .register-hero h1 .strong{
+      font-size:clamp(24px,3.8vw,30px);
     }
 
-    .register-page .page-title.title-gradient{
-      animation: scGlowPulse 3.6s ease-in-out infinite;
-      text-shadow:
-        0 0 10px rgba(246,195,76,0.55),
-        0 0 22px rgba(122,15,43,0.55),
-        0 0 40px rgba(0,0,0,0.8);
-      margin-bottom: 4px;
+    .register-hero .title-gradient{
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
     }
 
-    @keyframes scGlowPulse{
-      0%{
-        text-shadow:
-          0 0 6px rgba(246,195,76,0.35),
-          0 0 16px rgba(122,15,43,0.35),
-          0 0 30px rgba(0,0,0,0.6);
-        transform:translateY(0);
-      }
-      50%{
-        text-shadow:
-          0 0 14px rgba(246,195,76,0.85),
-          0 0 30px rgba(122,15,43,0.85),
-          0 0 46px rgba(0,0,0,0.9);
-        transform:translateY(-1px);
-      }
-      100%{
-        text-shadow:
-          0 0 6px rgba(246,195,76,0.35),
-          0 0 16px rgba(122,15,43,0.35),
-          0 0 30px rgba(0,0,0,0.6);
-        transform:translateY(0);
-      }
+    .register-hero p{
+      margin:0;
+      color:var(--muted);
+      font-size:.92rem;
+      max-width:720px;
     }
 
-    /* Тонка лінія під заголовком */
-    .register-intro::after{
-      content:"";
-      display:block;
-      margin:14px auto 0;
-      width:140px;
+    .register-hero__divider{
+      margin-top:10px;
+      width:120px;
       height:2px;
       border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
-      box-shadow:0 0 12px rgba(246,195,76,0.6);
-      opacity:.9;
+      box-shadow:0 0 10px rgba(246,195,76,.5);
     }
 
-    @media (max-width:520px){
-      .register-intro::after{width:90px;}
-    }
-
-    .lead{
-      max-width:720px;
-      margin:10px auto 0;
-      color:#d1d5db;
-    }
-
-    /* Невеликий список кроків */
-    .register-steps{
-      margin:18px auto 0;
-      max-width:720px;
-      display:flex;
-      flex-wrap:wrap;
-      justify-content:center;
-      gap:10px;
-      font-size:.8rem;
-      color:#9ca3af;
-    }
-
-    .register-steps li{
-      list-style:none;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(15,23,42,.6);
-      backdrop-filter:blur(4px);
-    }
-
-    /* Сітка: форма + оплата */
+    /* Сітка: форма + оплата — як дві панелі рейтингу */
     .register-layout{
       display:grid;
-      grid-template-columns:minmax(0,2.1fr) minmax(0,1.1fr);
+      grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
       gap:18px;
-      margin-top:20px;
       align-items:flex-start;
     }
 
@@ -171,21 +111,19 @@
       }
     }
 
-    /* Карта форми */
-    .register-form-card{
-      margin-top:0;
-    }
-
     .register-form-card h2{
-      margin-top:0;
-      margin-bottom:6px;
+      margin:0 0 6px;
+      font-size:1.05rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
     }
 
     .form__hint{
       font-size:.8rem;
+      color:var(--muted);
     }
 
-    /* Темні, преміальні інпути на цій сторінці */
+    /* Інпути — темні, як у таблиці рейтингу */
     .register-page .input,
     .register-page input[type="text"],
     .register-page input[type="tel"],
@@ -195,7 +133,7 @@
       color:#fff !important;
       padding:10px 14px !important;
       border-radius:10px !important;
-      font-size:1rem;
+      font-size:.96rem;
     }
 
     .register-page .input::placeholder,
@@ -206,16 +144,31 @@
     .register-page .input:focus,
     .register-page input:focus{
       outline:none;
-      border-color:#f6c34c !important;
+      border-color:var(--accent) !important;
       box-shadow:0 0 6px rgba(246,195,76,0.5);
     }
 
-    /* Блок вибору етапу */
+    .field{
+      display:grid;
+      gap:6px;
+      margin-bottom:12px;
+    }
+
+    .field label{
+      font-size:.9rem;
+      font-weight:500;
+    }
+
+    #foodQtyField.field--disabled{
+      opacity:.55;
+    }
+
+    /* Вибір етапу */
     .event-options{
       display:flex;
       flex-direction:column;
       gap:6px;
-      padding-top:4px;
+      padding-top:2px;
     }
 
     .event-item{
@@ -224,46 +177,28 @@
       gap:8px;
       padding:7px 10px;
       border-radius:10px;
-      background:linear-gradient(120deg,#020617,#020617 40%,#0b1120 100%);
-      border:1px solid rgba(148,163,184,.4);
+      background:#05060c;
+      border:1px solid #262636;
       cursor:pointer;
-      font-size:.95rem;
-      position:relative;
-      overflow:hidden;
+      font-size:.9rem;
     }
 
-    .event-item::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:linear-gradient(90deg,rgba(250,204,21,.3),transparent 35%);
-      opacity:0;
-      transition:opacity .18s ease;
-      pointer-events:none;
-    }
-
-    .event-item:hover::before{
-      opacity:1;
+    .event-item:hover{
+      border-color:var(--accent);
     }
 
     .event-item input[type="radio"]{
-      width:20px;
-      height:20px;
+      width:18px;
+      height:18px;
       accent-color:#22c55e;
-      transform:scale(1.15);
       flex-shrink:0;
     }
 
-    .event-item span{
-      position:relative;
-      z-index:1;
-    }
-
-    /* Радіо «харчування» */
+    /* Радіокнопки «харчування» */
     .radio-row{
       display:flex;
-      gap:16px;
       flex-wrap:wrap;
+      gap:16px;
     }
 
     .radio-row label{
@@ -271,10 +206,7 @@
       align-items:center;
       gap:6px;
       cursor:pointer;
-    }
-
-    #foodQtyField.field--disabled{
-      opacity:.55;
+      font-size:.9rem;
     }
 
     /* Телефон */
@@ -287,9 +219,9 @@
     .phone-prefix{
       padding:10px 12px;
       border-radius:10px;
-      background:#020617;
-      border:1px solid #1f2937;
-      font-size:.9rem;
+      background:#05060c;
+      border:1px solid #262636;
+      font-size:.86rem;
       color:#e5e7eb;
     }
 
@@ -298,7 +230,7 @@
       display:flex;
       align-items:center;
       gap:10px;
-      margin-top:6px;
+      margin-top:4px;
     }
 
     .spinner{
@@ -320,34 +252,17 @@
     .form-msg{
       margin-top:6px;
       font-weight:600;
+      font-size:.9rem;
     }
 
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
 
-    /* Картка з оплатою */
+    /* Картка оплати — як бокова панель */
     .card--payment{
-      background:radial-gradient(circle at top,#1e293b 0,#020617 55%);
-      border:1px solid rgba(148,163,184,.45);
-      box-shadow:0 16px 40px rgba(0,0,0,.7);
-      position:relative;
-      overflow:hidden;
-    }
-
-    .card--payment::before{
-      content:"";
-      position:absolute;
-      inset:-40%;
-      background:
-        radial-gradient(circle at top left,rgba(250,204,21,.12) 0,transparent 60%),
-        radial-gradient(circle at bottom right,rgba(56,189,248,.12) 0,transparent 60%);
-      opacity:.9;
-      pointer-events:none;
-    }
-
-    .card--payment > *{
-      position:relative;
-      z-index:1;
+      background:#05060c;
+      border:1px solid #262636;
+      box-shadow:var(--shadow);
     }
 
     .card-payment-title{
@@ -356,13 +271,17 @@
       display:flex;
       align-items:center;
       gap:8px;
+      text-transform:uppercase;
+      font-size:.84rem;
+      letter-spacing:.12em;
+      color:#e5e7eb;
     }
 
     .card-payment-title span{
       width:20px;
       height:20px;
       border-radius:50%;
-      background:linear-gradient(135deg,#f6c34c,#b45309);
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -376,19 +295,20 @@
       letter-spacing:.16em;
       padding:8px 10px;
       border-radius:10px;
-      background:rgba(15,23,42,.85);
-      border:1px solid rgba(148,163,184,.7);
+      background:#020308;
+      border:1px solid #33384a;
       display:inline-block;
       margin:4px 0;
+      font-size:.9rem;
     }
 
     .card-note{
-      font-size:.78rem;
-      color:#d1d5db;
+      font-size:.8rem;
+      color:var(--muted);
       margin-top:6px;
     }
 
-    /* Hid outline в шапці (щоб не було білих ліній) */
+    /* Приховати outline у хедері, щоб не було білих рамок */
     .header *:focus,
     .header *:focus-visible,
     .header a:focus,
@@ -427,35 +347,28 @@
 <main class="main">  
   <section class="container section section--narrow">  
 
-    <!-- HERO -->
-    <div class="register-intro">  
-      <div class="register-kicker">
-        <span>SC</span> SEASON 2026 · ENTRY
+    <!-- HERO у стилі рейтингу -->
+    <div class="register-hero">
+      <div class="register-hero__kicker">
+        <span class="register-hero__kicker-tag">SC</span>
+        SEASON 2026 · ENTRY
       </div>
-      <h1 class="page-title title-gradient">  
-        <span>Реєстрація</span>  
-        <span>на турнір</span>  
-        <span>STOLAR CARP 2026</span>  
-      </h1>  
-      <p class="lead">  
-        Подайте заявку на участь у багатоетапному турнірі STOLAR CARP 2026.  
-        Після відправки заявки здійсніть оплату внеску та вкажіть <b>назву команди</b>  
-        у коментарі до платежу.
-      </p>  
-
-      <ul class="register-steps">
-        <li>1. Оберіть етап</li>
-        <li>2. Заповніть дані команди</li>
-        <li>3. Підтвердіть регламент</li>
-        <li>4. Оплатіть внесок протягом 24 годин</li>
-      </ul>
-    </div>    
+      <h1 class="title-gradient">
+        <span>РЕЄСТРАЦІЯ НА ТУРНІР</span>
+        <span class="strong">STOLAR CARP 2026</span>
+      </h1>
+      <p>
+        Подайте заявку на участь у багатоетапному турнірі STOLAR CARP 2026. Після відправки
+        заявки здійсніть оплату внеску та вкажіть <b>назву команди</b> у коментарі до платежу.
+      </p>
+      <div class="register-hero__divider"></div>
+    </div>
 
     <!-- LAYOUT: форма + оплата -->
     <div class="register-layout">
 
       <!-- ФОРМА -->
-      <div class="form-card register-form-card">  
+      <div class="card register-form-card">  
         <h2>Форма реєстрації</h2>  
         <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>  
 
@@ -637,7 +550,7 @@
   </div>  
 </footer>  
 
-<!-- СКРИПТ РЕЄСТРАЦІЇ (той самий, що був) -->
+<!-- СКРИПТ РЕЄСТРАЦІЇ (без змін) -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 

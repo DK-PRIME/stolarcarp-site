@@ -77,17 +77,20 @@
     }
 
     .season-table-wrapper{
-      margin-top:6px;
-      border-radius:14px;
-      overflow:hidden;
-      background:radial-gradient(circle at top,#0b0d14 0,#05060a 55%);
-      border:1px solid rgba(255,255,255,.09);
-      box-shadow:0 14px 30px rgba(0,0,0,.75);
+  margin-top:6px;
+  border-radius:14px;
+  overflow:hidden;
+  background:radial-gradient(circle at top,#0b0d14 0,#05060a 55%);
+  border:1px solid rgba(255,255,255,.09);
+  box-shadow:0 14px 30px rgba(0,0,0,.75);
+
+  width:110%;      /* розширюємо блок на 10% */
+  margin-left:-5%; /* зсуваємо, щоб лишився по центру */
     }
 
     /* ===== Базова таблиця ===== */
     .table--season{
-      width:110%;
+      width:100%;
       table-layout:fixed;
       border-collapse:collapse;
       font-size:.7rem;              /* дрібний шрифт */
@@ -143,7 +146,7 @@
       text-align:left;
     }
 
-    /* === ШИРИНИ КОЛОНОК (сума ~110%) === */
+    /* === ШИРИНИ КОЛОНОК (сума ~100%) === */
     .col-place  { width:8%; }   /* місце */
     .col-move   { width:6%; }   /* рух */
     .col-team   { width:21%; }

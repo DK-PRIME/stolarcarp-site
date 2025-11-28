@@ -5,37 +5,208 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Водойми — STOLAR CARP</title>
 
-  <!-- стилі сайту як і раніше -->
+  <!-- Головні стилі сайту -->
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    /* додатковий стиль для карточок озер */
-    .lakes-grid{display:grid;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr))}
-    @media (max-width:960px){.lakes-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media (max-width:640px){.lakes-grid{grid-template-columns:1fr}}
-
-    .lake-card{overflow:hidden;padding:0}
-    .lake-photo{position:relative;aspect-ratio:16/9;overflow:hidden}
-    .lake-photo img{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1);transition:transform .35s ease}
-    .lake-card:hover .lake-photo img{transform:scale(1.04)}
-    .lake-label{
-      position:absolute;left:12px;bottom:12px;
-      padding:6px 10px;border-radius:999px;font-weight:700;
-      background:rgba(0,0,0,.55);backdrop-filter:saturate(140%) blur(2px);
-      border:1px solid rgba(255,255,255,.12)
+    /* Фон сторінки — як на рейтингу, темний з легким градієнтом */
+    body.lakes-page{
+      background:
+        radial-gradient(circle at top,#111827 0,#05060a 55%);
     }
-    .lake-body{padding:14px}
-    .tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-    .tag{padding:4px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);font-size:.9rem;opacity:.9}
-    .actions{margin-top:12px;display:flex;gap:10px}
-    .btn-route{display:inline-block;padding:8px 12px;border-radius:10px;background:#191a1d;color:#fff;text-decoration:none}
+
+    .section--lakes{
+      max-width:1100px;
+      margin:0 auto;
+    }
+
+    /* Верхній блок з заголовком */
+    .lakes-hero{
+      margin-top:10px;
+      margin-bottom:26px;
+    }
+    .lakes-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 9px;
+      border-radius:999px;
+      font-size:.72rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      background:rgba(0,0,0,.55);
+      border:1px solid rgba(148,163,184,.45);
+      color:#e5e7eb;
+      margin-bottom:8px;
+    }
+    .lakes-kicker span{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#f6c34c,#cc6a2b);
+      color:#000;
+      font-weight:800;
+      font-size:.7rem;
+    }
+
+    .lakes-title{
+      margin:0;
+    }
+
+    .lakes-sub{
+      margin-top:8px;
+      max-width:720px;
+      color:#d1d5db;
+    }
+
+    .lakes-hero-line{
+      margin-top:12px;
+      width:140px;
+      height:2px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
+      box-shadow:0 0 12px rgba(246,195,76,0.5);
+    }
+
+    /* Сітка карточок */
+    .lakes-grid{
+      display:grid;
+      gap:16px;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      margin-top:20px;
+    }
+    @media (max-width:960px){
+      .lakes-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:640px){
+      .lakes-grid{grid-template-columns:1fr}
+    }
+
+    /* Карточка водойми у стилі SC */
+    .lake-card{
+      padding:0;
+      background:radial-gradient(circle at top,#111827 0,#020617 55%);
+      border-radius:18px;
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 10px 30px rgba(0,0,0,.7);
+      overflow:hidden;
+      position:relative;
+    }
+
+    .lake-photo{
+      position:relative;
+      aspect-ratio:16/9;
+      overflow:hidden;
+    }
+    .lake-photo img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+      transform:scale(1);
+      transition:transform .35s ease;
+    }
+    .lake-card:hover .lake-photo img{
+      transform:scale(1.05);
+    }
+
+    .lake-photo::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(to top,rgba(0,0,0,.7),transparent 45%);
+    }
+
+    .lake-label{
+      position:absolute;
+      left:14px;
+      bottom:12px;
+      padding:6px 12px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:.95rem;
+      background:rgba(0,0,0,.65);
+      border:1px solid rgba(255,255,255,.18);
+      color:#f9fafb;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      z-index:1;
+    }
+    .lake-label::before{
+      content:"★";
+      font-size:.8rem;
+      color:#facc15;
+    }
+
+    .lake-body{
+      padding:14px 14px 16px;
+    }
+    .lake-body p{
+      margin:0;
+      color:#e5e7eb;
+      font-size:.95rem;
+    }
+
+    .tags{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:10px;
+    }
+    .tag{
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.55);
+      font-size:.8rem;
+      color:#d1d5db;
+      background:rgba(15,23,42,.9);
+    }
+
+    .actions{
+      margin-top:12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .btn-route{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:8px 12px;
+      border-radius:10px;
+      background:#111827;
+      border:1px solid rgba(248,250,252,.18);
+      color:#f9fafb;
+      font-size:.85rem;
+      text-decoration:none;
+      transition:background .18s ease,transform .1s ease,box-shadow .18s ease;
+    }
+    .btn-route::before{
+      content:"↗";
+      font-size:.85rem;
+      opacity:.9;
+    }
+    .btn-route:hover{
+      background:linear-gradient(135deg,#f6c34c,#cc6a2b);
+      color:#000;
+      transform:translateY(-1px);
+      box-shadow:0 8px 22px rgba(0,0,0,.7);
+    }
   </style>
 </head>
-<body>
+
+<body class="lakes-page">
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -51,9 +222,22 @@
 </header>
 
 <main class="main">
-  <section class="container section">
-    <h1 class="page-title title-gradient">Водойми</h1>
+  <section class="container section section--lakes">
 
+    <!-- HERO -->
+    <div class="lakes-hero">
+      <div class="lakes-kicker">
+        <span>SC</span> ЛОКАЦІЇ ТУРНІРУ
+      </div>
+      <h1 class="page-title title-gradient lakes-title">Водойми сезону</h1>
+      <p class="lakes-sub">
+        Основні водойми серії STOLAR CARP. Тут відбуваються етапи сезону,
+        розбиття на зони та народжуються трофейні Big Fish.
+      </p>
+      <div class="lakes-hero-line"></div>
+    </div>
+
+    <!-- GRID -->
     <div class="lakes-grid">
       <!-- Лелехівка -->
       <article class="card lake-card">
@@ -62,14 +246,17 @@
           <span class="lake-label">Лелехівка</span>
         </div>
         <div class="lake-body">
-          <p>Класична розбивка на зони A/B/C. 27 секторів. Зручний під’їзд і стабільний кльов.</p>
+          <p>Класична розбивка на зони A/B/C. До 27 секторів, комфортний під’їзд
+            та стабільний кльов для серйозних марафонів.</p>
           <div class="tags">
             <span class="tag">Зони: A • B • C</span>
-            <span class="tag">Сектори: 15-24</span>
+            <span class="tag">До 27 секторів</span>
           </div>
           <div class="actions">
             <a class="btn-route" target="_blank" rel="noopener"
-               href="https://www.google.com/maps/search/?api=1&query=Лелехівка+Львівська+область">Маршрут</a>
+               href="https://www.google.com/maps/search/?api=1&query=Лелехівка+Львівська+область">
+              Маршрут на Google Maps
+            </a>
           </div>
         </div>
       </article>
@@ -81,14 +268,17 @@
           <span class="lake-label">Пристань</span>
         </div>
         <div class="lake-body">
-          <p>Гарні екземпляри білого амура, чисті береги та зручна інфраструктура для команд.</p>
+          <p>Водойма з гарним потенціалом білого амура, чистими берегами
+            та зручною інфраструктурою для команд.</p>
           <div class="tags">
             <span class="tag">Зони: A • B • C</span>
-            <span class="tag">Сектори: 15-24</span>
+            <span class="tag">Комфортні сектори</span>
           </div>
           <div class="actions">
             <a class="btn-route" target="_blank" rel="noopener"
-               href="https://www.google.com/maps/search/?api=1&query=Пристань+водойма">Маршрут</a>
+               href="https://www.google.com/maps/search/?api=1&query=Пристань+водойма">
+              Маршрут на Google Maps
+            </a>
           </div>
         </div>
       </article>
@@ -100,20 +290,23 @@
           <span class="lake-label">Bounty</span>
         </div>
         <div class="lake-body">
-          <p>Глибокі ділянки та потенціал на Big Fish. Рекомендуємо міцні монтажі.</p>
+          <p>Глибші ділянки, перспективні бровки та високий шанс на Big Fish.
+            Рекомендуємо міцні монтажі та продуману тактику.</p>
           <div class="tags">
             <span class="tag">Зони: A • B • C</span>
-            <span class="tag">Сектори: 15-24</span>
+            <span class="tag">Big Fish потенціал</span>
           </div>
           <div class="actions">
             <a class="btn-route" target="_blank" rel="noopener"
-               href="https://www.google.com/maps/search/?api=1&query=Fishing+pond+Bounty">Маршрут</a>
+               href="https://www.google.com/maps/search/?api=1&query=Fishing+pond+Bounty">
+              Маршрут на Google Maps
+            </a>
           </div>
         </div>
       </article>
     </div>
   </section>
-              </main>
+</main>
 
 <footer class="footer">
   <div class="container footer__row">

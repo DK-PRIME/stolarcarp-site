@@ -87,7 +87,7 @@
       width:100%;
       table-layout:fixed;
       border-collapse:collapse;
-      font-size:.75rem;              /* дрібніше ~ на 20% */
+      font-size:.75rem;              /* дрібний шрифт, щоб усе влазило */
       background:#05060a;
     }
     .table--season thead{
@@ -181,7 +181,7 @@
       color:#e5e7eb;
     }
     .stage-points{
-      font-size:.58rem;
+      font-size:.58рем;
       opacity:.85;
       color:#9ca3af;
     }
@@ -192,20 +192,6 @@
     }
     .table--main tbody tr.row-qualified .place-num{
       color:var(--accent-gold-soft);
-    }
-
-    /* Топ-3 підсвічені */
-    .table--main tbody tr:nth-child(1){
-      background:radial-gradient(circle at left,#3b2f12 0,#11121a 55%);
-    }
-    .table--main tbody tr:nth-child(1) .place-num{
-      color:var(--accent-gold);
-    }
-    .table--main tbody tr:nth-child(2){
-      background:radial-gradient(circle at left,#1f2933 0,#11121a 55%);
-    }
-    .table--main tbody tr:nth-child(3){
-      background:radial-gradient(circle at left,#3b1f1a 0,#11121a 55%);
     }
 
     /* Цифри */
@@ -288,7 +274,7 @@
       </p>
       <div class="rating-tags">
         <span class="pill">✔ Сукупний рейтинг за всі етапи</span>
-        <span class="pill">✔ Враховується вага, Big Fish та стабільність</span>
+        <span class="pill">✔ Спочатку бали, потім вага і Big Fish</span>
         <span class="pill">✔ До фіналу проходить 18 команд</span>
       </div>
     </div>
@@ -315,7 +301,9 @@
             </tr>
           </thead>
           <tbody id="season-top">
-            <!-- Демо-рядки 1–3; реально сюди підуть перші 18 команд -->
+            <!-- 18 готових рядків під учасників фіналу -->
+
+            <!-- 1 -->
             <tr class="row-qualified">
               <td class="col-place">
                 <div class="place-wrap">
@@ -323,205 +311,167 @@
                   <span class="move move--same">–</span>
                 </div>
               </td>
-              <td class="col-team">AirHook</td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">1</span><span class="stage-points">/ 2</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">2</span><span class="stage-points">/ 5</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">3</span><span class="stage-points">/ 7</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">1</span><span class="stage-points">/ 0</span></div>
-              </td>
-              <td class="col-points"><b>14</b></td>
-              <td class="col-weight">368.400</td>
-              <td class="col-big">14.875</td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
             </tr>
 
+            <!-- 2 -->
             <tr class="row-qualified">
               <td class="col-place">
                 <div class="place-wrap">
                   <span class="place-num">2</span>
-                  <span class="move move--down">↓ 1</span>
+                  <span class="move move--same">–</span>
                 </div>
               </td>
-              <td class="col-team">Max Fish</td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">3</span><span class="stage-points">/ 7</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">2</span><span class="stage-points">/ 5</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">4</span><span class="stage-points">/ 9</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-points"><b>21</b></td>
-              <td class="col-weight">342.775</td>
-              <td class="col-big">13.200</td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
             </tr>
 
+            <!-- 3 -->
             <tr class="row-qualified">
               <td class="col-place">
                 <div class="place-wrap">
                   <span class="place-num">3</span>
-                  <span class="move move--up">↑ 2</span>
-                </div>
-              </td>
-              <td class="col-team">Garage</td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">5</span><span class="stage-points">/ 11</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">3</span><span class="stage-points">/ 7</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">1</span><span class="stage-points">/ 0</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-points"><b>18</b></td>
-              <td class="col-weight">329.050</td>
-              <td class="col-big">15.300</td>
-            </tr>
-
-            <!-- …далі будуть рядки аж до 18-го місця -->
-          </tbody>
-        </table>
-      </div>
-
-      <p class="rating-note">
-        Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу.
-        У колонках етапів вказано <b>місце / набрані бали</b> з урахуванням бонусу <b>-1 бал</b> за рибу 13+ кг.
-        Незаповнені етапи відображаються як <b>– / –</b> і не враховуються в загальних балах сезону.
-      </p>
-
-      <!-- Блок претендентів -->
-      <h4 class="subhead">
-        Претенденти на участь у Фіналі сезону
-        <span>— команди, що знаходяться нижче 18-го місця</span>
-      </h4>
-
-      <div class="season-table-wrapper">
-        <table class="table table--season table--contenders">
-          <thead>
-            <tr>
-              <th class="col-place">Місце / рух</th>
-              <th class="col-team">Команда</th>
-              <th class="col-stage">Е1 м/б</th>
-              <th class="col-stage">Е2 м/б</th>
-              <th class="col-stage">Е3 м/б</th>
-              <th class="col-stage">Е4 м/б</th>
-              <th class="col-stage">Е5 м/б</th>
-              <th class="col-stage">Фінал м/б</th>
-              <th class="col-points">Бали сезону</th>
-              <th class="col-weight">Загал вага, кг</th>
-              <th class="col-big">Big Fish сезону, кг</th>
-            </tr>
-          </thead>
-          <tbody id="season-contenders">
-            <!-- Демо-рядки 19+; реально сюди підуть всі команди після 18-го місця -->
-            <tr>
-              <td class="col-place">
-                <div class="place-wrap">
-                  <span class="place-num">19</span>
-                  <span class="move move--up">↑ 1</span>
-                </div>
-              </td>
-              <td class="col-team">DK Два Кума</td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">7</span><span class="stage-points">/ 15</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">5</span><span class="stage-points">/ 11</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-points"><b>26</b></td>
-              <td class="col-weight">198.750</td>
-              <td class="col-big">12.900</td>
-            </tr>
-
-            <tr>
-              <td class="col-place">
-                <div class="place-wrap">
-                  <span class="place-num">20</span>
                   <span class="move move--same">–</span>
                 </div>
               </td>
-              <td class="col-team">MAD CATs</td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">9</span><span class="stage-points">/ 17</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">8</span><span class="stage-points">/ 16</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell"><span class="stage-place">–</span><span class="stage-points">/ –</span></div>
-              </td>
-              <td class="col-points"><b>33</b></td>
-              <td class="col-weight">172.430</td>
-              <td class="col-big">11.450</td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
             </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
 
-  </section>
-</main>
+            <!-- 4 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">4</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
 
-<footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львівщина</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9" rel="noopener">YouTube</a>
-    </div>
-  </div>
-</footer>
-</body>
-</html>
+            <!-- 5 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">5</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 6 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">6</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 7 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">7</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 8 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">8</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 9 -->
+            <tr class="row-qualified">
+              <td class="col-place">
+                <div class="place-wrap">
+                  <span class="place-num">9</span>
+                  <span class="move move--same">–</span>
+                </div>
+              </td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">-</span><span class="stage-points">/ -</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-plac

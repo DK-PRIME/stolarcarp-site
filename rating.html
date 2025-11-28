@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ук">
+<html lang="uk">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,16 +10,6 @@
     :root{ --line:rgba(255,255,255,.08); --panel:#111215; }
 
     .hint{opacity:.75}
-    .textarea{width:100%}
-
-    .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
-    .input{background:var(--panel);border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
-    .btn{padding:10px 14px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);color:#fff;text-decoration:none;font-weight:600;cursor:pointer}
-    .btn:hover{filter:brightness(1.08)}
-    .state{display:inline-flex;align-items:center;gap:8px}
-    .dot{width:8px;height:8px;border-radius:999px;background:#f59e0b}
-    .dot.ok{background:#16a34a}
-    .dot.err{background:#ef4444}
 
     /* ===== Преміальний хедер рейтингу сезону ===== */
     .season-rating-head{
@@ -37,9 +27,7 @@
       font-size:.78rem;
       margin-bottom:4px;
     }
-    .season-rating-head .page-title{
-      margin:0;
-    }
+    .season-rating-head .page-title{ margin:0; }
     .rating-desc{
       max-width:900px;
       margin-top:10px;
@@ -153,6 +141,12 @@
       color:#fde68a;
     }
 
+    .rating-status{
+      margin-top:8px;
+      font-size:.8rem;
+      opacity:.7;
+    }
+
     @media (max-width:960px){
       .table--season thead{ font-size:.78rem; }
       .col-weight,.col-big{display:none;}
@@ -201,26 +195,6 @@
       </div>
     </div>
 
-    <!-- Панель керування джерелом -->
-    <div class="card">
-      <h3>Джерело даних (Google Sheets GViz)</h3>
-      <div class="toolbar">
-        <input id="sheetId" class="input" placeholder="SHEET_ID або повна лінка" />
-        <input id="gid"     class="input" placeholder="gid (номер аркуша, зазвичай 0)" />
-        <button id="loadBtn" class="btn">Завантажити</button>
-        <label class="state"><span id="dot" class="dot"></span><span id="st">Очікування…</span></label>
-        <label><input type="checkbox" id="auto" /> Авто 60с</label>
-      </div>
-      <p class="form__hint hint">
-        Таблиця рейтингу сезону має містити колонки в порядку:<br>
-        <span class="code">
-          Місце; Рух; Команда; Е1; Е2; Е3; Е4; Е5; Фінал; Бали; Загальна вага; Big Fish сезону
-        </span><br>
-        Використовується публічний GViz-ендпоїнт:
-        <span class="code">https://docs.google.com/spreadsheets/d/&lt;SHEET_ID&gt;/gviz/tq?tqx=out:json&gid=&lt;gid&gt;</span>.
-      </p>
-    </div>
-
     <!-- Основна таблиця рейтингу сезону -->
     <div class="card card--season" id="season-wrap" style="display:none">
       <h3>Рейтинг команд сезону 2026</h3>
@@ -244,9 +218,15 @@
       </table>
       <p class="form__hint hint">
         Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу
-        (дані про «рух» подаються з таблиці).
+        (значення «руху» формується у Google&nbsp;Sheets).
       </p>
+      <div class="rating-status" id="rating-status"></div>
     </div>
+
+    <p id="rating-error" class="form__hint hint" style="display:none;color:#fca5a5">
+      Не вдалося завантажити рейтинг. Перевір, що таблиця сезону опублікована для перегляду.
+    </p>
+
   </section>
 </main>
 
@@ -261,19 +241,15 @@
 </footer>
 
 <script>
-/* ===== НАЛАШТУВАННЯ З URL або дефолт ===== */
-const qp = new URLSearchParams(location.search);
-const DEFAULT_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни на свій
-const DEFAULT_GID      = "0";
+/* ===== КОНСТАНТИ ТАБЛИЦІ РЕЙТИНГУ ===== */
+// тут ставиш свій ID таблички з рейтингом сезону
+const RATING_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміниш при потребі
+const RATING_GID      = "0";  // gid аркуша з рейтингом
 
-const sheetIdInput = document.getElementById('sheetId');
-const gidInput     = document.getElementById('gid');
-sheetIdInput.value = qp.get('sheet') || localStorage.getItem('rating_sheet') || DEFAULT_SHEET_ID;
-gidInput.value     = qp.get('gid')    || localStorage.getItem('rating_gid')   || DEFAULT_GID;
-
-/* ===== Утиліти ===== */
-const dot = document.getElementById('dot');
-const st  = document.getElementById('st');
+const seasonWrap   = document.getElementById('season-wrap');
+const seasonBody   = document.getElementById('season-body');
+const statusLabel  = document.getElementById('rating-status');
+const errorBlock   = document.getElementById('rating-error');
 
 const toNum = v => {
   if (v == null) return 0;
@@ -283,27 +259,19 @@ const toNum = v => {
 };
 const kg = v => toNum(v).toFixed(3);
 
-// витягнути чистий SHEET_ID навіть якщо вставили цілу лінку
-function normalizeSheetId(value){
-  if (!value) return "";
-  const v = value.trim();
-  const m = v.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  return m ? m[1] : v;
-}
-
 function parseGViz(text){
   const start = text.indexOf('{');
   const end   = text.lastIndexOf('}');
   if (start === -1 || end === -1){
-    throw new Error('Некоректна відповідь від GViz (перевір SHEET_ID/gid та публічний доступ таблиці).');
+    throw new Error('Некоректна відповідь від GViz');
   }
   return JSON.parse(text.substring(start, end + 1));
 }
 
-/* ===== Форматування "руху" місця ===== */
+/* Форматування "руху" місця */
 function formatMove(deltaRaw){
   const d = Number(toNum(deltaRaw));
-  if (!d) {
+  if (!d){
     return '<span class="move move--same">–</span>';
   }
   if (d > 0){
@@ -312,24 +280,28 @@ function formatMove(deltaRaw){
   return `<span class="move move--down">↓ ${d}</span>`;
 }
 
-/* ===== Рендер рейтингу сезону ===== */
-const seasonWrap  = document.getElementById('season-wrap');
-const seasonBody  = document.getElementById('season-body');
-
+/* Рендер таблиці */
 function renderSeason(rows){
-  seasonBody.innerHTML = rows.map((r, idx) => {
-    const place = r[0] ?? '';
-    const move  = r[1] ?? '';
-    const team  = r[2] ?? '';
-    const e1    = r[3] ?? '';
-    const e2    = r[4] ?? '';
-    const e3    = r[5] ?? '';
-    const e4    = r[6] ?? '';
-    const e5    = r[7] ?? '';
-    const fin   = r[8] ?? '';
-    const pts   = r[9] ?? '';
-    const wAll  = r[10] ?? '';
-    const big   = r[11] ?? '';
+  // відфільтровуємо технічні рядки: беремо лише ті, де Місце > 0
+  const data = rows.filter(cols => {
+    const place = cols[0];
+    const placeNum = Number(toNum(place));
+    return placeNum > 0;
+  });
+
+  seasonBody.innerHTML = data.map((cols, idx) => {
+    const place = cols[0] ?? '';
+    const move  = cols[1] ?? '';
+    const team  = cols[2] ?? '';
+    const e1    = cols[3] ?? '';
+    const e2    = cols[4] ?? '';
+    const e3    = cols[5] ?? '';
+    const e4    = cols[6] ?? '';
+    const e5    = cols[7] ?? '';
+    const fin   = cols[8] ?? '';
+    const pts   = cols[9] ?? '';
+    const wAll  = cols[10] ?? '';
+    const big   = cols[11] ?? '';
 
     const rowClass = idx < 18 ? 'row-qualified' : '';
 
@@ -354,62 +326,34 @@ function renderSeason(rows){
       </tr>
     `;
   }).join('');
-  seasonWrap.style.display = rows.length ? 'block' : 'none';
-}
 
-/* ===== Завантаження з GViz ===== */
-async function loadFromGViz(sheetId, gid){
-  const cleanId = normalizeSheetId(sheetId);
-  const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:json&gid=${gid}`;
-  dot.classList.remove('ok','err');
-  st.textContent = 'Завантаження…';
-  const res = await fetch(url, { cache:'no-store' });
-  const text = await res.text();
-  const json = parseGViz(text);
-  const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c?.v ?? ''));
-  return rows;
-}
-
-/* ===== Події та цикл автооновлення ===== */
-const loadBtn = document.getElementById('loadBtn');
-const autoChk = document.getElementById('auto');
-let timer = null;
-
-async function refresh(){
-  try{
-    const rawSheetId = sheetIdInput.value.trim();
-    const gid     = gidInput.value.trim() || '0';
-    if (!rawSheetId) { st.textContent='Вкажіть SHEET_ID'; dot.classList.add('err'); return; }
-
-    localStorage.setItem('rating_sheet', rawSheetId);
-    localStorage.setItem('rating_gid', gid);
-
-    const rows = await loadFromGViz(rawSheetId, gid);
-    renderSeason(rows);
-
-    dot.classList.add('ok');
-    st.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
-  } catch (e){
-    dot.classList.add('err');
-    st.textContent = 'Помилка: ' + e.message;
-    console.error(e);
-  }
-}
-
-loadBtn.addEventListener('click', refresh);
-autoChk.addEventListener('change', ()=>{
-  if (autoChk.checked){
-    refresh();
-    timer = setInterval(refresh, 60000);
+  if (data.length){
+    seasonWrap.style.display = 'block';
+    statusLabel.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
   } else {
-    clearInterval(timer);
+    statusLabel.textContent = 'Дані рейтингу відсутні';
   }
-});
+}
 
-/* Автозапуск при завантаженні сторінки */
-(function init(){
-  if (sheetIdInput.value) refresh();
-})();
+/* Завантаження з GViz */
+async function loadRating(){
+  try{
+    errorBlock.style.display = 'none';
+    const url = `https://docs.google.com/spreadsheets/d/${RATING_SHEET_ID}/gviz/tq?tqx=out:json&gid=${RATING_GID}`;
+    const res = await fetch(url, { cache:'no-store' });
+    const text = await res.text();
+    const json = parseGViz(text);
+    const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c?.v ?? ''));
+    renderSeason(rows);
+  } catch(e){
+    console.error(e);
+    errorBlock.style.display = 'block';
+  }
+}
+
+/* Автооновлення раз на 60с під час відкриття сторінки */
+loadRating();
+setInterval(loadRating, 60000);
 </script>
 </body>
 </html>

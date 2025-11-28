@@ -4,50 +4,290 @@
   <meta charset="utf-8">
   <base href="../">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Турнір STOLAR CARP 2026 — сезон, етапи, таймлайн</title>
+  <title>STOLAR CARP 2026 — Сезон та етапи</title>
+
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
   <style>
-    /* ====== СЕЗОН / ТАЙМЛАЙН ====== */
-    .season-hero { margin-top:24px }
-    .kicker{letter-spacing:.12em;text-transform:uppercase;opacity:.7;font-size:.8rem}
-    .grid-2{display:grid;gap:18px;grid-template-columns:1fr}
-    @media(min-width:980px){.grid-2{grid-template-columns:2fr 1fr}}
-    .panel{background:#111215;border-radius:16px;padding:16px}
-    .muted{opacity:.75}
+    /* ===== ФОН / БАЗА ===== */
+    body{
+      background:
+        radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+    }
+    .section--narrow{
+      max-width:1100px;
+      margin:0 auto;
+    }
 
-    .cards{display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
-    .card{grid-column:span 12;background:#15161a;border:1px solid #1e1f24;border-radius:16px;padding:16px}
-    @media(min-width:800px){.card{grid-column:span 6}}
-    @media(min-width:1160px){.card{grid-column:span 4}}
-    .card h3{margin:6px 0 8px}
-    .meta{display:flex;flex-wrap:wrap;gap:10px 16px;opacity:.9;font-size:.95rem}
-    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .btn{padding:10px 14px;border-radius:10px;text-decoration:none;font-weight:600}
-    .btn--primary{background:#6b5bff;color:#fff}
-    .btn--ghost{background:#1b1c20;color:#fff}
-    .btn--danger{background:#cc4b4b;color:#fff}
-    .btn[disabled]{opacity:.5;pointer-events:none}
-    .tag{display:inline-flex;align-items:center;gap:8px;padding:3px 10px;border-radius:999px;background:#25262b;font-size:.85rem}
-    .tag--accent{background:#ffe08a;color:#1a1b1e;font-weight:700}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78rem;font-weight:700}
-    .badge--soon{background:#253145;color:#9cc0ff}
-    .badge--live{background:#1f3b23;color:#8ef18e}
-    .badge--done{background:#2d2d2d;color:#cfcfcf}
+    /* ===== HERO СЕЗОНУ ===== */
+    .season-hero{
+      margin-top:20px;
+      text-align:center;
+    }
+    .season-kicker{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:5px 16px;
+      border-radius:999px;
+      font-size:.8rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      background:rgba(0,0,0,.45);
+      border:1px solid rgba(248,250,252,.18);
+      color:#e5e7eb;
+      margin-bottom:10px;
+    }
+    .page-title span{display:block;}
+    .page-title span:nth-child(1){
+      font-size:clamp(24px,3.6vw,30px);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .page-title span:nth-child(2){
+      font-size:clamp(30px,4.6vw,40px);
+      font-weight:900;
+    }
+    .page-title.title-gradient{
+      animation: scGlowPulse 3.6s ease-in-out infinite;
+      text-shadow:
+        0 0 10px rgba(246,195,76,0.55),
+        0 0 22px rgba(122,15,43,0.55),
+        0 0 40px rgba(0,0,0,0.8);
+      margin-bottom:4px;
+    }
+    @keyframes scGlowPulse{
+      0%{
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform:translateY(0);
+      }
+      50%{
+        text-shadow:
+          0 0 14px rgba(246,195,76,0.85),
+          0 0 30px rgba(122,15,43,0.85),
+          0 0 46px rgba(0,0,0,0.9);
+        transform:translateY(-1px);
+      }
+      100%{
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform:translateY(0);
+      }
+    }
 
-    .timeline{position:relative;padding:14px 0 8px;margin:6px 0 18px}
-    .timeline__rail{position:relative;height:8px;background:#1b1c20;border-radius:999px;overflow:hidden}
-    .timeline__prog{position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,#fbbf24,#ef4444)}
-    .timeline__marks{display:flex;justify-content:space-between;margin-top:8px;font-size:.85rem;opacity:.85}
-    .dot{position:relative;display:flex;align-items:center;gap:8px}
-    .dot::before{content:"";width:10px;height:10px;border-radius:999px;background:#404249;display:inline-block}
-    .dot--done::before{background:#22c55e}
-    .dot--live::before{background:#ef4444}
-    .dot--soon::before{background:#64748b}
+    .season-lead{
+      max-width:780px;
+      margin:10px auto 0;
+      color:#d1d5db;
+      font-size:.95rem;
+    }
+    .season-hero::after{
+      content:"";
+      display:block;
+      margin:16px auto 0;
+      width:140px;
+      height:2px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
+      box-shadow:0 0 12px rgba(246,195,76,0.6);
+      opacity:.9;
+    }
+    @media(max-width:520px){
+      .season-hero::after{width:90px;}
+    }
 
-    .stat{display:flex;gap:10px;align-items:center;margin:8px 0}
-    .stat b{font-size:1.1rem}
-    .title-sm{margin:.25rem 0 .5rem;opacity:.9}
+    /* ===== ЛЕГКИЙ ТАЙМЛАЙН (СТАТИКА) ===== */
+    .season-timeline{
+      margin:20px auto 0;
+      max-width:720px;
+    }
+    .timeline-rail{
+      position:relative;
+      height:8px;
+      border-radius:999px;
+      background:#151721;
+      overflow:hidden;
+    }
+    .timeline-rail::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg,#facc15,#fb923c,#ef4444);
+      opacity:.75;
+    }
+    .timeline-marks{
+      display:flex;
+      justify-content:space-between;
+      margin-top:8px;
+      font-size:.8rem;
+      color:#e5e7eb;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .timeline-mark{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:4px;
+    }
+    .timeline-dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      background:#22c55e;
+      box-shadow:0 0 10px rgba(34,197,94,.9);
+    }
+
+    /* ===== СІТКА ЕТАПІВ ===== */
+    .season-layout{
+      margin-top:26px;
+      display:grid;
+      gap:20px;
+      grid-template-columns:minmax(0,2.1fr) minmax(0,1.1fr);
+    }
+    @media(max-width:960px){
+      .season-layout{grid-template-columns:1fr;}
+    }
+
+    .panel{
+      background:#101118;
+      border-radius:18px;
+      padding:16px 16px 18px;
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.75);
+    }
+    .panel h2{margin-top:0;margin-bottom:6px;}
+    .panel .muted{opacity:.75;font-size:.9rem;}
+
+    .stages-grid{
+      margin-top:14px;
+      display:grid;
+      gap:14px;
+      grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+    }
+
+    .stage-card{
+      position:relative;
+      overflow:hidden;
+      border-radius:14px;
+      padding:14px 14px 12px;
+      background:radial-gradient(circle at top,#1e293b 0,#020617 60%);
+      border:1px solid rgba(51,65,85,.9);
+      box-shadow:0 12px 30px rgba(0,0,0,.8);
+    }
+    .stage-card::before{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:
+        radial-gradient(circle at top left,rgba(250,204,21,.10) 0,transparent 60%),
+        radial-gradient(circle at bottom right,rgba(56,189,248,.12) 0,transparent 60%);
+      opacity:.8;
+      pointer-events:none;
+    }
+    .stage-inner{position:relative;z-index:1;}
+
+    .stage-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:3px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,.95);
+      border:1px solid rgba(148,163,184,.6);
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .stage-kicker span.dot{
+      width:12px;
+      height:12px;
+      border-radius:999px;
+      background:linear-gradient(135deg,#facc15,#fb923c);
+      box-shadow:0 0 8px rgba(250,204,21,.9);
+    }
+
+    .stage-title{
+      margin:8px 0 4px;
+      font-size:1.05rem;
+      font-weight:700;
+    }
+    .stage-meta{
+      font-size:.88rem;
+      color:#e5e7eb;
+      opacity:.9;
+    }
+    .stage-meta span+span{margin-left:10px;}
+
+    .stage-desc{
+      margin-top:6px;
+      font-size:.88rem;
+      color:#cbd5f5;
+    }
+
+    .stage-links{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .stage-btn{
+      padding:7px 12px;
+      border-radius:10px;
+      text-decoration:none;
+      font-size:.86rem;
+      font-weight:600;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .stage-btn--primary{
+      background:#facc15;
+      color:#1a1a1d;
+    }
+    .stage-btn--ghost{
+      background:rgba(15,23,42,.9);
+      color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.6);
+    }
+
+    /* ===== АСАЙД: РЕЙТИНГ / АРХІВ ===== */
+    .season-aside-list{
+      margin-top:10px;
+      font-size:.9rem;
+    }
+    .season-aside-item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:6px 0;
+    }
+    .season-aside-item b a{
+      color:#facc15;
+      text-decoration:none;
+    }
+    .season-aside-item span.bullet{
+      width:10px;
+      height:10px;
+      border-radius:999px;
+      background:#facc15;
+    }
+
+    /* Прибираємо outline в хедері */
+    .header *:focus,
+    .header *:focus-visible,
+    .header a:focus,
+    .header a:focus-visible,
+    .header button:focus,
+    .header button:focus-visible{
+      outline:none !important;
+    }
   </style>
 </head>
 
@@ -73,90 +313,248 @@
 </header>
 
 <main class="main">
+
+  <!-- HERO СЕЗОНУ -->
   <section class="container section section--narrow season-hero">
-    <div class="kicker title-gradient">СЕЗОН 2026</div>
-    <h1 class="page-title title-gradient">Турнір STOLAR CARP 2026</h1>
-    <p class="lead">
-      5 етапів + Фінал. Дати ще уточнюються, але вже зараз формується структура сезону.
+    <div class="season-kicker">СЕЗОН 2026 · АРХІВ</div>
+    <h1 class="page-title title-gradient">
+      <span>STOLAR CARP</span>
+      <span>СЕЗОН 2026</span>
+    </h1>
+    <p class="season-lead">
+      Повний архів сезону STOLAR CARP 2026: п’ять етапів та Фінал сезону.
+      Для кожного етапу доступні протоколи зважувань та підсумкові результати.
     </p>
 
-    <div class="timeline" id="timeline" data-start="2026-01-01" data-end="2026-01-01">
-      <div class="timeline__rail"><div class="timeline__prog"></div></div>
-      <div class="timeline__marks">
-        <span class="dot" data-mark="2026-01-01">I</span>
-        <span class="dot" data-mark="2026-01-01">II</span>
-        <span class="dot" data-mark="2026-01-01">III</span>
-        <span class="dot" data-mark="2026-01-01">IV</span>
-        <span class="dot" data-mark="2026-01-01">V</span>
-        <span class="dot" data-mark="2026-01-01">Фінал</span>
+    <div class="season-timeline">
+      <div class="timeline-rail"></div>
+      <div class="timeline-marks">
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>I етап</div>
+        </div>
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>II етап</div>
+        </div>
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>III етап</div>
+        </div>
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>IV етап</div>
+        </div>
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>V етап</div>
+        </div>
+        <div class="timeline-mark">
+          <div class="timeline-dot"></div>
+          <div>Фінал</div>
+        </div>
       </div>
     </div>
   </section>
 
+  <!-- ЕТАПИ + БОКОВА ПАНЕЛЬ -->
   <section class="container section">
-    <div class="grid-2">
+    <div class="season-layout">
+
+      <!-- ЛІВА ЧАСТИНА: ЕТАПИ -->
       <div class="panel">
         <h2 class="title-gradient">Етапи сезону</h2>
-        <p class="title-sm muted">Дати тимчасові — оновляться автоматично після підтвердження календаря.</p>
+        <p class="muted">
+          Тут зібрані всі етапи сезону 2026. Клікніть на «Архів зважувань» або «Підсумкові результати» для переходу
+          на відповідні сторінки. У майбутніх сезонах ця структура буде повторюватися.
+        </p>
 
-        <div class="cards" id="stages">
-          <article class="card" data-start="2026-01-01" data-end="2026-01-01" data-id="2026-e1">
-            <span class="tag tag--accent">I ЕТАП <span class="badge" data-badge></span></span>
-            <h3>STOLAR CARP 2026 — I</h3>
-            <div class="meta"><span>📅 1–1 січня 2026</span><span>📍 Лелехівка</span></div>
-            <div class="btns">
-              <a class="btn btn--primary" href="live.html?stage=2026-e1">Live</a>
-              <a class="btn btn--ghost" href="entries.html?stage=2026-e1">Список команд</a>
-              <a class="btn btn--danger" href="#" data-results disabled>Результати</a>
+        <div class="stages-grid">
+
+          <!-- I ЕТАП -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> I ЕТАП
+              </div>
+              <h3 class="stage-title">STOLAR CARP 2026 — Етап I</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>🎣 Класичний старт сезону</span>
+              </div>
+              <p class="stage-desc">
+                Перший етап сезону: стабільний кльов, перевірені тактики та боротьба за перші рейтингові бали.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-e1">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026#e1">
+                  Підсумкові результати
+                </a>
+              </div>
             </div>
           </article>
 
-          <article class="card" data-start="2026-01-01" data-end="2026-01-01" data-id="2026-e2">
-            <span class="tag tag--accent">II ЕТАП <span class="badge" data-badge></span></span>
-            <h3>STOLAR CARP 2026 — II</h3>
-            <div class="meta"><span>📅 1–1 січня 2026</span><span>📍 Лелехівка</span></div>
-            <div class="btns">
-              <a class="btn btn--primary" href="live.html?stage=2026-e2">Live</a>
-              <a class="btn btn--ghost" href="entries.html?stage=2026-e2">Список команд</a>
-              <a class="btn btn--danger" href="#" data-results disabled>Результати</a>
+          <!-- II ЕТАП -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> II ЕТАП
+              </div>
+              <h3 class="stage-title">STOLAR CARP 2026 — Етап II</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>🔥 Загострення боротьби</span>
+              </div>
+              <p class="stage-desc">
+                Команди адаптуються до водойми, з’являються перші серйозні відриви та Big Fish сезону.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-e2">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026#e2">
+                  Підсумкові результати
+                </a>
+              </div>
             </div>
           </article>
 
-          <article class="card" data-start="2026-01-01" data-end="2026-01-01" data-id="2026-e3">
-            <span class="tag tag--accent">III ЕТАП <span class="badge" data-badge></span></span>
-            <h3>STOLAR CARP 2026 — III</h3>
-            <div class="meta"><span>📅 1–1 січня 2026</span><span>📍 Лелехівка</span></div>
-            <div class="btns">
-              <a class="btn btn--primary" href="live.html?stage=2026-e3">Live</a>
-              <a class="btn btn--ghost" href="entries.html?stage=2026-e3">Список команд</a>
-              <a class="btn btn--danger" href="#" data-results disabled>Результати</a>
+          <!-- III ЕТАП -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> III ЕТАП
+              </div>
+              <h3 class="stage-title">STOLAR CARP 2026 — Етап III</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>⚖️ Середина сезону</span>
+              </div>
+              <p class="stage-desc">
+                Поворотна точка сезону: команди або закріплюють лідерство, або наздоганяють конкурентів.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-e3">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026#e3">
+                  Підсумкові результати
+                </a>
+              </div>
             </div>
           </article>
 
-          <article class="card" data-start="2026-01-01" data-end="2026-01-01" data-id="2026-final">
-            <span class="tag tag--accent">ФІНАЛ <span class="badge" data-badge></span></span>
-            <h3>STOLAR CARP FINAL 2026</h3>
-            <div class="meta"><span>📅 1–1 січня 2026</span><span>📍 Лелехівка</span></div>
-            <div class="btns">
-              <a class="btn btn--primary" href="live.html?stage=2026-final">Live</a>
-              <a class="btn btn--ghost" href="rating.html?season=2026">Рейтинг</a>
-              <a class="btn btn--danger" href="#" data-results disabled>Результати</a>
+          <!-- IV ЕТАП -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> IV ЕТАП
+              </div>
+              <h3 class="stage-title">STOLAR CARP 2026 — Етап IV</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>💣 Фінішна пряма</span>
+              </div>
+              <p class="stage-desc">
+                Напруженість зростає: останні можливості покращити позиції перед вирішальним п’ятим етапом.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-e4">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026#e4">
+                  Підсумкові результати
+                </a>
+              </div>
             </div>
           </article>
+
+          <!-- V ЕТАП -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> V ЕТАП
+              </div>
+              <h3 class="stage-title">STOLAR CARP 2026 — Етап V</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>🏁 Завершення відбору</span>
+              </div>
+              <p class="stage-desc">
+                Останній рейтинговий етап перед Фіналом. Тут вирішується, хто потрапить до топу сезону.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-e5">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026#e5">
+                  Підсумкові результати
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <!-- ФІНАЛ -->
+          <article class="stage-card">
+            <div class="stage-inner">
+              <div class="stage-kicker">
+                <span class="dot"></span> ФІНАЛ СЕЗОНУ
+              </div>
+              <h3 class="stage-title">STOLAR CARP FINAL 2026</h3>
+              <div class="stage-meta">
+                <span>📍 Лелехівка</span>
+                <span>👑 Топ команд сезону</span>
+              </div>
+              <p class="stage-desc">
+                Головна подія року: зустріч кращих колективів сезону та боротьба за титул чемпіона STOLAR CARP.
+              </p>
+              <div class="stage-links">
+                <a class="stage-btn stage-btn--primary" href="live.html?stage=2026-final">
+                  Архів зважувань
+                </a>
+                <a class="stage-btn stage-btn--ghost" href="rating.html?season=2026">
+                  Підсумковий рейтинг сезону
+                </a>
+              </div>
+            </div>
+          </article>
+
         </div>
       </div>
 
+      <!-- ПРАВА ПАНЕЛЬ: РЕЙТИНГ + АРХІВИ -->
       <aside class="panel">
-        <h2 class="title-gradient">Рейтинг сезону</h2>
+        <h2 class="title-gradient">Архів сезону 2026</h2>
         <p class="muted">
-          Система очок оновлюється автоматично після кожного етапу. У фінал потрапляють найкращі команди сезону.
+          Ця сторінка показує структуру сезону та слугує архівом для всіх етапів STOLAR CARP 2026.
+          Усі протоколи та фінальні результати зберігаються у відкритому доступі.
         </p>
-        <div class="stat">🏆 <b><a href="rating.html?season=2026">Переглянути рейтинг</a></b></div>
-        <div class="stat">📜 <a href="rules.html">Регламент турніру</a></div>
-        <div class="stat">💬 <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Чат учасників</a></div>
+
+        <div class="season-aside-list">
+          <div class="season-aside-item">
+            <span class="bullet"></span>
+            <b><a href="rating.html?season=2026">Загальний рейтинг сезону</a></b>
+          </div>
+          <div class="season-aside-item">
+            <span class="bullet"></span>
+            <span><a href="rules.html">Регламент STOLAR CARP 2026</a></span>
+          </div>
+          <div class="season-aside-item">
+            <span class="bullet"></span>
+            <span><a href="live.html">Архів онлайн-протоколів</a></span>
+          </div>
+        </div>
+
         <hr style="opacity:.15;margin:14px 0">
-        <p class="muted">🔧 Планується автоматичне відкриття/закриття реєстрації за датами (на основі <code>config.js</code>).</p>
+
+        <p class="muted">
+          Надалі тут зʼявляться посилання на архіви <strong>2027, 2028, 2029, 2030…</strong>.
+          Кожен сезон матиме окрему сторінку з етапами та фіналом у такому ж стилі.
+        </p>
       </aside>
+
     </div>
   </section>
 </main>
@@ -170,39 +568,5 @@
     </div>
   </div>
 </footer>
-
-<script>
-(function(){
-  const toDate = s => new Date(s + 'T00:00:00');
-  const now = new Date();
-
-  const tl = document.getElementById('timeline');
-  if (tl){
-    const start = toDate(tl.dataset.start);
-    const end = toDate(tl.dataset.end);
-    const total = end - start;
-    const done = Math.min(Math.max(now - start, 0), total);
-    const pct = total > 0 ? (done/total)*100 : 0;
-    tl.querySelector('.timeline__prog').style.width = pct + '%';
-
-    tl.querySelectorAll('.dot').forEach(dot=>{
-      const d = toDate(dot.dataset.mark);
-      dot.classList.add(d < now ? 'dot--done' : 'dot--soon');
-    });
-  }
-
-  document.querySelectorAll('.card[data-start]').forEach(card=>{
-    const s = toDate(card.dataset.start);
-    const e = toDate(card.dataset.end);
-    const badge = card.querySelector('[data-badge]');
-    const resBtn = card.querySelector('[data-results]');
-    let state='soon',text='Очікується';
-    if (now >= s && now <= e) {state='live';text='Триває';}
-    else if (now>e){state='done';text='Завершено';resBtn && resBtn.removeAttribute('disabled');}
-    badge.textContent=text;
-    badge.className='badge badge--'+state;
-  });
-})();
-</script>
 </body>
 </html>

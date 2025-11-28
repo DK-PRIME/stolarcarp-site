@@ -75,20 +75,19 @@
       margin:0 0 10px;
     }
 
-    /* ===== Обгортка таблиці (щоб нічого не стирчало) ===== */
+    /* ===== Обгортка таблиці (рамка, без скролу) ===== */
     .season-table-wrapper{
       margin-top:6px;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.10);
       background:#05060a;
-      overflow-x:auto;                 /* горизонтальний скрол при потребі */
-      -webkit-overflow-scrolling:touch;
+      overflow:hidden;
     }
 
     /* ===== Таблиця рейтингу сезону ===== */
     .table--season{
       width:100%;
-      min-width:720px;                 /* щоб колонки не злипались */
+      table-layout:fixed;           /* жорстко ділить ширину між колонками */
       border-collapse:collapse;
       font-size:.9rem;
     }
@@ -98,13 +97,13 @@
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:7px 6px;
+      padding:6px 4px;
       text-align:center;
       font-weight:600;
       opacity:.9;
-      white-space:nowrap;
+      white-space:normal;           /* дозволяємо перенос */
       overflow:hidden;
-      text-overflow:ellipsis;
+      text-overflow:clip;
     }
     .table--season thead th:first-child{
       text-align:left;
@@ -121,13 +120,13 @@
       background:#191b25;
     }
     .table--season tbody td{
-      padding:5px 6px;
+      padding:4px 4px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
-      white-space:nowrap;
+      white-space:normal;           /* текст може ламатись в дві лінії */
       overflow:hidden;
-      text-overflow:ellipsis;
+      text-overflow:clip;
       box-sizing:border-box;
     }
     .table--season tbody td:first-child,
@@ -135,13 +134,13 @@
       text-align:left;
     }
 
-    /* === Компактні колонки === */
-    .col-place{width:70px}
-    .col-team{min-width:170px}
-    .col-stage{width:60px}
-    .col-points{width:90px}
-    .col-weight{width:110px}
-    .col-big{width:110px}
+    /* === ШИРИНИ КОЛОНОК У ВІДСОТКАХ (щоб все влізло) === */
+    .col-place { width:8%; }
+    .col-team  { width:18%; }
+    .col-stage { width:8%; }
+    .col-points{ width:8%; }
+    .col-weight{ width:10%; }
+    .col-big   { width:10%; }
 
     /* Блок місця / руху */
     .place-wrap{
@@ -149,7 +148,6 @@
       flex-direction:column;
       gap:1px;
       align-items:flex-start;
-      overflow:hidden;
     }
     .place-num{
       font-size:.9rem;
@@ -170,7 +168,7 @@
     .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.45)}
     .move--same{color:#e5e7eb;border-style:dashed}
 
-    /* Клітинка етапу: місце / бали */
+    /* Клітинка етапу: місце / бали в два рядки */
     .stage-cell{
       display:flex;
       flex-direction:column;
@@ -214,7 +212,7 @@
     /* Акценти в числах */
     .col-points b{
       color:var(--accent-gold);
-      letter-spacing:.02ем;
+      letter-spacing:.02em;
     }
     .col-weight{color:#e5e7eb;}
     .col-big{
@@ -226,6 +224,23 @@
       margin-top:8px;
       font-size:.8rem;
       opacity:.7;
+    }
+
+    /* ===== МОБІЛКА: ще дрібніший шрифт і менші відступи ===== */
+    @media (max-width:480px){
+      .table--season{
+        font-size:.78rem;
+      }
+      .table--season thead th,
+      .table--season tbody td{
+        padding:3px 2px;
+      }
+      .stage-cell{
+        font-size:.64rem;
+      }
+      .stage-points{
+        font-size:.6rem;
+      }
     }
   </style>
 </head>

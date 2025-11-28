@@ -2,16 +2,16 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <base href="../">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Архів турнірів — STOLAR CARP</title>
 
-  <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
+  <!-- Підключаємо стилі та скрипт з кореня -->
+  <link rel="stylesheet" href="../assets/css/main.css">
+  <script defer src="../assets/js/config.js"></script>
 
   <style>
-    body{
-      background:radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+    body.archive-page{
+      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
     }
 
     .archive-hero{
@@ -80,25 +80,25 @@
   </style>
 </head>
 
-<body>
-
-<!-- СПІЛЬНИЙ HEADER ЯК НА ГОЛОВНІЙ -->
+<body class="archive-page">
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
+    <a class="logo" href="../index.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
+
     <nav class="nav" id="nav">
-      <a href="index.html" class="nav__link">Головна</a>
-      <a href="rules.html" class="nav__link">Регламент</a>
-      <a href="register.html" class="nav__link">Реєстрація</a>
-      <a href="live.html" class="nav__link">Live</a>
-      <a href="rating.html" class="nav__link">Рейтинг</a>
-      <a href="lakes.html" class="nav__link">Водойми</a>
-      <a href="sponsors.html" class="nav__link">Спонсори</a>
-      <a href="events/index.html" class="nav__link nav__link--active">Архів турнірів</a>
+      <a href="../index.html" class="nav__link">Головна</a>
+      <a href="../rules.html" class="nav__link">Регламент</a>
+      <a href="../register.html" class="nav__link">Реєстрація</a>
+      <a href="../live.html" class="nav__link">Live</a>
+      <a href="../rating.html" class="nav__link">Рейтинг</a>
+      <a href="../lakes.html" class="nav__link">Водойми</a>
+      <a href="../sponsors.html" class="nav__link">Спонсори</a>
+      <a href="index.html" class="nav__link nav__link--active">Архів</a>
     </nav>
+
     <button class="burger" id="burger">
       <span></span><span></span><span></span>
     </button>
@@ -115,7 +115,7 @@
     <div class="seasons-grid">
 
       <!-- СЕЗОН 2026 -->
-      <a class="season-card" href="events/season-2026.html">
+      <a class="season-card" href="season-2026.html">
         <div>
           <div class="season-year">Сезон 2026</div>
           <div class="season-desc">

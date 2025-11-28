@@ -92,31 +92,36 @@
       text-align:left;
     }
 
-    .col-place{width:120px}
-    .col-team{min-width:190px}
-    .col-stage{width:60px}
-    .col-points{width:110px}
-    .col-weight,.col-big{width:130px}
+    /* === КОМПАКТНІ КОЛОНКИ ЯК НА IRON.FISH === */
+.col-place{width:64px}
+.col-team{min-width:160px}
+.col-stage{width:42px}
+.col-points{width:72px}
+.col-weight{width:88px}
+.col-big{width:88px}
 
-    .place-wrap{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-    }
-    .place-num{
-      font-weight:700;
-      font-size:1rem;
-    }
-    .move{
-      font-size:.78rem;
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-      padding:1px 6px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      opacity:.9;
-    }
+/* компактні бейджі етапів */
+.badge-stage{
+  min-width:30px;
+  padding:1px 4px;
+  font-size:.72rem;
+}
+
+/* компактний блок місця */
+.place-wrap{
+  gap:1px;
+  align-items:flex-start;
+}
+
+.place-num{
+  font-size:.85rem;
+  line-height:1;
+}
+
+.move{
+  font-size:.65rem;
+  padding:0 4px;
+}
     .move--up{color:#4ade80;border-color:rgba(74,222,128,.4)}
     .move--down{color:#f97373;border-color:rgba(248,113,113,.4)}
     .move--same{color:#e5e7eb;border-style:dashed}

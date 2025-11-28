@@ -62,34 +62,32 @@
       .season-rating-head{ padding:18px 16px; }
     }
 
-    /* ===== Блок рейтингу без зовнішньої рамки ===== */
+    /* ===== Блок рейтингу (без зайвої рамки) ===== */
     .card--season{
       margin-top:20px;
-      padding:0;                 /* без відступів — таблиця на всю ширину */
-      background:transparent;    /* забрали фон */
-      border:none;               /* забрали рамку */
-      box-shadow:none;           /* без тіней */
+      padding:0;
+      background:transparent;
+      border:none;
+      box-shadow:none;
     }
     .card--season h3{
       margin:0 0 8px;
     }
 
-    /* ===== Обгортка таблиці (тільки для скруглення кутів/кліпу) ===== */
+    /* Обгортка тільки для скруглених кутів */
     .season-table-wrapper{
       margin-top:0;
       border-radius:12px;
-      border:none;              /* рамку прибрано */
-      background:transparent;   /* фон прибрано */
-      overflow:hidden;          /* але кути таблиці залишаються скругленими */
+      overflow:hidden;
     }
 
     /* ===== Таблиця рейтингу сезону ===== */
     .table--season{
       width:100%;
-      table-layout:fixed;           /* жорстко ділить ширину між колонками */
+      table-layout:fixed;          /* чітке ділення ширини */
       border-collapse:collapse;
       font-size:.9rem;
-      background:#05060a;           /* фон самої таблиці */
+      background:#05060a;
     }
     .table--season thead{
       background:linear-gradient(90deg,#181920,#14151d);
@@ -97,7 +95,7 @@
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:6px 4px;
+      padding:6px 3px;
       text-align:center;
       font-weight:600;
       opacity:.9;
@@ -120,13 +118,13 @@
       background:#191b25;
     }
     .table--season tbody td{
-      padding:4px 4px;
+      padding:4px 3px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
-      white-space:normal;
+      white-space:nowrap;
       overflow:hidden;
-      text-overflow:clip;
+      text-overflow:ellipsis;
       box-sizing:border-box;
     }
     .table--season tbody td:first-child,
@@ -134,13 +132,13 @@
       text-align:left;
     }
 
-    /* === ШИРИНИ КОЛОНОК У ВІДСОТКАХ (щоб все влізло) === */
-    .col-place { width:8%; }
-    .col-team  { width:18%; }
-    .col-stage { width:8%; }
-    .col-points{ width:8%; }
-    .col-weight{ width:10%; }
-    .col-big   { width:10%; }
+    /* === ШИРИНИ КОЛОНОК (сума ≤ 100%) === */
+    .col-place  { width:7%; }
+    .col-team   { width:17%; }
+    .col-stage  { width:6%; }   /* Е1–Е5 + фінал = 6*6 = 36% */
+    .col-points { width:7%; }
+    .col-weight { width:12%; }  /* більше місця для ваги */
+    .col-big    { width:11%; }  /* більше місця для Big Fish */
 
     /* Блок місця / руху */
     .place-wrap{
@@ -168,7 +166,7 @@
     .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.45)}
     .move--same{color:#e5e7eb;border-style:dashed}
 
-    /* Клітинка етапу: місце / бали в два рядки */
+    /* Клітинка етапу: місце / бали */
     .stage-cell{
       display:flex;
       flex-direction:column;
@@ -229,7 +227,7 @@
     /* ===== МОБІЛКА ===== */
     @media (max-width:480px){
       .table--season{
-        font-size:.78rem;
+        font-size:.76rem;
       }
       .table--season thead th,
       .table--season tbody td{
@@ -239,8 +237,11 @@
         font-size:.64rem;
       }
       .stage-points{
-        font-size:.6rem;
+        font-size:.58rem;
       }
+      /* укоротити заголовки останніх двох колонок */
+      .col-weight-header{white-space:normal;font-size:.7rem;}
+      .col-big-header{white-space:normal;font-size:.7rem;}
     }
   </style>
 </head>
@@ -286,7 +287,7 @@
       </div>
     </div>
 
-    <!-- Рейтинг команд (без зайвої рамки, тільки таблиця) -->
+    <!-- Рейтинг команд -->
     <div class="card card--season" id="season-wrap">
       <h3>Рейтинг команд сезону 2026</h3>
 
@@ -303,8 +304,8 @@
               <th class="col-stage">Е5 м/б</th>
               <th class="col-stage">Фінал м/б</th>
               <th class="col-points">Бали сезону</th>
-              <th class="col-weight">Загальна вага, кг</th>
-              <th class="col-big">Big Fish сезону, кг</th>
+              <th class="col-weight col-weight-header">Загал вага, кг</th>
+              <th class="col-big col-big-header">Big Fish сезону, кг</th>
             </tr>
           </thead>
           <tbody id="season-body">
@@ -318,7 +319,7 @@
               </td>
               <td class="col-team">Назва команди</td>
 
-              <!-- У кожному етапі: місце / бали -->
+              <!-- Етапи: місце / бали -->
               <td class="col-stage">
                 <div class="stage-cell">
                   <span class="stage-place">1</span>
@@ -368,7 +369,6 @@
         Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу.
         В етапах вказано <b>місце / набрані бали</b>.
       </p>
-      <div class="rating-status" id="rating-status"></div>
     </div>
 
   </section>
@@ -384,9 +384,5 @@
   </div>
 </footer>
 
-<script>
-document.getElementById('rating-status').textContent =
-  'Демо-таблиця. Дані будуть підтягуватись з Google Sheets після підключення.';
-</script>
 </body>
 </html>

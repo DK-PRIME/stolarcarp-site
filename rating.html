@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Рейтинг — STOLAR CARP</title>
+  <title>Рейтинг сезону 2026 — STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
   <style>
     :root{ --line:rgba(255,255,255,.08); --panel:#111215; }
+
     .hint{opacity:.75}
     .textarea{width:100%}
     .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -20,8 +21,55 @@
     .btn:hover{filter:brightness(1.08)}
     .state{display:inline-flex;align-items:center;gap:8px}
     .dot{width:8px;height:8px;border-radius:999px;background:#f59e0b}
-    .dot.ok{background:#16a34a} .dot.err{background:#ef4444}
+    .dot.ok{background:#16a34a}
+    .dot.err{background:#ef4444}
     .card .table th,.card .table td{white-space:nowrap}
+
+    /* ===== Преміальний хедер рейтингу сезону ===== */
+    .season-rating-head{
+      margin-bottom:24px;
+      padding:24px 22px;
+      background:linear-gradient(135deg,#101117,#181924);
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 18px 40px rgba(0,0,0,.55);
+    }
+    .season-rating-head .kicker{
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      opacity:.8;
+      font-size:.78rem;
+      margin-bottom:4px;
+    }
+    .season-rating-head .page-title{
+      margin:0;
+    }
+    .rating-desc{
+      max-width:900px;
+      margin-top:10px;
+      font-size:1rem;
+      line-height:1.7;
+      opacity:.9;
+    }
+    .rating-tags{
+      margin-top:14px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      font-size:.8rem;
+      opacity:.9;
+    }
+    .pill{
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.25);
+    }
+    @media (max-width:640px){
+      .season-rating-head{
+        padding:18px 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -46,51 +94,83 @@
 </header>
 
 <main class="main">
-<section class="container section">
-  <h2 class="title-gradient">Рейтинг та нагородження</h2>
+  <section class="container section">
 
-  <!-- Панель керування джерелом -->
-  <div class="card">
-    <h3>Джерело даних (Google Sheets GViz)</h3>
-    <div class="toolbar">
-      <input id="sheetId" class="input" placeholder="SHEET_ID" />
-      <input id="gid"     class="input" placeholder="gid (номер аркуша, зазвичай 0)" />
-      <button id="loadBtn" class="btn">Завантажити</button>
-      <label class="state"><span id="dot" class="dot"></span><span id="st">Очікування…</span></label>
-      <label><input type="checkbox" id="auto" /> Авто 60с</label>
-    </div>
-    <p class="form__hint hint">
-      Таблиця має містити колонки в порядку: <span class="code">Команда; Зона; Сектор; К-сть; Вага, кг; Середня, кг; Big Fish, кг</span>.<br>
-      Використовується публічний GViz-ендпоїнт: <span class="code">https://docs.google.com/spreadsheets/d/&lt;SHEET_ID&gt;/gviz/tq?tqx=out:json&gid=&lt;gid&gt;</span>
-    </p>
-  </div>
-
-  <!-- Результати -->
-  <div id="awards-ready" style="display:none">
-    <div class="section card">
-      <h3>Топ озера (серед переможців зон)</h3>
-      <table class="table">
-        <thead><tr><th>Місце</th><th>Команда</th><th>Зона</th><th>Вага, кг</th><th>Big Fish, кг</th></tr></thead>
-        <tbody id="top-lake"></tbody>
-      </table>
-      <p class="form__hint hint">Визначається між переможцями зон A, B, C за найбільшою вагою (тай-брейк: Big Fish → середня).</p>
+    <!-- Преміальний заголовок сезону -->
+    <div class="season-rating-head">
+      <div class="kicker title-gradient">СЕЗОН 2026</div>
+      <h1 class="page-title title-gradient">Рейтинг сезону STOLAR CARP 2026</h1>
+      <p class="lead rating-desc">
+        Протягом сезону команди змагаються на кількох етапах STOLAR CARP, набираючи вагу та результати
+        у своїх зонах. Після завершення всіх етапів формується загальний рейтинг, за яким
+        <b>18 найкращих команд сезону</b> отримують путівку до
+        <b>Фіналу сезону STOLAR CARP 2026</b>.
+        Саме там кращі з кращих розігрують головний титул року.
+      </p>
+      <div class="rating-tags">
+        <span class="pill">✔ Сукупний рейтинг за всі етапи</span>
+        <span class="pill">✔ Враховується вага, Big Fish та стабільність</span>
+        <span class="pill">✔ До фіналу проходить 18 команд</span>
+      </div>
     </div>
 
-    <div class="section grid-3" id="zones-awards">
-      <!-- A/B/C тут -->
+    <!-- Панель керування джерелом -->
+    <div class="card">
+      <h3>Джерело даних (Google Sheets GViz)</h3>
+      <div class="toolbar">
+        <input id="sheetId" class="input" placeholder="SHEET_ID" />
+        <input id="gid"     class="input" placeholder="gid (номер аркуша, зазвичай 0)" />
+        <button id="loadBtn" class="btn">Завантажити</button>
+        <label class="state"><span id="dot" class="dot"></span><span id="st">Очікування…</span></label>
+        <label><input type="checkbox" id="auto" /> Авто 60с</label>
+      </div>
+      <p class="form__hint hint">
+        Таблиця має містити колонки в порядку:
+        <span class="code">Команда; Зона; Сектор; К-сть; Вага, кг; Середня, кг; Big Fish, кг</span>.<br>
+        Використовується публічний GViz-ендпоїнт:
+        <span class="code">https://docs.google.com/spreadsheets/d/&lt;SHEET_ID&gt;/gviz/tq?tqx=out:json&gid=&lt;gid&gt;</span>.
+      </p>
     </div>
 
-    <p class="form__hint hint">Потрібен «зсув місць» (2→1, 3→2, 4→3) для церемонії? Напиши — додам перемапінг у рендері.</p>
-  </div>
-</section>
+    <!-- Результати -->
+    <div id="awards-ready" style="display:none">
+      <div class="section card">
+        <h3>Топ озера (серед переможців зон)</h3>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Місце</th>
+              <th>Команда</th>
+              <th>Зона</th>
+              <th>Вага, кг</th>
+              <th>Big Fish, кг</th>
+            </tr>
+          </thead>
+          <tbody id="top-lake"></tbody>
+        </table>
+        <p class="form__hint hint">
+          Визначається між переможцями зон A, B, C за найбільшою вагою
+          (тай-брейк: Big Fish → середня вага → алфавіт).
+        </p>
+      </div>
+
+      <div class="section grid-3" id="zones-awards">
+        <!-- A/B/C тут -->
+      </div>
+
+      <p class="form__hint hint">
+        Потрібен «зсув місць» (2→1, 3→2, 4→3) для церемонії? Напиши — додамо перемапінг у рендері.
+      </p>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львівщина</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9" rel="noopener">YouTube</a>
     </div>
   </div>
 </footer>

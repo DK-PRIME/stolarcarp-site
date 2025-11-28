@@ -10,169 +10,393 @@
   <link rel="apple-touch-icon" href="assets/favicon.png">  
   <meta name="theme-color" content="#1a1a1a">
 
-  <!-- Стилі та скрипт меню -->
+  <!-- Головні стилі сайту -->
   <link rel="stylesheet" href="assets/css/main.css">  
   <script defer src="assets/js/config.js"></script>
 
-  <!-- Локальні стилі тільки для цієї сторінки -->
-  <style>  
-    .register-intro {  
-      margin-bottom: 20px;  
-      text-align: center;  
-      position: relative;  
-    }  
-  
-    .register-card {  
-      margin-top: 18px;  
-      margin-bottom: 16px;  
-    }  
-  
-    .register-form-card {  
-      margin-top: 10px;  
-    }  
-  
-    .event-options {  
-      display: flex;  
-      flex-direction: column;  
-      gap: 6px;  
-      padding-top: 4px;  
-    }  
-  
-    .event-item {  
-      display: flex;  
-      align-items: center;  
-      gap: 6px;  
-      padding: 6px 9px;  
-      border-radius: 10px;  
-      background: #0d0d14;  
-      border: 1px solid #262636;  
-      cursor: pointer;  
-      font-size: 0.95rem;  
-    }  
-  
-    .event-item:hover {  
-      border-color: rgba(250, 204, 21, 0.8);  
-    }  
-  
-    /* зелена більша крапка вибору етапу */  
-    .event-item input[type="radio"] {  
-      width: 20px;  
-      height: 20px;  
-      accent-color: #22c55e; /* зелений */  
-      transform: scale(1.15);  
-    }  
-  
-    .radio-row {  
-      display: flex;  
-      gap: 16px;  
-      flex-wrap: wrap;  
-    }  
-  
-    .radio-row label {  
-      display: inline-flex;  
-      align-items: center;  
-      gap: 6px;  
-      cursor: pointer;  
-    }  
-  
-    #foodQtyField.field--disabled {  
-      opacity: 0.55;  
-    }  
-  
-    /* Стиль заголовка */  
-    .page-title span {  
-      display: block;  
-    }  
-  
-    .page-title span:nth-child(1),  
-    .page-title span:nth-child(2) {  
-      font-size: clamp(26px,4vw,32px);  
-      text-transform: uppercase;  
-      letter-spacing: .08em;  
-    }  
-  
-    .page-title span:nth-child(3) {  
-      font-size: clamp(30px,4.6vw,40px);  
-      font-weight: 900;  
-    }  
-  
-    /* Градієнт + glow + легке "дихання" */  
-    .register-page .page-title.title-gradient {  
-      animation: scGlowPulse 3.6s ease-in-out infinite;  
-      text-shadow:  
-        0 0 10px rgba(246,195,76,0.55),  
-        0 0 22px rgba(122,15,43,0.55),  
-        0 0 40px rgba(0,0,0,0.8);  
-      margin-bottom: 4px;  
-    }  
-  
-    @keyframes scGlowPulse {  
-      0% {  
-        text-shadow:  
-          0 0 6px rgba(246,195,76,0.35),  
-          0 0 16px rgba(122,15,43,0.35),  
-          0 0 30px rgba(0,0,0,0.6);  
-        transform: translateY(0);  
-      }  
-      50% {  
-        text-shadow:  
-          0 0 14px rgba(246,195,76,0.85),  
-          0 0 30px rgba(122,15,43,0.85),  
-          0 0 46px rgba(0,0,0,0.9);  
-        transform: translateY(-1px);  
-      }  
-      100% {  
-        text-shadow:  
-          0 0 6px rgba(246,195,76,0.35),  
-          0 0 16px rgba(122,15,43,0.35),  
-          0 0 30px rgba(0,0,0,0.6);  
-        transform: translateY(0);  
-      }  
-    }  
-  
-    /* Тонка лінія під заголовком */  
-    .register-intro::after {  
-      content: "";  
-      display: block;  
-      margin: 14px auto 0;  
-      width: 120px;  
-      height: 2px;  
-      border-radius: 999px;  
-      background: linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);  
-      box-shadow: 0 0 12px rgba(246,195,76,0.6);  
-      opacity: .9;  
-    }  
-  
-    @media (max-width: 520px) {  
-      .register-intro::after {  
-        width: 90px;  
-      }  
-    }  
-  
-    /* Темні, преміальні інпути на цій сторінці */  
-    .register-page .input,  
-    .register-page input[type="text"],  
-    .register-page input[type="tel"],  
-    .register-page input[type="number"] {  
-      background: #0f0f14 !important;  
-      border: 1px solid #2a2a39 !important;  
-      color: #fff !important;  
-      padding: 10px 14px !important;  
-      border-radius: 10px !important;  
-      font-size: 1rem;  
-    }  
-  
-    .register-page .input::placeholder,  
-    .register-page input::placeholder {  
-      color: #6b7280;  
-    }  
-  
-    .register-page .input:focus,  
-    .register-page input:focus {  
-      outline: none;  
-      border-color: #f6c34c !important;  
-      box-shadow: 0 0 6px rgba(246,195,76,0.5);  
-    }  
+  <!-- Локальні стилі тільки для сторінки реєстрації -->
+  <style>
+    /* Загальний фон та відступи */
+    body.register-page{
+      background:
+        radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+    }
+
+    .section--narrow{
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* Верхній блок з заголовком */
+    .register-intro{
+      margin-top: 10px;
+      margin-bottom: 26px;
+      text-align: center;
+      position: relative;
+    }
+
+    .register-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:.78rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      background:rgba(0,0,0,.45);
+      border:1px solid rgba(248,250,252,.18);
+      color:#e5e7eb;
+      margin-bottom:10px;
+    }
+
+    .register-kicker span{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#f6c34c,#cc6a2b);
+      color:#000;
+      font-weight:800;
+      font-size:.7rem;
+    }
+
+    .page-title span{
+      display:block;
+    }
+
+    .page-title span:nth-child(1),
+    .page-title span:nth-child(2){
+      font-size:clamp(24px,3.8vw,30px);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .page-title span:nth-child(3){
+      font-size:clamp(30px,4.6vw,40px);
+      font-weight:900;
+    }
+
+    .register-page .page-title.title-gradient{
+      animation: scGlowPulse 3.6s ease-in-out infinite;
+      text-shadow:
+        0 0 10px rgba(246,195,76,0.55),
+        0 0 22px rgba(122,15,43,0.55),
+        0 0 40px rgba(0,0,0,0.8);
+      margin-bottom: 4px;
+    }
+
+    @keyframes scGlowPulse{
+      0%{
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform:translateY(0);
+      }
+      50%{
+        text-shadow:
+          0 0 14px rgba(246,195,76,0.85),
+          0 0 30px rgba(122,15,43,0.85),
+          0 0 46px rgba(0,0,0,0.9);
+        transform:translateY(-1px);
+      }
+      100%{
+        text-shadow:
+          0 0 6px rgba(246,195,76,0.35),
+          0 0 16px rgba(122,15,43,0.35),
+          0 0 30px rgba(0,0,0,0.6);
+        transform:translateY(0);
+      }
+    }
+
+    /* Тонка лінія під заголовком */
+    .register-intro::after{
+      content:"";
+      display:block;
+      margin:14px auto 0;
+      width:140px;
+      height:2px;
+      border-radius:999px;
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
+      box-shadow:0 0 12px rgba(246,195,76,0.6);
+      opacity:.9;
+    }
+
+    @media (max-width:520px){
+      .register-intro::after{width:90px;}
+    }
+
+    .lead{
+      max-width:720px;
+      margin:10px auto 0;
+      color:#d1d5db;
+    }
+
+    /* Невеликий список кроків */
+    .register-steps{
+      margin:18px auto 0;
+      max-width:720px;
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:center;
+      gap:10px;
+      font-size:.8rem;
+      color:#9ca3af;
+    }
+
+    .register-steps li{
+      list-style:none;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(15,23,42,.6);
+      backdrop-filter:blur(4px);
+    }
+
+    /* Сітка: форма + оплата */
+    .register-layout{
+      display:grid;
+      grid-template-columns:minmax(0,2.1fr) minmax(0,1.1fr);
+      gap:18px;
+      margin-top:20px;
+      align-items:flex-start;
+    }
+
+    @media (max-width:860px){
+      .register-layout{
+        grid-template-columns:1fr;
+      }
+    }
+
+    /* Карта форми */
+    .register-form-card{
+      margin-top:0;
+    }
+
+    .register-form-card h2{
+      margin-top:0;
+      margin-bottom:6px;
+    }
+
+    .form__hint{
+      font-size:.8rem;
+    }
+
+    /* Темні, преміальні інпути на цій сторінці */
+    .register-page .input,
+    .register-page input[type="text"],
+    .register-page input[type="tel"],
+    .register-page input[type="number"]{
+      background:#0f0f14 !important;
+      border:1px solid #2a2a39 !important;
+      color:#fff !important;
+      padding:10px 14px !important;
+      border-radius:10px !important;
+      font-size:1rem;
+    }
+
+    .register-page .input::placeholder,
+    .register-page input::placeholder{
+      color:#6b7280;
+    }
+
+    .register-page .input:focus,
+    .register-page input:focus{
+      outline:none;
+      border-color:#f6c34c !important;
+      box-shadow:0 0 6px rgba(246,195,76,0.5);
+    }
+
+    /* Блок вибору етапу */
+    .event-options{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      padding-top:4px;
+    }
+
+    .event-item{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:10px;
+      background:linear-gradient(120deg,#020617,#020617 40%,#0b1120 100%);
+      border:1px solid rgba(148,163,184,.4);
+      cursor:pointer;
+      font-size:.95rem;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .event-item::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg,rgba(250,204,21,.3),transparent 35%);
+      opacity:0;
+      transition:opacity .18s ease;
+      pointer-events:none;
+    }
+
+    .event-item:hover::before{
+      opacity:1;
+    }
+
+    .event-item input[type="radio"]{
+      width:20px;
+      height:20px;
+      accent-color:#22c55e;
+      transform:scale(1.15);
+      flex-shrink:0;
+    }
+
+    .event-item span{
+      position:relative;
+      z-index:1;
+    }
+
+    /* Радіо «харчування» */
+    .radio-row{
+      display:flex;
+      gap:16px;
+      flex-wrap:wrap;
+    }
+
+    .radio-row label{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+    }
+
+    #foodQtyField.field--disabled{
+      opacity:.55;
+    }
+
+    /* Телефон */
+    .phone-wrap{
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .phone-prefix{
+      padding:10px 12px;
+      border-radius:10px;
+      background:#020617;
+      border:1px solid #1f2937;
+      font-size:.9rem;
+      color:#e5e7eb;
+    }
+
+    /* Дії форми */
+    .form-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top:6px;
+    }
+
+    .spinner{
+      width:18px;
+      height:18px;
+      border-radius:50%;
+      border:3px solid rgba(255,255,255,.2);
+      border-top-color:#fff;
+      display:none;
+    }
+
+    .spinner--on{
+      display:inline-block;
+      animation:spin .9s linear infinite;
+    }
+
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .form-msg{
+      margin-top:6px;
+      font-weight:600;
+    }
+
+    .form-msg.ok{color:#43d18a;}
+    .form-msg.err{color:#ff6c6c;}
+
+    /* Картка з оплатою */
+    .card--payment{
+      background:radial-gradient(circle at top,#1e293b 0,#020617 55%);
+      border:1px solid rgba(148,163,184,.45);
+      box-shadow:0 16px 40px rgba(0,0,0,.7);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .card--payment::before{
+      content:"";
+      position:absolute;
+      inset:-40%;
+      background:
+        radial-gradient(circle at top left,rgba(250,204,21,.12) 0,transparent 60%),
+        radial-gradient(circle at bottom right,rgba(56,189,248,.12) 0,transparent 60%);
+      opacity:.9;
+      pointer-events:none;
+    }
+
+    .card--payment > *{
+      position:relative;
+      z-index:1;
+    }
+
+    .card-payment-title{
+      font-weight:600;
+      margin-bottom:6px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .card-payment-title span{
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#f6c34c,#b45309);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:.9rem;
+      color:#000;
+      font-weight:800;
+    }
+
+    .card-number{
+      font-weight:600;
+      letter-spacing:.16em;
+      padding:8px 10px;
+      border-radius:10px;
+      background:rgba(15,23,42,.85);
+      border:1px solid rgba(148,163,184,.7);
+      display:inline-block;
+      margin:4px 0;
+    }
+
+    .card-note{
+      font-size:.78rem;
+      color:#d1d5db;
+      margin-top:6px;
+    }
+
+    /* Hid outline в шапці (щоб не було білих ліній) */
+    .header *:focus,
+    .header *:focus-visible,
+    .header a:focus,
+    .header a:focus-visible,
+    .header button:focus,
+    .header button:focus-visible{
+      outline:none !important;
+    }
   </style>
 </head>  
 
@@ -202,178 +426,202 @@
 <!-- MAIN -->
 <main class="main">  
   <section class="container section section--narrow">  
+
+    <!-- HERO -->
     <div class="register-intro">  
+      <div class="register-kicker">
+        <span>SC</span> SEASON 2026 · ENTRY
+      </div>
       <h1 class="page-title title-gradient">  
         <span>Реєстрація</span>  
-        <span>Турнір</span>  
+        <span>на турнір</span>  
         <span>STOLAR CARP 2026</span>  
       </h1>  
       <p class="lead">  
-        Подайте заявку на участь у турнірі STOLAR CARP 2026. Після відправки заявки здійсніть оплату  
-        та вкажіть <b>назву команди</b> у коментарі до платежу.  
+        Подайте заявку на участь у багатоетапному турнірі STOLAR CARP 2026.  
+        Після відправки заявки здійсніть оплату внеску та вкажіть <b>назву команди</b>  
+        у коментарі до платежу.
       </p>  
+
+      <ul class="register-steps">
+        <li>1. Оберіть етап</li>
+        <li>2. Заповніть дані команди</li>
+        <li>3. Підтвердіть регламент</li>
+        <li>4. Оплатіть внесок протягом 24 годин</li>
+      </ul>
     </div>    
 
-    <!-- Форма -->
-    <div class="form-card register-form-card">  
-      <h2>Форма реєстрації</h2>  
-      <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>  
+    <!-- LAYOUT: форма + оплата -->
+    <div class="register-layout">
 
-      <form id="regForm" class="form" novalidate>  
-        <!-- honeypot (антибот) -->
-        <input  
-          type="text"  
-          name="hp"  
-          id="hp"  
-          autocomplete="off"  
-          style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"  
-        />  
+      <!-- ФОРМА -->
+      <div class="form-card register-form-card">  
+        <h2>Форма реєстрації</h2>  
+        <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>  
 
-        <!-- fingerprint -->
-        <input type="hidden" id="fp" name="fp" />  
+        <form id="regForm" class="form" novalidate>  
+          <!-- honeypot (антибот) -->
+          <input  
+            type="text"  
+            name="hp"  
+            id="hp"  
+            autocomplete="off"  
+            style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"  
+          />  
 
-        <!-- Етап -->
-        <div class="field">  
-          <label>  
-            Оберіть етап турніру <span style="color:var(--accent);">*</span>  
-          </label>  
-          <div id="eventOptions" class="event-options">  
-            <p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>  
+          <!-- fingerprint -->
+          <input type="hidden" id="fp" name="fp" />  
+
+          <!-- Етап -->
+          <div class="field">  
+            <label>  
+              Оберіть етап турніру <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div id="eventOptions" class="event-options">  
+              <p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>  
+            </div>  
           </div>  
-        </div>  
 
-        <!-- Назва команди -->
-        <div class="field">  
-          <label for="team_name">  
-            Назва команди <span style="color:var(--accent);">*</span>  
-          </label>  
-          <input  
-            type="text"  
-            id="team_name"  
-            name="team_name"  
-            class="input"  
-            required  
-            minlength="2"  
-            maxlength="100"  
-            placeholder="Введіть назву команди"  
-          />  
-        </div>  
-
-        <!-- Капітан -->
-        <div class="field">  
-          <label for="captain">  
-            Капітан команди <span style="color:var(--accent);">*</span>  
-          </label>  
-          <input  
-            type="text"  
-            id="captain"  
-            name="captain"  
-            class="input"  
-            required  
-            minlength="2"  
-            maxlength="100"  
-            placeholder="Ім'я та прізвище капітана"  
-          />  
-        </div>  
-
-        <!-- Телефон -->
-        <div class="field">  
-          <label for="phone_rest">  
-            Номер телефону (формат: +380XXXXXXXXX) <span style="color:var(--accent);">*</span>  
-          </label>  
-          <div class="phone-wrap">  
-            <span class="phone-prefix">+380</span>  
+          <!-- Назва команди -->
+          <div class="field">  
+            <label for="team_name">  
+              Назва команди <span style="color:var(--accent);">*</span>  
+            </label>  
             <input  
-              type="tel"  
-              id="phone_rest"  
-              inputmode="numeric"  
-              placeholder="XXXXXXXXX"  
+              type="text"  
+              id="team_name"  
+              name="team_name"  
+              class="input"  
               required  
+              minlength="2"  
+              maxlength="100"  
+              placeholder="Введіть назву команди"  
             />  
           </div>  
-          <input type="hidden" id="phone" name="phone" />  
-          <div class="hint" style="font-size:12px;color:var(--muted);">  
-            Вказуйте номер капітана для звʼязку по турніру.  
-          </div>  
-        </div>  
 
-        <!-- Харчування -->
-        <div class="field">  
-          <label>  
-            Харчування від організаторів? <span style="color:var(--accent);">*</span>  
-          </label>  
-          <div class="radio-row">  
-            <label>  
-              <input type="radio" name="food" value="Так" required />  
-              <span>Так</span>  
+          <!-- Капітан -->
+          <div class="field">  
+            <label for="captain">  
+              Капітан команди <span style="color:var(--accent);">*</span>  
             </label>  
+            <input  
+              type="text"  
+              id="captain"  
+              name="captain"  
+              class="input"  
+              required  
+              minlength="2"  
+              maxlength="100"  
+              placeholder="Ім'я та прізвище капітана"  
+            />  
+          </div>  
+
+          <!-- Телефон -->
+          <div class="field">  
+            <label for="phone_rest">  
+              Номер телефону (формат: +380XXXXXXXXX) <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div class="phone-wrap">  
+              <span class="phone-prefix">+380</span>  
+              <input  
+                type="tel"  
+                id="phone_rest"  
+                inputmode="numeric"  
+                placeholder="XXXXXXXXX"  
+                required  
+              />  
+            </div>  
+            <input type="hidden" id="phone" name="phone" />  
+            <div class="hint" style="font-size:12px;color:var(--muted);">  
+              Вказуйте номер капітана для звʼязку по турніру.  
+            </div>  
+          </div>  
+
+          <!-- Харчування -->
+          <div class="field">  
             <label>  
-              <input type="radio" name="food" value="Ні" />  
-              <span>Ні</span>  
+              Харчування від організаторів? <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div class="radio-row">  
+              <label>  
+                <input type="radio" name="food" value="Так" required />  
+                <span>Так</span>  
+              </label>  
+              <label>  
+                <input type="radio" name="food" value="Ні" />  
+                <span>Ні</span>  
+              </label>  
+            </div>  
+          </div>  
+
+          <!-- Кількість харчуючих -->
+          <div class="field field--disabled" id="foodQtyField">  
+            <label for="food_qty">Кількість харчуючих (1–6)</label>  
+            <input  
+              type="number"  
+              id="food_qty"  
+              name="food_qty"  
+              class="input"  
+              min="1"  
+              max="6"  
+              inputmode="numeric"  
+              placeholder="Вкажіть кількість, якщо замовляєте харчування"  
+            />  
+            <div class="hint" style="font-size:12px;color:var(--muted);">  
+              Якщо харчування не потрібне — залиште поле порожнім.  
+            </div>  
+          </div>  
+
+          <!-- Підтвердження регламенту -->
+          <div class="field">  
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">  
+              <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">  
+              <span>Підтверджую, що ознайомлений із  
+                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">  
+                  регламентом турніру  
+                </a>  
+              </span>  
             </label>  
           </div>  
-        </div>  
 
-        <!-- Кількість харчуючих -->
-        <div class="field field--disabled" id="foodQtyField">  
-          <label for="food_qty">Кількість харчуючих (1–6)</label>  
-          <input  
-            type="number"  
-            id="food_qty"  
-            name="food_qty"  
-            class="input"  
-            min="1"  
-            max="6"  
-            inputmode="numeric"  
-            placeholder="Вкажіть кількість, якщо замовляєте харчування"  
-          />  
-          <div class="hint" style="font-size:12px;color:var(--muted);">  
-            Якщо харчування не потрібне — залиште поле порожнім.  
-          </div>  
-        </div>  
+          <!-- Дія -->
+          <div class="form-actions">  
+            <button type="submit" id="submitBtn" class="btn btn--primary">  
+              Подати заявку  
+            </button>  
+            <div id="spinner" class="spinner" aria-hidden="true"></div>  
+          </div>
 
-        <!-- Підтвердження регламенту -->
-        <div class="field">  
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">  
-            <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">  
-            <span>Підтверджую, що ознайомлений із  
-              <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">  
-                регламентом турніру  
-              </a>  
-            </span>  
-          </label>  
-        </div>  
+          <!-- Повідомлення форми -->
+          <div id="msg" class="form-msg"></div>
 
-        <!-- Дія -->
-        <div class="form-actions">  
-          <button type="submit" id="submitBtn" class="btn btn--primary">  
-            Подати заявку  
-          </button>  
-          <div id="spinner" class="spinner" aria-hidden="true"></div>  
-        </div>
-
-        <!-- Повідомлення форми -->
-    <div id="msg" class="form-msg"></div>
-
-        <p class="form__hint" style="margin-top:6px;">  
-          ⚠️ Після відправки заявки у вас є <b>24 години</b>, щоб здійснити оплату.  
-          Якщо оплата не буде зарахована — заявка буде автоматично анульована.  
-        </p>  
-      </form>  
-    </div>  
-
-    <!-- Картка з оплатою -->
-    <div class="card register-card">  
-      <div class="card-payment-title" style="font-weight:600;margin-bottom:4px;">  
-        Оплата внеску  
+          <p class="form__hint" style="margin-top:6px;">  
+            ⚠️ Після відправки заявки у вас є <b>24 години</b>, щоб здійснити оплату.  
+            Якщо оплата не буде зарахована — заявка буде автоматично анульована.  
+          </p>  
+        </form>  
       </div>  
-      <p>Сума внеску: <b>3500 ₴</b> на картку</p>  
-      <p>Номер картки: <span id="cardNum" class="card-number" style="font-weight:600;letter-spacing:0.12em;">4874 0700 5068 8793</span></p>  
-      <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">  
-        Скопіювати картку  
-      </button>  
-      <p class="form__hint">У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.</p>  
-    </div>
+
+      <!-- КАРТКА З ОПЛАТОЮ -->
+      <div class="card register-card card--payment">  
+        <div class="card-payment-title">  
+          <span>₴</span> Оплата внеску  
+        </div>  
+        <p>Сума внеску: <b>3500 ₴</b> на банківську картку:</p>  
+        <p>Номер картки:</p>
+        <p>
+          <span id="cardNum" class="card-number">4874 0700 5068 8793</span>
+        </p>
+        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">  
+          Скопіювати номер картки  
+        </button>  
+        <p class="card-note">
+          У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.  
+          Це допоможе швидко ідентифікувати оплату та підтвердити вашу участь.
+        </p>  
+      </div>
+
+    </div><!-- /register-layout -->
 
   </section>  
 </main>  
@@ -389,12 +637,12 @@
   </div>  
 </footer>  
 
-<!-- СКРИПТ РЕЄСТРАЦІЇ -->
- <script>
+<!-- СКРИПТ РЕЄСТРАЦІЇ (той самий, що був) -->
+<script>
 document.addEventListener('DOMContentLoaded', () => {
 
   // Твоя робоча вебка (актуальна)
-const API = "https://script.google.com/macros/s/AKfycbyyBGjueNe074tk2QXmt2QTShhW00vzrFVOsw4UB4sgQ1eMHWKCsjCr6Z4NtwQdiSaG/exec";
+  const API = "https://script.google.com/macros/s/AKfycbyyBGjueNe074tk2QXmt2QTShhW00vzrFVOsw4UB4sgQ1eMHWKCsjCr6Z4NtwQdiSaG/exec";
   const form = document.getElementById('regForm');
   const qty = document.getElementById('food_qty');
   const qtyField = document.getElementById('foodQtyField');

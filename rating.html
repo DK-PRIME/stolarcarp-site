@@ -23,10 +23,12 @@
     .season-rating-head{
       margin-bottom:24px;
       padding:24px 22px;
-      background:radial-gradient(circle at top left,#1f2933 0,#101117 55%,#050609 100%);
+      background:
+        radial-gradient(circle at top left,rgba(250,204,21,.18) 0,transparent 38%),
+        radial-gradient(circle at bottom right,#111827 0,#050609 55%);
       border-radius:20px;
       border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 18px 40px rgba(0,0,0,.55);
+      box-shadow:0 18px 40px rgba(0,0,0,.7);
     }
     .season-rating-head .kicker{
       letter-spacing:.18em;
@@ -71,15 +73,16 @@
       box-shadow:none;
     }
     .card--season h3{
-      margin:0 0 8px;
+      margin:0 0 10px;
     }
 
     .season-table-wrapper{
       margin-top:6px;
-      border-radius:12px;
+      border-radius:14px;
       overflow:hidden;
-      background:#05060a;
-      border:1px solid rgba(255,255,255,.08);
+      background:radial-gradient(circle at top,#0b0d14 0,#05060a 55%);
+      border:1px solid rgba(255,255,255,.09);
+      box-shadow:0 14px 30px rgba(0,0,0,.75);
     }
 
     /* ===== Базова таблиця ===== */
@@ -91,12 +94,12 @@
       background:#05060a;
     }
     .table--season thead{
-      background:linear-gradient(90deg,#181920,#14151d);
+      background:linear-gradient(90deg,#181920,#111827);
     }
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:3px 2px;
+      padding:4px 2px;
       text-align:center;
       font-weight:600;
       opacity:.95;
@@ -104,21 +107,25 @@
       overflow:hidden;
       text-overflow:clip;
       font-size:.6rem;
-      line-height:1.2;
+      line-height:1.25;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:#e5e7eb;
     }
     .table--season thead th:first-child{
       text-align:left;
     }
 
     .table--season tbody tr{
-      background:#0f1016;
-      transition:background .15s ease;
+      background:#0b0d14;
+      transition:background .15s ease, transform .1s ease;
+      height:40px;                 /* вища строка, краще читається місце */
     }
     .table--season tbody tr:nth-child(odd){
-      background:#11121a;
+      background:#10121b;
     }
     .table--season tbody tr:hover{
-      background:#191b25;
+      background:#191b27;
     }
     .table--season tbody td{
       padding:3px 2px;
@@ -130,6 +137,7 @@
       text-overflow:ellipsis;
       box-sizing:border-box;
       font-size:.7rem;
+      color:#e5e7eb;
     }
     .table--season tbody td.col-team{
       text-align:left;
@@ -148,26 +156,27 @@
     /* Місце */
     .col-place .place-num{
       display:block;
-      font-size:.8rem;
+      font-size:.9rem;
       line-height:1;
       font-weight:700;
       padding-left:6px;          /* відступ від жовтої лінії */
     }
 
-    /* ↕️ */
+    /* Рух */
     .move{
       font-size:.6rem;
       display:inline-flex;
       align-items:center;
       justify-content:center;
       gap:4px;
-      padding:0 4px;
+      padding:2px 6px;
       border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.16);
       opacity:.9;
+      background:rgba(15,23,42,.7);
     }
-    .move--up{color:var(--accent-green);border-color:rgba(34,197,94,.45)}
-    .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.45)}
+    .move--up{color:var(--accent-green);border-color:rgba(34,197,94,.55)}
+    .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.55)}
     .move--same{color:#e5e7eb;border-style:dashed}
 
     /* Етап: місце / бали */
@@ -201,6 +210,30 @@
       color:var(--accent-gold-soft);
     }
 
+    /* Топ-5 підсвічування */
+    .table--main tbody tr:nth-child(1){
+      background:
+        radial-gradient(circle at left,rgba(251,191,36,.35) 0,rgba(15,23,42,1) 55%);
+      transform:translateY(-1px);
+    }
+    .table--main tbody tr:nth-child(2){
+      background:
+        radial-gradient(circle at left,rgba(148,163,184,.35) 0,rgba(15,23,42,1) 55%);
+    }
+    .table--main tbody tr:nth-child(3){
+      background:
+        radial-gradient(circle at left,rgba(248,113,113,.32) 0,rgba(15,23,42,1) 55%);
+    }
+    .table--main tbody tr:nth-child(4),
+    .table--main tbody tr:nth-child(5){
+      background:
+        radial-gradient(circle at left,rgba(56,189,248,.22) 0,rgba(15,23,42,1) 55%);
+    }
+
+    .table--main tbody tr:nth-child(-n+5) td{
+      border-bottom-color:rgba(248,250,252,.16);
+    }
+
     /* Цифри */
     .col-points b{
       color:var(--accent-gold);
@@ -213,9 +246,9 @@
     }
 
     .rating-note{
-      margin-top:6px;
+      margin-top:8px;
       font-size:.8rem;
-      opacity:.7;
+      opacity:.75;
     }
 
     /* Підзаголовок для претендентів */
@@ -241,7 +274,7 @@
       .table--season thead th{
         font-size:.55rem;
       }
-      .col-place .place-num{font-size:.72rem;}
+      .col-place .place-num{font-size:.78rem;}
       .stage-cell{font-size:.64rem;}
       .stage-points{font-size:.6rem;}
     }
@@ -298,7 +331,7 @@
           <thead>
             <tr>
               <th class="col-place">Місце</th>
-              <th class="col-move">​↕️</th>
+              <th class="col-move">Рух</th>
               <th class="col-team">Команда</th>
 
               <th class="col-stage">Е1<br>м / бали</th>
@@ -314,57 +347,296 @@
             </tr>
           </thead>
           <tbody id="season-top">
-            <!-- 1–18 місця (заготовки, JS просто підставить дані замість «–») -->
+            <!-- 1–18 місця (заготовки; JS підставить реальні дані замість «–») -->
+
             <!-- 1 -->
             <tr class="row-qualified">
               <td class="col-place"><span class="place-num">1</span></td>
               <td class="col-move"><span class="move move--same">–</span></td>
               <td class="col-team">-</td>
-              <td class="col-stage">
-                <div class="stage-cell">
-                  <span class="stage-place">–</span>
-                  <span class="stage-slash">/</span>
-                  <span class="stage-points">–</span>
-                </div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell">
-                  <span class="stage-place">–</span>
-                  <span class="stage-slash">/</span>
-                  <span class="stage-points">–</span>
-                </div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell">
-                  <span class="stage-place">–</span>
-                  <span class="stage-slash">/</span>
-                  <span class="stage-points">–</span>
-                </div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell">
-                  <span class="stage-place">–</span>
-                  <span class="stage-slash">/</span>
-                  <span class="stage-points">–</span>
-                </div>
-              </td>
-              <td class="col-stage">
-                <div class="stage-cell">
-                  <span class="stage-place">–</span>
-                  <span class="stage-slash">/</span>
-                  <span class="stage-points">–</span>
-                </div>
-              </td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
               <td class="col-points"><b>-</b></td>
               <td class="col-final">–</td>
               <td class="col-weight">-</td>
               <td class="col-big">-</td>
             </tr>
 
-            <!-- 2–18 абсолютно такі самі, тільки номер місця міняється -->
-            <!-- Для стислості я не дублюю всі 18 тут вручну,
-                 але ти можеш просто скопіювати рядок 1 і поміняти
-                 число в place-num від 2 до 18. -->
+            <!-- 2 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">2</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 3 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">3</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 4 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">4</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 5 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">5</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 6–18 — однакова структура -->
+            <!-- 6 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">6</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 7 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">7</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 8 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">8</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 9 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">9</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 10 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">10</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 11 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">11</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 12 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">12</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 13 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">13</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 14 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">14</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 15 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">15</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 16 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">16</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 17 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">17</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
+
+            <!-- 18 -->
+            <tr class="row-qualified">
+              <td class="col-place"><span class="place-num">18</span></td>
+              <td class="col-move"><span class="move move--same">–</span></td>
+              <td class="col-team">-</td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-stage"><div class="stage-cell"><span class="stage-place">–</span><span class="stage-slash">/</span><span class="stage-points">–</span></div></td>
+              <td class="col-points"><b>-</b></td>
+              <td class="col-final">–</td>
+              <td class="col-weight">-</td>
+              <td class="col-big">-</td>
+            </tr>
 
           </tbody>
         </table>
@@ -390,7 +662,7 @@
           <thead>
             <tr>
               <th class="col-place">Місце</th>
-              <th class="col-move">​↕️</th>
+              <th class="col-move">Рух</th>
               <th class="col-team">Команда</th>
 
               <th class="col-stage">Е1<br>м / бали</th>

@@ -188,3 +188,28 @@ body.register-page .field--disabled{opacity:.55}
 .header button:focus-visible{
   outline:none !important;
 }
+
+/* === SEASON RATING — рух команд (стрілочки) === */
+.table--season .col-move{
+  text-align:center;
+}
+
+.move{
+  font-weight:700;
+  font-size:.9rem;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.move--up{
+  color:#22c55e;   /* зелена ▲ */
+}
+
+.move--down{
+  color:#ef4444;   /* червона ▼ */
+}
+
+.move--same{
+  color:#9ca3af;   /* сіра ● */
+}

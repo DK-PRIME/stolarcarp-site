@@ -62,26 +62,25 @@
       .season-rating-head{ padding:18px 16px; }
     }
 
-    /* ===== Карточка з таблицею ===== */
+    /* ===== Блок рейтингу без зовнішньої рамки ===== */
     .card--season{
       margin-top:20px;
-      border-radius:18px;
-      background:linear-gradient(145deg,#0b0c10,#12131a);
-      border:1px solid rgba(255,255,255,.06);
-      box-shadow:0 14px 30px rgba(0,0,0,.6);
-      padding:18px 16px 14px;
+      padding:0;                 /* без відступів — таблиця на всю ширину */
+      background:transparent;    /* забрали фон */
+      border:none;               /* забрали рамку */
+      box-shadow:none;           /* без тіней */
     }
     .card--season h3{
-      margin:0 0 10px;
+      margin:0 0 8px;
     }
 
-    /* ===== Обгортка таблиці (рамка, без скролу) ===== */
+    /* ===== Обгортка таблиці (тільки для скруглення кутів/кліпу) ===== */
     .season-table-wrapper{
-      margin-top:6px;
+      margin-top:0;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:#05060a;
-      overflow:hidden;
+      border:none;              /* рамку прибрано */
+      background:transparent;   /* фон прибрано */
+      overflow:hidden;          /* але кути таблиці залишаються скругленими */
     }
 
     /* ===== Таблиця рейтингу сезону ===== */
@@ -90,6 +89,7 @@
       table-layout:fixed;           /* жорстко ділить ширину між колонками */
       border-collapse:collapse;
       font-size:.9rem;
+      background:#05060a;           /* фон самої таблиці */
     }
     .table--season thead{
       background:linear-gradient(90deg,#181920,#14151d);
@@ -101,7 +101,7 @@
       text-align:center;
       font-weight:600;
       opacity:.9;
-      white-space:normal;           /* дозволяємо перенос */
+      white-space:normal;
       overflow:hidden;
       text-overflow:clip;
     }
@@ -124,7 +124,7 @@
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
-      white-space:normal;           /* текст може ламатись в дві лінії */
+      white-space:normal;
       overflow:hidden;
       text-overflow:clip;
       box-sizing:border-box;
@@ -226,7 +226,7 @@
       opacity:.7;
     }
 
-    /* ===== МОБІЛКА: ще дрібніший шрифт і менші відступи ===== */
+    /* ===== МОБІЛКА ===== */
     @media (max-width:480px){
       .table--season{
         font-size:.78rem;
@@ -286,7 +286,7 @@
       </div>
     </div>
 
-    <!-- Основна таблиця рейтингу сезону -->
+    <!-- Рейтинг команд (без зайвої рамки, тільки таблиця) -->
     <div class="card card--season" id="season-wrap">
       <h3>Рейтинг команд сезону 2026</h3>
 

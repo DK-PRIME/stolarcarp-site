@@ -196,7 +196,7 @@
     </div>
 
     <!-- Основна таблиця рейтингу сезону -->
-    <div class="card card--season" id="season-wrap" style="display:none">
+    <div class="card card--season" id="season-wrap">
       <h3>Рейтинг команд сезону 2026</h3>
       <table class="table table--season">
         <thead>
@@ -214,18 +214,33 @@
             <th class="col-big">Big Fish сезону, кг</th>
           </tr>
         </thead>
-        <tbody id="season-body"></tbody>
+        <tbody id="season-body">
+          <!-- Сюди JS підставить дані з таблиці; тимчасово один рядок-пример -->
+          <tr class="row-qualified">
+            <td class="col-place">
+              <div class="place-wrap">
+                <span class="place-num">1</span>
+                <span class="move move--same">–</span>
+              </div>
+            </td>
+            <td class="col-team">Назва команди</td>
+            <td class="col-stage"><span class="badge-stage">1</span></td>
+            <td class="col-stage"><span class="badge-stage">2</span></td>
+            <td class="col-stage"><span class="badge-stage">3</span></td>
+            <td class="col-stage"><span class="badge-stage">4</span></td>
+            <td class="col-stage"><span class="badge-stage">5</span></td>
+            <td class="col-stage"><span class="badge-stage">1</span></td>
+            <td class="col-points"><b>25</b></td>
+            <td class="col-weight">368.400</td>
+            <td class="col-big">14.875</td>
+          </tr>
+        </tbody>
       </table>
       <p class="form__hint hint">
-        Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу
-        (значення «руху» формується у Google&nbsp;Sheets).
+        Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу.
       </p>
       <div class="rating-status" id="rating-status"></div>
     </div>
-
-    <p id="rating-error" class="form__hint hint" style="display:none;color:#fca5a5">
-      Не вдалося завантажити рейтинг. Перевір, що таблиця сезону опублікована для перегляду.
-    </p>
 
   </section>
 </main>
@@ -241,119 +256,10 @@
 </footer>
 
 <script>
-/* ===== КОНСТАНТИ ТАБЛИЦІ РЕЙТИНГУ ===== */
-// тут ставиш свій ID таблички з рейтингом сезону
-const RATING_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни при потребі
-const RATING_GID      = "0";  // gid аркуша з рейтингом
-
-const seasonWrap   = document.getElementById('season-wrap');
-const seasonBody   = document.getElementById('season-body');
-const statusLabel  = document.getElementById('rating-status');
-const errorBlock   = document.getElementById('rating-error');
-
-const toNum = v => {
-  if (v == null) return 0;
-  const s = String(v).trim().replace(/\s+/g,'').replace(',', '.');
-  const x = parseFloat(s);
-  return Number.isFinite(x) ? x : 0;
-};
-const kg = v => toNum(v).toFixed(3);
-
-function parseGViz(text){
-  const start = text.indexOf('{');
-  const end   = text.lastIndexOf('}');
-  if (start === -1 || end === -1){
-    throw new Error('Некоректна відповідь від GViz');
-  }
-  return JSON.parse(text.substring(start, end + 1));
-}
-
-/* Форматування "руху" місця */
-function formatMove(deltaRaw){
-  const d = Number(toNum(deltaRaw));
-  if (!d){
-    return '<span class="move move--same">–</span>';
-  }
-  if (d > 0){
-    return `<span class="move move--up">↑ +${d}</span>`;
-  }
-  return `<span class="move move--down">↓ ${d}</span>`;
-}
-
-/* Рендер таблиці */
-function renderSeason(rows){
-  // беремо лише рядки, де Місце > 0 (усі KEY / ACTIVE_STAGE / службові — відсіюються)
-  const data = rows.filter(cols => {
-    const place = cols[0];
-    const placeNum = Number(toNum(place));
-    return placeNum > 0;
-  });
-
-  seasonBody.innerHTML = data.map((cols, idx) => {
-    const place = cols[0] ?? '';
-    const move  = cols[1] ?? '';
-    const team  = cols[2] ?? '';
-    const e1    = cols[3] ?? '';
-    const e2    = cols[4] ?? '';
-    const e3    = cols[5] ?? '';
-    const e4    = cols[6] ?? '';
-    const e5    = cols[7] ?? '';
-    const fin   = cols[8] ?? '';
-    const pts   = cols[9] ?? '';
-    const wAll  = cols[10] ?? '';
-    const big   = cols[11] ?? '';
-
-    const rowClass = idx < 18 ? 'row-qualified' : '';
-
-    return `
-      <tr class="${rowClass}">
-        <td class="col-place">
-          <div class="place-wrap">
-            <span class="place-num">${place || '-'}</span>
-            ${formatMove(move)}
-          </div>
-        </td>
-        <td class="col-team">${team || '-'}</td>
-        <td class="col-stage"><span class="badge-stage">${e1 || '-'}</span></td>
-        <td class="col-stage"><span class="badge-stage">${e2 || '-'}</span></td>
-        <td class="col-stage"><span class="badge-stage">${e3 || '-'}</span></td>
-        <td class="col-stage"><span class="badge-stage">${e4 || '-'}</span></td>
-        <td class="col-stage"><span class="badge-stage">${e5 || '-'}</span></td>
-        <td class="col-stage"><span class="badge-stage">${fin || '-'}</span></td>
-        <td class="col-points"><b>${pts || '-'}</b></td>
-        <td class="col-weight">${wAll ? kg(wAll) : '-'}</td>
-        <td class="col-big">${big ? kg(big) : '-'}</td>
-      </tr>
-    `;
-  }).join('');
-
-  if (data.length){
-    seasonWrap.style.display = 'block';
-    statusLabel.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
-  } else {
-    statusLabel.textContent = 'Дані рейтингу відсутні';
-  }
-}
-
-/* Завантаження з GViz */
-async function loadRating(){
-  try{
-    errorBlock.style.display = 'none';
-    const url = `https://docs.google.com/spreadsheets/d/${RATING_SHEET_ID}/gviz/tq?tqx=out:json&gid=${RATING_GID}`;
-    const res = await fetch(url, { cache:'no-store' });
-    const text = await res.text();
-    const json = parseGViz(text);
-    const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c?.v ?? ''));
-    renderSeason(rows);
-  } catch(e){
-    console.error(e);
-    errorBlock.style.display = 'block';
-  }
-}
-
-/* Автооновлення раз на 60с */
-loadRating();
-setInterval(loadRating, 60000);
+/* Якщо захочеш — тут пізніше додамо підвантаження з Google Sheets.
+   Поки таблиця статична, щоб ти чітко бачив верстку. */
+document.getElementById('rating-status').textContent =
+  'Демо-таблиця. Дані будуть підтягуватись з Google Sheets після підключення.';
 </script>
 </body>
 </html>

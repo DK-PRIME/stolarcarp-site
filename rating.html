@@ -11,10 +11,7 @@
 
     .hint{opacity:.75}
     .textarea{width:100%}
-    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    @media (max-width:960px){ .grid-3{grid-template-columns:1fr} }
-    .badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);opacity:.9}
-    .badge--zone{background:#171822}
+
     .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
     .input{background:var(--panel);border:1px solid var(--line);color:#fff;border-radius:10px;padding:10px 12px;outline:none;min-width:260px}
     .btn{padding:10px 14px;border-radius:10px;background:#1b1c20;border:1px solid var(--line);color:#fff;text-decoration:none;font-weight:600;cursor:pointer}
@@ -23,6 +20,7 @@
     .dot{width:8px;height:8px;border-radius:999px;background:#f59e0b}
     .dot.ok{background:#16a34a}
     .dot.err{background:#ef4444}
+
     .card .table th,.card .table td{white-space:nowrap}
 
     /* ===== Преміальний хедер рейтингу сезону ===== */
@@ -69,6 +67,71 @@
       .season-rating-head{
         padding:18px 16px;
       }
+    }
+
+    /* ===== Таблиця рейтингу сезону ===== */
+    .card--season{
+      margin-top:20px;
+    }
+    .table--season{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.92rem;
+    }
+    .table--season thead th{
+      border-bottom:1px solid var(--line);
+      padding:8px 8px;
+      text-align:left;
+      font-weight:600;
+      opacity:.85;
+    }
+    .table--season tbody td{
+      padding:6px 8px;
+      border-bottom:1px solid rgba(255,255,255,.03);
+    }
+    .col-place{width:110px}
+    .col-team{min-width:200px}
+    .col-stage{width:60px;text-align:center}
+    .col-points{width:110px}
+    .col-weight,.col-big{width:130px}
+
+    .place-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .place-num{
+      font-weight:700;
+      font-size:1rem;
+    }
+    .move{
+      font-size:.78rem;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      padding:1px 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      opacity:.9;
+    }
+    .move--up{color:#4ade80;border-color:rgba(74,222,128,.4)}
+    .move--down{color:#f97373;border-color:rgba(248,113,113,.4)}
+    .move--same{color:#e5e7eb;border-style:dashed}
+
+    .badge-stage{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.06);
+      font-size:.8rem;
+    }
+
+    @media (max-width:960px){
+      .table--season thead{
+        font-size:.8rem;
+      }
+      .col-weight,.col-big{display:none;}
     }
   </style>
 </head>
@@ -125,41 +188,39 @@
         <label><input type="checkbox" id="auto" /> Авто 60с</label>
       </div>
       <p class="form__hint hint">
-        Таблиця має містити колонки в порядку:
-        <span class="code">Команда; Зона; Сектор; К-сть; Вага, кг; Середня, кг; Big Fish, кг</span>.<br>
+        Таблиця рейтингу сезону має містити колонки в порядку:<br>
+        <span class="code">
+          Місце; Рух; Команда; Е1; Е2; Е3; Е4; Е5; Фінал; Бали; Загальна вага; Big Fish сезону
+        </span><br>
         Використовується публічний GViz-ендпоїнт:
         <span class="code">https://docs.google.com/spreadsheets/d/&lt;SHEET_ID&gt;/gviz/tq?tqx=out:json&gid=&lt;gid&gt;</span>.
       </p>
     </div>
 
-    <!-- Результати -->
-    <div id="awards-ready" style="display:none">
-      <div class="section card">
-        <h3>Топ озера (серед переможців зон)</h3>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Місце</th>
-              <th>Команда</th>
-              <th>Зона</th>
-              <th>Вага, кг</th>
-              <th>Big Fish, кг</th>
-            </tr>
-          </thead>
-          <tbody id="top-lake"></tbody>
-        </table>
-        <p class="form__hint hint">
-          Визначається між переможцями зон A, B, C за найбільшою вагою
-          (тай-брейк: Big Fish → середня вага → алфавіт).
-        </p>
-      </div>
-
-      <div class="section grid-3" id="zones-awards">
-        <!-- A/B/C тут -->
-      </div>
-
+    <!-- Основна таблиця рейтингу сезону -->
+    <div class="card card--season" id="season-wrap" style="display:none">
+      <h3>Рейтинг команд сезону 2026</h3>
+      <table class="table table--season">
+        <thead>
+          <tr>
+            <th class="col-place">Місце / рух</th>
+            <th class="col-team">Команда</th>
+            <th class="col-stage">Е1</th>
+            <th class="col-stage">Е2</th>
+            <th class="col-stage">Е3</th>
+            <th class="col-stage">Е4</th>
+            <th class="col-stage">Е5</th>
+            <th class="col-stage">Фінал</th>
+            <th class="col-points">Бали сезону</th>
+            <th class="col-weight">Загальна вага, кг</th>
+            <th class="col-big">Big Fish сезону, кг</th>
+          </tr>
+        </thead>
+        <tbody id="season-body"></tbody>
+      </table>
       <p class="form__hint hint">
-        Потрібен «зсув місць» (2→1, 3→2, 4→3) для церемонії? Напиши — додамо перемапінг у рендері.
+        Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу
+        (дані про «рух» подаються з таблиці).
       </p>
     </div>
   </section>
@@ -205,118 +266,59 @@ function parseGViz(text){
   return JSON.parse(text.substring(start, end));
 }
 
-/* ===== Агрегація по команді: прибираємо дублікати =====
-   - сумуємо Вага, К-сть; Big Fish = max; середню рахуємо як середнє по рядках;
-   - "основна" зона команди = де найбільша вага цієї команди. */
-function aggregate(rows){
-  const byTeam = new Map();
-  for (const r of rows){
-    const team   = (r[0] ?? '').toString().trim();
-    const zone   = (r[1] ?? '').toString().trim().toUpperCase();
-    const sector = r[2] ?? '';
-    const cnt    = toNum(r[3]);
-    const weight = toNum(r[4]);
-    const avg    = toNum(r[5]);
-    const big    = toNum(r[6]);
-
-    if (!team) continue;
-    if (!byTeam.has(team)){
-      byTeam.set(team, {
-        team, zones:new Map(), totalCnt:0, totalWeight:0, totalAvgSum:0, rows:0, big:0, sector
-      });
-    }
-    const t = byTeam.get(team);
-    t.totalCnt    += cnt;
-    t.totalWeight += weight;
-    t.totalAvgSum += avg;
-    t.rows        += 1;
-    t.big          = Math.max(t.big, big);
-    if (zone){
-      const z = t.zones.get(zone) || { weight:0, cnt:0, big:0 };
-      z.weight += weight; z.cnt += cnt; z.big = Math.max(z.big, big);
-      t.zones.set(zone, z);
-    }
+/* ===== Форматування "руху" місця ===== */
+function formatMove(deltaRaw){
+  const d = Number(toNum(deltaRaw));
+  if (!d) {
+    return '<span class="move move--same">–</span>';
   }
-  const out = [];
-  for (const t of byTeam.values()){
-    let mainZone = '', bestW = -1, bestBig = -1;
-    for (const [z,agg] of t.zones.entries()){
-      if (agg.weight > bestW || (agg.weight===bestW && agg.big>bestBig)){
-        bestW = agg.weight; bestBig = agg.big; mainZone = z;
-      }
-    }
-    out.push({
-      team: t.team,
-      zone: mainZone,
-      sector: t.sector,
-      cnt: t.totalCnt,
-      weight: t.totalWeight,
-      avg: t.rows ? (t.totalAvgSum / t.rows) : 0,
-      big: t.big
-    });
+  if (d > 0){
+    return `<span class="move move--up">↑ +${d}</span>`;
   }
-  return out;
+  return `<span class="move move--down">↓ ${d}</span>`;
 }
 
-function rankZone(items, zoneLetter){
-  const arr = items.filter(x => x.zone === zoneLetter);
-  arr.sort((a,b)=>{
-    if (b.weight !== a.weight) return b.weight - a.weight; // вага
-    if (b.big !== a.big)       return b.big - a.big;       // big fish
-    if (b.avg !== a.avg)       return b.avg - a.avg;       // середня
-    return a.team.localeCompare(b.team, 'uk', {sensitivity:'base'});
-  });
-  return arr.map((x,i)=>({...x, place:i+1}));
-}
+/* ===== Рендер рейтингу сезону ===== */
+const seasonWrap  = document.getElementById('season-wrap');
+const seasonBody  = document.getElementById('season-body');
 
-function topLake(zA, zB, zC){
-  const winners = [zA[0], zB[0], zC[0]].filter(Boolean);
-  winners.sort((a,b)=>{
-    if (b.weight !== a.weight) return b.weight - a.weight;
-    if (b.big !== a.big)       return b.big - a.big;
-    if (b.avg !== a.avg)       return b.avg - a.avg;
-    return a.team.localeCompare(b.team, 'uk', {sensitivity:'base'});
-  });
-  return winners.map((x,i)=>({...x, place:i+1}));
-}
+function renderSeason(rows){
+  seasonBody.innerHTML = rows.map(r => {
+    const place = r[0] ?? '';
+    const move  = r[1] ?? '';
+    const team  = r[2] ?? '';
+    const e1    = r[3] ?? '';
+    const e2    = r[4] ?? '';
+    const e3    = r[5] ?? '';
+    const e4    = r[6] ?? '';
+    const e5    = r[7] ?? '';
+    const fin   = r[8] ?? '';
+    const pts   = r[9] ?? '';
+    const wAll  = r[10] ?? '';
+    const big   = r[11] ?? '';
 
-/* ===== Рендер ===== */
-const awardsWrap   = document.getElementById('awards-ready');
-const zonesWrap    = document.getElementById('zones-awards');
-const topLakeTbody = document.getElementById('top-lake');
-
-function renderZoneTable(container, zoneLetter, rows){
-  const title = `Нагородження — ${zoneLetter}`;
-  const html = `
-    <div class="card">
-      <h3>${title} <span class="badge badge--zone">Зона ${zoneLetter}</span></h3>
-      <table class="table">
-        <thead><tr><th>Місце</th><th>Команда</th><th>Вага, кг</th><th>Big Fish, кг</th><th>Середня, кг</th></tr></thead>
-        <tbody>
-          ${rows.map(r=>`
-            <tr>
-              <td>${r.place}</td>
-              <td>${r.team}</td>
-              <td>${kg(r.weight)}</td>
-              <td>${kg(r.big)}</td>
-              <td>${kg(r.avg)}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`;
-  container.insertAdjacentHTML('beforeend', html);
-}
-
-function renderTopLake(rows){
-  topLakeTbody.innerHTML = rows.map(r=>`
-    <tr>
-      <td>${r.place}</td>
-      <td>${r.team}</td>
-      <td>${r.zone || '-'}</td>
-      <td>${kg(r.weight)}</td>
-      <td>${kg(r.big)}</td>
-    </tr>
-  `).join('');
+    return `
+      <tr>
+        <td class="col-place">
+          <div class="place-wrap">
+            <span class="place-num">${place || '-'}</span>
+            ${formatMove(move)}
+          </div>
+        </td>
+        <td class="col-team">${team || '-'}</td>
+        <td class="col-stage"><span class="badge-stage">${e1 || '-'}</span></td>
+        <td class="col-stage"><span class="badge-stage">${e2 || '-'}</span></td>
+        <td class="col-stage"><span class="badge-stage">${e3 || '-'}</span></td>
+        <td class="col-stage"><span class="badge-stage">${e4 || '-'}</span></td>
+        <td class="col-stage"><span class="badge-stage">${e5 || '-'}</span></td>
+        <td class="col-stage"><span class="badge-stage">${fin || '-'}</span></td>
+        <td class="col-points"><b>${pts || '-'}</b></td>
+        <td class="col-weight">${wAll ? kg(wAll) : '-'}</td>
+        <td class="col-big">${big ? kg(big) : '-'}</td>
+      </tr>
+    `;
+  }).join('');
+  seasonWrap.style.display = rows.length ? 'block' : 'none';
 }
 
 /* ===== Завантаження з GViz ===== */
@@ -327,15 +329,7 @@ async function loadFromGViz(sheetId, gid){
   const res = await fetch(url, { cache:'no-store' });
   const text = await res.text();
   const json = parseGViz(text);
-  const rows = (json.table.rows || []).map(r => [
-    r.c?.[0]?.v ?? '', // Команда
-    r.c?.[1]?.v ?? '', // Зона
-    r.c?.[2]?.v ?? '', // Сектор
-    r.c?.[3]?.v ?? '', // К-сть
-    r.c?.[4]?.v ?? '', // Вага
-    r.c?.[5]?.v ?? '', // Середня
-    r.c?.[6]?.v ?? ''  // Big Fish
-  ]);
+  const rows = (json.table.rows || []).map(r => (r.c || []).map(c => c?.v ?? ''));
   return rows;
 }
 
@@ -353,21 +347,9 @@ async function refresh(){
     localStorage.setItem('rating_sheet', sheetId);
     localStorage.setItem('rating_gid', gid);
 
-    const raw = await loadFromGViz(sheetId, gid);
-    const agg = aggregate(raw);
+    const rows = await loadFromGViz(sheetId, gid);
+    renderSeason(rows);
 
-    const zA = rankZone(agg, 'A');
-    const zB = rankZone(agg, 'B');
-    const zC = rankZone(agg, 'C');
-
-    zonesWrap.innerHTML = '';
-    renderZoneTable(zonesWrap, 'A', zA);
-    renderZoneTable(zonesWrap, 'B', zB);
-    renderZoneTable(zonesWrap, 'C', zC);
-
-    renderTopLake(topLake(zA, zB, zC));
-
-    awardsWrap.style.display = 'block';
     dot.classList.add('ok');
     st.textContent = 'Оновлено: ' + new Date().toLocaleTimeString('uk-UA');
   } catch (e){

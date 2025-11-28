@@ -62,7 +62,7 @@
       .season-rating-head{ padding:18px 16px; }
     }
 
-    /* ===== Таблиця рейтингу сезону ===== */
+    /* ===== Карточка з таблицею ===== */
     .card--season{
       margin-top:20px;
       border-radius:18px;
@@ -75,12 +75,14 @@
       margin:0 0 10px;
     }
 
+    /* ===== Таблиця рейтингу сезону ===== */
     .table--season{
       width:100%;
       border-collapse:collapse;
       font-size:.9rem;
-      overflow:hidden;
       border-radius:12px;
+      table-layout:fixed;          /* важливо: нічого не вилазить */
+      overflow:hidden;
     }
     .table--season thead{
       background:linear-gradient(90deg,#181920,#14151d);
@@ -92,6 +94,9 @@
       text-align:center;
       font-weight:600;
       opacity:.9;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
     .table--season thead th:first-child{
       text-align:left;
@@ -99,20 +104,23 @@
 
     .table--season tbody tr{
       background:#0f1016;
-      transition:background .15s ease,transform .12s ease;
+      transition:background .15s ease;
     }
     .table--season tbody tr:nth-child(odd){
       background:#11121a;
     }
     .table--season tbody tr:hover{
-      background:#191b25;
-      transform:translateY(-1px);
+      background:#191b25;          /* без transform, щоб рядок не стрибав */
     }
     .table--season tbody td{
       padding:5px 6px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      box-sizing:border-box;
     }
     .table--season tbody td:first-child,
     .table--season tbody td.col-team{
@@ -122,10 +130,10 @@
     /* === Компактні колонки === */
     .col-place{width:70px}
     .col-team{min-width:170px}
-    .col-stage{width:42px}
-    .col-points{width:80px}
-    .col-weight{width:96px}
-    .col-big{width:96px}
+    .col-stage{width:52px}
+    .col-points{width:90px}
+    .col-weight{width:100px}
+    .col-big{width:100px}
 
     /* Блок місця / руху */
     .place-wrap{
@@ -133,6 +141,7 @@
       flex-direction:column;
       gap:1px;
       align-items:flex-start;
+      overflow:hidden;
     }
     .place-num{
       font-size:.9rem;
@@ -153,28 +162,23 @@
     .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.45)}
     .move--same{color:#e5e7eb;border-style:dashed}
 
-    /* Бейджі етапів */
-    .badge-stage{
-      display:inline-flex;
+    /* Клітинка етапу: місце / бали */
+    .stage-cell{
+      display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
-      min-width:30px;
-      padding:1px 4px;
-      border-radius:6px;
-      font-size:.72rem;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(15,23,42,.7);
+      font-size:.7rem;
+      line-height:1.05;
     }
-    /* приклад кольорів, які потім можна ставити з JS */
-    .badge-stage--ok{
-      background:rgba(34,197,94,.12);
-      border-color:rgba(34,197,94,.55);
-      color:#bbf7d0;
+    .stage-place{
+      font-weight:600;
+      color:#e5e7eb;
     }
-    .badge-stage--skip{
-      background:rgba(148,163,184,.10);
-      border-color:rgba(148,163,184,.45);
-      color:#cbd5f5;
+    .stage-points{
+      font-size:.65rem;
+      opacity:.85;
+      color:#9ca3af;
     }
 
     /* Перші 18 команд — учасники фіналу */
@@ -272,12 +276,12 @@
           <tr>
             <th class="col-place">Місце / рух</th>
             <th class="col-team">Команда</th>
-            <th class="col-stage">Е1</th>
-            <th class="col-stage">Е2</th>
-            <th class="col-stage">Е3</th>
-            <th class="col-stage">Е4</th>
-            <th class="col-stage">Е5</th>
-            <th class="col-stage">Фінал</th>
+            <th class="col-stage">Е1 м/б</th>
+            <th class="col-stage">Е2 м/б</th>
+            <th class="col-stage">Е3 м/б</th>
+            <th class="col-stage">Е4 м/б</th>
+            <th class="col-stage">Е5 м/б</th>
+            <th class="col-stage">Фінал м/б</th>
             <th class="col-points">Бали сезону</th>
             <th class="col-weight">Загальна вага, кг</th>
             <th class="col-big">Big Fish сезону, кг</th>
@@ -293,12 +297,45 @@
               </div>
             </td>
             <td class="col-team">Назва команди</td>
-            <td class="col-stage"><span class="badge-stage badge-stage--ok">1</span></td>
-            <td class="col-stage"><span class="badge-stage badge-stage--ok">2</span></td>
-            <td class="col-stage"><span class="badge-stage badge-stage--ok">3</span></td>
-            <td class="col-stage"><span class="badge-stage badge-stage--ok">4</span></td>
-            <td class="col-stage"><span class="badge-stage badge-stage--skip">–</span></td>
-            <td class="col-stage"><span class="badge-stage badge-stage--ok">1</span></td>
+
+            <!-- У кожному етапі: місце / бали -->
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">1</span>
+                <span class="stage-points">/ 5</span>
+              </div>
+            </td>
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">2</span>
+                <span class="stage-points">/ 8</span>
+              </div>
+            </td>
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">3</span>
+                <span class="stage-points">/ 10</span>
+              </div>
+            </td>
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">4</span>
+                <span class="stage-points">/ 12</span>
+              </div>
+            </td>
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">–</span>
+                <span class="stage-points">/ –</span>
+              </div>
+            </td>
+            <td class="col-stage">
+              <div class="stage-cell">
+                <span class="stage-place">1</span>
+                <span class="stage-points">/ 5</span>
+              </div>
+            </td>
+
             <td class="col-points"><b>25</b></td>
             <td class="col-weight">368.400</td>
             <td class="col-big">14.875</td>
@@ -307,6 +344,7 @@
       </table>
       <p class="form__hint hint">
         Рух місця показує зміну позиції команди відносно попереднього оновлення рейтингу.
+        В етапах вказано <b>місце / набрані бали</b>.
       </p>
       <div class="rating-status" id="rating-status"></div>
     </div>

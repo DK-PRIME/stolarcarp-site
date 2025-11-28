@@ -243,7 +243,7 @@
 <script>
 /* ===== КОНСТАНТИ ТАБЛИЦІ РЕЙТИНГУ ===== */
 // тут ставиш свій ID таблички з рейтингом сезону
-const RATING_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміниш при потребі
+const RATING_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни при потребі
 const RATING_GID      = "0";  // gid аркуша з рейтингом
 
 const seasonWrap   = document.getElementById('season-wrap');
@@ -282,7 +282,7 @@ function formatMove(deltaRaw){
 
 /* Рендер таблиці */
 function renderSeason(rows){
-  // відфільтровуємо технічні рядки: беремо лише ті, де Місце > 0
+  // беремо лише рядки, де Місце > 0 (усі KEY / ACTIVE_STAGE / службові — відсіюються)
   const data = rows.filter(cols => {
     const place = cols[0];
     const placeNum = Number(toNum(place));
@@ -351,7 +351,7 @@ async function loadRating(){
   }
 }
 
-/* Автооновлення раз на 60с під час відкриття сторінки */
+/* Автооновлення раз на 60с */
 loadRating();
 setInterval(loadRating, 60000);
 </script>

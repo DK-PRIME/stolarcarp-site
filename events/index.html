@@ -82,25 +82,26 @@
 
 <body>
 
+<!-- СПІЛЬНИЙ HEADER ЯК НА ГОЛОВНІЙ -->
 <header class="header">
   <div class="container header__row">
-
-    <!-- ✅ ЛОГО ВЕДЕ НА ГОЛОВНУ -->
     <a class="logo" href="index.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
-
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
       <a href="rating.html" class="nav__link">Рейтинг</a>
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
-
-      <!-- ✅ ТУТ БЕЗ events/ — БО МИ ВЖЕ В НЬОМУ -->
-      <a href="events/index.html" class="nav__link nav__link--active">Архів</a>
+      <a href="events/index.html" class="nav__link nav__link--active">Архів турнірів</a>
     </nav>
+    <button class="burger" id="burger">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
 
@@ -113,7 +114,7 @@
 
     <div class="seasons-grid">
 
-      <!-- ✅ СЕЗОН 2026 -->
+      <!-- СЕЗОН 2026 -->
       <a class="season-card" href="events/season-2026.html">
         <div>
           <div class="season-year">Сезон 2026</div>
@@ -124,7 +125,7 @@
         <div class="season-btn">Відкрити сезон</div>
       </a>
 
-      <!-- МАЙБУТНІ -->
+      <!-- МАЙБУТНІ СЕЗОНИ -->
       <div class="season-card" style="opacity:.4;pointer-events:none">
         <div>
           <div class="season-year">Сезон 2027</div>
@@ -142,6 +143,5 @@
     <div>© STOLAR CARP</div>
   </div>
 </footer>
-
 </body>
 </html>

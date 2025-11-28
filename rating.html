@@ -86,7 +86,7 @@
       width:100%;
       table-layout:fixed;          /* чітке ділення ширини */
       border-collapse:collapse;
-      font-size:.9rem;
+      font-size:.72rem;            /* було ~0.9rem — зменшили ~ на 20% */
       background:#05060a;
     }
     .table--season thead{
@@ -95,13 +95,15 @@
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:6px 3px;
+      padding:4px 2px;
       text-align:center;
       font-weight:600;
       opacity:.9;
       white-space:normal;
       overflow:hidden;
       text-overflow:clip;
+      font-size:.58rem;           /* дрібніші заголовки */
+      line-height:1.1;
     }
     .table--season thead th:first-child{
       text-align:left;
@@ -118,7 +120,7 @@
       background:#191b25;
     }
     .table--season tbody td{
-      padding:4px 3px;
+      padding:3px 2px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
@@ -126,6 +128,7 @@
       overflow:hidden;
       text-overflow:ellipsis;
       box-sizing:border-box;
+      font-size:.64rem;           /* дрібніші цифри в клітинках */
     }
     .table--season tbody td:first-child,
     .table--season tbody td.col-team{
@@ -137,8 +140,8 @@
     .col-team   { width:17%; }
     .col-stage  { width:6%; }   /* Е1–Е5 + фінал = 6*6 = 36% */
     .col-points { width:7%; }
-    .col-weight { width:12%; }  /* більше місця для ваги */
-    .col-big    { width:11%; }  /* більше місця для Big Fish */
+    .col-weight { width:13%; }  /* трохи більше для ваги */
+    .col-big    { width:14%; }  /* трохи більше для Big Fish */
 
     /* Блок місця / руху */
     .place-wrap{
@@ -148,16 +151,16 @@
       align-items:flex-start;
     }
     .place-num{
-      font-size:.9rem;
+      font-size:.70rem;
       line-height:1;
       font-weight:700;
     }
     .move{
-      font-size:.65rem;
+      font-size:.55rem;
       display:inline-flex;
       align-items:center;
       gap:4px;
-      padding:0 4px;
+      padding:0 3px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       opacity:.9;
@@ -172,7 +175,7 @@
       flex-direction:column;
       align-items:center;
       justify-content:center;
-      font-size:.7rem;
+      font-size:.62rem;
       line-height:1.05;
     }
     .stage-place{
@@ -180,7 +183,7 @@
       color:#e5e7eb;
     }
     .stage-points{
-      font-size:.65rem;
+      font-size:.55rem;
       opacity:.85;
       color:#9ca3af;
     }
@@ -211,11 +214,16 @@
     .col-points b{
       color:var(--accent-gold);
       letter-spacing:.02em;
+      font-size:.72rem;
     }
-    .col-weight{color:#e5e7eb;}
+    .col-weight{
+      color:#e5e7eb;
+      font-size:.64rem;
+    }
     .col-big{
       color:var(--accent-blue);
       font-weight:500;
+      font-size:.62rem;
     }
 
     .rating-status{
@@ -227,21 +235,16 @@
     /* ===== МОБІЛКА ===== */
     @media (max-width:480px){
       .table--season{
-        font-size:.76rem;
+        font-size:.7rem;
       }
       .table--season thead th,
       .table--season tbody td{
         padding:3px 2px;
       }
-      .stage-cell{
-        font-size:.64rem;
+      .col-weight-header,
+      .col-big-header{
+        font-size:.62rem;
       }
-      .stage-points{
-        font-size:.58rem;
-      }
-      /* укоротити заголовки останніх двох колонок */
-      .col-weight-header{white-space:normal;font-size:.7rem;}
-      .col-big-header{white-space:normal;font-size:.7rem;}
     }
   </style>
 </head>

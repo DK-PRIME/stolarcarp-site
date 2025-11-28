@@ -13,8 +13,134 @@
   <!-- Стилі та скрипт меню -->
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
+  <style>
+    body.home-page{
+      background:
+        radial-gradient(circle at top,#111827 0,#020617 55%);
+    }
+
+    .hero-main{
+      max-width:980px;
+      margin:0 auto;
+      padding:70px 0 60px;
+      text-align:center;
+    }
+
+    .hero-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:4px 12px;
+      border-radius:999px;
+      font-size:.75rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      background:rgba(0,0,0,.6);
+      border:1px solid rgba(148,163,184,.5);
+      color:#e5e7eb;
+      margin-bottom:14px;
+    }
+    .hero-kicker span{
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      font-size:.8rem;
+      background:linear-gradient(135deg,#f6c34c,#cc6a2b);
+      color:#000;
+    }
+
+    .hero-title{
+      font-size:clamp(40px,7vw,64px);
+      font-weight:900;
+      letter-spacing:.06em;
+      margin:0;
+      text-transform:uppercase;
+      background:linear-gradient(90deg,#f7f18c 0%,#f6c34c 30%,#f28b2b 65%,#b32626 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
+    .hero-subtitle{
+      margin:14px auto 0;
+      max-width:640px;
+      color:#d1d5db;
+      font-size:1.02rem;
+    }
+
+    .hero-tags{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:center;
+    }
+    .hero-tag{
+      padding:4px 12px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.55);
+      font-size:.8rem;
+      color:#e5e7eb;
+      background:rgba(15,23,42,.9);
+    }
+
+    .hero-cta{
+      margin-top:30px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      justify-content:center;
+    }
+    .btn-lg{
+      padding:12px 22px;
+      font-size:.98rem;
+      border-radius:999px;
+    }
+    /* акцентна кнопка для реєстрації */
+    .btn--accent{
+      background:linear-gradient(135deg,#f6c34c,#f28b2b);
+      color:#111;
+      border:none;
+    }
+    .btn--accent:hover{
+      filter:brightness(1.05);
+    }
+
+    .hero-meta{
+      margin-top:22px;
+      font-size:.88rem;
+      color:#9ca3af;
+    }
+
+    .hero-season-card{
+      margin-top:40px;
+      padding:22px 18px;
+      border-radius:22px;
+      background:radial-gradient(circle at top,#1e293b 0,#020617 65%);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.8);
+      text-align:center;
+    }
+    .hero-season-card h2{
+      margin:0 0 10px;
+    }
+    .hero-season-card p{
+      margin:0 0 16px;
+      color:#e5e7eb;
+      font-size:.95rem;
+    }
+
+    @media (max-width:640px){
+      .hero-main{padding:60px 0 40px;}
+    }
+  </style>
 </head>
-<body>
+<body class="home-page">
 
 <!-- HEADER -->
 <header class="header">
@@ -31,8 +157,7 @@
       <a href="rating.html" class="nav__link">Рейтинг</a>
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
-      <!-- 🔁 Було: events/turnir-2026.html / "Турнір 2026" -->
-      <a href="events/index.html" class="nav__link">Архів </a>
+      <a href="events/index.html" class="nav__link">Архів</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -40,56 +165,56 @@
 
 <!-- MAIN -->
 <main class="main">
-  <section class="container section">
-    <h1 class="title-gradient">STOLAR CARP 2025</h1>
-    <p class="lead">
-      Офіційний сайт серії турнірів з карпфішингу у Львівській області.
-      Реєстрація, регламент, live-протоколи, рейтинг команд та події сезону.
+  <section class="section container hero-main">
+
+    <div class="hero-kicker">
+      <span>SC</span> СЕРІЯ КАРПОВИХ ТУРНІРІВ
+    </div>
+
+    <h1 class="hero-title">STOLAR CARP</h1>
+
+    <p class="hero-subtitle">
+      Преміальна серія коропових змагань у Львівській області.
+      Стабільні водойми, чесний спорт, живі емоції та прозорі онлайн-протоколи.
     </p>
 
-    <div class="cta-row">
-      <a class="btn btn--primary" href="register.html">Подати заявку</a>
-      <a class="btn btn--ghost" href="rules.html">Переглянути регламент</a>
-      <a class="btn btn--danger" href="live.html">Live протокол</a>
+    <div class="hero-tags">
+      <span class="hero-tag">Сезон 2026 · 5 етапів + Фінал</span>
+      <span class="hero-tag">Зони A · B · C</span>
+      <span class="hero-tag">Live-таблиці та рейтинг онлайн</span>
     </div>
 
-    <div class="grid grid-2" style="margin-top:40px">
-      <div class="card">
-        <div class="kpi">
-          <span class="num">Лелехівка</span>
-          <a href="events/osinniy-korop-2025.html" class="badge badge--warn">Осінній короп</a>
-        </div>
-        <p class="form__hint">Оновлено: 24.10.2025</p>
-      </div>
-
-      <div class="card highlight" style="text-align:center">
-        <h2 class="title-gradient">🏆 Сезон STOLAR CARP 2026</h2>
-        <p>Сезон із 5 етапів і Фіналом. Результати та рейтинг оновлюються автоматично.</p>
-        <!-- 🔁 Було: events/turnir-2026.html -->
-        <a href="events/season-2026.html" class="btn btn--primary">
-          Переглянути сезон 2026
-        </a>
-      </div>
-
-      <hr style="margin:40px 0; opacity:.2">
-
-      <div class="card">
-        <h3>Благодійність</h3>
-        <p>Частину внесків спрямовуємо на підтримку захисників України 🇺🇦</p>
-        <span class="badge badge--success">Підтримаймо разом</span>
-      </div>
-
-      <div class="card">
-        <h3>Швидкі протоколи</h3>
-        <p>Оновлення результатів до 5 хв після зважування.</p>
-        <span class="badge badge--warn">LIVE</span>
-      </div>
-
-      <div class="card">
-        <h3>Спонсори</h3>
-        <p>Trinity Baits, Flagman, Robin, Puhach Baits, Charbaits, Ібіс, VKK та інші.</p>
-      </div>
+    <div class="hero-cta">
+      <!-- 1. Регламент -->
+      <a class="btn btn--primary btn-lg" href="rules.html">
+        Переглянути регламент
+      </a>
+      <!-- 2. Реєстрація -->
+      <a class="btn btn--accent btn-lg" href="register.html">
+        Подати заявку
+      </a>
+      <!-- 3. Live -->
+      <a class="btn btn--danger btn-lg" href="live.html">
+        Live протоколи
+      </a>
     </div>
+
+    <div class="hero-meta">
+      Локації сезону: Лелехівка · Пристань · Bounty.  
+      Рейтинг команд оновлюється автоматично після кожного зважування.
+    </div>
+
+    <div class="hero-season-card">
+      <h2 class="title-gradient">🏆 Сезон STOLAR CARP 2026</h2>
+      <p>
+        Слідкуй за всіма етапами та Фіналом в одному місці.
+        Архів зважувань, Big Fish та підсумковий рейтинг команд.
+      </p>
+      <a href="events/season-2026.html" class="btn btn--primary btn-lg">
+        Переглянути сезон 2026
+      </a>
+    </div>
+
   </section>
 </main>
 

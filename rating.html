@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uk">
+<html lang="ук">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -20,8 +20,6 @@
     .dot{width:8px;height:8px;border-radius:999px;background:#f59e0b}
     .dot.ok{background:#16a34a}
     .dot.err{background:#ef4444}
-
-    .card .table th,.card .table td{white-space:nowrap}
 
     /* ===== Преміальний хедер рейтингу сезону ===== */
     .season-rating-head{
@@ -64,34 +62,51 @@
       background:rgba(0,0,0,.25);
     }
     @media (max-width:640px){
-      .season-rating-head{
-        padding:18px 16px;
-      }
+      .season-rating-head{ padding:18px 16px; }
     }
 
     /* ===== Таблиця рейтингу сезону ===== */
-    .card--season{
-      margin-top:20px;
-    }
+    .card--season{ margin-top:20px; }
+
     .table--season{
       width:100%;
       border-collapse:collapse;
-      font-size:.92rem;
+      font-size:.9rem;
+    }
+    .table--season thead{
+      background:#181920;
     }
     .table--season thead th{
       border-bottom:1px solid var(--line);
+      border-right:1px solid rgba(255,255,255,.04);
       padding:8px 8px;
-      text-align:left;
+      text-align:center;
       font-weight:600;
-      opacity:.85;
+      opacity:.9;
+    }
+    .table--season thead th:first-child{
+      text-align:left;
+    }
+    .table--season tbody tr{
+      background:#101116;
+    }
+    .table--season tbody tr:nth-child(odd){
+      background:#12131a;
     }
     .table--season tbody td{
       padding:6px 8px;
-      border-bottom:1px solid rgba(255,255,255,.03);
+      border-bottom:1px solid rgba(255,255,255,.04);
+      border-right:1px solid rgba(255,255,255,.02);
+      text-align:center;
     }
-    .col-place{width:110px}
-    .col-team{min-width:200px}
-    .col-stage{width:60px;text-align:center}
+    .table--season tbody td:first-child,
+    .table--season tbody td.col-team{
+      text-align:left;
+    }
+
+    .col-place{width:120px}
+    .col-team{min-width:190px}
+    .col-stage{width:60px}
     .col-points{width:110px}
     .col-weight,.col-big{width:130px}
 
@@ -119,18 +134,27 @@
     .move--same{color:#e5e7eb;border-style:dashed}
 
     .badge-stage{
-      display:inline-block;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:42px;
       padding:2px 6px;
-      border-radius:999px;
+      border-radius:6px;
       background:rgba(255,255,255,.03);
       border:1px solid rgba(255,255,255,.06);
       font-size:.8rem;
     }
 
+    /* Перші 18 команд — учасники фіналу */
+    .row-qualified{
+      box-shadow:inset 3px 0 0 #facc15;
+    }
+    .row-qualified .place-num{
+      color:#fde68a;
+    }
+
     @media (max-width:960px){
-      .table--season thead{
-        font-size:.8rem;
-      }
+      .table--season thead{ font-size:.78rem; }
       .col-weight,.col-big{display:none;}
     }
   </style>
@@ -181,7 +205,7 @@
     <div class="card">
       <h3>Джерело даних (Google Sheets GViz)</h3>
       <div class="toolbar">
-        <input id="sheetId" class="input" placeholder="SHEET_ID" />
+        <input id="sheetId" class="input" placeholder="SHEET_ID або повна лінка" />
         <input id="gid"     class="input" placeholder="gid (номер аркуша, зазвичай 0)" />
         <button id="loadBtn" class="btn">Завантажити</button>
         <label class="state"><span id="dot" class="dot"></span><span id="st">Очікування…</span></label>
@@ -238,9 +262,8 @@
 
 <script>
 /* ===== НАЛАШТУВАННЯ З URL або дефолт ===== */
-// Можеш передати ?sheet=<ID>&gid=<gid> у адресному рядку
 const qp = new URLSearchParams(location.search);
-const DEFAULT_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни на свій, якщо інший
+const DEFAULT_SHEET_ID = "1v5owevBkZuiRGioOjujOMXvvH4w7zbt5UWDCE8ND2Vo"; // заміни на свій
 const DEFAULT_GID      = "0";
 
 const sheetIdInput = document.getElementById('sheetId');
@@ -260,10 +283,21 @@ const toNum = v => {
 };
 const kg = v => toNum(v).toFixed(3);
 
+// витягнути чистий SHEET_ID навіть якщо вставили цілу лінку
+function normalizeSheetId(value){
+  if (!value) return "";
+  const v = value.trim();
+  const m = v.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : v;
+}
+
 function parseGViz(text){
   const start = text.indexOf('{');
-  const end   = text.lastIndexOf(')');
-  return JSON.parse(text.substring(start, end));
+  const end   = text.lastIndexOf('}');
+  if (start === -1 || end === -1){
+    throw new Error('Некоректна відповідь від GViz (перевір SHEET_ID/gid та публічний доступ таблиці).');
+  }
+  return JSON.parse(text.substring(start, end + 1));
 }
 
 /* ===== Форматування "руху" місця ===== */
@@ -283,7 +317,7 @@ const seasonWrap  = document.getElementById('season-wrap');
 const seasonBody  = document.getElementById('season-body');
 
 function renderSeason(rows){
-  seasonBody.innerHTML = rows.map(r => {
+  seasonBody.innerHTML = rows.map((r, idx) => {
     const place = r[0] ?? '';
     const move  = r[1] ?? '';
     const team  = r[2] ?? '';
@@ -297,8 +331,10 @@ function renderSeason(rows){
     const wAll  = r[10] ?? '';
     const big   = r[11] ?? '';
 
+    const rowClass = idx < 18 ? 'row-qualified' : '';
+
     return `
-      <tr>
+      <tr class="${rowClass}">
         <td class="col-place">
           <div class="place-wrap">
             <span class="place-num">${place || '-'}</span>
@@ -323,7 +359,8 @@ function renderSeason(rows){
 
 /* ===== Завантаження з GViz ===== */
 async function loadFromGViz(sheetId, gid){
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
+  const cleanId = normalizeSheetId(sheetId);
+  const url = `https://docs.google.com/spreadsheets/d/${cleanId}/gviz/tq?tqx=out:json&gid=${gid}`;
   dot.classList.remove('ok','err');
   st.textContent = 'Завантаження…';
   const res = await fetch(url, { cache:'no-store' });
@@ -340,14 +377,14 @@ let timer = null;
 
 async function refresh(){
   try{
-    const sheetId = sheetIdInput.value.trim();
+    const rawSheetId = sheetIdInput.value.trim();
     const gid     = gidInput.value.trim() || '0';
-    if (!sheetId) { st.textContent='Вкажіть SHEET_ID'; dot.classList.add('err'); return; }
+    if (!rawSheetId) { st.textContent='Вкажіть SHEET_ID'; dot.classList.add('err'); return; }
 
-    localStorage.setItem('rating_sheet', sheetId);
+    localStorage.setItem('rating_sheet', rawSheetId);
     localStorage.setItem('rating_gid', gid);
 
-    const rows = await loadFromGViz(sheetId, gid);
+    const rows = await loadFromGViz(rawSheetId, gid);
     renderSeason(rows);
 
     dot.classList.add('ok');

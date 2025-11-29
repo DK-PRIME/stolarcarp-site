@@ -42,23 +42,20 @@
       margin-bottom:14px;
     }
 
-    .hero-kicker--fish{
-  position: relative;
-  padding-left: 40px;
-}
+    /* Іконка з рибою зліва в плашці */
+    .hero-kicker-icon{
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      flex-shrink:0;
+      background:url('assets/fish-gold.png') center/cover no-repeat;
+    }
 
-.hero-kicker--fish::before{
-  content: "";
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: url('assets/fish-gold.png') center/cover no-repeat;
-}
-    
+    .hero-kicker-text{
+      font-size:.75rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+    }
 
     .hero-title{
       font-size:clamp(40px,7vw,64px);
@@ -72,29 +69,6 @@
       color:transparent;
     }
 
- .hero-kicker--fish{
-  position: relative;
-  padding-left: 32px; /* майже не чіпаємо текст */
-}
-
-.hero-kicker--fish::before{
-  content: "";
-  position: absolute;
-  left: -12px;        /* ❗ виходить ЗА плашку */
-  top: 50%;
-  transform: translateY(-50%);
-  width: 34px;        /* РОЗМІР КОЛА як на твоїй обводці */
-  height: 34px;
-  border-radius: 50%;
-  background: url('assets/fish-gold.png') center/cover no-repeat;
-  z-index: 5;         /* ❗ ПОВЕРХ плашки */
-}
-
-.hero-kicker-text{
-  font-size:.75rem;
-  letter-spacing:.18em;
-  text-transform:uppercase;
-}
     .hero-subtitle{
       margin:14px auto 0;
       max-width:640px;
@@ -197,8 +171,8 @@
   <section class="section container hero-main">
 
     <div class="hero-kicker">
-  <img src="assets/fish-gold.png" class="hero-fish" alt="">
-  <span class="hero-kicker-text">СЕРІЯ КАРПОВИХ ТУРНІРІВ</span>
+      <span class="hero-kicker-icon"></span>
+      <span class="hero-kicker-text">СЕРІЯ КАРПОВИХ ТУРНІРІВ</span>
     </div>
 
     <h1 class="hero-title">STOLAR CARP</h1>

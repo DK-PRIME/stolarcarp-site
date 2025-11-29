@@ -141,6 +141,21 @@
     @media (max-width:640px){
       .hero-main{padding:60px 0 40px;}
     }
+    .hero-kicker-wrap{
+  position: relative;
+  display: inline-block;
+}
+
+.hero-fish-overlay{
+  position: absolute;
+  left: -16px;      /* рибка заходить НА плашку */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;      /* РОЗМІР */
+  height: 22px;
+  z-index: 10;      /* ПОВЕРХ плашки */
+  pointer-events: none;
+}
   </style>
 </head>
 <body class="home-page">
@@ -170,9 +185,11 @@
 <main class="main">
   <section class="section container hero-main">
 
-    <div class="hero-kicker">
-      <span class="hero-kicker-icon"></span>
-      <span class="hero-kicker-text">СЕРІЯ КАРПОВИХ ТУРНІРІВ</span>
+    <div class="hero-kicker-wrap">
+  <img src="assets/fish-gold.png" class="hero-fish-overlay" alt="">
+  <div class="hero-kicker">
+    <span class="hero-kicker-text">СЕРІЯ КАРПОВИХ ТУРНІРІВ</span>
+  </div>
     </div>
 
     <h1 class="hero-title">STOLAR CARP</h1>

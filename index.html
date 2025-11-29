@@ -72,17 +72,22 @@
       color:transparent;
     }
 
- .hero-fish{
-  width:34px;
-  height:34px;
-  min-width:34px;
-  min-height:34px;
-  max-width:34px;
-  max-height:34px;
-  object-fit:contain;
-  margin-right:8px;
-  flex-shrink:0;
-  display:block;
+ .hero-kicker--fish{
+  position: relative;
+  padding-left: 32px; /* майже не чіпаємо текст */
+}
+
+.hero-kicker--fish::before{
+  content: "";
+  position: absolute;
+  left: -12px;        /* ❗ виходить ЗА плашку */
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;        /* РОЗМІР КОЛА як на твоїй обводці */
+  height: 34px;
+  border-radius: 50%;
+  background: url('assets/fish-gold.png') center/cover no-repeat;
+  z-index: 5;         /* ❗ ПОВЕРХ плашки */
 }
 
 .hero-kicker-text{

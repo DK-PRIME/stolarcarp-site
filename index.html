@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STOLAR CARP — офіційний сайт турнірів</title>
 
-  <!-- Favicon & App Icon -->
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
 
-  <!-- Стилі та скрипт меню -->
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
@@ -43,7 +41,6 @@
       margin-left: 89px;
     }
 
-    /* Іконка з рибою зліва в плашці */
     .hero-kicker-icon{
       width:20px;
       height:20px;
@@ -64,7 +61,7 @@
       letter-spacing:.06em;
       margin:0;
       text-transform:uppercase;
-      background:linear-gradient(90deg,#f7f18c 0%,#f6c34c 30%,#f28b2b 65%,#b32626 100%);
+      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
@@ -105,7 +102,7 @@
       font-size:.98rem;
       border-radius:999px;
     }
-    /* акцентна кнопка для реєстрації */
+
     .btn--accent{
       background:linear-gradient(135deg,#f6c34c,#f28b2b);
       color:#111;
@@ -161,16 +158,22 @@
 
     /* ---- НОВІ БЛОКИ ГОЛОВНОЇ ---- */
 
+    /* одна чітка ліва колонка контенту */
     .info-block{
-      max-width:980px;
+      max-width:720px;
       margin:0 auto;
       padding:40px 0;
       color:#e5e7eb;
+      text-align:left;
+    }
+
+    .info-block h2{
+      text-align:left;
     }
 
     .info-text{
-      max-width:720px;
-      margin:12px auto 0;
+      max-width:none;
+      margin:12px 0 0;
       color:#d1d5db;
       font-size:.98rem;
     }
@@ -180,8 +183,8 @@
     .advantages-list{
       list-style:none;
       padding:0;
-      margin:20px auto 0;
-      max-width:720px;
+      margin:20px 0 0;
+      max-width:none;
       text-align:left;
       color:#e5e7eb;
       font-size:.95rem;
@@ -198,8 +201,15 @@
       color:#facc15;
       font-weight:600;
     }
+    
+    /* Місія: чистий вертикальний стовпець по лівому краю */
+    .mission-cards{
+      margin-top:22px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
 
-    .mission-cards,
     .lake-cards{
       margin-top:22px;
       display:flex;
@@ -216,20 +226,34 @@
       background:rgba(15,23,42,.9);
       font-size:.9rem;
     }
+    
+    .mission-card{
+      width:100%;
+      margin:0;
+    }
 
     .call-to-action{
-      text-align:center;
+      text-align:left;
+    }
+
+    .call-to-action .btn{
+      margin-top:16px;
     }
 
     .section.highlight{
       text-align:center;
       padding:60px 0;
     }
+
+    @media (max-width:640px){
+      .info-block{
+        padding:28px 0;
+      }
+    }
   </style>
 </head>
 <body class="home-page">
 
-<!-- HEADER -->
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="index.html">
@@ -250,9 +274,7 @@
   </div>
 </header>
 
-<!-- MAIN -->
 <main class="main">
-  <!-- HERO -->
   <section class="section container hero-main">
 
     <div class="hero-kicker-wrap">
@@ -306,7 +328,6 @@
 
   </section>
 
-  <!-- ХТО МОЖЕ ВЗЯТИ УЧАСТЬ -->
   <section class="section container info-block">
     <h2 class="title-gradient">Хто може взяти участь?</h2>
     <p class="info-text">
@@ -324,7 +345,6 @@
     </ul>
   </section>
 
-  <!-- МІСІЯ -->
   <section class="section container info-block">
     <h2 class="title-gradient">Місія STOLAR CARP</h2>
     <p class="info-text">
@@ -334,14 +354,13 @@
     </p>
 
     <div class="mission-cards">
-      <div class="mission-card">Чесні та зрозумілі правила</div>
-      <div class="mission-card">Сучасний формат та live-таблиці</div>
-      <div class="mission-card">Повага до риби й водойм</div>
-      <div class="mission-card">Розвиток спільноти карпятників</div>
+      <div class="mission-card">✅ Чесні та зрозумілі правила</div>
+      <div class="mission-card">📊 Сучасний формат та live-таблиці</div>
+      <div class="mission-card">🤝 Повага до риби й водойм</div>
+      <div class="mission-card">🎣 Розвиток спільноти карпятників</div>
     </div>
   </section>
 
-  <!-- СТРУКТУРА СЕЗОНУ -->
   <section class="section container info-block">
     <h2 class="title-gradient">Структура сезону</h2>
     <p class="info-text">
@@ -360,7 +379,6 @@
     </ul>
   </section>
 
-  <!-- ЛОКАЦІЇ -->
   <section class="section container info-block">
     <h2 class="title-gradient">Локації сезону</h2>
     <p class="info-text">
@@ -379,7 +397,6 @@
     </a>
   </section>
 
-  <!-- ЧОМУ STOLAR CARP -->
   <section class="section container info-block">
     <h2 class="title-gradient">Чому саме STOLAR CARP?</h2>
 
@@ -392,7 +409,6 @@
     </ul>
   </section>
 
-  <!-- ЗАКЛИК ДО УЧАСТІ -->
   <section class="section container info-block call-to-action">
     <h2 class="title-gradient">Готовий до сезону STOLAR CARP?</h2>
     <p class="info-text">
@@ -405,7 +421,6 @@
 
 </main>
 
-<!-- TikTok Section -->
 <section class="section container highlight">
   <h2 class="title-gradient">🎬 Ми в TikTok</h2>
   <p>Дивись короткі відео з наших турнірів, зважувань та нагороджень!</p>
@@ -414,7 +429,6 @@
   </a>
 </section>
 
-<!-- FOOTER -->
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>

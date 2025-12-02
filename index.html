@@ -57,47 +57,74 @@
 
     .hero-title{
   position:relative;
+  z-index:1;
   font-size:clamp(40px,7vw,64px);
   font-weight:900;
   letter-spacing:.06em;
-  margin:0 0 36px;
+  margin:0 0 40px;
   text-transform:uppercase;
 
-  /* твій градієнт */
+  /* ГРАДІЄНТНО-ЗОЛОТИЙ ТЕКСТ */
   background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
 
-  /* ЧІТКИЙ 3D без «каші» */
+  /* ОБВОДКА БУКВ (3D-контур) */
+  -webkit-text-stroke:1px rgba(0,0,0,0.75);
+
+  /* ЛЕГКЕ 3D: тіні вниз */
   text-shadow:
-    0 1px 0 rgba(255,255,255,0.25),   /* легкий верхній блік */
-    0 2px 0 rgba(160,110,0,0.85),     /* тонкий «край» під літерами */
-    0 3px 4px rgba(0,0,0,0.65);       /* одна основна тінь вниз */
+    0 1px 0 rgba(255,255,255,0.35),   /* верхній блік */
+    0 2px 0 rgba(140,90,0,0.9),       /* край під літерами */
+    0 6px 12px rgba(0,0,0,0.85);      /* основна об’ємна тінь */
 
   opacity:0;
-  transform:translateY(14px);
+  transform:translateY(16px);
   animation:heroTitleFade 0.9s ease-out forwards;
     }
+    .hero-title::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+
+  /* зона підсвітки позаду тексту */
+  width:360px;
+  height:120px;
+
+  background:
+    radial-gradient(circle at 50% 40%,
+      rgba(255,215,0,0.35) 0%,
+      rgba(255,140,0,0.22) 35%,
+      rgba(217,4,41,0.18) 60%,
+      transparent 80%);
+
+  filter:blur(18px);
+  opacity:0;
+  pointer-events:none;
+
+  animation:heroGlow 1.1s ease-out forwards 0.1s;
+    }
     .hero-title::after{
-  co.hero-title::after{
   content:"";
   position:absolute;
   left:50%;
   transform:translateX(-50%);
-  bottom:-14px;
+  bottom:-16px;
 
   width:240px;
   height:3px;
   border-radius:999px;
 
   background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
-  box-shadow:
-    0 0 6px rgba(255,180,0,.6);   /* менше розмиття */
+  box-shadow:0 0 6px rgba(255,180,0,.6);
 
   opacity:0;
   animation:heroLineFade 1.1s ease-out forwards;
-  }
+    }
 
     .hero-subtitle{
       margin:14px auto 0;

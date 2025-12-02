@@ -52,14 +52,23 @@ img{max-width:100%;height:auto;display:block}
     position:fixed;
     inset:60px 0 auto 0;
     flex-direction:column;
-    background:var(--panel);
+
+    /* 🔥 Фон меню = банер + затемнення для читабельності тексту */
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.85), rgba(0,0,0,0.95)),
+      url('../dk-dva-kuma-banner.jpg') center/cover no-repeat;
+
     padding:16px;
     border-bottom-left-radius:var(--radius);
     border-bottom-right-radius:var(--radius);
     transform:translateY(-120%);
-    transition:transform .25s ease
+    transition:transform .25s ease;
   }
-  .nav.open{transform:translateY(0)}
+
+  .nav.open{
+    transform:translateY(0);
+  }
+
   .burger{display:block}
 }
 

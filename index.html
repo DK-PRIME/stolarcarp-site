@@ -56,15 +56,42 @@
     }
 
     .hero-title{
-      font-size:clamp(40px,7vw,64px);
-      font-weight:900;
-      letter-spacing:.06em;
-      margin:0;
-      text-transform:uppercase;
-      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
+  position:relative;
+  font-size:clamp(40px,7vw,64px);
+  font-weight:900;
+  letter-spacing:.06em;
+  margin:0 0 32px;
+  text-transform:uppercase;
+
+  background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+
+  text-shadow:
+    0 0 10px rgba(255,190,0,0.45),
+    0 0 22px rgba(255,130,0,0.35);
+
+  animation: heroTitleFade 0.9s ease-out forwards;
+  opacity:0;
+  transform:translateY(10px);
+}
+    .hero-title::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:-14px;
+
+  width:240px;
+  height:3px;
+  border-radius:999px;
+
+  background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
+  box-shadow:0 0 14px rgba(255,184,0,.55);
+
+  animation: heroLineFade 1.2s ease-out forwards;
+  opacity:0;
     }
 
     .hero-subtitle{
@@ -250,6 +277,15 @@
         padding:28px 0;
       }
     }
+    @keyframes heroTitleFade{
+  0%{opacity:0; transform:translateY(18px);}
+  100%{opacity:1; transform:translateY(0);}
+}
+
+@keyframes heroLineFade{
+  0%{opacity:0; width:0;}
+  100%{opacity:1; width:240px;}
+}
   </style>
 </head>
 <body class="home-page">

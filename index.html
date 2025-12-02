@@ -60,38 +60,45 @@
   font-size:clamp(40px,7vw,64px);
   font-weight:900;
   letter-spacing:.06em;
-  margin:0 0 32px;
+  margin:0 0 38px;
   text-transform:uppercase;
 
+  /* твій градієнт */
   background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
   -webkit-background-clip:text;
   background-clip:text;
   color:transparent;
 
+  /* 3D + преміум-обробка */
   text-shadow:
-    0 0 10px rgba(255,190,0,0.45),
-    0 0 22px rgba(255,130,0,0.35);
+    0px 1px 0px rgba(255,255,255,0.35),   /* верхній блік */
+    0px -2px 3px rgba(0,0,0,0.55),        /* внутрішня тінь, ефект гравірування */
+    0px 3px 6px rgba(0,0,0,0.75),         /* обʼємна нижня тінь */
+    0 0 14px rgba(255,183,0,0.6),         /* золоте світіння */
+    0 0 28px rgba(217,4,41,0.45);         /* глибоке бордове сяйво */
 
-  animation: heroTitleFade 0.9s ease-out forwards;
   opacity:0;
-  transform:translateY(10px);
-}
+  transform:translateY(18px);
+  animation:heroTitleFade 0.9s ease-out forwards;
+    }
     .hero-title::after{
   content:"";
   position:absolute;
   left:50%;
   transform:translateX(-50%);
-  bottom:-14px;
+  bottom:-16px;
 
-  width:240px;
+  width:260px;
   height:3px;
   border-radius:999px;
 
   background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
-  box-shadow:0 0 14px rgba(255,184,0,.55);
+  box-shadow:
+    0 0 10px rgba(255,180,0,.6),
+    0 0 20px rgba(217,4,41,.45);
 
-  animation: heroLineFade 1.2s ease-out forwards;
   opacity:0;
+  animation:heroLineFade 1.1s ease-out forwards;
     }
 
     .hero-subtitle{
@@ -278,13 +285,25 @@
       }
     }
     @keyframes heroTitleFade{
-  0%{opacity:0; transform:translateY(18px);}
-  100%{opacity:1; transform:translateY(0);}
-}
+  0%{
+    opacity:0;
+    transform:translateY(22px);
+  }
+  100%{
+    opacity:1;
+    transform:translateY(0);
+  }
+    }
 
 @keyframes heroLineFade{
-  0%{opacity:0; width:0;}
-  100%{opacity:1; width:240px;}
+  0%{
+    opacity:0;
+    width:0;
+  }
+  100%{
+    opacity:1;
+    width:260px;
+  }
 }
   </style>
 </head>

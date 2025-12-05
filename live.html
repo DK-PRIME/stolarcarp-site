@@ -246,15 +246,16 @@
 <!-- СКРИПТ LIVE-ПІДТЯГУВАННЯ -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const apiUrl = 'https://script.google.com/macros/s/AKfycbzlJBi2eA8K2DpcJMcIBBbLFnX4YvDR11qy_UGKPYS2slzjHQ91jpYQBlT87fK1iVH2/exec?action=live';
+  // ВАЖЛИВО: та сама веб-адреса, що й у register.html
+  const apiUrl = 'https://script.google.com/macros/s/AKfycbyyBGjueNe074tk2QXmt2QTShhW00vzrFVOsw4UB4sgQ1eMHWKCsjCr6Z4NtwQdiSaG/exec?action=live';
 
-  const stageEl   = document.getElementById('liveStageName');
-  const zonesWrap = document.getElementById('zonesContainer');
+  const stageEl    = document.getElementById('liveStageName');
+  const zonesWrap  = document.getElementById('zonesContainer');
   const totalTbody = document.querySelector('#totalTable tbody');
   const bigFishTbody = document.querySelector('#bigFishTable tbody');
-  const loadingEl = document.getElementById('liveLoading');
-  const contentEl = document.getElementById('liveContent');
-  const errorEl   = document.getElementById('liveError');
+  const loadingEl  = document.getElementById('liveLoading');
+  const contentEl  = document.getElementById('liveContent');
+  const errorEl    = document.getElementById('liveError');
 
   const fmt = (v) => {
     if (v === null || v === undefined || v === '') return '-';
@@ -352,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await fetch(apiUrl);
       const json = await res.json();
+      console.log('LIVE JSON:', json);
 
       if (json && json.stage) {
         stageEl.textContent = json.stage;
@@ -371,7 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Live fetch error:', err);
       if (errorEl){
         errorEl.style.display = 'block';
-        errorEl.textContent = '❌ Не вдалося завантажити live-дані. Перевірте налаштування ACTIVE_STAGE або спробуйте пізніше.';
+        errorEl.textContent = '❌ Не вдалося завантажити live-дані. Перевірте веб-скрипт або спробуйте пізніше.';
       }
       if (loadingEl) loadingEl.style.display = 'none';
     }

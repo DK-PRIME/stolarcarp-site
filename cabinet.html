@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Мій кабінет · STOLAR CARP</title>
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <meta name="theme-color" content="#1a1a1a">
+
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+
+  <style>
+    body{
+      background:radial-gradient(circle at top,#111827 0,#020617 55%);
+    }
+
+    .cabinet-main{
+      max-width:980px;
+      margin:70px auto 60px;
+      padding:0 16px 40px;
+      color:#e5e7eb;
+    }
+
+    .cabinet-title{
+      font-size:2rem;
+      font-weight:800;
+      margin-bottom:8px;
+    }
+
+    .cabinet-subtitle{
+      color:#9ca3af;
+      font-size:.95rem;
+      margin-bottom:24px;
+    }
+
+    .cabinet-grid{
+      display:grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr);
+      gap:20px;
+    }
+
+    @media (max-width:768px){
+      .cabinet-main{
+        margin-top:56px;
+      }
+      .cabinet-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    .card{
+      background:rgba(15,23,42,.95);
+      border-radius:18px;
+      border:1px solid rgba(148,163,184,.4);
+      padding:18px 16px 20px;
+      box-shadow:0 18px 40px rgba(0,0,0,.85);
+    }
+
+    .card h2{
+      font-size:1.1rem;
+      margin:0 0 10px;
+    }
+
+    .card p{
+      margin:0;
+      font-size:.92rem;
+      color:#d1d5db;
+    }
+
+    .badge-small{
+      display:inline-block;
+      font-size:.7rem;
+      text-transform:uppercase;
+      letter-spacing:.18em;
+      color:#9ca3af;
+      margin-bottom:4px;
+    }
+
+    .profile-row{
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      margin-top:6px;
+      font-size:.9rem;
+    }
+    .profile-row span.label{
+      color:#9ca3af;
+    }
+
+    .status-pill{
+      display:inline-flex;
+      align-items:center;
+      padding:2px 8px;
+      border-radius:999px;
+      font-size:.78rem;
+      border:1px solid rgba(148,163,184,.6);
+      margin-left:4px;
+    }
+
+    .status-pill--ok{
+      border-color:#22c55e;
+      color:#bbf7d0;
+    }
+    .status-pill--pending{
+      border-color:#fbbf24;
+      color:#fef3c7;
+    }
+
+    table.cabinet-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:10px;
+      font-size:.88rem;
+    }
+    table.cabinet-table th,
+    table.cabinet-table td{
+      padding:8px 6px;
+      border-bottom:1px solid rgba(31,41,55,.9);
+      text-align:left;
+    }
+    table.cabinet-table th{
+      color:#9ca3af;
+      font-weight:500;
+      font-size:.8rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .hint{
+      margin-top:10px;
+      font-size:.8rem;
+      color:#9ca3af;
+    }
+
+    .btn-link{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:.9rem;
+      padding:8px 14px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.7);
+      color:#e5e7eb;
+      text-decoration:none;
+      margin-top:8px;
+    }
+    .btn-link:hover{
+      border-color:#facc15;
+      color:#facc15;
+    }
+
+    .alert{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:rgba(30,64,175,.4);
+      border:1px solid rgba(129,140,248,.9);
+      font-size:.9rem;
+    }
+
+    .alert-error{
+      background:rgba(127,29,29,.4);
+      border-color:#fca5a5;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="events/index.html" class="nav__link">Архів</a>
+      <a href="cabinet.html" class="nav__link nav__link--active">Мій кабінет</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+  <section class="cabinet-main container">
+    <h1 class="cabinet-title">Мій кабінет</h1>
+    <p class="cabinet-subtitle">
+      Тут відображаються дані вашої команди, заявки на етапи та статус участі в сезоні STOLAR CARP.
+    </p>
+
+    <!-- БЛОК ДЛЯ НЕАВТОРИЗОВАНОГО КОРИСТУВАЧА -->
+    <div id="guestView" class="card">
+      <span class="badge-small">доступ учасника</span>
+      <h2>Вхід у кабінет</h2>
+      <p>
+        Щоб переглянути дані своєї команди та подавати заявки на етапи,
+        увійдіть через особистий аккаунт.
+      </p>
+
+      <a href="https://dk-prime.netlify.app" class="btn-link" target="_blank">
+        Увійти / Зареєструватися через DK Prime
+      </a>
+
+      <div class="alert">
+        Після успішного входу в DK Prime поверніться на цю сторінку — тут зʼявиться ваш профіль
+        та список заявок.
+      </div>
+    </div>
+
+    <!-- БЛОК КАБІНЕТУ ДЛЯ ЗАЛОГІНЕНОГО -->
+    <div id="userView" class="cabinet-grid" style="display:none;">
+      <!-- ПРОФІЛЬ КОМАНДИ -->
+      <div class="card">
+        <span class="badge-small">профіль команди</span>
+        <h2>Моя команда</h2>
+
+        <div class="profile-row">
+          <span class="label">Назва команди:</span>
+          <span id="teamNameValue">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Капітан:</span>
+          <span id="captainNameValue">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Телефон:</span>
+          <span id="phoneValue">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Email акаунта:</span>
+          <span id="emailValue">—</span>
+        </div>
+
+        <div class="hint">
+          Дані редагуються через форму реєстрації на участь. Якщо потрібно щось змінити —
+          зверніться до організатора.
+        </div>
+      </div>
+
+      <!-- МОЇ ЗАЯВКИ -->
+      <div class="card">
+        <span class="badge-small">заявки на етапи</span>
+        <h2>Мої заявки</h2>
+
+        <table class="cabinet-table">
+          <thead>
+            <tr>
+              <th>Етап</th>
+              <th>Статус заявки</th>
+              <th>Оплата</th>
+              <th>Сектор / Зона</th>
+            </tr>
+          </thead>
+          <tbody id="applicationsBody">
+            <tr>
+              <td colspan="4">Завантаження даних...</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="hint">
+          Статуси оновлюються організатором після перевірки оплати та жеребкування.
+        </p>
+      </div>
+    </div>
+
+    <div id="errorView" class="card alert-error" style="display:none;">
+      Виникла помилка при завантаженні кабінету. Спробуйте перезавантажити сторінку
+      або зверніться до організатора.
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

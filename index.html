@@ -335,6 +335,23 @@
       }
     }
 
+    /* КНОПКА "УВІЙТИ" В ХЕДЕРІ */
+    .header-login{
+      margin-left:12px;
+      padding:6px 14px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.6);
+      background:rgba(15,23,42,.9);
+      color:#e5e7eb;
+      font-size:.85rem;
+      text-decoration:none;
+      white-space:nowrap;
+    }
+    .header-login:hover{
+      border-color:#facc15;
+      color:#facc15;
+    }
+
     /* Анімації */
     @keyframes heroTitleFade{
       0%{
@@ -384,10 +401,18 @@
       <a href="register.html" class="nav__link">Реєстрація</a>
       <a href="live.html" class="nav__link">Live</a>
       <a href="rating.html" class="nav__link">Рейтинг</a>
+      <!-- НОВИЙ ПУНКТ МЕНЮ "МІЙ КАБІНЕТ" -->
+      <a href="https://dk-prime.netlify.app" class="nav__link" target="_blank">Мій кабінет</a>
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
       <a href="events/index.html" class="nav__link">Архів</a>
     </nav>
+
+    <!-- НОВА КНОПКА "УВІЙТИ" ЛІВІШЕ ВІД БУРГЕРА -->
+    <a href="https://dk-prime.netlify.app" class="header-login" target="_blank">
+      Увійти
+    </a>
+
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
 </header>

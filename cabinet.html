@@ -38,17 +38,13 @@
 
     .cabinet-grid{
       display:grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr);
+      grid-template-columns:minmax(0,1.2fr) minmax(0,1.6fr);
       gap:20px;
     }
 
     @media (max-width:768px){
-      .cabinet-main{
-        margin-top:56px;
-      }
-      .cabinet-grid{
-        grid-template-columns:1fr;
-      }
+      .cabinet-main{margin-top:56px;}
+      .cabinet-grid{grid-template-columns:1fr;}
     }
 
     .card{
@@ -86,9 +82,7 @@
       margin-top:6px;
       font-size:.9rem;
     }
-    .profile-row span.label{
-      color:#9ca3af;
-    }
+    .profile-row span.label{color:#9ca3af;}
 
     .status-pill{
       display:inline-flex;
@@ -99,7 +93,6 @@
       border:1px solid rgba(148,163,184,.6);
       margin-left:4px;
     }
-
     .status-pill--ok{
       border-color:#22c55e;
       color:#bbf7d0;
@@ -197,26 +190,27 @@
       Тут відображаються дані вашої команди, заявки на етапи та статус участі в сезоні STOLAR CARP.
     </p>
 
-    <!-- БЛОК ДЛЯ НЕАВТОРИЗОВАНОГО КОРИСТУВАЧА -->
+    <!-- ГОСТЬ (не залогінений у Firebase) -->
     <div id="guestView" class="card">
       <span class="badge-small">доступ учасника</span>
       <h2>Вхід у кабінет</h2>
       <p>
         Щоб переглянути дані своєї команди та подавати заявки на етапи,
-        увійдіть через особистий аккаунт.
+        увійдіть або зареєструйтесь через STOLAR CARP.
       </p>
 
-      <a href="https://dk-prime.netlify.app" class="btn-link" target="_blank">
-        Увійти / Зареєструватися через DK Prime
+      <!-- ТУТ ВЖЕ НЕ DK PRIME, А НАША СТОРІНКА АВТОРИЗАЦІЇ -->
+      <a href="auth.html" class="btn-link">
+        Увійти / Зареєструватися
       </a>
 
       <div class="alert">
-        Після успішного входу в DK Prime поверніться на цю сторінку — тут зʼявиться ваш профіль
-        та список заявок.
+        Після успішного входу поверніться на цю сторінку — тут зʼявиться ваш профіль
+        та список заявок команди.
       </div>
     </div>
 
-    <!-- БЛОК КАБІНЕТУ ДЛЯ ЗАЛОГІНЕНОГО -->
+    <!-- КАБІНЕТ (є користувач у Firebase) -->
     <div id="userView" class="cabinet-grid" style="display:none;">
       <!-- ПРОФІЛЬ КОМАНДИ -->
       <div class="card">
@@ -226,6 +220,10 @@
         <div class="profile-row">
           <span class="label">Назва команди:</span>
           <span id="teamNameValue">—</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Роль у команді:</span>
+          <span id="roleValue">—</span>
         </div>
         <div class="profile-row">
           <span class="label">Капітан:</span>
@@ -241,7 +239,7 @@
         </div>
 
         <div class="hint">
-          Дані редагуються через форму реєстрації на участь. Якщо потрібно щось змінити —
+          Дані редагуються через форму реєстрації / профілю. Якщо потрібно щось змінити —
           зверніться до організатора.
         </div>
       </div>
@@ -289,6 +287,14 @@
     </div>
   </div>
 </footer>
+
+<!-- Firebase (та сама compat-версія, що й на auth.html) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="assets/js/firebase-init.js"></script>
+<script src="assets/js/cabinet.js"></script>
 
 </body>
 </html>

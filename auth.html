@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <title>Реєстрація · STOLAR CARP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet" href="assets/css/main.css">
+
+  <!-- Firebase (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- Ініт Firebase -->
+  <script defer src="assets/js/firebase-init.js"></script>
+  <!-- Логіка реєстрації -->
+  <script defer src="assets/js/auth.js"></script>
+</head>
+<body class="page-auth">
+
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+  </div>
+</header>
+
+<main class="main">
+  <section class="section container" style="max-width:480px;">
+    <h1>Реєстрація акаунта</h1>
+
+    <p style="color:#9ca3af;font-size:.9rem;margin-bottom:16px;">
+      Заповни дані, щоб створити акаунт STOLAR CARP. Один акаунт – одна людина. 
+      Для командних змагань капітан створює команду, учасники приєднуються за кодом.
+    </p>
+
+    <div class="card" style="padding:16px 18px;border-radius:18px;background:#020617;border:1px solid rgba(148,163,184,.4);">
+      <label>
+        <span>Email</span>
+        <input type="email" id="regEmail" placeholder="example@gmail.com">
+      </label>
+
+      <label>
+        <span>Пароль</span>
+        <input type="password" id="regPassword" placeholder="Мінімум 6 символів">
+      </label>
+
+      <label>
+        <span>Ім'я та прізвище</span>
+        <input type="text" id="regFullName" placeholder="Ім'я Прізвище">
+      </label>
+
+      <label>
+        <span>Номер телефону</span>
+        <input type="tel" id="regPhone" placeholder="+380...">
+      </label>
+
+      <label>
+        <span>Місто / селище</span>
+        <input type="text" id="regCity" placeholder="Місто або населений пункт">
+      </label>
+
+      <div style="margin-top:12px;">
+        <span style="display:block;margin-bottom:4px;">Роль у системі</span>
+        <label style="display:inline-flex;align-items:center;gap:6px;margin-right:12px;">
+          <input type="radio" name="role" value="captain" checked>
+          <span>Капітан (створюю команду)</span>
+        </label>
+        <label style="display:inline-flex;align-items:center;gap:6px;">
+          <input type="radio" name="role" value="member">
+          <span>Учасник (приєднуюсь до команди)</span>
+        </label>
+      </div>
+
+      <div id="teamBlockCaptain" style="margin-top:12px;">
+        <label>
+          <span>Назва команди</span>
+          <input type="text" id="regTeamName" placeholder="Наприклад: DK Два Кума">
+        </label>
+      </div>
+
+      <div id="teamBlockMember" style="margin-top:12px;display:none;">
+        <label>
+          <span>JOIN-код команди</span>
+          <input type="text" id="regJoinCode" placeholder="Код, який дав капітан">
+        </label>
+      </div>
+
+      <button id="btnRegister" class="btn btn--accent" style="margin-top:16px;width:100%;">
+        Створити акаунт
+      </button>
+
+      <p id="regMessage" style="margin-top:10px;font-size:.9rem;color:#f97316;"></p>
+    </div>
+
+    <hr style="margin:24px 0;border-color:rgba(148,163,184,.3);">
+
+    <h2>У мене вже є акаунт</h2>
+    <div class="card" style="padding:16px 18px;border-radius:18px;background:#020617;border:1px solid rgba(148,163,184,.4);">
+      <label>
+        <span>Email</span>
+        <input type="email" id="loginEmail" placeholder="example@gmail.com">
+      </label>
+
+      <label>
+        <span>Пароль</span>
+        <input type="password" id="loginPassword" placeholder="Пароль">
+      </label>
+
+      <button id="btnLogin" class="btn btn--primary" style="margin-top:16px;width:100%;">
+        Увійти
+      </button>
+
+      <p id="loginMessage" style="margin-top:10px;font-size:.9rem;color:#f97316;"></p>
+    </div>
+  </section>
+</main>
+
+</body>
+</html>

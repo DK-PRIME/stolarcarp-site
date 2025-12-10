@@ -70,6 +70,12 @@
       gap:18px;
     }
 
+    @media (max-width:900px){
+      .cabinet-layout{
+        grid-template-columns:1fr;
+      }
+    }
+
     .card{
       background:#020617;
       border-radius:18px;
@@ -236,11 +242,13 @@
       background:#020617;
       border:1px solid #4b5563;
       flex-shrink:0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:.8rem;
-      color:#e5e7eb;
+    }
+
+    .member-avatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
     }
 
     .member-meta{
@@ -293,6 +301,11 @@
       margin-left:3px;
     }
 
+    #avatarMsg{
+      font-size:.78rem;
+    }
+    #avatarMsg.ok{color:#22c55e;}
+    #avatarMsg.err{color:#ef4444;}
   </style>
 </head>
 <body class="cabinet-page">
@@ -333,9 +346,9 @@
       </p>
     </div>
 
-    <div class="cabinet-layout">
+    <div class="cabinet-layout" id="cabinetContent">
 
-      <div>
+      <div id="cabinet-user">
 
         <!-- ПРОФІЛЬ КОМАНДИ -->
         <div class="card card--soft" style="margin-bottom:16px;">
@@ -394,13 +407,9 @@
             <div class="cabinet-small-muted">Завантаження…</div>
           </div>
         </div>
-
       </div>
 
     </div>
-
-    <div id="cabinetError" class="cabinet-small-muted"></div>
-
   </section>
 </main>
 
@@ -416,11 +425,12 @@
 
 <!-- Firebase (той самий варіант, що й на auth.html) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<script src="assets/js/firebase-init.js"></script>
+<!-- УВАГА: модулі! -->
+<script type="module" src="assets/js/firebase-init.js"></script>
 <script type="module" src="assets/js/cabinet.js"></script>
 
 </body>

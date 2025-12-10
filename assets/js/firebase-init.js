@@ -1,31 +1,35 @@
 // assets/js/firebase-init.js
-// Єдиний Firebase для сайту STOLAR CARP
+// Firebase для сайту STOLAR CARP (compat-версія, щоб працювали auth.js і cabinet.js)
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth }       from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore }  from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+// Підтягуємо COMPAT SDK (старий стиль, але остання версія)
+import firebase from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js";
+import "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js";
+import "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js";
 
-// ⚠️ ВАЖЛИВО:
-// Скопіюй звідси дані з того ж проекту Firebase,
-// де працює DK PRIME (firebase-config.js у репозиторії DK-Prime).
+// ⚠️ ТУТ ВСТАВЛЯЄШ СВОЮ КОНФІГУРАЦІЮ З FIREBASE CONSOLE
+// Можеш просто СКОПІЮВАТИ firebaseConfig з dk-prime (firebase-config.js)
 const firebaseConfig = {
-  apiKey: "СКОПІЮЙ_ІЗ_DK_PRIME",
-  authDomain: "СКОПІЮЙ_ІЗ_DK_PRIME",
-  projectId: "СКОПІЮЙ_ІЗ_DK_PRIME",
-  storageBucket: "СКОПІЮЙ_ІЗ_DK_PRIME",
-  messagingSenderId: "СКОПІЮЙ_ІЗ_DK_PRIME",
-  appId: "СКОПІЮЙ_ІЗ_DK_PRIME",
+  apiKey:        "ТУТ_ТВІЙ_apiKey",
+  authDomain:    "ТУТ_ТВІЙ_authDomain",
+  projectId:     "ТУТ_ТВІЙ_projectId",
+  storageBucket: "ТУТ_ТВІЙ_storageBucket",
+  messagingSenderId: "ТУТ_ТВІЙ_messagingSenderId",
+  appId:         "ТУТ_ТВІЙ_appId"
 };
 
-// 1 спільний app
-const app  = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db   = getFirestore(app);
+// Ініціалізація
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
-// Експортуємо для всіх модулів
-export { app, auth, db };
+// Головні сервіси
+const auth = firebase.auth();
+const db   = firebase.firestore();
 
-// Якщо десь ще потрібні глобальні змінні (старі скрипти) — лишаю:
-window.stolarApp  = app;
-window.stolarAuth = auth;
-window.stolarDb   = db;
+// Виводимо в глобальний scope (для auth.js, cabinet.js)
+window.firebase = firebase;
+window.auth     = auth;
+window.db       = db;
+
+// І експортимо для модульних скриптів (register_firebase.js)
+export { firebase, auth, db };

@@ -1,56 +1,51 @@
 // assets/js/cabinet.js
-// Кабінет учасника STOLAR CARP — читає users + teams + аватар
+// Кабінет учасника STOLAR CARP
+// Читає users/{uid}, teams/{teamId}, аватар, статистику.
 
 (function () {
-  const auth    = window.scAuth;
-  const db      = window.scDb;
-  const storage = window.scStorage;
+  const auth    = window.scAuth || window.auth;
+  const db      = window.scDb   || window.db;
+  const storage = window.scStorage || window.storage;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізований (cabinet.js)");
+    console.error("Firebase не ініціалізований. Перевір firebase-init.js та підключення скриптів.");
     return;
   }
 
-  const guestBlock      = document.getElementById("cabinet-guest");
-  const userBlock       = document.getElementById("cabinet-user");
-  const profileSubtitle = document.getElementById("profileSubtitle");
+  // Блоки Гість/Користувач
+  const guestBlock = document.getElementById("cabinet-guest");
+  const userBlock  = document.getElementById("cabinet-user");
 
-  const teamNameEl      = document.getElementById("teamNameText");
-  const captainTextEl   = document.getElementById("captainText");
-  const userRoleTextEl  = document.getElementById("userRoleText");
-  const userPhoneTextEl = document.getElementById("userPhoneText");
-  const joinCodePillEl  = document.getElementById("joinCodePill");
-  const joinCodeTextEl  = document.getElementById("joinCodeText");
+  // Текстові поля профілю
+  const profileSubtitleEl = document.getElementById("profileSubtitle");
+  const teamNameEl        = document.getElementById("teamNameText");
+  const captainTextEl     = document.getElementById("captainText");
+  const userRoleTextEl    = document.getElementById("userRoleText");
+  const userPhoneTextEl   = document.getElementById("userPhoneText");
+  const joinCodePillEl    = document.getElementById("joinCodePill");
+  const joinCodeTextEl    = document.getElementById("joinCodeText");
 
+  // Аватар
   const avatarImgEl         = document.getElementById("cabinetAvatarImg");
   const avatarPlaceholderEl = document.getElementById("cabinetAvatarPlaceholder");
   const avatarInputEl       = document.getElementById("avatarFile");
   const avatarBtnEl         = document.getElementById("avatarUploadBtn");
   const avatarMsgEl         = document.getElementById("avatarMsg");
 
+  // Учасники команди
   const membersContainerEl = document.getElementById("membersContainer");
+
+  // Досягнення
   const statsWrapperEl     = document.getElementById("statsWrapper");
 
-  const loginBtn = document.getElementById("cabinetLoginBtn");
-
-  // кнопка "Увійти / Зареєструватися" веде на auth.html
-  if (loginBtn) {
-    loginBtn.addEventListener("click", () => {
-      window.location.href = "auth.html";
-    });
-  }
-
-  function showGuest(message) {
+  function showGuest() {
     if (guestBlock) guestBlock.style.display = "block";
-    if (userBlock)  userBlock.style.display = "none";
-    if (profileSubtitle && message) {
-      profileSubtitle.textContent = message;
-    }
+    if (userBlock)  userBlock.style.display  = "none";
   }
 
   function showUser() {
     if (guestBlock) guestBlock.style.display = "none";
-    if (userBlock)  userBlock.style.display = "block";
+    if (userBlock)  userBlock.style.display  = "block";
   }
 
   function setAvatarUrl(url) {
@@ -60,15 +55,16 @@
     avatarPlaceholderEl.style.display = "none";
   }
 
-  // ----- основне завантаження профілю -----
   async function loadCabinet(user) {
     try {
-      if (profileSubtitle) profileSubtitle.textContent = "Завантаження профілю…";
-
       // 1. user doc
       const userSnap = await db.collection("users").doc(user.uid).get();
       if (!userSnap.exists) {
-        showGuest("Анкета користувача не знайдена. Завершіть реєстрацію на сторінці входу.");
+        if (profileSubtitleEl) {
+          profileSubtitleEl.textContent =
+            "Анкета користувача не знайдена. Завершіть реєстрацію на сторінці входу.";
+        }
+        showUser();
         return;
       }
 
@@ -77,12 +73,18 @@
       const fullName = u.fullName || u.name || user.email || "Без імені";
       const phone    = u.phone || "—";
       const city     = u.city || "";
+      const roleKey  = u.role || "member";
 
       const roleText =
-        u.role === "admin"   ? "Адміністратор" :
-        u.role === "judge"   ? "Суддя" :
-        u.role === "captain" ? "Капітан команди" :
-                               "Учасник команди";
+        roleKey === "admin"   ? "Адміністратор" :
+        roleKey === "judge"   ? "Суддя" :
+        roleKey === "captain" ? "Капітан команди" :
+                                "Учасник команди";
+
+      if (profileSubtitleEl) {
+        profileSubtitleEl.textContent =
+          `Акаунт: ${fullName}` + (city ? ` · ${city}` : "");
+      }
 
       if (captainTextEl)   captainTextEl.textContent   = fullName + (city ? ` · ${city}` : "");
       if (userRoleTextEl)  userRoleTextEl.textContent  = roleText;
@@ -91,9 +93,6 @@
       // аватар
       if (u.avatarUrl) {
         setAvatarUrl(u.avatarUrl);
-      } else if (avatarImgEl && avatarPlaceholderEl) {
-        avatarImgEl.style.display = "none";
-        avatarPlaceholderEl.style.display = "flex";
       }
 
       // 2. team doc
@@ -116,10 +115,10 @@
       if (teamNameEl) teamNameEl.textContent = teamName;
       if (joinCode && joinCodePillEl && joinCodeTextEl) {
         joinCodePillEl.style.display = "inline-flex";
-        joinCodeTextEl.textContent = joinCode;
+        joinCodeTextEl.textContent   = joinCode;
       }
 
-      // 3. список учасників (поки що показуємо тільки поточного)
+      // 3. список учасників (мінімум — цей користувач)
       if (membersContainerEl) {
         membersContainerEl.innerHTML = "";
         const row = document.createElement("div");
@@ -138,8 +137,8 @@
       if (statsWrapperEl) {
         const stats = u.seasonStats || {};
         const total = stats.totalWeightKg ?? "—";
-        const big   = stats.bigFishKg ?? "—";
-        const rank  = stats.rank ?? "—";
+        const big   = stats.bigFishKg    ?? "—";
+        const rank  = stats.rank         ?? "—";
 
         statsWrapperEl.innerHTML = `
           <div class="stats-grid">
@@ -159,19 +158,23 @@
         `;
       }
 
-      if (profileSubtitle) profileSubtitle.textContent = "Профіль завантажено.";
       showUser();
 
     } catch (err) {
-      console.error(err);
-      showGuest("Помилка завантаження кабінету: " + (err.message || err));
+      console.error("Помилка завантаження кабінету:", err);
+      if (profileSubtitleEl) {
+        profileSubtitleEl.textContent =
+          "Помилка завантаження кабінету: " + (err.message || err);
+      }
+      showUser();
     }
   }
 
   // ----- слухач авторизації -----
   auth.onAuthStateChanged((user) => {
     if (!user) {
-      showGuest("Щоб побачити кабінет, увійдіть у систему.");
+      // якщо не залогінений — показуємо гостьовий блок
+      showGuest();
       return;
     }
     loadCabinet(user);
@@ -203,7 +206,7 @@
       try {
         if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
 
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+        const ext  = (file.name.split(".").pop() || "jpg").toLowerCase();
         const path = `avatars/${user.uid}/avatar.${ext}`;
         const snap = await storage.ref().child(path).put(file);
         const url  = await snap.ref.getDownloadURL();

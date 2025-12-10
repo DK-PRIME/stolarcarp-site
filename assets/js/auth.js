@@ -1,23 +1,13 @@
-// assets/js/auth.js — STOLAR CARP (auth.html)
-
-import { auth, db } from "./firebase-init.js";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
-import {
-  doc,
-  setDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+// assets/js/auth.js
+// Реєстрація акаунта + вхід для STOLAR CARP (COMPAT)
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Перевіряємо, що Firebase ініціалізовано
+  if (!window.firebase || !window.auth || !window.db) {
+    console.error("Firebase не ініціалізовано. Перевір firebase-init.js");
+    return;
+  }
+
   const signupForm = document.getElementById("signupForm");
   const loginForm  = document.getElementById("loginForm");
   const signupMsg  = document.getElementById("signupMsg");
@@ -37,7 +27,9 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = loading ? "Зачекайте..." : labelDefault;
   };
 
-  // ---------- РЕЄСТРАЦІЯ ----------
+  // ---------------------------------------------------
+  // РЕЄСТРАЦІЯ НОВОГО АКАУНТА
+  // ---------------------------------------------------
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -45,54 +37,71 @@ document.addEventListener("DOMContentLoaded", () => {
       setLoading(signupBtn, true, "Створити акаунт");
 
       try {
-        const email     = document.getElementById("signupEmail").value.trim();
-        const password  = document.getElementById("signupPassword").value;
-        const fullName  = document.getElementById("signupFullName").value.trim();
-        const phone     = document.getElementById("signupPhone").value.trim();
-        const city      = document.getElementById("signupCity").value.trim();
-        const isCaptain = document.getElementById("signupRoleCaptain").checked;
-        const teamName  = document.getElementById("signupTeamName").value.trim();
-        const joinCode  = document.getElementById("signupJoinCode").value.trim();
+        const email    = document.getElementById("signupEmail").value.trim();
+        const password = document.getElementById("signupPassword").value;
+        const fullName = document.getElementById("signupFullName").value.trim();
 
-        if (!email || !password || !fullName || !phone || !city) {
-          throw new Error("Заповніть усі обовʼязкові поля.");
+        const phoneCleanEl = document.getElementById("signupPhoneClean");
+        const cityEl       = document.getElementById("signupCity");
+
+        const phoneDigits = phoneCleanEl.value.replace(/\D/g, "").slice(0, 9);
+        const phone       = phoneDigits ? "+380" + phoneDigits : "";
+
+        const city        = cityEl.value.trim();
+
+        const isCaptain   = document.getElementById("signupRoleCaptain").checked;
+        const teamName    = document.getElementById("signupTeamName").value.trim();
+        const joinCodeRaw = document.getElementById("signupJoinCode").value.trim();
+
+        // Валідація
+        if (!email || !password || !fullName || !phoneDigits || !city) {
+          throw new Error("Заповніть всі обовʼязкові поля.");
+        }
+        if (password.length < 6) {
+          throw new Error("Пароль має містити щонайменше 6 символів.");
         }
         if (isCaptain && !teamName) {
-          throw new Error("Вкажіть назву команди.");
+          throw new Error("Вкажіть назву команди для капітана.");
         }
-        if (!isCaptain && !joinCode) {
+        if (!isCaptain && !joinCodeRaw) {
           throw new Error("Вкажіть код приєднання до команди.");
         }
 
-        // 1. створюємо користувача
-        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        // 1. Створюємо користувача в Firebase Auth
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
         const uid  = cred.user.uid;
 
-        // 2. створюємо / знаходимо команду
+        // 2. Команда: або створюємо (капітан), або шукаємо по коду (учасник)
         let teamId;
-        let finalJoinCode = joinCode;
+        let finalJoinCode = joinCodeRaw;
 
         if (isCaptain) {
-          const teamRef = doc(collection(db, "teams"));
+          // Створюємо нову команду
+          const teamRef = db.collection("teams").doc();
           teamId = teamRef.id;
 
+          // Генеруємо код приєднання (6 символів)
           finalJoinCode = (
             Math.random().toString(36).slice(2, 8) +
             Date.now().toString(36)
-          ).toUpperCase().slice(0, 6);
+          )
+            .toUpperCase()
+            .slice(0, 6);
 
-          await setDoc(teamRef, {
+          await teamRef.set({
             name: teamName,
             ownerUid: uid,
             joinCode: finalJoinCode,
-            createdAt: serverTimestamp()
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
         } else {
-          const q = query(
-            collection(db, "teams"),
-            where("joinCode", "==", joinCode.toUpperCase())
-          );
-          const snap = await getDocs(q);
+          // Шукаємо існуючу команду по joinCode
+          const joinCode = joinCodeRaw.trim().toUpperCase();
+          const snap = await db
+            .collection("teams")
+            .where("joinCode", "==", joinCode)
+            .limit(1)
+            .get();
 
           if (snap.empty) {
             throw new Error("Команду з таким кодом не знайдено.");
@@ -100,25 +109,33 @@ document.addEventListener("DOMContentLoaded", () => {
           teamId = snap.docs[0].id;
         }
 
-        // 3. профіль користувача
-        await setDoc(doc(db, "users", uid), {
+        // 3. Записуємо профіль користувача в Firestore
+        await db.collection("users").doc(uid).set({
           fullName,
           email,
           phone,
           city,
           role: isCaptain ? "captain" : "member",
           teamId,
-          createdAt: serverTimestamp()
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        showMsg(
-          signupMsg,
-          isCaptain
-            ? `Акаунт створено! Код команди: ${finalJoinCode}. Зараз відкриється кабінет.`
-            : "Акаунт створено та приєднано до команди. Зараз відкриється кабінет.",
-          "ok"
-        );
+        // 4. Повідомлення
+        if (isCaptain) {
+          showMsg(
+            signupMsg,
+            `Акаунт створено! Код вашої команди: ${finalJoinCode}. Зараз відкриється кабінет.`,
+            "ok"
+          );
+        } else {
+          showMsg(
+            signupMsg,
+            "Акаунт створено та приєднано до команди. Зараз відкриється кабінет.",
+            "ok"
+          );
+        }
 
+        // 5. Редірект у кабінет
         setTimeout(() => {
           window.location.href = "cabinet.html";
         }, 900);
@@ -130,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (text.includes("auth/email-already-in-use")) {
           text = "Такий email вже використовується.";
         } else if (text.includes("auth/weak-password")) {
-          text = "Пароль занадто простий. Мінімум 6 символів.";
+          text = "Пароль занадто простий (мінімум 6 символів).";
         }
 
         showMsg(signupMsg, text, "err");
@@ -140,7 +157,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- ВХІД ----------
+  // ---------------------------------------------------
+  // ВХІД У ВЖЕ ІСНУЮЧИЙ АКАУНТ
+  // ---------------------------------------------------
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -155,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
           throw new Error("Введіть email та пароль.");
         }
 
-        await signInWithEmailAndPassword(auth, email, password);
+        await auth.signInWithEmailAndPassword(email, password);
 
         showMsg(loginMsg, "Вхід успішний, переходимо у кабінет…", "ok");
 
@@ -181,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Якщо вже залогінений і відкрив auth.html — кидаємо у кабінет
-  onAuthStateChanged(auth, (user) => {
+  auth.onAuthStateChanged((user) => {
     if (user && window.location.pathname.endsWith("auth.html")) {
       window.location.href = "cabinet.html";
     }

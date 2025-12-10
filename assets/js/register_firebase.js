@@ -5,13 +5,13 @@
 import { auth, db, firebase } from "./firebase-init.js";
 
 // ------- DOM-елементи -------
-const form            = document.getElementById("regForm");
-const eventOptionsEl  = document.getElementById("eventOptions");
-const msgEl           = document.getElementById("msg");
-const submitBtn       = document.getElementById("submitBtn");
-const spinnerEl       = document.getElementById("spinner");
+const form           = document.getElementById("regForm");
+const eventOptionsEl = document.getElementById("eventOptions");
+const msgEl          = document.getElementById("msg");
+const submitBtn      = document.getElementById("submitBtn");
+const spinnerEl      = document.getElementById("spinner");
 
-// поля з профілю
+// (можуть існувати або бути видалені з HTML)
 const teamNameInput   = document.getElementById("team_name");
 const captainInput    = document.getElementById("captain");
 const phoneRestInput  = document.getElementById("phone_rest");
@@ -23,6 +23,13 @@ const foodQtyInput    = document.getElementById("food_qty");
 
 // honeypot
 const hpInput         = document.getElementById("hp");
+
+// профіль (тримаємо в змінній, а не в інпутах)
+let profileData = {
+  teamName:    "",
+  captainName: "",
+  phone:       ""
+};
 
 // ------------ утиліти -------------
 function showMessage(text, type = "ok") {
@@ -39,7 +46,6 @@ function setLoading(isLoading) {
 }
 
 // ------------ завантаження відкритих етапів -------------
-// stages, де isRegistrationOpen == true
 async function loadOpenStages() {
   if (!eventOptionsEl) return;
 
@@ -92,7 +98,6 @@ async function loadOpenStages() {
 async function loadProfile(user) {
   if (!user) throw new Error("Немає авторизованого користувача");
 
-  // users/{uid}
   const userSnap = await db.collection("users").doc(user.uid).get();
   if (!userSnap.exists) {
     throw new Error("Профіль користувача не знайдено. Завершіть реєстрацію акаунта.");
@@ -125,27 +130,33 @@ async function loadProfile(user) {
     }
   }
 
-  // інпути (readonly)
+  const fullPhone = phoneRest ? `+380${phoneRest}` : "";
+
+  // зберігаємо в profileData
+  profileData = {
+    teamName:    teamName || "Без назви",
+    captainName,
+    phone:       fullPhone
+  };
+
+  // якщо поля раптом є в HTML — заповнюємо їх тільки для відображення
   if (teamNameInput) {
-    teamNameInput.value = teamName || "Без назви";
-    teamNameInput.disabled = false;
+    teamNameInput.value = profileData.teamName;
+    teamNameInput.disabled = true;
     teamNameInput.readOnly = true;
   }
-
   if (captainInput) {
-    captainInput.value = captainName;
-    captainInput.disabled = false;
+    captainInput.value = profileData.captainName;
+    captainInput.disabled = true;
     captainInput.readOnly = true;
   }
-
   if (phoneRestInput) {
     phoneRestInput.value = phoneRest;
-    phoneRestInput.disabled = false;
+    phoneRestInput.disabled = true;
     phoneRestInput.readOnly = true;
   }
-
   if (phoneHiddenInput) {
-    phoneHiddenInput.value = phoneRest ? `+380${phoneRest}` : "";
+    phoneHiddenInput.value = fullPhone;
   }
 }
 
@@ -171,7 +182,6 @@ function initFoodLogic() {
 // ------------ ініціалізація -------------
 auth.onAuthStateChanged(async user => {
   try {
-    // список відкритих етапів
     await loadOpenStages();
 
     if (!user) {
@@ -232,24 +242,23 @@ if (form) {
       foodQty = q;
     }
 
-    const teamName    = (teamNameInput && teamNameInput.value) || "";
-    const captainName = (captainInput && captainInput.value) || "";
-    const phone       = (phoneHiddenInput && phoneHiddenInput.value) || "";
+    // беремо дані з профілю, а не з форми
+    const { teamName, captainName, phone } = profileData;
 
     try {
       setLoading(true);
       showMessage("");
 
       await db.collection("registrations").add({
-        userUid:     user.uid,
+        userUid:   user.uid,
         teamName,
         captainName,
         phone,
         stageId,
         food,
-        foodQty:     foodQty ?? null,
-        status:      "pending_payment",
-        createdAt:   firebase.firestore.FieldValue.serverTimestamp()
+        foodQty:   foodQty ?? null,
+        status:    "pending_payment",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
 
       showMessage(

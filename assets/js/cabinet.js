@@ -1,5 +1,5 @@
 // assets/js/cabinet.js
-// Кабінет учасника STOLAR CARP
+// Кабінет учасника STOLAR CARP — читає users + teams + аватар
 
 (function () {
   const auth    = window.scAuth;
@@ -7,35 +7,50 @@
   const storage = window.scStorage;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізований.");
+    console.error("Firebase не ініціалізований (cabinet.js)");
     return;
   }
 
-  const statusEl           = document.getElementById("cabinetStatus");
-  const wrapperEl          = document.getElementById("cabinetWrapper");
+  const guestBlock      = document.getElementById("cabinet-guest");
+  const userBlock       = document.getElementById("cabinet-user");
+  const profileSubtitle = document.getElementById("profileSubtitle");
 
-  const teamNameEl         = document.getElementById("teamNameText");
-  const captainTextEl      = document.getElementById("captainText");
-  const userRoleTextEl     = document.getElementById("userRoleText");
-  const userPhoneTextEl    = document.getElementById("userPhoneText");
-  const joinCodePillEl     = document.getElementById("joinCodePill");
-  const joinCodeTextEl     = document.getElementById("joinCodeText");
+  const teamNameEl      = document.getElementById("teamNameText");
+  const captainTextEl   = document.getElementById("captainText");
+  const userRoleTextEl  = document.getElementById("userRoleText");
+  const userPhoneTextEl = document.getElementById("userPhoneText");
+  const joinCodePillEl  = document.getElementById("joinCodePill");
+  const joinCodeTextEl  = document.getElementById("joinCodeText");
 
-  const avatarImgEl        = document.getElementById("cabinetAvatarImg");
-  const avatarPlaceholderEl= document.getElementById("cabinetAvatarPlaceholder");
-  const avatarInputEl      = document.getElementById("avatarFile");
-  const avatarBtnEl        = document.getElementById("avatarUploadBtn");
-  const avatarMsgEl        = document.getElementById("avatarMsg");
+  const avatarImgEl         = document.getElementById("cabinetAvatarImg");
+  const avatarPlaceholderEl = document.getElementById("cabinetAvatarPlaceholder");
+  const avatarInputEl       = document.getElementById("avatarFile");
+  const avatarBtnEl         = document.getElementById("avatarUploadBtn");
+  const avatarMsgEl         = document.getElementById("avatarMsg");
 
   const membersContainerEl = document.getElementById("membersContainer");
   const statsWrapperEl     = document.getElementById("statsWrapper");
 
-  function setStatus(text) {
-    if (statusEl) statusEl.textContent = text;
+  const loginBtn = document.getElementById("cabinetLoginBtn");
+
+  // кнопка "Увійти / Зареєструватися" веде на auth.html
+  if (loginBtn) {
+    loginBtn.addEventListener("click", () => {
+      window.location.href = "auth.html";
+    });
   }
 
-  function showWrapper() {
-    if (wrapperEl) wrapperEl.style.display = "block";
+  function showGuest(message) {
+    if (guestBlock) guestBlock.style.display = "block";
+    if (userBlock)  userBlock.style.display = "none";
+    if (profileSubtitle && message) {
+      profileSubtitle.textContent = message;
+    }
+  }
+
+  function showUser() {
+    if (guestBlock) guestBlock.style.display = "none";
+    if (userBlock)  userBlock.style.display = "block";
   }
 
   function setAvatarUrl(url) {
@@ -48,13 +63,12 @@
   // ----- основне завантаження профілю -----
   async function loadCabinet(user) {
     try {
-      setStatus("Завантаження профілю…");
+      if (profileSubtitle) profileSubtitle.textContent = "Завантаження профілю…";
 
       // 1. user doc
       const userSnap = await db.collection("users").doc(user.uid).get();
       if (!userSnap.exists) {
-        setStatus("Анкета користувача не знайдена. Завершіть реєстрацію на сторінці входу.");
-        showWrapper();
+        showGuest("Анкета користувача не знайдена. Завершіть реєстрацію на сторінці входу.");
         return;
       }
 
@@ -77,6 +91,9 @@
       // аватар
       if (u.avatarUrl) {
         setAvatarUrl(u.avatarUrl);
+      } else if (avatarImgEl && avatarPlaceholderEl) {
+        avatarImgEl.style.display = "none";
+        avatarPlaceholderEl.style.display = "flex";
       }
 
       // 2. team doc
@@ -102,7 +119,7 @@
         joinCodeTextEl.textContent = joinCode;
       }
 
-      // 3. список учасників (простий варіант — тільки поточний)
+      // 3. список учасників (поки що показуємо тільки поточного)
       if (membersContainerEl) {
         membersContainerEl.innerHTML = "";
         const row = document.createElement("div");
@@ -117,7 +134,7 @@
         membersContainerEl.appendChild(row);
       }
 
-      // 4. статистика (поки з user.seasonStats)
+      // 4. статистика (з user.seasonStats, якщо є)
       if (statsWrapperEl) {
         const stats = u.seasonStats || {};
         const total = stats.totalWeightKg ?? "—";
@@ -142,31 +159,26 @@
         `;
       }
 
-      setStatus("");  // прибираємо текст "перевірка..."
-      showWrapper();
+      if (profileSubtitle) profileSubtitle.textContent = "Профіль завантажено.";
+      showUser();
 
     } catch (err) {
       console.error(err);
-      setStatus("Помилка завантаження кабінету: " + (err.message || err));
-      showWrapper();
+      showGuest("Помилка завантаження кабінету: " + (err.message || err));
     }
   }
 
   // ----- слухач авторизації -----
   auth.onAuthStateChanged((user) => {
     if (!user) {
-      setStatus("Ви не увійшли. Перехід на сторінку входу…");
-      // даємо секунду, щоб текст мигнув
-      setTimeout(() => {
-        window.location.href = "auth.html";
-      }, 800);
+      showGuest("Щоб побачити кабінет, увійдіть у систему.");
       return;
     }
     loadCabinet(user);
   });
 
   // ----- завантаження аватара -----
-  if (avatarBtnEl && avatarInputEl) {
+  if (avatarBtnEl && avatarInputEl && storage) {
     avatarBtnEl.addEventListener("click", async (e) => {
       e.preventDefault();
       const user = auth.currentUser;
@@ -189,7 +201,7 @@
       }
 
       try {
-        avatarMsgEl && (avatarMsgEl.textContent = "Завантаження…");
+        if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
 
         const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
         const path = `avatars/${user.uid}/avatar.${ext}`;
@@ -199,7 +211,7 @@
         await db.collection("users").doc(user.uid).update({ avatarUrl: url });
         setAvatarUrl(url);
 
-        avatarMsgEl && (avatarMsgEl.textContent = "Аватар оновлено!");
+        if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
       } catch (err) {
         console.error(err);
         if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження.";

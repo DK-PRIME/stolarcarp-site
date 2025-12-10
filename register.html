@@ -330,16 +330,16 @@
       <span class="logo__text">STOLAR CARP</span>  
     </a>  
     <nav class="nav" id="nav">
-  <a href="/index.html" class="nav__link">Головна</a>
-  <a href="/rules.html" class="nav__link">Регламент</a>
-  <a href="/register.html" class="nav__link">Реєстрація</a>
-  <a href="/live.html" class="nav__link">Live</a>
-  <a href="/rating.html" class="nav__link">Рейтинг</a>
-  <a href="/lakes.html" class="nav__link">Водойми</a>
-  <a href="/sponsors.html" class="nav__link">Спонсори</a>
-  <a href="/events/index.html" class="nav__link">Архів</a>
-  <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-</nav>  
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>  
     <button class="burger" id="burger"><span></span><span></span><span></span></button>  
   </div>  
 </header>  
@@ -371,7 +371,10 @@
       <!-- ФОРМА -->
       <div class="card register-form-card">  
         <h2>Форма реєстрації</h2>  
-        <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>  
+        <p class="form__hint">
+          Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.
+          Дані команди підтягуються з вашого акаунта (Мій кабінет).
+        </p>  
 
         <form id="regForm" class="form" novalidate>  
           <!-- honeypot (антибот) -->
@@ -397,61 +400,57 @@
           </div>  
 
           <!-- Назва команди (тільки для читання, з Firebase) -->
-<div class="field">  
-  <label for="team_name">  
-    Назва команди <span style="color:var(--accent);">*</span>  
-  </label>  
-  <input  
-    type="text"  
-    id="team_name"  
-    name="team_name"  
-    class="input"  
-    placeholder="Завантажую назву команди..."  
-    readonly  
-    disabled  
-  />  
-</div>  
+          <div class="field">  
+            <label for="team_name">  
+              Назва команди <span style="color:var(--accent);">*</span>  
+            </label>  
+            <input  
+              type="text"  
+              id="team_name"  
+              name="team_name"  
+              class="input"  
+              placeholder="Завантажую назву команди..."  
+              readonly  
+              disabled  
+            />  
+          </div>  
 
-<!-- Капітан (тільки для читання) -->
-<div class="field">  
-  <label for="captain">  
-    Капітан команди <span style="color:var(--accent);">*</span>  
-  </label>  
-  <input  
-    type="text"  
-    id="captain"  
-    name="captain"  
-    class="input"  
-    placeholder="Завантажую дані капітана..."  
-    readonly  
-    disabled  
-  />  
-</div>  
+          <!-- Капітан (тільки для читання) -->
+          <div class="field">  
+            <label for="captain">  
+              Капітан команди <span style="color:var(--accent);">*</span>  
+            </label>  
+            <input  
+              type="text"  
+              id="captain"  
+              name="captain"  
+              class="input"  
+              placeholder="Завантажую дані капітана..."  
+              readonly  
+              disabled  
+            />  
+          </div>  
 
-<!-- Телефон (тільки для читання) -->
-<div class="field">  
-  <label for="phone_rest">  
-    Номер телефону капітана <span style="color:var(--accent);">*</span>  
-  </label>  
-  <div class="phone-wrap">  
-    <span class="phone-prefix">+380</span>  
-    <input  
-      type="tel"  
-      id="phone_rest"  
-      inputmode="numeric"  
-      placeholder="XXXXXXXXX"  
-      readonly  
-      disabled  
-    />  
-  </div>  
-  <input type="hidden" id="phone" name="phone" />  
-  <div class="hint" style="font-size:12px;color:var(--muted);">  
-    Номер підтягнеться з вашого профілю.  
-  </div>  
-</div>  
+          <!-- Телефон (тільки для читання) -->
+          <div class="field">  
+            <label for="phone_rest">  
+              Номер телефону капітана <span style="color:var(--accent);">*</span>  
+            </label>  
+            <div class="phone-wrap">  
+              <span class="phone-prefix">+380</span>  
+              <input  
+                type="tel"  
+                id="phone_rest"  
+                inputmode="numeric"  
+                placeholder="XXXXXXXXX"  
+                readonly  
+                disabled  
+              />  
+            </div>  
+            <!-- повний номер для відправки у Firestore -->
             <input type="hidden" id="phone" name="phone" />  
             <div class="hint" style="font-size:12px;color:var(--muted);">  
-              Вказуйте номер капітана для звʼязку по турніру.  
+              Номер автоматично підтягнеться з вашого профілю.  
             </div>  
           </div>  
 
@@ -515,7 +514,7 @@
 
           <p class="form__hint" style="margin-top:6px;">  
             ⚠️ Після відправки заявки у вас є <b>24 години</b>, щоб здійснити оплату.  
-            Якщо оплата не буде зарахована — заявка буде автоматично анульована.  
+            Якщо оплата не буде зарахована — заявка може бути анульована організатором.  
           </p>  
         </form>  
       </div>  
@@ -556,6 +555,6 @@
 </footer>  
 
 <!-- Firebase логіка реєстрації на етап -->
-  <script type="module" src="assets/js/register_firebase.js"></script>
+<script type="module" src="assets/js/register_firebase.js"></script>
 </body>  
 </html>

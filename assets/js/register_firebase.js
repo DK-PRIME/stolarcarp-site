@@ -1,30 +1,51 @@
 // assets/js/register_firebase.js
-// Реєстрація на ЕТАПИ зі сторони STOLAR CARP
-// Використовує compat-версію Firebase через firebase-init.js
+// Реєстрація на ЕТАП: читає users/teams, пише в registrations.
+// DK Prime читає цю ж колекцію і підтверджує заявку.
 
-import { auth, db, firebase } from "./firebase-init.js";
+import { auth, db } from "./firebase-init.js";
 
-// ------- DOM-елементи -------
-const form            = document.getElementById("regForm");
-const eventOptionsEl  = document.getElementById("eventOptions");
-const msgEl           = document.getElementById("msg");
-const submitBtn       = document.getElementById("submitBtn");
-const spinnerEl       = document.getElementById("spinner");
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// харчування
-const foodQtyField    = document.getElementById("foodQtyField");
-const foodQtyInput    = document.getElementById("food_qty");
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-// honeypot
-const hpInput         = document.getElementById("hp");
+// DOM
+const form           = document.getElementById("regForm");
+const eventOptionsEl = document.getElementById("eventOptions");
+const msgEl          = document.getElementById("msg");
+const submitBtn      = document.getElementById("submitBtn");
+const spinnerEl      = document.getElementById("spinner");
+const hpInput        = document.getElementById("hp");
+const foodQtyField   = document.getElementById("foodQtyField");
+const foodQtyInput   = document.getElementById("food_qty");
+const profileSummary = document.getElementById("profileSummary");
+const copyCardBtn    = document.getElementById("copyCard");
+const cardNumEl      = document.getElementById("cardNum");
 
-// ------------ утиліти -------------
+// кеш даних профілю
+let currentUser = null;
+let profileData = {
+  teamId: null,
+  teamName: "",
+  captainName: "",
+  phone: ""
+};
+
 function showMessage(text, type = "ok") {
   if (!msgEl) return;
   msgEl.textContent = text;
   msgEl.classList.remove("ok", "err");
-  if (type === "ok") msgEl.classList.add("ok");
-  else msgEl.classList.add("err");
+  msgEl.classList.add(type === "ok" ? "ok" : "err");
 }
 
 function setLoading(isLoading) {
@@ -33,18 +54,31 @@ function setLoading(isLoading) {
   spinnerEl.classList.toggle("spinner--on", isLoading);
 }
 
-// ------------ завантаження відкритих етапів -------------
+// ----------------- копіювання карти -----------------
+if (copyCardBtn && cardNumEl) {
+  copyCardBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(cardNumEl.textContent.trim());
+      copyCardBtn.textContent = "Скопійовано ✔";
+      setTimeout(() => {
+        copyCardBtn.textContent = "Скопіювати номер картки";
+      }, 1200);
+    } catch {
+      alert("Не вдалося скопіювати номер. Скопіюйте вручну.");
+    }
+  });
+}
+
+// ----------------- відкриті етапи -----------------
 async function loadOpenStages() {
   if (!eventOptionsEl) return;
 
   try {
-    console.log("[STOLAR] Читаю stages...");
-    const snap = await db
-      .collection("stages")
-      .where("isRegistrationOpen", "==", true)
-      .get();
-
-    console.log("[STOLAR] stages size:", snap.size);
+    const q = query(
+      collection(db, "stages"),
+      where("isRegistrationOpen", "==", true)
+    );
+    const snap = await getDocs(q);
 
     eventOptionsEl.innerHTML = "";
 
@@ -79,13 +113,66 @@ async function loadOpenStages() {
       eventOptionsEl.appendChild(wrapper);
     });
   } catch (err) {
-    console.error("[STOLAR] Помилка завантаження етапів:", err);
+    console.error("Помилка завантаження етапів:", err);
     eventOptionsEl.innerHTML =
-      '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити етапи. Перевір Firebase-конфіг та права доступу.</p>';
+      '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити етапи. Спробуйте пізніше.</p>';
   }
 }
 
-// ------------ логіка харчування -------------
+// ----------------- завантаження профілю -----------------
+async function loadProfile(user) {
+  if (!user) throw new Error("Немає авторизованого користувача");
+
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+  if (!userSnap.exists()) {
+    throw new Error("Профіль користувача не знайдено. Створіть акаунт на сторінці Акаунт.");
+  }
+
+  const u = userSnap.data();
+
+  const fullName = u.fullName || user.email || "";
+  const rawPhone = (u.phone || "").replace(/\s+/g, "");
+  let phone = rawPhone;
+  // нормалізуємо на +380...
+  if (rawPhone && !rawPhone.startsWith("+380")) {
+    if (rawPhone.startsWith("380")) phone = "+" + rawPhone;
+    else if (rawPhone.length === 9) phone = "+380" + rawPhone;
+  }
+
+  let teamName = "";
+  let teamId   = u.teamId || null;
+
+  if (teamId) {
+    try {
+      const teamSnap = await getDoc(doc(db, "teams", teamId));
+      if (teamSnap.exists()) {
+        const t = teamSnap.data();
+        teamName = t.name || t.teamName || "";
+      }
+    } catch (err) {
+      console.warn("Не вдалося прочитати команду:", err);
+    }
+  }
+
+  profileData = {
+    teamId,
+    teamName: teamName || "Без назви",
+    captainName: fullName,
+    phone: phone || ""
+  };
+
+  if (profileSummary) {
+    profileSummary.innerHTML = `
+      Профіль:
+      <br>Команда: <b>${profileData.teamName}</b>
+      <br>Капітан: <b>${profileData.captainName}</b>
+      <br>Телефон: <b>${profileData.phone || "не вказано"}</b>
+    `;
+  }
+}
+
+// ----------------- харчування -----------------
 function initFoodLogic() {
   const foodRadios = document.querySelectorAll('input[name="food"]');
   if (!foodRadios.length || !foodQtyField || !foodQtyInput) return;
@@ -102,32 +189,38 @@ function initFoodLogic() {
   update();
 }
 
-// ------------ ініціалізація -------------
-auth.onAuthStateChanged(async user => {
-  try {
-    await loadOpenStages();   // етапи вантажимо завжди
+// ----------------- auth state -----------------
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user || null;
 
-    if (!user) {
-      showMessage(
-        "Щоб подати заявку, увійдіть у свій акаунт (Мій кабінет).",
-        "err"
-      );
-      if (submitBtn) submitBtn.disabled = true;
-      return;
+  await loadOpenStages().catch(console.error);
+
+  if (!user) {
+    showMessage(
+      "Щоб подати заявку, увійдіть у свій акаунт (сторінка «Акаунт»).",
+      "err"
+    );
+    if (submitBtn) submitBtn.disabled = true;
+    if (profileSummary) {
+      profileSummary.textContent = "Ви не залогінені. Спочатку увійдіть у акаунт STOLAR CARP.";
     }
+    return;
+  }
 
-    // якщо треба буде тягнути назву команди/капітана — додамо тут,
-    // зараз форма використовує тільки етап + харчування
+  try {
+    await loadProfile(user);
     initFoodLogic();
+    if (submitBtn) submitBtn.disabled = false;
   } catch (err) {
     console.error(err);
-    showMessage(err.message || "Помилка ініціалізації сторінки", "err");
+    showMessage(err.message || "Помилка завантаження профілю.", "err");
+    if (submitBtn) submitBtn.disabled = true;
   }
 });
 
-// ------------ сабміт форми -------------
+// ----------------- сабміт форми -----------------
 if (form) {
-  form.addEventListener("submit", async e => {
+  form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     if (hpInput && hpInput.value) {
@@ -135,8 +228,7 @@ if (form) {
       return;
     }
 
-    const user = auth.currentUser;
-    if (!user) {
+    if (!currentUser) {
       showMessage("Спочатку увійдіть у свій акаунт.", "err");
       return;
     }
@@ -165,21 +257,41 @@ if (form) {
       foodQty = q;
     }
 
+    // дістаємо назву етапу (щоб не шукати потім в адмінці)
+    let stageTitle = "";
+    try {
+      const stSnap = await getDoc(doc(db, "stages", stageId));
+      if (stSnap.exists()) {
+        const st = stSnap.data();
+        stageTitle =
+          st.fullTitle ||
+          st.title ||
+          `${st.seasonTitle || ""} — ${st.name || st.stageName || "Етап"}`;
+      }
+    } catch (err) {
+      console.warn("Не вдалося прочитати документ етапу:", err);
+    }
+
     try {
       setLoading(true);
       showMessage("");
 
-      await db.collection("registrations").add({
-        userUid:   user.uid,
+      await addDoc(collection(db, "registrations"), {
+        userUid:   currentUser.uid,
+        teamId:    profileData.teamId,
+        teamName:  profileData.teamName,
+        captain:   profileData.captainName,
+        phone:     profileData.phone,
         stageId,
+        stageTitle,
         food,
         foodQty:   foodQty ?? null,
-        status:    "pending_payment",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        status:    "pending_payment", // DK Prime може змінити на confirmed / rejected
+        createdAt: serverTimestamp()
       });
 
       showMessage(
-        "Заявку відправлено! Після оплати внеску організатор підтвердить участь.",
+        "Заявку відправлено! Після оплати організатор підтвердить участь у адмінці.",
         "ok"
       );
       form.reset();
@@ -187,7 +299,7 @@ if (form) {
     } catch (err) {
       console.error("Помилка відправки заявки:", err);
       showMessage(
-        `Помилка відправки заявки: ${err.code || err.message}`,
+        `Помилка відправки заявки: ${err.message || err}`,
         "err"
       );
     } finally {

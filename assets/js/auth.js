@@ -1,6 +1,6 @@
-// assets/js/auth.js  — STOLAR CARP (auth.html)
+// assets/js/auth.js — STOLAR CARP (auth.html)
 
-import { auth, db } from "../../firebase-config.js";
+import { auth, db } from "./firebase-init.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -10,7 +10,6 @@ import {
 import {
   doc,
   setDoc,
-  getDoc,
   collection,
   query,
   where,
@@ -38,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.textContent = loading ? "Зачекайте..." : labelDefault;
   };
 
-  // -------------------- РЕЄСТРАЦІЯ --------------------
+  // ---------- РЕЄСТРАЦІЯ ----------
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -74,17 +73,13 @@ document.addEventListener("DOMContentLoaded", () => {
         let finalJoinCode = joinCode;
 
         if (isCaptain) {
-          // нова команда
           const teamRef = doc(collection(db, "teams"));
           teamId = teamRef.id;
 
-          // простий код 6 символів
           finalJoinCode = (
             Math.random().toString(36).slice(2, 8) +
             Date.now().toString(36)
-          )
-            .toUpperCase()
-            .slice(0, 6);
+          ).toUpperCase().slice(0, 6);
 
           await setDoc(teamRef, {
             name: teamName,
@@ -93,7 +88,6 @@ document.addEventListener("DOMContentLoaded", () => {
             createdAt: serverTimestamp()
           });
         } else {
-          // шукаємо існуючу команду по joinCode
           const q = query(
             collection(db, "teams"),
             where("joinCode", "==", joinCode.toUpperCase())
@@ -106,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
           teamId = snap.docs[0].id;
         }
 
-        // 3. записуємо профіль користувача в users/{uid}
+        // 3. профіль користувача
         await setDoc(doc(db, "users", uid), {
           fullName,
           email,
@@ -125,7 +119,6 @@ document.addEventListener("DOMContentLoaded", () => {
           "ok"
         );
 
-        // 4. редірект у кабінет
         setTimeout(() => {
           window.location.href = "cabinet.html";
         }, 900);
@@ -147,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // -------------------- ВХІД --------------------
+  // ---------- ВХІД ----------
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();

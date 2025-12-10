@@ -1,8 +1,7 @@
 // assets/js/firebase-init.js
-// Єдиний ініт Firebase для STOLAR CARP (і далі для DK Prime)
+// ЄДИНА ініціалізація Firebase для STOLAR CARP + DK PRIME
 
 (function () {
-  // Конфіг твого проекту STOLAR CARP
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
     authDomain: "stolar-carp.firebaseapp.com",
@@ -12,8 +11,8 @@
     appId: "1:1019636788370:web:af1c1ecadb683df212ca4b"
   };
 
-  // Ініціалізація (щоб не інітити двічі)
-  if (firebase.apps.length === 0) {
+  // Ініціалізуємо додаток один раз
+  if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
   }
 
@@ -21,12 +20,12 @@
   const db = firebase.firestore();
   const storage = firebase.storage();
 
-  // Наші "офіційні" хендли для всіх скриптів STOLAR CARP
+  // Глобальні змінні для всього проекту
   window.scAuth = auth;
   window.scDb = db;
   window.scStorage = storage;
 
-  // Для сумісності зі старими скриптами
+  // Для сумісності, якщо десь ще використовується window.auth / db / storage
   window.auth = auth;
   window.db = db;
   window.storage = storage;

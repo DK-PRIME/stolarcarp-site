@@ -1,159 +1,340 @@
-// ---- ІМПОРТИ ----
-import { auth, db, storage } from "./firebase-init.js";
+// assets/js/cabinet.js
+import { auth, db, storage, firebase } from "./firebase-init.js";
 
-// ---- ОТРИМУЄМО ЕЛЕМЕНТИ З HTML ----
-const guestBlock = document.getElementById("cabinet-guest");
-const userBlock  = document.getElementById("cabinet-user");
-
-const teamNameEl = document.getElementById("teamNameText");
-const captainEl  = document.getElementById("captainText");
-const userRoleEl = document.getElementById("userRoleText");
-const phoneEl    = document.getElementById("userPhoneText");
-
+const profileSubtitle = document.getElementById("profileSubtitle");
+const teamNameText = document.getElementById("teamNameText");
+const captainText = document.getElementById("captainText");
+const userRoleText = document.getElementById("userRoleText");
+const userPhoneText = document.getElementById("userPhoneText");
 const joinCodePill = document.getElementById("joinCodePill");
-const joinCodeEl   = document.getElementById("joinCodeText");
+const joinCodeText = document.getElementById("joinCodeText");
+
+const avatarFileInput = document.getElementById("avatarFile");
+const avatarUploadBtn = document.getElementById("avatarUploadBtn");
+const avatarImg = document.getElementById("cabinetAvatarImg");
+const avatarPlaceholder = document.getElementById("cabinetAvatarPlaceholder");
+const avatarMsg = document.getElementById("avatarMsg");
 
 const membersContainer = document.getElementById("membersContainer");
-
-const avatarInput   = document.getElementById("avatarFile");
-const avatarBtn     = document.getElementById("avatarUploadBtn");
-const avatarImg     = document.getElementById("cabinetAvatarImg");
-const avatarPlaceholder = document.getElementById("cabinetAvatarPlaceholder");
-const avatarMsg     = document.getElementById("avatarMsg");
-
 const statsWrapper = document.getElementById("statsWrapper");
+const errorBox = document.getElementById("cabinetError");
 
+function setError(msg) {
+  if (!errorBox) return;
+  errorBox.textContent = msg;
+  errorBox.style.color = "#fca5a5";
+}
 
-// ---- ВХІД/ВИХІД ДЛЯ ГОСТЯ ----
-auth.onAuthStateChanged(async (user) => {
-  if (!user) {
-    guestBlock.style.display = "block";
-    userBlock.style.display  = "none";
-    return;
+function clearError() {
+  if (!errorBox) return;
+  errorBox.textContent = "";
+  errorBox.style.color = "#6b7280";
+}
+
+// --------- пошук команди користувача ---------
+async function findUsersTeam(userUid, userData) {
+  // 1) якщо є поле teamId
+  if (userData.teamId) {
+    const tDoc = await db.collection("teams").doc(userData.teamId).get();
+    if (tDoc.exists) {
+      return { id: tDoc.id, data: tDoc.data() };
+    }
   }
 
-  guestBlock.style.display = "none";
-  userBlock.style.display  = "block";
+  // 2) команда де ownerUid = uid (капітан створив)
+  const ownSnap = await db
+    .collection("teams")
+    .where("ownerUid", "==", userUid)
+    .limit(1)
+    .get();
 
-  await loadCabinet(user);
-});
+  if (!ownSnap.empty) {
+    const d = ownSnap.docs[0];
+    return { id: d.id, data: d.data() };
+  }
 
+  // 3) запасний варіант — по joinCode
+  if (userData.joinCode) {
+    const joinSnap = await db
+      .collection("teams")
+      .where("joinCode", "==", userData.joinCode)
+      .limit(1)
+      .get();
 
-// ---- ЗАВАНТАЖЕННЯ ДАНИХ ----
+    if (!joinSnap.empty) {
+      const d = joinSnap.docs[0];
+      return { id: d.id, data: d.data() };
+    }
+  }
+
+  return null;
+}
+
+// --------- завантаження кабінету ---------
 async function loadCabinet(user) {
-  const userRef = db.collection("users").doc(user.uid);
-  const snap = await userRef.get();
+  clearError();
+  if (profileSubtitle) profileSubtitle.textContent = "Завантаження профілю…";
 
-  if (!snap.exists) {
-    captainEl.textContent = "Заповніть профіль на сторінці реєстрації";
-    return;
-  }
+  try {
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (!userDoc.exists) {
+      if (profileSubtitle) {
+        profileSubtitle.textContent =
+          "Профіль користувача не знайдено. Завершіть реєстрацію акаунта.";
+      }
+      return;
+    }
 
-  const data = snap.data();
+    const u = userDoc.data();
 
-  // --- ОСНОВНА ІНФА ---
-  const fullName = data.fullName || data.name || "Без імені";
-  captainEl.textContent = `Капітан: ${fullName}`;
-  phoneEl.textContent   = data.phone || "-";
-  userRoleEl.textContent = data.role === "captain" ? "Капітан" : "Учасник";
+    const fullName = u.fullName || u.name || user.email || "Без імені";
+    const phone = u.phone || "";
+    const roleRaw = u.role || "member";
 
-  // --- КОМАНДА ---
-  if (data.teamId) {
-    const t = await db.collection("teams").doc(data.teamId).get();
-    if (t.exists) {
-      const team = t.data();
-      teamNameEl.textContent = team.name || "Без назви";
+    let roleLabel = "Учасник команди";
+    if (roleRaw === "captain") roleLabel = "Капітан команди";
+    else if (roleRaw === "admin") roleLabel = "Адмін / суддя";
 
-      if (team.joinCode) {
-        joinCodePill.style.display = "inline-block";
-        joinCodeEl.textContent = team.joinCode;
+    // Основні поля
+    if (captainText) {
+      captainText.textContent = `${fullName} — ${roleLabel.toLowerCase()}`;
+    }
+    if (userRoleText) userRoleText.textContent = roleLabel;
+    if (userPhoneText) userPhoneText.textContent = phone || "—";
+
+    // Аватар
+    const avatarUrl = u.avatarUrl;
+    if (avatarUrl) {
+      if (avatarImg) {
+        avatarImg.src = avatarUrl;
+        avatarImg.style.display = "block";
+      }
+      if (avatarPlaceholder) {
+        avatarPlaceholder.style.display = "none";
+      }
+    } else {
+      if (avatarPlaceholder) {
+        const initials = fullName
+          .trim()
+          .split(/\s+/)
+          .map((p) => p[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
+        avatarPlaceholder.textContent = initials || "SC";
       }
     }
-  } else {
-    teamNameEl.textContent = "Команда не створена";
+
+    // Команда
+    const team = await findUsersTeam(user.uid, u);
+    if (team) {
+      const t = team.data;
+      if (teamNameText) {
+        teamNameText.textContent = t.name || t.teamName || "Без назви";
+      }
+      if (t.joinCode && joinCodeText && joinCodePill) {
+        joinCodeText.textContent = t.joinCode;
+        joinCodePill.style.display = "inline-flex";
+      } else if (joinCodePill) {
+        joinCodePill.style.display = "none";
+      }
+    } else {
+      if (teamNameText) {
+        teamNameText.textContent = u.teamName || "Без назви";
+      }
+      if (joinCodePill) joinCodePill.style.display = "none";
+    }
+
+    if (profileSubtitle) {
+      profileSubtitle.textContent = "Ваш профіль успішно завантажено.";
+    }
+
+    // Учасники
+    await loadMembers(u, team);
+
+    // Статистика
+    loadStats(u);
+
+  } catch (err) {
+    console.error(err);
+    if (profileSubtitle) {
+      profileSubtitle.textContent = "Сталася помилка при завантаженні профілю.";
+    }
+    setError(err.message || "Не вдалося прочитати дані з Firestore.");
   }
-
-  // --- АВАТАР ---
-  if (data.avatarUrl) {
-    avatarImg.src = data.avatarUrl;
-    avatarImg.style.display = "block";
-    avatarPlaceholder.style.display = "none";
-  }
-
-  // --- УЧАСНИКИ КОМАНДИ ---
-  loadMembers(data.teamId);
-
-  // --- ДОСЯГНЕННЯ ---
-  loadStats(data.teamId);
 }
 
+async function loadMembers(userData, teamObj) {
+  if (!membersContainer) return;
 
-// ---- ЗАВАНТАЖЕННЯ УЧАСНИКІВ ----
-async function loadMembers(teamId) {
+  membersContainer.innerHTML = "";
+
+  let teamId = userData.teamId;
+  if (!teamId && teamObj) teamId = teamObj.id;
+
   if (!teamId) {
-    membersContainer.innerHTML = `<div class="cabinet-small-muted">Команда не створена</div>`;
+    membersContainer.innerHTML =
+      '<div class="cabinet-small-muted">Команда ще не привʼязана. Завершіть реєстрацію капітана або приєднайтесь до команди за кодом.</div>';
     return;
   }
 
-  const q = await db.collection("users").where("teamId", "==", teamId).get();
+  const snap = await db
+    .collection("users")
+    .where("teamId", "==", teamId)
+    .get();
 
-  let html = "";
-  q.forEach((doc) => {
-    const u = doc.data();
-    html += `
-      <div class="member-row">
-        <div class="member-avatar">
-          <img src="${u.avatarUrl || "assets/img/avatar-default.png"}">
-        </div>
-        <div class="member-meta">
-          <div class="member-name">${u.fullName || "Учасник"}</div>
-          <div class="member-role">${u.role === "captain" ? "Капітан" : "Учасник"}</div>
-        </div>
-      </div>
-    `;
+  if (snap.empty) {
+    membersContainer.innerHTML =
+      '<div class="cabinet-small-muted">Поки що в команді тільки ви. Інші учасники зʼявляться після приєднання за кодом.</div>';
+    return;
+  }
+
+  snap.forEach((doc) => {
+    const m = doc.data();
+
+    const row = document.createElement("div");
+    row.className = "member-row";
+
+    const avatar = document.createElement("div");
+    avatar.className = "member-avatar";
+    const initials = (m.name || m.fullName || "?")
+      .split(/\s+/)
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+    avatar.textContent = initials;
+
+    const meta = document.createElement("div");
+    meta.className = "member-meta";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "member-name";
+    nameEl.textContent = m.name || m.fullName || "Без імені";
+
+    const roleEl = document.createElement("div");
+    roleEl.className = "member-role";
+    const r = m.role || "member";
+    let rLabel = "Учасник";
+    if (r === "captain") rLabel = "Капітан";
+    else if (r === "admin") rLabel = "Адмін / суддя";
+    roleEl.textContent = rLabel;
+
+    meta.appendChild(nameEl);
+    meta.appendChild(roleEl);
+
+    row.appendChild(avatar);
+    row.appendChild(meta);
+
+    membersContainer.appendChild(row);
   });
-
-  membersContainer.innerHTML = html;
 }
 
+function loadStats(userData) {
+  if (!statsWrapper) return;
 
-// ---- ДОСЯГНЕННЯ (ПОКИ ДЕМКА) ----
-async function loadStats(teamId) {
-  statsWrapper.innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">Загальний улов</div>
-      <div class="stat-value">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Big Fish</div>
-      <div class="stat-value">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Рейтинг</div>
-      <div class="stat-value">—</div>
-    </div>
-  `;
+  statsWrapper.innerHTML = "";
+
+  const stats = userData.seasonStats || {};
+  const total = stats.totalWeightKg ?? "—";
+  const big = stats.bigFishKg ?? "—";
+  const rank = stats.rank ?? "—";
+
+  const grid = document.createElement("div");
+  grid.className = "stats-grid";
+
+  function addStat(label, value, unit) {
+    const card = document.createElement("div");
+    card.className = "stat-card";
+
+    const l = document.createElement("div");
+    l.className = "stat-label";
+    l.textContent = label;
+
+    const v = document.createElement("div");
+    v.className = "stat-value";
+    v.textContent = value;
+
+    if (unit) {
+      const uEl = document.createElement("span");
+      uEl.className = "stat-unit";
+      uEl.textContent = unit;
+      v.appendChild(uEl);
+    }
+
+    card.appendChild(l);
+    card.appendChild(v);
+    grid.appendChild(card);
+  }
+
+  addStat("Загальний улов за сезон", total, total === "—" ? "" : "кг");
+  addStat("Найбільша риба (Big Fish)", big, big === "—" ? "" : "кг");
+  addStat("Місце у сезонному рейтингу", rank, "");
+
+  statsWrapper.appendChild(grid);
 }
 
+// --------- завантаження аватара ---------
+if (avatarUploadBtn && avatarFileInput) {
+  avatarUploadBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
 
-// ---- АВАТАР ----
-avatarBtn?.addEventListener("click", async () => {
-  const user = auth.currentUser;
-  if (!user) return;
+    const user = auth.currentUser;
+    if (!user) {
+      setError("Щоб змінити аватар, увійдіть у акаунт.");
+      return;
+    }
 
-  const file = avatarInput.files[0];
-  if (!file) return;
+    const file = avatarFileInput.files[0];
+    if (!file) {
+      setError("Оберіть файл зображення.");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("Файл має бути зображенням (jpg, png…).");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Файл завеликий (максимум 5 МБ).");
+      return;
+    }
 
-  const ref = storage.ref(`avatars/${user.uid}/${file.name}`);
-  await ref.put(file);
-  const url = await ref.getDownloadURL();
+    clearError();
+    if (avatarMsg) avatarMsg.textContent = "Завантаження…";
 
-  await db.collection("users").doc(user.uid).update({
-    avatarUrl: url
+    try {
+      const ext = file.name.split(".").pop().toLowerCase() || "jpg";
+      const path = `avatars/${user.uid}/avatar.${ext}`;
+      const ref = storage.ref().child(path);
+
+      const snap = await ref.put(file);
+      const url = await snap.ref.getDownloadURL();
+
+      await db.collection("users").doc(user.uid).update({ avatarUrl: url });
+
+      if (avatarImg) {
+        avatarImg.src = url;
+        avatarImg.style.display = "block";
+      }
+      if (avatarPlaceholder) {
+        avatarPlaceholder.style.display = "none";
+      }
+
+      if (avatarMsg) avatarMsg.textContent = "Збережено ✔";
+    } catch (err) {
+      console.error(err);
+      if (avatarMsg) avatarMsg.textContent = "Помилка при завантаженні.";
+      setError("Не вдалося завантажити фото. Спробуйте ще раз.");
+    }
   });
+}
 
-  avatarImg.src = url;
-  avatarImg.style.display = "block";
-  avatarPlaceholder.style.display = "none";
-  avatarMsg.textContent = "Оновлено!";
+// --------- слухач авторизації ---------
+auth.onAuthStateChanged((user) => {
+  if (!user) {
+    // в кабінет заходять тільки залогінені
+    window.location.href = "auth.html";
+    return;
+  }
+  loadCabinet(user);
 });

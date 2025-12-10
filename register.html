@@ -3,295 +3,127 @@
 <head>  
   <meta charset="utf-8">  
   <meta name="viewport" content="width=device-width, initial-scale=1">  
-  <title>Реєстрація — STOLAR CARP</title>
+  <title>Реєстрація на етап — STOLAR CARP</title>
 
-  <!-- Favicon & App Icon -->
   <link rel="icon" type="image/png" href="assets/favicon.png">  
   <link rel="apple-touch-icon" href="assets/favicon.png">  
   <meta name="theme-color" content="#1a1a1a">
 
-  <!-- Головні стилі сайту -->
   <link rel="stylesheet" href="assets/css/main.css">  
   <script defer src="assets/js/config.js"></script>
 
-  <!-- Локальні стилі тільки для сторінки реєстрації -->
   <style>
-    body.register-page{
-      background:var(--bg);
-    }
-
-    .section--narrow{
-      max-width:1100px;
-      margin:0 auto;
-    }
-
+    body.register-page{background:var(--bg);}
+    .section--narrow{max-width:1100px;margin:0 auto;}
     .register-hero{
-      margin-top:14px;
-      margin-bottom:22px;
-      padding:18px 16px 16px;
-      border-radius:16px;
-      background:linear-gradient(145deg,#14141d,#08080d);
-      border:1px solid #262636;
+      margin-top:14px;margin-bottom:22px;padding:18px 16px 16px;border-radius:16px;
+      background:linear-gradient(145deg,#14141d,#08080d);border:1px solid #262636;
       box-shadow:var(--shadow);
     }
-
     .register-hero__kicker{
-      font-size:.72rem;
-      text-transform:uppercase;
-      letter-spacing:.18em;
-      color:var(--muted);
-      margin-bottom:6px;
-      display:flex;
-      align-items:center;
-      gap:8px;
+      font-size:.72rem;text-transform:uppercase;letter-spacing:.18em;
+      color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;
     }
-
     .register-hero__kicker-tag{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      width:22px;
-      height:22px;
-      border-radius:999px;
+      display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:999px;
       background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      font-weight:800;
-      font-size:.75rem;
-      color:#000;
+      font-weight:800;font-size:.75rem;color:#000;
       box-shadow:0 0 8px rgba(0,0,0,.7);
     }
-
     .register-hero h1{
-      margin:0 0 8px;
-      font-size:clamp(22px,3.4vw,28px);
-      font-weight:800;
-      letter-spacing:.06em;
-      text-transform:uppercase;
+      margin:0 0 8px;font-size:clamp(22px,3.4vw,28px);
+      font-weight:800;letter-spacing:.06em;text-transform:uppercase;
     }
-
-    .register-hero h1 .strong{
-      font-size:clamp(24px,3.8vw,30px);
-    }
-
     .register-hero .title-gradient{
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
+      -webkit-background-clip:text;background-clip:text;color:transparent;
     }
-
     .register-hero p{
-      margin:0;
-      color:var(--muted);
-      font-size:.92rem;
-      max-width:720px;
+      margin:0;color:var(--muted);font-size:.92rem;max-width:720px;
     }
-
     .register-hero__divider{
-      margin-top:10px;
-      width:120px;
-      height:2px;
-      border-radius:999px;
+      margin-top:10px;width:120px;height:2px;border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
       box-shadow:0 0 10px rgba(246,195,76,.5);
     }
-
     .register-layout{
-      display:grid;
-      grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
-      gap:18px;
-      align-items:flex-start;
+      display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
+      gap:18px;align-items:flex-start;
     }
-
-    @media (max-width:860px){
-      .register-layout{
-        grid-template-columns:1fr;
-      }
-    }
+    @media (max-width:860px){.register-layout{grid-template-columns:1fr;}}
 
     .register-form-card h2{
-      margin:0 0 6px;
-      font-size:1.05rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
+      margin:0 0 6px;font-size:1.05rem;text-transform:uppercase;letter-spacing:.08em;
     }
+    .form__hint{font-size:.8rem;color:var(--muted);}
 
-    .form__hint{
-      font-size:.8rem;
-      color:var(--muted);
-    }
-
-    .register-page .input,
     .register-page input[type="text"],
     .register-page input[type="tel"],
     .register-page input[type="number"]{
-      background:#0f0f14 !important;
-      border:1px solid #2a2a39 !important;
-      color:#fff !important;
-      padding:10px 14px !important;
-      border-radius:10px !important;
-      font-size:.96rem;
+      background:#0f0f14;border:1px solid #2a2a39;color:#fff;
+      padding:10px 14px;border-radius:10px;font-size:.96rem;
     }
-
-    .register-page .input::placeholder,
-    .register-page input::placeholder{
-      color:#6b7280;
-    }
-
-    .register-page .input:focus,
+    .register-page input::placeholder{color:#6b7280;}
     .register-page input:focus{
-      outline:none;
-      border-color:var(--accent) !important;
+      outline:none;border-color:var(--accent);
       box-shadow:0 0 6px rgba(246,195,76,0.5);
     }
 
-    .field{
-      display:grid;
-      gap:6px;
-      margin-bottom:12px;
-    }
+    .field{display:grid;gap:6px;margin-bottom:12px;}
+    .field label{font-size:.9rem;font-weight:500;}
+    #foodQtyField.field--disabled{opacity:.55;}
 
-    .field label{
-      font-size:.9rem;
-      font-weight:500;
-    }
-
-    #foodQtyField.field--disabled{
-      opacity:.55;
-    }
-
-    .event-options{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      padding-top:2px;
-    }
-
+    .event-options{display:flex;flex-direction:column;gap:6px;padding-top:2px;}
     .event-item{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 10px;
-      border-radius:10px;
-      background:#05060c;
-      border:1px solid #262636;
-      cursor:pointer;
-      font-size:.9rem;
+      display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;
+      background:#05060c;border:1px solid #262636;cursor:pointer;font-size:.9rem;
     }
-
-    .event-item:hover{
-      border-color:var(--accent);
-    }
-
+    .event-item:hover{border-color:var(--accent);}
     .event-item input[type="radio"]{
-      width:18px;
-      height:18px;
-      accent-color:#22c55e;
-      flex-shrink:0;
+      width:18px;height:18px;accent-color:#22c55e;flex-shrink:0;
     }
 
-    .radio-row{
-      display:flex;
-      flex-wrap:wrap;
-      gap:16px;
-    }
+    .radio-row{display:flex;flex-wrap:wrap;gap:16px;}
+    .radio-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:.9rem;}
 
-    .radio-row label{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      cursor:pointer;
-      font-size:.9rem;
-    }
-
-    .form-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-top:4px;
-    }
-
+    .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;}
     .spinner{
-      width:18px;
-      height:18px;
-      border-radius:50%;
-      border:3px solid rgba(255,255,255,.2);
-      border-top-color:#fff;
+      width:18px;height:18px;border-radius:50%;
+      border:3px solid rgba(255,255,255,.2);border-top-color:#fff;
       display:none;
     }
-
-    .spinner--on{
-      display:inline-block;
-      animation:spin .9s linear infinite;
-    }
-
+    .spinner--on{display:inline-block;animation:spin .9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
 
-    .form-msg{
-      margin-top:6px;
-      font-weight:600;
-      font-size:.9rem;
-    }
-
+    .form-msg{margin-top:6px;font-weight:600;font-size:.9rem;}
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
 
     .card--payment{
-      background:#05060c;
-      border:1px solid #262636;
-      box-shadow:var(--shadow);
+      background:#05060c;border:1px solid #262636;box-shadow:var(--shadow);
     }
-
     .card-payment-title{
-      font-weight:600;
-      margin-bottom:6px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      text-transform:uppercase;
-      font-size:.84rem;
-      letter-spacing:.12em;
-      color:#e5e7eb;
+      font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px;
+      text-transform:uppercase;font-size:.84rem;letter-spacing:.12em;color:#e5e7eb;
     }
-
     .card-payment-title span{
-      width:20px;
-      height:20px;
-      border-radius:50%;
+      width:20px;height:20px;border-radius:50%;
       background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:.9rem;
-      color:#000;
-      font-weight:800;
+      display:inline-flex;align-items:center;justify-content:center;
+      font-size:.9rem;color:#000;font-weight:800;
     }
-
     .card-number{
-      font-weight:600;
-      letter-spacing:.16em;
-      padding:8px 10px;
-      border-radius:10px;
-      background:#020308;
-      border:1px solid #33384a;
-      display:inline-block;
-      margin:4px 0;
-      font-size:.9rem;
+      font-weight:600;letter-spacing:.16em;padding:8px 10px;border-radius:10px;
+      background:#020308;border:1px solid #33384a;display:inline-block;
+      margin:4px 0;font-size:.9rem;
     }
+    .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
 
-    .card-note{
-      font-size:.8rem;
-      color:var(--muted);
-      margin-top:6px;
+    .profile-summary{
+      font-size:.85rem;color:var(--muted);margin-bottom:10px;
     }
-
-    .header *:focus,
-    .header *:focus-visible,
-    .header a:focus,
-    .header a:focus-visible,
-    .header button:focus,
-    .header button:focus-visible{
-      outline:none !important;
-    }
+    .profile-summary b{color:#e5e7eb;}
   </style>
 </head>  
 
@@ -312,7 +144,7 @@
       <a href="/lakes.html" class="nav__link">Водойми</a>
       <a href="/sponsors.html" class="nav__link">Спонсори</a>
       <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      <a href="/auth.html" class="nav__link">Акаунт</a>
     </nav>  
     <button class="burger" id="burger"><span></span><span></span><span></span></button>  
   </div>  
@@ -327,13 +159,11 @@
         SEASON 2026 · ENTRY
       </div>
       <h1 class="title-gradient">
-        <span>РЕЄСТРАЦІЯ НА ТУРНІР</span>
-        <span class="strong">STOLAR CARP 2026</span>
+        <span>РЕЄСТРАЦІЯ НА ЕТАП</span>
       </h1>
       <p>
-        Подайте заявку на участь у багатоетапному турнірі STOLAR CARP 2026.  
-        Дані команди та капітана вже збережені у вашому акаунті (Мій кабінет) 
-        та не вводяться на цій сторінці.
+        Виберіть відкритий етап, налаштуйте харчування — і подайте заявку.
+        Дані команди беруться з вашого акаунта STOLAR CARP.
       </p>
       <div class="register-hero__divider"></div>
     </div>
@@ -342,31 +172,28 @@
 
       <!-- ФОРМА -->
       <div class="card register-form-card">  
-        <h2>Форма реєстрації</h2>  
+        <h2>Форма реєстрації на етап</h2>  
         <p class="form__hint">
-          Ви обираєте лише етап, опції харчування та підтверджуєте регламент.  
-          Назва команди, капітан і телефон привʼязані до акаунта.
+          Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.
         </p>  
+
+        <!-- коротка інфа про профіль -->
+        <div id="profileSummary" class="profile-summary">
+          Профіль: завантаження...
+        </div>
 
         <form id="regForm" class="form" novalidate>  
           <!-- honeypot -->
-          <input  
-            type="text"  
-            name="hp"  
-            id="hp"  
-            autocomplete="off"  
-            style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"  
-          />  
+          <input
+            type="text"
+            name="hp"
+            id="hp"
+            autocomplete="off"
+            style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"
+          />
 
-          <!-- fingerprint (на майбутнє, якщо треба) -->
-          <input type="hidden" id="fp" name="fp" />  
-
-          <!-- приховані поля для команди / капітана / телефону,
-               щоб їх заповнив register_firebase.js з профілю -->
-          <input type="hidden" id="team_name" name="team_name" />
-          <input type="hidden" id="captain"   name="captain"   />
-          <input type="hidden" id="phone_rest" name="phone_rest" />
-          <input type="hidden" id="phone"     name="phone"     />
+          <!-- fingerprint, якщо захочеш додати -->
+          <input type="hidden" id="fp" name="fp">
 
           <!-- Етап -->
           <div class="field">  
@@ -380,8 +207,8 @@
           <div class="field">  
             <label>Харчування від організаторів? <span style="color:var(--accent);">*</span></label>  
             <div class="radio-row">  
-              <label><input type="radio" name="food" value="Так" required /> <span>Так</span></label>  
-              <label><input type="radio" name="food" value="Ні" /> <span>Ні</span></label>  
+              <label><input type="radio" name="food" value="Так" required> <span>Так</span></label>  
+              <label><input type="radio" name="food" value="Ні"> <span>Ні</span></label>  
             </div>  
           </div>  
 
@@ -392,13 +219,12 @@
               type="number"
               id="food_qty"
               name="food_qty"
-              class="input"
               min="1"
               max="6"
               inputmode="numeric"
               placeholder="Вкажіть кількість, якщо замовляєте харчування"
             />
-            <div class="hint" style="font-size:12px;color:var(--muted);">
+            <div class="form__hint">
               Якщо харчування не потрібне — залиште поле порожнім.
             </div>
           </div>
@@ -406,7 +232,8 @@
           <!-- Підтвердження регламенту -->
           <div class="field">  
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">  
-              <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">  
+              <input type="checkbox" id="rules" required
+                     style="transform:scale(1.3);accent-color:#f6c34c;">  
               <span>Підтверджую, що ознайомлений із
                 <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">
                   регламентом турніру
@@ -416,11 +243,18 @@
           </div>  
 
           <div class="form-actions">  
-            <button type="submit" id="submitBtn" class="btn btn--primary">Подати заявку</button>  
+            <button type="submit" id="submitBtn" class="btn btn--primary">
+              Подати заявку
+            </button>  
             <div id="spinner" class="spinner" aria-hidden="true"></div>  
           </div>
 
           <div id="msg" class="form-msg"></div>
+
+          <p class="form__hint" style="margin-top:6px;">  
+            Після подачі заявки організатор бачить її в адмінці DK Prime і
+            підтверджує участь після оплати внеску.
+          </p>  
         </form>  
       </div>  
 
@@ -432,8 +266,8 @@
         <p>Сума внеску: <b>3500 ₴</b> на банківську картку:</p>  
         <p>Номер картки:</p>
         <p><span id="cardNum" class="card-number">4874 0700 5068 8793</span></p>
-        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">  
-          Скопіювати номер картки  
+        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
+          Скопіювати номер картки
         </button>  
         <p class="card-note">
           У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
@@ -455,7 +289,7 @@
   </div>  
 </footer>
 
-<!-- Логіка реєстрації на етап (сама імпортує firebase-init.js) -->
+<!-- Логіка реєстрації на етап -->
 <script type="module" src="assets/js/register_firebase.js"></script>
 
 </body>  

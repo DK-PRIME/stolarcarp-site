@@ -24,7 +24,7 @@
 
     .cabinet-kicker{
       font-size:.78rem;
-      letter-spacing:.18em;
+      letter-spacing:.18ем;
       text-transform:uppercase;
       color:#9ca3af;
       display:flex;
@@ -70,12 +70,6 @@
       gap:18px;
     }
 
-    @media (max-width:900px){
-      .cabinet-layout{
-        grid-template-columns:1fr;
-      }
-    }
-
     .card{
       background:#020617;
       border-radius:18px;
@@ -102,11 +96,12 @@
       color:#9ca3af;
     }
 
-    .cabinet-small-muted{
-      font-size:.8rem;
-      color:#6b7280;
-      margin-top:4px;
+    .cabinet-msg{
+      margin-top:6px;
+      font-size:.85rem;
     }
+    .cabinet-msg.ok{color:#4ade80;}
+    .cabinet-msg.err{color:#fca5a5;}
 
     /* --------- Профіль команди --------- */
     .team-header{
@@ -155,7 +150,7 @@
 
     .avatar-upload input[type="file"]{
       font-size:.75rem;
-      max-width:180px;
+      max-width:160px;
     }
 
     .avatar-small-btn{
@@ -301,11 +296,11 @@
       margin-left:3px;
     }
 
-    #avatarMsg{
-      font-size:.78rem;
+    .cabinet-small-muted{
+      font-size:.8rem;
+      color:#6b7280;
+      margin-top:4px;
     }
-    #avatarMsg.ok{color:#22c55e;}
-    #avatarMsg.err{color:#ef4444;}
   </style>
 </head>
 <body class="cabinet-page">
@@ -342,73 +337,71 @@
         <span>МІЙ КАБІНЕТ</span>
       </h1>
       <p class="cabinet-subtitle">
-        Ваш профіль, команда, учасники та досягнення сезону STOLAR CARP.
+        Тут відображаються ваша команда, учасники та досягнення у сезоні STOLAR CARP.
       </p>
     </div>
 
-    <div class="cabinet-layout" id="cabinetContent">
+    <div class="cabinet-layout" id="cabinetRoot" style="display:none;">
+      <div class="card card--soft" style="margin-bottom:16px;">
+        <h2 class="card-title">Команда та профіль</h2>
+        <p class="card-subtitle" id="profileSubtitle">
+          Завантаження профілю…
+        </p>
+        <div id="cabinetMsg" class="cabinet-msg"></div>
 
-      <div id="cabinet-user">
-
-        <!-- ПРОФІЛЬ КОМАНДИ -->
-        <div class="card card--soft" style="margin-bottom:16px;">
-          <h2 class="card-title">Команда та профіль</h2>
-          <p class="card-subtitle" id="profileSubtitle">
-            Завантаження профілю…
-          </p>
-
-          <div class="team-header">
-            <div class="team-avatar-wrap">
-              <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар" style="display:none;">
-              <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
-            </div>
-
-            <div class="team-main">
-              <div class="team-name" id="teamNameText">Команда…</div>
-              <div class="team-tagline" id="captainText">Капітан…</div>
-
-              <div class="team-meta">
-                <div class="meta-pill">
-                  <strong>Роль:</strong> <span id="userRoleText">–</span>
-                </div>
-                <div class="meta-pill">
-                  <strong>Телефон:</strong> <span id="userPhoneText">–</span>
-                </div>
-                <div class="meta-pill" id="joinCodePill" style="display:none;">
-                  <strong>Код команди:</strong> <span id="joinCodeText"></span>
-                </div>
-              </div>
-
-              <div class="avatar-upload">
-                <label for="avatarFile">Аватар учасника:</label>
-                <input type="file" id="avatarFile" accept="image/*" />
-                <button id="avatarUploadBtn" class="avatar-small-btn">Зберегти</button>
-                <span id="avatarMsg"></span>
-              </div>
-            </div>
+        <div class="team-header">
+          <div class="team-avatar-wrap">
+            <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар" style="display:none;">
+            <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
           </div>
 
-          <div class="members-list">
-            <div class="members-title">Склад команди</div>
-            <div id="membersContainer">
-              <div class="cabinet-small-muted">Завантаження списку учасників…</div>
+          <div class="team-main">
+            <div class="team-name" id="teamNameText">Команда…</div>
+            <div class="team-tagline" id="captainText">Капітан…</div>
+
+            <div class="team-meta">
+              <div class="meta-pill">
+                <strong>Роль:</strong> <span id="userRoleText">–</span>
+              </div>
+              <div class="meta-pill">
+                <strong>Телефон:</strong> <span id="userPhoneText">–</span>
+              </div>
+              <div class="meta-pill" id="joinCodePill" style="display:none;">
+                <strong>Код команди:</strong> <span id="joinCodeText"></span>
+              </div>
+            </div>
+
+            <div class="avatar-upload">
+              <label for="avatarFile">Аватар учасника:</label>
+              <input type="file" id="avatarFile" accept="image/*" />
+              <button id="avatarUploadBtn" class="avatar-small-btn">Зберегти</button>
+              <span id="avatarMsg" class="cabinet-small-muted"></span>
             </div>
           </div>
         </div>
 
-        <!-- ДОСЯГНЕННЯ -->
-        <div class="card">
-          <h2 class="card-title">Досягнення команди</h2>
-          <p class="card-subtitle">
-            Результати сезону та Big Fish.
-          </p>
-
-          <div id="statsWrapper">
-            <div class="cabinet-small-muted">Завантаження…</div>
+        <div class="members-list">
+          <div class="members-title">Склад команди</div>
+          <div id="membersContainer">
+            <div class="cabinet-small-muted">Завантаження списку учасників…</div>
           </div>
         </div>
       </div>
 
+      <div class="card">
+        <h2 class="card-title">Досягнення команди</h2>
+        <p class="card-subtitle">
+          Підсумки виступів у сезоні STOLAR CARP (дані підтягуються з адмінки).
+        </p>
+
+        <div id="statsWrapper">
+          <div class="cabinet-small-muted">Завантаження статистики…</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="cabinetLoading" class="cabinet-small-muted" style="margin-top:20px;">
+      Перевірка доступу до кабінету…
     </div>
   </section>
 </main>
@@ -423,15 +416,14 @@
   </div>
 </footer>
 
-<!-- Firebase (той самий варіант, що й на auth.html) -->
+<!-- Firebase (compat, як на auth.html) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<!-- УВАГА: модулі! -->
-<script type="module" src="assets/js/firebase-init.js"></script>
-<script type="module" src="assets/js/cabinet.js"></script>
+<script src="assets/js/firebase-init.js"></script>
+<script src="assets/js/cabinet.js"></script>
 
 </body>
 </html>

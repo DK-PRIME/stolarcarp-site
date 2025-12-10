@@ -1,15 +1,17 @@
 // assets/js/auth.js
 // Реєстрація акаунта + вхід. Пише у Firestore: users, teams.
+// ПРАЦЮЄ ЧЕРЕЗ firebase-init.js (scAuth, scDb).
 
 (function () {
-  const auth = window.scAuth;
-  const db   = window.scDb;
+  const auth = window.scAuth || window.auth;
+  const db   = window.scDb   || window.db;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізований (auth.js)");
+    console.error("Firebase не ініціалізовано. Перевір скрипти firebase-*-compat та firebase-init.js");
     return;
   }
 
+  // Елементи форм
   const signupForm = document.getElementById("signupForm");
   const loginForm  = document.getElementById("loginForm");
   const signupMsg  = document.getElementById("signupMsg");
@@ -64,15 +66,16 @@
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         const uid  = cred.user.uid;
 
-        // 2. створюємо / знаходимо команду
+        // 2. створюємо / шукаємо команду
         let teamId = null;
         let finalJoinCode = joinCode;
 
         if (isCaptain) {
+          // doc() без аргумента — новий teamId
           const teamRef = db.collection("teams").doc();
           teamId = teamRef.id;
 
-          // Генеруємо joinCode, якщо не хочеш вручну
+          // простий joinCode 6 символів
           finalJoinCode = (
             Math.random().toString(36).slice(2, 8) +
             Date.now().toString(36)
@@ -91,17 +94,17 @@
             "ok"
           );
         } else {
-          // шукаємо команду по joinCode
-          const snap = await db
-            .collection("teams")
+          // учасник приєднується по joinCode
+          const snap = await db.collection("teams")
             .where("joinCode", "==", finalJoinCode)
+            .limit(1)
             .get();
 
           if (snap.empty) {
             throw new Error("Команду з таким кодом не знайдено.");
           }
-          const doc = snap.docs[0];
-          teamId = doc.id;
+
+          teamId = snap.docs[0].id;
 
           showMsg(
             signupMsg,
@@ -110,7 +113,7 @@
           );
         }
 
-        // 3. запис у users/{uid}
+        // 3. запис users/{uid} — ЄДИНА СХЕМА
         await db.collection("users").doc(uid).set({
           fullName,
           email,
@@ -121,6 +124,7 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
+        // 4. редірект у кабінет
         setTimeout(() => {
           window.location.href = "cabinet.html";
         }, 900);
@@ -128,10 +132,10 @@
       } catch (err) {
         console.error(err);
         let text = err.message || "Сталася помилка під час реєстрації.";
-        if (text.includes("auth/email-already-in-use")) {
+        if (String(text).includes("auth/email-already-in-use")) {
           text = "Такий email вже використовується.";
         }
-        if (text.includes("auth/invalid-email")) {
+        if (String(text).includes("auth/invalid-email")) {
           text = "Email має некоректний формат.";
         }
         showMsg(signupMsg, text, "err");
@@ -167,9 +171,9 @@
       } catch (err) {
         console.error(err);
         let text = err.message || "Помилка входу.";
-        if (text.includes("auth/wrong-password")) {
+        if (String(text).includes("auth/wrong-password")) {
           text = "Невірний пароль.";
-        } else if (text.includes("auth/user-not-found")) {
+        } else if (String(text).includes("auth/user-not-found")) {
           text = "Користувача з таким email не знайдено.";
         }
         showMsg(loginMsg, text, "err");
@@ -179,7 +183,7 @@
     });
   }
 
-  // якщо вже залогінений і зайшов на auth.html — кидаємо у кабінет
+  // Якщо вже залогінений і зайшов на auth.html — кидаємо у кабінет
   auth.onAuthStateChanged((user) => {
     if (user && window.location.pathname.endsWith("auth.html")) {
       window.location.href = "cabinet.html";

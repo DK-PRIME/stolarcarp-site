@@ -1,34 +1,22 @@
 // assets/js/firebase-init.js
-// Ініціалізація Firebase (COMPAT) для STOLAR CARP
+// ЄДИНА ініціалізація Firebase для STOLAR CARP + DK Prime (MODULAR SDK)
 
-// Переконуємось, що глобальний об'єкт firebase є
-if (typeof firebase === "undefined") {
-  console.error("Firebase SDK (compat) не завантажено. Перевір скрипти в auth.html");
-} else {
-  // Твій config
-  const firebaseConfig = {
-    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
-    authDomain: "stolar-carp.firebaseapp.com",
-    projectId: "stolar-carp",
-    storageBucket: "stolar-carp.firebasestorage.app",
-    messagingSenderId: "1019636788370",
-    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
-    measurementId: "G-VWC07QNS7P"
-  };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // Якщо ще не ініціалізовано — ініціалізуємо
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
-  }
+// ТВОЯ КОНФІГРАЦІЯ
+const firebaseConfig = {
+  apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
+  authDomain: "stolar-carp.firebaseapp.com",
+  projectId: "stolar-carp",
+  storageBucket: "stolar-carp.firebasestorage.app",
+  messagingSenderId: "1019636788370",
+  appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
+  measurementId: "G-VWC07QNS7P"
+};
 
-  // Створюємо сервіси
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
-
-  // Виносимо в window, щоб ними користувалися інші скрипти
-  window.firebase = firebase;
-  window.auth = auth;
-  window.db   = db;
-
-  console.log("Firebase STOLAR CARP ініціалізовано");
-}
+// 1 додаток на проект
+export const app  = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db   = getFirestore(app);

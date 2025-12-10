@@ -24,7 +24,7 @@
 
     .cabinet-kicker{
       font-size:.78rem;
-      letter-spacing:.18ем;
+      letter-spacing:.18em;
       text-transform:uppercase;
       color:#9ca3af;
       display:flex;
@@ -66,7 +66,7 @@
     .cabinet-layout{
       margin-top:18px;
       display:grid;
-      grid-template-columns:minmax(0,1.8fr);
+      grid-template-columns:minmax(0,1fr);
       gap:18px;
     }
 
@@ -96,12 +96,11 @@
       color:#9ca3af;
     }
 
-    .cabinet-msg{
-      margin-top:6px;
-      font-size:.85rem;
+    .cabinet-small-muted{
+      font-size:.8rem;
+      color:#6b7280;
+      margin-top:4px;
     }
-    .cabinet-msg.ok{color:#4ade80;}
-    .cabinet-msg.err{color:#fca5a5;}
 
     /* --------- Профіль команди --------- */
     .team-header{
@@ -119,53 +118,22 @@
       background:radial-gradient(circle at top,#facc15,#f97316,#111827);
       flex-shrink:0;
       position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     .team-avatar{
       width:100%;
       height:100%;
       object-fit:cover;
-      display:block;
+      display:none;
     }
 
     .team-avatar-placeholder{
-      width:100%;
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
       font-weight:800;
       font-size:1.4rem;
       color:#111827;
-    }
-
-    .avatar-upload{
-      margin-top:8px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-size:.8rem;
-      flex-wrap:wrap;
-    }
-
-    .avatar-upload input[type="file"]{
-      font-size:.75rem;
-      max-width:160px;
-    }
-
-    .avatar-small-btn{
-      border-radius:999px;
-      border:none;
-      padding:5px 10px;
-      font-size:.78rem;
-      font-weight:600;
-      background:#0f172a;
-      color:#e5e7eb;
-      cursor:pointer;
-    }
-
-    .avatar-small-btn:hover{
-      background:#111827;
     }
 
     .team-main{
@@ -206,6 +174,34 @@
       font-weight:600;
     }
 
+    .avatar-upload{
+      margin-top:8px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:.8rem;
+    }
+
+    .avatar-upload input[type="file"]{
+      font-size:.75rem;
+      max-width:160px;
+    }
+
+    .avatar-small-btn{
+      border-radius:999px;
+      border:none;
+      padding:5px 10px;
+      font-size:.78rem;
+      font-weight:600;
+      background:#0f172a;
+      color:#e5e7eb;
+      cursor:pointer;
+    }
+
+    .avatar-small-btn:hover{
+      background:#111827;
+    }
+
     /* --------- Учасники --------- */
     .members-list{
       margin-top:10px;
@@ -214,7 +210,7 @@
     }
 
     .members-title{
-      font-size:.86rem;
+      font-size:.86рем;
       text-transform:uppercase;
       letter-spacing:.16em;
       color:#9ca3af;
@@ -227,23 +223,6 @@
       gap:8px;
       padding:5px 0;
       font-size:.88rem;
-    }
-
-    .member-avatar{
-      width:34px;
-      height:34px;
-      border-radius:999px;
-      overflow:hidden;
-      background:#020617;
-      border:1px solid #4b5563;
-      flex-shrink:0;
-    }
-
-    .member-avatar img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
     }
 
     .member-meta{
@@ -266,10 +245,7 @@
       grid-template-columns:repeat(3,minmax(0,1fr));
       gap:10px;
       margin:8px 0 10px;
-    }
-
-    @media (max-width:640px){
-      .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+      font-size:.85rem;
     }
 
     .stat-card{
@@ -277,12 +253,12 @@
       padding:9px 10px;
       background:radial-gradient(circle at top,#0b1120 0,#020617 70%);
       border:1px solid #1f2937;
-      font-size:.8rem;
     }
 
     .stat-label{
       color:#9ca3af;
       margin-bottom:4px;
+      font-size:.78rem;
     }
 
     .stat-value{
@@ -296,11 +272,13 @@
       margin-left:3px;
     }
 
-    .cabinet-small-muted{
-      font-size:.8rem;
-      color:#6b7280;
-      margin-top:4px;
+    /* Повідомлення */
+    #cabinetMsg{
+      margin-top:8px;
+      font-size:.82rem;
     }
+    #cabinetMsg.ok{color:#22c55e;}
+    #cabinetMsg.err{color:#ef4444;}
   </style>
 </head>
 <body class="cabinet-page">
@@ -336,22 +314,24 @@
       <h1 class="cabinet-title">
         <span>МІЙ КАБІНЕТ</span>
       </h1>
-      <p class="cabinet-subtitle">
-        Тут відображаються ваша команда, учасники та досягнення у сезоні STOLAR CARP.
+      <p class="cabinet-subtitle" id="cabinetStatus">
+        Перевірка доступу до кабінету…
       </p>
     </div>
 
-    <div class="cabinet-layout" id="cabinetRoot" style="display:none;">
-      <div class="card card--soft" style="margin-bottom:16px;">
+    <!-- Весь контент зʼявиться тільки після завантаження даних -->
+    <div class="cabinet-layout" id="cabinetContent" style="display:none;">
+
+      <!-- ПРОФІЛЬ КОМАНДИ -->
+      <div class="card card--soft">
         <h2 class="card-title">Команда та профіль</h2>
-        <p class="card-subtitle" id="profileSubtitle">
-          Завантаження профілю…
+        <p class="card-subtitle">
+          Ваш акаунт, команда та базові дані для участі в турнірі.
         </p>
-        <div id="cabinetMsg" class="cabinet-msg"></div>
 
         <div class="team-header">
           <div class="team-avatar-wrap">
-            <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар" style="display:none;">
+            <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар">
             <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
           </div>
 
@@ -373,10 +353,11 @@
 
             <div class="avatar-upload">
               <label for="avatarFile">Аватар учасника:</label>
-              <input type="file" id="avatarFile" accept="image/*" />
+              <input type="file" id="avatarFile" accept="image/*">
               <button id="avatarUploadBtn" class="avatar-small-btn">Зберегти</button>
-              <span id="avatarMsg" class="cabinet-small-muted"></span>
             </div>
+
+            <div id="cabinetMsg"></div>
           </div>
         </div>
 
@@ -388,20 +369,39 @@
         </div>
       </div>
 
+      <!-- ДОСЯГНЕННЯ -->
       <div class="card">
         <h2 class="card-title">Досягнення команди</h2>
         <p class="card-subtitle">
-          Підсумки виступів у сезоні STOLAR CARP (дані підтягуються з адмінки).
+          Підсумки виступів у сезоні STOLAR CARP та Big Fish.
         </p>
 
-        <div id="statsWrapper">
-          <div class="cabinet-small-muted">Завантаження статистики…</div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Загальний улов за сезон</div>
+            <div class="stat-value">
+              <span id="statTotalWeight">—</span><span class="stat-unit">кг</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Найбільша риба (Big Fish)</div>
+            <div class="stat-value">
+              <span id="statBigFish">—</span><span class="stat-unit">кг</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Місце в сезонному рейтингу</div>
+            <div class="stat-value">
+              <span id="statRank">—</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div id="cabinetLoading" class="cabinet-small-muted" style="margin-top:20px;">
-      Перевірка доступу до кабінету…
+        <p class="cabinet-small-muted">
+          Детальна таблиця результатів буде додана після інтеграції з адмінкою DK PRIME.
+        </p>
+      </div>
+
     </div>
   </section>
 </main>
@@ -416,7 +416,7 @@
   </div>
 </footer>
 
-<!-- Firebase (compat, як на auth.html) -->
+<!-- Firebase + ініціалізація (та сама, що й на інших сторінках) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

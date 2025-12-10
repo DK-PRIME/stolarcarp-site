@@ -1,27 +1,12 @@
 // assets/js/register_firebase.js
 // Реєстрація на ЕТАПИ зі сторони STOLAR CARP
+// Використовує compat-версію Firebase через firebase-init.js
 
-import { auth, db } from "./firebase-init.js";
-
-import {
-  onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-  addDoc,
-  serverTimestamp,
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { auth, db, firebase } from "./firebase-init.js";
 
 // ------- DOM-елементи -------
 const form            = document.getElementById("regForm");
 const eventOptionsEl  = document.getElementById("eventOptions");
-const loadingEventsEl = document.getElementById("loading-events");
 const msgEl           = document.getElementById("msg");
 const submitBtn       = document.getElementById("submitBtn");
 const spinnerEl       = document.getElementById("spinner");
@@ -32,14 +17,14 @@ const captainInput    = document.getElementById("captain");
 const phoneRestInput  = document.getElementById("phone_rest");
 const phoneHiddenInput= document.getElementById("phone");
 
-// радіокнопки харчування
+// харчування
 const foodQtyField    = document.getElementById("foodQtyField");
 const foodQtyInput    = document.getElementById("food_qty");
 
 // honeypot
 const hpInput         = document.getElementById("hp");
 
-// ------------ helper’и -------------
+// ------------ утиліти -------------
 function showMessage(text, type = "ok") {
   if (!msgEl) return;
   msgEl.textContent = text;
@@ -54,15 +39,15 @@ function setLoading(isLoading) {
 }
 
 // ------------ завантаження відкритих етапів -------------
+// stages, де isRegistrationOpen == true
 async function loadOpenStages() {
   if (!eventOptionsEl) return;
 
   try {
-    const q = query(
-      collection(db, "stages"),
-      where("isRegistrationOpen", "==", true)
-    );
-    const snap = await getDocs(q);
+    const snap = await db
+      .collection("stages")
+      .where("isRegistrationOpen", "==", true)
+      .get();
 
     eventOptionsEl.innerHTML = "";
 
@@ -72,7 +57,7 @@ async function loadOpenStages() {
       return;
     }
 
-    snap.forEach((docSnap) => {
+    snap.forEach(docSnap => {
       const st = docSnap.data();
       const id = docSnap.id;
 
@@ -81,12 +66,10 @@ async function loadOpenStages() {
         st.title ||
         `${st.seasonTitle || ""} — ${st.name || st.stageName || "Етап"}`;
 
-      const radioId = `stage_${id}`;
-
       const wrapper = document.createElement("label");
       wrapper.className = "event-item";
       wrapper.innerHTML = `
-        <input type="radio" name="stageId" value="${id}" id="${radioId}">
+        <input type="radio" name="stageId" value="${id}">
         <div>
           <div>${title}</div>
           ${
@@ -96,7 +79,6 @@ async function loadOpenStages() {
           }
         </div>
       `;
-
       eventOptionsEl.appendChild(wrapper);
     });
   } catch (err) {
@@ -111,31 +93,30 @@ async function loadProfile(user) {
   if (!user) throw new Error("Немає авторизованого користувача");
 
   // users/{uid}
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  if (!userSnap.exists()) {
-    throw new Error(
-      "Профіль користувача не знайдено. Завершіть реєстрацію акаунта в «Мій кабінет»."
-    );
+  const userSnap = await db.collection("users").doc(user.uid).get();
+  if (!userSnap.exists) {
+    throw new Error("Профіль користувача не знайдено. Завершіть реєстрацію акаунта.");
   }
 
   const u = userSnap.data();
 
   const captainName = u.fullName || u.displayName || user.email || "";
-  const rawPhone = (u.phone || "").replace(/\s+/g, "");
+  const rawPhone    = (u.phone || "").replace(/\s+/g, "");
   let phoneRest = "";
+  if (rawPhone.startsWith("+380")) {
+    phoneRest = rawPhone.substring(4);
+  } else if (rawPhone.startsWith("380")) {
+    phoneRest = rawPhone.substring(3);
+  } else {
+    phoneRest = rawPhone;
+  }
 
-  if (rawPhone.startsWith("+380"))      phoneRest = rawPhone.substring(4);
-  else if (rawPhone.startsWith("380")) phoneRest = rawPhone.substring(3);
-  else                                 phoneRest = rawPhone;
-
-  // команда з users або з окремої колекції teams
+  // команда
   let teamName = u.teamName || "";
   if (u.teamId) {
     try {
-      const teamSnap = await getDoc(doc(db, "teams", u.teamId));
-      if (teamSnap.exists()) {
+      const teamSnap = await db.collection("teams").doc(u.teamId).get();
+      if (teamSnap.exists) {
         const t = teamSnap.data();
         teamName = t.name || t.teamName || teamName;
       }
@@ -144,7 +125,7 @@ async function loadProfile(user) {
     }
   }
 
-  // Записуємо у readonly поля
+  // інпути (readonly)
   if (teamNameInput) {
     teamNameInput.value = teamName || "Без назви";
     teamNameInput.disabled = false;
@@ -164,7 +145,7 @@ async function loadProfile(user) {
   }
 
   if (phoneHiddenInput) {
-    phoneHiddenInput.value = `+380${phoneRest}`;
+    phoneHiddenInput.value = phoneRest ? `+380${phoneRest}` : "";
   }
 }
 
@@ -183,13 +164,14 @@ function initFoodLogic() {
     }
   }
 
-  foodRadios.forEach((r) => r.addEventListener("change", update));
+  foodRadios.forEach(r => r.addEventListener("change", update));
   update();
 }
 
-// ------------ ініціалізація сторінки -------------
-onAuthStateChanged(auth, async (user) => {
+// ------------ ініціалізація -------------
+auth.onAuthStateChanged(async user => {
   try {
+    // список відкритих етапів
     await loadOpenStages();
 
     if (!user) {
@@ -209,9 +191,9 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ------------ надсилання заявки -------------
+// ------------ сабміт форми -------------
 if (form) {
-  form.addEventListener("submit", async (e) => {
+  form.addEventListener("submit", async e => {
     e.preventDefault();
 
     // honeypot
@@ -226,15 +208,13 @@ if (form) {
       return;
     }
 
-    // етап
     const stageRadio = document.querySelector('input[name="stageId"]:checked');
     if (!stageRadio) {
-      showMessage("Обери етап турніру.", "err");
+      showMessage("Оберіть етап турніру.", "err");
       return;
     }
     const stageId = stageRadio.value;
 
-    // харчування
     const foodRadio = document.querySelector('input[name="food"]:checked');
     if (!foodRadio) {
       showMessage("Оберіть, чи потрібне харчування.", "err");
@@ -260,7 +240,7 @@ if (form) {
       setLoading(true);
       showMessage("");
 
-      await addDoc(collection(db, "registrations"), {
+      await db.collection("registrations").add({
         userUid:     user.uid,
         teamName,
         captainName,
@@ -269,7 +249,7 @@ if (form) {
         food,
         foodQty:     foodQty ?? null,
         status:      "pending_payment",
-        createdAt:   serverTimestamp(),
+        createdAt:   firebase.firestore.FieldValue.serverTimestamp()
       });
 
       showMessage(

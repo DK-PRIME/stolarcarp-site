@@ -1,35 +1,34 @@
 // assets/js/firebase-init.js
-// Firebase для сайту STOLAR CARP (compat-версія, щоб працювали auth.js і cabinet.js)
+// Ініціалізація Firebase (COMPAT) для STOLAR CARP
 
-// Підтягуємо COMPAT SDK (старий стиль, але остання версія)
-import firebase from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app-compat.js";
-import "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth-compat.js";
-import "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore-compat.js";
+// Переконуємось, що глобальний об'єкт firebase є
+if (typeof firebase === "undefined") {
+  console.error("Firebase SDK (compat) не завантажено. Перевір скрипти в auth.html");
+} else {
+  // Твій config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
+    authDomain: "stolar-carp.firebaseapp.com",
+    projectId: "stolar-carp",
+    storageBucket: "stolar-carp.firebasestorage.app",
+    messagingSenderId: "1019636788370",
+    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
+    measurementId: "G-VWC07QNS7P"
+  };
 
-// ⚠️ ТУТ ВСТАВЛЯЄШ СВОЮ КОНФІГУРАЦІЮ З FIREBASE CONSOLE
-// Можеш просто СКОПІЮВАТИ firebaseConfig з dk-prime (firebase-config.js)
-const firebaseConfig = {
-  apiKey:        "ТУТ_ТВІЙ_apiKey",
-  authDomain:    "ТУТ_ТВІЙ_authDomain",
-  projectId:     "ТУТ_ТВІЙ_projectId",
-  storageBucket: "ТУТ_ТВІЙ_storageBucket",
-  messagingSenderId: "ТУТ_ТВІЙ_messagingSenderId",
-  appId:         "ТУТ_ТВІЙ_appId"
-};
+  // Якщо ще не ініціалізовано — ініціалізуємо
+  if (firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+  }
 
-// Ініціалізація
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig);
+  // Створюємо сервіси
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+
+  // Виносимо в window, щоб ними користувалися інші скрипти
+  window.firebase = firebase;
+  window.auth = auth;
+  window.db   = db;
+
+  console.log("Firebase STOLAR CARP ініціалізовано");
 }
-
-// Головні сервіси
-const auth = firebase.auth();
-const db   = firebase.firestore();
-
-// Виводимо в глобальний scope (для auth.js, cabinet.js)
-window.firebase = firebase;
-window.auth     = auth;
-window.db       = db;
-
-// І експортимо для модульних скриптів (register_firebase.js)
-export { firebase, auth, db };

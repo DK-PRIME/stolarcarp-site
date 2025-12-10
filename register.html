@@ -396,55 +396,59 @@
             </div>  
           </div>  
 
-          <!-- Назва команди -->
-          <div class="field">  
-            <label for="team_name">  
-              Назва команди <span style="color:var(--accent);">*</span>  
-            </label>  
-            <input  
-              type="text"  
-              id="team_name"  
-              name="team_name"  
-              class="input"  
-              required  
-              minlength="2"  
-              maxlength="100"  
-              placeholder="Введіть назву команди"  
-            />  
-          </div>  
+          <!-- Назва команди (тільки для читання, з Firebase) -->
+<div class="field">  
+  <label for="team_name">  
+    Назва команди <span style="color:var(--accent);">*</span>  
+  </label>  
+  <input  
+    type="text"  
+    id="team_name"  
+    name="team_name"  
+    class="input"  
+    placeholder="Завантажую назву команди..."  
+    readonly  
+    disabled  
+  />  
+</div>  
 
-          <!-- Капітан -->
-          <div class="field">  
-            <label for="captain">  
-              Капітан команди <span style="color:var(--accent);">*</span>  
-            </label>  
-            <input  
-              type="text"  
-              id="captain"  
-              name="captain"  
-              class="input"  
-              required  
-              minlength="2"  
-              maxlength="100"  
-              placeholder="Ім'я та прізвище капітана"  
-            />  
-          </div>  
+<!-- Капітан (тільки для читання) -->
+<div class="field">  
+  <label for="captain">  
+    Капітан команди <span style="color:var(--accent);">*</span>  
+  </label>  
+  <input  
+    type="text"  
+    id="captain"  
+    name="captain"  
+    class="input"  
+    placeholder="Завантажую дані капітана..."  
+    readonly  
+    disabled  
+  />  
+</div>  
 
-          <!-- Телефон -->
-          <div class="field">  
-            <label for="phone_rest">  
-              Номер телефону (формат: +380XXXXXXXXX) <span style="color:var(--accent);">*</span>  
-            </label>  
-            <div class="phone-wrap">  
-              <span class="phone-prefix">+380</span>  
-              <input  
-                type="tel"  
-                id="phone_rest"  
-                inputmode="numeric"  
-                placeholder="XXXXXXXXX"  
-                required  
-              />  
-            </div>  
+<!-- Телефон (тільки для читання) -->
+<div class="field">  
+  <label for="phone_rest">  
+    Номер телефону капітана <span style="color:var(--accent);">*</span>  
+  </label>  
+  <div class="phone-wrap">  
+    <span class="phone-prefix">+380</span>  
+    <input  
+      type="tel"  
+      id="phone_rest"  
+      inputmode="numeric"  
+      placeholder="XXXXXXXXX"  
+      readonly  
+      disabled  
+    />  
+  </div>  
+  <input type="hidden" id="phone" name="phone" />  
+  <div class="hint" style="font-size:12px;color:var(--muted);">  
+    Номер підтягнеться з вашого профілю.  
+  </div>  
+</div>  
             <input type="hidden" id="phone" name="phone" />  
             <div class="hint" style="font-size:12px;color:var(--muted);">  
               Вказуйте номер капітана для звʼязку по турніру.  

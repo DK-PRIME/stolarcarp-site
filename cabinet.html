@@ -17,374 +17,6 @@
       background:#020617;
       color:#e5e7eb;
     }
-
-    .cabinet-hero{
-      padding:26px 0 10px;
-    }
-
-    .cabinet-kicker{
-      font-size:.78rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      color:#9ca3af;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      margin-bottom:6px;
-    }
-
-    .cabinet-kicker-dot{
-      width:10px;
-      height:10px;
-      border-radius:999px;
-      background:linear-gradient(135deg,#facc15,#f97316);
-      box-shadow:0 0 10px rgba(250,204,21,.7);
-    }
-
-    .cabinet-title{
-      margin:0 0 6px;
-      font-size:clamp(22px,3.4vw,30px);
-      font-weight:800;
-      letter-spacing:.06em;
-      text-transform:uppercase;
-    }
-
-    .cabinet-title span{
-      background:linear-gradient(90deg,#facc15 0%,#f97316 40%,#dc2626 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-    }
-
-    .cabinet-subtitle{
-      margin:0;
-      font-size:.95rem;
-      color:#9ca3af;
-      max-width:640px;
-    }
-
-    .cabinet-layout{
-      margin-top:18px;
-      display:grid;
-      grid-template-columns:minmax(0,1.8fr) minmax(0,1.1fr);
-      gap:18px;
-    }
-
-    @media (max-width:900px){
-      .cabinet-layout{
-        grid-template-columns:1fr;
-      }
-    }
-
-    .card{
-      background:#020617;
-      border-radius:18px;
-      border:1px solid #1f2937;
-      box-shadow:0 20px 40px rgba(0,0,0,.75);
-      padding:16px 14px 16px;
-    }
-
-    .card--soft{
-      background:radial-gradient(circle at top,#0b1220 0,#020617 65%);
-    }
-
-    .card-title{
-      margin:0 0 8px;
-      font-size:.9rem;
-      letter-spacing:.14em;
-      text-transform:uppercase;
-      color:#9ca3af;
-    }
-
-    .card-subtitle{
-      margin:0 0 10px;
-      font-size:.86rem;
-      color:#9ca3af;
-    }
-
-    .cabinet-btn-primary{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      padding:9px 18px;
-      border:none;
-      font-size:.95rem;
-      font-weight:600;
-      background:linear-gradient(135deg,#facc15,#f97316);
-      color:#111827;
-      cursor:pointer;
-      box-shadow:0 0 18px rgba(250,204,21,.55);
-    }
-
-    .cabinet-btn-primary:disabled{
-      opacity:.65;
-      cursor:default;
-      box-shadow:none;
-    }
-
-    .cabinet-note{
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius:12px;
-      background:rgba(15,23,42,.95);
-      border:1px solid rgba(148,163,184,.4);
-      font-size:.85rem;
-      color:#e5e7eb;
-    }
-
-    /* --------- Гість / користувач --------- */
-    #cabinet-user{display:none;}
-    .cabinet-hidden{display:none;}
-
-    /* --------- Профіль команди --------- */
-    .team-header{
-      display:flex;
-      align-items:flex-start;
-      gap:14px;
-      margin-bottom:12px;
-    }
-
-    .team-avatar-wrap{
-      width:82px;
-      height:82px;
-      border-radius:18px;
-      overflow:hidden;
-      background:radial-gradient(circle at top,#facc15,#f97316,#111827);
-      flex-shrink:0;
-      position:relative;
-    }
-
-    .team-avatar{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-
-    .team-avatar-placeholder{
-      width:100%;
-      height:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-weight:800;
-      font-size:1.4rem;
-      color:#111827;
-    }
-
-    .avatar-upload{
-      margin-top:8px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      font-size:.8rem;
-    }
-
-    .avatar-upload input[type="file"]{
-      font-size:.75rem;
-      max-width:160px;
-    }
-
-    .avatar-small-btn{
-      border-radius:999px;
-      border:none;
-      padding:5px 10px;
-      font-size:.78rem;
-      font-weight:600;
-      background:#0f172a;
-      color:#e5e7eb;
-      cursor:pointer;
-    }
-
-    .avatar-small-btn:hover{
-      background:#111827;
-    }
-
-    .team-main{
-      flex:1;
-    }
-
-    .team-name{
-      font-size:1.1rem;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      margin-bottom:4px;
-    }
-
-    .team-tagline{
-      font-size:.85rem;
-      color:#9ca3af;
-      margin-bottom:8px;
-    }
-
-    .team-meta{
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      font-size:.8rem;
-    }
-
-    .meta-pill{
-      border-radius:999px;
-      padding:4px 8px;
-      background:#020617;
-      border:1px solid #374151;
-      color:#e5e7eb;
-    }
-
-    .meta-pill strong{
-      color:#facc15;
-      font-weight:600;
-    }
-
-    /* --------- Учасники --------- */
-    .members-list{
-      margin-top:10px;
-      border-top:1px solid #1f2937;
-      padding-top:10px;
-    }
-
-    .members-title{
-      font-size:.86rem;
-      text-transform:uppercase;
-      letter-spacing:.16em;
-      color:#9ca3af;
-      margin-bottom:6px;
-    }
-
-    .member-row{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      padding:5px 0;
-      font-size:.88rem;
-    }
-
-    .member-avatar{
-      width:34px;
-      height:34px;
-      border-radius:999px;
-      overflow:hidden;
-      background:#020617;
-      border:1px solid #4b5563;
-      flex-shrink:0;
-    }
-
-    .member-avatar img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-
-    .member-meta{
-      display:flex;
-      flex-direction:column;
-    }
-
-    .member-name{
-      font-weight:500;
-    }
-
-    .member-role{
-      font-size:.78rem;
-      color:#9ca3af;
-    }
-
-    /* --------- Досягнення --------- */
-    .stats-grid{
-      display:grid;
-      grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:10px;
-      margin:8px 0 10px;
-    }
-
-    @media (max-width:640px){
-      .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
-    }
-
-    .stat-card{
-      border-radius:12px;
-      padding:9px 10px;
-      background:radial-gradient(circle at top,#0b1120 0,#020617 70%);
-      border:1px solid #1f2937;
-      font-size:.8rem;
-    }
-
-    .stat-label{
-      color:#9ca3af;
-      margin-bottom:4px;
-    }
-
-    .stat-value{
-      font-size:1.05rem;
-      font-weight:700;
-    }
-
-    .stat-unit{
-      font-size:.8rem;
-      color:#9ca3af;
-      margin-left:3px;
-    }
-
-    .results-table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:.8rem;
-      margin-top:5px;
-    }
-
-    .results-table th,
-    .results-table td{
-      padding:4px 6px;
-      border-bottom:1px solid #111827;
-    }
-
-    .results-table th{
-      text-align:left;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      color:#9ca3af;
-      font-weight:500;
-      font-size:.72rem;
-      background:#020617;
-    }
-
-    .results-table tbody tr:nth-child(even){
-      background:#020617;
-    }
-
-    .results-table tbody tr:nth-child(odd){
-      background:#020617;
-    }
-
-    .results-section-title{
-      margin:10px 0 4px;
-      font-size:.82rem;
-      text-transform:uppercase;
-      letter-spacing:.16em;
-      color:#9ca3af;
-    }
-
-    .cabinet-small-muted{
-      font-size:.8rem;
-      color:#6b7280;
-      margin-top:4px;
-    }
-
-    /* права колонка */
-    .info-list{
-      font-size:.85rem;
-      color:#d1d5db;
-      margin:6px 0 0;
-      padding-left:18px;
-    }
-
-    .info-list li{
-      margin-bottom:4px;
-    }
   </style>
 </head>
 <body class="cabinet-page">
@@ -412,6 +44,7 @@
 
 <main class="main">
   <section class="container">
+
     <div class="cabinet-hero">
       <div class="cabinet-kicker">
         <span class="cabinet-kicker-dot"></span>
@@ -421,109 +54,70 @@
         <span>МІЙ КАБІНЕТ</span>
       </h1>
       <p class="cabinet-subtitle">
-        Тут відображаються ваша команда, учасники та досягнення у сезоні STOLAR CARP
-        і незалежних турнірах, які ми підʼєднуємо до вашого профілю.
+        Ваш профіль, команда, учасники та досягнення сезону STOLAR CARP.
       </p>
     </div>
 
-    <div class="cabinet-layout">
+    <!-- Єдиний блок для користувача -->
+    <div id="cabinet-user">
 
-      <!-- БЛОК ДЛЯ ГОСТЯ (НЕ ЗАЛОГІНЕНИЙ) -->
-      <div id="cabinet-guest" class="card card--soft">
-        <h2 class="card-title">Доступ учасника</h2>
-        <p class="card-subtitle">
-          Щоб бачити дані команди та подавати заявки на етапи, увійдіть або
-          зареєструйтесь через STOLAR CARP.
-        </p>
+      <!-- ПРОФІЛЬ КОМАНДИ -->
+      <div class="card card--soft" style="margin-bottom:16px;">
+        <h2 class="card-title">Команда та профіль</h2>
+        <p class="card-subtitle" id="profileSubtitle">Завантаження профілю…</p>
 
-        <button id="cabinetLoginBtn" class="cabinet-btn-primary">
-          Увійти / Зареєструватися
-        </button>
-
-        <div class="cabinet-note">
-          Після успішного входу поверніться на цю сторінку — зʼявиться ваш профіль,
-          учасники та історія виступів.
-        </div>
-      </div>
-
-      <!-- БЛОК ДЛЯ ЗАЛОГІНЕНОГО -->
-      <div id="cabinet-user">
-
-        <!-- ПРОФІЛЬ КОМАНДИ -->
-        <div class="card card--soft" style="margin-bottom:16px;">
-          <h2 class="card-title">Команда та профіль</h2>
-          <p class="card-subtitle" id="profileSubtitle">
-            Завантаження профілю…
-          </p>
-
-          <div class="team-header">
-            <div class="team-avatar-wrap">
-              <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар" style="display:none;">
-              <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
-            </div>
-
-            <div class="team-main">
-              <div class="team-name" id="teamNameText">Команда…</div>
-              <div class="team-tagline" id="captainText">Капітан…</div>
-
-              <div class="team-meta">
-                <div class="meta-pill">
-                  <strong>Роль:</strong> <span id="userRoleText">–</span>
-                </div>
-                <div class="meta-pill">
-                  <strong>Телефон:</strong> <span id="userPhoneText">–</span>
-                </div>
-                <div class="meta-pill" id="joinCodePill" style="display:none;">
-                  <strong>Код команди:</strong> <span id="joinCodeText"></span>
-                </div>
-              </div>
-
-              <div class="avatar-upload">
-                <label for="avatarFile">Аватар учасника:</label>
-                <input type="file" id="avatarFile" accept="image/*" />
-                <button id="avatarUploadBtn" class="avatar-small-btn">Зберегти</button>
-                <span id="avatarMsg"></span>
-              </div>
-            </div>
+        <div class="team-header">
+          <div class="team-avatar-wrap">
+            <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар" style="display:none;">
+            <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
           </div>
 
-          <div class="members-list">
-            <div class="members-title">Склад команди</div>
-            <div id="membersContainer">
-              <div class="cabinet-small-muted">Завантаження списку учасників…</div>
+          <div class="team-main">
+            <div class="team-name" id="teamNameText">Команда…</div>
+            <div class="team-tagline" id="captainText">Капітан…</div>
+
+            <div class="team-meta">
+              <div class="meta-pill">
+                <strong>Роль:</strong> <span id="userRoleText">–</span>
+              </div>
+              <div class="meta-pill">
+                <strong>Телефон:</strong> <span id="userPhoneText">–</span>
+              </div>
+              <div class="meta-pill" id="joinCodePill" style="display:none;">
+                <strong>Код команди:</strong> <span id="joinCodeText"></span>
+              </div>
+            </div>
+
+            <div class="avatar-upload">
+              <label for="avatarFile">Аватар:</label>
+              <input type="file" id="avatarFile" accept="image/*" />
+              <button id="avatarUploadBtn" class="avatar-small-btn">Зберегти</button>
+              <span id="avatarMsg"></span>
             </div>
           </div>
         </div>
 
-        <!-- ДОСЯГНЕННЯ -->
-        <div class="card">
-          <h2 class="card-title">Досягнення команди</h2>
-          <p class="card-subtitle">
-            Підсумки виступів у сезоні STOLAR CARP та незалежних турнірах.
-          </p>
-
-          <div id="statsWrapper">
-            <div class="cabinet-small-muted">Завантаження статистики…</div>
+        <!-- УЧАСНИКИ КОМАНДИ -->
+        <div class="members-list">
+          <div class="members-title">Склад команди</div>
+          <div id="membersContainer">
+            <div class="cabinet-small-muted">Завантаження списку…</div>
           </div>
         </div>
       </div>
 
-      <!-- ПРАВА КОЛОНКА: Пояснення -->
-      <aside class="card">
-        <h2 class="card-title">Як працює кабінет</h2>
-        <p class="card-subtitle">
-          Ми поєднуємо ваш акаунт, команду та результати з адмінки DK PRIME.
-        </p>
-        <ul class="info-list">
-          <li><b>Акаунт</b> створюється один раз і закріплюється за людиною.</li>
-          <li><b>Капітан</b> створює команду та отримує код приєднання.</li>
-          <li><b>Учасники</b> заходять у систему та вводять код, щоб приєднатися.</li>
-          <li><b>Результати</b> з етапів записуються в Firestore і зʼявляються тут як статистика.</li>
-          <li>У майбутньому додамо <b>бейджі, нагороди, досягнення</b> за окремі трофеї.</li>
-        </ul>
-      </aside>
+      <!-- ДОСЯГНЕННЯ -->
+      <div class="card">
+        <h2 class="card-title">Досягнення команди</h2>
+        <p class="card-subtitle">Результати сезону та Big Fish.</p>
+
+        <div id="statsWrapper">
+          <div class="cabinet-small-muted">Завантаження…</div>
+        </div>
+      </div>
 
     </div>
+
   </section>
 </main>
 
@@ -537,7 +131,7 @@
   </div>
 </footer>
 
-<!-- Firebase (той самий варіант, що й на auth.html) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>

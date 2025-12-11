@@ -7,7 +7,7 @@
   const db   = window.scDb   || window.db;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізовано. Перевір скрипти firebase-*-compat та firebase-init.js");
+    console.error("Firebase не ініціалізовано. Перевір firebase-*-compat та firebase-init.js");
     return;
   }
 
@@ -47,7 +47,7 @@
 
         const isCaptain = document.getElementById("signupRoleCaptain").checked;
         const teamName  = document.getElementById("signupTeamName").value.trim();
-        const joinCode  = document.getElementById("signupJoinCode").value.trim().toUpperCase();
+        let   joinCode  = document.getElementById("signupJoinCode").value.trim().toUpperCase();
 
         if (!email || !password || !fullName || !phoneFull || !city) {
           throw new Error("Заповніть усі обовʼязкові поля.");
@@ -62,20 +62,20 @@
           throw new Error("Вкажіть код приєднання до команди.");
         }
 
-        // 1. створюємо користувача в Auth
+        // 1. Створюємо користувача в Auth
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         const uid  = cred.user.uid;
 
-        // 2. створюємо / шукаємо команду
+        // 2. Створюємо / шукаємо команду
         let teamId = null;
         let finalJoinCode = joinCode;
 
         if (isCaptain) {
-          // doc() без аргумента — новий teamId
+          // Новий teamId
           const teamRef = db.collection("teams").doc();
           teamId = teamRef.id;
 
-          // простий joinCode 6 символів
+          // Примітивний joinCode 6 символів
           finalJoinCode = (
             Math.random().toString(36).slice(2, 8) +
             Date.now().toString(36)
@@ -94,7 +94,7 @@
             "ok"
           );
         } else {
-          // учасник приєднується по joinCode
+          // Учасник приєднується по joinCode
           const snap = await db.collection("teams")
             .where("joinCode", "==", finalJoinCode)
             .limit(1)
@@ -113,7 +113,7 @@
           );
         }
 
-        // 3. запис users/{uid} — ЄДИНА СХЕМА
+        // 3. users/{uid} — ЄДИНА СХЕМА
         await db.collection("users").doc(uid).set({
           fullName,
           email,
@@ -124,18 +124,17 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        // 4. редірект у кабінет
+        // 4. Редірект у кабінет
         setTimeout(() => {
           window.location.href = "cabinet.html";
-        }, 900);
+        }, 800);
 
       } catch (err) {
         console.error(err);
         let text = err.message || "Сталася помилка під час реєстрації.";
         if (String(text).includes("auth/email-already-in-use")) {
           text = "Такий email вже використовується.";
-        }
-        if (String(text).includes("auth/invalid-email")) {
+        } else if (String(text).includes("auth/invalid-email")) {
           text = "Email має некоректний формат.";
         }
         showMsg(signupMsg, text, "err");
@@ -166,7 +165,7 @@
 
         setTimeout(() => {
           window.location.href = "cabinet.html";
-        }, 600);
+        }, 500);
 
       } catch (err) {
         console.error(err);

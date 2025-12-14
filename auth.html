@@ -13,14 +13,10 @@
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    /* те саме оформлення що й було — лишаю */
     body.auth-page{
-      min-height:100vh;
-      margin:0;
+      min-height:100vh;margin:0;
       background:radial-gradient(circle at top,#111827 0,#020617 55%);
-      color:#e5e7eb;
-      display:flex;
-      flex-direction:column;
+      color:#e5e7eb;display:flex;flex-direction:column;
     }
     .auth-main{flex:1;display:flex;align-items:center;justify-content:center;padding:70px 16px 40px;}
     .auth-shell{width:100%;max-width:980px;}
@@ -43,7 +39,6 @@
       text-shadow:0 1px 0 rgba(255,255,255,.2),0 4px 16px rgba(0,0,0,.9);
     }
     .auth-subtitle{margin:0;font-size:.95rem;color:#d1d5db;max-width:620px;}
-
     .auth-card{
       margin-top:20px;background:radial-gradient(circle at top,#111827 0,#020617 70%);
       border-radius:22px;border:1px solid rgba(148,163,184,.45);
@@ -83,9 +78,7 @@
       padding:9px 12px;font-size:.92rem;color:#e5e7eb;
     }
     .input-auth::placeholder{color:#6b7280;}
-    .input-auth:focus{
-      outline:none;border-color:#facc15;box-shadow:0 0 8px rgba(250,204,21,.5);
-    }
+    .input-auth:focus{outline:none;border-color:#facc15;box-shadow:0 0 8px rgba(250,204,21,.5);}
     .field-hint{font-size:.78rem;color:#6b7280;}
     .role-row{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
     .role-option{display:flex;align-items:center;gap:6px;font-size:.86rem;}
@@ -126,6 +119,7 @@
     .auth-tab-panel.active{display:block;}
   </style>
 </head>
+
 <body class="auth-page">
 
 <header class="header">
@@ -176,45 +170,38 @@
         <!-- РЕЄСТРАЦІЯ -->
         <div id="tab-signup" class="auth-form-wrap auth-tab-panel active">
           <h2 class="auth-form-title">новий акаунт</h2>
-          <p class="auth-form-description">
-            Заповніть всі поля, щоб створити свій профіль STOLAR CARP.
-          </p>
+          <p class="auth-form-description">Заповніть всі поля, щоб створити свій профіль STOLAR CARP.</p>
 
           <form id="signupForm" novalidate>
             <div class="auth-fields">
               <div class="field">
                 <label for="signupEmail">Email</label>
-                <input type="email" id="signupEmail" class="input-auth"
-                       placeholder="example@gmail.com" required>
+                <input type="email" id="signupEmail" class="input-auth" placeholder="example@gmail.com" required>
                 <div class="field-hint">Використовується для входу.</div>
               </div>
 
               <div class="field">
                 <label for="signupPassword">Пароль</label>
-                <input type="password" id="signupPassword" class="input-auth"
-                       placeholder="Мінімум 6 символів" minlength="6" required>
+                <input type="password" id="signupPassword" class="input-auth" placeholder="Мінімум 6 символів" minlength="6" required>
               </div>
 
               <div class="field">
                 <label for="signupFullName">Імʼя та прізвище</label>
-                <input type="text" id="signupFullName" class="input-auth"
-                       placeholder="Імʼя Прізвище" required>
+                <input type="text" id="signupFullName" class="input-auth" placeholder="Імʼя Прізвище" required>
               </div>
 
               <div class="field">
                 <label for="signupPhoneClean">Номер телефону</label>
                 <div class="phone-wrap">
                   <span class="phone-prefix">+380</span>
-                  <input type="tel" id="signupPhoneClean" class="input-auth"
-                         placeholder="XXXXXXXXX" inputmode="numeric" maxlength="9" required>
+                  <input type="tel" id="signupPhoneClean" class="input-auth" placeholder="XXXXXXXXX" inputmode="numeric" maxlength="9" required>
                 </div>
                 <input type="hidden" id="signupPhone">
               </div>
 
               <div class="field">
                 <label for="signupCity">Місто / селище</label>
-                <input type="text" id="signupCity" class="input-auth"
-                       placeholder="Місто або населений пункт" required>
+                <input type="text" id="signupCity" class="input-auth" placeholder="Місто або населений пункт" required>
               </div>
 
               <div class="field single-column">
@@ -233,28 +220,19 @@
 
               <div class="field single-column" id="teamNameField">
                 <label for="signupTeamName">Назва команди</label>
-                <input type="text" id="signupTeamName" class="input-auth"
-                       placeholder="Наприклад: DK Два Кума">
-                <div class="field-hint">
-                  Назва, яка буде у протоколах та рейтингу.
-                </div>
+                <input type="text" id="signupTeamName" class="input-auth" placeholder="Наприклад: DK Два Кума">
+                <div class="field-hint">Назва, яка буде у протоколах та рейтингу.</div>
               </div>
 
               <div class="field single-column" id="joinCodeField" style="display:none;">
                 <label for="signupJoinCode">Код приєднання до команди</label>
-                <input type="text" id="signupJoinCode" class="input-auth"
-                       placeholder="Введіть код, який дав капітан">
-                <div class="field-hint">
-                  Отримайте код у капітана, якщо команда вже створена.
-                </div>
+                <input type="text" id="signupJoinCode" class="input-auth" placeholder="Введіть код, який дав капітан">
+                <div class="field-hint">Отримайте код у капітана, якщо команда вже створена.</div>
               </div>
-
             </div>
 
             <div class="auth-actions">
-              <button type="submit" id="signupBtn" class="btn-primary-auth">
-                Створити акаунт
-              </button>
+              <button type="submit" id="signupBtn" class="btn-primary-auth">Створити акаунт</button>
               <div id="signupMsg" class="auth-msg"></div>
             </div>
           </form>
@@ -263,27 +241,21 @@
         <!-- ВХІД -->
         <div id="tab-login" class="auth-form-wrap auth-tab-panel">
           <h2 class="auth-form-title">вхід у акаунт</h2>
-          <p class="auth-form-description">
-            Якщо ви вже маєте акаунт STOLAR CARP, увійдіть за допомогою email та пароля.
-          </p>
+          <p class="auth-form-description">Якщо ви вже маєте акаунт STOLAR CARP, увійдіть за допомогою email та пароля.</p>
 
           <form id="loginForm" novalidate>
             <div class="auth-fields">
               <div class="field single-column">
                 <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" class="input-auth"
-                       placeholder="example@gmail.com" required>
+                <input type="email" id="loginEmail" class="input-auth" placeholder="example@gmail.com" required>
               </div>
               <div class="field single-column">
                 <label for="loginPassword">Пароль</label>
-                <input type="password" id="loginPassword" class="input-auth"
-                       placeholder="Пароль" required>
+                <input type="password" id="loginPassword" class="input-auth" placeholder="Пароль" required>
               </div>
             </div>
             <div class="auth-actions">
-              <button type="submit" id="loginBtn" class="btn-primary-auth">
-                Увійти
-              </button>
+              <button type="submit" id="loginBtn" class="btn-primary-auth">Увійти</button>
               <div id="loginMsg" class="auth-msg"></div>
             </div>
           </form>
@@ -321,11 +293,8 @@
   </div>
 </footer>
 
-<!-- УВАГА: тільки modular, НІЯКИХ compat-скриптів -->
-<script type="module" src="assets/js/auth.js"></script>
-
 <script>
-  // Таби + роль + телефон
+  // Таби + роль + телефон (залишаємо)
   document.addEventListener('DOMContentLoaded', () => {
     const tabButtons = document.querySelectorAll('.auth-tab-btn');
     const panels = {
@@ -368,7 +337,7 @@
   });
 </script>
 
-  <!-- Firebase compat SDK -->
+<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -377,8 +346,8 @@
 <!-- Єдина ініціалізація -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- Логіка реєстрації/входу -->
+<!-- Логіка реєстрації/входу (НЕ module!) -->
 <script src="assets/js/auth.js"></script>
 
 </body>
-</html>
+  </html>

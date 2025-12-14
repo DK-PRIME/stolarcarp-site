@@ -247,3 +247,29 @@ body.register-page .field--disabled{opacity:.55}
     justify-content:center;
   }
 }
+
+/* === Cabinet avatar upload: mobile fix === */
+body.cabinet-page .avatar-upload{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;           /* головне! */
+}
+
+body.cabinet-page .avatar-upload input[type="file"]{
+  max-width:100% !important; /* перебиває 160px */
+}
+
+@media (max-width:560px){
+  body.cabinet-page .avatar-upload{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  body.cabinet-page .avatar-upload input[type="file"]{
+    width:100%;
+  }
+  body.cabinet-page .avatar-small-btn{
+    width:100%;
+    justify-content:center;
+  }
+}

@@ -1,96 +1,74 @@
 // assets/js/auth.js
-// STOLAR CARP Auth (compat) — реєстрація/вхід
-// Працює з firebase-init.js, який ставить window.scAuth / window.scDb
+// Реєстрація + вхід. Пише в Firestore: users/{uid}, teams/{teamId}
 
 (function () {
   const auth = window.scAuth;
   const db   = window.scDb;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізовано. Перевір підключення firebase-*-compat та firebase-init.js");
+    console.error("Firebase не ініціалізовано. Перевір підключення firebase-*-compat + firebase-init.js");
     return;
   }
 
-  // форми
   const signupForm = document.getElementById("signupForm");
   const loginForm  = document.getElementById("loginForm");
-
   const signupMsg  = document.getElementById("signupMsg");
   const loginMsg   = document.getElementById("loginMsg");
-
   const signupBtn  = document.getElementById("signupBtn");
   const loginBtn   = document.getElementById("loginBtn");
 
-  function showMsg(el, text, type) {
+  function msg(el, text, type) {
     if (!el) return;
     el.textContent = text || "";
     el.className = "auth-msg" + (type ? " " + type : "");
   }
 
-  function setLoading(btn, loading, labelDefault) {
+  function loading(btn, on, label) {
     if (!btn) return;
-    btn.disabled = !!loading;
-    btn.textContent = loading ? "Зачекайте..." : labelDefault;
+    btn.disabled = !!on;
+    btn.textContent = on ? "Зачекайте..." : label;
   }
 
-  function normEmail(v){ return (v || "").trim().toLowerCase(); }
-  function normText(v){ return (v || "").trim(); }
-  function normCode(v){ return (v || "").trim().toUpperCase(); }
-
-  async function generateUniqueJoinCode() {
-    // 6 символів, перевіряємо на колізію
-    for (let i = 0; i < 8; i++) {
-      const code = Math.random().toString(36).slice(2, 10).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
-      const snap = await db.collection("teams").where("joinCode", "==", code).limit(1).get();
-      if (snap.empty) return code;
-    }
-    // fallback
-    return (Date.now().toString(36).toUpperCase().slice(-6));
+  function genJoinCode(len = 6) {
+    return (Math.random().toString(36).slice(2, 2 + len)).toUpperCase();
   }
 
-  // ----------------- РЕЄСТРАЦІЯ -----------------
+  // --------- SIGNUP ----------
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      showMsg(signupMsg, "", "");
-      setLoading(signupBtn, true, "Створити акаунт");
+      msg(signupMsg, "", "");
+      loading(signupBtn, true, "Створити акаунт");
 
       try {
-        const email     = normEmail(document.getElementById("signupEmail")?.value);
-        const password  = document.getElementById("signupPassword")?.value || "";
-        const fullName  = normText(document.getElementById("signupFullName")?.value);
-        const phone     = normText(document.getElementById("signupPhone")?.value);
-        const city      = normText(document.getElementById("signupCity")?.value);
+        const email     = (document.getElementById("signupEmail")?.value || "").trim();
+        const password  = (document.getElementById("signupPassword")?.value || "");
+        const fullName  = (document.getElementById("signupFullName")?.value || "").trim();
+        const phone     = (document.getElementById("signupPhone")?.value || "").trim();
+        const city      = (document.getElementById("signupCity")?.value || "").trim();
 
         const isCaptain = !!document.getElementById("signupRoleCaptain")?.checked;
-        const teamName  = normText(document.getElementById("signupTeamName")?.value);
-        const joinCode  = normCode(document.getElementById("signupJoinCode")?.value);
+        const teamName  = (document.getElementById("signupTeamName")?.value || "").trim();
+        const joinCode  = (document.getElementById("signupJoinCode")?.value || "").trim().toUpperCase();
 
-        if (!email || !password || !fullName || !phone || !city) {
-          throw new Error("Заповніть усі обовʼязкові поля.");
-        }
-        if (password.length < 6) {
-          throw new Error("Пароль має містити щонайменше 6 символів.");
-        }
-        if (isCaptain && !teamName) {
-          throw new Error("Вкажіть назву команди.");
-        }
-        if (!isCaptain && !joinCode) {
-          throw new Error("Вкажіть код приєднання до команди.");
-        }
+        if (!email || !password || !fullName || !phone || !city) throw new Error("Заповніть усі обовʼязкові поля.");
+        if (password.length < 6) throw new Error("Пароль має містити щонайменше 6 символів.");
+        if (isCaptain && !teamName) throw new Error("Вкажіть назву команди.");
+        if (!isCaptain && !joinCode) throw new Error("Вкажіть код приєднання до команди.");
 
-        // 1) створюємо Auth користувача (вже буде signed-in)
+        // 1) створюємо auth-user
         const cred = await auth.createUserWithEmailAndPassword(email, password);
         const uid  = cred.user.uid;
 
         // 2) команда
         let teamId = null;
+        let finalJoinCode = null;
 
         if (isCaptain) {
-          const teamRef = db.collection("teams").doc(); // авто-ID
+          const teamRef = db.collection("teams").doc();
           teamId = teamRef.id;
 
-          const finalJoinCode = await generateUniqueJoinCode();
+          finalJoinCode = genJoinCode(6);
 
           await teamRef.set({
             name: teamName,
@@ -99,21 +77,15 @@
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
 
-          showMsg(
-            signupMsg,
-            `Акаунт створено! Код команди: ${finalJoinCode}. Переходимо в кабінет…`,
-            "ok"
-          );
         } else {
-          const q = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
-          if (q.empty) throw new Error("Команду з таким кодом не знайдено.");
-          teamId = q.docs[0].id;
+          const snap = await db.collection("teams")
+            .where("joinCode", "==", joinCode)
+            .limit(1)
+            .get();
 
-          showMsg(
-            signupMsg,
-            "Акаунт створено та приєднано до команди. Переходимо в кабінет…",
-            "ok"
-          );
+          if (snap.empty) throw new Error("Команду з таким кодом не знайдено.");
+
+          teamId = snap.docs[0].id;
         }
 
         // 3) users/{uid}
@@ -123,61 +95,71 @@
           phone,
           city,
           role: isCaptain ? "captain" : "member",
-          teamId,
+          teamId: teamId,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: false });
+        }, { merge: true });
 
-        setTimeout(() => {
-          window.location.href = "cabinet.html";
-        }, 600);
+        msg(
+          signupMsg,
+          isCaptain
+            ? `Акаунт створено! Код команди: ${finalJoinCode}. Переходимо в кабінет…`
+            : "Акаунт створено та приєднано до команди. Переходимо в кабінет…",
+          "ok"
+        );
+
+        setTimeout(() => (window.location.href = "cabinet.html"), 700);
 
       } catch (err) {
         console.error(err);
-        let text = (err && err.message) ? err.message : "Сталася помилка під час реєстрації.";
+        const code = err?.code || "";
+        let text = err?.message || "Помилка реєстрації.";
 
-        // firebase auth коди
-        if (String(err?.code).includes("auth/email-already-in-use")) text = "Такий email вже використовується.";
-        if (String(err?.code).includes("auth/invalid-email")) text = "Email має некоректний формат.";
-        if (String(err?.code).includes("auth/weak-password")) text = "Пароль занадто слабкий (мінімум 6 символів).";
+        if (code === "auth/email-already-in-use") text = "Такий email вже використовується.";
+        if (code === "auth/invalid-email") text = "Email має некоректний формат.";
+        if (code === "auth/weak-password") text = "Пароль занадто слабкий (мін. 6 символів).";
 
-        showMsg(signupMsg, text, "err");
+        msg(signupMsg, text, "err");
       } finally {
-        setLoading(signupBtn, false, "Створити акаунт");
+        loading(signupBtn, false, "Створити акаунт");
       }
     });
   }
 
-  // ----------------- ВХІД -----------------
+  // --------- LOGIN ----------
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      showMsg(loginMsg, "", "");
-      setLoading(loginBtn, true, "Увійти");
+      msg(loginMsg, "", "");
+      loading(loginBtn, true, "Увійти");
 
       try {
-        const email    = normEmail(document.getElementById("loginEmail")?.value);
-        const password = document.getElementById("loginPassword")?.value || "";
+        const email    = (document.getElementById("loginEmail")?.value || "").trim();
+        const password = (document.getElementById("loginPassword")?.value || "");
 
         if (!email || !password) throw new Error("Введіть email та пароль.");
 
         await auth.signInWithEmailAndPassword(email, password);
+        msg(loginMsg, "Вхід успішний. Переходимо у кабінет…", "ok");
 
-        showMsg(loginMsg, "Вхід успішний, переходимо у кабінет…", "ok");
-        setTimeout(() => window.location.href = "cabinet.html", 300);
+        setTimeout(() => (window.location.href = "cabinet.html"), 450);
 
       } catch (err) {
         console.error(err);
-        let text = (err && err.message) ? err.message : "Помилка входу.";
-        if (String(err?.code).includes("auth/wrong-password")) text = "Невірний пароль.";
-        if (String(err?.code).includes("auth/user-not-found")) text = "Користувача з таким email не знайдено.";
-        showMsg(loginMsg, text, "err");
+        const code = err?.code || "";
+        let text = err?.message || "Помилка входу.";
+
+        if (code === "auth/wrong-password") text = "Невірний пароль.";
+        if (code === "auth/user-not-found") text = "Користувача з таким email не знайдено.";
+        if (code === "auth/invalid-credential") text = "Невірний email або пароль.";
+
+        msg(loginMsg, text, "err");
       } finally {
-        setLoading(loginBtn, false, "Увійти");
+        loading(loginBtn, false, "Увійти");
       }
     });
   }
 
-  // якщо вже залогінений і зайшов на auth.html — кидаємо у кабінет
+  // якщо вже залогінений і зайшов на auth.html — кидаємо в cabinet
   auth.onAuthStateChanged((user) => {
     if (user && window.location.pathname.endsWith("auth.html")) {
       window.location.href = "cabinet.html";

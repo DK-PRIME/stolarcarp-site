@@ -11,177 +11,187 @@
     return;
   }
 
-  const statusEl    = document.getElementById("cabinetStatus");
-  const wrapperEl   = document.getElementById("cabinetWrapper");
+  const statusEl = document.getElementById("cabinetStatus");
+  const msgEl    = document.getElementById("cabinetMsg");
 
   const teamNameEl      = document.getElementById("teamNameText");
-  const captainTextEl   = document.getElementById("captainText");
-  const userRoleTextEl  = document.getElementById("userRoleText");
-  const userPhoneTextEl = document.getElementById("userPhoneText");
+  const captainEl       = document.getElementById("captainText");
+  const roleEl          = document.getElementById("userRoleText");
+  const phoneEl         = document.getElementById("userPhoneText");
+  const joinCodeWrapEl  = document.getElementById("joinCodePill");
+  const joinCodeEl      = document.getElementById("joinCodeText");
 
-  const joinCodePillEl  = document.getElementById("joinCodePill");
-  const joinCodeTextEl  = document.getElementById("joinCodeText");
+  const membersContainerEl = document.getElementById("membersContainer");
+  const statsWrapperEl     = document.getElementById("statsWrapper");
 
-  const avatarImgEl         = document.getElementById("cabinetAvatarImg");
-  const avatarPlaceholderEl = document.getElementById("cabinetAvatarPlaceholder");
-  const avatarInputEl       = document.getElementById("avatarFile");
-  const avatarBtnEl         = document.getElementById("avatarUploadBtn");
-  const avatarMsgEl         = document.getElementById("avatarMsg");
+  const avatarInputEl = document.getElementById("avatarFile");
+  const avatarBtnEl   = document.getElementById("avatarUploadBtn");
 
-  const membersContainerEl  = document.getElementById("membersContainer");
-  const statsWrapperEl      = document.getElementById("statsWrapper");
-
-  function setStatus(text) {
-    if (statusEl) statusEl.textContent = text || "";
-  }
-  function showWrapper() {
-    if (wrapperEl) wrapperEl.style.display = "block";
-  }
-  function setAvatarUrl(url) {
-    if (!avatarImgEl || !avatarPlaceholderEl) return;
-    avatarImgEl.src = url;
-    avatarImgEl.style.display = "block";
-    avatarPlaceholderEl.style.display = "none";
+  function setStatus(t) { if (statusEl) statusEl.textContent = t || ""; }
+  function setMsg(t, type) {
+    if (!msgEl) return;
+    msgEl.textContent = t || "";
+    msgEl.className = type ? ("form-msg " + type) : "";
   }
 
-  function roleLabel(role) {
-    return role === "admin"   ? "Адміністратор" :
-           role === "judge"   ? "Суддя" :
-           role === "captain" ? "Капітан команди" :
-                                "Учасник команди";
+  function roleText(r) {
+    if (r === "admin") return "Адміністратор";
+    if (r === "judge") return "Суддя";
+    if (r === "captain") return "Капітан команди";
+    return "Учасник команди";
   }
 
   async function loadCabinet(user) {
-    try {
-      setStatus("Завантаження профілю…");
+    setMsg("", "");
+    setStatus("Завантаження профілю…");
 
-      // 1) users/{uid}
-      const userSnap = await db.collection("users").doc(user.uid).get();
-
-      if (!userSnap.exists) {
-        setStatus("Анкета користувача не знайдена. Поверніться на сторінку входу та завершіть реєстрацію.");
-        showWrapper();
-        return;
-      }
-
-      const u = userSnap.data() || {};
-      const fullName = u.fullName || user.email || "Без імені";
-      const phone    = u.phone || "—";
-      const city     = u.city || "";
-      const roleText = roleLabel(u.role);
-
-      if (captainTextEl)   captainTextEl.textContent   = fullName + (city ? ` · ${city}` : "");
-      if (userRoleTextEl)  userRoleTextEl.textContent  = roleText;
-      if (userPhoneTextEl) userPhoneTextEl.textContent = phone;
-
-      if (u.avatarUrl) setAvatarUrl(u.avatarUrl);
-
-      // 2) teams/{teamId}
-      let teamName = "—";
-      let joinCode = "";
-
-      if (u.teamId) {
-        const teamSnap = await db.collection("teams").doc(u.teamId).get();
-        if (teamSnap.exists) {
-          const t = teamSnap.data() || {};
-          teamName = t.name || "—";
-          joinCode = t.joinCode || "";
-        }
-      }
-
-      if (teamNameEl) teamNameEl.textContent = teamName;
-
-      if (joinCode && joinCodePillEl && joinCodeTextEl) {
-        joinCodePillEl.style.display = "inline-flex";
-        joinCodeTextEl.textContent = joinCode;
-      } else if (joinCodePillEl) {
-        joinCodePillEl.style.display = "none";
-      }
-
-      // 3) Склад команди — з твоїми Rules це НЕ МОЖНА витягнути з /users
-      if (membersContainerEl) {
-        membersContainerEl.innerHTML = `
-          <div class="notice">
-            <b>Склад команди:</b> наразі прихований правилами доступу (Firestore Rules).
-            Учасник може читати тільки свій профіль. Якщо хочеш — я зроблю окрему безпечну схему
-            “teamMembers” або підправимо Rules так, щоб команда бачила своїх.
-          </div>
-        `;
-      }
-
-      // 4) Статистика (якщо колись додаси)
-      if (statsWrapperEl) {
-        const stats = u.seasonStats || {};
-        const total = (stats.totalWeightKg ?? "—");
-        const big   = (stats.bigFishKg ?? "—");
-        const rank  = (stats.rank ?? "—");
-
-        statsWrapperEl.innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Улов за сезон</div>
-              <div class="stat-value">${total}<span class="stat-unit">кг</span></div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Big Fish</div>
-              <div class="stat-value">${big}<span class="stat-unit">кг</span></div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Місце в рейтингу</div>
-              <div class="stat-value">${rank}</div>
-            </div>
-          </div>
-        `;
-      }
-
-      setStatus("Кабінет завантажено.");
-      showWrapper();
-
-    } catch (err) {
-      console.error(err);
-      setStatus("Помилка завантаження кабінету: " + (err?.message || err));
-      showWrapper();
-    }
-  }
-
-  // auth guard
-  auth.onAuthStateChanged((user) => {
-    if (!user) {
-      setStatus("Ви не увійшли. Перехід на сторінку входу…");
-      setTimeout(() => window.location.href = "auth.html", 400);
+    // 1) user doc
+    const userSnap = await db.collection("users").doc(user.uid).get();
+    if (!userSnap.exists) {
+      setStatus("");
+      setMsg("Анкета користувача не знайдена. Зайдіть в 'Вхід/реєстрація' та завершіть реєстрацію.", "err");
       return;
     }
-    loadCabinet(user);
+
+    const u = userSnap.data() || {};
+    const fullName = u.fullName || user.email || "Без імені";
+    const phone    = u.phone || "—";
+    const city     = u.city || "";
+
+    if (captainEl) captainEl.textContent = fullName + (city ? ` · ${city}` : "");
+    if (roleEl) roleEl.textContent = roleText(u.role);
+    if (phoneEl) phoneEl.textContent = phone;
+
+    // 2) team doc
+    let teamName = "—";
+    let joinCode = "";
+
+    if (u.teamId) {
+      const teamSnap = await db.collection("teams").doc(u.teamId).get();
+      if (teamSnap.exists) {
+        const t = teamSnap.data() || {};
+        teamName = t.name || "—";
+        joinCode = t.joinCode || "";
+      }
+    }
+
+    if (teamNameEl) teamNameEl.textContent = teamName;
+
+    if (joinCodeWrapEl && joinCodeEl) {
+      if (joinCode) {
+        joinCodeWrapEl.style.display = "inline-flex";
+        joinCodeEl.textContent = joinCode;
+      } else {
+        joinCodeWrapEl.style.display = "none";
+      }
+    }
+
+    // 3) members list (✅ читає users по teamId)
+    if (membersContainerEl) {
+      membersContainerEl.innerHTML = "";
+
+      if (!u.teamId) {
+        membersContainerEl.innerHTML = `<div class="notice">Немає привʼязки до команди (teamId).</div>`;
+      } else {
+        try {
+          const membersSnap = await db.collection("users")
+            .where("teamId", "==", u.teamId)
+            .get();
+
+          if (membersSnap.empty) {
+            membersContainerEl.innerHTML = `<div class="notice">У команді ще немає учасників.</div>`;
+          } else {
+            membersSnap.forEach((doc) => {
+              const m = doc.data() || {};
+              const row = document.createElement("div");
+              row.className = "member-row";
+              row.innerHTML = `
+                <div class="member-avatar"></div>
+                <div class="member-meta">
+                  <div class="member-name">${(m.fullName || m.email || "Без імені")}</div>
+                  <div class="member-role">${roleText(m.role)}</div>
+                </div>
+              `;
+              membersContainerEl.appendChild(row);
+            });
+          }
+        } catch (e) {
+          console.error(e);
+          membersContainerEl.innerHTML = `<div class="notice">Не вдалося завантажити склад команди.</div>`;
+        }
+      }
+    }
+
+    // 4) stats (поки заглушка з users.seasonStats)
+    if (statsWrapperEl) {
+      const s = u.seasonStats || {};
+      const total = (s.totalWeightKg ?? "—");
+      const big   = (s.bigFishKg ?? "—");
+      const rank  = (s.rank ?? "—");
+
+      statsWrapperEl.innerHTML = `
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Улов за сезон</div>
+            <div class="stat-value">${total}<span class="stat-unit">кг</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Big Fish</div>
+            <div class="stat-value">${big}<span class="stat-unit">кг</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Місце в рейтингу</div>
+            <div class="stat-value">${rank}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    setStatus("Кабінет завантажено.");
+    setTimeout(() => setStatus(""), 700);
+  }
+
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      setStatus("Ви не увійшли. Переходимо на вхід…");
+      setTimeout(() => (window.location.href = "auth.html"), 500);
+      return;
+    }
+    loadCabinet(user).catch((e) => {
+      console.error(e);
+      setStatus("");
+      setMsg("Помилка завантаження кабінету.", "err");
+    });
   });
 
-  // avatar upload
+  // upload avatar (якщо storage треба)
   if (avatarBtnEl && avatarInputEl) {
     avatarBtnEl.addEventListener("click", async (e) => {
       e.preventDefault();
-      const user = auth.currentUser;
-      if (!user) return alert("Спочатку увійдіть у акаунт.");
 
-      const file = avatarInputEl.files[0];
-      if (!file) return alert("Оберіть файл.");
-      if (!file.type.startsWith("image/")) return alert("Потрібен файл-зображення.");
-      if (file.size > 5 * 1024 * 1024) return alert("Максимальний розмір 5 МБ.");
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const file = avatarInputEl.files?.[0];
+      if (!file) return setMsg("Оберіть файл.", "err");
+      if (!file.type.startsWith("image/")) return setMsg("Потрібен файл-зображення.", "err");
 
       try {
-        if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
+        setMsg("Завантаження аватара…", "ok");
 
         const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
         const path = `avatars/${user.uid}/avatar.${ext}`;
 
-        const snap = await storage.ref().child(path).put(file);
-        const url  = await snap.ref.getDownloadURL();
+        const ref = storage.ref().child(path);
+        const snap = await ref.put(file);
+        const url = await snap.ref.getDownloadURL();
 
         await db.collection("users").doc(user.uid).set({ avatarUrl: url }, { merge: true });
-        setAvatarUrl(url);
 
-        if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
+        setMsg("Аватар збережено!", "ok");
       } catch (err) {
         console.error(err);
-        if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження.";
+        setMsg("Помилка завантаження аватара.", "err");
       }
     });
   }

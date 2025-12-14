@@ -222,3 +222,28 @@ body.register-page .field--disabled{opacity:.55}
 .move--same{
   color:#9ca3af;   /* сіра ● */
 }
+
+/* === Cabinet avatar row: mobile fix (кнопка "Зберегти" не вилазить) === */
+.avatar-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.avatar-actions input[type="file"]{
+  max-width:100%;
+}
+
+@media (max-width:560px){
+  .avatar-actions{
+    align-items:stretch;
+  }
+  .avatar-actions input[type="file"]{
+    width:100%;
+  }
+  .avatar-small-btn{
+    width:100%;
+    justify-content:center;
+  }
+}

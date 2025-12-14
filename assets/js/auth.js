@@ -1,188 +1,186 @@
-// assets/js/cabinet.js
-// Кабінет учасника STOLAR CARP (compat)
+// assets/js/auth.js
+// STOLAR CARP Auth (compat) — реєстрація/вхід
+// Працює з firebase-init.js, який ставить window.scAuth / window.scDb
 
 (function () {
-  const auth    = window.scAuth;
-  const db      = window.scDb;
-  const storage = window.scStorage;
+  const auth = window.scAuth;
+  const db   = window.scDb;
 
   if (!auth || !db) {
-    console.error("Firebase не ініціалізований.");
+    console.error("Firebase не ініціалізовано. Перевір підключення firebase-*-compat та firebase-init.js");
     return;
   }
 
-  const statusEl    = document.getElementById("cabinetStatus");
-  const wrapperEl   = document.getElementById("cabinetWrapper");
+  // форми
+  const signupForm = document.getElementById("signupForm");
+  const loginForm  = document.getElementById("loginForm");
 
-  const teamNameEl      = document.getElementById("teamNameText");
-  const captainTextEl   = document.getElementById("captainText");
-  const userRoleTextEl  = document.getElementById("userRoleText");
-  const userPhoneTextEl = document.getElementById("userPhoneText");
+  const signupMsg  = document.getElementById("signupMsg");
+  const loginMsg   = document.getElementById("loginMsg");
 
-  const joinCodePillEl  = document.getElementById("joinCodePill");
-  const joinCodeTextEl  = document.getElementById("joinCodeText");
+  const signupBtn  = document.getElementById("signupBtn");
+  const loginBtn   = document.getElementById("loginBtn");
 
-  const avatarImgEl         = document.getElementById("cabinetAvatarImg");
-  const avatarPlaceholderEl = document.getElementById("cabinetAvatarPlaceholder");
-  const avatarInputEl       = document.getElementById("avatarFile");
-  const avatarBtnEl         = document.getElementById("avatarUploadBtn");
-  const avatarMsgEl         = document.getElementById("avatarMsg");
-
-  const membersContainerEl  = document.getElementById("membersContainer");
-  const statsWrapperEl      = document.getElementById("statsWrapper");
-
-  function setStatus(text) {
-    if (statusEl) statusEl.textContent = text || "";
-  }
-  function showWrapper() {
-    if (wrapperEl) wrapperEl.style.display = "block";
-  }
-  function setAvatarUrl(url) {
-    if (!avatarImgEl || !avatarPlaceholderEl) return;
-    avatarImgEl.src = url;
-    avatarImgEl.style.display = "block";
-    avatarPlaceholderEl.style.display = "none";
+  function showMsg(el, text, type) {
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = "auth-msg" + (type ? " " + type : "");
   }
 
-  function roleLabel(role) {
-    return role === "admin"   ? "Адміністратор" :
-           role === "judge"   ? "Суддя" :
-           role === "captain" ? "Капітан команди" :
-                                "Учасник команди";
+  function setLoading(btn, loading, labelDefault) {
+    if (!btn) return;
+    btn.disabled = !!loading;
+    btn.textContent = loading ? "Зачекайте..." : labelDefault;
   }
 
-  async function loadCabinet(user) {
-    try {
-      setStatus("Завантаження профілю…");
+  function normEmail(v){ return (v || "").trim().toLowerCase(); }
+  function normText(v){ return (v || "").trim(); }
+  function normCode(v){ return (v || "").trim().toUpperCase(); }
 
-      // 1) users/{uid}
-      const userSnap = await db.collection("users").doc(user.uid).get();
-
-      if (!userSnap.exists) {
-        setStatus("Анкета користувача не знайдена. Поверніться на сторінку входу та завершіть реєстрацію.");
-        showWrapper();
-        return;
-      }
-
-      const u = userSnap.data() || {};
-      const fullName = u.fullName || user.email || "Без імені";
-      const phone    = u.phone || "—";
-      const city     = u.city || "";
-      const roleText = roleLabel(u.role);
-
-      if (captainTextEl)   captainTextEl.textContent   = fullName + (city ? ` · ${city}` : "");
-      if (userRoleTextEl)  userRoleTextEl.textContent  = roleText;
-      if (userPhoneTextEl) userPhoneTextEl.textContent = phone;
-
-      if (u.avatarUrl) setAvatarUrl(u.avatarUrl);
-
-      // 2) teams/{teamId}
-      let teamName = "—";
-      let joinCode = "";
-
-      if (u.teamId) {
-        const teamSnap = await db.collection("teams").doc(u.teamId).get();
-        if (teamSnap.exists) {
-          const t = teamSnap.data() || {};
-          teamName = t.name || "—";
-          joinCode = t.joinCode || "";
-        }
-      }
-
-      if (teamNameEl) teamNameEl.textContent = teamName;
-
-      if (joinCode && joinCodePillEl && joinCodeTextEl) {
-        joinCodePillEl.style.display = "inline-flex";
-        joinCodeTextEl.textContent = joinCode;
-      } else if (joinCodePillEl) {
-        joinCodePillEl.style.display = "none";
-      }
-
-      // 3) Склад команди — з твоїми Rules це НЕ МОЖНА витягнути з /users
-      if (membersContainerEl) {
-        membersContainerEl.innerHTML = `
-          <div class="notice">
-            <b>Склад команди:</b> наразі прихований правилами доступу (Firestore Rules).
-            Учасник може читати тільки свій профіль. Якщо хочеш — я зроблю окрему безпечну схему
-            “teamMembers” або підправимо Rules так, щоб команда бачила своїх.
-          </div>
-        `;
-      }
-
-      // 4) Статистика (якщо колись додаси)
-      if (statsWrapperEl) {
-        const stats = u.seasonStats || {};
-        const total = (stats.totalWeightKg ?? "—");
-        const big   = (stats.bigFishKg ?? "—");
-        const rank  = (stats.rank ?? "—");
-
-        statsWrapperEl.innerHTML = `
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Улов за сезон</div>
-              <div class="stat-value">${total}<span class="stat-unit">кг</span></div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Big Fish</div>
-              <div class="stat-value">${big}<span class="stat-unit">кг</span></div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Місце в рейтингу</div>
-              <div class="stat-value">${rank}</div>
-            </div>
-          </div>
-        `;
-      }
-
-      setStatus("Кабінет завантажено.");
-      showWrapper();
-
-    } catch (err) {
-      console.error(err);
-      setStatus("Помилка завантаження кабінету: " + (err?.message || err));
-      showWrapper();
+  async function generateUniqueJoinCode() {
+    // 6 символів, перевіряємо на колізію
+    for (let i = 0; i < 8; i++) {
+      const code = Math.random().toString(36).slice(2, 10).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+      const snap = await db.collection("teams").where("joinCode", "==", code).limit(1).get();
+      if (snap.empty) return code;
     }
+    // fallback
+    return (Date.now().toString(36).toUpperCase().slice(-6));
   }
 
-  // auth guard
-  auth.onAuthStateChanged((user) => {
-    if (!user) {
-      setStatus("Ви не увійшли. Перехід на сторінку входу…");
-      setTimeout(() => window.location.href = "auth.html", 400);
-      return;
-    }
-    loadCabinet(user);
-  });
-
-  // avatar upload
-  if (avatarBtnEl && avatarInputEl) {
-    avatarBtnEl.addEventListener("click", async (e) => {
+  // ----------------- РЕЄСТРАЦІЯ -----------------
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const user = auth.currentUser;
-      if (!user) return alert("Спочатку увійдіть у акаунт.");
-
-      const file = avatarInputEl.files[0];
-      if (!file) return alert("Оберіть файл.");
-      if (!file.type.startsWith("image/")) return alert("Потрібен файл-зображення.");
-      if (file.size > 5 * 1024 * 1024) return alert("Максимальний розмір 5 МБ.");
+      showMsg(signupMsg, "", "");
+      setLoading(signupBtn, true, "Створити акаунт");
 
       try {
-        if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
+        const email     = normEmail(document.getElementById("signupEmail")?.value);
+        const password  = document.getElementById("signupPassword")?.value || "";
+        const fullName  = normText(document.getElementById("signupFullName")?.value);
+        const phone     = normText(document.getElementById("signupPhone")?.value);
+        const city      = normText(document.getElementById("signupCity")?.value);
 
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-        const path = `avatars/${user.uid}/avatar.${ext}`;
+        const isCaptain = !!document.getElementById("signupRoleCaptain")?.checked;
+        const teamName  = normText(document.getElementById("signupTeamName")?.value);
+        const joinCode  = normCode(document.getElementById("signupJoinCode")?.value);
 
-        const snap = await storage.ref().child(path).put(file);
-        const url  = await snap.ref.getDownloadURL();
+        if (!email || !password || !fullName || !phone || !city) {
+          throw new Error("Заповніть усі обовʼязкові поля.");
+        }
+        if (password.length < 6) {
+          throw new Error("Пароль має містити щонайменше 6 символів.");
+        }
+        if (isCaptain && !teamName) {
+          throw new Error("Вкажіть назву команди.");
+        }
+        if (!isCaptain && !joinCode) {
+          throw new Error("Вкажіть код приєднання до команди.");
+        }
 
-        await db.collection("users").doc(user.uid).set({ avatarUrl: url }, { merge: true });
-        setAvatarUrl(url);
+        // 1) створюємо Auth користувача (вже буде signed-in)
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        const uid  = cred.user.uid;
 
-        if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
+        // 2) команда
+        let teamId = null;
+
+        if (isCaptain) {
+          const teamRef = db.collection("teams").doc(); // авто-ID
+          teamId = teamRef.id;
+
+          const finalJoinCode = await generateUniqueJoinCode();
+
+          await teamRef.set({
+            name: teamName,
+            ownerUid: uid,
+            joinCode: finalJoinCode,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          showMsg(
+            signupMsg,
+            `Акаунт створено! Код команди: ${finalJoinCode}. Переходимо в кабінет…`,
+            "ok"
+          );
+        } else {
+          const q = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
+          if (q.empty) throw new Error("Команду з таким кодом не знайдено.");
+          teamId = q.docs[0].id;
+
+          showMsg(
+            signupMsg,
+            "Акаунт створено та приєднано до команди. Переходимо в кабінет…",
+            "ok"
+          );
+        }
+
+        // 3) users/{uid}
+        await db.collection("users").doc(uid).set({
+          fullName,
+          email,
+          phone,
+          city,
+          role: isCaptain ? "captain" : "member",
+          teamId,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: false });
+
+        setTimeout(() => {
+          window.location.href = "cabinet.html";
+        }, 600);
+
       } catch (err) {
         console.error(err);
-        if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження.";
+        let text = (err && err.message) ? err.message : "Сталася помилка під час реєстрації.";
+
+        // firebase auth коди
+        if (String(err?.code).includes("auth/email-already-in-use")) text = "Такий email вже використовується.";
+        if (String(err?.code).includes("auth/invalid-email")) text = "Email має некоректний формат.";
+        if (String(err?.code).includes("auth/weak-password")) text = "Пароль занадто слабкий (мінімум 6 символів).";
+
+        showMsg(signupMsg, text, "err");
+      } finally {
+        setLoading(signupBtn, false, "Створити акаунт");
       }
     });
   }
+
+  // ----------------- ВХІД -----------------
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      showMsg(loginMsg, "", "");
+      setLoading(loginBtn, true, "Увійти");
+
+      try {
+        const email    = normEmail(document.getElementById("loginEmail")?.value);
+        const password = document.getElementById("loginPassword")?.value || "";
+
+        if (!email || !password) throw new Error("Введіть email та пароль.");
+
+        await auth.signInWithEmailAndPassword(email, password);
+
+        showMsg(loginMsg, "Вхід успішний, переходимо у кабінет…", "ok");
+        setTimeout(() => window.location.href = "cabinet.html", 300);
+
+      } catch (err) {
+        console.error(err);
+        let text = (err && err.message) ? err.message : "Помилка входу.";
+        if (String(err?.code).includes("auth/wrong-password")) text = "Невірний пароль.";
+        if (String(err?.code).includes("auth/user-not-found")) text = "Користувача з таким email не знайдено.";
+        showMsg(loginMsg, text, "err");
+      } finally {
+        setLoading(loginBtn, false, "Увійти");
+      }
+    });
+  }
+
+  // якщо вже залогінений і зайшов на auth.html — кидаємо у кабінет
+  auth.onAuthStateChanged((user) => {
+    if (user && window.location.pathname.endsWith("auth.html")) {
+      window.location.href = "cabinet.html";
+    }
+  });
 })();

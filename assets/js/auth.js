@@ -6,8 +6,8 @@
   const auth = window.scAuth;
   const db   = window.scDb;
 
-  if (!auth || !db) {
-    console.error("Firebase не ініціалізовано. Перевір підключення firebase-*-compat.js та assets/js/firebase-init.js");
+  if (!auth || !db || !window.firebase) {
+    console.error("Firebase не ініціалізовано. Перевір firebase-*-compat.js та assets/js/firebase-init.js");
     return;
   }
 
@@ -21,16 +21,21 @@
   const signupBtn  = document.getElementById("signupBtn");
   const loginBtn   = document.getElementById("loginBtn");
 
-  const capMode    = document.getElementById("isCaptain");       // checkbox: капітан?
-  const teamNameIn = document.getElementById("teamName");         // input: назва команди
-  const joinCodeIn = document.getElementById("joinCode");         // input: код команди
-  const fullNameIn = document.getElementById("fullName");         // input: ПІБ
-  const phoneIn    = document.getElementById("phone");            // input: телефон
-  const cityIn     = document.getElementById("city");             // input: місто
+  // Signup inputs (реальні id з auth.html)
+  const emailInSU    = document.getElementById("signupEmail");
+  const passInSU     = document.getElementById("signupPassword");
+  const fullNameIn   = document.getElementById("signupFullName");
+  const phoneIn      = document.getElementById("signupPhone");      // hidden з +380...
+  const phoneCleanIn = document.getElementById("signupPhoneClean"); // видимий 9 цифр
+  const cityIn       = document.getElementById("signupCity");
 
-  // якщо в тебе інші id в html — підженеш тут
-  const emailInSU  = document.getElementById("signupEmail");
-  const passInSU   = document.getElementById("signupPassword");
+  const roleCaptain  = document.getElementById("signupRoleCaptain");
+  const roleMember   = document.getElementById("signupRoleMember");
+
+  const teamNameIn   = document.getElementById("signupTeamName");
+  const joinCodeIn   = document.getElementById("signupJoinCode");
+
+  // Login inputs
   const emailInLI  = document.getElementById("loginEmail");
   const passInLI   = document.getElementById("loginPassword");
 
@@ -56,31 +61,47 @@
     return out;
   }
 
+  function getRole(){
+    if (roleMember && roleMember.checked) return "member";
+    return "captain";
+  }
+
+  function getPhone(){
+    // пріоритет: hidden з +380..., але якщо раптом не заповнився — зберемо з clean
+    const p = norm(phoneIn?.value);
+    if (p) return p;
+    const digits = norm(phoneCleanIn?.value).replace(/\D/g,"").slice(0,9);
+    return digits ? ("+380" + digits) : "";
+  }
+
   async function ensureUserDoc(uid, payload){
     await db.collection("users").doc(uid).set(payload, { merge:true });
   }
 
   async function createTeamForCaptain(uid, teamName){
     const joinCode = makeJoinCode(6);
+
     const teamRef = await db.collection("teams").add({
       name: teamName,
       ownerUid: uid,
       joinCode,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
+
     return { teamId: teamRef.id, joinCode };
   }
 
   async function findTeamByJoinCode(code){
+    const clean = norm(code).toUpperCase().replace(/\s+/g,"");
     const qs = await db.collection("teams")
-      .where("joinCode","==",code)
+      .where("joinCode","==",clean)
       .limit(1)
       .get();
 
     if (qs.empty) return null;
 
-    const doc = qs.docs[0];
-    return { teamId: doc.id, ...(doc.data()||{}) };
+    const docSnap = qs.docs[0];
+    return { teamId: docSnap.id, ...(docSnap.data() || {}) };
   }
 
   // ===== Signup =====
@@ -89,21 +110,24 @@
       e.preventDefault();
       setMsg(signupMsg, "");
 
-      const email = norm(emailInSU?.value);
-      const pass  = String(passInSU?.value || "");
+      const email    = norm(emailInSU?.value);
+      const pass     = String(passInSU?.value || "");
       const fullName = norm(fullNameIn?.value);
-      const phone    = norm(phoneIn?.value);
+      const phone    = getPhone();
       const city     = norm(cityIn?.value);
 
-      const isCaptain = !!capMode?.checked;
-      const teamName  = norm(teamNameIn?.value);
-      const joinCode  = norm(joinCodeIn?.value).toUpperCase();
+      const role     = getRole();
+      const isCaptain = role === "captain";
+
+      const teamName = norm(teamNameIn?.value);
+      const joinCode = norm(joinCodeIn?.value).toUpperCase().replace(/\s+/g,"");
 
       // базова валідація
       if (!email || !pass) return setMsg(signupMsg, "Вкажіть email і пароль.", "err");
       if (pass.length < 6) return setMsg(signupMsg, "Пароль мінімум 6 символів.", "err");
       if (!fullName) return setMsg(signupMsg, "Вкажіть ім'я та прізвище.", "err");
       if (!phone) return setMsg(signupMsg, "Вкажіть номер телефону.", "err");
+      if (!city) return setMsg(signupMsg, "Вкажіть місто / селище.", "err");
 
       if (isCaptain && !teamName) return setMsg(signupMsg, "Вкажіть назву команди.", "err");
       if (!isCaptain && !joinCode) return setMsg(signupMsg, "Вкажіть код команди капітана.", "err");
@@ -117,7 +141,6 @@
 
         let teamId = null;
         let finalJoinCode = null;
-        let role = isCaptain ? "captain" : "member";
 
         if (isCaptain){
           const created = await createTeamForCaptain(user.uid, teamName);
@@ -126,7 +149,7 @@
         } else {
           const found = await findTeamByJoinCode(joinCode);
           if (!found){
-            // якщо код не знайдено — видаляємо створений auth-акаунт, щоб не лишати “сміття”
+            // якщо код не знайдено — прибираємо щойно створений auth-акаунт
             try { await user.delete(); } catch(_){}
             return setMsg(signupMsg, "Код команди не знайдено. Перевірте та спробуйте ще раз.", "err");
           }
@@ -134,8 +157,7 @@
           finalJoinCode = found.joinCode || joinCode;
         }
 
-        // ЄДИНА схема users:
-        // docId = uid, поля: fullName,email,phone,city,role,teamId,createdAt,avatarUrl
+        // users/{uid}
         await ensureUserDoc(user.uid, {
           fullName,
           email: user.email || email,
@@ -147,16 +169,20 @@
           avatarUrl: ""
         });
 
-        setMsg(signupMsg, isCaptain
-          ? `Готово! Команду створено. Код: ${finalJoinCode}`
-          : `Готово! Ви приєднані до команди.`, "ok"
+        setMsg(
+          signupMsg,
+          isCaptain
+            ? `Готово! Команду створено. Код: ${finalJoinCode}`
+            : `Готово! Ви приєднані до команди.`,
+          "ok"
         );
 
         // редірект
         setTimeout(() => window.location.href = "cabinet.html", 500);
       } catch (err){
         console.error(err);
-        setMsg(signupMsg, "Помилка реєстрації. Перевір email/пароль або правила Firestore.", "err");
+        const msg = (err && err.message) ? err.message : String(err);
+        setMsg(signupMsg, "Помилка реєстрації: " + msg, "err");
       } finally {
         setLoading(signupBtn, false);
       }
@@ -184,7 +210,8 @@
         setTimeout(() => window.location.href = "cabinet.html", 300);
       } catch (err){
         console.error(err);
-        setMsg(loginMsg, "Не вдалося увійти. Перевірте дані.", "err");
+        const msg = (err && err.message) ? err.message : String(err);
+        setMsg(loginMsg, "Не вдалося увійти: " + msg, "err");
       } finally {
         setLoading(loginBtn, false);
       }

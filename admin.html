@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STOLAR CARP • Адмінка</title>
+
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
+
+  <style>
+    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
+    .admin-wrap{ max-width:1100px; margin:0 auto; padding:32px 0 70px; }
+    .admin-top{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; border-radius:18px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+    }
+    .admin-badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 12px; border-radius:999px;
+      font-size:.85rem; color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(0,0,0,.35);
+    }
+    .admin-grid{
+      margin-top:18px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media(min-width:900px){
+      .admin-grid{ grid-template-columns: 1.2fr .8fr; }
+    }
+    .admin-card{
+      padding:16px;
+      border-radius:18px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+    }
+    .admin-card h2{ margin:0 0 10px; }
+    .muted{ color:#9ca3af; }
+    .admin-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .item{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.55);
+    }
+    .item-top{ display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;}
+    .pill{
+      display:inline-flex; align-items:center;
+      padding:4px 10px; border-radius:999px;
+      font-size:.78rem;
+      border:1px solid rgba(148,163,184,.35);
+      color:#e5e7eb;
+      background:rgba(0,0,0,.35);
+    }
+    .pill.ok{ border-color:rgba(34,197,94,.6); }
+    .pill.warn{ border-color:rgba(250,204,21,.65); }
+    .pill.bad{ border-color:rgba(239,68,68,.65); }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .row .btn{ padding:10px 14px; border-radius:12px; }
+    .admin-hidden{ display:none; }
+  </style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav">
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>
+  </div>
+</header>
+
+<main class="main">
+  <section class="section container admin-wrap">
+
+    <div class="admin-top">
+      <div>
+        <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
+        <div class="muted" id="adminStatus">Перевіряю доступ…</div>
+      </div>
+      <div class="admin-badge" id="adminBadge">🔒 admin</div>
+    </div>
+
+    <div id="adminApp" class="admin-hidden">
+      <div class="admin-grid">
+
+        <!-- ЛІВО: Заявки -->
+        <div class="admin-card">
+          <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
+          <div class="muted">Тут будуть заявки зі статусом оплати та підтвердження.</div>
+
+          <div class="row">
+            <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
+          </div>
+
+          <div class="admin-list" id="regsList"></div>
+        </div>
+
+        <!-- ПРАВО: Жереб + Зважування -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="admin-card">
+            <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
+            <div class="muted">Призначення зона/сектор для команди після підтвердження оплати.</div>
+            <div class="row">
+              <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
+            </div>
+            <div class="muted" style="margin-top:8px;">
+              (зараз це каркас — далі підключимо ліміти секторів і автоперевірку дублів)
+            </div>
+          </div>
+
+          <div class="admin-card">
+            <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
+            <div class="muted">Додавання зважувань (1–4) і формування результатів зон A/B/C.</div>
+            <div class="row">
+              <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<script>
+  // --- helpers ---
+  function $id(id){ return document.getElementById(id); }
+  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+  async function waitForFirebase(){
+    // config.js має виставити window.scAuth + window.scDb
+    for (let i=0;i<80;i++){
+      if (window.scAuth && window.scDb) return;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error("Firebase не ініціалізувався (scAuth/scDb не знайдено).");
+  }
+
+  async function requireAdmin(){
+    await waitForFirebase();
+    const auth = window.scAuth;
+    const db = window.scDb;
+
+    // чекаємо користувача
+    await new Promise(resolve => auth.onAuthStateChanged(() => resolve()));
+
+    const u = auth.currentUser;
+    if (!u) { location.href = "/"; return; }
+
+    // перевіряємо адміна через admins/{uid}
+    const snap = await db.collection("admins").doc(u.uid).get();
+    if (!snap.exists) { location.href = "/"; return; }
+
+    $id("adminStatus").textContent = "Доступ дозволено ✅";
+    $id("adminApp").classList.remove("admin-hidden");
+
+    // кнопка: завантажити заявки (демо-версія)
+    $id("btnLoadRegs").addEventListener("click", loadRegistrations);
+
+    // заглушки
+    $id("btnOpenDraw").addEventListener("click", () => alert("Модуль жеребкування: наступний крок"));
+    $id("btnOpenWeigh").addEventListener("click", () => alert("Модуль зважувань: наступний крок"));
+
+    // автозагрузка
+    loadRegistrations().catch(()=>{});
+  }
+
+  async function loadRegistrations(){
+    const db = window.scDb;
+    const box = $id("regsList");
+    box.innerHTML = '<div class="muted">Завантажую…</div>';
+
+    // IMPORTANT:
+    // Я не знаю точні поля твоїх registrations, тому читаємо останні 25 і показуємо “як є”.
+    const snap = await db.collection("registrations")
+      .orderBy("createdAt", "desc")
+      .limit(25)
+      .get();
+
+    if (snap.empty){
+      box.innerHTML = '<div class="muted">Заявок поки немає.</div>';
+      return;
+    }
+
+    const items = [];
+    snap.forEach(doc => {
+      const d = doc.data() || {};
+      const teamName = d.teamName || d.team || d.name || "Команда";
+      const stageId = d.stageId || d.stage || "—";
+      const pay = d.paymentStatus || d.payStatus || "pending";
+
+      const pillClass = pay === "paid" ? "ok" : (pay === "rejected" ? "bad" : "warn");
+
+      items.push(`
+        <div class="item" data-id="${esc(doc.id)}">
+          <div class="item-top">
+            <div><b>${esc(teamName)}</b> <span class="muted">• stage: ${esc(stageId)}</span></div>
+            <span class="pill ${pillClass}">${esc(pay)}</span>
+          </div>
+          <div class="muted" style="margin-top:6px;">
+            id: ${esc(doc.id)}
+          </div>
+          <div class="row">
+            <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
+            <button class="btn btn--primary" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
+          </div>
+        </div>
+      `);
+    });
+
+    box.innerHTML = items.join("");
+  }
+
+  // --- actions (тільки адмін, бо в rules це закриємо) ---
+  window.approveReg = async function(regId){
+    const db = window.scDb;
+    await db.collection("registrations").doc(regId).update({
+      paymentStatus: "paid",
+      approvedAt: new Date(),
+      approvedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+    });
+    loadRegistrations();
+  }
+
+  window.rejectReg = async function(regId){
+    const db = window.scDb;
+    await db.collection("registrations").doc(regId).update({
+      paymentStatus: "rejected",
+      rejectedAt: new Date(),
+      rejectedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+    });
+    loadRegistrations();
+  }
+
+  // старт
+  requireAdmin().catch(err => {
+    console.error(err);
+    const el = document.getElementById("adminStatus");
+    if (el) el.textContent = "Помилка: " + err.message;
+  });
+</script>
+
+</body>
+</html>

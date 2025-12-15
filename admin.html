@@ -7,13 +7,13 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- ✅ Firebase compat SDK (потрібно саме так і саме в такому порядку) -->
+  <!-- Firebase compat SDK (defer OK, бо стартуємо через window.load) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- (опційно) твій загальний файл сайту -->
+  <!-- твій файл сайту (може бути, не заважає) -->
   <script defer src="assets/js/config.js"></script>
 
   <style>
@@ -108,7 +108,6 @@
 
     <div id="adminApp" class="admin-hidden">
 
-      <!-- Панель -->
       <div class="admin-card" style="margin-top:14px;">
         <div class="split">
           <h2 class="section-title" style="margin:0;">Керування</h2>
@@ -132,10 +131,9 @@
 
       <div class="admin-grid">
 
-        <!-- ЛІВО: заявки -->
         <div class="admin-card">
           <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
-          <div class="muted">Колекція: <b>registrations</b>. Підтвердження/відхилення — тільки адмін.</div>
+          <div class="muted">Колекція: <b>registrations</b></div>
 
           <div class="row">
             <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
@@ -144,7 +142,6 @@
           <div class="admin-list" id="regsList"></div>
         </div>
 
-        <!-- ПРАВО: модулі (каркас) -->
         <div style="display:flex; flex-direction:column; gap:14px;">
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
@@ -170,10 +167,14 @@
 </main>
 
 <script>
-  // ✅ ЖОРСТКА ПРИВʼЯЗКА: тільки цей UID має доступ
+  // ✅ ВАЖЛИВО: стартуємо тільки після window.load (коли defer скрипти вже завантажені)
+  window.addEventListener("load", () => AdminBoot().catch(err => {
+    console.error(err);
+    setStatus("Помилка: " + (err && err.message ? err.message : String(err)));
+  }));
+
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
-  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
     authDomain: "stolar-carp.firebaseapp.com",
@@ -188,14 +189,19 @@
   function setStatus(t){ const el=$id("adminStatus"); if(el) el.textContent=t; }
   function hint(t){ const el=$id("adminHint"); if(el) el.textContent=t; }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
 
-  window.addEventListener("error", (e) => setStatus("Помилка JS: " + (e.message || "unknown")));
+  async function waitForFirebaseCompat(){
+    // чекаємо, поки window.firebase зʼявиться
+    for (let i=0;i<120;i++){
+      if (window.firebase && typeof window.firebase.initializeApp === "function") return;
+      await new Promise(r => setTimeout(r, 50));
+    }
+    throw new Error("Firebase SDK не завантажився (compat). Перевір інтернет/блокування скриптів.");
+  }
 
-  function initFirebaseSafe(){
-    // якщо config.js вже створив — беремо
+  function initFirebase(){
     if (window.scAuth && window.scDb) return;
-
-    if (!window.firebase) throw new Error("Firebase SDK не завантажився (compat).");
 
     if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
@@ -204,49 +210,45 @@
     window.scStorage = firebase.storage ? firebase.storage() : null;
   }
 
-  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
+  async function AdminBoot(){
+    setStatus("Firebase: завантажую compat…");
+    await waitForFirebaseCompat();
 
-  async function requireAdmin(){
     setStatus("Firebase: ініціалізація…");
-    initFirebaseSafe();
+    initFirebase();
 
     const auth = window.scAuth;
-    const db   = window.scDb;
-
-    setStatus("Auth: чекаю onAuthStateChanged…");
+    setStatus("Auth: перевіряю користувача…");
 
     const user = await new Promise(resolve => {
       const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); });
     });
 
-    if (!user) {
+    if (!user){
       setStatus("Нема входу → /auth.html");
       location.href = "/auth.html";
       return;
     }
 
-    // ✅ ТІЛЬКИ UID (без role)
-    if (user.uid !== ADMIN_UID) {
-      setStatus("Доступ заборонено ❌ (не адмін UID)");
+    if (user.uid !== ADMIN_UID){
+      setStatus("Доступ заборонено ❌ (не твій UID)");
       location.href = "/";
       return;
     }
 
-    // ✅ ДОСТУП ДОЗВОЛЕНО
     setStatus("Доступ дозволено ✅");
     $id("adminUidInfo").textContent = "ADMIN UID: " + user.uid;
-
     $id("adminApp").classList.remove("admin-hidden");
 
     // кнопки
     bind("btnLogout", async () => { await auth.signOut(); location.href="/"; });
 
-    bind("btnCreateContest", () => { hint("1) Створити змагання — наступний крок (seasons/stages/settings)"); alert("1) Створити змагання — наступний крок"); });
-    bind("btnToggleContest", () => { hint("2) Відкрити/закрити — наступний крок (settings)"); alert("2) Відкрити/закрити — наступний крок"); });
+    bind("btnCreateContest", () => { hint("1) Створити змагання — робимо наступним кроком"); alert("1) Створити змагання — наступний крок"); });
+    bind("btnToggleContest", () => { hint("2) Відкрити/закрити — робимо наступним кроком"); alert("2) Відкрити/закрити — наступний крок"); });
     bind("btnRegistrations", () => { hint("3) Реєстрація команд — показую заявки"); loadRegistrations(); });
     bind("btnDraw", () => { hint("4) Жеребкування — наступний крок"); alert("4) Жеребкування — наступний крок"); });
     bind("btnWeigh", () => { hint("5) Зважування — наступний крок"); alert("5) Зважування — наступний крок"); });
-    bind("btnUsers", () => { hint("6) Користувачі сайту — наступний крок"); alert("6) Користувачі — наступний крок"); });
+    bind("btnUsers", () => { hint("6) Користувачі — наступний крок"); alert("6) Користувачі — наступний крок"); });
 
     bind("btnLoadRegs", () => loadRegistrations());
     bind("btnOpenDraw", () => alert("Модуль жеребу: наступний крок"));
@@ -264,9 +266,8 @@
 
     let snap;
     try {
-      snap = await db.collection("registrations").orderBy("createdAt", "desc").limit(25).get();
+      snap = await db.collection("registrations").orderBy("createdAt","desc").limit(25).get();
     } catch(e){
-      // якщо немає індексу/createdAt — підстрахуємось
       snap = await db.collection("registrations").limit(25).get();
     }
 
@@ -320,11 +321,6 @@
     });
     loadRegistrations();
   }
-
-  requireAdmin().catch(err => {
-    console.error(err);
-    setStatus("Помилка: " + err.message);
-  });
 </script>
 
 </body>

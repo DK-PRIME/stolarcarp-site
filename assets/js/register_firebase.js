@@ -1,168 +1,279 @@
 // assets/js/register_firebase.js
+// COMPAT (firebase-init.js -> window.scAuth / window.scDb)
+// Реєстрація команди на відкритий етап (seasons/*/stages де isRegistrationOpen == true)
+// Запис у collection: registrations
+
 (function () {
   const auth = window.scAuth;
   const db   = window.scDb;
 
+  const form           = document.getElementById("regForm");
+  const eventOptionsEl = document.getElementById("eventOptions");
+  const msgEl          = document.getElementById("msg");
+  const submitBtn      = document.getElementById("submitBtn");
+  const spinnerEl      = document.getElementById("spinner");
+  const hpInput        = document.getElementById("hp");
+  const foodQtyField   = document.getElementById("foodQtyField");
+  const foodQtyInput   = document.getElementById("food_qty");
+  const profileSummary = document.getElementById("profileSummary");
+  const copyCardBtn    = document.getElementById("copyCard");
+  const cardNumEl      = document.getElementById("cardNum");
+
   if (!auth || !db || !window.firebase) {
-    document.getElementById("eventOptions").innerHTML =
-      '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
+    if (eventOptionsEl) {
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
+    }
+    if (submitBtn) submitBtn.disabled = true;
     return;
   }
-
-  const form = document.getElementById("regForm");
-  const eventOptionsEl = document.getElementById("eventOptions");
-  const msgEl = document.getElementById("msg");
-  const submitBtn = document.getElementById("submitBtn");
-  const spinner = document.getElementById("spinner");
-  const foodQtyField = document.getElementById("foodQtyField");
-  const foodQtyInput = document.getElementById("food_qty");
-  const profileSummary = document.getElementById("profileSummary");
 
   let currentUser = null;
   let profile = null;
 
-  function msg(text, ok = true) {
+  function setMsg(text, ok = true) {
+    if (!msgEl) return;
     msgEl.textContent = text || "";
-    msgEl.className = "form-msg " + (ok ? "ok" : "err");
+    msgEl.classList.remove("ok", "err");
+    if (text) msgEl.classList.add(ok ? "ok" : "err");
   }
 
-  function loading(v) {
-    submitBtn.disabled = v;
-    spinner.classList.toggle("spinner--on", v);
+  function setLoading(v) {
+    if (submitBtn) submitBtn.disabled = !!v;
+    if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
   }
 
-  // ===== PROFILE =====
+  // copy card
+  if (copyCardBtn && cardNumEl) {
+    copyCardBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(cardNumEl.textContent.trim());
+        copyCardBtn.textContent = "Скопійовано ✔";
+        setTimeout(() => (copyCardBtn.textContent = "Скопіювати номер картки"), 1200);
+      } catch {
+        alert("Не вдалося скопіювати номер. Скопіюйте вручну.");
+      }
+    });
+  }
+
+  function initFoodLogic() {
+    const radios = document.querySelectorAll('input[name="food"]');
+    if (!radios.length || !foodQtyField || !foodQtyInput) return;
+
+    function update() {
+      const selected = document.querySelector('input[name="food"]:checked');
+      const need = selected && selected.value === "Так";
+      foodQtyField.classList.toggle("field--disabled", !need);
+      foodQtyInput.disabled = !need;
+      if (!need) foodQtyInput.value = "";
+    }
+
+    radios.forEach(r => r.addEventListener("change", update));
+    update();
+  }
+
   async function loadProfile(user) {
     const uSnap = await db.collection("users").doc(user.uid).get();
-    if (!uSnap.exists) throw "Нема профілю користувача";
+    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль.");
 
-    const u = uSnap.data();
-    let teamName = "—";
+    const u = uSnap.data() || {};
+    const teamId = u.teamId || null;
 
-    if (u.teamId) {
-      const tSnap = await db.collection("teams").doc(u.teamId).get();
-      if (tSnap.exists) teamName = tSnap.data().name;
+    let teamName = "";
+    if (teamId) {
+      const tSnap = await db.collection("teams").doc(teamId).get();
+      if (tSnap.exists) teamName = (tSnap.data() || {}).name || "";
     }
 
     profile = {
       uid: user.uid,
-      teamId: u.teamId,
-      teamName,
-      captain: u.fullName || user.email,
+      email: user.email || "",
+      teamId,
+      teamName: teamName || "Без назви",
+      captain: u.fullName || user.email || "",
       phone: u.phone || ""
     };
 
-    profileSummary.innerHTML = `
-      Команда: <b>${profile.teamName}</b><br>
-      Капітан: <b>${profile.captain}</b><br>
-      Телефон: <b>${profile.phone || "—"}</b>
-    `;
+    if (profileSummary) {
+      profileSummary.innerHTML =
+        `Команда: <b>${profile.teamName}</b><br>` +
+        `Капітан: <b>${profile.captain}</b><br>` +
+        `Телефон: <b>${profile.phone || "не вказано"}</b>`;
+    }
   }
 
-  // ===== STAGES =====
-  async function loadStages() {
-    eventOptionsEl.innerHTML = "Завантаження етапів…";
+  async function loadOpenStages() {
+    if (!eventOptionsEl) return;
 
-    const snap = await db
-      .collectionGroup("stages")
-      .where("isRegistrationOpen", "==", true)
-      .get();
+    eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження актуальних етапів...</p>`;
 
-    if (snap.empty) {
-      eventOptionsEl.innerHTML = "Нема відкритих етапів";
+    // кеш 60 сек
+    const cacheKey = "sc_open_stages_v2";
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+      if (cached && (Date.now() - cached.t < 60_000) && Array.isArray(cached.items)) {
+        renderStages(cached.items);
+        return;
+      }
+    } catch {}
+
+    try {
+      const snap = await db
+        .collectionGroup("stages")
+        .where("isRegistrationOpen", "==", true)
+        .get();
+
+      const items = [];
+      snap.forEach(docSnap => {
+        const st = docSnap.data() || {};
+        const parts = docSnap.ref.path.split("/"); // seasons/2026/stages/2026_e1
+        const seasonId = parts[1] || st.seasonId || "";
+        const stageId = docSnap.id;
+
+        items.push({
+          seasonId,
+          stageId,
+          title: st.label || st.fullTitle || st.title || stageId,
+          isFinal: !!st.isFinal
+        });
+      });
+
+      items.sort((a,b) => (a.seasonId + a.stageId).localeCompare(b.seasonId + b.stageId));
+      sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), items }));
+      renderStages(items);
+    } catch (e) {
+      console.error("loadOpenStages error:", e);
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити етапи (Rules/доступ). Увійдіть у акаунт і оновіть сторінку.</p>';
+    }
+  }
+
+  function renderStages(items) {
+    if (!eventOptionsEl) return;
+    eventOptionsEl.innerHTML = "";
+
+    if (!items.length) {
+      eventOptionsEl.innerHTML = `<p class="form__hint">Зараз немає відкритих етапів для реєстрації.</p>`;
       return;
     }
 
-    eventOptionsEl.innerHTML = "";
-
-    snap.forEach(doc => {
-      const st = doc.data();
-      const path = doc.ref.path.split("/");
-      const seasonId = path[1];
-
-      const label = document.createElement("label");
-      label.className = "event-item";
-      label.innerHTML = `
-        <input type="radio" name="stagePick" value="${seasonId}||${doc.id}">
-        <div>${st.label || doc.id} <small>(${seasonId})</small></div>
+    items.forEach(st => {
+      const value = `${st.seasonId}||${st.stageId}`;
+      const el = document.createElement("label");
+      el.className = "event-item";
+      el.innerHTML = `
+        <input type="radio" name="stagePick" value="${value}">
+        <div>
+          <div>${st.title}</div>
+          <div style="font-size:12px;color:var(--muted);">
+            ${st.seasonId ? `Сезон: ${st.seasonId}` : ""}${st.isFinal ? " · ФІНАЛ" : ""}
+          </div>
+        </div>
       `;
-      eventOptionsEl.appendChild(label);
+      eventOptionsEl.appendChild(el);
     });
   }
 
-  // ===== AUTH =====
-  auth.onAuthStateChanged(async user => {
-    await loadStages();
+  auth.onAuthStateChanged(async (user) => {
+    currentUser = user || null;
+    setMsg("");
 
     if (!user) {
-      msg("Увійдіть у акаунт STOLAR CARP", false);
-      submitBtn.disabled = true;
+      if (submitBtn) submitBtn.disabled = true;
+      if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Акаунт» і поверніться сюди.";
+      if (eventOptionsEl) eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Етапи доступні після входу в акаунт.</p>';
+      setMsg("Увійдіть у акаунт, щоб бачити відкриті етапи і подати заявку.", false);
       return;
     }
-
-    currentUser = user;
-    await loadProfile(user);
-    submitBtn.disabled = false;
-  });
-
-  // ===== SUBMIT =====
-  form.addEventListener("submit", async e => {
-    e.preventDefault();
-
-    if (!currentUser || !profile) {
-      msg("Нема профілю", false);
-      return;
-    }
-
-    const pick = document.querySelector("input[name=stagePick]:checked");
-    if (!pick) {
-      msg("Оберіть етап", false);
-      return;
-    }
-
-    const food = document.querySelector("input[name=food]:checked")?.value;
-    if (!food) {
-      msg("Оберіть харчування", false);
-      return;
-    }
-
-    let foodQty = null;
-    if (food === "Так") {
-      foodQty = Number(foodQtyInput.value);
-      if (!foodQty || foodQty < 1 || foodQty > 6) {
-        msg("Кількість 1–6", false);
-        return;
-      }
-    }
-
-    const [seasonId, stageId] = pick.value.split("||");
 
     try {
-      loading(true);
-
-      await db.collection("registrations").add({
-        uid: profile.uid,
-        teamId: profile.teamId,
-        teamName: profile.teamName,
-        captain: profile.captain,
-        phone: profile.phone,
-
-        seasonId,
-        stageId,
-
-        food,
-        foodQty,
-        status: "pending_payment",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-      msg("Заявку подано ✔");
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      msg("Помилка відправки", false);
-    } finally {
-      loading(false);
+      await loadProfile(user);
+      initFoodLogic();
+      await loadOpenStages();
+      if (submitBtn) submitBtn.disabled = false;
+    } catch (e) {
+      console.error(e);
+      if (submitBtn) submitBtn.disabled = true;
+      setMsg(e.message || "Помилка профілю.", false);
     }
   });
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (hpInput && hpInput.value) {
+        setMsg("Підозра на бота. Заявка не відправлена.", false);
+        return;
+      }
+
+      if (!currentUser || !profile) {
+        setMsg("Увійдіть у акаунт.", false);
+        return;
+      }
+
+      const picked = document.querySelector('input[name="stagePick"]:checked');
+      if (!picked) {
+        setMsg("Оберіть етап.", false);
+        return;
+      }
+
+      const food = document.querySelector('input[name="food"]:checked')?.value;
+      if (!food) {
+        setMsg("Оберіть харчування.", false);
+        return;
+      }
+
+      let foodQty = null;
+      if (food === "Так") {
+        const q = Number(foodQtyInput?.value || "0");
+        if (!q || q < 1 || q > 6) {
+          setMsg("Вкажіть кількість харчуючих 1–6.", false);
+          return;
+        }
+        foodQty = q;
+      }
+
+      const [seasonId, stageId] = String(picked.value).split("||");
+
+      let stageTitle = "";
+      try {
+        const stSnap = await db.collection("seasons").doc(seasonId).collection("stages").doc(stageId).get();
+        if (stSnap.exists) stageTitle = (stSnap.data() || {}).label || "";
+      } catch {}
+
+      try {
+        setLoading(true);
+        setMsg("");
+
+        await db.collection("registrations").add({
+          uid: profile.uid,
+          seasonId,
+          stageId,
+          stageTitle: stageTitle || stageId,
+
+          teamId: profile.teamId,
+          teamName: profile.teamName,
+          captain: profile.captain,
+          phone: profile.phone,
+
+          food,
+          foodQty: foodQty ?? null,
+
+          status: "pending_payment",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setMsg("Заявка подана ✔ Після оплати я підтверджу в DK Prime.", true);
+        form.reset();
+        initFoodLogic();
+      } catch (err) {
+        console.error("submit error:", err);
+        setMsg("Помилка відправки заявки (Rules/доступ).", false);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }
 })();

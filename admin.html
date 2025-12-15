@@ -97,12 +97,27 @@
     </div>
 
     <div id="adminApp" class="admin-hidden">
+
+      <!-- Панель кнопок -->
+      <div class="admin-card" style="margin-top:14px;">
+        <h2 class="section-title" style="margin:0 0 10px;">Керування</h2>
+        <div class="row">
+          <button class="btn btn--primary" id="btnCreateContest">1. Створити змагання</button>
+          <button class="btn btn--accent"  id="btnToggleContest">2. Відкрити / закрити</button>
+          <button class="btn btn--primary" id="btnRegistrations">3. Реєстрація команд</button>
+          <button class="btn btn--accent"  id="btnDraw">4. Жеребкування</button>
+          <button class="btn btn--danger"  id="btnWeigh">5. Зважування</button>
+          <button class="btn btn--primary" id="btnUsers">6. Користувачі сайту</button>
+        </div>
+        <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
+      </div>
+
       <div class="admin-grid">
 
         <!-- ЛІВО: Заявки -->
         <div class="admin-card">
           <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
-          <div class="muted">Тут будуть заявки зі статусом оплати та підтвердження.</div>
+          <div class="muted">Тут показуються заявки (registrations). Підтвердження оплати доступне тільки адміну.</div>
 
           <div class="row">
             <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
@@ -111,22 +126,19 @@
           <div class="admin-list" id="regsList"></div>
         </div>
 
-        <!-- ПРАВО: Жереб + Зважування -->
+        <!-- ПРАВО: Заглушки модулів -->
         <div style="display:flex; flex-direction:column; gap:14px;">
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
-            <div class="muted">Призначення зона/сектор для команди після підтвердження оплати.</div>
+            <div class="muted">Модуль жеребу: зона/сектор для команди (підключимо наступним кроком).</div>
             <div class="row">
               <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
-            </div>
-            <div class="muted" style="margin-top:8px;">
-              (зараз це каркас — далі підключимо ліміти секторів і автоперевірку дублів)
             </div>
           </div>
 
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
-            <div class="muted">Додавання зважувань (1–4) і формування результатів зон A/B/C.</div>
+            <div class="muted">Модуль зважувань (1–4) і результати зон A/B/C (підключимо наступним кроком).</div>
             <div class="row">
               <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
             </div>
@@ -164,21 +176,53 @@
     const u = auth.currentUser;
     if (!u) { location.href = "/"; return; }
 
-    // перевіряємо адміна через admins/{uid}
-    const snap = await db.collection("admins").doc(u.uid).get();
-    if (!snap.exists) { location.href = "/"; return; }
+    // ✅ ВИПРАВЛЕНО: перевірка адміна через users/{uid}.role
+    const me = await db.collection("users").doc(u.uid).get();
+    const role = (me.exists && me.data() && me.data().role) ? me.data().role : "user";
+    if (role !== "admin") { location.href = "/"; return; }
 
     $id("adminStatus").textContent = "Доступ дозволено ✅";
     $id("adminApp").classList.remove("admin-hidden");
 
-    // кнопка: завантажити заявки (демо-версія)
+    // Кнопки керування
+    $id("btnCreateContest").addEventListener("click", () => {
+      $id("adminHint").textContent = "Створити змагання — модуль підключимо наступним кроком.";
+      alert("Створити змагання — наступний крок");
+    });
+
+    $id("btnToggleContest").addEventListener("click", () => {
+      $id("adminHint").textContent = "Відкрити/закрити — модуль підключимо наступним кроком (settings).";
+      alert("Відкрити / закрити — наступний крок");
+    });
+
+    $id("btnRegistrations").addEventListener("click", () => {
+      $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations).";
+      loadRegistrations();
+    });
+
+    $id("btnDraw").addEventListener("click", () => {
+      $id("adminHint").textContent = "Жеребкування — модуль підключимо наступним кроком.";
+      alert("Жеребкування — наступний крок");
+    });
+
+    $id("btnWeigh").addEventListener("click", () => {
+      $id("adminHint").textContent = "Зважування — модуль підключимо наступним кроком.";
+      alert("Зважування — наступний крок");
+    });
+
+    $id("btnUsers").addEventListener("click", () => {
+      $id("adminHint").textContent = "Користувачі сайту — модуль підключимо наступним кроком (users).";
+      alert("Користувачі сайту — наступний крок");
+    });
+
+    // Кнопка: оновити заявки
     $id("btnLoadRegs").addEventListener("click", loadRegistrations);
 
-    // заглушки
+    // Заглушки справа
     $id("btnOpenDraw").addEventListener("click", () => alert("Модуль жеребкування: наступний крок"));
     $id("btnOpenWeigh").addEventListener("click", () => alert("Модуль зважувань: наступний крок"));
 
-    // автозагрузка
+    // автозагрузка заявок
     loadRegistrations().catch(()=>{});
   }
 
@@ -187,8 +231,7 @@
     const box = $id("regsList");
     box.innerHTML = '<div class="muted">Завантажую…</div>';
 
-    // IMPORTANT:
-    // Я не знаю точні поля твоїх registrations, тому читаємо останні 25 і показуємо “як є”.
+    // читаємо останні 25 і показуємо “як є”
     const snap = await db.collection("registrations")
       .orderBy("createdAt", "desc")
       .limit(25)
@@ -228,7 +271,7 @@
     box.innerHTML = items.join("");
   }
 
-  // --- actions (тільки адмін, бо в rules це закриємо) ---
+  // --- actions (тільки адмін, бо в rules це закрито) ---
   window.approveReg = async function(regId){
     const db = window.scDb;
     await db.collection("registrations").doc(regId).update({

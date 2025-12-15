@@ -290,7 +290,16 @@
 </footer>
 
 <!-- Логіка реєстрації на етап -->
-<script type="module" src="assets/js/register_firebase.js"></script>
+<!-- Firebase COMPAT -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- Твій ініт -->
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- Реєстрація -->
+<script src="assets/js/register_firebase.js"></script>
 
 </body>  
 </html>

@@ -152,101 +152,102 @@
 </main>
 
 <script>
-  // --- helpers ---
+  // Показуємо будь-які JS помилки прямо на екрані
+  window.addEventListener("error", (e) => {
+    const el = document.getElementById("adminStatus");
+    if (el) el.textContent = "Помилка JS: " + (e.message || "unknown");
+  });
+
+  function setStatus(t){
+    const el = document.getElementById("adminStatus");
+    if (el) el.textContent = t;
+  }
+
   function $id(id){ return document.getElementById(id); }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
   async function waitForFirebase(){
-    // config.js має виставити window.scAuth + window.scDb
-    for (let i=0;i<80;i++){
-      if (window.scAuth && window.scDb) return;
+    setStatus("Firebase: шукаю scAuth/scDb…");
+    for (let i=0;i<120;i++){
+      if (window.scAuth && window.scDb) {
+        setStatus("Firebase: scAuth/scDb знайдено ✅");
+        return;
+      }
       await new Promise(r => setTimeout(r, 100));
     }
-    throw new Error("Firebase не ініціалізувався (scAuth/scDb не знайдено).");
+    throw new Error("Не з’явились scAuth/scDb (перевір config.js і підключення firebase sdk)");
   }
 
   async function requireAdmin(){
-  await waitForFirebase();
+    await waitForFirebase();
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
+    const auth = window.scAuth;
+    const db   = window.scDb;
 
-  // ✅ ПРАВИЛЬНО чекаємо Firebase Auth
-  const user = await new Promise(resolve => {
-    const unsub = auth.onAuthStateChanged(u => {
-      unsub();
-      resolve(u);
+    setStatus("Auth: чекаю onAuthStateChanged…");
+
+    const user = await new Promise(resolve => {
+      const unsub = auth.onAuthStateChanged(u => {
+        unsub();
+        resolve(u);
+      });
     });
-  });
 
-  if (!user) {
-    location.href = "/auth.html";
-    return;
-  }
+    if (!user) {
+      setStatus("Auth: ти не залогінений → кидаю на /auth.html");
+      location.href = "/auth.html";
+      return;
+    }
 
-  // ✅ перевірка ролі адміна
-  const me = await db.collection("users").doc(user.uid).get();
-  const role = me.exists ? me.data().role : null;
+    setStatus("Auth: user OK ✅ (uid: " + user.uid.slice(0,6) + "…)");
 
-  if (role !== "admin") {
-    location.href = "/";
-    return;
-  }
+    setStatus("Role: читаю users/" + user.uid.slice(0,6) + "…");
 
-  // ✅ ДОСТУП ДОЗВОЛЕНО
-  document.getElementById("adminStatus").textContent = "Доступ дозволено ✅";
-  document.getElementById("adminApp").classList.remove("admin-hidden");
+    const me = await db.collection("users").doc(user.uid).get();
+    if (!me.exists) {
+      setStatus("Role: нема документа users/{uid} (профіль не створився) ❌");
+      location.href = "/";
+      return;
+    }
 
-  // Кнопки керування
-  $id("btnCreateContest").addEventListener("click", () => {
-    $id("adminHint").textContent = "Створити змагання — модуль підключимо наступним кроком.";
-    alert("Створити змагання — наступний крок");
-  });
+    const role = me.data().role || "user";
+    setStatus("Role: " + role);
 
-  $id("btnToggleContest").addEventListener("click", () => {
-    $id("adminHint").textContent = "Відкрити/закрити — модуль підключимо наступним кроком (settings).";
-    alert("Відкрити / закрити — наступний крок");
-  });
+    if (role !== "admin") {
+      setStatus("Доступ заборонено ❌ (role=" + role + ")");
+      location.href = "/";
+      return;
+    }
 
-  $id("btnRegistrations").addEventListener("click", () => {
-    $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations).";
-    loadRegistrations();
-  });
+    // ✅ ДОСТУП ДОЗВОЛЕНО
+    setStatus("Доступ дозволено ✅");
+    $id("adminApp").classList.remove("admin-hidden");
 
-  $id("btnDraw").addEventListener("click", () => {
-    $id("adminHint").textContent = "Жеребкування — модуль підключимо наступним кроком.";
-    alert("Жеребкування — наступний крок");
-  });
+    // Кнопки керування (якщо вони є в HTML)
+    const bind = (id, fn) => { const b = $id(id); if (b) b.addEventListener("click", fn); };
 
-  $id("btnWeigh").addEventListener("click", () => {
-    $id("adminHint").textContent = "Зважування — модуль підключимо наступним кроком.";
-    alert("Зважування — наступний крок");
-  });
+    bind("btnCreateContest", () => { $id("adminHint").textContent = "Створити змагання — наступний крок"; alert("Створити змагання — наступний крок"); });
+    bind("btnToggleContest", () => { $id("adminHint").textContent = "Відкрити/закрити — наступний крок"; alert("Відкрити / закрити — наступний крок"); });
+    bind("btnRegistrations", () => { $id("adminHint").textContent = "Реєстрація команд — показую заявки"; loadRegistrations(); });
+    bind("btnDraw", () => { $id("adminHint").textContent = "Жеребкування — наступний крок"; alert("Жеребкування — наступний крок"); });
+    bind("btnWeigh", () => { $id("adminHint").textContent = "Зважування — наступний крок"; alert("Зважування — наступний крок"); });
+    bind("btnUsers", () => { $id("adminHint").textContent = "Користувачі — наступний крок"; alert("Користувачі — наступний крок"); });
 
-  $id("btnUsers").addEventListener("click", () => {
-    $id("adminHint").textContent = "Користувачі сайту — модуль підключимо наступним кроком (users).";
-    alert("Користувачі сайту — наступний крок");
-  });
+    bind("btnLoadRegs", () => loadRegistrations());
+    bind("btnOpenDraw", () => alert("Модуль жеребкування: наступний крок"));
+    bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
 
-  // Оновити заявки
-  $id("btnLoadRegs").addEventListener("click", loadRegistrations);
-
-  // Заглушки справа (якщо вони є у твоєму HTML)
-  const d = $id("btnOpenDraw");
-  if (d) d.addEventListener("click", () => alert("Модуль жеребкування: наступний крок"));
-  const w = $id("btnOpenWeigh");
-  if (w) w.addEventListener("click", () => alert("Модуль зважувань: наступний крок"));
-
-  // автозагрузка заявок
-  loadRegistrations().catch(()=>{});
+    // Автопоказ заявок (якщо колекція є)
+    loadRegistrations().catch(()=>{});
   }
 
   async function loadRegistrations(){
     const db = window.scDb;
     const box = $id("regsList");
+    if (!box) return;
+
     box.innerHTML = '<div class="muted">Завантажую…</div>';
 
-    // читаємо останні 25 і показуємо “як є”
     const snap = await db.collection("registrations")
       .orderBy("createdAt", "desc")
       .limit(25)
@@ -263,22 +264,15 @@
       const teamName = d.teamName || d.team || d.name || "Команда";
       const stageId = d.stageId || d.stage || "—";
       const pay = d.paymentStatus || d.payStatus || "pending";
-
       const pillClass = pay === "paid" ? "ok" : (pay === "rejected" ? "bad" : "warn");
 
       items.push(`
-        <div class="item" data-id="${esc(doc.id)}">
+        <div class="item">
           <div class="item-top">
             <div><b>${esc(teamName)}</b> <span class="muted">• stage: ${esc(stageId)}</span></div>
             <span class="pill ${pillClass}">${esc(pay)}</span>
           </div>
-          <div class="muted" style="margin-top:6px;">
-            id: ${esc(doc.id)}
-          </div>
-          <div class="row">
-            <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
-            <button class="btn btn--primary" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
-          </div>
+          <div class="muted" style="margin-top:6px;">id: ${esc(doc.id)}</div>
         </div>
       `);
     });
@@ -286,32 +280,10 @@
     box.innerHTML = items.join("");
   }
 
-  // --- actions (тільки адмін, бо в rules це закрито) ---
-  window.approveReg = async function(regId){
-    const db = window.scDb;
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "paid",
-      approvedAt: new Date(),
-      approvedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
-    });
-    loadRegistrations();
-  }
-
-  window.rejectReg = async function(regId){
-    const db = window.scDb;
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "rejected",
-      rejectedAt: new Date(),
-      rejectedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
-    });
-    loadRegistrations();
-  }
-
   // старт
   requireAdmin().catch(err => {
     console.error(err);
-    const el = document.getElementById("adminStatus");
-    if (el) el.textContent = "Помилка: " + err.message;
+    setStatus("Помилка: " + err.message);
   });
 </script>
 

@@ -7,13 +7,13 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- ✅ Firebase compat SDK (ОБОВʼЯЗКОВО) -->
+  <!-- ✅ Firebase compat SDK (ОБОВʼЯЗКОВО, і саме в такому порядку) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- (не обов'язково, але хай буде: твій загальний конфіг/іконки/меню) -->
+  <!-- (опційно) твій загальний файл сайту: меню/іконки/інші штуки -->
   <script defer src="assets/js/config.js"></script>
 
   <style>
@@ -140,7 +140,7 @@
           <div class="admin-list" id="regsList"></div>
         </div>
 
-        <!-- ПРАВО: Заглушки модулів -->
+        <!-- ПРАВО: Модулі (поки каркас) -->
         <div style="display:flex; flex-direction:column; gap:14px;">
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
@@ -166,7 +166,7 @@
 </main>
 
 <script>
-  // ✅ Твій firebaseConfig (вставлено сюди, щоб адмінка точно працювала)
+  // ✅ Твій Firebase config (адмінка автономна)
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
     authDomain: "stolar-carp.firebaseapp.com",
@@ -183,15 +183,17 @@
 
   window.addEventListener("error", (e) => setStatus("Помилка JS: " + (e.message || "unknown")));
 
-  // --- 1) INIT Firebase (compat) ---
-  function initFirebase(){
+  function initFirebaseSafe(){
+    // 1) якщо config.js вже виставив scAuth/scDb — беремо їх
+    if (window.scAuth && window.scDb) return;
+
+    // 2) інакше ініціалізуємо тут (НАДІЙНО)
     if (!window.firebase) throw new Error("Firebase SDK не завантажився (compat).");
 
     if (!firebase.apps || firebase.apps.length === 0) {
       firebase.initializeApp(firebaseConfig);
     }
 
-    // ✅ робимо так, як ти домовлявся: глобальні об’єкти
     window.scAuth = firebase.auth();
     window.scDb   = firebase.firestore();
     window.scStorage = firebase.storage ? firebase.storage() : null;
@@ -199,11 +201,12 @@
 
   async function requireAdmin(){
     setStatus("Firebase: ініціалізація…");
-    initFirebase();
-    setStatus("Auth: чекаю onAuthStateChanged…");
+    initFirebaseSafe();
 
     const auth = window.scAuth;
     const db   = window.scDb;
+
+    setStatus("Auth: чекаю onAuthStateChanged…");
 
     const user = await new Promise(resolve => {
       const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); });
@@ -215,7 +218,7 @@
       return;
     }
 
-    setStatus("Role: перевіряю users/" + user.uid.slice(0,6) + "…");
+    setStatus("Role: читаю users/" + user.uid.slice(0,6) + "…");
 
     const me = await db.collection("users").doc(user.uid).get();
     const role = me.exists ? (me.data().role || "user") : "user";
@@ -229,10 +232,7 @@
     setStatus("Доступ дозволено ✅");
     $id("adminApp").classList.remove("admin-hidden");
 
-    // Кнопки
     bindButtons();
-
-    // Автозагрузка заявок
     loadRegistrations().catch(()=>{});
   }
 
@@ -241,17 +241,16 @@
   function bindButtons(){
     bind("btnLogout", async () => { await window.scAuth.signOut(); location.href="/"; });
 
-    bind("btnCreateContest", () => { $id("adminHint").textContent = "Створити змагання — наступний крок (seasons/stages)."; alert("Створити змагання — наступний крок"); });
-    bind("btnToggleContest", () => { $id("adminHint").textContent = "Відкрити/закрити — наступний крок (settings)."; alert("Відкрити/закрити — наступний крок"); });
+    bind("btnCreateContest", () => { $id("adminHint").textContent = "1) Створити змагання — наступний крок (seasons/stages)."; alert("Створити змагання — наступний крок"); });
+    bind("btnToggleContest", () => { $id("adminHint").textContent = "2) Відкрити/закрити — наступний крок (settings)."; alert("Відкрити/закрити — наступний крок"); });
 
-    bind("btnRegistrations", () => { $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations)."; loadRegistrations(); });
+    bind("btnRegistrations", () => { $id("adminHint").textContent = "3) Реєстрація команд — показую заявки (registrations)."; loadRegistrations(); });
 
-    bind("btnDraw", () => { $id("adminHint").textContent = "Жеребкування — наступний крок (zone/sector)."; alert("Жеребкування — наступний крок"); });
-    bind("btnWeigh", () => { $id("adminHint").textContent = "Зважування — наступний крок (weighings)."; alert("Зважування — наступний крок"); });
-    bind("btnUsers", () => { $id("adminHint").textContent = "Користувачі — наступний крок (users)."; alert("Користувачі — наступний крок"); });
+    bind("btnDraw", () => { $id("adminHint").textContent = "4) Жеребкування — наступний крок (zone/sector)."; alert("Жеребкування — наступний крок"); });
+    bind("btnWeigh", () => { $id("adminHint").textContent = "5) Зважування — наступний крок (weighings)."; alert("Зважування — наступний крок"); });
+    bind("btnUsers", () => { $id("adminHint").textContent = "6) Користувачі — наступний крок (users)."; alert("Користувачі — наступний крок"); });
 
     bind("btnLoadRegs", () => loadRegistrations());
-
     bind("btnOpenDraw", () => alert("Модуль жеребу: наступний крок"));
     bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
   }
@@ -267,7 +266,6 @@
     try {
       snap = await db.collection("registrations").orderBy("createdAt", "desc").limit(25).get();
     } catch(e){
-      // якщо createdAt не індексований/не існує — покажемо просто 25
       snap = await db.collection("registrations").limit(25).get();
     }
 
@@ -302,7 +300,6 @@
     box.innerHTML = items.join("");
   }
 
-  // --- actions ---
   window.approveReg = async function(regId){
     const db = window.scDb;
     await db.collection("registrations").doc(regId).update({
@@ -323,7 +320,6 @@
     loadRegistrations();
   }
 
-  // старт
   requireAdmin().catch(err => {
     console.error(err);
     setStatus("Помилка: " + err.message);

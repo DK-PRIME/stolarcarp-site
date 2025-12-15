@@ -166,64 +166,79 @@
   }
 
   async function requireAdmin(){
-    await waitForFirebase();
-    const auth = window.scAuth;
-    const db = window.scDb;
+  await waitForFirebase();
 
-    // чекаємо користувача
-    await new Promise(resolve => auth.onAuthStateChanged(() => resolve()));
+  const auth = window.scAuth;
+  const db   = window.scDb;
 
-    const u = auth.currentUser;
-    if (!u) { location.href = "/"; return; }
-
-    // ✅ ВИПРАВЛЕНО: перевірка адміна через users/{uid}.role
-    const me = await db.collection("users").doc(u.uid).get();
-    const role = (me.exists && me.data() && me.data().role) ? me.data().role : "user";
-    if (role !== "admin") { location.href = "/"; return; }
-
-    $id("adminStatus").textContent = "Доступ дозволено ✅";
-    $id("adminApp").classList.remove("admin-hidden");
-
-    // Кнопки керування
-    $id("btnCreateContest").addEventListener("click", () => {
-      $id("adminHint").textContent = "Створити змагання — модуль підключимо наступним кроком.";
-      alert("Створити змагання — наступний крок");
+  // ✅ ПРАВИЛЬНО чекаємо Firebase Auth
+  const user = await new Promise(resolve => {
+    const unsub = auth.onAuthStateChanged(u => {
+      unsub();
+      resolve(u);
     });
+  });
 
-    $id("btnToggleContest").addEventListener("click", () => {
-      $id("adminHint").textContent = "Відкрити/закрити — модуль підключимо наступним кроком (settings).";
-      alert("Відкрити / закрити — наступний крок");
-    });
+  if (!user) {
+    location.href = "/auth.html";
+    return;
+  }
 
-    $id("btnRegistrations").addEventListener("click", () => {
-      $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations).";
-      loadRegistrations();
-    });
+  // ✅ перевірка ролі адміна
+  const me = await db.collection("users").doc(user.uid).get();
+  const role = me.exists ? me.data().role : null;
 
-    $id("btnDraw").addEventListener("click", () => {
-      $id("adminHint").textContent = "Жеребкування — модуль підключимо наступним кроком.";
-      alert("Жеребкування — наступний крок");
-    });
+  if (role !== "admin") {
+    location.href = "/";
+    return;
+  }
 
-    $id("btnWeigh").addEventListener("click", () => {
-      $id("adminHint").textContent = "Зважування — модуль підключимо наступним кроком.";
-      alert("Зважування — наступний крок");
-    });
+  // ✅ ДОСТУП ДОЗВОЛЕНО
+  document.getElementById("adminStatus").textContent = "Доступ дозволено ✅";
+  document.getElementById("adminApp").classList.remove("admin-hidden");
 
-    $id("btnUsers").addEventListener("click", () => {
-      $id("adminHint").textContent = "Користувачі сайту — модуль підключимо наступним кроком (users).";
-      alert("Користувачі сайту — наступний крок");
-    });
+  // Кнопки керування
+  $id("btnCreateContest").addEventListener("click", () => {
+    $id("adminHint").textContent = "Створити змагання — модуль підключимо наступним кроком.";
+    alert("Створити змагання — наступний крок");
+  });
 
-    // Кнопка: оновити заявки
-    $id("btnLoadRegs").addEventListener("click", loadRegistrations);
+  $id("btnToggleContest").addEventListener("click", () => {
+    $id("adminHint").textContent = "Відкрити/закрити — модуль підключимо наступним кроком (settings).";
+    alert("Відкрити / закрити — наступний крок");
+  });
 
-    // Заглушки справа
-    $id("btnOpenDraw").addEventListener("click", () => alert("Модуль жеребкування: наступний крок"));
-    $id("btnOpenWeigh").addEventListener("click", () => alert("Модуль зважувань: наступний крок"));
+  $id("btnRegistrations").addEventListener("click", () => {
+    $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations).";
+    loadRegistrations();
+  });
 
-    // автозагрузка заявок
-    loadRegistrations().catch(()=>{});
+  $id("btnDraw").addEventListener("click", () => {
+    $id("adminHint").textContent = "Жеребкування — модуль підключимо наступним кроком.";
+    alert("Жеребкування — наступний крок");
+  });
+
+  $id("btnWeigh").addEventListener("click", () => {
+    $id("adminHint").textContent = "Зважування — модуль підключимо наступним кроком.";
+    alert("Зважування — наступний крок");
+  });
+
+  $id("btnUsers").addEventListener("click", () => {
+    $id("adminHint").textContent = "Користувачі сайту — модуль підключимо наступним кроком (users).";
+    alert("Користувачі сайту — наступний крок");
+  });
+
+  // Оновити заявки
+  $id("btnLoadRegs").addEventListener("click", loadRegistrations);
+
+  // Заглушки справа (якщо вони є у твоєму HTML)
+  const d = $id("btnOpenDraw");
+  if (d) d.addEventListener("click", () => alert("Модуль жеребкування: наступний крок"));
+  const w = $id("btnOpenWeigh");
+  if (w) w.addEventListener("click", () => alert("Модуль зважувань: наступний крок"));
+
+  // автозагрузка заявок
+  loadRegistrations().catch(()=>{});
   }
 
   async function loadRegistrations(){

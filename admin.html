@@ -7,13 +7,13 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- ✅ Firebase compat SDK (ОБОВʼЯЗКОВО, і саме в такому порядку) -->
+  <!-- ✅ Firebase compat SDK (потрібно саме так і саме в такому порядку) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- (опційно) твій загальний файл сайту: меню/іконки/інші штуки -->
+  <!-- (опційно) твій загальний файл сайту -->
   <script defer src="assets/js/config.js"></script>
 
   <style>
@@ -74,6 +74,7 @@
     .row .btn{ padding:10px 14px; border-radius:12px; }
     .admin-hidden{ display:none; }
     .split{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
   </style>
 </head>
 
@@ -107,11 +108,13 @@
 
     <div id="adminApp" class="admin-hidden">
 
-      <!-- Панель кнопок -->
+      <!-- Панель -->
       <div class="admin-card" style="margin-top:14px;">
         <div class="split">
           <h2 class="section-title" style="margin:0;">Керування</h2>
-          <button class="btn btn--primary" id="btnLogout">Вийти</button>
+          <div class="row" style="margin:0;">
+            <button class="btn btn--primary" id="btnLogout">Вийти</button>
+          </div>
         </div>
 
         <div class="row" style="margin-top:10px;">
@@ -124,11 +127,12 @@
         </div>
 
         <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
+        <div class="muted mono" style="margin-top:6px;" id="adminUidInfo"></div>
       </div>
 
       <div class="admin-grid">
 
-        <!-- ЛІВО: Заявки -->
+        <!-- ЛІВО: заявки -->
         <div class="admin-card">
           <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
           <div class="muted">Колекція: <b>registrations</b>. Підтвердження/відхилення — тільки адмін.</div>
@@ -140,11 +144,11 @@
           <div class="admin-list" id="regsList"></div>
         </div>
 
-        <!-- ПРАВО: Модулі (поки каркас) -->
+        <!-- ПРАВО: модулі (каркас) -->
         <div style="display:flex; flex-direction:column; gap:14px;">
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
-            <div class="muted">Зона/сектор для команди (підключимо наступним кроком).</div>
+            <div class="muted">Зона/сектор для команди (наступним кроком).</div>
             <div class="row">
               <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
             </div>
@@ -152,7 +156,7 @@
 
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
-            <div class="muted">Зважування 1–4 + формування зон A/B/C (підключимо наступним кроком).</div>
+            <div class="muted">Зважування 1–4 + результати зон A/B/C (наступним кроком).</div>
             <div class="row">
               <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
             </div>
@@ -166,7 +170,10 @@
 </main>
 
 <script>
-  // ✅ Твій Firebase config (адмінка автономна)
+  // ✅ ЖОРСТКА ПРИВʼЯЗКА: тільки цей UID має доступ
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+
+  // ✅ Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
     authDomain: "stolar-carp.firebaseapp.com",
@@ -179,25 +186,25 @@
 
   function $id(id){ return document.getElementById(id); }
   function setStatus(t){ const el=$id("adminStatus"); if(el) el.textContent=t; }
+  function hint(t){ const el=$id("adminHint"); if(el) el.textContent=t; }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
   window.addEventListener("error", (e) => setStatus("Помилка JS: " + (e.message || "unknown")));
 
   function initFirebaseSafe(){
-    // 1) якщо config.js вже виставив scAuth/scDb — беремо їх
+    // якщо config.js вже створив — беремо
     if (window.scAuth && window.scDb) return;
 
-    // 2) інакше ініціалізуємо тут (НАДІЙНО)
     if (!window.firebase) throw new Error("Firebase SDK не завантажився (compat).");
 
-    if (!firebase.apps || firebase.apps.length === 0) {
-      firebase.initializeApp(firebaseConfig);
-    }
+    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
 
     window.scAuth = firebase.auth();
-    window.scDb   = firebase.firestore();
+    window.scDb = firebase.firestore();
     window.scStorage = firebase.storage ? firebase.storage() : null;
   }
+
+  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
 
   async function requireAdmin(){
     setStatus("Firebase: ініціалізація…");
@@ -218,41 +225,34 @@
       return;
     }
 
-    setStatus("Role: читаю users/" + user.uid.slice(0,6) + "…");
-
-    const me = await db.collection("users").doc(user.uid).get();
-    const role = me.exists ? (me.data().role || "user") : "user";
-
-    if (role !== "admin") {
-      setStatus("Доступ заборонено ❌ (role=" + role + ")");
+    // ✅ ТІЛЬКИ UID (без role)
+    if (user.uid !== ADMIN_UID) {
+      setStatus("Доступ заборонено ❌ (не адмін UID)");
       location.href = "/";
       return;
     }
 
+    // ✅ ДОСТУП ДОЗВОЛЕНО
     setStatus("Доступ дозволено ✅");
+    $id("adminUidInfo").textContent = "ADMIN UID: " + user.uid;
+
     $id("adminApp").classList.remove("admin-hidden");
 
-    bindButtons();
-    loadRegistrations().catch(()=>{});
-  }
+    // кнопки
+    bind("btnLogout", async () => { await auth.signOut(); location.href="/"; });
 
-  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
-
-  function bindButtons(){
-    bind("btnLogout", async () => { await window.scAuth.signOut(); location.href="/"; });
-
-    bind("btnCreateContest", () => { $id("adminHint").textContent = "1) Створити змагання — наступний крок (seasons/stages)."; alert("Створити змагання — наступний крок"); });
-    bind("btnToggleContest", () => { $id("adminHint").textContent = "2) Відкрити/закрити — наступний крок (settings)."; alert("Відкрити/закрити — наступний крок"); });
-
-    bind("btnRegistrations", () => { $id("adminHint").textContent = "3) Реєстрація команд — показую заявки (registrations)."; loadRegistrations(); });
-
-    bind("btnDraw", () => { $id("adminHint").textContent = "4) Жеребкування — наступний крок (zone/sector)."; alert("Жеребкування — наступний крок"); });
-    bind("btnWeigh", () => { $id("adminHint").textContent = "5) Зважування — наступний крок (weighings)."; alert("Зважування — наступний крок"); });
-    bind("btnUsers", () => { $id("adminHint").textContent = "6) Користувачі — наступний крок (users)."; alert("Користувачі — наступний крок"); });
+    bind("btnCreateContest", () => { hint("1) Створити змагання — наступний крок (seasons/stages/settings)"); alert("1) Створити змагання — наступний крок"); });
+    bind("btnToggleContest", () => { hint("2) Відкрити/закрити — наступний крок (settings)"); alert("2) Відкрити/закрити — наступний крок"); });
+    bind("btnRegistrations", () => { hint("3) Реєстрація команд — показую заявки"); loadRegistrations(); });
+    bind("btnDraw", () => { hint("4) Жеребкування — наступний крок"); alert("4) Жеребкування — наступний крок"); });
+    bind("btnWeigh", () => { hint("5) Зважування — наступний крок"); alert("5) Зважування — наступний крок"); });
+    bind("btnUsers", () => { hint("6) Користувачі сайту — наступний крок"); alert("6) Користувачі — наступний крок"); });
 
     bind("btnLoadRegs", () => loadRegistrations());
     bind("btnOpenDraw", () => alert("Модуль жеребу: наступний крок"));
     bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
+
+    loadRegistrations().catch(()=>{});
   }
 
   async function loadRegistrations(){
@@ -266,6 +266,7 @@
     try {
       snap = await db.collection("registrations").orderBy("createdAt", "desc").limit(25).get();
     } catch(e){
+      // якщо немає індексу/createdAt — підстрахуємось
       snap = await db.collection("registrations").limit(25).get();
     }
 

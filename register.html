@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="uk">  
-<head>  
-  <meta charset="utf-8">  
-  <meta name="viewport" content="width=device-width, initial-scale=1">  
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Реєстрація на етап — STOLAR CARP</title>
 
-  <link rel="icon" type="image/png" href="assets/favicon.png">  
-  <link rel="apple-touch-icon" href="assets/favicon.png">  
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
 
-  <link rel="stylesheet" href="assets/css/main.css">  
+  <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
   <style>
@@ -39,9 +39,7 @@
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent;
     }
-    .register-hero p{
-      margin:0;color:var(--muted);font-size:.92rem;max-width:720px;
-    }
+    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:720px;}
     .register-hero__divider{
       margin-top:10px;width:120px;height:2px;border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
@@ -58,8 +56,6 @@
     }
     .form__hint{font-size:.8rem;color:var(--muted);}
 
-    .register-page input[type="text"],
-    .register-page input[type="tel"],
     .register-page input[type="number"]{
       background:#0f0f14;border:1px solid #2a2a39;color:#fff;
       padding:10px 14px;border-radius:10px;font-size:.96rem;
@@ -100,9 +96,7 @@
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
 
-    .card--payment{
-      background:#05060c;border:1px solid #262636;box-shadow:var(--shadow);
-    }
+    .card--payment{background:#05060c;border:1px solid #262636;box-shadow:var(--shadow);}
     .card-payment-title{
       font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px;
       text-transform:uppercase;font-size:.84rem;letter-spacing:.12em;color:#e5e7eb;
@@ -120,21 +114,18 @@
     }
     .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
 
-    .profile-summary{
-      font-size:.85rem;color:var(--muted);margin-bottom:10px;
-    }
+    .profile-summary{font-size:.85rem;color:var(--muted);margin-bottom:10px;}
     .profile-summary b{color:#e5e7eb;}
   </style>
-</head>  
+</head>
 
-<body class="register-page">  
-
-<header class="header">  
-  <div class="container header__row">  
-    <a class="logo" href="index.html">  
-      <span class="logo__mark">SC</span>  
-      <span class="logo__text">STOLAR CARP</span>  
-    </a>  
+<body class="register-page">
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
     <nav class="nav" id="nav">
       <a href="/index.html" class="nav__link">Головна</a>
       <a href="/rules.html" class="nav__link">Регламент</a>
@@ -145,161 +136,115 @@
       <a href="/sponsors.html" class="nav__link">Спонсори</a>
       <a href="/events/index.html" class="nav__link">Архів</a>
       <a href="/auth.html" class="nav__link">Акаунт</a>
-    </nav>  
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>  
-  </div>  
-</header>  
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
 
-<main class="main">  
-  <section class="container section section--narrow">  
+<main class="main">
+  <section class="container section section--narrow">
 
     <div class="register-hero">
       <div class="register-hero__kicker">
         <span class="register-hero__kicker-tag">SC</span>
         SEASON 2026 · ENTRY
       </div>
-      <h1 class="title-gradient">
-        <span>РЕЄСТРАЦІЯ НА ЕТАП</span>
-      </h1>
-      <p>
-        Виберіть відкритий етап, налаштуйте харчування — і подайте заявку.
-        Дані команди беруться з вашого акаунта STOLAR CARP.
-      </p>
+      <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ НА ЕТАП</span></h1>
+      <p>Виберіть відкритий етап, налаштуйте харчування — і подайте заявку. Дані команди беруться з вашого акаунта STOLAR CARP.</p>
       <div class="register-hero__divider"></div>
     </div>
 
     <div class="register-layout">
 
       <!-- ФОРМА -->
-      <div class="card register-form-card">  
-        <h2>Форма реєстрації на етап</h2>  
-        <p class="form__hint">
-          Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.
-        </p>  
+      <div class="card register-form-card">
+        <h2>Форма реєстрації на етап</h2>
+        <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>
 
-        <!-- коротка інфа про профіль -->
-        <div id="profileSummary" class="profile-summary">
-          Профіль: завантаження...
-        </div>
+        <div id="profileSummary" class="profile-summary">Профіль: завантаження...</div>
 
-        <form id="regForm" class="form" novalidate>  
-          <!-- honeypot -->
-          <input
-            type="text"
-            name="hp"
-            id="hp"
-            autocomplete="off"
-            style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"
-          />
-
-          <!-- fingerprint, якщо захочеш додати -->
-          <input type="hidden" id="fp" name="fp">
-
+        <form id="regForm" class="form" novalidate>
           <!-- Етап -->
-          <div class="field">  
-            <label>Оберіть етап турніру <span style="color:var(--accent);">*</span></label>  
-            <div id="eventOptions" class="event-options">  
-              <p id="loading-events" class="form__hint">Завантаження актуальних етапів...</p>  
-            </div>  
-          </div>  
-
-          <!-- Харчування -->
-          <div class="field">  
-            <label>Харчування від організаторів? <span style="color:var(--accent);">*</span></label>  
-            <div class="radio-row">  
-              <label><input type="radio" name="food" value="Так" required> <span>Так</span></label>  
-              <label><input type="radio" name="food" value="Ні"> <span>Ні</span></label>  
-            </div>  
-          </div>  
-
-          <!-- Кількість харчуючих -->
-          <div class="field field--disabled" id="foodQtyField">  
-            <label for="food_qty">Кількість харчуючих (1–6)</label>  
-            <input
-              type="number"
-              id="food_qty"
-              name="food_qty"
-              min="1"
-              max="6"
-              inputmode="numeric"
-              placeholder="Вкажіть кількість, якщо замовляєте харчування"
-            />
-            <div class="form__hint">
-              Якщо харчування не потрібне — залиште поле порожнім.
+          <div class="field">
+            <label>Оберіть етап турніру <span style="color:var(--accent);">*</span></label>
+            <div id="eventOptions" class="event-options">
+              <p class="form__hint">Завантаження актуальних етапів...</p>
             </div>
           </div>
 
-          <!-- Підтвердження регламенту -->
-          <div class="field">  
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">  
-              <input type="checkbox" id="rules" required
-                     style="transform:scale(1.3);accent-color:#f6c34c;">  
-              <span>Підтверджую, що ознайомлений із
-                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">
-                  регламентом турніру
-                </a>
-              </span>  
-            </label>  
-          </div>  
+          <!-- Харчування -->
+          <div class="field">
+            <label>Харчування від організаторів? <span style="color:var(--accent);">*</span></label>
+            <div class="radio-row">
+              <label><input type="radio" name="food" value="Так" required> <span>Так</span></label>
+              <label><input type="radio" name="food" value="Ні"> <span>Ні</span></label>
+            </div>
+          </div>
 
-          <div class="form-actions">  
-            <button type="submit" id="submitBtn" class="btn btn--primary">
-              Подати заявку
-            </button>  
-            <div id="spinner" class="spinner" aria-hidden="true"></div>  
+          <!-- Кількість харчуючих -->
+          <div class="field field--disabled" id="foodQtyField">
+            <label for="food_qty">Кількість харчуючих (1–6)</label>
+            <input type="number" id="food_qty" name="food_qty" min="1" max="6" inputmode="numeric"
+              placeholder="Вкажіть кількість, якщо замовляєте харчування">
+            <div class="form__hint">Якщо харчування не потрібне — залиште поле порожнім.</div>
+          </div>
+
+          <!-- Регламент -->
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" id="rules" required style="transform:scale(1.3);accent-color:#f6c34c;">
+              <span>Підтверджую, що ознайомлений із
+                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
+              </span>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="submitBtn" class="btn btn--primary" disabled>Подати заявку</button>
+            <div id="spinner" class="spinner" aria-hidden="true"></div>
           </div>
 
           <div id="msg" class="form-msg"></div>
 
-          <p class="form__hint" style="margin-top:6px;">  
-            Після подачі заявки організатор бачить її в адмінці DK Prime і
-            підтверджує участь після оплати внеску.
-          </p>  
-        </form>  
-      </div>  
+          <p class="form__hint" style="margin-top:6px;">
+            Після подачі заявки організатор бачить її в адмінці DK Prime і підтверджує участь після оплати внеску.
+          </p>
+        </form>
+      </div>
 
       <!-- ОПЛАТА -->
-      <div class="card register-card card--payment">  
-        <div class="card-payment-title">  
-          <span>₴</span> Оплата внеску  
-        </div>  
-        <p>Сума внеску: <b>3500 ₴</b> на банківську картку:</p>  
+      <div class="card register-card card--payment">
+        <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
+        <p>Сума внеску: <b>3500 ₴</b> на банківську картку:</p>
         <p>Номер картки:</p>
-        <p><span id="cardNum" class="card-number">4874 0700 5068 8793</span></p>
-        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
-          Скопіювати номер картки
-        </button>  
-        <p class="card-note">
-          У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
-        </p>  
+        <p><span class="card-number">4874 0700 5068 8793</span></p>
+        <p class="card-note">У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.</p>
       </div>
 
     </div>
+  </section>
+</main>
 
-  </section>  
-</main>  
-
-<footer class="footer">  
-  <div class="container footer__row">  
-    <div>© 2025 STOLAR CARP · Львів</div>  
-    <div class="footer__links">  
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>  
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>  
-    </div>  
-  </div>  
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
 </footer>
 
-<!-- Логіка реєстрації на етап -->
 <!-- Firebase COMPAT -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Твій ініт -->
+<!-- Твій ініт (має виставляти window.scAuth і window.scDb) -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- Реєстрація -->
+<!-- Реєстрація (твій файл) -->
 <script src="assets/js/register_firebase.js"></script>
 
-</body>  
+</body>
 </html>

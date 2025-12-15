@@ -6,6 +6,14 @@
   <title>STOLAR CARP • Адмінка</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
+
+  <!-- ✅ Firebase compat SDK (ОБОВʼЯЗКОВО) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <!-- (не обов'язково, але хай буде: твій загальний конфіг/іконки/меню) -->
   <script defer src="assets/js/config.js"></script>
 
   <style>
@@ -65,6 +73,7 @@
     .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
     .row .btn{ padding:10px 14px; border-radius:12px; }
     .admin-hidden{ display:none; }
+    .split{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
   </style>
 </head>
 
@@ -100,8 +109,12 @@
 
       <!-- Панель кнопок -->
       <div class="admin-card" style="margin-top:14px;">
-        <h2 class="section-title" style="margin:0 0 10px;">Керування</h2>
-        <div class="row">
+        <div class="split">
+          <h2 class="section-title" style="margin:0;">Керування</h2>
+          <button class="btn btn--primary" id="btnLogout">Вийти</button>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
           <button class="btn btn--primary" id="btnCreateContest">1. Створити змагання</button>
           <button class="btn btn--accent"  id="btnToggleContest">2. Відкрити / закрити</button>
           <button class="btn btn--primary" id="btnRegistrations">3. Реєстрація команд</button>
@@ -109,6 +122,7 @@
           <button class="btn btn--danger"  id="btnWeigh">5. Зважування</button>
           <button class="btn btn--primary" id="btnUsers">6. Користувачі сайту</button>
         </div>
+
         <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
       </div>
 
@@ -117,7 +131,7 @@
         <!-- ЛІВО: Заявки -->
         <div class="admin-card">
           <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
-          <div class="muted">Тут показуються заявки (registrations). Підтвердження оплати доступне тільки адміну.</div>
+          <div class="muted">Колекція: <b>registrations</b>. Підтвердження/відхилення — тільки адмін.</div>
 
           <div class="row">
             <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
@@ -130,7 +144,7 @@
         <div style="display:flex; flex-direction:column; gap:14px;">
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
-            <div class="muted">Модуль жеребу: зона/сектор для команди (підключимо наступним кроком).</div>
+            <div class="muted">Зона/сектор для команди (підключимо наступним кроком).</div>
             <div class="row">
               <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
             </div>
@@ -138,7 +152,7 @@
 
           <div class="admin-card">
             <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
-            <div class="muted">Модуль зважувань (1–4) і результати зон A/B/C (підключимо наступним кроком).</div>
+            <div class="muted">Зважування 1–4 + формування зон A/B/C (підключимо наступним кроком).</div>
             <div class="row">
               <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
             </div>
@@ -152,66 +166,59 @@
 </main>
 
 <script>
-  // Показуємо будь-які JS помилки прямо на екрані
-  window.addEventListener("error", (e) => {
-    const el = document.getElementById("adminStatus");
-    if (el) el.textContent = "Помилка JS: " + (e.message || "unknown");
-  });
-
-  function setStatus(t){
-    const el = document.getElementById("adminStatus");
-    if (el) el.textContent = t;
-  }
+  // ✅ Твій firebaseConfig (вставлено сюди, щоб адмінка точно працювала)
+  const firebaseConfig = {
+    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
+    authDomain: "stolar-carp.firebaseapp.com",
+    projectId: "stolar-carp",
+    storageBucket: "stolar-carp.firebasestorage.app",
+    messagingSenderId: "1019636788370",
+    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
+    measurementId: "G-VWC07QNS7P"
+  };
 
   function $id(id){ return document.getElementById(id); }
+  function setStatus(t){ const el=$id("adminStatus"); if(el) el.textContent=t; }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-  async function waitForFirebase(){
-    setStatus("Firebase: шукаю scAuth/scDb…");
-    for (let i=0;i<120;i++){
-      if (window.scAuth && window.scDb) {
-        setStatus("Firebase: scAuth/scDb знайдено ✅");
-        return;
-      }
-      await new Promise(r => setTimeout(r, 100));
+  window.addEventListener("error", (e) => setStatus("Помилка JS: " + (e.message || "unknown")));
+
+  // --- 1) INIT Firebase (compat) ---
+  function initFirebase(){
+    if (!window.firebase) throw new Error("Firebase SDK не завантажився (compat).");
+
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(firebaseConfig);
     }
-    throw new Error("Не з’явились scAuth/scDb (перевір config.js і підключення firebase sdk)");
+
+    // ✅ робимо так, як ти домовлявся: глобальні об’єкти
+    window.scAuth = firebase.auth();
+    window.scDb   = firebase.firestore();
+    window.scStorage = firebase.storage ? firebase.storage() : null;
   }
 
   async function requireAdmin(){
-    await waitForFirebase();
+    setStatus("Firebase: ініціалізація…");
+    initFirebase();
+    setStatus("Auth: чекаю onAuthStateChanged…");
 
     const auth = window.scAuth;
     const db   = window.scDb;
 
-    setStatus("Auth: чекаю onAuthStateChanged…");
-
     const user = await new Promise(resolve => {
-      const unsub = auth.onAuthStateChanged(u => {
-        unsub();
-        resolve(u);
-      });
+      const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); });
     });
 
     if (!user) {
-      setStatus("Auth: ти не залогінений → кидаю на /auth.html");
+      setStatus("Нема входу → /auth.html");
       location.href = "/auth.html";
       return;
     }
 
-    setStatus("Auth: user OK ✅ (uid: " + user.uid.slice(0,6) + "…)");
-
-    setStatus("Role: читаю users/" + user.uid.slice(0,6) + "…");
+    setStatus("Role: перевіряю users/" + user.uid.slice(0,6) + "…");
 
     const me = await db.collection("users").doc(user.uid).get();
-    if (!me.exists) {
-      setStatus("Role: нема документа users/{uid} (профіль не створився) ❌");
-      location.href = "/";
-      return;
-    }
-
-    const role = me.data().role || "user";
-    setStatus("Role: " + role);
+    const role = me.exists ? (me.data().role || "user") : "user";
 
     if (role !== "admin") {
       setStatus("Доступ заборонено ❌ (role=" + role + ")");
@@ -219,26 +226,34 @@
       return;
     }
 
-    // ✅ ДОСТУП ДОЗВОЛЕНО
     setStatus("Доступ дозволено ✅");
     $id("adminApp").classList.remove("admin-hidden");
 
-    // Кнопки керування (якщо вони є в HTML)
-    const bind = (id, fn) => { const b = $id(id); if (b) b.addEventListener("click", fn); };
+    // Кнопки
+    bindButtons();
 
-    bind("btnCreateContest", () => { $id("adminHint").textContent = "Створити змагання — наступний крок"; alert("Створити змагання — наступний крок"); });
-    bind("btnToggleContest", () => { $id("adminHint").textContent = "Відкрити/закрити — наступний крок"; alert("Відкрити / закрити — наступний крок"); });
-    bind("btnRegistrations", () => { $id("adminHint").textContent = "Реєстрація команд — показую заявки"; loadRegistrations(); });
-    bind("btnDraw", () => { $id("adminHint").textContent = "Жеребкування — наступний крок"; alert("Жеребкування — наступний крок"); });
-    bind("btnWeigh", () => { $id("adminHint").textContent = "Зважування — наступний крок"; alert("Зважування — наступний крок"); });
-    bind("btnUsers", () => { $id("adminHint").textContent = "Користувачі — наступний крок"; alert("Користувачі — наступний крок"); });
+    // Автозагрузка заявок
+    loadRegistrations().catch(()=>{});
+  }
+
+  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
+
+  function bindButtons(){
+    bind("btnLogout", async () => { await window.scAuth.signOut(); location.href="/"; });
+
+    bind("btnCreateContest", () => { $id("adminHint").textContent = "Створити змагання — наступний крок (seasons/stages)."; alert("Створити змагання — наступний крок"); });
+    bind("btnToggleContest", () => { $id("adminHint").textContent = "Відкрити/закрити — наступний крок (settings)."; alert("Відкрити/закрити — наступний крок"); });
+
+    bind("btnRegistrations", () => { $id("adminHint").textContent = "Реєстрація команд — показую заявки (registrations)."; loadRegistrations(); });
+
+    bind("btnDraw", () => { $id("adminHint").textContent = "Жеребкування — наступний крок (zone/sector)."; alert("Жеребкування — наступний крок"); });
+    bind("btnWeigh", () => { $id("adminHint").textContent = "Зважування — наступний крок (weighings)."; alert("Зважування — наступний крок"); });
+    bind("btnUsers", () => { $id("adminHint").textContent = "Користувачі — наступний крок (users)."; alert("Користувачі — наступний крок"); });
 
     bind("btnLoadRegs", () => loadRegistrations());
-    bind("btnOpenDraw", () => alert("Модуль жеребкування: наступний крок"));
-    bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
 
-    // Автопоказ заявок (якщо колекція є)
-    loadRegistrations().catch(()=>{});
+    bind("btnOpenDraw", () => alert("Модуль жеребу: наступний крок"));
+    bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
   }
 
   async function loadRegistrations(){
@@ -248,10 +263,13 @@
 
     box.innerHTML = '<div class="muted">Завантажую…</div>';
 
-    const snap = await db.collection("registrations")
-      .orderBy("createdAt", "desc")
-      .limit(25)
-      .get();
+    let snap;
+    try {
+      snap = await db.collection("registrations").orderBy("createdAt", "desc").limit(25).get();
+    } catch(e){
+      // якщо createdAt не індексований/не існує — покажемо просто 25
+      snap = await db.collection("registrations").limit(25).get();
+    }
 
     if (snap.empty){
       box.innerHTML = '<div class="muted">Заявок поки немає.</div>';
@@ -273,11 +291,36 @@
             <span class="pill ${pillClass}">${esc(pay)}</span>
           </div>
           <div class="muted" style="margin-top:6px;">id: ${esc(doc.id)}</div>
+          <div class="row">
+            <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
+            <button class="btn btn--primary" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
+          </div>
         </div>
       `);
     });
 
     box.innerHTML = items.join("");
+  }
+
+  // --- actions ---
+  window.approveReg = async function(regId){
+    const db = window.scDb;
+    await db.collection("registrations").doc(regId).update({
+      paymentStatus: "paid",
+      approvedAt: new Date(),
+      approvedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+    });
+    loadRegistrations();
+  }
+
+  window.rejectReg = async function(regId){
+    const db = window.scDb;
+    await db.collection("registrations").doc(regId).update({
+      paymentStatus: "rejected",
+      rejectedAt: new Date(),
+      rejectedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+    });
+    loadRegistrations();
   }
 
   // старт

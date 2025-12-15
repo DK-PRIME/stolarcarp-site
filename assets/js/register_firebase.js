@@ -2,7 +2,7 @@
 // Реєстрація на ЕТАП: читає users/teams, читає відкриті stages з seasons/*/stages (як в DK Prime),
 // пише в registrations.
 
-import { auth, db } from "./firebase-init.js";
+import { auth, db } from "./firebase-mod.js";
 
 import {
   doc,

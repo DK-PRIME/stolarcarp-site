@@ -2,7 +2,7 @@
 // Реєстрація на ЕТАП: читає users/teams, читає відкриті stages з seasons/*/stages (як в DK Prime),
 // пише в registrations.
 
-import { auth, db } from "./firebase-mod.js";
+import { auth, db } from "./firebase-init.js";
 
 import {
   doc,
@@ -13,7 +13,8 @@ import {
   where,
   addDoc,
   serverTimestamp,
-  collectionGroup
+  collectionGroup,
+  limit
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
@@ -125,60 +126,131 @@ async function loadProfile(user) {
   }
 }
 
-// --- load open stages (as DK Prime stores them: seasons/*/stages/*)
+function renderStageOption({ seasonId, stageId, title, isFinal }) {
+  const value = `${seasonId}||${stageId}`;
+
+  const wrapper = document.createElement("label");
+  wrapper.className = "event-item";
+  wrapper.innerHTML = `
+    <input type="radio" name="stagePick" value="${value}">
+    <div>
+      <div>${title}</div>
+      <div style="font-size:12px;color:var(--muted);">
+        ${seasonId ? `Сезон: ${seasonId}` : ""}
+        ${isFinal ? " · ФІНАЛ" : ""}
+      </div>
+    </div>
+  `;
+  eventOptionsEl.appendChild(wrapper);
+}
+
+// --- load open stages
 async function loadOpenStages() {
   if (!eventOptionsEl) return;
 
   eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження актуальних етапів...</p>`;
 
+  // 1) СПРОБА №1 — collectionGroup (як ти хотів)
   try {
-    // 🔥 ПРАВИЛЬНО: шукаємо відкриті етапи в підколекції seasons/*/stages (collectionGroup)
-    const q = query(
+    const q1 = query(
       collectionGroup(db, "stages"),
       where("isRegistrationOpen", "==", true)
     );
-    const snap = await getDocs(q);
+    const snap1 = await getDocs(q1);
 
     eventOptionsEl.innerHTML = "";
 
-    if (snap.empty) {
-      eventOptionsEl.innerHTML =
-        '<p class="form__hint">Зараз немає відкритих етапів для реєстрації.</p>';
-      return;
+    if (!snap1.empty) {
+      snap1.forEach((docSnap) => {
+        const st = docSnap.data() || {};
+        const parts = docSnap.ref.path.split("/"); // seasons/{seasonId}/stages/{stageId}
+        const seasonId = parts[1] || st.seasonId || "";
+        const stageId  = docSnap.id;
+        const title    = st.label || st.fullTitle || st.title || "Етап";
+        renderStageOption({ seasonId, stageId, title, isFinal: !!st.isFinal });
+      });
+      return; // ✅ успіх
     }
 
-    snap.forEach((docSnap) => {
-      const st = docSnap.data() || {};
-
-      // витягуємо seasonId з шляху: seasons/{seasonId}/stages/{stageId}
-      const path = docSnap.ref.path; // e.g. "seasons/2026/stages/2026_e1"
-      const parts = path.split("/");
-      const seasonId = parts[1] || st.seasonId || "";
-      const stageId = docSnap.id;
-
-      const title = st.label || st.fullTitle || st.title || `Етап`;
-
-      // value = seasonId||stageId щоб потім правильно читати документ етапу
-      const value = `${seasonId}||${stageId}`;
-
-      const wrapper = document.createElement("label");
-      wrapper.className = "event-item";
-      wrapper.innerHTML = `
-        <input type="radio" name="stagePick" value="${value}">
-        <div>
-          <div>${title}</div>
-          <div style="font-size:12px;color:var(--muted);">
-            ${seasonId ? `Сезон: ${seasonId}` : ""}
-            ${st.isFinal ? " · ФІНАЛ" : ""}
-          </div>
-        </div>
-      `;
-      eventOptionsEl.appendChild(wrapper);
-    });
-  } catch (err) {
-    console.error("Помилка завантаження етапів:", err);
     eventOptionsEl.innerHTML =
-      '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити етапи. Перевір доступ/індекс collectionGroup.</p>';
+      '<p class="form__hint">Зараз немає відкритих етапів для реєстрації.</p>';
+    return;
+  } catch (err) {
+    // тут важливо побачити КОД помилки
+    console.error("Помилка collectionGroup(stages):", err);
+
+    const code = err?.code || "";
+    const msg  = err?.message || String(err);
+
+    // Показуємо людині зрозуміло:
+    eventOptionsEl.innerHTML = `
+      <p class="form__hint" style="color:#ff6c6c;">
+        Не вдалося завантажити етапи (collectionGroup). Код: <b>${code || "?"}</b>
+        <br><span style="opacity:.8">${msg}</span>
+        <br>Пробую резервний спосіб…
+      </p>
+    `;
+
+    // 2) СПРОБА №2 — fallback без collectionGroup (найчастіше рятує)
+    try {
+      // Беремо сезон(и) 2026 (бо в тебе так і є). Якщо буде інший — скажеш, зробимо авто.
+      const seasonsSnap = await getDocs(
+        query(collection(db, "seasons"), where("year", "==", 2026), limit(5))
+      );
+
+      // якщо раптом поле year не підходить — просто беремо docId "2026"
+      let seasonIds = [];
+      if (!seasonsSnap.empty) {
+        seasonsSnap.forEach(s => seasonIds.push(s.id));
+      } else {
+        seasonIds = ["2026"];
+      }
+
+      const foundStages = [];
+
+      for (const seasonId of seasonIds) {
+        const stagesSnap = await getDocs(
+          query(
+            collection(db, "seasons", seasonId, "stages"),
+            where("isRegistrationOpen", "==", true)
+          )
+        );
+
+        stagesSnap.forEach(stDoc => {
+          const st = stDoc.data() || {};
+          foundStages.push({
+            seasonId,
+            stageId: stDoc.id,
+            title: st.label || st.fullTitle || st.title || "Етап",
+            isFinal: !!st.isFinal
+          });
+        });
+      }
+
+      eventOptionsEl.innerHTML = "";
+
+      if (!foundStages.length) {
+        eventOptionsEl.innerHTML =
+          '<p class="form__hint">Зараз немає відкритих етапів для реєстрації.</p>';
+        return;
+      }
+
+      foundStages.forEach(renderStageOption);
+      return;
+    } catch (err2) {
+      console.error("Fallback теж не спрацював:", err2);
+
+      const code2 = err2?.code || "";
+      const msg2  = err2?.message || String(err2);
+
+      eventOptionsEl.innerHTML = `
+        <p class="form__hint" style="color:#ff6c6c;">
+          Не вдалося завантажити етапи навіть резервним способом.
+          <br>Код: <b>${code2 || "?"}</b>
+          <br><span style="opacity:.8">${msg2}</span>
+        </p>
+      `;
+    }
   }
 }
 
@@ -237,15 +309,14 @@ if (form) {
 
     let foodQty = null;
     if (food === "Так") {
-      const q = Number(foodQtyInput.value || "0");
-      if (!q || q < 1 || q > 6) {
+      const qn = Number(foodQtyInput.value || "0");
+      if (!qn || qn < 1 || qn > 6) {
         showMessage("Вкажіть кількість харчуючих від 1 до 6.", "err");
         return;
       }
-      foodQty = q;
+      foodQty = qn;
     }
 
-    // назва етапу (щоб видно в DK Prime без пошуку)
     let stageTitle = "";
     try {
       const stSnap = await getDoc(doc(db, "seasons", seasonId, "stages", stageId));
@@ -259,8 +330,7 @@ if (form) {
       showMessage("");
 
       await addDoc(collection(db, "registrations"), {
-        // ✅ ВАЖЛИВО: під правила доступу — поле має бути uid
-        uid:       currentUser.uid,
+        uid: currentUser.uid,
 
         seasonId,
         stageId,
@@ -283,7 +353,7 @@ if (form) {
       initFoodLogic();
     } catch (err) {
       console.error("Помилка відправки заявки:", err);
-      showMessage(`Помилка відправки заявки: ${err.message || err}`, "err");
+      showMessage(`Помилка відправки заявки: ${err?.message || err}`, "err");
     } finally {
       setLoading(false);
     }

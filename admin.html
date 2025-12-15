@@ -7,15 +7,6 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- Firebase compat SDK (defer OK, бо стартуємо через window.load) -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
-  <!-- твій файл сайту (може бути, не заважає) -->
-  <script defer src="assets/js/config.js"></script>
-
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
     .admin-wrap{ max-width:1100px; margin:0 auto; padding:32px 0 70px; }
@@ -32,9 +23,25 @@
       font-size:.85rem; color:#e5e7eb;
       border:1px solid rgba(148,163,184,.35);
       background:rgba(0,0,0,.35);
+      white-space:nowrap;
     }
+    .muted{ color:#9ca3af; }
+    .admin-hidden{ display:none; }
+
+    .admin-card{
+      margin-top:14px;
+      padding:16px;
+      border-radius:18px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .row .btn{ padding:10px 14px; border-radius:12px; }
+
     .admin-grid{
-      margin-top:18px;
+      margin-top:14px;
       display:grid;
       grid-template-columns: 1fr;
       gap:14px;
@@ -42,15 +49,7 @@
     @media(min-width:900px){
       .admin-grid{ grid-template-columns: 1.2fr .8fr; }
     }
-    .admin-card{
-      padding:16px;
-      border-radius:18px;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.6);
-    }
-    .admin-card h2{ margin:0 0 10px; }
-    .muted{ color:#9ca3af; }
+
     .admin-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
     .item{
       padding:12px;
@@ -58,7 +57,7 @@
       border:1px solid rgba(148,163,184,.25);
       background:rgba(2,6,23,.55);
     }
-    .item-top{ display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap;}
+    .item-top{ display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
     .pill{
       display:inline-flex; align-items:center;
       padding:4px 10px; border-radius:999px;
@@ -70,11 +69,23 @@
     .pill.ok{ border-color:rgba(34,197,94,.6); }
     .pill.warn{ border-color:rgba(250,204,21,.65); }
     .pill.bad{ border-color:rgba(239,68,68,.65); }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .row .btn{ padding:10px 14px; border-radius:12px; }
-    .admin-hidden{ display:none; }
-    .split{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .mini-form{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .mini-form input, .mini-form select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+      outline:none;
+    }
+    .mini-form input::placeholder{ color:#6b7280; }
   </style>
 </head>
 
@@ -101,63 +112,106 @@
     <div class="admin-top">
       <div>
         <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
-        <div class="muted" id="adminStatus">Перевіряю доступ…</div>
+        <div class="muted" id="adminStatus">Запуск…</div>
       </div>
       <div class="admin-badge" id="adminBadge">🔒 admin</div>
     </div>
 
     <div id="adminApp" class="admin-hidden">
 
-      <div class="admin-card" style="margin-top:14px;">
-        <div class="split">
-          <h2 class="section-title" style="margin:0;">Керування</h2>
-          <div class="row" style="margin:0;">
-            <button class="btn btn--primary" id="btnLogout">Вийти</button>
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
+      <!-- Панель кнопок -->
+      <div class="admin-card">
+        <h2 class="section-title" style="margin:0 0 10px;">Керування</h2>
+        <div class="row">
           <button class="btn btn--primary" id="btnCreateContest">1. Створити змагання</button>
           <button class="btn btn--accent"  id="btnToggleContest">2. Відкрити / закрити</button>
           <button class="btn btn--primary" id="btnRegistrations">3. Реєстрація команд</button>
           <button class="btn btn--accent"  id="btnDraw">4. Жеребкування</button>
           <button class="btn btn--danger"  id="btnWeigh">5. Зважування</button>
           <button class="btn btn--primary" id="btnUsers">6. Користувачі сайту</button>
+          <button class="btn btn--primary" id="btnLogout">Вийти</button>
         </div>
-
         <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
-        <div class="muted mono" style="margin-top:6px;" id="adminUidInfo"></div>
       </div>
 
+      <!-- МОДУЛІ -->
       <div class="admin-grid">
 
-        <div class="admin-card">
+        <!-- ЛІВО: Заявки -->
+        <div class="admin-card" id="modRegistrations">
           <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
-          <div class="muted">Колекція: <b>registrations</b></div>
-
+          <div class="muted">Колекція: <b>registrations</b>. Підтвердження оплати — тільки ти (UID адміна).</div>
           <div class="row">
             <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
           </div>
-
           <div class="admin-list" id="regsList"></div>
         </div>
 
+        <!-- ПРАВО: Модулі -->
         <div style="display:flex; flex-direction:column; gap:14px;">
-          <div class="admin-card">
+
+          <!-- Створення змагання -->
+          <div class="admin-card admin-hidden" id="modCreate">
+            <h2 class="section-title" style="margin:0 0 10px;">Створити змагання (каркас)</h2>
+            <div class="muted">Записуємо в: <b>seasons</b> і (опційно) <b>seasons/{seasonId}/stages</b>, а також <b>settings/app</b>.</div>
+
+            <div class="mini-form">
+              <input id="inpSeasonId" placeholder="seasonId (наприклад: season-2026)" />
+              <input id="inpSeasonName" placeholder="Назва сезону (наприклад: STOLAR CARP 2026)" />
+              <input id="inpStageId" placeholder="stageId (наприклад: stage-1)" />
+              <input id="inpStageName" placeholder="Назва етапу (наприклад: Етап 1)" />
+              <select id="inpRegOpen">
+                <option value="true">Реєстрація: ВІДКРИТА</option>
+                <option value="false">Реєстрація: ЗАКРИТА</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <button class="btn btn--accent" id="btnDoCreate">Створити / Оновити</button>
+            </div>
+
+            <div class="muted" id="createMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <!-- Відкрити/Закрити -->
+          <div class="admin-card admin-hidden" id="modToggle">
+            <h2 class="section-title" style="margin:0 0 10px;">Відкрити / Закрити змагання</h2>
+            <div class="muted">Документ: <b>settings/app</b> поле <b>registrationOpen</b>.</div>
+            <div class="row">
+              <button class="btn btn--accent" id="btnOpenReg">Відкрити реєстрацію</button>
+              <button class="btn btn--danger" id="btnCloseReg">Закрити реєстрацію</button>
+            </div>
+            <div class="muted" id="toggleMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <!-- Жереб -->
+          <div class="admin-card admin-hidden" id="modDraw">
             <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
-            <div class="muted">Зона/сектор для команди (наступним кроком).</div>
+            <div class="muted">Наступним кроком підключимо: зона/сектор + контроль дублів.</div>
             <div class="row">
               <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
             </div>
           </div>
 
-          <div class="admin-card">
+          <!-- Зважування -->
+          <div class="admin-card admin-hidden" id="modWeigh">
             <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
-            <div class="muted">Зважування 1–4 + результати зон A/B/C (наступним кроком).</div>
+            <div class="muted">Наступним кроком: 1–4 зважування, big fish, зона A/B/C.</div>
             <div class="row">
               <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
             </div>
           </div>
+
+          <!-- Користувачі -->
+          <div class="admin-card admin-hidden" id="modUsers">
+            <h2 class="section-title" style="margin:0 0 10px;">Користувачі сайту</h2>
+            <div class="muted">Колекція: <b>users</b> (показуємо останніх 50).</div>
+            <div class="row">
+              <button class="btn btn--primary" id="btnLoadUsers">Оновити список</button>
+            </div>
+            <div class="admin-list" id="usersList"></div>
+          </div>
+
         </div>
 
       </div>
@@ -166,15 +220,16 @@
   </section>
 </main>
 
-<script>
-  // ✅ ВАЖЛИВО: стартуємо тільки після window.load (коли defer скрипти вже завантажені)
-  window.addEventListener("load", () => AdminBoot().catch(err => {
-    console.error(err);
-    setStatus("Помилка: " + (err && err.message ? err.message : String(err)));
-  }));
+<!-- Firebase compat SDK (щоб точно не було "SDK не завантажився") -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
+<script>
+  // ====== ВШИТИЙ АДМІН ======
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
+  // Твій Firebase config (як ти дав)
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
     authDomain: "stolar-carp.firebaseapp.com",
@@ -185,93 +240,97 @@
     measurementId: "G-VWC07QNS7P"
   };
 
+  // ===== helpers =====
   function $id(id){ return document.getElementById(id); }
   function setStatus(t){ const el=$id("adminStatus"); if(el) el.textContent=t; }
-  function hint(t){ const el=$id("adminHint"); if(el) el.textContent=t; }
+  function setHint(t){ const el=$id("adminHint"); if(el) el.textContent=t; }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function bind(id, fn){ const b=$id(id); if(b) b.addEventListener("click", fn); }
 
-  async function waitForFirebaseCompat(){
-    // чекаємо, поки window.firebase зʼявиться
-    for (let i=0;i<120;i++){
-      if (window.firebase && typeof window.firebase.initializeApp === "function") return;
-      await new Promise(r => setTimeout(r, 50));
-    }
-    throw new Error("Firebase SDK не завантажився (compat). Перевір інтернет/блокування скриптів.");
+  function showOnly(moduleId){
+    const mods = ["modRegistrations","modCreate","modToggle","modDraw","modWeigh","modUsers"];
+    mods.forEach(id => { const el=$id(id); if(el) el.classList.add("admin-hidden"); });
+    const target = $id(moduleId);
+    if(target) target.classList.remove("admin-hidden");
   }
 
-  function initFirebase(){
-    if (window.scAuth && window.scDb) return;
-
-    if (!firebase.apps || firebase.apps.length === 0) firebase.initializeApp(firebaseConfig);
-
-    window.scAuth = firebase.auth();
-    window.scDb = firebase.firestore();
-    window.scStorage = firebase.storage ? firebase.storage() : null;
+  // ===== init firebase =====
+  try{
+    firebase.initializeApp(firebaseConfig);
+  }catch(e){
+    // якщо вже ініціалізовано
   }
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-  async function AdminBoot(){
-    setStatus("Firebase: завантажую compat…");
-    await waitForFirebaseCompat();
-
-    setStatus("Firebase: ініціалізація…");
-    initFirebase();
-
-    const auth = window.scAuth;
-    setStatus("Auth: перевіряю користувача…");
-
-    const user = await new Promise(resolve => {
-      const unsub = auth.onAuthStateChanged(u => { unsub(); resolve(u); });
-    });
-
-    if (!user){
-      setStatus("Нема входу → /auth.html");
+  // ===== access gate (ТОЛЬКИ UID) =====
+  setStatus("Auth: перевіряю сесію…");
+  auth.onAuthStateChanged(async (user) => {
+    if(!user){
+      setStatus("Ти не увійшов як адмін → перекидаю на /auth.html");
       location.href = "/auth.html";
       return;
     }
 
-    if (user.uid !== ADMIN_UID){
-      setStatus("Доступ заборонено ❌ (не твій UID)");
-      location.href = "/";
+    if(user.uid !== ADMIN_UID){
+      setStatus("Доступ заборонено ❌ (це не UID адміна)");
+      // можна кинути на головну
+      setTimeout(()=> location.href="/", 600);
       return;
     }
 
-    setStatus("Доступ дозволено ✅");
-    $id("adminUidInfo").textContent = "ADMIN UID: " + user.uid;
+    // ✅ OK
+    setStatus("Доступ дозволено ✅ (admin UID)");
     $id("adminApp").classList.remove("admin-hidden");
 
-    // кнопки
+    // за замовчуванням
+    showOnly("modRegistrations");
+    setHint("Модуль: Реєстрація команд (заявки).");
+
+    // bind buttons
+    const bind = (id, fn) => { const b=$id(id); if(b) b.addEventListener("click", fn); };
+
     bind("btnLogout", async () => { await auth.signOut(); location.href="/"; });
 
-    bind("btnCreateContest", () => { hint("1) Створити змагання — робимо наступним кроком"); alert("1) Створити змагання — наступний крок"); });
-    bind("btnToggleContest", () => { hint("2) Відкрити/закрити — робимо наступним кроком"); alert("2) Відкрити/закрити — наступний крок"); });
-    bind("btnRegistrations", () => { hint("3) Реєстрація команд — показую заявки"); loadRegistrations(); });
-    bind("btnDraw", () => { hint("4) Жеребкування — наступний крок"); alert("4) Жеребкування — наступний крок"); });
-    bind("btnWeigh", () => { hint("5) Зважування — наступний крок"); alert("5) Зважування — наступний крок"); });
-    bind("btnUsers", () => { hint("6) Користувачі — наступний крок"); alert("6) Користувачі — наступний крок"); });
+    bind("btnCreateContest", () => { showOnly("modCreate"); setHint("Модуль: Створити змагання."); });
+    bind("btnToggleContest", () => { showOnly("modToggle"); setHint("Модуль: Відкрити/Закрити."); });
+    bind("btnRegistrations", () => { showOnly("modRegistrations"); setHint("Модуль: Реєстрація команд (заявки)."); loadRegistrations(); });
+    bind("btnDraw", () => { showOnly("modDraw"); setHint("Модуль: Жеребкування."); });
+    bind("btnWeigh", () => { showOnly("modWeigh"); setHint("Модуль: Зважування."); });
+    bind("btnUsers", () => { showOnly("modUsers"); setHint("Модуль: Користувачі сайту."); });
 
     bind("btnLoadRegs", () => loadRegistrations());
-    bind("btnOpenDraw", () => alert("Модуль жеребу: наступний крок"));
-    bind("btnOpenWeigh", () => alert("Модуль зважувань: наступний крок"));
+    bind("btnLoadUsers", () => loadUsers());
 
+    bind("btnOpenDraw", () => alert("Жеребкування — підключаю наступним кроком (зона/сектор + контроль дублів)."));
+    bind("btnOpenWeigh", () => alert("Зважування — підключаю наступним кроком (1–4, big fish, зони)."));
+
+    // create contest
+    bind("btnDoCreate", () => createContest());
+
+    // toggle reg open/close
+    bind("btnOpenReg", () => setRegistrationOpen(true));
+    bind("btnCloseReg", () => setRegistrationOpen(false));
+
+    // автопідвантаження
     loadRegistrations().catch(()=>{});
-  }
+  });
 
+  // ====== MODULE: registrations ======
   async function loadRegistrations(){
-    const db = window.scDb;
     const box = $id("regsList");
-    if (!box) return;
-
+    if(!box) return;
     box.innerHTML = '<div class="muted">Завантажую…</div>';
 
+    // якщо createdAt інколи відсутній — Firestore впаде.
+    // Тому робимо "м’якше": пробуємо з orderBy, якщо помилка — без сортування.
     let snap;
-    try {
+    try{
       snap = await db.collection("registrations").orderBy("createdAt","desc").limit(25).get();
-    } catch(e){
+    }catch(e){
       snap = await db.collection("registrations").limit(25).get();
     }
 
-    if (snap.empty){
+    if(snap.empty){
       box.innerHTML = '<div class="muted">Заявок поки немає.</div>';
       return;
     }
@@ -293,7 +352,7 @@
           <div class="muted" style="margin-top:6px;">id: ${esc(doc.id)}</div>
           <div class="row">
             <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
-            <button class="btn btn--primary" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
+            <button class="btn btn--danger" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
           </div>
         </div>
       `);
@@ -303,25 +362,116 @@
   }
 
   window.approveReg = async function(regId){
-    const db = window.scDb;
     await db.collection("registrations").doc(regId).update({
       paymentStatus: "paid",
-      approvedAt: new Date(),
-      approvedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      approvedBy: ADMIN_UID
     });
     loadRegistrations();
-  }
+  };
 
   window.rejectReg = async function(regId){
-    const db = window.scDb;
     await db.collection("registrations").doc(regId).update({
       paymentStatus: "rejected",
-      rejectedAt: new Date(),
-      rejectedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
+      rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      rejectedBy: ADMIN_UID
     });
     loadRegistrations();
+  };
+
+  // ====== MODULE: users ======
+  async function loadUsers(){
+    const box = $id("usersList");
+    if(!box) return;
+    box.innerHTML = '<div class="muted">Завантажую…</div>';
+
+    let snap;
+    try{
+      snap = await db.collection("users").orderBy("createdAt","desc").limit(50).get();
+    }catch(e){
+      snap = await db.collection("users").limit(50).get();
+    }
+
+    if(snap.empty){
+      box.innerHTML = '<div class="muted">Користувачів поки немає.</div>';
+      return;
+    }
+
+    const items = [];
+    snap.forEach(doc => {
+      const d = doc.data() || {};
+      items.push(`
+        <div class="item">
+          <div class="item-top">
+            <div><b>${esc(d.fullName || d.name || "Користувач")}</b> <span class="muted">• ${esc(d.email || "—")}</span></div>
+            <span class="pill ${doc.id===ADMIN_UID ? "ok":"warn"}">${doc.id===ADMIN_UID ? "admin(uid)" : esc(d.role || "user")}</span>
+          </div>
+          <div class="muted" style="margin-top:6px;">uid: ${esc(doc.id)} ${d.teamId ? " • teamId: " + esc(d.teamId) : ""}</div>
+        </div>
+      `);
+    });
+
+    box.innerHTML = items.join("");
+  }
+
+  // ====== MODULE: create contest ======
+  async function createContest(){
+    const seasonId = ($id("inpSeasonId").value || "").trim();
+    const seasonName = ($id("inpSeasonName").value || "").trim();
+    const stageId = ($id("inpStageId").value || "").trim();
+    const stageName = ($id("inpStageName").value || "").trim();
+    const regOpen = ($id("inpRegOpen").value === "true");
+
+    const msg = $id("createMsg");
+    if(!seasonId || !seasonName){
+      msg.textContent = "❌ Заповни seasonId і назву сезону.";
+      return;
+    }
+
+    msg.textContent = "⏳ Пишу в Firestore…";
+
+    // seasons/{seasonId}
+    await db.collection("seasons").doc(seasonId).set({
+      name: seasonName,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+
+    // seasons/{seasonId}/stages/{stageId} (якщо вказано)
+    if(stageId && stageName){
+      await db.collection("seasons").doc(seasonId)
+        .collection("stages").doc(stageId)
+        .set({
+          name: stageName,
+          seasonId,
+          registrationOpen: regOpen,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+    }
+
+    // settings/app
+    await db.collection("settings").doc("app").set({
+      activeSeasonId: seasonId,
+      activeStageId: stageId || null,
+      registrationOpen: regOpen,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+
+    msg.textContent = "✅ Готово. Активний сезон/етап збережено в settings/app.";
+  }
+
+  // ====== MODULE: open/close ======
+  async function setRegistrationOpen(open){
+    const el = $id("toggleMsg");
+    el.textContent = "⏳ Оновлюю settings/app…";
+    await db.collection("settings").doc("app").set({
+      registrationOpen: !!open,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+    el.textContent = open ? "✅ Реєстрацію ВІДКРИТО" : "✅ Реєстрацію ЗАКРИТО";
   }
 </script>
 
 </body>
-</html>
+  </html>

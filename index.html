@@ -569,14 +569,27 @@
 <footer class="footer">
   <div class="container footer__row">
     <div>
-  <span id="scAdminEntry" role="button" tabindex="0" title="Admin">© 2025 STOLAR CARP · Львів</span>
+      <span id="scAdminEntry" role="button" tabindex="0">
+        © 2025 STOLAR CARP · Львів
+      </span>
     </div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+      <a href="https://invite.viber.com/?g=...">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
     </div>
   </div>
 </footer>
+
+<script>
+  (function(){
+    const el = document.getElementById("scAdminEntry");
+    if(!el) return;
+
+    el.addEventListener("click", () => {
+      window.location.href = "/admin.html";
+    });
+  })();
+</script>
 
 </body>
 </html>

@@ -11,40 +11,46 @@
   };
 
   function fail(msg, err) {
-    console.warn("[firebase-init]", msg, err || "");
-    // щоб адмінка могла показати зрозумілу причину
-    window.__SC_FB_ERROR__ = msg;
-  }
-
-  if (typeof window.firebase === "undefined") {
-    fail("Firebase SDK compat не підключений (нема window.firebase).");
-    return;
+    console.error("[firebase-init]", msg, err || "");
+    window.scFirebaseInitError = msg + (err?.message ? (": " + err.message) : "");
   }
 
   try {
+    if (typeof window.firebase === "undefined") {
+      fail("Firebase SDK (compat) не підключений. Перевір firebase-*-compat.js у HTML.");
+      return;
+    }
+
+    // init app (один раз)
     if (!window.firebase.apps || !window.firebase.apps.length) {
       window.firebase.initializeApp(firebaseConfig);
     }
-  } catch (e) {
-    fail("Не вдалося initializeApp()", e);
-    return;
-  }
 
-  try {
-    window.scAuth = window.firebase.auth();
-  } catch (e) {
-    fail("Не підключений firebase-auth-compat.js", e);
-  }
+    // auth
+    try {
+      window.scAuth = window.firebase.auth();
+    } catch (e) {
+      fail("Не підключений firebase-auth-compat.js", e);
+    }
 
-  try {
-    window.scDb = window.firebase.firestore();
-  } catch (e) {
-    fail("Не підключений firebase-firestore-compat.js", e);
-  }
+    // firestore
+    try {
+      window.scDb = window.firebase.firestore();
+      // (опційно) щоб не було сюрпризів з офлайном на мобільному:
+      // window.scDb.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
+    } catch (e) {
+      fail("Не підключений firebase-firestore-compat.js", e);
+    }
 
-  try {
-    window.scStorage = window.firebase.storage();
+    // storage (не критично для адмінки)
+    try {
+      window.scStorage = window.firebase.storage();
+    } catch (e) {}
+
+    // сигнал “готово”
+    window.dispatchEvent(new Event("sc-firebase-ready"));
+    console.log("[firebase-init] OK");
   } catch (e) {
-    // не критично
+    fail("Критична помилка ініту", e);
   }
 })();

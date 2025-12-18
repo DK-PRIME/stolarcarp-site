@@ -1,90 +1,65 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>STOLAR CARP • Адмінка</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-    .admin-wrap{ max-width:1100px; margin:0 auto; padding:32px 0 70px; }
-    .admin-top{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding:14px 16px; border-radius:18px;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.6);
-    }
-    .admin-badge{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:6px 12px; border-radius:999px;
-      font-size:.85rem; color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(0,0,0,.35);
-      white-space:nowrap;
-    }
-    .muted{ color:#9ca3af; }
-    .admin-hidden{ display:none; }
-
+    .admin-wrap{ max-width:980px; margin:0 auto; padding:26px 0 70px; }
     .admin-card{
-      margin-top:14px;
-      padding:16px;
+      margin-top:14px; padding:16px;
       border-radius:18px;
       background:rgba(15,23,42,.9);
       border:1px solid rgba(148,163,184,.35);
       box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
-    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .row .btn{ padding:10px 14px; border-radius:12px; }
+    .muted{ color:#9ca3af; }
+    .admin-hidden{ display:none; }
 
-    .admin-grid{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-    }
-    @media(min-width:900px){
-      .admin-grid{ grid-template-columns: 1.2fr .8fr; }
-    }
-
-    .admin-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
-    .item{
-      padding:12px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.55);
-    }
-    .item-top{ display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
-    .pill{
-      display:inline-flex; align-items:center;
-      padding:4px 10px; border-radius:999px;
-      font-size:.78rem;
+    .admin-top{
+      display:flex; flex-direction:column; gap:6px;
+      padding:14px 16px; border-radius:18px;
+      background:rgba(15,23,42,.9);
       border:1px solid rgba(148,163,184,.35);
-      color:#e5e7eb;
-      background:rgba(0,0,0,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
-    .pill.ok{ border-color:rgba(34,197,94,.6); }
-    .pill.warn{ border-color:rgba(250,204,21,.65); }
-    .pill.bad{ border-color:rgba(239,68,68,.65); }
+    .admin-title{ font-size:1.25rem; font-weight:900; }
+    .admin-sub{ font-size:.95rem; }
 
-    .mini-form{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-    }
-    .mini-form input, .mini-form select{
+    .col{ display:flex; flex-direction:column; gap:10px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .btn-col{ display:flex; flex-direction:column; gap:10px; }
+    .btn-full{ width:100%; justify-content:center; padding:12px 14px; border-radius:14px; }
+
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    input, select{
       width:100%;
-      padding:10px 12px;
+      padding:11px 12px;
       border-radius:12px;
       border:1px solid rgba(148,163,184,.35);
       background:rgba(2,6,23,.55);
       color:#e5e7eb;
       outline:none;
     }
-    .mini-form input::placeholder{ color:#6b7280; }
+    input::placeholder{ color:#6b7280; }
+
+    .hr{ height:1px; background:rgba(148,163,184,.18); margin:8px 0; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      font-size:.82rem;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(0,0,0,.25);
+      color:#e5e7eb;
+      width:max-content;
+    }
+    .pill.ok{ border-color:rgba(34,197,94,.6); }
+    .pill.warn{ border-color:rgba(250,204,21,.65); }
+    .pill.bad{ border-color:rgba(239,68,68,.65); }
   </style>
 </head>
 
@@ -97,10 +72,10 @@
       <span class="logo__text">STOLAR CARP</span>
     </a>
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -109,26 +84,22 @@
 <main class="main">
   <section class="section container admin-wrap">
 
+    <!-- TOP STATUS -->
     <div class="admin-top">
-      <div>
-        <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
-        <div class="muted" id="adminStatus">Запуск…</div>
-      </div>
-      <div class="admin-badge" id="adminBadge">🔒 admin</div>
+      <div class="admin-title">Адмінка STOLAR CARP</div>
+      <div class="muted admin-sub" id="adminStatus">Запуск…</div>
+      <div class="row" id="adminPills"></div>
     </div>
 
     <!-- LOGIN -->
     <div id="adminLogin" class="admin-card admin-hidden">
-      <h2 class="section-title" style="margin:0 0 10px;">Вхід адміністратора</h2>
+      <h2 class="section-title" style="margin:0 0 8px;">Вхід адміністратора</h2>
       <div class="muted">Увійди email/паролем адмін-акаунта. Реєстрації тут немає.</div>
 
       <div class="row" style="margin-top:12px;">
-        <input id="admEmail" type="email" placeholder="Email"
-          style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
-        <input id="admPass" type="password" placeholder="Пароль"
-          style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
+        <input id="admEmail" type="email" placeholder="Email" style="flex:1; min-width:220px;">
+        <input id="admPass"  type="password" placeholder="Пароль" style="flex:1; min-width:220px;">
         <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
-        <button class="btn btn--primary" id="btnGoHome">На сайт</button>
       </div>
 
       <div class="muted" id="adminLoginMsg" style="margin-top:10px;"></div>
@@ -137,351 +108,341 @@
     <!-- APP -->
     <div id="adminApp" class="admin-hidden">
 
+      <!-- 1) CREATE STAGE -->
       <div class="admin-card">
-        <h2 class="section-title" style="margin:0 0 10px;">Керування</h2>
-        <div class="row">
-          <button class="btn btn--primary" id="btnCreateContest">1. Створити змагання</button>
-          <button class="btn btn--accent"  id="btnToggleContest">2. Відкрити / закрити</button>
-          <button class="btn btn--primary" id="btnRegistrations">3. Реєстрація команд</button>
-          <button class="btn btn--accent"  id="btnDraw">4. Жеребкування</button>
-          <button class="btn btn--danger"  id="btnWeigh">5. Зважування</button>
-          <button class="btn btn--primary" id="btnUsers">6. Користувачі сайту</button>
-          <button class="btn btn--primary" id="btnLogout">Вийти</button>
+        <h2 class="section-title" style="margin:0 0 8px;">1) Створити етап / змагання</h2>
+        <div class="muted">
+          Зберігаємо в колекцію <b>stages</b>. Реєстрація буде <b>автоматично по даті</b>, а також є <b>ручне відкриття/закриття</b>.
         </div>
-        <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
+
+        <div class="hr"></div>
+
+        <div class="col">
+          <div class="field">
+            <label class="muted">Season ID (наприклад: season-2026)</label>
+            <input id="inpSeasonId" placeholder="season-2026" value="season-2026">
+          </div>
+
+          <div class="field">
+            <label class="muted">Stage ID (наприклад: stage-1)</label>
+            <input id="inpStageId" placeholder="stage-1">
+          </div>
+
+          <div class="field">
+            <label class="muted">Назва етапу</label>
+            <input id="inpStageName" placeholder="Етап 1 • Осінній короп STOLAR CARP">
+          </div>
+
+          <div class="field">
+            <label class="muted">Старт змагання (дата + час)</label>
+            <input id="inpStartAt" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label class="muted">Жеребкування (дата + час)</label>
+            <input id="inpDrawAt" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label class="muted">Відкриття реєстрації (авто)</label>
+            <input id="inpRegOpenAt" type="datetime-local">
+          </div>
+
+          <div class="field">
+            <label class="muted">Закриття реєстрації (авто)</label>
+            <input id="inpRegCloseAt" type="datetime-local">
+          </div>
+
+          <button class="btn btn--primary btn-full" id="btnSaveStage">Зберегти етап</button>
+          <div class="muted" id="createMsg"></div>
+        </div>
       </div>
 
-      <div class="admin-grid">
+      <!-- 2) SELECT + TOGGLE REG -->
+      <div class="admin-card">
+        <h2 class="section-title" style="margin:0 0 8px;">2) Реєстрація (авто по даті + ручне керування)</h2>
+        <div class="muted">
+          Обери етап зі списку → побачиш статус → можеш <b>відкрити/закрити вручну</b>.
+        </div>
 
-        <!-- ЛІВО: registrations -->
-        <div class="admin-card" id="modRegistrations">
-          <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
-          <div class="muted">Колекція: <b>registrations</b> · оплата: <b>paymentStatus</b> (paid/pending/rejected)</div>
+        <div class="hr"></div>
+
+        <div class="col">
+          <div class="field">
+            <label class="muted">Вибір етапу</label>
+            <select id="selStage"></select>
+          </div>
+
           <div class="row">
-            <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
-          </div>
-          <div class="admin-list" id="regsList"></div>
-        </div>
-
-        <!-- ПРАВО: модулі -->
-        <div style="display:flex; flex-direction:column; gap:14px;">
-
-          <div class="admin-card admin-hidden" id="modCreate">
-            <h2 class="section-title" style="margin:0 0 10px;">1) Створити змагання</h2>
-            <div class="muted">Пишемо в: <b>seasons/{seasonId}</b> і <b>seasons/{seasonId}/stages/{stageId}</b>.</div>
-
-            <div class="mini-form">
-              <input id="inpSeasonId" placeholder="seasonId (наприклад: season-2026)" />
-              <input id="inpSeasonName" placeholder="Назва сезону (STOLAR CARP 2026)" />
-              <input id="inpStageId" placeholder="stageId (наприклад: stage-1)" />
-              <input id="inpStageName" placeholder="Назва етапу (Етап 1)" />
-            </div>
-
-            <div class="row">
-              <button class="btn btn--accent" id="btnDoCreate">Створити / Оновити</button>
-            </div>
-
-            <div class="muted" id="createMsg" style="margin-top:10px;"></div>
+            <button class="btn btn--accent" id="btnForceOpen">Відкрити вручну</button>
+            <button class="btn btn--danger" id="btnForceClose">Закрити вручну</button>
+            <button class="btn btn--primary" id="btnForceAuto">Повернути АВТО (по даті)</button>
           </div>
 
-          <div class="admin-card admin-hidden" id="modToggle">
-            <h2 class="section-title" style="margin:0 0 10px;">2) Відкрити / закрити</h2>
-            <div class="muted">Документ: <b>settings/app</b> поле <b>registrationOpen</b>.</div>
-            <div class="row">
-              <button class="btn btn--accent" id="btnOpenReg">Відкрити реєстрацію</button>
-              <button class="btn btn--danger" id="btnCloseReg">Закрити реєстрацію</button>
-            </div>
-            <div class="muted" id="toggleMsg" style="margin-top:10px;"></div>
-          </div>
-
-          <div class="admin-card admin-hidden" id="modDraw">
-            <h2 class="section-title" style="margin:0 0 10px;">4) Жеребкування</h2>
-            <div class="muted">Каркас. Далі підв’яжемо: зона/сектор + захист від дублів.</div>
-            <div class="row">
-              <button class="btn btn--accent" id="btnOpenDraw">Відкрити модуль жеребу</button>
-            </div>
-          </div>
-
-          <div class="admin-card admin-hidden" id="modWeigh">
-            <h2 class="section-title" style="margin:0 0 10px;">5) Зважування</h2>
-            <div class="muted">Каркас. Далі: 1–4 зважування, big fish, зони A/B/C.</div>
-            <div class="row">
-              <button class="btn btn--danger" id="btnOpenWeigh">Відкрити модуль зважувань</button>
-            </div>
-          </div>
-
-          <div class="admin-card admin-hidden" id="modUsers">
-            <h2 class="section-title" style="margin:0 0 10px;">6) Користувачі сайту</h2>
-            <div class="muted">Колекція: <b>users</b> (останнi 50).</div>
-            <div class="row">
-              <button class="btn btn--primary" id="btnLoadUsers">Оновити список</button>
-            </div>
-            <div class="admin-list" id="usersList"></div>
-          </div>
-
+          <div class="muted" id="stageInfo"></div>
         </div>
       </div>
-    </div>
+
+      <!-- 3) NEXT PAGES -->
+      <div class="admin-card">
+        <h2 class="section-title" style="margin:0 0 8px;">3) Далі по модулях</h2>
+        <div class="muted">Ці кнопки ведуть на окремі сторінки (щоб головну не грузити).</div>
+
+        <div class="hr"></div>
+
+        <div class="btn-col">
+          <a class="btn btn--primary btn-full" id="goRegs" href="admin-registrations.html">Реєстрація команд</a>
+          <a class="btn btn--accent  btn-full" id="goDraw" href="admin-draw.html">Жеребкування</a>
+          <a class="btn btn--danger  btn-full" id="goWeigh" href="judge-weighings.html">Зважування (судді)</a>
+          <a class="btn btn--primary btn-full" id="goUsers" href="admin-users.html">Користувачі сайту</a>
+        </div>
+
+        <div class="muted" style="margin-top:10px;">
+          * Кнопки “Вийти” немає — сесія Firebase тримається, як ти і хотів.
+        </div>
+      </div>
+
+    </div><!-- /adminApp -->
 
   </section>
 </main>
 
-<!-- Firebase compat SDK (ОДИН раз) -->
+<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase init (створює window.scAuth/window.scDb) -->
+<!-- Твій init: має створити window.scAuth / window.scDb -->
 <script src="assets/js/firebase-init.js"></script>
 
 <script>
-  // UI burger
-  (function(){
-    const burger = document.getElementById('burger');
-    const nav = document.getElementById('nav');
-    if (burger && nav) burger.addEventListener('click', () => nav.classList.toggle('open'));
-  })();
-
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   const $ = (id) => document.getElementById(id);
   const show = (el) => el && el.classList.remove("admin-hidden");
   const hide = (el) => el && el.classList.add("admin-hidden");
-  const setStatus = (t) => { const e = $("adminStatus"); if (e) e.textContent = t; };
 
-  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-  function showOnly(moduleId){
-    const ids = ["modRegistrations","modCreate","modToggle","modDraw","modWeigh","modUsers"];
-    ids.forEach(id => id === moduleId ? show($(id)) : hide($(id)));
+  function setStatus(text){ const e=$("adminStatus"); if(e) e.textContent=text; }
+  function pill(text, cls){
+    const el = document.createElement("div");
+    el.className = "pill " + (cls||"");
+    el.textContent = text;
+    return el;
   }
 
-  async function waitReady(){
-    for(let i=0;i<80;i++){
-      if (window.scAuth && window.scDb) return;
+  function dtToTs(localValue){
+    // datetime-local -> Firestore Timestamp через Date
+    if(!localValue) return null;
+    const d = new Date(localValue);
+    return window.firebase.firestore.Timestamp.fromDate(d);
+  }
+  function tsToText(ts){
+    if(!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString("uk-UA");
+  }
+
+  async function waitForFirebase(){
+    for(let i=0;i<120;i++){
+      if(window.scAuth && window.scDb) return;
       await new Promise(r=>setTimeout(r,100));
     }
-    throw new Error("Firebase не піднявся (нема scAuth/scDb).");
-  }
-
-  async function safeQueryLatest(col, limitN){
-    const db = window.scDb;
-    try{
-      return await db.collection(col).orderBy("createdAt","desc").limit(limitN).get();
-    }catch(e){
-      // fallback без orderBy (на випадок відсутнього індексу/createdAt)
-      return await db.collection(col).limit(limitN).get();
-    }
-  }
-
-  async function loadRegistrations(){
-    const box = $("regsList");
-    if(!box) return;
-    box.innerHTML = '<div class="muted">Завантажую…</div>';
-
-    const snap = await safeQueryLatest("registrations", 25);
-
-    if (snap.empty){
-      box.innerHTML = '<div class="muted">Заявок поки немає.</div>';
-      return;
-    }
-
-    const items = [];
-    snap.forEach(doc => {
-      const d = doc.data() || {};
-      const teamName = d.teamName || d.team || d.name || "Команда";
-      const stageId  = d.stageId || d.stage || "—";
-      const pay      = d.paymentStatus || d.payStatus || "pending";
-      const pillClass = pay === "paid" ? "ok" : (pay === "rejected" ? "bad" : "warn");
-
-      items.push(`
-        <div class="item">
-          <div class="item-top">
-            <div><b>${esc(teamName)}</b> <span class="muted">• stage: ${esc(stageId)}</span></div>
-            <span class="pill ${pillClass}">${esc(pay)}</span>
-          </div>
-          <div class="muted" style="margin-top:6px;">id: ${esc(doc.id)}</div>
-          <div class="row">
-            <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
-            <button class="btn btn--danger" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
-          </div>
-        </div>
-      `);
-    });
-
-    box.innerHTML = items.join("");
-  }
-
-  window.approveReg = async function(regId){
-    const db = window.scDb;
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "paid",
-      approvedAt: new Date(),
-      approvedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
-    });
-    loadRegistrations();
-  }
-
-  window.rejectReg = async function(regId){
-    const db = window.scDb;
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "rejected",
-      rejectedAt: new Date(),
-      rejectedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
-    });
-    loadRegistrations();
-  }
-
-  async function loadUsers(){
-    const box = $("usersList");
-    if(!box) return;
-    box.innerHTML = '<div class="muted">Завантажую…</div>';
-
-    const snap = await safeQueryLatest("users", 50);
-
-    if (snap.empty){
-      box.innerHTML = '<div class="muted">Користувачів поки немає.</div>';
-      return;
-    }
-
-    const items = [];
-    snap.forEach(doc => {
-      const d = doc.data() || {};
-      items.push(`
-        <div class="item">
-          <div class="item-top">
-            <div><b>${esc(d.fullName || "Без імені")}</b> <span class="muted">• ${esc(d.email || "")}</span></div>
-            <span class="pill">${esc(d.role || "user")}</span>
-          </div>
-          <div class="muted" style="margin-top:6px;">uid: ${esc(doc.id)} • teamId: ${esc(d.teamId || "—")}</div>
-        </div>
-      `);
-    });
-
-    box.innerHTML = items.join("");
-  }
-
-  async function doCreateContest(){
-    const db = window.scDb;
-    const seasonId = ($("inpSeasonId").value || "").trim();
-    const seasonName = ($("inpSeasonName").value || "").trim();
-    const stageId = ($("inpStageId").value || "").trim();
-    const stageName = ($("inpStageName").value || "").trim();
-    const msg = $("createMsg");
-
-    if(!seasonId || !seasonName || !stageId || !stageName){
-      if(msg) msg.textContent = "Заповни всі 4 поля.";
-      return;
-    }
-
-    if(msg) msg.textContent = "Записую…";
-
-    await db.collection("seasons").doc(seasonId).set({
-      name: seasonName,
-      updatedAt: new Date()
-    }, { merge: true });
-
-    await db.collection("seasons").doc(seasonId).collection("stages").doc(stageId).set({
-      name: stageName,
-      updatedAt: new Date()
-    }, { merge: true });
-
-    if(msg) msg.textContent = "Готово ✅";
-  }
-
-  async function setRegOpen(val){
-    const db = window.scDb;
-    const el = $("toggleMsg");
-    if(el) el.textContent = "Оновлюю…";
-    await db.collection("settings").doc("app").set({
-      registrationOpen: !!val,
-      updatedAt: new Date(),
-      updatedBy: (window.scAuth.currentUser && window.scAuth.currentUser.uid) || null
-    }, { merge: true });
-    if(el) el.textContent = val ? "Реєстрацію ВІДКРИТО ✅" : "Реєстрацію ЗАКРИТО ⛔";
+    throw new Error("Firebase НЕ ініціалізований (scAuth / scDb)");
   }
 
   async function init(){
-    await waitReady();
-
+    await waitForFirebase();
     const auth = window.scAuth;
+    const db   = window.scDb;
 
     const loginBox = $("adminLogin");
     const appBox   = $("adminApp");
     const msg      = $("adminLoginMsg");
 
-    const showLogin = (text) => {
+    function showLogin(text){
       hide(appBox); show(loginBox);
-      setStatus("Потрібен вхід");
-      if (msg) msg.textContent = text || "";
-    };
-    const showApp = () => { hide(loginBox); show(appBox); };
+      if(msg) msg.textContent = text || "";
+    }
+    function showApp(){
+      hide(loginBox); show(appBox);
+    }
 
-    $("btnGoHome").onclick = () => location.href = "/";
-
+    // login button
     $("btnAdminLogin").onclick = async () => {
-      const email = ($("admEmail").value || "").trim();
-      const pass  = ($("admPass").value || "").trim();
-      if(!email || !pass){
-        msg.textContent = "Введи email і пароль";
-        return;
-      }
-      msg.textContent = "Вхід…";
-      try{
-        await auth.signInWithEmailAndPassword(email, pass);
-      }catch(e){
-        msg.textContent = "Помилка входу: " + (e.message || "");
-      }
+      const email = $("admEmail").value.trim();
+      const pass  = $("admPass").value.trim();
+      if(!email || !pass){ msg.textContent="Введи email і пароль"; return; }
+      msg.textContent="Вхід…";
+      try { await auth.signInWithEmailAndPassword(email, pass); }
+      catch(e){ msg.textContent="Помилка входу"; }
     };
 
+    // Auth gate
     auth.onAuthStateChanged(async (user) => {
+      const pills = $("adminPills");
+      pills.innerHTML = "";
+
       if(!user){
-        showLogin("Увійди як адміністратор.");
+        setStatus("Потрібен вхід");
+        pills.appendChild(pill("🔒 не залогінений", "bad"));
+        showLogin("Увійди як адміністратор");
         return;
       }
-
       if(user.uid !== ADMIN_UID){
-        // чужий акаунт — блокуємо
-        setStatus("Доступ заборонено ⛔");
-        showLogin("Цей акаунт не має доступу до адмінки.");
+        setStatus("Доступ заборонено");
+        pills.appendChild(pill("⛔ не адмін", "bad"));
+        showLogin("Цей акаунт не має доступу");
         return;
       }
 
-      // ✅ admin
-      setStatus("Адмін-доступ дозволено ✅");
+      setStatus("Адмін-доступ дозволено");
+      pills.appendChild(pill("✅ admin", "ok"));
+      pills.appendChild(pill("UID: " + user.uid.slice(0,8) + "…", ""));
       showApp();
 
-      // кнопки модулів
-      $("btnCreateContest").onclick = () => { $("adminHint").textContent = "Модуль: Створити змагання"; showOnly("modCreate"); };
-      $("btnToggleContest").onclick = () => { $("adminHint").textContent = "Модуль: Відкрити/Закрити"; showOnly("modToggle"); };
-      $("btnRegistrations").onclick = () => { $("adminHint").textContent = "Модуль: Реєстрація команд"; showOnly("modRegistrations"); loadRegistrations(); };
-      $("btnDraw").onclick = () => { $("adminHint").textContent = "Модуль: Жеребкування"; showOnly("modDraw"); };
-      $("btnWeigh").onclick = () => { $("adminHint").textContent = "Модуль: Зважування"; showOnly("modWeigh"); };
-      $("btnUsers").onclick = () => { $("adminHint").textContent = "Модуль: Користувачі"; showOnly("modUsers"); loadUsers(); };
-
-      $("btnLogout").onclick = async () => { await auth.signOut(); location.href="/"; };
-
-      // дії
-      $("btnLoadRegs").onclick = () => loadRegistrations();
-      $("btnLoadUsers").onclick = () => loadUsers();
-      $("btnDoCreate").onclick  = () => doCreateContest();
-      $("btnOpenReg").onclick   = () => setRegOpen(true);
-      $("btnCloseReg").onclick  = () => setRegOpen(false);
-
-      $("btnOpenDraw").onclick  = () => alert("Жеребкування підключимо наступним кроком.");
-      $("btnOpenWeigh").onclick = () => alert("Зважування підключимо наступним кроком.");
-
-      // стартовий модуль
-      showOnly("modRegistrations");
-      loadRegistrations().catch(()=>{});
+      // load stages
+      await loadStages();
     });
+
+    async function loadStages(){
+      const sel = $("selStage");
+      sel.innerHTML = `<option value="">— немає етапів —</option>`;
+
+      const snap = await db.collection("stages").orderBy("startAt", "desc").limit(50).get();
+      if(snap.empty) return;
+
+      sel.innerHTML = "";
+      snap.forEach(doc => {
+        const s = doc.data() || {};
+        const opt = document.createElement("option");
+        opt.value = doc.id;
+        opt.textContent = `${s.stageName || doc.id} (${s.seasonId || "—"})`;
+        sel.appendChild(opt);
+      });
+
+      // restore last selected
+      const saved = localStorage.getItem("sc_admin_stage") || "";
+      if(saved && [...sel.options].some(o=>o.value===saved)) sel.value = saved;
+
+      await renderStageInfo();
+      sel.onchange = async () => {
+        localStorage.setItem("sc_admin_stage", sel.value || "");
+        await renderStageInfo();
+        syncLinks();
+      };
+      syncLinks();
+    }
+
+    function syncLinks(){
+      const stageId = $("selStage").value || "";
+      const q = stageId ? `?stage=${encodeURIComponent(stageId)}` : "";
+      $("goRegs").href  = "admin-registrations.html" + q;
+      $("goDraw").href  = "admin-draw.html" + q;
+      $("goWeigh").href = "judge-weighings.html" + q;
+      $("goUsers").href = "admin-users.html" + q;
+    }
+
+    async function renderStageInfo(){
+      const stageId = $("selStage").value;
+      const box = $("stageInfo");
+      if(!stageId){ box.textContent = "Обери етап, щоб бачити статус."; return; }
+
+      const doc = await db.collection("stages").doc(stageId).get();
+      if(!doc.exists){ box.textContent = "Етап не знайдений."; return; }
+      const s = doc.data();
+
+      const now = new Date();
+      const regOpenAt  = s.regOpenAt?.toDate?.() || null;
+      const regCloseAt = s.regCloseAt?.toDate?.() || null;
+
+      let autoOpen = false;
+      if(regOpenAt && regCloseAt){
+        autoOpen = (now >= regOpenAt && now <= regCloseAt);
+      }
+
+      // manualOpen: true / false / null (auto)
+      const manual = (typeof s.manualOpen === "boolean") ? s.manualOpen : null;
+      const effectiveOpen = (manual === true) ? true : (manual === false) ? false : autoOpen;
+
+      const mode = (manual === true) ? "РУЧНИЙ: ВІДКРИТО"
+                : (manual === false) ? "РУЧНИЙ: ЗАКРИТО"
+                : "АВТО (по даті)";
+
+      box.innerHTML =
+        `Етап: <b>${(s.stageName||stageId)}</b><br>` +
+        `Старт: <b>${tsToText(s.startAt)}</b><br>` +
+        `Жереб: <b>${tsToText(s.drawAt)}</b><br>` +
+        `Реєстрація (авто): <b>${tsToText(s.regOpenAt)}</b> → <b>${tsToText(s.regCloseAt)}</b><br>` +
+        `Режим: <b>${mode}</b><br>` +
+        `Фактично зараз: <b>${effectiveOpen ? "ВІДКРИТО" : "ЗАКРИТО"}</b>`;
+    }
+
+    // CREATE/SAVE STAGE
+    $("btnSaveStage").onclick = async () => {
+      const seasonId  = $("inpSeasonId").value.trim();
+      const stageIdIn = $("inpStageId").value.trim();
+      const stageName = $("inpStageName").value.trim();
+
+      const startAt   = dtToTs($("inpStartAt").value);
+      const drawAt    = dtToTs($("inpDrawAt").value);
+      const regOpenAt = dtToTs($("inpRegOpenAt").value);
+      const regCloseAt= dtToTs($("inpRegCloseAt").value);
+
+      const out = $("createMsg");
+      if(!seasonId || !stageIdIn || !stageName){
+        out.textContent = "Заповни мінімум: seasonId, stageId, назва.";
+        return;
+      }
+
+      const docId = `${seasonId}__${stageIdIn}`; // стабільний ключ
+      out.textContent = "Збереження…";
+
+      try{
+        await db.collection("stages").doc(docId).set({
+          seasonId,
+          stageId: stageIdIn,
+          stageName,
+          startAt: startAt || null,
+          drawAt: drawAt || null,
+          regOpenAt: regOpenAt || null,
+          regCloseAt: regCloseAt || null,
+          manualOpen: null, // null = авто
+          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+
+        out.textContent = "✅ Етап збережено: " + docId;
+        await loadStages();
+        $("selStage").value = docId;
+        localStorage.setItem("sc_admin_stage", docId);
+        await renderStageInfo();
+        syncLinks();
+      }catch(e){
+        console.error(e);
+        out.textContent = "❌ Помилка: " + (e.message || e);
+      }
+    };
+
+    // FORCE OPEN/CLOSE/AUTO
+    $("btnForceOpen").onclick = async () => setManual(true);
+    $("btnForceClose").onclick = async () => setManual(false);
+    $("btnForceAuto").onclick = async () => setManual(null);
+
+    async function setManual(val){
+      const stageId = $("selStage").value;
+      if(!stageId) return alert("Спочатку вибери етап");
+      try{
+        await db.collection("stages").doc(stageId).set({ manualOpen: val }, { merge:true });
+        await renderStageInfo();
+      }catch(e){
+        alert("Помилка: " + e.message);
+      }
+    }
   }
 
-  init().catch(err => {
+  init().catch(err=>{
     console.error(err);
-    setStatus("Помилка: " + (err.message || err));
-    show($("adminLogin"));
-    if ($("adminLoginMsg")) $("adminLoginMsg").textContent = "Критична помилка ініціалізації.";
+    setStatus("Помилка: " + err.message);
   });
 </script>
 

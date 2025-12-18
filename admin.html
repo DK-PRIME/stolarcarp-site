@@ -110,6 +110,19 @@
   <section class="section container admin-wrap">
 
     <div class="admin-top">
+      <!-- Admin login (показується тільки якщо ти не залогінений) -->
+<div id="adminLogin" class="admin-card admin-hidden">
+  <h2 class="section-title" style="margin:0 0 10px;">Вхід адміністратора</h2>
+  <div class="muted">Увійди email/паролем адмін-акаунта. Реєстрації тут немає.</div>
+
+  <div class="row" style="margin-top:12px;">
+    <input id="admEmail" type="email" placeholder="Email" style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
+    <input id="admPass" type="password" placeholder="Пароль" style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
+    <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
+  </div>
+
+  <div class="muted" id="adminLoginMsg" style="margin-top:10px;"></div>
+</div>
       <div>
         <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
         <div class="muted" id="adminStatus">Запуск…</div>
@@ -226,251 +239,86 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script>
-  // ====== ВШИТИЙ АДМІН ======
+  <script>
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
-  // Твій Firebase config (як ти дав)
-  const firebaseConfig = {
-    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
-    authDomain: "stolar-carp.firebaseapp.com",
-    projectId: "stolar-carp",
-    storageBucket: "stolar-carp.firebasestorage.app",
-    messagingSenderId: "1019636788370",
-    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
-    measurementId: "G-VWC07QNS7P"
-  };
+  function $(id){ return document.getElementById(id); }
+  function show(el){ if(el) el.classList.remove("admin-hidden"); }
+  function hide(el){ if(el) el.classList.add("admin-hidden"); }
+  function setStatus(t){ const e=$("adminStatus"); if(e) e.textContent=t; }
 
-  // ===== helpers =====
-  function $id(id){ return document.getElementById(id); }
-  function setStatus(t){ const el=$id("adminStatus"); if(el) el.textContent=t; }
-  function setHint(t){ const el=$id("adminHint"); if(el) el.textContent=t; }
-  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-
-  function showOnly(moduleId){
-    const mods = ["modRegistrations","modCreate","modToggle","modDraw","modWeigh","modUsers"];
-    mods.forEach(id => { const el=$id(id); if(el) el.classList.add("admin-hidden"); });
-    const target = $id(moduleId);
-    if(target) target.classList.remove("admin-hidden");
+  async function waitForFirebase(){
+    for(let i=0;i<100;i++){
+      if(window.scAuth && window.scDb) return;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    throw new Error("Firebase НЕ ініціалізований (scAuth / scDb)");
   }
 
-  // ===== init firebase =====
-  try{
-    firebase.initializeApp(firebaseConfig);
-  }catch(e){
-    // якщо вже ініціалізовано
+  async function init(){
+    await waitForFirebase();
+    const auth = window.scAuth;
+
+    const loginBox = $("adminLogin");
+    const appBox   = $("adminApp");
+    const btnLogin = $("btnAdminLogin");
+    const msg      = $("adminLoginMsg");
+
+    function showLogin(text){
+      hide(appBox);
+      show(loginBox);
+      if(msg) msg.textContent = text || "";
+    }
+
+    function showApp(){
+      hide(loginBox);
+      show(appBox);
+    }
+
+    // кнопка входу
+    if(btnLogin){
+      btnLogin.onclick = async () => {
+        const email = $("admEmail").value.trim();
+        const pass  = $("admPass").value.trim();
+        if(!email || !pass){
+          msg.textContent = "Введи email і пароль";
+          return;
+        }
+        msg.textContent = "Вхід…";
+        try{
+          await auth.signInWithEmailAndPassword(email, pass);
+        }catch(e){
+          msg.textContent = "Помилка входу";
+        }
+      };
+    }
+
+    // перевірка сесії
+    auth.onAuthStateChanged(user => {
+      if(!user){
+        setStatus("Потрібен вхід");
+        showLogin("Увійди як адміністратор");
+        return;
+      }
+
+      if(user.uid !== ADMIN_UID){
+        setStatus("Доступ заборонено");
+        showLogin("Цей акаунт не має доступу");
+        return;
+      }
+
+      // ✅ ТИ АДМІН
+      setStatus("Адмін-доступ дозволено");
+      showApp();
+    });
   }
-  const auth = firebase.auth();
-  const db = firebase.firestore();
 
-  // ===== access gate (ТОЛЬКИ UID) =====
-  setStatus("Auth: перевіряю сесію…");
-  auth.onAuthStateChanged(async (user) => {
-    if(!user){
-      setStatus("Ти не увійшов як адмін → перекидаю на /auth.html");
-      location.href = "/auth.html";
-      return;
-    }
-
-    if(user.uid !== ADMIN_UID){
-      setStatus("Доступ заборонено ❌ (це не UID адміна)");
-      // можна кинути на головну
-      setTimeout(()=> location.href="/", 600);
-      return;
-    }
-
-    // ✅ OK
-    setStatus("Доступ дозволено ✅ (admin UID)");
-    $id("adminApp").classList.remove("admin-hidden");
-
-    // за замовчуванням
-    showOnly("modRegistrations");
-    setHint("Модуль: Реєстрація команд (заявки).");
-
-    // bind buttons
-    const bind = (id, fn) => { const b=$id(id); if(b) b.addEventListener("click", fn); };
-
-    bind("btnLogout", async () => { await auth.signOut(); location.href="/"; });
-
-    bind("btnCreateContest", () => { showOnly("modCreate"); setHint("Модуль: Створити змагання."); });
-    bind("btnToggleContest", () => { showOnly("modToggle"); setHint("Модуль: Відкрити/Закрити."); });
-    bind("btnRegistrations", () => { showOnly("modRegistrations"); setHint("Модуль: Реєстрація команд (заявки)."); loadRegistrations(); });
-    bind("btnDraw", () => { showOnly("modDraw"); setHint("Модуль: Жеребкування."); });
-    bind("btnWeigh", () => { showOnly("modWeigh"); setHint("Модуль: Зважування."); });
-    bind("btnUsers", () => { showOnly("modUsers"); setHint("Модуль: Користувачі сайту."); });
-
-    bind("btnLoadRegs", () => loadRegistrations());
-    bind("btnLoadUsers", () => loadUsers());
-
-    bind("btnOpenDraw", () => alert("Жеребкування — підключаю наступним кроком (зона/сектор + контроль дублів)."));
-    bind("btnOpenWeigh", () => alert("Зважування — підключаю наступним кроком (1–4, big fish, зони)."));
-
-    // create contest
-    bind("btnDoCreate", () => createContest());
-
-    // toggle reg open/close
-    bind("btnOpenReg", () => setRegistrationOpen(true));
-    bind("btnCloseReg", () => setRegistrationOpen(false));
-
-    // автопідвантаження
-    loadRegistrations().catch(()=>{});
+  init().catch(err=>{
+    console.error(err);
+    setStatus("Помилка: " + err.message);
   });
-
-  // ====== MODULE: registrations ======
-  async function loadRegistrations(){
-    const box = $id("regsList");
-    if(!box) return;
-    box.innerHTML = '<div class="muted">Завантажую…</div>';
-
-    // якщо createdAt інколи відсутній — Firestore впаде.
-    // Тому робимо "м’якше": пробуємо з orderBy, якщо помилка — без сортування.
-    let snap;
-    try{
-      snap = await db.collection("registrations").orderBy("createdAt","desc").limit(25).get();
-    }catch(e){
-      snap = await db.collection("registrations").limit(25).get();
-    }
-
-    if(snap.empty){
-      box.innerHTML = '<div class="muted">Заявок поки немає.</div>';
-      return;
-    }
-
-    const items = [];
-    snap.forEach(doc => {
-      const d = doc.data() || {};
-      const teamName = d.teamName || d.team || d.name || "Команда";
-      const stageId = d.stageId || d.stage || "—";
-      const pay = d.paymentStatus || d.payStatus || "pending";
-      const pillClass = pay === "paid" ? "ok" : (pay === "rejected" ? "bad" : "warn");
-
-      items.push(`
-        <div class="item">
-          <div class="item-top">
-            <div><b>${esc(teamName)}</b> <span class="muted">• stage: ${esc(stageId)}</span></div>
-            <span class="pill ${pillClass}">${esc(pay)}</span>
-          </div>
-          <div class="muted" style="margin-top:6px;">id: ${esc(doc.id)}</div>
-          <div class="row">
-            <button class="btn btn--accent" onclick="approveReg('${esc(doc.id)}')">Підтвердити оплату</button>
-            <button class="btn btn--danger" onclick="rejectReg('${esc(doc.id)}')">Відхилити</button>
-          </div>
-        </div>
-      `);
-    });
-
-    box.innerHTML = items.join("");
-  }
-
-  window.approveReg = async function(regId){
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "paid",
-      approvedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      approvedBy: ADMIN_UID
-    });
-    loadRegistrations();
-  };
-
-  window.rejectReg = async function(regId){
-    await db.collection("registrations").doc(regId).update({
-      paymentStatus: "rejected",
-      rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      rejectedBy: ADMIN_UID
-    });
-    loadRegistrations();
-  };
-
-  // ====== MODULE: users ======
-  async function loadUsers(){
-    const box = $id("usersList");
-    if(!box) return;
-    box.innerHTML = '<div class="muted">Завантажую…</div>';
-
-    let snap;
-    try{
-      snap = await db.collection("users").orderBy("createdAt","desc").limit(50).get();
-    }catch(e){
-      snap = await db.collection("users").limit(50).get();
-    }
-
-    if(snap.empty){
-      box.innerHTML = '<div class="muted">Користувачів поки немає.</div>';
-      return;
-    }
-
-    const items = [];
-    snap.forEach(doc => {
-      const d = doc.data() || {};
-      items.push(`
-        <div class="item">
-          <div class="item-top">
-            <div><b>${esc(d.fullName || d.name || "Користувач")}</b> <span class="muted">• ${esc(d.email || "—")}</span></div>
-            <span class="pill ${doc.id===ADMIN_UID ? "ok":"warn"}">${doc.id===ADMIN_UID ? "admin(uid)" : esc(d.role || "user")}</span>
-          </div>
-          <div class="muted" style="margin-top:6px;">uid: ${esc(doc.id)} ${d.teamId ? " • teamId: " + esc(d.teamId) : ""}</div>
-        </div>
-      `);
-    });
-
-    box.innerHTML = items.join("");
-  }
-
-  // ====== MODULE: create contest ======
-  async function createContest(){
-    const seasonId = ($id("inpSeasonId").value || "").trim();
-    const seasonName = ($id("inpSeasonName").value || "").trim();
-    const stageId = ($id("inpStageId").value || "").trim();
-    const stageName = ($id("inpStageName").value || "").trim();
-    const regOpen = ($id("inpRegOpen").value === "true");
-
-    const msg = $id("createMsg");
-    if(!seasonId || !seasonName){
-      msg.textContent = "❌ Заповни seasonId і назву сезону.";
-      return;
-    }
-
-    msg.textContent = "⏳ Пишу в Firestore…";
-
-    // seasons/{seasonId}
-    await db.collection("seasons").doc(seasonId).set({
-      name: seasonName,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-
-    // seasons/{seasonId}/stages/{stageId} (якщо вказано)
-    if(stageId && stageName){
-      await db.collection("seasons").doc(seasonId)
-        .collection("stages").doc(stageId)
-        .set({
-          name: stageName,
-          seasonId,
-          registrationOpen: regOpen,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge:true });
-    }
-
-    // settings/app
-    await db.collection("settings").doc("app").set({
-      activeSeasonId: seasonId,
-      activeStageId: stageId || null,
-      registrationOpen: regOpen,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-
-    msg.textContent = "✅ Готово. Активний сезон/етап збережено в settings/app.";
-  }
-
-  // ====== MODULE: open/close ======
-  async function setRegistrationOpen(open){
-    const el = $id("toggleMsg");
-    el.textContent = "⏳ Оновлюю settings/app…";
-    await db.collection("settings").doc("app").set({
-      registrationOpen: !!open,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-    el.textContent = open ? "✅ Реєстрацію ВІДКРИТО" : "✅ Реєстрацію ЗАКРИТО";
-  }
+</script>
+    
 </script>
 
 </body>

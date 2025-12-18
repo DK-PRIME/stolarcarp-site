@@ -1,50 +1,5 @@
-/* STOLAR CARP config — shared JS across pages (helpers + Firebase init) */
+/* STOLAR CARP config — shared JS across pages (helpers only, NO Firebase init) */
 (function () {
-  /* =========================
-     Firebase INIT (compat)
-     ========================= */
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
-    authDomain: "stolar-carp.firebaseapp.com",
-    projectId: "stolar-carp",
-    storageBucket: "stolar-carp.firebasestorage.app",
-    messagingSenderId: "1019636788370",
-    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
-    measurementId: "G-VWC07QNS7P"
-  };
-
-  function ensureFirebaseCompatLoaded() {
-    // якщо firebase не підключений на сторінці — одразу виходимо
-    if (typeof window.firebase === "undefined") {
-      console.warn("Firebase SDK compat не підключений. Додай firebase-*-compat.js у HTML.");
-      return false;
-    }
-    if (!window.firebase.apps || !window.firebase.apps.length) {
-      window.firebase.initializeApp(firebaseConfig);
-    }
-    // auth/firestore можуть бути не підключені якщо не додані відповідні compat js
-    try {
-      window.scAuth = window.firebase.auth();
-    } catch (e) {
-      console.warn("firebase-auth-compat.js не підключений:", e);
-    }
-    try {
-      window.scDb = window.firebase.firestore();
-    } catch (e) {
-      console.warn("firebase-firestore-compat.js не підключений:", e);
-    }
-    try {
-      window.scStorage = window.firebase.storage();
-    } catch (e) {
-      // не критично для адмінки
-    }
-    return true;
-  }
-
-  // Викликаємо одразу
-  ensureFirebaseCompatLoaded();
-
   /* =========================
      Header / favicon
      ========================= */
@@ -59,10 +14,11 @@
         const l = document.createElement("link");
         l.rel = rel;
         l.href = href;
-        if (type) l.type = type;
+        if (type) showType(l, type);
         head.appendChild(l);
       }
     };
+    function showType(linkEl, type) { linkEl.type = type; }
     const addMeta = (name, content) => {
       let m = head.querySelector(`meta[name="${name}"]`);
       if (!m) {
@@ -81,7 +37,7 @@
      Utils
      ========================= */
   const escapeHTML = (s) =>
-    String(s)
+    String(s ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -131,10 +87,7 @@
     const renderLiveTable = (rows) => {
       if (!liveBody) return;
       liveBody.innerHTML = rows
-        .map(
-          (r) =>
-            `<tr>${r.map((c) => `<td>${escapeHTML(c || "")}</td>`).join("")}</tr>`
-        )
+        .map((r) => `<tr>${r.map((c) => `<td>${escapeHTML(c || "")}</td>`).join("")}</tr>`)
         .join("");
     };
 
@@ -153,7 +106,7 @@
         renderLiveTable(rows);
         setStatus("ok", "Оновлено: " + new Date().toLocaleTimeString("uk-UA"));
       } catch (e) {
-        setStatus("err", "Помилка: " + e.message);
+        setStatus("err", "Помилка: " + (e?.message || e));
       }
     };
 
@@ -164,10 +117,11 @@
           renderLiveTable(rows);
           setStatus("ok", "Оновлено з буфера");
         } catch (e) {
-          setStatus("err", "Помилка CSV: " + e.message);
+          setStatus("err", "Помилка CSV: " + (e?.message || e));
         }
       });
     }
+
     if (fetchBtn && csvUrlInput) {
       fetchBtn.addEventListener("click", async () => {
         const url = csvUrlInput.value.trim();
@@ -176,6 +130,7 @@
         await tick();
       });
     }
+
     if (autoToggle && csvUrlInput) {
       autoToggle.addEventListener("change", async (e) => {
         const on = e.target.checked;
@@ -229,12 +184,7 @@
       winners.sort((a, b) => b.weight - a.weight);
       topLake.innerHTML = winners.length
         ? winners
-            .map(
-              (w, i) =>
-                `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(
-                  w.weight
-                )}</td></tr>`
-            )
+            .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
             .join("")
         : `<tr><td colspan="3">Немає даних</td></tr>`;
     };
@@ -247,12 +197,7 @@
           const awards = [arr[1], arr[2], arr[3]].filter(Boolean);
           const rows = awards.length
             ? awards
-                .map(
-                  (w, i) =>
-                    `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(
-                      w.weight
-                    )}</td></tr>`
-                )
+                .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
                 .join("")
             : '<tr><td colspan="3">Недостатньо даних</td></tr>';
           return `
@@ -278,73 +223,55 @@
         const ready = document.getElementById("awards-ready");
         if (ready) ready.style.display = "block";
       } catch (e) {
-        alert("Помилка CSV: " + e.message);
+        alert("Помилка CSV: " + (e?.message || e));
       }
     });
   })();
 
   /* =========================
-     Optional: localstore registration
+     AUTO REGISTRATION WINDOWS (turnir-2026.html)
      ========================= */
   (function () {
-    const form = document.getElementById("register-form") || document.getElementById("regForm");
-    if (!form || !form.hasAttribute("data-localstore")) return;
-    form.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(form).entries());
-      if (!data.team || !data.captain || !data.phone) {
-        alert("Будь ласка, заповніть мінімальні поля: Команда, Капітан, Телефон.");
-        return;
+    const stagesWrap = document.getElementById("stages");
+    if (!stagesWrap) return;
+
+    const DAY = 86400000;
+    const toDate = (s) => (s ? new Date(s + "T00:00:00") : null);
+
+    stagesWrap.querySelectorAll(".card[data-id][data-start]").forEach((card) => {
+      const id = card.dataset.id;
+      const s = toDate(card.dataset.start || "2026-01-01");
+      if (!id || !s) return;
+
+      const open = card.dataset.regOpen ? toDate(card.dataset.regOpen) : new Date(s.getTime() - 14 * DAY);
+      const close = card.dataset.regClose ? toDate(card.dataset.regClose) : new Date(s.getTime() - 6 * 3600 * 1000);
+
+      let regBtn = card.querySelector("[data-reg]");
+      if (!regBtn) {
+        const btns =
+          card.querySelector(".btns") ||
+          card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
+        regBtn = document.createElement("a");
+        regBtn.className = "btn btn--primary";
+        regBtn.setAttribute("data-reg", "");
+        regBtn.href = `register.html?stage=${encodeURIComponent(id)}`;
+        btns.prepend(regBtn);
       }
-      const key = "sc_registrations";
-      const prev = JSON.parse(localStorage.getItem(key) || "[]");
-      prev.push({ ...data, created_at: new Date().toISOString() });
-      localStorage.setItem(key, JSON.stringify(prev));
-      location.href = "thanks.html";
+
+      const now = new Date();
+      if (now < open) {
+        regBtn.textContent = "Реєстрація скоро";
+        regBtn.style.opacity = ".6";
+        regBtn.style.pointerEvents = "none";
+      } else if (now > close) {
+        regBtn.textContent = "Реєстрацію закрито";
+        regBtn.style.opacity = ".6";
+        regBtn.style.pointerEvents = "none";
+      } else {
+        regBtn.textContent = "Реєстрація";
+        regBtn.style.opacity = "";
+        regBtn.style.pointerEvents = "";
+      }
     });
   })();
-})();
-
-/* ===== AUTO REGISTRATION WINDOWS (turnir-2026.html) ===== */
-(function () {
-  const stagesWrap = document.getElementById("stages");
-  if (!stagesWrap) return;
-
-  const DAY = 86400000;
-  const toDate = (s) => (s ? new Date(s + "T00:00:00") : null);
-
-  stagesWrap.querySelectorAll(".card[data-id][data-start]").forEach((card) => {
-    const id = card.dataset.id;
-    const s = toDate(card.dataset.start || "2026-01-01");
-    const e = toDate(card.dataset.end || card.dataset.start || "2026-01-01");
-    if (!id || !s) return;
-
-    const open = card.dataset.regOpen ? toDate(card.dataset.regOpen) : new Date(s.getTime() - 14 * DAY);
-    const close = card.dataset.regClose ? toDate(card.dataset.regClose) : new Date(s.getTime() - 6 * 3600 * 1000);
-
-    let regBtn = card.querySelector("[data-reg]");
-    if (!regBtn) {
-      const btns = card.querySelector(".btns") || card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
-      regBtn = document.createElement("a");
-      regBtn.className = "btn btn--primary";
-      regBtn.setAttribute("data-reg", "");
-      regBtn.href = `register.html?stage=${encodeURIComponent(id)}`;
-      btns.prepend(regBtn);
-    }
-
-    const now = new Date();
-    if (now < open) {
-      regBtn.textContent = "Реєстрація скоро";
-      regBtn.style.opacity = ".6";
-      regBtn.style.pointerEvents = "none";
-    } else if (now > close) {
-      regBtn.textContent = "Реєстрацію закрито";
-      regBtn.style.opacity = ".6";
-      regBtn.style.pointerEvents = "none";
-    } else {
-      regBtn.textContent = "Реєстрація";
-      regBtn.style.opacity = "";
-      regBtn.style.pointerEvents = "";
-    }
-  });
 })();

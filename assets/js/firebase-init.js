@@ -1,7 +1,4 @@
 // assets/js/firebase-init.js
-// ЄДИНА ініціалізація Firebase для STOLAR CARP + DK Prime
-// Використовуємо compat-версію SDK (10.12.2) і глобальний об'єкт firebase.
-
 (function () {
   const firebaseConfig = {
     apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
@@ -9,23 +6,38 @@
     projectId: "stolar-carp",
     storageBucket: "stolar-carp.firebasestorage.app",
     messagingSenderId: "1019636788370",
-    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b"
+    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
+    measurementId: "G-VWC07QNS7P"
   };
 
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
+  function fail(msg, err) {
+    console.error("[firebase-init]", msg, err || "");
+    window.scFirebaseError = msg;
   }
 
-  const auth = firebase.auth();
-  const db = firebase.firestore();
-  const storage = firebase.storage();
+  if (typeof window.firebase === "undefined") {
+    fail("Firebase SDK compat НЕ завантажився. Перевір script src firebase-*-compat.js");
+    return;
+  }
 
-  window.scAuth = auth;
-  window.scDb = db;
-  window.scStorage = storage;
+  try {
+    if (!window.firebase.apps || !window.firebase.apps.length) {
+      window.firebase.initializeApp(firebaseConfig);
+    }
+  } catch (e) {
+    fail("initializeApp впав", e);
+    return;
+  }
 
-  // сумісність
-  window.auth = auth;
-  window.db = db;
-  window.storage = storage;
+  try { window.scAuth = window.firebase.auth(); }
+  catch (e) { fail("auth() недоступний — нема firebase-auth-compat.js", e); }
+
+  try { window.scDb = window.firebase.firestore(); }
+  catch (e) { fail("firestore() недоступний — нема firebase-firestore-compat.js", e); }
+
+  try { window.scStorage = window.firebase.storage(); }
+  catch (e) { /* не критично */ }
+
+  window.scFirebaseReady = !!(window.scAuth && window.scDb);
+  console.log("[firebase-init] ready:", window.scFirebaseReady);
 })();

@@ -1,221 +1,297 @@
-// assets/js/auth.js
-// STOLAR CARP — Реєстрація / Вхід (Firebase compat 10.12.2)
-// Працює з assets/js/firebase-init.js (window.scAuth, window.scDb)
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Акаунт · STOLAR CARP</title>
 
-(function () {
-  const auth = window.scAuth;
-  const db   = window.scDb;
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <meta name="theme-color" content="#1a1a1a">
 
-  if (!auth || !db || !window.firebase) {
-    console.error("Firebase не ініціалізовано. Перевір firebase-*-compat.js та assets/js/firebase-init.js");
-    return;
-  }
+  <link rel="stylesheet" href="assets/css/main.css">
 
-  // ===== UI =====
-  const signupForm = document.getElementById("signupForm");
-  const loginForm  = document.getElementById("loginForm");
+  <style>
+    /* (ТУТ ТВОЇ СТИЛІ — БЕЗ ЗМІН) */
+    body.auth-page{min-height:100vh;margin:0;background:radial-gradient(circle at top,#111827 0,#020617 55%);color:#e5e7eb;display:flex;flex-direction:column;}
+    .auth-main{flex:1;display:flex;align-items:center;justify-content:center;padding:70px 16px 40px;}
+    .auth-shell{width:100%;max-width:980px;}
+    .auth-header{margin-bottom:22px;text-align:left;}
+    .auth-kicker{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.5);background:rgba(15,23,42,.9);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#e5e7eb;margin-bottom:10px;}
+    .auth-kicker-dot{width:18px;height:18px;border-radius:999px;background:linear-gradient(120deg,#facc15,#f97316,#dc2626);box-shadow:0 0 10px rgba(250,204,21,.7);}
+    .auth-title{font-size:clamp(26px,4vw,34px);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;background:linear-gradient(90deg,#facc15 0%,#f97316 40%,#dc2626 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 1px 0 rgba(255,255,255,.2),0 4px 16px rgba(0,0,0,.9);}
+    .auth-subtitle{margin:0;font-size:.95rem;color:#d1d5db;max-width:620px;}
+    .auth-card{margin-top:20px;background:radial-gradient(circle at top,#111827 0,#020617 70%);border-radius:22px;border:1px solid rgba(148,163,184,.45);box-shadow:0 24px 60px rgba(0,0,0,.9);padding:18px 18px 20px;}
+    .auth-tabs{display:flex;gap:8px;border-radius:999px;background:rgba(15,23,42,.95);padding:4px;margin-bottom:18px;}
+    .auth-tab-btn{flex:1;border:none;border-radius:999px;padding:8px 10px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;background:transparent;color:#9ca3af;cursor:pointer;}
+    .auth-tab-btn--active{background:linear-gradient(135deg,#facc15,#f97316);color:#111827;box-shadow:0 0 15px rgba(250,204,21,.6);}
+    .auth-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1.1fr);gap:18px;}
+    @media (max-width:900px){.auth-layout{grid-template-columns:1fr;}}
+    .auth-form-wrap{background:rgba(15,23,42,.95);border-radius:16px;border:1px solid rgba(30,64,175,.7);padding:16px 14px 16px;}
+    .auth-form-title{font-size:.95rem;text-transform:uppercase;letter-spacing:.16em;color:#9ca3af;margin:0 0 10px;}
+    .auth-form-description{font-size:.85rem;color:#9ca3af;margin:0 0 12px;}
+    .auth-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}
+    @media (max-width:640px){.auth-main{padding-top:60px;}.auth-fields{grid-template-columns:1fr;}}
+    .field{display:flex;flex-direction:column;gap:4px;font-size:.86rem;}
+    .field label{font-weight:500;}
+    .input-auth{background:#020617;border:1px solid #1f2937;border-radius:10px;padding:9px 12px;font-size:.92rem;color:#e5e7eb;}
+    .input-auth::placeholder{color:#6b7280;}
+    .input-auth:focus{outline:none;border-color:#facc15;box-shadow:0 0 8px rgba(250,204,21,.5);}
+    .field-hint{font-size:.78rem;color:#6b7280;}
+    .role-row{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
+    .role-option{display:flex;align-items:center;gap:6px;font-size:.86rem;}
+    .role-option input{accent-color:#facc15;transform:scale(1.2);}
+    .single-column{grid-column:1 / -1;}
+    .phone-wrap{display:flex;align-items:center;gap:6px;}
+    .phone-prefix{padding:9px 10px;border-radius:10px;background:#020617;border:1px solid #1f2937;font-size:.86rem;color:#e5e7eb;}
+    .auth-actions{margin-top:14px;display:flex;align-items:center;gap:10px;}
+    .btn-primary-auth{border:none;border-radius:999px;padding:10px 20px;font-size:.95rem;font-weight:600;background:linear-gradient(135deg,#facc15,#f97316);color:#111827;cursor:pointer;box-shadow:0 0 16px rgba(250,204,21,.5);}
+    .btn-primary-auth:disabled{opacity:.7;cursor:default;box-shadow:none;}
+    .auth-msg{margin-top:8px;font-size:.85rem;font-weight:500;}
+    .auth-msg.ok{color:#4ade80;}
+    .auth-msg.err{color:#fca5a5;}
+    .auth-aside{background:rgba(15,23,42,.95);border-radius:16px;border:1px solid rgba(148,163,184,.5);padding:16px 14px 16px;font-size:.88rem;}
+    .auth-aside h3{margin:0 0 8px;font-size:.96rem;}
+    .auth-aside ul{margin:8px 0 0;padding-left:18px;font-size:.85rem;color:#d1d5db;}
+    .auth-aside li{margin-bottom:4px;}
+    .auth-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(52,211,153,.7);font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:#6ee7b7;margin-top:4px;}
+    .auth-badge-dot{width:7px;height:7px;border-radius:999px;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.9);}
+    .auth-tab-panel{display:none;}
+    .auth-tab-panel.active{display:block;}
+  </style>
+</head>
 
-  const signupMsg  = document.getElementById("signupMsg");
-  const loginMsg   = document.getElementById("loginMsg");
+<body class="auth-page">
 
-  const signupBtn  = document.getElementById("signupBtn");
-  const loginBtn   = document.getElementById("loginBtn");
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="events/index.html" class="nav__link">Архів</a>
+      <a href="cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
 
-  // Signup inputs (реальні id з auth.html)
-  const emailInSU    = document.getElementById("signupEmail");
-  const passInSU     = document.getElementById("signupPassword");
-  const fullNameIn   = document.getElementById("signupFullName");
-  const phoneIn      = document.getElementById("signupPhone");      // hidden з +380...
-  const phoneCleanIn = document.getElementById("signupPhoneClean"); // видимий 9 цифр
-  const cityIn       = document.getElementById("signupCity");
+<main class="auth-main">
+  <div class="auth-shell container">
 
-  const roleCaptain  = document.getElementById("signupRoleCaptain");
-  const roleMember   = document.getElementById("signupRoleMember");
+    <div class="auth-header">
+      <div class="auth-kicker">
+        <span class="auth-kicker-dot"></span>
+        STOLAR CARP · ACCOUNT
+      </div>
+      <h1 class="auth-title">Реєстрація STOLAR CARP</h1>
+      <p class="auth-subtitle">
+        Один акаунт — одна людина. Капітан створює команду, учасники приєднуються за кодом.
+        Далі через акаунт ви подаєте заявки на етапи.
+      </p>
+    </div>
 
-  const teamNameIn   = document.getElementById("signupTeamName");
-  const joinCodeIn   = document.getElementById("signupJoinCode");
+    <div class="auth-card">
 
-  // Login inputs
-  const emailInLI  = document.getElementById("loginEmail");
-  const passInLI   = document.getElementById("loginPassword");
+      <div class="auth-tabs">
+        <button class="auth-tab-btn auth-tab-btn--active" data-tab="signup">Створити акаунт</button>
+        <button class="auth-tab-btn" data-tab="login">Увійти</button>
+      </div>
 
-  function setMsg(el, text, type){
-    if (!el) return;
-    el.textContent = text || "";
-    el.classList.remove("ok","err");
-    if (type) el.classList.add(type);
-  }
+      <div class="auth-layout">
 
-  function setLoading(btn, loading){
-    if (!btn) return;
-    btn.disabled = !!loading;
-    btn.style.opacity = loading ? "0.7" : "1";
-  }
+        <!-- РЕЄСТРАЦІЯ -->
+        <div id="tab-signup" class="auth-form-wrap auth-tab-panel active">
+          <h2 class="auth-form-title">новий акаунт</h2>
+          <p class="auth-form-description">Заповніть всі поля, щоб створити свій профіль STOLAR CARP.</p>
 
-  function norm(s){ return String(s || "").trim(); }
+          <form id="signupForm" novalidate>
+            <div class="auth-fields">
+              <div class="field">
+                <label for="signupEmail">Email</label>
+                <input type="email" id="signupEmail" class="input-auth" placeholder="example@gmail.com" required>
+                <div class="field-hint">Використовується для входу.</div>
+              </div>
 
-  function makeJoinCode(len = 6){
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let out = "";
-    for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
-    return out;
-  }
+              <div class="field">
+                <label for="signupPassword">Пароль</label>
+                <input type="password" id="signupPassword" class="input-auth" placeholder="Мінімум 6 символів" minlength="6" required>
+              </div>
 
-  function getRole(){
-    if (roleMember && roleMember.checked) return "member";
-    return "captain";
-  }
+              <div class="field">
+                <label for="signupFullName">Імʼя та прізвище</label>
+                <input type="text" id="signupFullName" class="input-auth" placeholder="Імʼя Прізвище" required>
+              </div>
 
-  function getPhone(){
-    // пріоритет: hidden з +380..., але якщо раптом не заповнився — зберемо з clean
-    const p = norm(phoneIn?.value);
-    if (p) return p;
-    const digits = norm(phoneCleanIn?.value).replace(/\D/g,"").slice(0,9);
-    return digits ? ("+380" + digits) : "";
-  }
+              <div class="field">
+                <label for="signupPhoneClean">Номер телефону</label>
+                <div class="phone-wrap">
+                  <span class="phone-prefix">+380</span>
+                  <input type="tel" id="signupPhoneClean" class="input-auth" placeholder="XXXXXXXXX" inputmode="numeric" maxlength="9" required>
+                </div>
+                <input type="hidden" id="signupPhone">
+              </div>
 
-  async function ensureUserDoc(uid, payload){
-    await db.collection("users").doc(uid).set(payload, { merge:true });
-  }
+              <div class="field">
+                <label for="signupCity">Місто / селище</label>
+                <input type="text" id="signupCity" class="input-auth" placeholder="Місто або населений пункт" required>
+              </div>
 
-  async function createTeamForCaptain(uid, teamName){
-    const joinCode = makeJoinCode(6);
+              <div class="field single-column">
+                <label>Роль у системі</label>
+                <div class="role-row">
+                  <label class="role-option">
+                    <input type="radio" name="signupRole" id="signupRoleCaptain" value="captain" checked>
+                    <span>Капітан (створюю команду)</span>
+                  </label>
+                  <label class="role-option">
+                    <input type="radio" name="signupRole" id="signupRoleMember" value="member">
+                    <span>Учасник (приєднуюсь до команди)</span>
+                  </label>
+                </div>
+              </div>
 
-    const teamRef = await db.collection("teams").add({
-      name: teamName,
-      ownerUid: uid,
-      joinCode,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+              <div class="field single-column" id="teamNameField">
+                <label for="signupTeamName">Назва команди</label>
+                <input type="text" id="signupTeamName" class="input-auth" placeholder="Наприклад: DK Два Кума">
+                <div class="field-hint">Назва, яка буде у протоколах та рейтингу.</div>
+              </div>
 
-    return { teamId: teamRef.id, joinCode };
-  }
+              <div class="field single-column" id="joinCodeField" style="display:none;">
+                <label for="signupJoinCode">Код приєднання до команди</label>
+                <input type="text" id="signupJoinCode" class="input-auth" placeholder="Введіть код, який дав капітан">
+                <div class="field-hint">Отримайте код у капітана, якщо команда вже створена.</div>
+              </div>
+            </div>
 
-  async function findTeamByJoinCode(code){
-    const clean = norm(code).toUpperCase().replace(/\s+/g,"");
-    const qs = await db.collection("teams")
-      .where("joinCode","==",clean)
-      .limit(1)
-      .get();
+            <div class="auth-actions">
+              <button type="submit" id="signupBtn" class="btn-primary-auth">Створити акаунт</button>
+              <div id="signupMsg" class="auth-msg"></div>
+            </div>
+          </form>
+        </div>
 
-    if (qs.empty) return null;
+        <!-- ВХІД -->
+        <div id="tab-login" class="auth-form-wrap auth-tab-panel">
+          <h2 class="auth-form-title">вхід у акаунт</h2>
+          <p class="auth-form-description">Якщо ви вже маєте акаунт STOLAR CARP, увійдіть за допомогою email та пароля.</p>
 
-    const docSnap = qs.docs[0];
-    return { teamId: docSnap.id, ...(docSnap.data() || {}) };
-  }
+          <form id="loginForm" novalidate>
+            <div class="auth-fields">
+              <div class="field single-column">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" class="input-auth" placeholder="example@gmail.com" required>
+              </div>
+              <div class="field single-column">
+                <label for="loginPassword">Пароль</label>
+                <input type="password" id="loginPassword" class="input-auth" placeholder="Пароль" required>
+              </div>
+            </div>
+            <div class="auth-actions">
+              <button type="submit" id="loginBtn" class="btn-primary-auth">Увійти</button>
+              <div id="loginMsg" class="auth-msg"></div>
+            </div>
+          </form>
+        </div>
 
-  // ===== Signup =====
-  if (signupForm){
-    signupForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      setMsg(signupMsg, "");
+        <!-- БОКОВА ІНФА -->
+        <aside class="auth-aside">
+          <h3>Навіщо акаунт?</h3>
+          <p>Через акаунт ви:</p>
+          <ul>
+            <li>створюєте команду та запрошуєте учасників;</li>
+            <li>подаєте заявки на етапи одним кліком;</li>
+            <li>бачите історію участі та результати;</li>
+            <li>далі — отримаєте нотифікації та бонуси.</li>
+          </ul>
 
-      const email    = norm(emailInSU?.value);
-      const pass     = String(passInSU?.value || "");
-      const fullName = norm(fullNameIn?.value);
-      const phone    = getPhone();
-      const city     = norm(cityIn?.value);
+          <div class="auth-badge">
+            <span class="auth-badge-dot"></span>
+            LIVE · SEASON 2026 READY
+          </div>
+        </aside>
 
-      const role     = getRole();
-      const isCaptain = role === "captain";
+      </div>
+    </div>
+  </div>
+</main>
 
-      const teamName = norm(teamNameIn?.value);
-      const joinCode = norm(joinCodeIn?.value).toUpperCase().replace(/\s+/g,"");
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
+</footer>
 
-      // базова валідація
-      if (!email || !pass) return setMsg(signupMsg, "Вкажіть email і пароль.", "err");
-      if (pass.length < 6) return setMsg(signupMsg, "Пароль мінімум 6 символів.", "err");
-      if (!fullName) return setMsg(signupMsg, "Вкажіть ім'я та прізвище.", "err");
-      if (!phone) return setMsg(signupMsg, "Вкажіть номер телефону.", "err");
-      if (!city) return setMsg(signupMsg, "Вкажіть місто / селище.", "err");
+<script>
+  // Таби + роль + телефон (твій код, без змін)
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabButtons = document.querySelectorAll('.auth-tab-btn');
+    const panels = {
+      signup: document.getElementById('tab-signup'),
+      login: document.getElementById('tab-login')
+    };
 
-      if (isCaptain && !teamName) return setMsg(signupMsg, "Вкажіть назву команди.", "err");
-      if (!isCaptain && !joinCode) return setMsg(signupMsg, "Вкажіть код команди капітана.", "err");
-
-      try {
-        setLoading(signupBtn, true);
-        setMsg(signupMsg, "Створюємо акаунт…");
-
-        const cred = await auth.createUserWithEmailAndPassword(email, pass);
-        const user = cred.user;
-
-        let teamId = null;
-        let finalJoinCode = null;
-
-        if (isCaptain){
-          const created = await createTeamForCaptain(user.uid, teamName);
-          teamId = created.teamId;
-          finalJoinCode = created.joinCode;
-        } else {
-          const found = await findTeamByJoinCode(joinCode);
-          if (!found){
-            // якщо код не знайдено — прибираємо щойно створений auth-акаунт
-            try { await user.delete(); } catch(_){}
-            return setMsg(signupMsg, "Код команди не знайдено. Перевірте та спробуйте ще раз.", "err");
-          }
-          teamId = found.teamId;
-          finalJoinCode = found.joinCode || joinCode;
-        }
-
-        // users/{uid}
-        await ensureUserDoc(user.uid, {
-          fullName,
-          email: user.email || email,
-          phone,
-          city,
-          role,
-          teamId,
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          avatarUrl: ""
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+        tabButtons.forEach(b => b.classList.toggle('auth-tab-btn--active', b === btn));
+        Object.keys(panels).forEach(key => {
+          panels[key].classList.toggle('active', key === tab);
         });
-
-        setMsg(
-          signupMsg,
-          isCaptain
-            ? `Готово! Команду створено. Код: ${finalJoinCode}`
-            : `Готово! Ви приєднані до команди.`,
-          "ok"
-        );
-
-        // редірект
-        setTimeout(() => window.location.href = "cabinet.html", 500);
-      } catch (err){
-        console.error(err);
-        const msg = (err && err.message) ? err.message : String(err);
-        setMsg(signupMsg, "Помилка реєстрації: " + msg, "err");
-      } finally {
-        setLoading(signupBtn, false);
-      }
+      });
     });
-  }
 
-  // ===== Login =====
-  if (loginForm){
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      setMsg(loginMsg, "");
+    const captainRadio = document.getElementById('signupRoleCaptain');
+    const memberRadio  = document.getElementById('signupRoleMember');
+    const teamField    = document.getElementById('teamNameField');
+    const joinField    = document.getElementById('joinCodeField');
 
-      const email = norm(emailInLI?.value);
-      const pass  = String(passInLI?.value || "");
+    function updateRoleFields(){
+      const isCaptain = captainRadio.checked;
+      teamField.style.display = isCaptain ? 'block' : 'none';
+      joinField.style.display = isCaptain ? 'none' : 'block';
+    }
 
-      if (!email || !pass) return setMsg(loginMsg, "Вкажіть email і пароль.", "err");
+    captainRadio.addEventListener('change', updateRoleFields);
+    memberRadio .addEventListener('change', updateRoleFields);
+    updateRoleFields();
 
-      try {
-        setLoading(loginBtn, true);
-        setMsg(loginMsg, "Вхід…");
-
-        await auth.signInWithEmailAndPassword(email, pass);
-
-        setMsg(loginMsg, "Успішно!", "ok");
-        setTimeout(() => window.location.href = "cabinet.html", 300);
-      } catch (err){
-        console.error(err);
-        const msg = (err && err.message) ? err.message : String(err);
-        setMsg(loginMsg, "Не вдалося увійти: " + msg, "err");
-      } finally {
-        setLoading(loginBtn, false);
-      }
+    const phoneClean = document.getElementById('signupPhoneClean');
+    const phoneFull  = document.getElementById('signupPhone');
+    phoneClean.addEventListener('input', () => {
+      const digits = phoneClean.value.replace(/\D/g,'').slice(0,9);
+      phoneClean.value = digits;
+      phoneFull.value = digits ? '+380' + digits : '';
     });
-  }
+  });
+</script>
 
-})();
+<!-- Firebase compat SDK (ОДИН РАЗ) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<!-- Єдина ініціалізація Firebase -->
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- Загальні хелпери сайту (без Firebase init всередині!) -->
+<script src="assets/js/config.js"></script>
+
+<!-- Логіка реєстрації/входу -->
+<script src="assets/js/auth.js"></script>
+
+</body>
+</html>

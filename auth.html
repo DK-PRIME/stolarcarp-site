@@ -3,65 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Акаунт · STOLAR CARP</title>
-
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
-  <meta name="theme-color" content="#1a1a1a">
+  <title>STOLAR CARP • Адмінка</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    /* (ТУТ ТВОЇ СТИЛІ — БЕЗ ЗМІН) */
-    body.auth-page{min-height:100vh;margin:0;background:radial-gradient(circle at top,#111827 0,#020617 55%);color:#e5e7eb;display:flex;flex-direction:column;}
-    .auth-main{flex:1;display:flex;align-items:center;justify-content:center;padding:70px 16px 40px;}
-    .auth-shell{width:100%;max-width:980px;}
-    .auth-header{margin-bottom:22px;text-align:left;}
-    .auth-kicker{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.5);background:rgba(15,23,42,.9);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#e5e7eb;margin-bottom:10px;}
-    .auth-kicker-dot{width:18px;height:18px;border-radius:999px;background:linear-gradient(120deg,#facc15,#f97316,#dc2626);box-shadow:0 0 10px rgba(250,204,21,.7);}
-    .auth-title{font-size:clamp(26px,4vw,34px);font-weight:900;text-transform:uppercase;letter-spacing:.08em;margin:0 0 8px;background:linear-gradient(90deg,#facc15 0%,#f97316 40%,#dc2626 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 1px 0 rgba(255,255,255,.2),0 4px 16px rgba(0,0,0,.9);}
-    .auth-subtitle{margin:0;font-size:.95rem;color:#d1d5db;max-width:620px;}
-    .auth-card{margin-top:20px;background:radial-gradient(circle at top,#111827 0,#020617 70%);border-radius:22px;border:1px solid rgba(148,163,184,.45);box-shadow:0 24px 60px rgba(0,0,0,.9);padding:18px 18px 20px;}
-    .auth-tabs{display:flex;gap:8px;border-radius:999px;background:rgba(15,23,42,.95);padding:4px;margin-bottom:18px;}
-    .auth-tab-btn{flex:1;border:none;border-radius:999px;padding:8px 10px;font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;background:transparent;color:#9ca3af;cursor:pointer;}
-    .auth-tab-btn--active{background:linear-gradient(135deg,#facc15,#f97316);color:#111827;box-shadow:0 0 15px rgba(250,204,21,.6);}
-    .auth-layout{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1.1fr);gap:18px;}
-    @media (max-width:900px){.auth-layout{grid-template-columns:1fr;}}
-    .auth-form-wrap{background:rgba(15,23,42,.95);border-radius:16px;border:1px solid rgba(30,64,175,.7);padding:16px 14px 16px;}
-    .auth-form-title{font-size:.95rem;text-transform:uppercase;letter-spacing:.16em;color:#9ca3af;margin:0 0 10px;}
-    .auth-form-description{font-size:.85rem;color:#9ca3af;margin:0 0 12px;}
-    .auth-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;}
-    @media (max-width:640px){.auth-main{padding-top:60px;}.auth-fields{grid-template-columns:1fr;}}
-    .field{display:flex;flex-direction:column;gap:4px;font-size:.86rem;}
-    .field label{font-weight:500;}
-    .input-auth{background:#020617;border:1px solid #1f2937;border-radius:10px;padding:9px 12px;font-size:.92rem;color:#e5e7eb;}
-    .input-auth::placeholder{color:#6b7280;}
-    .input-auth:focus{outline:none;border-color:#facc15;box-shadow:0 0 8px rgba(250,204,21,.5);}
-    .field-hint{font-size:.78rem;color:#6b7280;}
-    .role-row{display:flex;flex-direction:column;gap:6px;margin-top:2px;}
-    .role-option{display:flex;align-items:center;gap:6px;font-size:.86rem;}
-    .role-option input{accent-color:#facc15;transform:scale(1.2);}
-    .single-column{grid-column:1 / -1;}
-    .phone-wrap{display:flex;align-items:center;gap:6px;}
-    .phone-prefix{padding:9px 10px;border-radius:10px;background:#020617;border:1px solid #1f2937;font-size:.86rem;color:#e5e7eb;}
-    .auth-actions{margin-top:14px;display:flex;align-items:center;gap:10px;}
-    .btn-primary-auth{border:none;border-radius:999px;padding:10px 20px;font-size:.95rem;font-weight:600;background:linear-gradient(135deg,#facc15,#f97316);color:#111827;cursor:pointer;box-shadow:0 0 16px rgba(250,204,21,.5);}
-    .btn-primary-auth:disabled{opacity:.7;cursor:default;box-shadow:none;}
-    .auth-msg{margin-top:8px;font-size:.85rem;font-weight:500;}
-    .auth-msg.ok{color:#4ade80;}
-    .auth-msg.err{color:#fca5a5;}
-    .auth-aside{background:rgba(15,23,42,.95);border-radius:16px;border:1px solid rgba(148,163,184,.5);padding:16px 14px 16px;font-size:.88rem;}
-    .auth-aside h3{margin:0 0 8px;font-size:.96rem;}
-    .auth-aside ul{margin:8px 0 0;padding-left:18px;font-size:.85rem;color:#d1d5db;}
-    .auth-aside li{margin-bottom:4px;}
-    .auth-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid rgba(52,211,153,.7);font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:#6ee7b7;margin-top:4px;}
-    .auth-badge-dot{width:7px;height:7px;border-radius:999px;background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.9);}
-    .auth-tab-panel{display:none;}
-    .auth-tab-panel.active{display:block;}
+    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
+    .admin-wrap{ max-width:1100px; margin:0 auto; padding:32px 0 70px; }
+    .admin-top{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:14px 16px; border-radius:18px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+    }
+    .admin-badge{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 12px; border-radius:999px;
+      font-size:.85rem; color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(0,0,0,.35);
+      white-space:nowrap;
+    }
+    .muted{ color:#9ca3af; }
+    .admin-hidden{ display:none !important; }
+
+    .admin-card{
+      margin-top:14px;
+      padding:16px;
+      border-radius:18px;
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .row .btn{ padding:10px 14px; border-radius:12px; }
+
+    .admin-grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+    @media(min-width:900px){
+      .admin-grid{ grid-template-columns: 1.2fr .8fr; }
+    }
+
+    .admin-list{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    .item{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.55);
+    }
+    .item-top{ display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+    .pill{
+      display:inline-flex; align-items:center;
+      padding:4px 10px; border-radius:999px;
+      font-size:.78rem;
+      border:1px solid rgba(148,163,184,.35);
+      color:#e5e7eb;
+      background:rgba(0,0,0,.35);
+    }
+    .pill.ok{ border-color:rgba(34,197,94,.6); }
+    .pill.warn{ border-color:rgba(250,204,21,.65); }
+    .pill.bad{ border-color:rgba(239,68,68,.65); }
+
+    .mini-form{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .mini-form input, .mini-form select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+      outline:none;
+    }
+    .mini-form input::placeholder{ color:#6b7280; }
   </style>
 </head>
 
-<body class="auth-page">
+<body>
 
 <header class="header">
   <div class="container header__row">
@@ -69,229 +97,287 @@
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
-    <nav class="nav" id="nav">
+    <nav class="nav">
       <a href="index.html" class="nav__link">Головна</a>
-      <a href="rules.html" class="nav__link">Регламент</a>
-      <a href="register.html" class="nav__link">Реєстрація</a>
       <a href="live.html" class="nav__link">Live</a>
       <a href="rating.html" class="nav__link">Рейтинг</a>
-      <a href="lakes.html" class="nav__link">Водойми</a>
-      <a href="sponsors.html" class="nav__link">Спонсори</a>
-      <a href="events/index.html" class="nav__link">Архів</a>
       <a href="cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
 </header>
 
-<main class="auth-main">
-  <div class="auth-shell container">
+<main class="main">
+  <section class="section container admin-wrap">
 
-    <div class="auth-header">
-      <div class="auth-kicker">
-        <span class="auth-kicker-dot"></span>
-        STOLAR CARP · ACCOUNT
+    <div class="admin-top">
+      <div>
+        <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
+        <div class="muted" id="adminStatus">Запуск…</div>
       </div>
-      <h1 class="auth-title">Реєстрація STOLAR CARP</h1>
-      <p class="auth-subtitle">
-        Один акаунт — одна людина. Капітан створює команду, учасники приєднуються за кодом.
-        Далі через акаунт ви подаєте заявки на етапи.
-      </p>
+      <div class="admin-badge" id="adminBadge">🔒 admin</div>
     </div>
 
-    <div class="auth-card">
+    <!-- LOGIN -->
+    <div id="adminLogin" class="admin-card admin-hidden">
+      <h2 class="section-title" style="margin:0 0 10px;">Вхід адміністратора</h2>
+      <div class="muted">Увійди email/паролем адмін-акаунта. Реєстрації тут немає.</div>
 
-      <div class="auth-tabs">
-        <button class="auth-tab-btn auth-tab-btn--active" data-tab="signup">Створити акаунт</button>
-        <button class="auth-tab-btn" data-tab="login">Увійти</button>
+      <div class="row" style="margin-top:12px;">
+        <input id="admEmail" type="email" placeholder="Email"
+          style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
+        <input id="admPass" type="password" placeholder="Пароль"
+          style="flex:1; min-width:220px; padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.35); background:rgba(2,6,23,.55); color:#e5e7eb;">
+        <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
       </div>
 
-      <div class="auth-layout">
+      <div class="muted" id="adminLoginMsg" style="margin-top:10px;"></div>
+    </div>
 
-        <!-- РЕЄСТРАЦІЯ -->
-        <div id="tab-signup" class="auth-form-wrap auth-tab-panel active">
-          <h2 class="auth-form-title">новий акаунт</h2>
-          <p class="auth-form-description">Заповніть всі поля, щоб створити свій профіль STOLAR CARP.</p>
+    <!-- APP -->
+    <div id="adminApp" class="admin-hidden">
 
-          <form id="signupForm" novalidate>
-            <div class="auth-fields">
-              <div class="field">
-                <label for="signupEmail">Email</label>
-                <input type="email" id="signupEmail" class="input-auth" placeholder="example@gmail.com" required>
-                <div class="field-hint">Використовується для входу.</div>
-              </div>
-
-              <div class="field">
-                <label for="signupPassword">Пароль</label>
-                <input type="password" id="signupPassword" class="input-auth" placeholder="Мінімум 6 символів" minlength="6" required>
-              </div>
-
-              <div class="field">
-                <label for="signupFullName">Імʼя та прізвище</label>
-                <input type="text" id="signupFullName" class="input-auth" placeholder="Імʼя Прізвище" required>
-              </div>
-
-              <div class="field">
-                <label for="signupPhoneClean">Номер телефону</label>
-                <div class="phone-wrap">
-                  <span class="phone-prefix">+380</span>
-                  <input type="tel" id="signupPhoneClean" class="input-auth" placeholder="XXXXXXXXX" inputmode="numeric" maxlength="9" required>
-                </div>
-                <input type="hidden" id="signupPhone">
-              </div>
-
-              <div class="field">
-                <label for="signupCity">Місто / селище</label>
-                <input type="text" id="signupCity" class="input-auth" placeholder="Місто або населений пункт" required>
-              </div>
-
-              <div class="field single-column">
-                <label>Роль у системі</label>
-                <div class="role-row">
-                  <label class="role-option">
-                    <input type="radio" name="signupRole" id="signupRoleCaptain" value="captain" checked>
-                    <span>Капітан (створюю команду)</span>
-                  </label>
-                  <label class="role-option">
-                    <input type="radio" name="signupRole" id="signupRoleMember" value="member">
-                    <span>Учасник (приєднуюсь до команди)</span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="field single-column" id="teamNameField">
-                <label for="signupTeamName">Назва команди</label>
-                <input type="text" id="signupTeamName" class="input-auth" placeholder="Наприклад: DK Два Кума">
-                <div class="field-hint">Назва, яка буде у протоколах та рейтингу.</div>
-              </div>
-
-              <div class="field single-column" id="joinCodeField" style="display:none;">
-                <label for="signupJoinCode">Код приєднання до команди</label>
-                <input type="text" id="signupJoinCode" class="input-auth" placeholder="Введіть код, який дав капітан">
-                <div class="field-hint">Отримайте код у капітана, якщо команда вже створена.</div>
-              </div>
-            </div>
-
-            <div class="auth-actions">
-              <button type="submit" id="signupBtn" class="btn-primary-auth">Створити акаунт</button>
-              <div id="signupMsg" class="auth-msg"></div>
-            </div>
-          </form>
+      <div class="admin-card">
+        <h2 class="section-title" style="margin:0 0 10px;">Керування</h2>
+        <div class="row">
+          <button class="btn btn--primary" id="btnCreateContest">1. Створити змагання</button>
+          <button class="btn btn--accent"  id="btnToggleContest">2. Відкрити / закрити</button>
+          <button class="btn btn--primary" id="btnRegistrations">3. Реєстрація команд</button>
+          <button class="btn btn--accent"  id="btnDraw">4. Жеребкування</button>
+          <button class="btn btn--danger"  id="btnWeigh">5. Зважування</button>
+          <button class="btn btn--primary" id="btnUsers">6. Користувачі сайту</button>
+          <button class="btn btn--primary" id="btnLogout">Вийти</button>
         </div>
+        <div class="muted" style="margin-top:10px;" id="adminHint">Обери модуль зверху.</div>
+      </div>
 
-        <!-- ВХІД -->
-        <div id="tab-login" class="auth-form-wrap auth-tab-panel">
-          <h2 class="auth-form-title">вхід у акаунт</h2>
-          <p class="auth-form-description">Якщо ви вже маєте акаунт STOLAR CARP, увійдіть за допомогою email та пароля.</p>
+      <div class="admin-grid">
 
-          <form id="loginForm" novalidate>
-            <div class="auth-fields">
-              <div class="field single-column">
-                <label for="loginEmail">Email</label>
-                <input type="email" id="loginEmail" class="input-auth" placeholder="example@gmail.com" required>
-              </div>
-              <div class="field single-column">
-                <label for="loginPassword">Пароль</label>
-                <input type="password" id="loginPassword" class="input-auth" placeholder="Пароль" required>
-              </div>
-            </div>
-            <div class="auth-actions">
-              <button type="submit" id="loginBtn" class="btn-primary-auth">Увійти</button>
-              <div id="loginMsg" class="auth-msg"></div>
-            </div>
-          </form>
-        </div>
-
-        <!-- БОКОВА ІНФА -->
-        <aside class="auth-aside">
-          <h3>Навіщо акаунт?</h3>
-          <p>Через акаунт ви:</p>
-          <ul>
-            <li>створюєте команду та запрошуєте учасників;</li>
-            <li>подаєте заявки на етапи одним кліком;</li>
-            <li>бачите історію участі та результати;</li>
-            <li>далі — отримаєте нотифікації та бонуси.</li>
-          </ul>
-
-          <div class="auth-badge">
-            <span class="auth-badge-dot"></span>
-            LIVE · SEASON 2026 READY
+        <!-- ЛІВО: Заявки -->
+        <div class="admin-card" id="modRegistrations">
+          <h2 class="section-title" style="margin:0 0 10px;">Заявки на участь</h2>
+          <div class="muted">Колекція: <b>registrations</b>.</div>
+          <div class="row">
+            <button class="btn btn--primary" id="btnLoadRegs">Оновити список</button>
           </div>
-        </aside>
+          <div class="admin-list" id="regsList"></div>
+        </div>
 
+        <!-- ПРАВО: Модулі -->
+        <div style="display:flex; flex-direction:column; gap:14px;">
+
+          <div class="admin-card admin-hidden" id="modCreate">
+            <h2 class="section-title" style="margin:0 0 10px;">Створити змагання (каркас)</h2>
+            <div class="muted">Записуємо в: <b>seasons</b> + <b>settings/app</b>.</div>
+
+            <div class="mini-form">
+              <input id="inpSeasonId" placeholder="seasonId (наприклад: season-2026)" />
+              <input id="inpSeasonName" placeholder="Назва сезону (наприклад: STOLAR CARP 2026)" />
+              <input id="inpStageId" placeholder="stageId (наприклад: stage-1)" />
+              <input id="inpStageName" placeholder="Назва етапу (наприклад: Етап 1)" />
+              <select id="inpRegOpen">
+                <option value="true">Реєстрація: ВІДКРИТА</option>
+                <option value="false">Реєстрація: ЗАКРИТА</option>
+              </select>
+            </div>
+
+            <div class="row">
+              <button class="btn btn--accent" id="btnDoCreate">Створити / Оновити</button>
+            </div>
+
+            <div class="muted" id="createMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="admin-card admin-hidden" id="modToggle">
+            <h2 class="section-title" style="margin:0 0 10px;">Відкрити / Закрити</h2>
+            <div class="muted">Документ: <b>settings/app</b> поле <b>registrationOpen</b>.</div>
+            <div class="row">
+              <button class="btn btn--accent" id="btnOpenReg">Відкрити реєстрацію</button>
+              <button class="btn btn--danger" id="btnCloseReg">Закрити реєстрацію</button>
+            </div>
+            <div class="muted" id="toggleMsg" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="admin-card admin-hidden" id="modDraw">
+            <h2 class="section-title" style="margin:0 0 10px;">Жеребкування</h2>
+            <div class="muted">Підключимо наступним кроком.</div>
+          </div>
+
+          <div class="admin-card admin-hidden" id="modWeigh">
+            <h2 class="section-title" style="margin:0 0 10px;">Зважування</h2>
+            <div class="muted">Підключимо наступним кроком.</div>
+          </div>
+
+          <div class="admin-card admin-hidden" id="modUsers">
+            <h2 class="section-title" style="margin:0 0 10px;">Користувачі сайту</h2>
+            <div class="muted">Колекція: <b>users</b> (останні 50).</div>
+            <div class="row">
+              <button class="btn btn--primary" id="btnLoadUsers">Оновити список</button>
+            </div>
+            <div class="admin-list" id="usersList"></div>
+          </div>
+
+        </div>
       </div>
+
     </div>
-  </div>
+  </section>
 </main>
 
-<footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
-    </div>
-  </div>
-</footer>
-
-<script>
-  // Таби + роль + телефон (твій код, без змін)
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabButtons = document.querySelectorAll('.auth-tab-btn');
-    const panels = {
-      signup: document.getElementById('tab-signup'),
-      login: document.getElementById('tab-login')
-    };
-
-    tabButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tab = btn.dataset.tab;
-        tabButtons.forEach(b => b.classList.toggle('auth-tab-btn--active', b === btn));
-        Object.keys(panels).forEach(key => {
-          panels[key].classList.toggle('active', key === tab);
-        });
-      });
-    });
-
-    const captainRadio = document.getElementById('signupRoleCaptain');
-    const memberRadio  = document.getElementById('signupRoleMember');
-    const teamField    = document.getElementById('teamNameField');
-    const joinField    = document.getElementById('joinCodeField');
-
-    function updateRoleFields(){
-      const isCaptain = captainRadio.checked;
-      teamField.style.display = isCaptain ? 'block' : 'none';
-      joinField.style.display = isCaptain ? 'none' : 'block';
-    }
-
-    captainRadio.addEventListener('change', updateRoleFields);
-    memberRadio .addEventListener('change', updateRoleFields);
-    updateRoleFields();
-
-    const phoneClean = document.getElementById('signupPhoneClean');
-    const phoneFull  = document.getElementById('signupPhone');
-    phoneClean.addEventListener('input', () => {
-      const digits = phoneClean.value.replace(/\D/g,'').slice(0,9);
-      phoneClean.value = digits;
-      phoneFull.value = digits ? '+380' + digits : '';
-    });
-  });
-</script>
-
-<!-- Firebase compat SDK (ОДИН РАЗ) -->
+<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<!-- Єдина ініціалізація Firebase -->
+<!-- ЄДИНИЙ ініт -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- Загальні хелпери сайту (без Firebase init всередині!) -->
-<script src="assets/js/config.js"></script>
+<script>
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+  const $ = (id) => document.getElementById(id);
+  const show = (el) => el && el.classList.remove("admin-hidden");
+  const hide = (el) => el && el.classList.add("admin-hidden");
+  const setStatus = (t) => { const e = $("adminStatus"); if(e) e.textContent = t; };
 
-<!-- Логіка реєстрації/входу -->
-<script src="assets/js/auth.js"></script>
+  async function waitForFirebase(){
+    for(let i=0;i<80;i++){
+      if(window.scAuth && window.scDb) return;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    throw new Error("Firebase НЕ ініціалізований (scAuth/scDb). Перевір firebase-init.js");
+  }
+
+  function activateModule(key){
+    const mods = {
+      regs: $("modRegistrations"),
+      create: $("modCreate"),
+      toggle: $("modToggle"),
+      draw: $("modDraw"),
+      weigh: $("modWeigh"),
+      users: $("modUsers")
+    };
+    Object.values(mods).forEach(hide);
+    if(key && mods[key]) show(mods[key]);
+  }
+
+  async function init(){
+    await waitForFirebase();
+    const auth = window.scAuth;
+    const db   = window.scDb;
+
+    const loginBox = $("adminLogin");
+    const appBox   = $("adminApp");
+    const msg      = $("adminLoginMsg");
+
+    const btnLogin = $("btnAdminLogin");
+    const btnLogout= $("btnLogout");
+
+    const showLogin = (text) => { hide(appBox); show(loginBox); if(msg) msg.textContent = text || ""; };
+    const showApp   = () => { hide(loginBox); show(appBox); };
+
+    if(btnLogin){
+      btnLogin.onclick = async () => {
+        const email = ($("admEmail")?.value || "").trim();
+        const pass  = ($("admPass")?.value || "").trim();
+        if(!email || !pass){ msg.textContent = "Введи email і пароль"; return; }
+        msg.textContent = "Вхід…";
+        try{
+          await auth.signInWithEmailAndPassword(email, pass);
+        }catch(e){
+          msg.textContent = "Помилка входу: " + (e?.message || "");
+        }
+      };
+    }
+
+    if(btnLogout){
+      btnLogout.onclick = async () => {
+        await auth.signOut();
+      };
+    }
+
+    // меню
+    $("btnRegistrations")?.addEventListener("click",()=>activateModule("regs"));
+    $("btnCreateContest")?.addEventListener("click",()=>activateModule("create"));
+    $("btnToggleContest")?.addEventListener("click",()=>activateModule("toggle"));
+    $("btnDraw")?.addEventListener("click",()=>activateModule("draw"));
+    $("btnWeigh")?.addEventListener("click",()=>activateModule("weigh"));
+    $("btnUsers")?.addEventListener("click",()=>activateModule("users"));
+    activateModule("regs");
+
+    // простий лоадер заявок
+    $("btnLoadRegs")?.addEventListener("click", async ()=>{
+      const wrap = $("regsList");
+      if(!wrap) return;
+      wrap.innerHTML = `<div class="muted">Завантаження…</div>`;
+      try{
+        const snap = await db.collection("registrations").orderBy("createdAt","desc").limit(50).get();
+        if(snap.empty){ wrap.innerHTML = `<div class="muted">Порожньо</div>`; return; }
+        wrap.innerHTML = snap.docs.map(d=>{
+          const x = d.data() || {};
+          return `
+            <div class="item">
+              <div class="item-top">
+                <div><b>${(x.teamName||x.team||"Команда")}</b></div>
+                <span class="pill ${x.paid ? "ok":"warn"}">${x.paid ? "Оплачено":"Не оплачено"}</span>
+              </div>
+              <div class="muted" style="margin-top:6px;">
+                UID: ${x.uid || "-"} · Тел: ${x.captainPhone || x.phone || "-"}
+              </div>
+            </div>`;
+        }).join("");
+      }catch(e){
+        wrap.innerHTML = `<div class="muted">Помилка: ${e.message}</div>`;
+      }
+    });
+
+    // простий лоадер юзерів
+    $("btnLoadUsers")?.addEventListener("click", async ()=>{
+      const wrap = $("usersList");
+      if(!wrap) return;
+      wrap.innerHTML = `<div class="muted">Завантаження…</div>`;
+      try{
+        const snap = await db.collection("users").orderBy("createdAt","desc").limit(50).get();
+        if(snap.empty){ wrap.innerHTML = `<div class="muted">Порожньо</div>`; return; }
+        wrap.innerHTML = snap.docs.map(d=>{
+          const x = d.data() || {};
+          return `
+            <div class="item">
+              <div class="item-top">
+                <div><b>${(x.fullName||x.name||"Користувач")}</b></div>
+                <span class="pill">${x.role || "member"}</span>
+              </div>
+              <div class="muted" style="margin-top:6px;">
+                ${x.email || "-"} · ${x.phone || "-"}
+              </div>
+            </div>`;
+        }).join("");
+      }catch(e){
+        wrap.innerHTML = `<div class="muted">Помилка: ${e.message}</div>`;
+      }
+    });
+
+    // перевірка сесії
+    auth.onAuthStateChanged(user=>{
+      if(!user){
+        setStatus("Потрібен вхід");
+        showLogin("Увійди як адміністратор");
+        return;
+      }
+      if(user.uid !== ADMIN_UID){
+        setStatus("Доступ заборонено");
+        showLogin("Цей акаунт не має доступу (не адмін UID)");
+        return;
+      }
+      setStatus("Адмін-доступ дозволено");
+      showApp();
+    });
+  }
+
+  init().catch(err=>{
+    console.error(err);
+    setStatus("Помилка: " + err.message);
+    show($("adminLogin"));
+  });
+</script>
 
 </body>
-        </html>
+</html>

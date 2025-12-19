@@ -1,7 +1,5 @@
 // assets/js/auth.js
 (function () {
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-
   const $ = (id) => document.getElementById(id);
 
   function setMsg(el, text, type) {
@@ -17,7 +15,7 @@
       if (window.scAuth && window.scDb) return;
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір SDK та firebase-init.js");
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
   }
 
   function genJoinCode(len = 6) {
@@ -28,7 +26,7 @@
   }
 
   async function createTeam(db, name, ownerUid) {
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 10; i++) {
       const joinCode = genJoinCode(6);
       const exists = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
       if (!exists.empty) continue;
@@ -37,77 +35,68 @@
         name: name || "Команда",
         ownerUid,
         joinCode,
-        createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
+        createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
       return { teamId: ref.id, joinCode };
     }
-    throw new Error("Не вдалося згенерувати унікальний joinCode (спробуй ще раз).");
+    throw new Error("Не вдалося згенерувати унікальний joinCode. Спробуй ще раз.");
   }
 
   async function findTeamByJoinCode(db, code) {
-    const snap = await db
-      .collection("teams")
-      .where("joinCode", "==", String(code || "").trim().toUpperCase())
-      .limit(1)
-      .get();
-
+    const c = String(code || "").trim().toUpperCase();
+    const snap = await db.collection("teams").where("joinCode", "==", c).limit(1).get();
     if (snap.empty) return null;
     const doc = snap.docs[0];
     return { teamId: doc.id, ...doc.data() };
   }
 
-  // ✅ ГОЛОВНЕ: куди перекидаємо після входу
-  // - звичайний сценарій (кнопка "Увійти") -> cabinet.html
-  // - якщо людина зайшла з admin.html, то admin.html ставить прапорець sc_admin_intent=1
-  function redirectAfterAuth(user) {
-    if (!user) return;
+  async function ensureUserDoc(db, uid, data) {
+    const ref = db.collection("users").doc(uid);
+    const snap = await ref.get();
 
-    const wantAdmin = sessionStorage.getItem("sc_admin_intent") === "1";
+    const base = {
+      fullName: data.fullName || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      city: data.city || "",
+      role: data.role || "member",    // member/captain/judge/admin (для суддів/адміна ставимо руками)
+      teamId: data.teamId || null,
+      avatarUrl: "",
+      createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-    // якщо це адмін і він реально зайшов через адмінку — залишаємо в адмінці
-    if (wantAdmin && user.uid === ADMIN_UID) {
-      location.href = "/admin.html";
+    if (!snap.exists) {
+      await ref.set(base, { merge: true });
       return;
     }
 
-    // ✅ УСІ ІНШІ (і навіть адмін, якщо зайшов як звичайний користувач) -> кабінет
-    location.href = "/cabinet.html";
-  }
+    // м'яке оновлення, щоб не затирати існуючі дані
+    const cur = snap.data() || {};
+    const patch = {};
+    if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
+    if (!cur.email && base.email) patch.email = base.email;
+    if (!cur.phone && base.phone) patch.phone = base.phone;
+    if (!cur.city && base.city) patch.city = base.city;
+    if (cur.teamId == null && base.teamId) patch.teamId = base.teamId;
+    if (!cur.role && base.role) patch.role = base.role;
 
-  async function ensureUserDoc(db, user, data) {
-    const ref = db.collection("users").doc(user.uid);
-    const snap = await ref.get();
-
-    if (!snap.exists) {
-      await ref.set({
-        fullName: data.fullName || "",
-        email: data.email || user.email || "",
-        phone: data.phone || "",
-        city: data.city || "",
-        role: data.role || "member",
-        teamId: data.teamId || null,
-        createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-        avatarUrl: "",
-      });
-    } else {
-      // НЕ чіпаємо роль адміна/судді, якщо вона вже є
-      const cur = snap.data() || {};
-      const patch = {};
-      if (!cur.fullName && data.fullName) patch.fullName = data.fullName;
-      if (!cur.phone && data.phone) patch.phone = data.phone;
-      if (!cur.city && data.city) patch.city = data.city;
-      if ((cur.teamId == null) && data.teamId) patch.teamId = data.teamId;
-      if (!cur.role && data.role) patch.role = data.role;
-      if (Object.keys(patch).length) await ref.update(patch);
+    if (Object.keys(patch).length) {
+      patch.updatedAt = window.firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set(patch, { merge: true });
     }
   }
 
   async function setUserTeamAndRole(db, uid, teamId, role) {
-    await db.collection("users").doc(uid).update({
+    await db.collection("users").doc(uid).set({
       teamId: teamId || null,
       role: role || "member",
-    });
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  function goCabinet() {
+    location.href = "cabinet.html";
   }
 
   const signupForm = $("signupForm");
@@ -145,7 +134,7 @@
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
-      await ensureUserDoc(db, user, { fullName, email, phone, city, role, teamId: null });
+      await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
       if (role === "captain") {
         if (!teamName) {
@@ -155,8 +144,8 @@
         setMsg(signupMsg, "Створюю команду…", "");
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
-        setMsg(signupMsg, `Готово ✅ Команда створена. Код: ${team.joinCode}`, "ok");
-        setTimeout(() => redirectAfterAuth(user), 600);
+        setMsg(signupMsg, `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}`, "ok");
+        setTimeout(goCabinet, 600);
         return;
       }
 
@@ -165,7 +154,7 @@
           setMsg(signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
           return;
         }
-        setMsg(signupMsg, "Шукаю команду…", "");
+        setMsg(signupMsg, "Шукаю команду по коду…", "");
         const team = await findTeamByJoinCode(db, joinCode);
         if (!team) {
           setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
@@ -173,12 +162,12 @@
         }
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
         setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
-        setTimeout(() => redirectAfterAuth(user), 600);
+        setTimeout(goCabinet, 600);
         return;
       }
 
       setMsg(signupMsg, "Акаунт створено ✅", "ok");
-      setTimeout(() => redirectAfterAuth(user), 600);
+      setTimeout(goCabinet, 600);
     } catch (err) {
       console.error(err);
       setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
@@ -206,9 +195,9 @@
       $("loginBtn") && ($("loginBtn").disabled = true);
       setMsg(loginMsg, "Вхід…", "");
 
-      const cred = await auth.signInWithEmailAndPassword(email, pass);
+      await auth.signInWithEmailAndPassword(email, pass);
       setMsg(loginMsg, "Готово ✅", "ok");
-      setTimeout(() => redirectAfterAuth(cred.user), 300);
+      setTimeout(goCabinet, 300);
     } catch (err) {
       console.error(err);
       setMsg(loginMsg, err?.message || "Помилка входу", "err");
@@ -220,14 +209,12 @@
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // ✅ Автоперекид тільки на сторінці акаунта/логіну:
-  // якщо користувач вже залогінений — в кабінет (або в адмінку якщо прийшов з admin.html)
+  // якщо вже залогінений — не показуємо auth, кидаємо в кабінет
   (async () => {
     try {
       await waitFirebase();
-      const auth = window.scAuth;
-      auth.onAuthStateChanged((u) => {
-        if (u) redirectAfterAuth(u);
+      window.scAuth.onAuthStateChanged((u) => {
+        if (u) goCabinet();
       });
     } catch (e) {
       console.warn(e);

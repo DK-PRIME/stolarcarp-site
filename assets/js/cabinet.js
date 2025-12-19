@@ -3,33 +3,37 @@
 // Працює з firebase-init.js (window.scAuth, window.scDb, window.scStorage)
 
 (function () {
-  const auth    = window.scAuth;
-  const db      = window.scDb;
-  const storage = window.scStorage;
+  "use strict";
 
-  if (!auth || !db) {
-    console.error("Firebase не ініціалізований. Підключи firebase-*-compat.js та assets/js/firebase-init.js");
-    return;
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+
+  async function waitFirebase(maxMs = 12000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      if (window.scAuth && window.scDb) return;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір firebase-init.js і підключення SDK на сторінці.");
   }
 
-  const statusEl      = document.getElementById("cabinetStatus");
-  const contentEl     = document.getElementById("cabinetContent");
+  const statusEl  = document.getElementById("cabinetStatus");
+  const contentEl = document.getElementById("cabinetContent");
 
-  const teamNameEl    = document.getElementById("teamNameText");
-  const captainTextEl = document.getElementById("captainText");
-  const userRoleEl    = document.getElementById("userRoleText");
-  const userPhoneEl   = document.getElementById("userPhoneText");
+  const teamNameEl     = document.getElementById("teamNameText");
+  const captainTextEl  = document.getElementById("captainText");
+  const userRoleEl     = document.getElementById("userRoleText");
+  const userPhoneEl    = document.getElementById("userPhoneText");
 
-  const joinCodePillEl= document.getElementById("joinCodePill");
-  const joinCodeTextEl= document.getElementById("joinCodeText");
+  const joinCodePillEl = document.getElementById("joinCodePill");
+  const joinCodeTextEl = document.getElementById("joinCodeText");
 
-  const avatarImgEl   = document.getElementById("cabinetAvatarImg");
-  const avatarPhEl    = document.getElementById("cabinetAvatarPlaceholder");
-  const avatarInputEl = document.getElementById("avatarFile");
-  const avatarBtnEl   = document.getElementById("avatarUploadBtn");
-  const avatarMsgEl   = document.getElementById("avatarMsg");
+  const avatarImgEl    = document.getElementById("cabinetAvatarImg");
+  const avatarPhEl     = document.getElementById("cabinetAvatarPlaceholder");
+  const avatarInputEl  = document.getElementById("avatarFile");
+  const avatarBtnEl    = document.getElementById("avatarUploadBtn");
+  const avatarMsgEl    = document.getElementById("avatarMsg");
 
-  const membersEl     = document.getElementById("membersContainer");
+  const membersEl      = document.getElementById("membersContainer");
 
   let unsubUser = null;
   let unsubTeam = null;
@@ -95,7 +99,7 @@
     });
   }
 
-  function subscribeTeam(teamId){
+  function subscribeTeam(db, teamId){
     if (!teamId){
       if (teamNameEl) teamNameEl.textContent = "Без команди";
       if (joinCodePillEl) joinCodePillEl.style.display = "none";
@@ -116,7 +120,7 @@
       }
     });
 
-    // ✅ склад команди = users where teamId == teamId (працює швидко і стабільно)
+    // склад команди = users where teamId == teamId
     unsubMembers = db.collection("users")
       .where("teamId","==",teamId)
       .onSnapshot((qs) => {
@@ -129,10 +133,10 @@
       });
   }
 
-  function subscribeUser(uid){
+  function subscribeUser(auth, db, uid){
     unsubUser = db.collection("users").doc(uid).onSnapshot((snap) => {
       if (!snap.exists){
-        setStatus("Анкета користувача не знайдена. Зайди в auth.html і зареєструйся заново.");
+        setStatus("Анкета користувача не знайдена. Перейди в «Увійти» і зареєструй акаунт заново.");
         showContent();
         return;
       }
@@ -149,12 +153,13 @@
 
       if (typeof unsubTeam === "function") { unsubTeam(); unsubTeam = null; }
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
-      subscribeTeam(u.teamId || null);
+      subscribeTeam(db, u.teamId || null);
 
       setStatus("Кабінет завантажено.");
       showContent();
-
-      setTimeout(() => { if (statusEl && statusEl.textContent === "Кабінет завантажено.") statusEl.textContent = ""; }, 1200);
+      setTimeout(() => {
+        if (statusEl && statusEl.textContent === "Кабінет завантажено.") statusEl.textContent = "";
+      }, 1200);
     }, (err) => {
       console.error(err);
       setStatus("Помилка читання профілю. Перевір правила доступу Firestore.");
@@ -162,52 +167,74 @@
     });
   }
 
-  auth.onAuthStateChanged((user) => {
-    cleanup();
+  (async () => {
+    try {
+      await waitFirebase();
+      const auth    = window.scAuth;
+      const db      = window.scDb;
+      const storage = window.scStorage;
 
-    if (!user){
-      setStatus("Ви не увійшли. Переходимо на сторінку входу…");
-      hideContent();
-      setTimeout(() => window.location.href = "auth.html", 400);
-      return;
-    }
+      auth.onAuthStateChanged((user) => {
+        cleanup();
 
-    setStatus("Перевірка доступу до кабінету…");
-    showContent();
-    subscribeUser(user.uid);
-  });
+        if (!user){
+          setStatus("Ви не увійшли. Переходимо на сторінку входу…");
+          hideContent();
+          setTimeout(() => window.location.href = "auth.html", 400);
+          return;
+        }
 
-  // ===== avatar upload =====
-  if (avatarBtnEl && avatarInputEl && storage){
-    avatarBtnEl.addEventListener("click", async (e) => {
-      e.preventDefault();
+        // ✅ Адмін не живе в кабінеті — тільки адмінка через © (або якщо відкрив cabinet випадково)
+        if (user.uid === ADMIN_UID){
+          setStatus("Адмін-акаунт → перехід в адмінку…");
+          hideContent();
+          setTimeout(() => window.location.href = "admin.html", 200);
+          return;
+        }
 
-      const user = auth.currentUser;
-      if (!user) return alert("Спочатку увійдіть у акаунт.");
+        setStatus("Перевірка доступу до кабінету…");
+        showContent();
+        subscribeUser(auth, db, user.uid);
+      });
 
-      const file = avatarInputEl.files && avatarInputEl.files[0];
-      if (!file) return alert("Оберіть файл.");
-      if (!file.type.startsWith("image/")) return alert("Потрібен файл-зображення.");
-      if (file.size > 5 * 1024 * 1024) return alert("Максимальний розмір 5 МБ.");
+      // ===== avatar upload =====
+      if (avatarBtnEl && avatarInputEl && storage){
+        avatarBtnEl.addEventListener("click", async (e) => {
+          e.preventDefault();
 
-      try {
-        if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
+          const user = auth.currentUser;
+          if (!user) return alert("Спочатку увійдіть у акаунт.");
 
-        const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-        const path = `avatars/${user.uid}/avatar.${ext}`;
+          const file = avatarInputEl.files && avatarInputEl.files[0];
+          if (!file) return alert("Оберіть файл.");
+          if (!file.type.startsWith("image/")) return alert("Потрібен файл-зображення.");
+          if (file.size > 5 * 1024 * 1024) return alert("Максимальний розмір 5 МБ.");
 
-        const ref = storage.ref().child(path);
-        const snap = await ref.put(file);
-        const url = await snap.ref.getDownloadURL();
+          try {
+            if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
 
-        await db.collection("users").doc(user.uid).set({ avatarUrl:url }, { merge:true });
+            const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+            const path = `avatars/${user.uid}/avatar.${ext}`;
 
-        if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
-        setTimeout(() => { if (avatarMsgEl) avatarMsgEl.textContent = ""; }, 2000);
-      } catch (err){
-        console.error(err);
-        if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження аватара.";
+            const ref = storage.ref().child(path);
+            const snap = await ref.put(file);
+            const url = await snap.ref.getDownloadURL();
+
+            await db.collection("users").doc(user.uid).set({ avatarUrl:url }, { merge:true });
+
+            if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
+            setTimeout(() => { if (avatarMsgEl) avatarMsgEl.textContent = ""; }, 2000);
+          } catch (err){
+            console.error(err);
+            if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження аватара.";
+          }
+        });
       }
-    });
-  }
+
+    } catch (err) {
+      console.error(err);
+      setStatus("Помилка ініціалізації кабінету: " + (err?.message || err));
+      showContent();
+    }
+  })();
 })();

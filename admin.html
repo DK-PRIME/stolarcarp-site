@@ -1,15 +1,16 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>STOLAR CARP • Адмінка</title>
 
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
     .admin-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
+
     .admin-top{
       padding:14px 16px; border-radius:18px;
       background:rgba(15,23,42,.9);
@@ -29,7 +30,12 @@
     }
 
     .stack{ display:flex; flex-direction:column; gap:10px; }
-    .stack .btn{ width:100%; justify-content:center; padding:12px 14px; border-radius:14px; }
+    .stack .btn{
+      width:100%;
+      justify-content:center;
+      padding:12px 14px;
+      border-radius:14px;
+    }
 
     .mini-form{
       margin-top:12px;
@@ -49,35 +55,34 @@
     .mini-form input::placeholder{ color:#6b7280; }
 
     .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
-
     .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .row input{ flex:1; min-width:220px; }
 
-    .grid-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width:720px){ .grid-2{ grid-template-columns:1fr; } }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:700px){ .grid2{ grid-template-columns:1fr; } }
 
     .stage-box{
-      padding:12px;
+      border:1px solid rgba(148,163,184,.22);
       border-radius:14px;
-      border:1px solid rgba(148,163,184,.28);
+      padding:12px;
       background:rgba(2,6,23,.35);
     }
-    .stage-head{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; margin-bottom:10px;
-    }
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:4px 10px; border-radius:999px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(15,23,42,.65);
-      color:#e5e7eb;
+    .stage-title{
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
       font-size:.82rem;
-      white-space:nowrap;
+      color:#e5e7eb;
+      margin:0 0 10px;
     }
-    .msg{ margin-top:10px; }
-    .msg.ok{ color:#22c55e; }
-    .msg.err{ color:#ef4444; }
+
+    .tiny{
+      font-size:.8rem;
+      color:#9ca3af;
+      margin-top:4px;
+    }
+
+    .ok{ color:#22c55e; }
+    .err{ color:#ef4444; }
   </style>
 </head>
 
@@ -104,6 +109,7 @@
     <div class="admin-top">
       <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Адмінка STOLAR CARP</div>
       <div class="muted" id="adminStatus">Запуск…</div>
+      <div class="muted" id="adminError" style="display:none; margin-top:6px;"></div>
     </div>
 
     <!-- LOGIN -->
@@ -111,9 +117,11 @@
       <h2 class="section-title" style="margin:0 0 10px;">Вхід адміністратора</h2>
       <div class="muted">Увійди email/паролем адмін-акаунта.</div>
 
-      <div class="row">
-        <input id="admEmail" type="email" placeholder="Email" />
-        <input id="admPass" type="password" placeholder="Пароль" />
+      <div class="row" style="margin-top:12px;">
+        <input id="admEmail" type="email" placeholder="Email"
+          style="flex:1; min-width:220px;">
+        <input id="admPass" type="password" placeholder="Пароль"
+          style="flex:1; min-width:220px;">
         <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
       </div>
 
@@ -126,11 +134,11 @@
       <div class="admin-card">
         <div class="stack">
           <button class="btn btn--primary" id="btnOpenCreate">1) Створити змагання</button>
-          <button class="btn btn--accent"  id="btnOpenReg">2) Відкрити / закрити реєстрацію</button>
+          <button class="btn btn--accent"  id="btnOpenReg">2) Дати реєстрацій (календар)</button>
 
           <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
           <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
-          <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування (судді/адмін)</a>
+          <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування</a>
         </div>
       </div>
 
@@ -146,10 +154,12 @@
 
           <input id="inpYear" placeholder="Рік (наприклад: 2026)" inputmode="numeric" />
 
-          <!-- бренд/серія авто -->
-          <input id="inpName" placeholder="Назва змагання (наприклад: Осінній Короп / STALKER / Таблиця трьох)" />
+          <!-- бренд автозаповнений, але прихований -->
+          <input id="inpBrand" value="STOLAR CARP" style="display:none;" />
 
-          <select id="inpStagesCount" class="only-season">
+          <input id="inpName" placeholder="Назва змагання (наприклад: Season STOLAR CARP 2026 / Осінній короп)" />
+
+          <select id="inpStagesCount">
             <option value="2">К-сть етапів у сезоні: 2</option>
             <option value="3" selected>К-сть етапів у сезоні: 3</option>
             <option value="4">К-сть етапів у сезоні: 4</option>
@@ -159,18 +169,12 @@
             <option value="8">К-сть етапів у сезоні: 8</option>
           </select>
 
-          <select id="inpHasFinal" class="only-season">
+          <select id="inpHasFinal">
             <option value="yes" selected>Фінал: ТАК</option>
             <option value="no">Фінал: НІ</option>
           </select>
 
-          <div class="hr"></div>
-
-          <div class="muted" style="margin-top:0;">
-            Дати реєстрації (календар). Час фіксовано: <b>12:00 Київ</b>.
-          </div>
-
-          <div id="stageDatesWrap"></div>
+          <div id="stagesDatesWrap"></div>
 
           <select id="inpRegMode">
             <option value="auto" selected>Режим реєстрації: AUTO (по даті)</option>
@@ -183,42 +187,24 @@
           <button class="btn btn--primary" id="btnSetActive">Зробити активним</button>
         </div>
 
-        <div id="createMsg" class="msg muted"></div>
+        <div class="muted" id="createMsg" style="margin-top:10px;"></div>
       </div>
 
-      <!-- 2) REGISTRATION DATES (calendar) -->
+      <!-- 2) REG DATES EDITOR -->
       <div class="admin-card admin-hidden" id="modReg">
-        <h2 class="section-title" style="margin:0 0 8px;">Відкрити / закрити реєстрацію</h2>
+        <h2 class="section-title" style="margin:0 0 8px;">Дати реєстрацій (календар)</h2>
 
         <div class="mini-form">
-          <select id="selStage"></select>
+          <select id="selComp"></select>
+          <div id="regDatesEditor"></div>
 
-          <div class="stage-box">
-            <div class="stage-head">
-              <div class="pill" id="regPill">—</div>
-              <div class="pill">12:00 Київ</div>
-            </div>
-
-            <div class="grid-2">
-              <div>
-                <div class="muted" style="margin-bottom:6px;">Відкриття (дата)</div>
-                <input type="date" id="regOpenDate" />
-              </div>
-              <div>
-                <div class="muted" style="margin-bottom:6px;">Закриття (дата)</div>
-                <input type="date" id="regCloseDate" />
-              </div>
-            </div>
-
-            <div class="stack" style="margin-top:12px;">
-              <button class="btn btn--accent" id="btnSaveRegDates">Зберегти дати</button>
-              <button class="btn btn--primary" id="btnManualOpen">MANUAL: Відкрити</button>
-              <button class="btn btn--danger" id="btnManualClose">MANUAL: Закрити</button>
-            </div>
-
-            <div id="regMsg" class="msg muted"></div>
+          <div class="stack" style="margin-top:8px;">
+            <button class="btn btn--accent" id="btnSaveRegDates">Зберегти дати</button>
+            <button class="btn btn--primary" id="btnMakeActiveFromReg">Зробити активним</button>
           </div>
         </div>
+
+        <div class="muted" id="regMsg" style="margin-top:10px;"></div>
       </div>
 
     </div>
@@ -234,16 +220,26 @@
 <script src="assets/js/firebase-init.js"></script>
 
 <script>
-  // твій UID адміна
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-
-  const BRAND = "STOLAR CARP";
+  const BRAND_DEFAULT = "STOLAR CARP";
   const KYIV_TZ = "Europe/Kyiv";
 
   const $ = (id)=>document.getElementById(id);
   const show = (el)=>el && el.classList.remove("admin-hidden");
   const hide = (el)=>el && el.classList.add("admin-hidden");
-  const setStatus = (t)=>{ const e=$("adminStatus"); if(e) e.textContent=t; };
+
+  function setStatus(t){
+    const e = $("adminStatus");
+    if(e) e.textContent = t;
+  }
+  function setError(text){
+    const e = $("adminError");
+    if(!e) return;
+    if(!text){ e.style.display="none"; e.textContent=""; return; }
+    e.style.display="block";
+    e.className = "muted err";
+    e.textContent = text;
+  }
 
   const modCreate = $("modCreate");
   const modReg    = $("modReg");
@@ -254,157 +250,135 @@
     if(name==="reg") show(modReg);
   }
 
-  function msg(el, text, type){
-    if(!el) return;
-    el.classList.remove("ok","err","muted");
-    if(type) el.classList.add(type);
-    else el.classList.add("muted");
-    el.textContent = text || "";
+  function pad2(n){ return String(n).padStart(2,"0"); }
+
+  // ----------- TIMEZONE HELPERS (Kyiv noon) -----------
+  // повертає offset в хвилинах для конкретного date у заданій TZ
+  function tzOffsetMinutes(date, timeZone){
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit",
+      hour12: false
+    });
+    const parts = dtf.formatToParts(date);
+    const map = {};
+    parts.forEach(p => { map[p.type] = p.value; });
+
+    // “локальний” час у TZ, але створюємо як UTC
+    const asUTC = Date.UTC(
+      Number(map.year),
+      Number(map.month) - 1,
+      Number(map.day),
+      Number(map.hour),
+      Number(map.minute),
+      Number(map.second)
+    );
+    return (asUTC - date.getTime()) / 60000;
   }
 
-  function toSlug(s){
-    return String(s||"")
-      .toLowerCase()
-      .trim()
-      .replace(/['"]/g,"")
-      .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
-      .replace(/-+/g,"-")
-      .replace(/^-|-$/g,"");
-  }
-
-  // ===== Kyiv 12:00 helper (Timestamp) =====
-  // беремо дату YYYY-MM-DD і робимо Timestamp на 12:00 Київ незалежно від девайсу
-  function getKyivOffsetMinutes(yyyy, mm, dd, hh=12, mi=0){
-    // пробуємо витягнути GMT+/- з Intl (працює у сучасних браузерах)
-    const dt = new Date(Date.UTC(yyyy, mm-1, dd, hh, mi, 0));
-    const fmt = new Intl.DateTimeFormat("en-US", { timeZone: KYIV_TZ, timeZoneName: "shortOffset", hour: "2-digit" });
-    const parts = fmt.formatToParts(dt);
-    const tz = (parts.find(p=>p.type==="timeZoneName")||{}).value || "";
-    // tz типу "GMT+2" або "GMT+3"
-    const m = tz.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/i);
-    if(!m) return 0;
-    const h = parseInt(m[1],10);
-    const mins = m[2] ? parseInt(m[2],10) : 0;
-    return h*60 + (h>=0 ? mins : -mins);
-  }
-
-  function kyivNoonTimestamp(dateStr){
-    if(!dateStr) return null;
-    const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  function kyivNoonToDate(dateStr){
+    // dateStr = YYYY-MM-DD
+    const m = String(dateStr||"").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if(!m) return null;
-    const Y = parseInt(m[1],10);
-    const Mo = parseInt(m[2],10);
-    const D = parseInt(m[3],10);
-    const offMin = getKyivOffsetMinutes(Y, Mo, D, 12, 0);
-    // Київ = UTC + offMin, тому UTC час = Kyiv - offset
-    const utcMs = Date.UTC(Y, Mo-1, D, 12, 0, 0) - offMin*60000;
-    return window.firebase.firestore.Timestamp.fromDate(new Date(utcMs));
+    const Y = Number(m[1]), Mo = Number(m[2]), D = Number(m[3]);
+
+    // беремо 12:00 як UTC базу і підганяємо під Kyiv offset на ту дату
+    const baseUTC = new Date(Date.UTC(Y, Mo-1, D, 12, 0, 0));
+    const offMin = tzOffsetMinutes(baseUTC, KYIV_TZ);
+    // якщо в Kyiv зараз +2/+3 — треба відняти offset, щоб отримати реальний UTC момент київських 12:00
+    return new Date(baseUTC.getTime() - offMin * 60000);
+  }
+
+  function dateToYMD_inKyiv(date){
+    if(!date) return "";
+    const dtf = new Intl.DateTimeFormat("en-CA", { timeZone: KYIV_TZ, year:"numeric", month:"2-digit", day:"2-digit" });
+    return dtf.format(date); // YYYY-MM-DD
+  }
+
+  function toTS(d){
+    return d ? window.firebase.firestore.Timestamp.fromDate(d) : null;
   }
 
   async function waitForFirebase(){
     for(let i=0;i<120;i++){
-      if(window.scAuth && window.scDb) return;
+      if(window.scAuth && window.scDb && window.firebase && window.firebase.firestore) return;
       await new Promise(r=>setTimeout(r,100));
     }
-    throw new Error("Firebase НЕ ініціалізований (scAuth / scDb)");
+    throw new Error("Firebase не ініціалізований (перевір assets/js/firebase-init.js)");
   }
 
-  function renderStageDateInputs(){
-    const type = $("inpType").value;
-    const year = $("inpYear").value.trim();
-    const wrap = $("stageDatesWrap");
+  // ----------- UI: stages calendar blocks -----------
+  function buildStagesCalendarUI({ type, stagesCount, hasFinal }, existingStages){
+    const wrap = $("stagesDatesWrap");
     if(!wrap) return;
-
-    // hide/show season-only
-    document.querySelectorAll(".only-season").forEach(el=>{
-      el.style.display = (type==="season") ? "" : "none";
-    });
-
     wrap.innerHTML = "";
 
-    if(type==="oneoff"){
-      wrap.innerHTML = `
-        <div class="stage-box">
-          <div class="stage-head">
-            <div class="pill"><b>Змагання</b></div>
+    const regMode = $("inpRegMode")?.value || "auto";
+
+    const makeStageBox = (key, title, prefill) => {
+      const openVal  = prefill?.regOpenAt ? dateToYMD_inKyiv(prefill.regOpenAt.toDate ? prefill.regOpenAt.toDate() : prefill.regOpenAt) : "";
+      const closeVal = prefill?.regCloseAt ? dateToYMD_inKyiv(prefill.regCloseAt.toDate ? prefill.regCloseAt.toDate() : prefill.regCloseAt) : "";
+
+      const box = document.createElement("div");
+      box.className = "stage-box";
+      box.innerHTML = `
+        <div class="stage-title">${title}</div>
+        <div class="grid2">
+          <div>
+            <input type="date" data-stage="${key}" data-field="open" value="${openVal}">
+            <div class="tiny">Відкриття (12:00 Київ)</div>
           </div>
-          <div class="grid-2">
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Відкриття (дата)</div>
-              <input type="date" id="date_open_main" />
-            </div>
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Закриття (дата)</div>
-              <input type="date" id="date_close_main" />
-            </div>
+          <div>
+            <input type="date" data-stage="${key}" data-field="close" value="${closeVal}">
+            <div class="tiny">Закриття (12:00 Київ)</div>
           </div>
         </div>
       `;
+      return box;
+    };
+
+    // One-off: тільки один блок "Змагання"
+    if(type === "oneoff"){
+      wrap.appendChild(makeStageBox("main", "Реєстрація на змагання", existingStages?.main));
       return;
     }
 
-    const n = parseInt($("inpStagesCount").value,10) || 3;
-    const hasFinal = $("inpHasFinal").value === "yes";
-
-    const boxes = [];
-    for(let i=1;i<=n;i++){
-      boxes.push(`
-        <div class="stage-box">
-          <div class="stage-head">
-            <div class="pill"><b>Етап ${i}</b></div>
-          </div>
-          <div class="grid-2">
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Відкриття (дата)</div>
-              <input type="date" id="date_open_stage_${i}" />
-            </div>
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Закриття (дата)</div>
-              <input type="date" id="date_close_stage_${i}" />
-            </div>
-          </div>
-        </div>
-      `);
+    // Season: stage-1..stage-N + optional final
+    for(let i=1;i<=stagesCount;i++){
+      const key = `stage-${i}`;
+      wrap.appendChild(makeStageBox(key, `Етап ${i}`, existingStages?.[key]));
     }
-
     if(hasFinal){
-      boxes.push(`
-        <div class="stage-box">
-          <div class="stage-head">
-            <div class="pill"><b>Фінал</b></div>
-          </div>
-          <div class="grid-2">
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Відкриття (дата)</div>
-              <input type="date" id="date_open_final" />
-            </div>
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Закриття (дата)</div>
-              <input type="date" id="date_close_final" />
-            </div>
-          </div>
-        </div>
-      `);
+      wrap.appendChild(makeStageBox("final", "Фінал", existingStages?.final));
     }
+  }
 
-    wrap.innerHTML = boxes.join("");
+  function readStagesDatesFromUI(){
+    const map = {};
+    document.querySelectorAll('#stagesDatesWrap input[type="date"][data-stage][data-field]').forEach(inp=>{
+      const key = inp.getAttribute("data-stage");
+      const field = inp.getAttribute("data-field");
+      map[key] = map[key] || {};
+      map[key][field] = inp.value || "";
+    });
+    return map; // {stage-1:{open:'YYYY-MM-DD',close:'YYYY-MM-DD'}, ...}
   }
 
   async function init(){
     await waitForFirebase();
-
     const auth = window.scAuth;
     const db   = window.scDb;
 
     const loginBox = $("adminLogin");
     const appBox   = $("adminApp");
     const btnLogin = $("btnAdminLogin");
-    const loginMsg = $("adminLoginMsg");
+    const msg      = $("adminLoginMsg");
 
     function showLogin(text){
       hide(appBox);
       show(loginBox);
-      loginMsg.textContent = text || "";
+      if(msg) msg.textContent = text || "";
     }
     function showApp(){
       hide(loginBox);
@@ -413,171 +387,201 @@
 
     $("btnOpenCreate").onclick = ()=>{
       openModule("create");
-      renderStageDateInputs();
     };
 
     $("btnOpenReg").onclick = async ()=>{
       openModule("reg");
-      await loadStagesList();
+      await loadCompetitionsIntoSelect();
+      await renderRegDatesEditor();
     };
-
-    // live updates for create module
-    $("inpType").addEventListener("change", renderStageDateInputs);
-    $("inpStagesCount").addEventListener("change", renderStageDateInputs);
-    $("inpHasFinal").addEventListener("change", renderStageDateInputs);
 
     if(btnLogin){
       btnLogin.onclick = async () => {
-        const email = $("admEmail").value.trim();
-        const pass  = $("admPass").value.trim();
-        if(!email || !pass){ loginMsg.textContent = "Введи email і пароль"; return; }
-        loginMsg.textContent = "Вхід…";
+        const email = ($("admEmail").value || "").trim();
+        const pass  = ($("admPass").value || "").trim();
+        if(!email || !pass){ msg.textContent = "Введи email і пароль"; return; }
+        msg.textContent = "Вхід…";
         try{ await auth.signInWithEmailAndPassword(email, pass); }
-        catch(e){ loginMsg.textContent = e?.message || "Помилка входу"; }
+        catch(e){ msg.textContent = e?.message || "Помилка входу"; }
       };
     }
 
-    auth.onAuthStateChanged(async (user) => {
-      if(!user){
-        setStatus("Потрібен вхід (адмін)");
-        showLogin("Увійди як адміністратор");
-        return;
+    // ---- dynamic form logic ----
+    function syncCreateFormVisibility(){
+      const type = $("inpType").value;
+      const isSeason = type === "season";
+      $("inpStagesCount").style.display = isSeason ? "" : "none";
+      $("inpHasFinal").style.display    = isSeason ? "" : "none";
+
+      // brand default
+      $("inpBrand").value = BRAND_DEFAULT;
+
+      const year = ($("inpYear").value || "").trim();
+      const name = $("inpName");
+      if(!name.value.trim()){
+        if(isSeason && year) name.value = `Season ${BRAND_DEFAULT} ${year}`;
       }
 
-      if(user.uid !== ADMIN_UID){
-        setStatus("Доступ заборонено ❌");
-        showLogin("Цей акаунт не має доступу");
-        return;
-      }
+      const stagesCount = Number($("inpStagesCount").value || "3");
+      const hasFinal = $("inpHasFinal").value === "yes";
+      buildStagesCalendarUI({ type, stagesCount, hasFinal }, null);
+    }
 
-      setStatus("Адмін-доступ дозволено ✅");
-      showApp();
-      openModule("create");
-      renderStageDateInputs();
-      await loadStagesList();
+    $("inpType").addEventListener("change", syncCreateFormVisibility);
+    $("inpStagesCount").addEventListener("change", syncCreateFormVisibility);
+    $("inpHasFinal").addEventListener("change", syncCreateFormVisibility);
+    $("inpYear").addEventListener("input", ()=>{
+      const type = $("inpType").value;
+      const isSeason = type === "season";
+      const year = ($("inpYear").value || "").trim();
+      const name = $("inpName");
+      if(isSeason && year && (!name.value || name.value.startsWith("Season "))){
+        name.value = `Season ${BRAND_DEFAULT} ${year}`;
+      }
     });
 
-    // ===== CREATE SAVE =====
+    // ---- auth gate ----
+    auth.onAuthStateChanged(async (user) => {
+      try{
+        setError("");
+        if(!user){
+          setStatus("Потрібен вхід (адмін)");
+          showLogin("Увійди як адміністратор");
+          return;
+        }
+        if(user.uid !== ADMIN_UID){
+          setStatus("Доступ заборонено ❌");
+          showLogin("Цей акаунт не має доступу");
+          return;
+        }
+
+        setStatus("Адмін-доступ дозволено ✅");
+        showApp();
+        openModule("create");
+        syncCreateFormVisibility();
+      }catch(e){
+        console.error(e);
+        setStatus("Помилка ❌");
+        setError(e?.message || String(e));
+      }
+    });
+
+    // ---- CREATE COMPETITION ----
     $("btnDoCreate").onclick = async ()=>{
-      const type = $("inpType").value;
-      const year = $("inpYear").value.trim();
-      const customName = $("inpName").value.trim();
-      const regMode = $("inpRegMode").value;
+      const type = $("inpType").value; // season | oneoff
+      const year = ($("inpYear").value || "").trim();
+      const brand = BRAND_DEFAULT;
+      const name = ($("inpName").value || "").trim();
+      const regMode = $("inpRegMode").value; // auto | manual
+      const stagesCount = Number($("inpStagesCount").value || "3");
+      const hasFinal = $("inpHasFinal").value === "yes";
 
-      const createMsgEl = $("createMsg");
-
-      if(!/^\d{4}$/.test(year)){
-        msg(createMsgEl, "Вкажи рік у форматі YYYY (наприклад 2026).", "err");
+      if(!year || !/^\d{4}$/.test(year)){
+        $("createMsg").textContent = "Вкажи рік (наприклад 2026).";
+        return;
+      }
+      if(!name){
+        $("createMsg").textContent = "Вкажи назву змагання.";
         return;
       }
 
-      if(type==="oneoff" && !customName){
-        msg(createMsgEl, "Для одноразового змагання введи назву (Осінній Короп / STALKER / ...).", "err");
-        return;
-      }
+      const datesMap = readStagesDatesFromUI();
 
-      let competitionId = "";
-      let title = "";
-      let stagesCount = 0;
-      let hasFinal = false;
+      // збирання stages структури
+      const stages = {};
+      const stageKeys = [];
 
-      if(type==="season"){
-        stagesCount = parseInt($("inpStagesCount").value,10) || 3;
-        hasFinal = $("inpHasFinal").value === "yes";
-        competitionId = `season-${year}`;
-        title = `Season ${BRAND} ${year}`;
+      if(type === "oneoff"){
+        stageKeys.push("main");
       }else{
-        competitionId = `event-${year}-${toSlug(customName) || "event"}`;
-        title = customName;
+        for(let i=1;i<=stagesCount;i++) stageKeys.push(`stage-${i}`);
+        if(hasFinal) stageKeys.push("final");
       }
 
-      msg(createMsgEl, "Збереження…");
+      for(const key of stageKeys){
+        const openStr  = datesMap?.[key]?.open  || "";
+        const closeStr = datesMap?.[key]?.close || "";
+
+        stages[key] = {
+          key,
+          regOpenAt: toTS(kyivNoonToDate(openStr)),
+          regCloseAt: toTS(kyivNoonToDate(closeStr)),
+          regMode,
+          manualOpen: false
+        };
+      }
+
+      // docId
+      const compId = (type === "season")
+        ? `season-${year}`
+        : `oneoff-${year}-${String(name).toLowerCase().replace(/[^a-z0-9а-яіїє\- ]/gi,"").trim().replace(/\s+/g,"-").slice(0,40)}`;
+
+      $("createMsg").textContent = "Збереження…";
 
       try{
-        // competitions/{id}
-        await db.collection("competitions").doc(competitionId).set({
-          competitionId,
-          type,                 // season | oneoff
-          brand: BRAND,         // авто
+        await db.collection("competitions").doc(compId).set({
+          compId,
+          type,              // season | oneoff
           year: Number(year),
-          title,
+          brand,
+          name,
           stagesCount: type==="season" ? stagesCount : 1,
           hasFinal: type==="season" ? hasFinal : false,
-          regMode,              // auto | manual
+          regMode,           // default
+          stages,            // map of stage configs
           updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
           createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
         }, { merge:true });
 
-        // stages (для season)
-        if(type==="season"){
-          for(let i=1;i<=stagesCount;i++){
-            const openDate = (document.getElementById(`date_open_stage_${i}`)||{}).value || "";
-            const closeDate = (document.getElementById(`date_close_stage_${i}`)||{}).value || "";
-
-            await db.collection("competitions").doc(competitionId)
-              .collection("stages").doc(`stage-${i}`)
-              .set({
-                competitionId,
-                stageId: `stage-${i}`,
-                order: i,
-                title: `Етап ${i}`,
-                regMode,
-                regOpenDate: openDate || null,
-                regCloseDate: closeDate || null,
-                regOpenAt: kyivNoonTimestamp(openDate),
-                regCloseAt: kyivNoonTimestamp(closeDate),
-                manualOpen: false,
-                updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge:true });
-          }
-
-          if(hasFinal){
-            const openDate = (document.getElementById(`date_open_final`)||{}).value || "";
-            const closeDate = (document.getElementById(`date_close_final`)||{}).value || "";
-
-            await db.collection("competitions").doc(competitionId)
-              .collection("stages").doc(`final`)
-              .set({
-                competitionId,
-                stageId: "final",
-                order: stagesCount + 1,
-                title: `Фінал`,
-                regMode,
-                regOpenDate: openDate || null,
-                regCloseDate: closeDate || null,
-                regOpenAt: kyivNoonTimestamp(openDate),
-                regCloseAt: kyivNoonTimestamp(closeDate),
-                manualOpen: false,
-                updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-              }, { merge:true });
-          }
-        }else{
-          // oneoff stage doc = main
-          const openDate = (document.getElementById(`date_open_main`)||{}).value || "";
-          const closeDate = (document.getElementById(`date_close_main`)||{}).value || "";
-
-          await db.collection("competitions").doc(competitionId)
-            .collection("stages").doc(`main`)
-            .set({
-              competitionId,
-              stageId: "main",
-              order: 1,
-              title,
-              regMode,
-              regOpenDate: openDate || null,
-              regCloseDate: closeDate || null,
-              regOpenAt: kyivNoonTimestamp(openDate),
-              regCloseAt: kyivNoonTimestamp(closeDate),
-              manualOpen: false,
-              updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-              createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge:true });
-        }
-
-        msg(createMsgEl, `✅ Збережено: ${competitionId}`, "ok");
-        await loadStagesList(true);
+        $("createMsg").innerHTML = `<span class="ok">✅ Збережено:</span> ${compId}`;
+        await loadCompetitionsIntoSelect();
       }catch(e){
         console.error(e);
-        msg(createMsgEl, "❌ Помилка: " + (e.message || e), "
+        $("createMsg").innerHTML = `<span class="err">❌ Помилка:</span> ${e?.message || e}`;
+      }
+    };
+
+    $("btnSetActive").onclick = async ()=>{
+      const type = $("inpType").value;
+      const year = ($("inpYear").value || "").trim();
+      const name = ($("inpName").value || "").trim();
+      if(!year){ $("createMsg").textContent = "Спочатку вкажи рік/збережи змагання."; return; }
+
+      const compId = (type === "season")
+        ? `season-${year}`
+        : `oneoff-${year}-${String(name).toLowerCase().replace(/[^a-z0-9а-яіїє\- ]/gi,"").trim().replace(/\s+/g,"-").slice(0,40)}`;
+
+      $("createMsg").textContent = "Оновлення settings/app…";
+      try{
+        await db.collection("settings").doc("app").set({
+          activeCompetitionId: compId,
+          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+        $("createMsg").innerHTML = `<span class="ok">✅ Активне змагання:</span> ${compId}`;
+      }catch(e){
+        console.error(e);
+        $("createMsg").innerHTML = `<span class="err">❌ Помилка:</span> ${e?.message || e}`;
+      }
+    };
+
+    // ---- REG DATES EDITOR ----
+    $("selComp").addEventListener("change", async ()=>{
+      await renderRegDatesEditor();
+    });
+
+    $("btnSaveRegDates").onclick = async ()=>{
+      const compId = $("selComp").value || "";
+      if(!compId){ $("regMsg").textContent = "Нема вибраного змагання."; return; }
+
+      const editor = $("regDatesEditor");
+      const inputs = editor.querySelectorAll('input[type="date"][data-stage][data-field]');
+      const patchStages = {};
+
+      inputs.forEach(inp=>{
+        const key = inp.getAttribute("data-stage");
+        const field = inp.getAttribute("data-field"); // open|close
+        patchStages[key] = patchStages[key] || {};
+        patchStages[key][field] = inp.value || "";
+      });
+
+      // convert to timestamps

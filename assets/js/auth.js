@@ -17,18 +17,17 @@
       if (window.scAuth && window.scDb) return;
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір SDK та firebase-init.js");
   }
 
   function genJoinCode(len = 6) {
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // без плутаних I O 0 1
+    const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     let out = "";
     for (let i = 0; i < len; i++) out += chars[Math.floor(Math.random() * chars.length)];
     return out;
   }
 
   async function createTeam(db, name, ownerUid) {
-    // робимо унікальний joinCode (кілька спроб)
     for (let i = 0; i < 8; i++) {
       const joinCode = genJoinCode(6);
       const exists = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
@@ -38,7 +37,7 @@
         name: name || "Команда",
         ownerUid,
         joinCode,
-        createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date()
+        createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
       });
 
       return { teamId: ref.id, joinCode };
@@ -47,44 +46,59 @@
   }
 
   async function findTeamByJoinCode(db, code) {
-    const snap = await db.collection("teams").where("joinCode", "==", String(code || "").trim().toUpperCase()).limit(1).get();
+    const snap = await db
+      .collection("teams")
+      .where("joinCode", "==", String(code || "").trim().toUpperCase())
+      .limit(1)
+      .get();
+
     if (snap.empty) return null;
     const doc = snap.docs[0];
     return { teamId: doc.id, ...doc.data() };
   }
 
+  // ✅ ГОЛОВНЕ: куди перекидаємо після входу
+  // - звичайний сценарій (кнопка "Увійти") -> cabinet.html
+  // - якщо людина зайшла з admin.html, то admin.html ставить прапорець sc_admin_intent=1
   function redirectAfterAuth(user) {
     if (!user) return;
-    if (user.uid === ADMIN_UID) {
-      location.href = "admin.html";
-    } else {
-      location.href = "cabinet.html";
+
+    const wantAdmin = sessionStorage.getItem("sc_admin_intent") === "1";
+
+    // якщо це адмін і він реально зайшов через адмінку — залишаємо в адмінці
+    if (wantAdmin && user.uid === ADMIN_UID) {
+      location.href = "/admin.html";
+      return;
     }
+
+    // ✅ УСІ ІНШІ (і навіть адмін, якщо зайшов як звичайний користувач) -> кабінет
+    location.href = "/cabinet.html";
   }
 
   async function ensureUserDoc(db, user, data) {
     const ref = db.collection("users").doc(user.uid);
     const snap = await ref.get();
+
     if (!snap.exists) {
       await ref.set({
         fullName: data.fullName || "",
         email: data.email || user.email || "",
         phone: data.phone || "",
         city: data.city || "",
-        role: data.role || "member",      // member/captain/judge/admin
+        role: data.role || "member",
         teamId: data.teamId || null,
         createdAt: window.firebase?.firestore?.FieldValue?.serverTimestamp?.() || new Date(),
-        avatarUrl: ""
+        avatarUrl: "",
       });
     } else {
-      // мінімально оновимо поля, якщо порожні
+      // НЕ чіпаємо роль адміна/судді, якщо вона вже є
       const cur = snap.data() || {};
       const patch = {};
       if (!cur.fullName && data.fullName) patch.fullName = data.fullName;
       if (!cur.phone && data.phone) patch.phone = data.phone;
       if (!cur.city && data.city) patch.city = data.city;
-      if (!cur.role && data.role) patch.role = data.role;
       if ((cur.teamId == null) && data.teamId) patch.teamId = data.teamId;
+      if (!cur.role && data.role) patch.role = data.role;
       if (Object.keys(patch).length) await ref.update(patch);
     }
   }
@@ -92,14 +106,12 @@
   async function setUserTeamAndRole(db, uid, teamId, role) {
     await db.collection("users").doc(uid).update({
       teamId: teamId || null,
-      role: role || "member"
+      role: role || "member",
     });
   }
 
-  // ====== INIT UI (tabs already handled in HTML) ======
   const signupForm = $("signupForm");
   const loginForm = $("loginForm");
-
   const signupMsg = $("signupMsg");
   const loginMsg = $("loginMsg");
 
@@ -118,7 +130,6 @@
     const city = ($("signupCity")?.value || "").trim();
 
     const role = (document.querySelector('input[name="signupRole"]:checked')?.value || "captain").trim();
-
     const teamName = ($("signupTeamName")?.value || "").trim();
     const joinCode = ($("signupJoinCode")?.value || "").trim();
 
@@ -134,10 +145,8 @@
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
-      // створюємо профіль користувача
       await ensureUserDoc(db, user, { fullName, email, phone, city, role, teamId: null });
 
-      // якщо капітан — створюємо команду
       if (role === "captain") {
         if (!teamName) {
           setMsg(signupMsg, "Для капітана потрібна назва команди.", "err");
@@ -146,19 +155,17 @@
         setMsg(signupMsg, "Створюю команду…", "");
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
-        setMsg(signupMsg, `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}`, "ok");
-        // невелика пауза, щоб прочитав
+        setMsg(signupMsg, `Готово ✅ Команда створена. Код: ${team.joinCode}`, "ok");
         setTimeout(() => redirectAfterAuth(user), 600);
         return;
       }
 
-      // якщо учасник — приєднуємося по коду
       if (role === "member") {
         if (!joinCode) {
           setMsg(signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
           return;
         }
-        setMsg(signupMsg, "Шукаю команду по коду…", "");
+        setMsg(signupMsg, "Шукаю команду…", "");
         const team = await findTeamByJoinCode(db, joinCode);
         if (!team) {
           setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
@@ -170,7 +177,6 @@
         return;
       }
 
-      // інші ролі (на майбутнє)
       setMsg(signupMsg, "Акаунт створено ✅", "ok");
       setTimeout(() => redirectAfterAuth(user), 600);
     } catch (err) {
@@ -211,11 +217,11 @@
     }
   }
 
-  // підв’язка
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // якщо вже залогінений — одразу перекидаємо
+  // ✅ Автоперекид тільки на сторінці акаунта/логіну:
+  // якщо користувач вже залогінений — в кабінет (або в адмінку якщо прийшов з admin.html)
   (async () => {
     try {
       await waitFirebase();

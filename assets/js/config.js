@@ -1,24 +1,32 @@
 /* STOLAR CARP config — shared JS across pages (helpers only, NO Firebase init) */
 (function () {
+  "use strict";
+
   /* =========================
-     Header / favicon
+     Header / burger
      ========================= */
   const burger = document.getElementById("burger");
   const nav = document.getElementById("nav");
-  if (burger && nav) burger.addEventListener("click", () => nav.classList.toggle("open"));
+  if (burger && nav) {
+    burger.addEventListener("click", () => nav.classList.toggle("open"));
+  }
 
+  /* =========================
+     Inject favicon & theme meta (once)
+     ========================= */
   (function injectIcons() {
     const head = document.head;
+    if (!head) return;
+
     const addLink = (rel, href, type) => {
-      if (!head.querySelector(`link[rel="${rel}"]`)) {
-        const l = document.createElement("link");
-        l.rel = rel;
-        l.href = href;
-        if (type) showType(l, type);
-        head.appendChild(l);
-      }
+      if (head.querySelector(`link[rel="${rel}"]`)) return;
+      const l = document.createElement("link");
+      l.rel = rel;
+      l.href = href;
+      if (type) l.type = type;
+      head.appendChild(l);
     };
-    function showType(linkEl, type) { linkEl.type = type; }
+
     const addMeta = (name, content) => {
       let m = head.querySelector(`meta[name="${name}"]`);
       if (!m) {
@@ -28,6 +36,7 @@
       }
       m.setAttribute("content", content);
     };
+
     addLink("icon", "assets/favicon.png", "image/png");
     addLink("apple-touch-icon", "assets/favicon.png");
     addMeta("theme-color", "#1a1a1a");
@@ -49,6 +58,7 @@
       .replace(/\r/g, "")
       .split("\n")
       .filter((l) => l.trim().length);
+
     return lines.map((line) => {
       const sep = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
       return line.split(sep).map((c) => c.trim().replace(/^"(.*)"$/, "$1"));
@@ -56,16 +66,16 @@
   }
 
   function toNum(x) {
-    const v = (x || "").toString().replace(",", ".").replace(/\s+/g, "");
+    const v = String(x || "").replace(",", ".").replace(/\s+/g, "");
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
   }
   const kg = (v) => toNum(v).toFixed(3);
 
   /* =========================
-     LIVE PAGE
+     LIVE PAGE (optional)
      ========================= */
-  (function () {
+  (function livePage() {
     const paste = document.getElementById("csv-paste");
     const renderBtn = document.getElementById("render-csv");
     const liveBody = document.getElementById("live-body");
@@ -76,12 +86,14 @@
     const statusDot = document.getElementById("statusDot");
     let autoTimer = null;
 
+    if (!paste && !renderBtn && !liveBody && !csvUrlInput && !fetchBtn && !autoToggle) return;
+
     const setStatus = (type, text) => {
       if (!statusText || !statusDot) return;
       statusDot.classList.remove("ok", "err");
       if (type === "ok") statusDot.classList.add("ok");
       if (type === "err") statusDot.classList.add("err");
-      statusText.textContent = text;
+      statusText.textContent = text || "";
     };
 
     const renderLiveTable = (rows) => {
@@ -133,12 +145,10 @@
 
     if (autoToggle && csvUrlInput) {
       autoToggle.addEventListener("change", async (e) => {
-        const on = e.target.checked;
+        const on = !!e.target.checked;
         localStorage.setItem("live_auto", on ? "1" : "0");
-        if (autoTimer) {
-          clearInterval(autoTimer);
-          autoTimer = null;
-        }
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = null;
         if (on) {
           await tick();
           autoTimer = setInterval(tick, 60000);
@@ -157,9 +167,9 @@
   })();
 
   /* =========================
-     RATING + AWARDS
+     RATING + AWARDS (optional)
      ========================= */
-  (function () {
+  (function ratingAwards() {
     const rateCSV = document.getElementById("rating-csv");
     const calcBtn = document.getElementById("calc-awards");
     const topLake = document.getElementById("top-lake");
@@ -183,9 +193,7 @@
       const winners = ["A", "B", "C"].map((z) => byZ[z][0]).filter(Boolean);
       winners.sort((a, b) => b.weight - a.weight);
       topLake.innerHTML = winners.length
-        ? winners
-            .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
-            .join("")
+        ? winners.map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join("")
         : `<tr><td colspan="3">Немає даних</td></tr>`;
     };
 
@@ -196,9 +204,7 @@
           const arr = byZ[z];
           const awards = [arr[1], arr[2], arr[3]].filter(Boolean);
           const rows = awards.length
-            ? awards
-                .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
-                .join("")
+            ? awards.map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join("")
             : '<tr><td colspan="3">Недостатньо даних</td></tr>';
           return `
             <div class="card">
@@ -231,7 +237,7 @@
   /* =========================
      AUTO REGISTRATION WINDOWS (turnir-2026.html)
      ========================= */
-  (function () {
+  (function autoRegButtons() {
     const stagesWrap = document.getElementById("stages");
     if (!stagesWrap) return;
 
@@ -248,9 +254,7 @@
 
       let regBtn = card.querySelector("[data-reg]");
       if (!regBtn) {
-        const btns =
-          card.querySelector(".btns") ||
-          card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
+        const btns = card.querySelector(".btns") || card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
         regBtn = document.createElement("a");
         regBtn.className = "btn btn--primary";
         regBtn.setAttribute("data-reg", "");

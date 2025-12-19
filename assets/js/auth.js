@@ -24,13 +24,72 @@
     location.href = "cabinet.html";
   }
 
-  // ✅ дозволяє НЕ редіректити з auth.html, якщо ти спеціально відкрив сторінку
-  // приклад: auth.html?stay=1
-  function shouldStayOnAuth() {
-    const p = new URLSearchParams(location.search);
-    return p.get("stay") === "1";
+  // ---------- UI: панель “вже увійшли” (створюється автоматично, HTML міняти НЕ треба)
+  function ensureSignedInBar() {
+    let bar = document.getElementById("signedInBar");
+    if (bar) return bar;
+
+    bar = document.createElement("div");
+    bar.id = "signedInBar";
+    bar.style.margin = "12px 0";
+    bar.style.padding = "12px";
+    bar.style.borderRadius = "14px";
+    bar.style.border = "1px solid rgba(148,163,184,.35)";
+    bar.style.background = "rgba(15,23,42,.9)";
+    bar.style.display = "none";
+
+    bar.innerHTML = `
+      <div style="font-weight:800; margin-bottom:6px;">Ви вже увійшли</div>
+      <div id="signedInText" style="color:#9ca3af; font-size:.9rem; margin-bottom:10px;"></div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button id="btnGoCabinet" class="btn btn--primary" type="button">Перейти в кабінет</button>
+        <button id="btnLogout" class="btn btn--danger" type="button">Вийти</button>
+      </div>
+      <div style="color:#6b7280; font-size:.85rem; margin-top:10px;">
+        Якщо хочеш зареєструвати інший акаунт (капітан/учасник) — натисни “Вийти”.
+      </div>
+    `;
+
+    // вставляємо вгору сторінки (перед формами)
+    const host =
+      document.querySelector("main") ||
+      document.querySelector(".main") ||
+      document.body;
+    host.insertBefore(bar, host.firstChild);
+
+    return bar;
   }
 
+  function showBar(user) {
+    const bar = ensureSignedInBar();
+    const t = document.getElementById("signedInText");
+    const email = user?.email || "—";
+    if (t) t.textContent = `Поточний акаунт: ${email}`;
+    bar.style.display = "block";
+
+    const btnGo = document.getElementById("btnGoCabinet");
+    const btnOut = document.getElementById("btnLogout");
+
+    if (btnGo) btnGo.onclick = () => goCabinet();
+    if (btnOut) btnOut.onclick = async () => {
+      try {
+        await window.scAuth.signOut();
+        // після виходу сховаємо панель і покажемо форми
+        bar.style.display = "none";
+        const wrap = document.getElementById("authWrap");
+        if (wrap) wrap.style.display = "block";
+      } catch (e) {
+        alert("Не вдалося вийти з акаунта.");
+      }
+    };
+  }
+
+  function hideBar() {
+    const bar = document.getElementById("signedInBar");
+    if (bar) bar.style.display = "none";
+  }
+
+  // ---------- TEAM helpers (як у тебе було)
   function genJoinCode(len = 6) {
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     let out = "";
@@ -73,7 +132,7 @@
       email: data.email || "",
       phone: data.phone || "",
       city: data.city || "",
-      role: data.role || "member", // member/captain/judge/admin
+      role: data.role || "member",
       teamId: data.teamId || null,
       avatarUrl: "",
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
@@ -84,7 +143,6 @@
       return;
     }
 
-    // м'яке оновлення
     const cur = snap.data() || {};
     const patch = {};
     if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
@@ -111,29 +169,12 @@
     );
   }
 
-  // ---------- UI refs ----------
+  // ---------- Forms
   const signupForm = $("signupForm");
   const loginForm = $("loginForm");
   const signupMsg = $("signupMsg");
   const loginMsg = $("loginMsg");
 
-  const alreadyBox = $("alreadyBox");
-  const alreadyEmail = $("alreadyEmail");
-  const btnGoCabinet = $("btnGoCabinet");
-  const btnLogout = $("btnLogout");
-
-  function showAlready(user) {
-    if (!alreadyBox) return;
-    alreadyBox.style.display = "block";
-    if (alreadyEmail) alreadyEmail.textContent = user?.email ? `Email: ${user.email}` : "";
-  }
-
-  function hideAlready() {
-    if (!alreadyBox) return;
-    alreadyBox.style.display = "none";
-  }
-
-  // ---------- signup ----------
   async function onSignup(e) {
     e.preventDefault();
     setMsg(signupMsg, "", "");
@@ -206,7 +247,6 @@
     }
   }
 
-  // ---------- login ----------
   async function onLogin(e) {
     e.preventDefault();
     setMsg(loginMsg, "", "");
@@ -240,41 +280,23 @@
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // ---------- already logged in behavior ----------
+  // ---------- ВАЖЛИВО: більше НЕ перекидаємо автоматично з auth.html
   (async () => {
     try {
       await waitFirebase();
-      const auth = window.scAuth;
 
-      if (btnGoCabinet) btnGoCabinet.onclick = goCabinet;
-      if (btnLogout) {
-        btnLogout.onclick = async () => {
-          try {
-            btnLogout.disabled = true;
-            await auth.signOut();
-            hideAlready();
-            setMsg(loginMsg, "Ви вийшли. Тепер можна реєструвати новий акаунт.", "ok");
-            setMsg(signupMsg, "", "");
-          } catch (e) {
-            console.error(e);
-            setMsg(loginMsg, "Не вдалося вийти з акаунта.", "err");
-          } finally {
-            btnLogout.disabled = false;
-          }
-        };
-      }
+      // (необов'язково) якщо на сторінці є обгортка форм — ми можемо ховати її, коли user уже залогінений
+      // якщо її нема — нічого страшного, все працює
+      const maybeWrap = document.getElementById("authWrap");
 
-      auth.onAuthStateChanged((u) => {
+      window.scAuth.onAuthStateChanged((u) => {
         if (u) {
-          // ✅ якщо хочеш лишитись на auth.html (тест/нова реєстрація) — відкрий auth.html?stay=1
-          if (shouldStayOnAuth()) {
-            showAlready(u);
-            return;
-          }
-          // стандартно — кидаємо в кабінет
-          goCabinet();
+          // користувач вже в системі: показати панель і (за бажання) сховати форми
+          showBar(u);
+          if (maybeWrap) maybeWrap.style.display = "none";
         } else {
-          hideAlready();
+          hideBar();
+          if (maybeWrap) maybeWrap.style.display = "block";
         }
       });
     } catch (e) {

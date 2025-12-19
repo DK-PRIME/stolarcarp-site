@@ -18,18 +18,7 @@
       if (window.scAuth && window.scDb) return;
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір firebase-init.js та підключення compat SDK.");
-  }
-
-  function redirectAfterAuth(user) {
-    if (!user) return;
-    // ✅ Ти (адмін) — в адмінку
-    if (user.uid === ADMIN_UID) {
-      location.href = "admin.html";
-      return;
-    }
-    // ✅ Всі інші — в кабінет
-    location.href = "cabinet.html";
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
   }
 
   function genJoinCode(len = 6) {
@@ -69,15 +58,12 @@
     const ref = db.collection("users").doc(uid);
     const snap = await ref.get();
 
-    // ✅ ВАЖЛИВО: якщо це адмін UID — роль не затираємо “member”
-    const roleToSave = (uid === ADMIN_UID) ? "admin" : (data.role || "member");
-
     const base = {
       fullName: data.fullName || "",
       email: data.email || "",
       phone: data.phone || "",
       city: data.city || "",
-      role: roleToSave,           // member/captain/judge/admin
+      role: data.role || "member", // member/captain/judge/admin
       teamId: data.teamId || null,
       avatarUrl: "",
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
@@ -88,19 +74,14 @@
       return;
     }
 
-    // м’яке оновлення
     const cur = snap.data() || {};
     const patch = {};
-
-    // ✅ Адміну нічого “переписувати” не треба
-    if (uid !== ADMIN_UID) {
-      if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
-      if (!cur.email && base.email) patch.email = base.email;
-      if (!cur.phone && base.phone) patch.phone = base.phone;
-      if (!cur.city && base.city) patch.city = base.city;
-      if (cur.teamId == null && base.teamId) patch.teamId = base.teamId;
-      if (!cur.role && base.role) patch.role = base.role;
-    }
+    if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
+    if (!cur.email && base.email) patch.email = base.email;
+    if (!cur.phone && base.phone) patch.phone = base.phone;
+    if (!cur.city && base.city) patch.city = base.city;
+    if (cur.teamId == null && base.teamId) patch.teamId = base.teamId;
+    if (!cur.role && base.role) patch.role = base.role;
 
     if (Object.keys(patch).length) {
       patch.updatedAt = window.firebase.firestore.FieldValue.serverTimestamp();
@@ -109,16 +90,25 @@
   }
 
   async function setUserTeamAndRole(db, uid, teamId, role) {
-    // ✅ Адміна не чіпаємо
-    if (uid === ADMIN_UID) return;
-
-    await db.collection("users").doc(uid).set({
-      teamId: teamId || null,
-      role: role || "member",
-      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    await db.collection("users").doc(uid).set(
+      {
+        teamId: teamId || null,
+        role: role || "member",
+        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+      },
+      { merge: true }
+    );
   }
 
+  function goCabinet() {
+    location.href = "cabinet.html";
+  }
+
+  function goHome() {
+    location.href = "index.html";
+  }
+
+  // ====== UI refs ======
   const signupForm = $("signupForm");
   const loginForm = $("loginForm");
   const signupMsg = $("signupMsg");
@@ -147,6 +137,12 @@
       return;
     }
 
+    // ⛔ важливо: з auth.html НЕ дозволяємо створювати адміна випадково
+    if (role === "admin" || role === "judge") {
+      setMsg(signupMsg, "Ці ролі створюються тільки адміністратором.", "err");
+      return;
+    }
+
     try {
       $("signupBtn") && ($("signupBtn").disabled = true);
       setMsg(signupMsg, "Створюю акаунт…", "");
@@ -154,14 +150,14 @@
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
-      await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
-
-      // ✅ Якщо випадково зареєструвався адмін — просто перекидаємо в адмінку
-      if (user.uid === ADMIN_UID) {
-        setMsg(signupMsg, "Адмін акаунт ✅", "ok");
-        setTimeout(() => redirectAfterAuth(user), 400);
+      // ⛔ якщо раптом це твій адмін-email (помилково) — виводимо з auth.html
+      if (user && user.uid === ADMIN_UID) {
+        setMsg(signupMsg, "Це адмін-акаунт. Вхід у адмінку тільки через © на головній.", "err");
+        setTimeout(goHome, 900);
         return;
       }
+
+      await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
       if (role === "captain") {
         if (!teamName) {
@@ -172,7 +168,7 @@
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
         setMsg(signupMsg, `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}`, "ok");
-        setTimeout(() => redirectAfterAuth(user), 600);
+        setTimeout(goCabinet, 600);
         return;
       }
 
@@ -189,13 +185,12 @@
         }
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
         setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
-        setTimeout(() => redirectAfterAuth(user), 600);
+        setTimeout(goCabinet, 600);
         return;
       }
 
       setMsg(signupMsg, "Акаунт створено ✅", "ok");
-      setTimeout(() => redirectAfterAuth(user), 600);
-
+      setTimeout(goCabinet, 600);
     } catch (err) {
       console.error(err);
       setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
@@ -224,9 +219,16 @@
       setMsg(loginMsg, "Вхід…", "");
 
       const cred = await auth.signInWithEmailAndPassword(email, pass);
-      setMsg(loginMsg, "Готово ✅", "ok");
-      setTimeout(() => redirectAfterAuth(cred.user), 300);
 
+      // ⛔ адмін НЕ заходить через auth.html
+      if (cred?.user?.uid === ADMIN_UID) {
+        setMsg(loginMsg, "Адмін входить тільки через © на головній.", "err");
+        setTimeout(goHome, 900);
+        return;
+      }
+
+      setMsg(loginMsg, "Готово ✅", "ok");
+      setTimeout(goCabinet, 300);
     } catch (err) {
       console.error(err);
       setMsg(loginMsg, err?.message || "Помилка входу", "err");
@@ -238,12 +240,21 @@
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // ✅ Якщо вже залогінений — одразу кидаємо куди треба (адмін/кабінет)
+  // ✅ якщо вже залогінений:
+  // - учасник → кабінет
+  // - адмін → на головну (адмінка тільки через ©)
   (async () => {
     try {
       await waitFirebase();
       window.scAuth.onAuthStateChanged((u) => {
-        if (u) redirectAfterAuth(u);
+        if (!u) return;
+        if (u.uid === ADMIN_UID) {
+          if (loginMsg) setMsg(loginMsg, "Адмін входить тільки через © на головній.", "err");
+          if (signupMsg) setMsg(signupMsg, "Адмін входить тільки через © на головній.", "err");
+          setTimeout(goHome, 700);
+          return;
+        }
+        goCabinet();
       });
     } catch (e) {
       console.warn(e);

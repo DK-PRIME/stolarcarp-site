@@ -2,7 +2,6 @@
 (function () {
   "use strict";
 
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const $ = (id) => document.getElementById(id);
 
   function setMsg(el, text, type) {
@@ -19,6 +18,17 @@
       await new Promise((r) => setTimeout(r, 100));
     }
     throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
+  }
+
+  function goCabinet() {
+    location.href = "cabinet.html";
+  }
+
+  // ✅ дозволяє НЕ редіректити з auth.html, якщо ти спеціально відкрив сторінку
+  // приклад: auth.html?stay=1
+  function shouldStayOnAuth() {
+    const p = new URLSearchParams(location.search);
+    return p.get("stay") === "1";
   }
 
   function genJoinCode(len = 6) {
@@ -74,6 +84,7 @@
       return;
     }
 
+    // м'яке оновлення
     const cur = snap.data() || {};
     const patch = {};
     if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
@@ -100,20 +111,29 @@
     );
   }
 
-  function goCabinet() {
-    location.href = "cabinet.html";
-  }
-
-  function goHome() {
-    location.href = "index.html";
-  }
-
-  // ====== UI refs ======
+  // ---------- UI refs ----------
   const signupForm = $("signupForm");
   const loginForm = $("loginForm");
   const signupMsg = $("signupMsg");
   const loginMsg = $("loginMsg");
 
+  const alreadyBox = $("alreadyBox");
+  const alreadyEmail = $("alreadyEmail");
+  const btnGoCabinet = $("btnGoCabinet");
+  const btnLogout = $("btnLogout");
+
+  function showAlready(user) {
+    if (!alreadyBox) return;
+    alreadyBox.style.display = "block";
+    if (alreadyEmail) alreadyEmail.textContent = user?.email ? `Email: ${user.email}` : "";
+  }
+
+  function hideAlready() {
+    if (!alreadyBox) return;
+    alreadyBox.style.display = "none";
+  }
+
+  // ---------- signup ----------
   async function onSignup(e) {
     e.preventDefault();
     setMsg(signupMsg, "", "");
@@ -137,25 +157,12 @@
       return;
     }
 
-    // ⛔ важливо: з auth.html НЕ дозволяємо створювати адміна випадково
-    if (role === "admin" || role === "judge") {
-      setMsg(signupMsg, "Ці ролі створюються тільки адміністратором.", "err");
-      return;
-    }
-
     try {
       $("signupBtn") && ($("signupBtn").disabled = true);
       setMsg(signupMsg, "Створюю акаунт…", "");
 
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
-
-      // ⛔ якщо раптом це твій адмін-email (помилково) — виводимо з auth.html
-      if (user && user.uid === ADMIN_UID) {
-        setMsg(signupMsg, "Це адмін-акаунт. Вхід у адмінку тільки через © на головній.", "err");
-        setTimeout(goHome, 900);
-        return;
-      }
 
       await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
@@ -199,6 +206,7 @@
     }
   }
 
+  // ---------- login ----------
   async function onLogin(e) {
     e.preventDefault();
     setMsg(loginMsg, "", "");
@@ -218,15 +226,7 @@
       $("loginBtn") && ($("loginBtn").disabled = true);
       setMsg(loginMsg, "Вхід…", "");
 
-      const cred = await auth.signInWithEmailAndPassword(email, pass);
-
-      // ⛔ адмін НЕ заходить через auth.html
-      if (cred?.user?.uid === ADMIN_UID) {
-        setMsg(loginMsg, "Адмін входить тільки через © на головній.", "err");
-        setTimeout(goHome, 900);
-        return;
-      }
-
+      await auth.signInWithEmailAndPassword(email, pass);
       setMsg(loginMsg, "Готово ✅", "ok");
       setTimeout(goCabinet, 300);
     } catch (err) {
@@ -240,21 +240,42 @@
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // ✅ якщо вже залогінений:
-  // - учасник → кабінет
-  // - адмін → на головну (адмінка тільки через ©)
+  // ---------- already logged in behavior ----------
   (async () => {
     try {
       await waitFirebase();
-      window.scAuth.onAuthStateChanged((u) => {
-        if (!u) return;
-        if (u.uid === ADMIN_UID) {
-          if (loginMsg) setMsg(loginMsg, "Адмін входить тільки через © на головній.", "err");
-          if (signupMsg) setMsg(signupMsg, "Адмін входить тільки через © на головній.", "err");
-          setTimeout(goHome, 700);
-          return;
+      const auth = window.scAuth;
+
+      if (btnGoCabinet) btnGoCabinet.onclick = goCabinet;
+      if (btnLogout) {
+        btnLogout.onclick = async () => {
+          try {
+            btnLogout.disabled = true;
+            await auth.signOut();
+            hideAlready();
+            setMsg(loginMsg, "Ви вийшли. Тепер можна реєструвати новий акаунт.", "ok");
+            setMsg(signupMsg, "", "");
+          } catch (e) {
+            console.error(e);
+            setMsg(loginMsg, "Не вдалося вийти з акаунта.", "err");
+          } finally {
+            btnLogout.disabled = false;
+          }
+        };
+      }
+
+      auth.onAuthStateChanged((u) => {
+        if (u) {
+          // ✅ якщо хочеш лишитись на auth.html (тест/нова реєстрація) — відкрий auth.html?stay=1
+          if (shouldStayOnAuth()) {
+            showAlready(u);
+            return;
+          }
+          // стандартно — кидаємо в кабінет
+          goCabinet();
+        } else {
+          hideAlready();
         }
-        goCabinet();
       });
     } catch (e) {
       console.warn(e);

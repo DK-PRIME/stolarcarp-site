@@ -10,47 +10,24 @@
     measurementId: "G-VWC07QNS7P"
   };
 
-  function fail(msg, err) {
-    console.error("[firebase-init]", msg, err || "");
-    window.scFirebaseInitError = msg + (err?.message ? (": " + err.message) : "");
-  }
-
-  try {
-    if (typeof window.firebase === "undefined") {
-      fail("Firebase SDK (compat) не підключений. Перевір firebase-*-compat.js у HTML.");
+  function init() {
+    if (!window.firebase) {
+      console.warn("Firebase compat SDK не підключений на сторінці.");
       return;
     }
 
-    // init app (один раз)
     if (!window.firebase.apps || !window.firebase.apps.length) {
       window.firebase.initializeApp(firebaseConfig);
     }
 
-    // auth
-    try {
-      window.scAuth = window.firebase.auth();
-    } catch (e) {
-      fail("Не підключений firebase-auth-compat.js", e);
-    }
+    // глобальні хендли (єдина схема, як ми домовлялись)
+    window.scAuth = window.firebase.auth();
+    window.scDb = window.firebase.firestore();
 
-    // firestore
-    try {
-      window.scDb = window.firebase.firestore();
-      // (опційно) щоб не було сюрпризів з офлайном на мобільному:
-      // window.scDb.enablePersistence({ synchronizeTabs: true }).catch(()=>{});
-    } catch (e) {
-      fail("Не підключений firebase-firestore-compat.js", e);
-    }
-
-    // storage (не критично для адмінки)
     try {
       window.scStorage = window.firebase.storage();
-    } catch (e) {}
-
-    // сигнал “готово”
-    window.dispatchEvent(new Event("sc-firebase-ready"));
-    console.log("[firebase-init] OK");
-  } catch (e) {
-    fail("Критична помилка ініту", e);
+    } catch (_) {}
   }
+
+  init();
 })();

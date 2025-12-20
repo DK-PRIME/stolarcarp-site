@@ -1,7 +1,6 @@
 // assets/js/register_firebase.js
-// Показує всі змагання/етапи з Firestore (collection: competitions)
-// Дозволяє подати заявку тільки на ВІДКРИТЕ змагання/етап
-// Запис у collection: registrations
+// STOLAR CARP — Registration (competitions/events)
+// shows competitions + stages, allows submit only if registration open
 
 (function () {
   const auth = window.scAuth;
@@ -18,7 +17,6 @@
   const profileSummary = document.getElementById("profileSummary");
   const copyCardBtn    = document.getElementById("copyCard");
   const cardNumEl      = document.getElementById("cardNum");
-  const rulesCb        = document.getElementById("rules");
 
   if (!auth || !db || !window.firebase) {
     if (eventOptionsEl) {
@@ -31,7 +29,6 @@
 
   let currentUser = null;
   let profile = null;
-  let lastItems = [];
 
   function setMsg(text, ok = true) {
     if (!msgEl) return;
@@ -42,6 +39,7 @@
 
   function setLoading(v) {
     if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
+    // submitBtn керуємо окремо нижче (бо є логіка “є відкриті/нема”)
   }
 
   function fmtDate(d) {
@@ -51,70 +49,51 @@
 
   function toDateMaybe(x) {
     if (!x) return null;
-    try {
-      if (x instanceof Date) return x;
-      if (typeof x === "string") return new Date(x);
-      if (x && typeof x.toDate === "function") return x.toDate(); // Timestamp
-    } catch {}
+
+    // Firestore Timestamp
+    if (x && typeof x.toDate === "function") return x.toDate();
+
+    // ISO string "2026-04-17" (як у тебе) — ставимо 12:00 локально, щоб вікно не “плавало”
+    if (typeof x === "string") {
+      const s = x.trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T12:00:00`);
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    if (x instanceof Date) return x;
     return null;
   }
 
-  function nowKyiv() {
+  function nowLocal() {
     return new Date();
   }
 
   function isOpenWindow(item) {
-    const mode = (item.regMode || "auto").toLowerCase();
+    // regMode: "auto" (by dates) or "manual" (manualOpen)
+    const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
 
     const openAt  = toDateMaybe(item.regOpenAt);
     const closeAt = toDateMaybe(item.regCloseAt);
     if (!openAt || !closeAt) return false;
 
-    const n = nowKyiv();
+    const n = nowLocal();
     return n >= openAt && n <= closeAt;
   }
 
-  // -------- UI state: submit enable/disable --------
-  function getPickedValue() {
-    return document.querySelector('input[name="stagePick"]:checked')?.value || "";
-  }
-  function getFoodValue() {
-    return document.querySelector('input[name="food"]:checked')?.value || "";
-  }
-  function isRulesOk() {
-    return !!rulesCb?.checked;
-  }
+  function detectKind(it) {
+    // 4 типи: stage, final, comp, stalker
+    if (it.isFinal) return "final";
 
-  function validateFormForSubmit() {
-    // вибір змагання
-    const picked = getPickedValue();
-    if (!picked) return false;
+    const t = (it.type || "").toLowerCase();
+    const name = `${it.compTitle || ""} ${it.stageTitle || ""}`.toLowerCase();
 
-    // перевірка що вибране саме "відкрите"
-    const [competitionId, stageKeyRaw] = String(picked).split("||");
-    const stageId = (stageKeyRaw || "").trim() || null;
-    const it = lastItems.find(x => x.compId === competitionId && (x.stageKey || null) === stageId);
-    if (!it || !isOpenWindow(it)) return false;
+    const isStalker = t.includes("stalker") || name.includes("stalker") || !!it.isSolo;
+    if (isStalker) return "stalker";
 
-    // харчування
-    const food = getFoodValue();
-    if (!food) return false;
-
-    if (food === "Так") {
-      const q = Number(foodQtyInput?.value || "0");
-      if (!q || q < 1 || q > 6) return false;
-    }
-
-    // правила
-    if (!isRulesOk()) return false;
-
-    return true;
-  }
-
-  function updateSubmitState() {
-    if (!submitBtn) return;
-    submitBtn.disabled = !validateFormForSubmit();
+    if (it.stageKey) return "stage";
+    return "comp";
   }
 
   // copy card
@@ -140,19 +119,15 @@
       foodQtyField.classList.toggle("field--disabled", !need);
       foodQtyInput.disabled = !need;
       if (!need) foodQtyInput.value = "";
-      updateSubmitState();
     }
 
     radios.forEach(r => r.addEventListener("change", update));
-    foodQtyInput.addEventListener("input", updateSubmitState);
     update();
   }
 
-  if (rulesCb) rulesCb.addEventListener("change", updateSubmitState);
-
   async function loadProfile(user) {
     const uSnap = await db.collection("users").doc(user.uid).get();
-    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль.");
+    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на «Акаунт» і створіть профіль.");
 
     const u = uSnap.data() || {};
     const teamId = u.teamId || null;
@@ -180,30 +155,9 @@
     }
   }
 
-  function detectKind(it) {
-    // потрібні різні кольори:
-    // етапи = stage, фінал = final, звичайні змагання = oneoff, stalker = stalker
-    if (it.isFinal) return "final";
-    if (it.stageKey) return "stage"; // етап сезону
-    const t = `${it.compTitle || ""} ${it.brand || ""}`.toLowerCase();
-    if ((it.type || "").toLowerCase() === "stalker" || t.includes("stalker")) return "stalker";
-    return "oneoff";
-  }
-
   async function loadCompetitions() {
     if (!eventOptionsEl) return;
-
     eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження змагань...</p>`;
-    const cacheKey = "sc_competitions_v2";
-
-    try {
-      const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
-      if (cached && (Date.now() - cached.t < 60_000) && Array.isArray(cached.items)) {
-        lastItems = cached.items;
-        renderCompetitionItems(lastItems);
-        return;
-      }
-    } catch {}
 
     try {
       const snap = await db.collection("competitions").get();
@@ -215,90 +169,89 @@
 
         const brand = c.brand || "STOLAR CARP";
         const year  = c.year || c.seasonYear || "";
-        const title = c.title || c.name || (year ? `Season ${year}` : compId);
+        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
 
-        const type  = (c.type || "").toLowerCase(); // season / oneoff / stalker ...
-        const stagesArr = c.stages; // (якщо ти десь ще маєш іншу структуру — скажеш, підлаштую)
+        const type = (c.type || "").toLowerCase();
 
-        if (Array.isArray(stagesArr) && stagesArr.length) {
-          stagesArr.forEach((st, idx) => {
-            const stageKey = st.stageId || st.id || `stage-${idx + 1}`;
-            const stageTitle = st.title || st.name || st.label || (st.isFinal ? "Фінал" : `Етап ${idx + 1}`);
+        // === MAIN: у тебе це events[] ===
+        const evArr = Array.isArray(c.events) ? c.events : null;
+        const stArr = Array.isArray(c.stages) ? c.stages : null;
+
+        const arr = evArr || stArr;
+
+        if (arr && arr.length) {
+          arr.forEach((ev, idx) => {
+            const stageKey   = ev.key || ev.stageId || ev.id || `stage-${idx + 1}`;
+            const isFinal    = !!ev.isFinal || stageKey === "final";
+            const stageTitle = ev.title || ev.name || (isFinal ? "Фінал" : `Етап ${idx + 1}`);
+
+            const startAt  = toDateMaybe(ev.startDate || ev.startAt);
+            const finishAt = toDateMaybe(ev.finishDate || ev.endDate || ev.endAt);
 
             items.push({
               compId,
-              compTitle: title,
+              compTitle,
               brand,
               year,
-              type: type || "season",
+              type,
               stageKey,
               stageTitle,
-              isFinal: !!st.isFinal,
+              isFinal,
 
-              startAt: toDateMaybe(st.startAt || st.startDate),
-              endAt:   toDateMaybe(st.endAt || st.endDate),
+              startAt,
+              endAt: finishAt,
 
-              regMode: st.regMode || c.regMode || "auto",
-              manualOpen: !!(st.manualOpen ?? c.manualOpen),
-              regOpenAt:  st.regOpenAt || null,
-              regCloseAt: st.regCloseAt || null,
+              regMode: ev.regMode || c.regMode || "auto",
+              manualOpen: !!(ev.manualOpen ?? c.manualOpen),
+              regOpenAt: ev.regOpenAt || c.regOpenAt || null,
+              regCloseAt: ev.regCloseAt || c.regCloseAt || null,
+
+              isSolo: !!ev.isSolo || !!c.isSolo
             });
           });
         } else {
+          // no stages/events => single competition
           items.push({
             compId,
-            compTitle: title,
+            compTitle,
             brand,
             year,
-            type: type || "oneoff",
+            type,
             stageKey: null,
             stageTitle: null,
             isFinal: false,
 
-            startAt: toDateMaybe(c.startAt || c.startDate),
-            endAt:   toDateMaybe(c.endAt || c.endDate),
+            startAt: toDateMaybe(c.startDate || c.startAt),
+            endAt:   toDateMaybe(c.finishDate || c.endDate || c.endAt),
 
             regMode: c.regMode || "auto",
             manualOpen: !!c.manualOpen,
-            regOpenAt:  c.regOpenAt || null,
+            regOpenAt: c.regOpenAt || null,
             regCloseAt: c.regCloseAt || null,
+
+            isSolo: !!c.isSolo
           });
         }
       });
 
-      // Сортування (нові зверху)
+      // sort: newest year first
       items.sort((a, b) => {
         const ay = String(a.year || "");
         const by = String(b.year || "");
         if (ay !== by) return by.localeCompare(ay, "uk");
-        const at = (a.compTitle || "").toString();
-        const bt = (b.compTitle || "").toString();
+        const at = String(a.compTitle || "");
+        const bt = String(b.compTitle || "");
         if (at !== bt) return at.localeCompare(bt, "uk");
         return String(a.stageKey || "").localeCompare(String(b.stageKey || ""), "uk");
       });
 
-      lastItems = items;
-      sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), items }));
       renderCompetitionItems(items);
     } catch (e) {
       console.error("loadCompetitions error:", e);
       eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ або акаунт).</p>';
+        '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ).</p>';
       if (submitBtn) submitBtn.disabled = true;
     }
-  }
-
-  function wireActiveHighlight() {
-    // підсвітка вибраного
-    const radios = document.querySelectorAll('input[name="stagePick"]');
-    radios.forEach(r => {
-      r.addEventListener("change", () => {
-        document.querySelectorAll(".event-item").forEach(el => el.classList.remove("is-active"));
-        const lbl = r.closest(".event-item");
-        if (lbl) lbl.classList.add("is-active");
-        updateSubmitState();
-      });
-    });
   }
 
   function renderCompetitionItems(items) {
@@ -306,7 +259,7 @@
     eventOptionsEl.innerHTML = "";
 
     if (!items.length) {
-      eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань. Додай їх в адмінці.</p>`;
+      eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань.</p>`;
       if (submitBtn) submitBtn.disabled = true;
       return;
     }
@@ -314,24 +267,28 @@
     items.forEach(it => {
       const open = isOpenWindow(it);
       const kind = detectKind(it);
+
       const value = `${it.compId}||${it.stageKey || ""}`;
 
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
 
       const regOpenD  = toDateMaybe(it.regOpenAt);
       const regCloseD = toDateMaybe(it.regCloseAt);
+
       const regLine = (regOpenD && regCloseD)
         ? `Реєстрація: ${fmtDate(regOpenD)} — ${fmtDate(regCloseD)}`
         : `Реєстрація: —`;
 
-      const titleText =
-        `${it.brand ? `${it.brand} · ` : ""}${it.compTitle}${it.stageTitle ? ` — ${it.stageTitle}` : ""}`;
+      const badges = [];
+      badges.push(open ? `<span class="pill-b pill-b--open">ВІДКРИТО</span>` : `<span class="pill-b pill-b--closed">ЗАКРИТО</span>`);
 
-      const typeLabel =
-        kind === "final"  ? "ФІНАЛ" :
-        kind === "stage"  ? "ЕТАП" :
-        kind === "stalker"? "STALKER" :
-                            "ЗМАГАННЯ";
+      if (kind === "final") badges.push(`<span class="pill-b pill-b--final">ФІНАЛ</span>`);
+      else if (kind === "stage") badges.push(`<span class="pill-b pill-b--stage">ЕТАП</span>`);
+      else if (kind === "stalker") badges.push(`<span class="pill-b pill-b--stalker">STALKER</span>`);
+      else badges.push(`<span class="pill-b pill-b--comp">ЗМАГАННЯ</span>`);
+
+      const titleLeft =
+        `${it.brand ? `${it.brand} · ` : ""}${it.compTitle}${it.stageTitle ? ` — ${it.stageTitle}` : ""}`;
 
       const el = document.createElement("label");
       el.className = "event-item" + (open ? "" : " is-closed");
@@ -340,26 +297,19 @@
         <input type="radio" name="stagePick" value="${value}" ${open ? "" : "disabled"}>
         <div class="event-body">
           <div class="event-title">
-            <div class="text">${titleText}</div>
-            <div class="event-badges">
-              <span class="pill-b ${open ? "pill-b--open" : "pill-b--closed"}">${open ? "ВІДКРИТО" : "ЗАКРИТО"}</span>
-              <span class="pill-b ${
-                kind === "final" ? "pill-b--final" :
-                kind === "stage" ? "pill-b--stage" :
-                kind === "stalker" ? "pill-b--stalker" :
-                "pill-b--oneoff"
-              }">${typeLabel}</span>
-            </div>
+            <div class="event-name" title="${titleLeft.replaceAll('"', "&quot;")}">${titleLeft}</div>
+            <div class="event-badges">${badges.join("")}</div>
           </div>
-          <div class="event-meta">${dateLine}<br>${regLine}</div>
+          <div class="event-meta">${dateLine} · ${regLine}</div>
         </div>
       `;
 
       eventOptionsEl.appendChild(el);
     });
 
-    wireActiveHighlight();
-    updateSubmitState();
+    // кнопка активна тільки якщо є відкриті
+    const anyOpen = items.some(isOpenWindow);
+    if (submitBtn) submitBtn.disabled = !anyOpen;
   }
 
   auth.onAuthStateChanged(async (user) => {
@@ -370,7 +320,7 @@
       if (submitBtn) submitBtn.disabled = true;
       if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Акаунт» і поверніться сюди.";
       if (eventOptionsEl) eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу в акаунт.</p>';
+        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу.</p>';
       setMsg("Увійдіть у акаунт, щоб бачити змагання та подати заявку.", false);
       return;
     }
@@ -379,7 +329,6 @@
       await loadProfile(user);
       initFoodLogic();
       await loadCompetitions();
-      updateSubmitState();
     } catch (e) {
       console.error(e);
       if (submitBtn) submitBtn.disabled = true;
@@ -395,35 +344,43 @@
         setMsg("Підозра на бота. Заявка не відправлена.", false);
         return;
       }
+
       if (!currentUser || !profile) {
         setMsg("Увійдіть у акаунт.", false);
         return;
       }
-      if (!validateFormForSubmit()) {
-        setMsg("Перевірте: вибір змагання, харчування та регламент.", false);
+
+      const picked = document.querySelector('input[name="stagePick"]:checked');
+      if (!picked) {
+        setMsg("Оберіть відкрите змагання/етап.", false);
         return;
       }
 
-      const picked = getPickedValue();
-      const food = getFoodValue();
+      const food = document.querySelector('input[name="food"]:checked')?.value;
+      if (!food) {
+        setMsg("Оберіть харчування.", false);
+        return;
+      }
 
       let foodQty = null;
       if (food === "Так") {
         const q = Number(foodQtyInput?.value || "0");
+        if (!q || q < 1 || q > 6) {
+          setMsg("Вкажіть кількість харчуючих 1–6.", false);
+          return;
+        }
         foodQty = q;
       }
 
-      const [competitionId, stageKeyRaw] = String(picked).split("||");
+      const [competitionId, stageKeyRaw] = String(picked.value).split("||");
       const stageId = (stageKeyRaw || "").trim() || null;
 
       try {
         setLoading(true);
-        if (submitBtn) submitBtn.disabled = true;
         setMsg("");
 
         await db.collection("registrations").add({
           uid: profile.uid,
-
           competitionId,
           stageId,
 
@@ -441,15 +398,17 @@
 
         setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
         form.reset();
-        document.querySelectorAll(".event-item").forEach(el => el.classList.remove("is-active"));
         initFoodLogic();
-        updateSubmitState();
+        // перерендер залишаємо як є (не треба знов грузити)
       } catch (err) {
         console.error("submit error:", err);
         setMsg("Помилка відправки заявки (Rules/доступ).", false);
       } finally {
         setLoading(false);
-        updateSubmitState();
+        // після сабміту кнопку не “вбиваємо” — вона залежить від відкритих етапів
+        // її стан оновлюється при рендері
+        const anyOpen = !!document.querySelector('.event-item:not(.is-closed) input[type="radio"]');
+        if (submitBtn) submitBtn.disabled = !anyOpen;
       }
     });
   }

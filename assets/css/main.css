@@ -1,478 +1,512 @@
-/* =========================
-   STOLAR CARP • main.css
-   STABLE HEADER + BURGER PANEL (bg photo, NOT full-screen)
-   NO register-page styling here
-   ========================= */
+// assets/js/register_firebase.js
+// STOLAR CARP • Registration
+// competitions + events[] → cards with lamp status (red/yellow/green)
+// Shows: title + start/finish dates. NO "closed/active" text. NO reg open/close dates.
 
-/* === BASE COLORS & FONTS === */
-:root{
-  --bg:#0b0b0f;
-  --panel:#13131a;
-  --muted:#8a8f98;
-  --text:#f2f3f5;
-  --accent:#ffcc00;
-  --accent-2:#d72638;
-  --radius:16px;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --header-h:72px;
-}
+(function () {
+  const auth = window.scAuth;
+  const db   = window.scDb;
 
-*{ box-sizing:border-box; }
-html,body{
-  margin:0; padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  line-height:1.55;
-}
-a{ color:var(--accent); text-decoration:none; }
-img{ max-width:100%; height:auto; display:block; }
+  const form           = document.getElementById("regForm");
+  const eventOptionsEl = document.getElementById("eventOptions");
+  const msgEl          = document.getElementById("msg");
+  const submitBtn      = document.getElementById("submitBtn");
+  const spinnerEl      = document.getElementById("spinner");
+  const hpInput        = document.getElementById("hp");
+  const foodQtyField   = document.getElementById("foodQtyField");
+  const foodQtyInput   = document.getElementById("food_qty");
+  const profileSummary = document.getElementById("profileSummary");
+  const copyCardBtn    = document.getElementById("copyCard");
+  const cardNumEl      = document.getElementById("cardNum");
+  const rulesChk       = document.getElementById("rules");
 
-.container{ width:min(1100px,92%); margin-inline:auto; }
-.hidden{ display:none !important; }
-
-/* === HEADER === */
-.header{
-  position:sticky;
-  top:0;
-  z-index:2000;
-  background:rgba(11,11,15,.75);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
-  border-bottom:1px solid #222;
-  overflow:visible;
-}
-
-.header__row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 0;
-  min-height:var(--header-h);
-}
-
-/* LOGO */
-.logo{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  color:var(--text);
-  font-weight:900;
-  letter-spacing:.5px;
-}
-.logo__mark{
-  width:44px; height:44px; min-width:44px;
-  border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  color:#000;
-  box-shadow:var(--shadow);
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  line-height:1;
-  font-weight:900;
-  font-size:16px;
-}
-.logo__text{
-  font-weight:900;
-  line-height:1.1;
-  white-space:nowrap;
-}
-
-/* NAV DESKTOP */
-.nav{
-  display:flex;
-  gap:16px;
-  align-items:center;
-}
-.nav__link{
-  padding:10px 12px;
-  border-radius:12px;
-  color:var(--text);
-  opacity:.9;
-  border:1px solid transparent;
-}
-.nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
-.nav__link--active{
-  border-color:#333;
-  background:linear-gradient(180deg,#14141c,#0f0f15);
-}
-
-/* LOGIN BUTTON (header) */
-.header-login{
-  padding:6px 14px;
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.6);
-  background:rgba(15,23,42,.85);
-  color:#e5e7eb;
-  font-size:.85rem;
-  text-decoration:none;
-  white-space:nowrap;
-}
-.header-login:hover{
-  border-color:rgba(255,204,0,.9);
-  color:rgba(255,204,0,.95);
-}
-
-/* BURGER BUTTON */
-.burger{
-  display:none;
-  background:transparent;
-  border:0;
-  cursor:pointer;
-  padding:10px;
-  border-radius:12px;
-  -webkit-tap-highlight-color:transparent;
-}
-.burger span{
-  display:block;
-  width:26px;
-  height:3px;
-  background:#fff;
-  margin:5px 0;
-  border-radius:3px;
-}
-
-/* прибираємо outline у хедері */
-.header *:focus,
-.header *:focus-visible,
-.header a:focus,
-.header a:focus-visible,
-.header button:focus,
-.header button:focus-visible{
-  outline:none !important;
-}
-
-/* =========================
-   MOBILE: burger panel (NOT fullscreen)
-   ========================= */
-@media (max-width:860px){
-  .burger{ display:block; }
-
-  /* desktop nav ховаємо, керуємо панеллю */
-  .nav{
-    position:fixed;
-    left:12px;
-    right:12px;
-    top:calc(var(--header-h) + env(safe-area-inset-top) + 10px);
-    bottom:auto;
-    z-index:1900;
-
-    /* ВАЖЛИВО: висота тільки по контенту */
-    height:auto;
-    max-height:calc(100dvh - var(--header-h) - env(safe-area-inset-top) - 24px);
-    overflow:auto;
-    -webkit-overflow-scrolling:touch;
-
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
-
-    padding:16px 14px;
-    gap:10px;
-
-    border-radius:24px;
-    border:1px solid rgba(255,255,255,.12);
-    box-shadow:0 22px 60px rgba(0,0,0,.65);
-
-    /* ✅ затемнення + прозорість, щоб трохи було видно сторінку під меню */
-    background:
-      linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.70)),
-      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
-
-    /* ✅ стартово сховано */
-    transform:translateY(-14px);
-    opacity:0;
-    pointer-events:none;
-    transition:transform .22s ease, opacity .22s ease;
-    backdrop-filter:blur(2px);
-    -webkit-backdrop-filter:blur(2px);
+  if (!auth || !db || !window.firebase) {
+    if (eventOptionsEl) {
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    return;
   }
 
-  .nav.open{
-    transform:translateY(0);
-    opacity:1;
-    pointer-events:auto;
+  let currentUser = null;
+  let profile = null;
+
+  let lastItems = [];
+  let nearestUpcomingValue = null; // `${compId}||${stageKey||""}`
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  /* ✅ кнопки ВУЖЧІ (як на твоєму скріні) */
-  .nav__link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-
-    width:auto;
-    min-width:190px;
-    max-width:78vw;
-
-    padding:12px 18px;
-    border-radius:999px;
-
-    background:rgba(0,0,0,.22);          /* прозоріше */
-    border:1px solid rgba(255,255,255,.20);
-    backdrop-filter:blur(6px);
-    -webkit-backdrop-filter:blur(6px);
-
-    font-size:1.02rem;
-    white-space:nowrap;
-    text-align:center;
+  function setMsg(text, ok = true) {
+    if (!msgEl) return;
+    msgEl.textContent = text || "";
+    msgEl.classList.remove("ok", "err");
+    if (text) msgEl.classList.add(ok ? "ok" : "err");
   }
 
-  .nav__link:hover{
-    background:rgba(0,0,0,.30);
-    border-color:rgba(246,195,76,.35);
+  function setLoading(v) {
+    if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
+    if (submitBtn) submitBtn.disabled = !!v || submitBtn.disabled;
   }
-}
 
-/* === LAYOUT === */
-.main{ padding:28px 0 60px; }
-.section{ margin-top:40px; }
-
-.card{
-  background:var(--panel);
-  border:1px solid #262636;
-  border-radius:16px;
-  padding:18px;
-}
-
-/* === TABLES === */
-.table{ width:100%; border-collapse:collapse; }
-.table th,.table td{
-  border:1px solid #262636;
-  padding:10px 12px;
-  text-align:left;
-}
-.table th{ background:#15151e; }
-.table tr:nth-child(even){ background:#0f0f16; }
-
-/* === GRID === */
-.grid{ display:grid; gap:16px; }
-.grid-2{ grid-template-columns:repeat(2,1fr); }
-.grid-3{ grid-template-columns:repeat(3,1fr); }
-@media (max-width:900px){
-  .grid-2,.grid-3{ grid-template-columns:1fr; }
-}
-
-/* === BUTTONS === */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:12px 16px;
-  border-radius:12px;
-  text-decoration:none;
-  font-weight:800;
-  border:1px solid #333;
-  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
-}
-.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
-.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
-.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
-.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
-.btn--ghost{ background:#0d0d13; color:var(--text); }
-
-/* === BADGES === */
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  border:1px solid #333;
-  color:#ddd;
-}
-
-/* === INPUTS (базові, без реєстру) === */
-.input,.select,.textarea{
-  width:100%;
-  padding:12px 14px;
-  border-radius:12px;
-  border:1px solid #2b2b36;
-  background:#0d0d14;
-  color:#fff;
-}
-.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
-.form{ display:grid; gap:14px; }
-.form__hint{ color:var(--muted); font-size:12px; }
-
-/* === FOOTER === */
-.footer{ border-top:1px solid #222; background:#0c0c12; }
-.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
-.footer__links{ display:flex; gap:12px; }
-
-/* === HERO (як було) === */
-.hero{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:26px;
-  align-items:center;
-  margin-top:18px;
-}
-.hero__card{
-  background:linear-gradient(180deg,#161620,#0d0d13);
-  border:1px solid #262636;
-  border-radius:20px;
-  padding:26px;
-  box-shadow:var(--shadow);
-}
-.hero__kicker{
-  display:inline-block;
-  font-weight:800;
-  letter-spacing:.08em;
-  color:#000;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  padding:6px 10px;
-  border-radius:999px;
-  margin-bottom:12px;
-}
-.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
-.hero p{ color:var(--muted); margin:0 0 18px; }
-.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-@media (max-width:900px){
-  .hero{ grid-template-columns:1fr; }
-  .hero h1{ font-size:34px; }
-}
-
-/* === CABINET small fixes (окремо від register) === */
-.avatar-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.avatar-actions input[type="file"]{ max-width:100%; }
-@media (max-width:560px){
-  .avatar-actions{ align-items:stretch; }
-  .avatar-actions input[type="file"]{ width:100%; }
-  .avatar-small-btn{ width:100%; justify-content:center; }
-}
-
-body.cabinet-page .avatar-upload{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-body.cabinet-page .avatar-upload input[type="file"]{
-  max-width:100% !important;
-}
-@media (max-width:560px){
-  body.cabinet-page .avatar-upload{
-    flex-direction:column;
-    align-items:stretch;
+  function nowKyiv() {
+    return new Date();
   }
-  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
-  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
-}
-/* =========================
-   REGISTER • stage cards 10/10
-   Lamp status + clean layout
-   ========================= */
 
-.stage-card{
-  background: rgba(15,23,42,.55);
-  border: 1px solid rgba(148,163,184,.22);
-  border-radius: 18px;
-  padding: 14px 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-}
+  function toDateMaybe(x) {
+    if (!x) return null;
+    try {
+      if (x instanceof Date) return x;
+      if (typeof x === "string") {
+        const d = new Date(x);
+        return isFinite(d.getTime()) ? d : null;
+      }
+      if (x && typeof x.toDate === "function") return x.toDate(); // Firestore Timestamp
+    } catch {}
+    return null;
+  }
 
-.stage-card + .stage-card{ margin-top: 12px; }
+  function fmtDate(d) {
+    if (!d) return "—";
+    return d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
 
-.stage-head{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  min-width: 0;
-}
+  function getRegDatesFromEvent(ev) {
+    const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen || null;
+    const regClose = ev.regCloseAt || ev.regCloseDate || ev.regClose || null;
+    return { regOpenAt: regOpen, regCloseAt: regClose };
+  }
 
-.lamp{
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  flex-shrink:0;
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.08),
-    0 0 12px rgba(0,0,0,.25);
-}
+  function getRunDatesFromEvent(ev) {
+    const start  = ev.startAt  || ev.startDate  || null;
+    const finish = ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
+    return { startAt: start, endAt: finish };
+  }
 
-.lamp-red{
-  background:#d72638;
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.08),
-    0 0 10px rgba(215,38,56,.75);
-}
+  function isOpenWindow(item) {
+    const mode = String(item.regMode || "auto").toLowerCase();
+    if (mode === "manual") return !!item.manualOpen;
 
-.lamp-yellow{
-  background:#ffcc00;
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.08),
-    0 0 12px rgba(255,204,0,.75);
-  animation: lampPulse 1.3s ease-in-out infinite;
-}
+    const openAt  = toDateMaybe(item.regOpenAt);
+    const closeAt = toDateMaybe(item.regCloseAt);
+    if (!openAt || !closeAt) return false;
 
-.lamp-green{
-  background:#2ecc71;
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,.08),
-    0 0 12px rgba(46,204,113,.75);
-  animation: lampPulse 1.6s ease-in-out infinite;
-}
+    const n = nowKyiv();
+    return n >= openAt && n <= closeAt;
+  }
 
-@keyframes lampPulse{
-  0%,100%{ transform: scale(1); filter: brightness(1); }
-  50%{ transform: scale(1.08); filter: brightness(1.12); }
-}
+  function isUpcoming(item) {
+    const mode = String(item.regMode || "auto").toLowerCase();
+    if (mode === "manual") return false;
 
-.stage-info{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:4px;
-}
+    const openAt = toDateMaybe(item.regOpenAt);
+    if (!openAt) return false;
 
-.stage-title{
-  font-weight: 800;
-  font-size: .98rem;
-  color: #f2f3f5;
-  letter-spacing: .01em;
+    return openAt > nowKyiv();
+  }
 
-  /* ✅ не обрізаємо назву — переносимо */
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  line-height: 1.25;
-}
+  function isStalkerComp(c) {
+    const t = `${c.title || ""} ${c.name || ""}`.toLowerCase();
+    const type = String(c.type || "").toLowerCase();
+    const fmt  = String(c.format || "").toLowerCase();
+    return t.includes("stalker") || type === "stalker" || fmt === "solo";
+  }
 
-.stage-dates{
-  font-size: .88rem;
-  color: rgba(226,232,240,.78);
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex-wrap: wrap;
-}
+  // copy card
+  if (copyCardBtn && cardNumEl) {
+    copyCardBtn.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(cardNumEl.textContent.trim());
+        copyCardBtn.textContent = "Скопійовано ✔";
+        setTimeout(() => (copyCardBtn.textContent = "Скопіювати номер картки"), 1200);
+      } catch {
+        alert("Не вдалося скопіювати номер. Скопіюйте вручну.");
+      }
+    });
+  }
 
-.stage-sub{
-  font-size: .78rem;
-  color: rgba(148,163,184,.85);
-}
+  function initFoodLogic() {
+    const radios = document.querySelectorAll('input[name="food"]');
+    if (!radios.length || !foodQtyField || !foodQtyInput) return;
 
-/* маленька “стрілка” що це клікабельно */
-.stage-card[role="button"]{
-  cursor: pointer;
-  user-select:none;
-}
-.stage-card[role="button"]:active{
-  transform: translateY(1px);
-}
+    function update() {
+      const selected = document.querySelector('input[name="food"]:checked');
+      const need = selected && selected.value === "Так";
+      foodQtyField.classList.toggle("field--disabled", !need);
+      foodQtyInput.disabled = !need;
+      if (!need) foodQtyInput.value = "";
+    }
 
-/* мобільні — ще компактніше */
-@media (max-width: 420px){
-  .stage-card{ padding: 12px; }
-  .stage-title{ font-size: .94rem; }
-  .stage-dates{ font-size: .84rem; }
-}
+    radios.forEach(r => r.addEventListener("change", update));
+    update();
+  }
+
+  async function loadProfile(user) {
+    const uSnap = await db.collection("users").doc(user.uid).get();
+    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль.");
+
+    const u = uSnap.data() || {};
+    const teamId = u.teamId || null;
+
+    let teamName = "";
+    if (teamId) {
+      const tSnap = await db.collection("teams").doc(teamId).get();
+      if (tSnap.exists) teamName = (tSnap.data() || {}).name || "";
+    }
+
+    profile = {
+      uid: user.uid,
+      email: user.email || "",
+      teamId,
+      teamName: teamName || "Без назви",
+      captain: u.fullName || user.email || "",
+      phone: u.phone || ""
+    };
+
+    if (profileSummary) {
+      profileSummary.innerHTML =
+        `Команда: <b>${escapeHtml(profile.teamName)}</b><br>` +
+        `Капітан: <b>${escapeHtml(profile.captain)}</b><br>` +
+        `Телефон: <b>${escapeHtml(profile.phone || "не вказано")}</b>`;
+    }
+  }
+
+  function computeNearestUpcomingValue(items) {
+    // closest future regOpenAt (auto-mode)
+    const future = items
+      .filter(isUpcoming)
+      .map(it => ({ it, openAt: toDateMaybe(it.regOpenAt) }))
+      .filter(x => x.openAt)
+      .sort((a, b) => a.openAt - b.openAt);
+
+    if (!future.length) return null;
+    const it = future[0].it;
+    return `${it.compId}||${it.stageKey || ""}`;
+  }
+
+  function getLampClass(it, value) {
+    if (isOpenWindow(it)) return "lamp-green";
+    if (nearestUpcomingValue && value === nearestUpcomingValue) return "lamp-yellow";
+    return "lamp-red";
+  }
+
+  function getLampTitle(it, value) {
+    const cls = getLampClass(it, value);
+    if (cls === "lamp-green") return "Реєстрація відкрита";
+    if (cls === "lamp-yellow") return "Найближча реєстрація (скоро відкриється)";
+    return "Реєстрація ще не відкрита або вже закрита";
+  }
+
+  function refreshSubmitState() {
+    if (!submitBtn) return;
+    const loading = spinnerEl && spinnerEl.classList.contains("spinner--on");
+    if (loading) { submitBtn.disabled = true; return; }
+
+    const picked = document.querySelector('input[name="stagePick"]:checked');
+    const rulesOk = rulesChk ? !!rulesChk.checked : true;
+    submitBtn.disabled = !(picked && rulesOk);
+  }
+
+  document.addEventListener("change", (e) => {
+    if (!e.target) return;
+    if (e.target.name === "stagePick" || e.target.id === "rules") refreshSubmitState();
+  });
+
+  async function loadCompetitions() {
+    if (!eventOptionsEl) return;
+    eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
+
+    try {
+      const snap = await db.collection("competitions").get();
+      const items = [];
+
+      snap.forEach(docSnap => {
+        const c = docSnap.data() || {};
+        const compId = docSnap.id;
+
+        const brand = c.brand || "STOLAR CARP";
+        const year  = c.year || c.seasonYear || "";
+        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+
+        const type = String(c.type || "").toLowerCase();
+        const stalker = isStalkerComp(c);
+
+        const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+        if (eventsArr && eventsArr.length) {
+          eventsArr.forEach((ev, idx) => {
+            const key = ev.key || ev.stageId || ev.id || `stage-${idx+1}`;
+            const isFinal = String(key).toLowerCase().includes("final") || !!ev.isFinal;
+
+            const { startAt, endAt } = getRunDatesFromEvent(ev);
+            const { regOpenAt, regCloseAt } = getRegDatesFromEvent(ev);
+
+            const stageTitle =
+              ev.title || ev.name || ev.label ||
+              (isFinal ? "Фінал" : `Етап ${idx + 1}`);
+
+            items.push({
+              kind: "stage",
+              compId,
+              compTitle,
+              brand,
+              year,
+              stalker,
+              type: type || "season",
+              stageKey: key,
+              stageTitle,
+              isFinal,
+
+              startAt: toDateMaybe(startAt),
+              endAt: toDateMaybe(endAt),
+
+              regMode: ev.regMode || c.regMode || "auto",
+              manualOpen: !!(ev.manualOpen ?? c.manualOpen),
+              regOpenAt,
+              regCloseAt
+            });
+          });
+        } else {
+          const startAt = toDateMaybe(c.startAt || c.startDate);
+          const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
+
+          items.push({
+            kind: "oneoff",
+            compId,
+            compTitle,
+            brand,
+            year,
+            stalker,
+            type: stalker ? "stalker" : (type || "competition"),
+            stageKey: null,
+            stageTitle: null,
+            isFinal: false,
+
+            startAt,
+            endAt,
+
+            regMode: c.regMode || "auto",
+            manualOpen: !!c.manualOpen,
+            regOpenAt: c.regOpenAt || c.regOpenDate || null,
+            regCloseAt: c.regCloseAt || c.regCloseDate || null
+          });
+        }
+      });
+
+      // nice order by start date (participants читають)
+      items.sort((a, b) => {
+        const ad = a.startAt ? a.startAt.getTime() : 9999999999999;
+        const bd = b.startAt ? b.startAt.getTime() : 9999999999999;
+        return ad - bd;
+      });
+
+      lastItems = items;
+      nearestUpcomingValue = computeNearestUpcomingValue(items);
+
+      renderItems(items);
+      refreshSubmitState();
+    } catch (e) {
+      console.error("loadCompetitions error:", e);
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ).</p>';
+    }
+  }
+
+  function renderItems(items) {
+    if (!eventOptionsEl) return;
+    eventOptionsEl.innerHTML = "";
+
+    if (!items.length) {
+      eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань. Додай їх в адмінці.</p>`;
+      if (submitBtn) submitBtn.disabled = true;
+      return;
+    }
+
+    items.forEach(it => {
+      const open = isOpenWindow(it);
+      const value = `${it.compId}||${it.stageKey || ""}`;
+
+      // TITLE: щоб було читабельно — “Сезон … — Етап …”
+      const titleText =
+        `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
+        (it.stageTitle ? ` — ${it.stageTitle}` : "");
+
+      const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
+
+      const lampCls = getLampClass(it, value);
+      const lampTitle = getLampTitle(it, value);
+
+      const card = document.createElement("div");
+      card.className = "stage-card";
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+
+      // радіо, але ховаємо — клікаємо по картці
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "stagePick";
+      radio.value = value;
+      radio.style.position = "absolute";
+      radio.style.opacity = "0";
+      radio.style.pointerEvents = "none";
+      radio.disabled = !open;
+
+      card.appendChild(radio);
+
+      card.innerHTML += `
+        <div class="stage-head">
+          <span class="lamp ${lampCls}" title="${escapeHtml(lampTitle)}" aria-hidden="true"></span>
+          <div class="stage-info">
+            <div class="stage-title">${escapeHtml(titleText)}</div>
+            <div class="stage-dates">
+              <span>📅</span>
+              <span>${escapeHtml(dateLine)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // click selects ONLY if open (green)
+      function selectIfOpen() {
+        if (!open) {
+          setMsg("Ця реєстрація зараз закрита. Оберіть зелену лампочку.", false);
+          return;
+        }
+        setMsg("");
+        // знімаємо попередні
+        document.querySelectorAll('input[name="stagePick"]').forEach(r => (r.checked = false));
+        radio.checked = true;
+        refreshSubmitState();
+      }
+
+      card.addEventListener("click", selectIfOpen);
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          selectIfOpen();
+        }
+      });
+
+      eventOptionsEl.appendChild(card);
+    });
+  }
+
+  auth.onAuthStateChanged(async (user) => {
+    currentUser = user || null;
+    setMsg("");
+
+    if (!user) {
+      if (submitBtn) submitBtn.disabled = true;
+      if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Акаунт» і поверніться сюди.";
+      if (eventOptionsEl) eventOptionsEl.innerHTML =
+        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу в акаунт.</p>';
+      setMsg("Увійдіть у акаунт, щоб бачити змагання та подати заявку.", false);
+      return;
+    }
+
+    try {
+      await loadProfile(user);
+      initFoodLogic();
+      await loadCompetitions();
+      refreshSubmitState();
+    } catch (e) {
+      console.error(e);
+      if (submitBtn) submitBtn.disabled = true;
+      setMsg(e.message || "Помилка профілю.", false);
+    }
+  });
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (hpInput && hpInput.value) {
+        setMsg("Підозра на бота. Заявка не відправлена.", false);
+        return;
+      }
+
+      if (!currentUser || !profile) {
+        setMsg("Увійдіть у акаунт.", false);
+        return;
+      }
+
+      if (rulesChk && !rulesChk.checked) {
+        setMsg("Потрібно підтвердити ознайомлення з регламентом.", false);
+        return;
+      }
+
+      const picked = document.querySelector('input[name="stagePick"]:checked');
+      if (!picked) {
+        setMsg("Оберіть відкрите (зелене) змагання/етап.", false);
+        return;
+      }
+
+      const pickedValue = String(picked.value);
+      const it = (lastItems || []).find(x => `${x.compId}||${x.stageKey || ""}` === pickedValue);
+      if (!it || !isOpenWindow(it)) {
+        setMsg("Ця реєстрація зараз закрита. Оберіть зелену лампочку.", false);
+        return;
+      }
+
+      const food = document.querySelector('input[name="food"]:checked')?.value;
+      if (!food) {
+        setMsg("Оберіть харчування.", false);
+        return;
+      }
+
+      let foodQty = null;
+      if (food === "Так") {
+        const q = Number(foodQtyInput?.value || "0");
+        if (!q || q < 1 || q > 6) {
+          setMsg("Вкажіть кількість харчуючих 1–6.", false);
+          return;
+        }
+        foodQty = q;
+      }
+
+      const [competitionId, stageKeyRaw] = pickedValue.split("||");
+      const stageId = (stageKeyRaw || "").trim() || null;
+
+      try {
+        setLoading(true);
+        setMsg("");
+        refreshSubmitState();
+
+        await db.collection("registrations").add({
+          uid: profile.uid,
+
+          competitionId,
+          stageId,
+
+          teamId: profile.teamId,
+          teamName: profile.teamName,
+          captain: profile.captain,
+          phone: profile.phone,
+
+          food,
+          foodQty: foodQty ?? null,
+
+          status: "pending_payment",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
+        form.reset();
+        initFoodLogic();
+        refreshSubmitState();
+      } catch (err) {
+        console.error("submit error:", err);
+        setMsg("Помилка відправки заявки (Rules/доступ).", false);
+      } finally {
+        setLoading(false);
+        refreshSubmitState();
+      }
+    });
+  }
+})();

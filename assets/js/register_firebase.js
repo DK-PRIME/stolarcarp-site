@@ -458,7 +458,7 @@
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
+        setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
         form.reset();
         initFoodLogic();
       } catch (err) {

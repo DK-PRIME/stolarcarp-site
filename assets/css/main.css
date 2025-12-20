@@ -1,6 +1,6 @@
 /* =========================
    STOLAR CARP • main.css
-   STABLE HEADER + BURGER PANEL (NOT FULLSCREEN)
+   STABLE HEADER + BURGER PANEL (bg photo, NOT full-screen)
    NO register-page styling here
    ========================= */
 
@@ -14,7 +14,7 @@
   --accent-2:#d72638;
   --radius:16px;
   --shadow:0 10px 30px rgba(0,0,0,.35);
-  --header-height:72px;
+  --header-h:72px;
 }
 
 *{ box-sizing:border-box; }
@@ -47,8 +47,9 @@ img{ max-width:100%; height:auto; display:block; }
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap:12px;
   padding:12px 0;
-  min-height:var(--header-height);
+  min-height:var(--header-h);
 }
 
 /* LOGO */
@@ -59,7 +60,6 @@ img{ max-width:100%; height:auto; display:block; }
   color:var(--text);
   font-weight:900;
   letter-spacing:.5px;
-  overflow:visible;
 }
 .logo__mark{
   width:44px; height:44px; min-width:44px;
@@ -73,8 +73,6 @@ img{ max-width:100%; height:auto; display:block; }
   line-height:1;
   font-weight:900;
   font-size:16px;
-  overflow:visible;
-  padding:0;
 }
 .logo__text{
   font-weight:900;
@@ -99,6 +97,22 @@ img{ max-width:100%; height:auto; display:block; }
 .nav__link--active{
   border-color:#333;
   background:linear-gradient(180deg,#14141c,#0f0f15);
+}
+
+/* LOGIN BUTTON (header) */
+.header-login{
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.6);
+  background:rgba(15,23,42,.85);
+  color:#e5e7eb;
+  font-size:.85rem;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.header-login:hover{
+  border-color:rgba(255,204,0,.9);
+  color:rgba(255,204,0,.95);
 }
 
 /* BURGER BUTTON */
@@ -130,92 +144,85 @@ img{ max-width:100%; height:auto; display:block; }
   outline:none !important;
 }
 
-/* ==========================================================
-   MOBILE BURGER MENU (panel only, NOT fullscreen)
-   - panel is only as tall as items (ends at last button)
-   - background is more transparent (you can see page behind)
-   - buttons are narrow "pills" (not full width)
-   ========================================================== */
+/* =========================
+   MOBILE: burger panel (NOT fullscreen)
+   ========================= */
 @media (max-width:860px){
   .burger{ display:block; }
 
-  /* щоб справа не тиснуло (у тебе в index є кнопка Увійти) */
-  .header-login{ display:none; }
-
+  /* desktop nav ховаємо, керуємо панеллю */
   .nav{
     position:fixed;
-    left:50%;
-    transform:translateX(-50%) translateY(-12px);
+    left:12px;
+    right:12px;
+    top:calc(var(--header-h) + env(safe-area-inset-top) + 10px);
+    bottom:auto;
+    z-index:1900;
 
-    top:calc(var(--header-height) + env(safe-area-inset-top) + 10px);
-    width:min(92vw, 560px);
+    /* ВАЖЛИВО: висота тільки по контенту */
+    height:auto;
+    max-height:calc(100dvh - var(--header-h) - env(safe-area-inset-top) - 24px);
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
 
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
+
+    padding:16px 14px;
     gap:10px;
 
-    padding:14px 14px 16px;
+    border-radius:24px;
+    border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 22px 60px rgba(0,0,0,.65);
 
-    /* ✅ прозоріший фон + картинка */
+    /* ✅ затемнення + прозорість, щоб трохи було видно сторінку під меню */
     background:
-      linear-gradient(rgba(0,0,0,.18), rgba(0,0,0,.28)),
+      linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.70)),
       url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
-    border:1px solid rgba(255,255,255,.12);
-    border-radius:26px;
-    box-shadow:0 22px 55px rgba(0,0,0,.55);
-
-    backdrop-filter:blur(8px);
-    -webkit-backdrop-filter:blur(8px);
-
-    /* ✅ не перекриває весь екран, тільки панель */
-    max-height:calc(100dvh - var(--header-height) - env(safe-area-inset-top) - 20px);
-    overflow:auto;
-    -webkit-overflow-scrolling:touch;
-
-    /* ✅ ховаємо */
+    /* ✅ стартово сховано */
+    transform:translateY(-14px);
     opacity:0;
     pointer-events:none;
-    visibility:hidden;
-    transition:transform .18s ease, opacity .18s ease;
-    z-index:3000;
+    transition:transform .22s ease, opacity .22s ease;
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
   }
 
   .nav.open{
+    transform:translateY(0);
     opacity:1;
     pointer-events:auto;
-    visibility:visible;
-    transform:translateX(-50%) translateY(0);
   }
 
-  /* ✅ “пігулки” ВУЖЧІ, як на скріні */
+  /* ✅ кнопки ВУЖЧІ (як на твоєму скріні) */
   .nav__link{
     display:inline-flex;
     align-items:center;
     justify-content:center;
 
     width:auto;
-    max-width:88vw;
+    min-width:190px;
+    max-width:78vw;
 
-    padding:10px 22px;
+    padding:12px 18px;
     border-radius:999px;
 
-    background:rgba(0,0,0,.18);
+    background:rgba(0,0,0,.22);          /* прозоріше */
     border:1px solid rgba(255,255,255,.20);
-
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
 
-    font-size:1rem;
+    font-size:1.02rem;
     white-space:nowrap;
     text-align:center;
   }
 
   .nav__link:hover{
-    background:rgba(0,0,0,.26);
-    border-color:rgba(255,204,0,.45);
+    background:rgba(0,0,0,.30);
+    border-color:rgba(246,195,76,.35);
   }
 }
 

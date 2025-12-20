@@ -1,8 +1,6 @@
 /* =========================
    STOLAR CARP • main.css
-   clean + mobile safe header (SC not cropped)
-   + burger menu BG image restore
-   + register stage picker "framed" + no overflow
+   FINAL • mobile safe • burger fixed
    ========================= */
 
 /* === BASE COLORS & FONTS === */
@@ -18,27 +16,25 @@
   --danger:#ff4757;
   --radius:16px;
   --shadow:0 10px 30px rgba(0,0,0,.35);
-
-  /* extra */
-  --panel-2:#0f0f16;
-  --stroke:rgba(148,163,184,.22);
 }
 
 *{ box-sizing:border-box; }
 html,body{
-  margin:0; padding:0;
+  margin:0;
+  padding:0;
   background:var(--bg);
   color:var(--text);
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   line-height:1.55;
 }
+
 a{ color:var(--accent); text-decoration:none; }
-img{ max-width:100%; height:auto; display:block; }
+img{ max-width:100%; display:block; }
 .container{ width:min(1100px,92%); margin-inline:auto; }
+.hidden{ display:none!important; }
 
-.hidden{ display:none !important; }
+/* ================= HEADER ================= */
 
-/* === HEADER === */
 .header{
   position:sticky;
   top:0;
@@ -46,7 +42,6 @@ img{ max-width:100%; height:auto; display:block; }
   background:rgba(11,11,15,.75);
   backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
-  overflow:visible;
 }
 
 .header__row{
@@ -57,69 +52,62 @@ img{ max-width:100%; height:auto; display:block; }
   min-height:72px;
 }
 
+/* logo */
 .logo{
   display:flex;
   align-items:center;
   gap:10px;
-  text-decoration:none;
   color:var(--text);
   font-weight:900;
-  letter-spacing:.5px;
-  overflow:visible;
 }
 
 .logo__mark{
   width:44px;
   height:44px;
-  min-width:44px;
   border-radius:12px;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
   color:#000;
-  box-shadow:var(--shadow);
-
-  display:inline-flex;
+  display:flex;
   align-items:center;
   justify-content:center;
-
-  line-height:1;
   font-weight:900;
-  font-size:16px;
-
-  overflow:visible;
-  padding:0;
+  line-height:1;
 }
 
 .logo__text{
   font-weight:900;
-  line-height:1.1;
   white-space:nowrap;
 }
 
-/* nav (desktop) */
+/* ================= NAV DESKTOP ================= */
+
 .nav{
   display:flex;
-  gap:16px;
-  align-items:center;
+  gap:14px;
 }
+
 .nav__link{
-  padding:10px 12px;
+  padding:8px 12px;
   border-radius:12px;
   color:var(--text);
   opacity:.9;
-  border:1px solid transparent;
 }
-.nav__link:hover{ opacity:1; background:var(--panel); }
-.nav__link--active{ border-color:#333; background:linear-gradient(180deg,#14141c,#0f0f15); }
 
-/* burger */
+.nav__link:hover{
+  opacity:1;
+  background:rgba(255,255,255,.06);
+}
+
+/* ================= BURGER ================= */
+
 .burger{
   display:none;
   background:none;
   border:0;
   cursor:pointer;
   padding:8px;
-  border-radius:12px;
 }
+
 .burger span{
   display:block;
   width:24px;
@@ -129,84 +117,48 @@ img{ max-width:100%; height:auto; display:block; }
   border-radius:2px;
 }
 
-/* mobile nav panel + BACKGROUND IMAGE RESTORE */
+/* ================= MOBILE NAV ================= */
+
 @media (max-width:860px){
   .burger{ display:block; }
 
   .nav{
     position:fixed;
-    left:0; right:0;
     top:72px;
+    left:50%;
+    transform:translate(-50%,-120%);
     flex-direction:column;
-    align-items:stretch;
-    gap:10px;
-    padding:14px;
-
-    /* фото як фон (як ти просив) */
-    background-image:url("../dk-dva-kuma-banner.jpg");
-    background-size:cover;
-    background-position:center;
-    background-repeat:no-repeat;
-
-    border-bottom-left-radius:var(--radius);
-    border-bottom-right-radius:var(--radius);
-
-    transform:translateY(-130%);
+    gap:12px;
+    padding:18px 20px;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(10px);
+    border-radius:20px;
+    width:auto;
+    align-items:center;
     transition:transform .25s ease;
-
-    /* щоб нічого не “вилазило” */
-    overflow:hidden;
   }
 
-  /* темний оверлей щоб текст читався */
-  .nav::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.90));
-    pointer-events:none;
+  .nav.open{
+    transform:translate(-50%,0);
   }
-
-  /* легкий блиск/шум щоб преміально */
-  .nav::after{
-    content:"";
-    position:absolute;
-    inset:0;
-    background:
-      radial-gradient(1200px 420px at 20% 0%, rgba(246,195,76,.10), transparent 55%),
-      radial-gradient(900px 380px at 90% 20%, rgba(122,15,43,.12), transparent 55%);
-    pointer-events:none;
-  }
-
-  /* щоб лінки були поверх оверлеїв */
-  .nav > *{ position:relative; z-index:1; }
-
-  .nav.open{ transform:translateY(0); }
 
   .nav__link{
+    padding:10px 18px;
+    border-radius:999px;
+    background:rgba(255,255,255,.06);
+    width:auto;              /* 🔥 ВАЖЛИВО */
     text-align:center;
-    background:rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.10);
-    backdrop-filter:blur(6px);
+    white-space:nowrap;
   }
+
   .nav__link:hover{
-    background:rgba(0,0,0,.55);
-    border-color:rgba(246,195,76,.35);
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    color:#000;
   }
 }
 
-/* прибираємо білі outline-лінії у хедері */
-.header *:focus,
-.header *:focus-visible,
-.header a:focus,
-.header a:focus-visible,
-.header button:focus,
-.header button:focus-visible{
-  outline:none !important;
-}
+/* ================= LAYOUT ================= */
 
-/* === LAYOUT === */
 .main{ padding:28px 0 60px; }
 .section{ margin-top:40px; }
 
@@ -215,295 +167,47 @@ img{ max-width:100%; height:auto; display:block; }
   border:1px solid #262636;
   border-radius:16px;
   padding:18px;
-
-  /* щоб внутрішні елементи не вилазили */
-  overflow:hidden;
 }
 
-/* === TABLES === */
-.table{ width:100%; border-collapse:collapse; }
-.table th,.table td{
-  border:1px solid #262636;
-  padding:10px 12px;
-  text-align:left;
-}
-.table th{ background:#15151e; }
-.table tr:nth-child(even){ background:#0f0f16; }
+/* ================= BUTTONS ================= */
 
-/* === GRID === */
-.grid{ display:grid; gap:16px; }
-.grid-2{ grid-template-columns:repeat(2,1fr); }
-.grid-3{ grid-template-columns:repeat(3,1fr); }
-@media (max-width:900px){
-  .grid-2,.grid-3{ grid-template-columns:1fr; }
-}
-
-/* === BUTTONS === */
 .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:8px;
-  padding:12px 16px;
-  border-radius:12px;
-  text-decoration:none;
-  font-weight:800;
-  border:1px solid #333;
-  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
-}
-.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
-.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
-.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
-.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
-.btn--ghost{ background:#0d0d13; color:var(--text); }
-
-/* === BADGES === */
-.badge{
-  display:inline-block;
-  padding:4px 10px;
+  padding:12px 18px;
   border-radius:999px;
-  font-size:12px;
-  border:1px solid #333;
-  color:#ddd;
+  font-weight:800;
+  border:none;
+  cursor:pointer;
 }
-.badge--success{ background:#0e2b1b; border-color:#124d2e; color:#9ff0bf; }
-.badge--warn{ background:#2a2109; border-color:#5c470f; color:#ffd27a; }
 
-/* === INPUTS === */
-.input,.select,.textarea{
-  width:100%;
-  padding:12px 14px;
-  border-radius:12px;
-  border:1px solid #2b2b36;
-  background:#0d0d14;
+.btn--primary{
+  background:linear-gradient(135deg,var(--accent),#ffd84d);
+  color:#000;
+}
+
+.btn--danger{
+  background:linear-gradient(135deg,var(--accent-2),#8b1020);
   color:#fff;
 }
-.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
-.form{ display:grid; gap:14px; }
-.form__hint{ color:var(--muted); font-size:12px; }
 
-/* === FOOTER === */
-.footer{ border-top:1px solid #222; background:#0c0c12; }
-.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
-.footer__links{ display:flex; gap:12px; }
+/* ================= FOOTER ================= */
 
-/* === HELPERS === */
-.notice{ border-left:4px solid var(--accent); padding:12px; border-radius:12px; background:#12121a; }
-.code{
-  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"DejaVu Sans Mono",monospace;
-  background:#0a0a0f;
-  border:1px solid #242434;
-  border-radius:12px;
-  padding:8px 10px;
-  display:inline-block;
+.footer{
+  border-top:1px solid #222;
+  background:#0c0c12;
 }
 
-/* === HERO === */
-.hero{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:26px;
-  align-items:center;
-  margin-top:18px;
-}
-.hero__card{
-  background:linear-gradient(180deg,#161620,#0d0d13);
-  border:1px solid #262636;
-  border-radius:20px;
-  padding:26px;
-  box-shadow:var(--shadow);
-}
-.hero__kicker{
-  display:inline-block;
-  font-weight:800;
-  letter-spacing:.08em;
-  color:#000;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  padding:6px 10px;
-  border-radius:999px;
-  margin-bottom:12px;
-}
-.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
-.hero p{ color:var(--muted); margin:0 0 18px; }
-.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-
-@media (max-width:900px){
-  .hero{ grid-template-columns:1fr; }
-  .hero h1{ font-size:34px; }
-}
-
-/* === REGISTER/CABINET fixes === */
-.avatar-actions{
+.footer__row{
   display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.avatar-actions input[type="file"]{ max-width:100%; }
-@media (max-width:560px){
-  .avatar-actions{ align-items:stretch; }
-  .avatar-actions input[type="file"]{ width:100%; }
-  .avatar-small-btn{ width:100%; justify-content:center; }
-}
-
-body.cabinet-page .avatar-upload{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-body.cabinet-page .avatar-upload input[type="file"]{
-  max-width:100% !important;
-}
-@media (max-width:560px){
-  body.cabinet-page .avatar-upload{
-    flex-direction:column;
-    align-items:stretch;
-  }
-  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
-  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
-}
-
-/* =========================
-   REGISTER • STAGE PICKER
-   "в рамці" + не вилазить
-   ========================= */
-
-/* контейнер зі списком */
-.event-options{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:10px;
-  border-radius:14px;
-  border:1px solid rgba(148,163,184,.18);
-  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
-
-  /* головне: ніяких вилазів */
-  overflow:hidden;
-}
-
-/* кожен пункт */
-.event-item{
-  position:relative;
-  display:flex;
-  align-items:flex-start;
-  gap:10px;
-
-  padding:12px 12px;
-  border-radius:14px;
-
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid rgba(148,163,184,.22);
-  box-shadow:0 10px 26px rgba(0,0,0,.25);
-
-  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
-
-  /* знов: не вилазить */
-  overflow:hidden;
-}
-
-.event-item:hover{
-  transform:translateY(-1px);
-  border-color:rgba(246,195,76,.55);
-  box-shadow:0 14px 34px rgba(0,0,0,.35);
-}
-
-.event-item input[type="radio"]{
-  width:18px;height:18px;
-  accent-color:var(--accent);
-  margin-top:2px;
-  flex:0 0 auto;
-}
-
-/* Оце вирішує твою “карявість” і обрізання: */
-.event-item > div{
-  min-width:0;               /* ключ */
-  flex:1 1 auto;
-}
-.event-item div,
-.event-item span{
-  overflow-wrap:anywhere;    /* ключ */
-  word-break:break-word;     /* ключ */
-}
-
-/* якщо в тебе довгі рядки типу "STOLAR CARP · Season ... — Етап 3" */
-.event-item > div > div:first-child{
-  font-weight:800;
-  letter-spacing:.02em;
-  line-height:1.25;
-}
-
-/* мета-рядок (дата/реєстрація) */
-.event-item > div > div:nth-child(2){
-  margin-top:4px;
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.25;
-}
-
-/* OPTIONAL класи (на майбутнє, якщо захочеш): */
-.event-title{
-  display:flex;
-  align-items:flex-start;
   justify-content:space-between;
-  gap:10px;
-  font-weight:800;
+  align-items:center;
+  padding:18px 0;
+  color:#aab;
 }
-.event-meta{
-  margin-top:4px;
-  font-size:12px;
-  color:var(--muted);
-}
-.event-badges{
+
+.footer__links{
   display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
-
-/* pill badges (як ти хотів преміум) */
-.pill-b{
-  font-size:11px;
-  padding:5px 10px;
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.25);
-  background:rgba(2,6,23,.55);
-  color:#e5e7eb;
-  white-space:nowrap;
-}
-.pill-b--open{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  border-color:transparent;
-  color:#04110a;
-  font-weight:900;
-}
-.pill-b--closed{
-  background:rgba(239,68,68,.15);
-  border-color:rgba(239,68,68,.35);
-  color:#ffb4b4;
-}
-.pill-b--final{
-  background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);
-  border-color:transparent;
-  color:#120a00;
-  font-weight:900;
-}
-.pill-b--active{
-  background:rgba(246,195,76,.15);
-  border-color:rgba(246,195,76,.35);
-  color:#ffe7a6;
-  font-weight:900;
-}
-
-/* disabled look (якщо label має class is-closed) */
-.event-item.is-closed{
-  opacity:.58;
-  filter:saturate(.85);
-}
-.event-item.is-closed:hover{
-  transform:none;
-  box-shadow:0 10px 26px rgba(0,0,0,.25);
+  gap:12px;
 }

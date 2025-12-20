@@ -1,353 +1,151 @@
 /* =========================
-   STOLAR CARP • main.css
-   FULL REPLACE • burger bg restored + pills by text
+   REGISTER • Premium stage picker (mobile-safe, framed)
    ========================= */
 
-/* === BASE COLORS & FONTS === */
-:root{
-  --bg:#0b0b0f;
-  --panel:#13131a;
-  --muted:#8a8f98;
-  --text:#f2f3f5;
-  --accent:#ffcc00;
-  --accent-2:#d72638;
-  --ok:#2ecc71;
-  --warn:#f39c12;
-  --danger:#ff4757;
-  --radius:16px;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
+/* трошки повітря на мобілці щоб нічого не липло до країв */
+body.register-page .section--narrow{
+  width:min(1100px, 94%);
 }
 
-*{ box-sizing:border-box; }
-html,body{
-  margin:0; padding:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  line-height:1.55;
-}
-a{ color:var(--accent); text-decoration:none; }
-img{ max-width:100%; height:auto; display:block; }
-.container{ width:min(1100px,92%); margin-inline:auto; }
-
-.hidden{ display:none !important; }
-
-/* === HEADER === */
-.header{
-  position:sticky;
-  top:0;
-  z-index:1000;
-  background:rgba(11,11,15,.75);
-  backdrop-filter:blur(10px);
-  border-bottom:1px solid #222;
-  overflow:visible; /* важливо: щоб нічого не різало */
-}
-
-.header__row{
+/* контейнер списку */
+.event-options{ 
   display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 0;
-  min-height:72px; /* запас по висоті — SC не обрізає */
-}
-
-.logo{
-  display:flex;
-  align-items:center;
+  flex-direction:column;
   gap:10px;
-  text-decoration:none;
-  color:var(--text);
-  font-weight:900;
-  letter-spacing:.5px;
-  overflow:visible;
 }
 
-.logo__mark{
-  width:44px;
-  height:44px;
-  min-width:44px;
-  border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  color:#000;
-  box-shadow:var(--shadow);
+/* рамка самого “пункту” + обрізка щоб НЕ вилазило */
+.event-item{
+  position:relative;
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
 
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
+  padding:12px 12px;
+  border-radius:14px;
 
-  line-height:1;      /* ключове */
-  font-weight:900;
-  font-size:16px;
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid rgba(148,163,184,.22);
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
 
-  overflow:visible;   /* ключове */
-  padding:0;          /* НЕ ставимо padding, щоб не ламало квадрат */
+  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+
+  overflow:hidden;            /* ключ: обрізає все що “вилазить” */
+  max-width:100%;             /* ключ */
 }
 
-.logo__text{
+.event-item:hover{
+  transform:translateY(-1px);
+  border-color:rgba(246,195,76,.55);
+  box-shadow:0 14px 34px rgba(0,0,0,.45);
+}
+
+.event-item input[type="radio"]{
+  width:18px;height:18px;
+  margin-top:2px;
+  flex:0 0 auto;
+  accent-color:var(--accent);
+}
+
+/* внутрішній блок з текстом і бейджами */
+.event-body{
+  flex:1 1 auto;
+  min-width:0;                /* ключ: дозволяє ellipsis */
+}
+
+/* верхня лінія: назва + бейджі */
+.event-title{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+/* назва з обрізкою */
+.event-name{
   font-weight:900;
-  line-height:1.1;
+  letter-spacing:.02em;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;         /* 1 рядок, без “вилазів” */
+}
+
+/* підрядок */
+.event-meta{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+  overflow:hidden;
+  text-overflow:ellipsis;
   white-space:nowrap;
 }
 
-/* nav */
-.nav{
+/* бейджі */
+.event-badges{
   display:flex;
-  gap:16px;
-  align-items:center;
-}
-.nav__link{
-  padding:10px 12px;
-  border-radius:12px;
-  color:var(--text);
-  opacity:.9;
-  border:1px solid transparent;
-}
-.nav__link:hover{ opacity:1; background:var(--panel); }
-.nav__link--active{ border-color:#333; background:linear-gradient(180deg,#14141c,#0f0f15); }
-
-/* burger */
-.burger{
-  display:none;
-  background:none;
-  border:0;
-  cursor:pointer;
-  padding:8px;
-  border-radius:12px;
-}
-.burger span{
-  display:block;
-  width:24px;
-  height:2px;
-  background:#fff;
-  margin:5px 0;
-  border-radius:2px;
-}
-
-/* === MOBILE NAV PANEL (FIXED) === */
-@media (max-width:860px){
-  .burger{ display:block; }
-
-  .nav{
-    position:fixed;
-    left:0; right:0;
-    top:72px; /* = min-height header */
-    bottom:0;
-
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    gap:14px;
-
-    padding:34px 18px;
-
-    /* ✅ ПОВЕРНУЛИ ФОТО НА ФОН */
-    background:
-      linear-gradient(180deg, rgba(0,0,0,.70), rgba(0,0,0,.88)),
-      url("/assets/dk-dva-kuma-banner.jpg") center/cover no-repeat;
-
-    border-bottom-left-radius:var(--radius);
-    border-bottom-right-radius:var(--radius);
-
-    transform:translateY(-130%);
-    transition:transform .25s ease;
-
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-  }
-
-  .nav.open{ transform:translateY(0); }
-
-  /* ✅ ПІЛЮЛІ ПО ДОВЖИНІ ТЕКСТУ */
-  .nav__link{
-    text-align:center;
-
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-
-    width:auto;            /* головне */
-    max-width:92vw;        /* щоб не вилазило */
-    padding:12px 22px;
-
-    border-radius:999px;
-
-    background:rgba(0,0,0,.42);
-    border:1px solid rgba(255,255,255,.14);
-    backdrop-filter:blur(6px);
-
-    font-size:1.05rem;
-    white-space:nowrap;
-  }
-
-  .nav__link:hover{
-    background:rgba(0,0,0,.52);
-    border-color:rgba(246,195,76,.30);
-  }
-}
-
-/* прибираємо білі outline-лінії у хедері */
-.header *:focus,
-.header *:focus-visible,
-.header a:focus,
-.header a:focus-visible,
-.header button:focus,
-.header button:focus-visible{
-  outline:none !important;
-}
-
-/* === LAYOUT === */
-.main{ padding:28px 0 60px; }
-.section{ margin-top:40px; }
-
-.card{
-  background:var(--panel);
-  border:1px solid #262636;
-  border-radius:16px;
-  padding:18px;
-}
-
-/* === TABLES === */
-.table{ width:100%; border-collapse:collapse; }
-.table th,.table td{
-  border:1px solid #262636;
-  padding:10px 12px;
-  text-align:left;
-}
-.table th{ background:#15151e; }
-.table tr:nth-child(even){ background:#0f0f16; }
-
-/* === GRID === */
-.grid{ display:grid; gap:16px; }
-.grid-2{ grid-template-columns:repeat(2,1fr); }
-.grid-3{ grid-template-columns:repeat(3,1fr); }
-@media (max-width:900px){
-  .grid-2,.grid-3{ grid-template-columns:1fr; }
-}
-
-/* === BUTTONS === */
-.btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  padding:12px 16px;
-  border-radius:12px;
-  text-decoration:none;
-  font-weight:800;
-  border:1px solid #333;
-  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
-}
-.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
-.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
-.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
-.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
-.btn--ghost{ background:#0d0d13; color:var(--text); }
-
-/* === BADGES === */
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  border:1px solid #333;
-  color:#ddd;
-}
-.badge--success{ background:#0e2b1b; border-color:#124d2e; color:#9ff0bf; }
-.badge--warn{ background:#2a2109; border-color:#5c470f; color:#ffd27a; }
-
-/* === INPUTS === */
-.input,.select,.textarea{
-  width:100%;
-  padding:12px 14px;
-  border-radius:12px;
-  border:1px solid #2b2b36;
-  background:#0d0d14;
-  color:#fff;
-}
-.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
-.form{ display:grid; gap:14px; }
-.form__hint{ color:var(--muted); font-size:12px; }
-
-/* === FOOTER === */
-.footer{ border-top:1px solid #222; background:#0c0c12; }
-.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
-.footer__links{ display:flex; gap:12px; }
-
-/* === HELPERS === */
-.notice{ border-left:4px solid var(--accent); padding:12px; border-radius:12px; background:#12121a; }
-.code{
-  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"DejaVu Sans Mono",monospace;
-  background:#0a0a0f;
-  border:1px solid #242434;
-  border-radius:12px;
-  padding:8px 10px;
-  display:inline-block;
-}
-
-/* === HERO (як було) === */
-.hero{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:26px;
-  align-items:center;
-  margin-top:18px;
-}
-.hero__card{
-  background:linear-gradient(180deg,#161620,#0d0d13);
-  border:1px solid #262636;
-  border-radius:20px;
-  padding:26px;
-  box-shadow:var(--shadow);
-}
-.hero__kicker{
-  display:inline-block;
-  font-weight:800;
-  letter-spacing:.08em;
-  color:#000;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  padding:6px 10px;
-  border-radius:999px;
-  margin-bottom:12px;
-}
-.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
-.hero p{ color:var(--muted); margin:0 0 18px; }
-.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-
-@media (max-width:900px){
-  .hero{ grid-template-columns:1fr; }
-  .hero h1{ font-size:34px; }
-}
-
-/* === REGISTER/CABINET fixes that you had (залишив ключові) === */
-.avatar-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
+  gap:6px;
   flex-wrap:wrap;
-}
-.avatar-actions input[type="file"]{ max-width:100%; }
-@media (max-width:560px){
-  .avatar-actions{ align-items:stretch; }
-  .avatar-actions input[type="file"]{ width:100%; }
-  .avatar-small-btn{ width:100%; justify-content:center; }
+  justify-content:flex-end;
+  flex:0 0 auto;
 }
 
-body.cabinet-page .avatar-upload{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
+.pill-b{
+  font-size:11px;
+  padding:5px 10px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.25);
+  background:rgba(2,6,23,.55);
+  color:#e5e7eb;
+  white-space:nowrap;
 }
-body.cabinet-page .avatar-upload input[type="file"]{
-  max-width:100% !important;
+
+/* статус реєстрації */
+.pill-b--open{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  border-color:transparent;
+  color:#04110a;
+  font-weight:900;
 }
-@media (max-width:560px){
-  body.cabinet-page .avatar-upload{
-    flex-direction:column;
-    align-items:stretch;
-  }
-  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
-  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
+.pill-b--closed{
+  background:rgba(239,68,68,.15);
+  border-color:rgba(239,68,68,.35);
+  color:#ffb4b4;
+  font-weight:900;
+}
+
+/* типи (кольори як ти хотів) */
+.pill-b--stage{
+  background:rgba(59,130,246,.14);
+  border-color:rgba(59,130,246,.35);
+  color:#b9d7ff;
+  font-weight:900;
+}
+.pill-b--final{
+  background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);
+  border-color:transparent;
+  color:#120a00;
+  font-weight:900;
+}
+.pill-b--comp{
+  background:rgba(168,85,247,.14);
+  border-color:rgba(168,85,247,.35);
+  color:#e6c7ff;
+  font-weight:900;
+}
+.pill-b--stalker{
+  background:rgba(34,197,94,.12);
+  border-color:rgba(34,197,94,.35);
+  color:#b7f7cd;
+  font-weight:900;
+}
+
+/* disabled look */
+.event-item.is-closed{
+  opacity:.58;
+  filter:saturate(.85);
+}
+.event-item.is-closed:hover{
+  transform:none;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
 }

@@ -1,157 +1,365 @@
 /* =========================
 STOLAR CARP • main.css
-STABLE HEADER + BURGER PANEL (CONTENT HEIGHT)
+STABLE HEADER + BURGER OVERLAY (bg photo)
+NO register-page styling here
 ========================= */
 
+/* === BASE COLORS & FONTS === */
 :root{
---bg:#0b0b0f;
---panel:#13131a;
---muted:#8a8f98;
---text:#f2f3f5;
---accent:#ffcc00;
---accent-2:#d72638;
---radius:16px;
---shadow:0 10px 30px rgba(0,0,0,.35);
---header-height:72px;
+  --bg:#0b0b0f;
+  --panel:#13131a;
+  --muted:#8a8f98;
+  --text:#f2f3f5;
+  --accent:#ffcc00;
+  --accent-2:#d72638;
+  --radius:16px;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
+  --header-height:72px;
 }
 
 *{ box-sizing:border-box; }
 html,body{
-margin:0; padding:0;
-background:var(--bg);
-color:var(--text);
-font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-line-height:1.55;
+  margin:0; padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;
 }
-
 a{ color:var(--accent); text-decoration:none; }
 img{ max-width:100%; height:auto; display:block; }
+
 .container{ width:min(1100px,92%); margin-inline:auto; }
+.hidden{ display:none !important; }
 
 /* === HEADER === */
 .header{
-position:sticky;
-top:0;
-z-index:2000;
-background:rgba(11,11,15,.75);
-backdrop-filter:blur(10px);
-border-bottom:1px solid #222;
+  position:sticky;
+  top:0;
+  z-index:2000;
+  background:rgba(11,11,15,.75);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid #222;
+  overflow:visible;
 }
 
 .header__row{
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:12px 0;
-min-height:var(--header-height);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 0;
+  min-height:var(--header-height);
 }
 
 /* LOGO */
 .logo{
-display:flex;
-align-items:center;
-gap:10px;
-font-weight:900;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:var(--text);
+  font-weight:900;
+  letter-spacing:.5px;
+  overflow:visible;
 }
 .logo__mark{
-width:44px;height:44px;
-border-radius:12px;
-background:linear-gradient(135deg,var(--accent),var(--accent-2));
-color:#000;
-display:flex;
-align-items:center;
-justify-content:center;
+  width:44px; height:44px; min-width:44px;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#000;
+  box-shadow:var(--shadow);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+  font-weight:900;
+  font-size:16px;
+  overflow:visible;
+  padding:0;
 }
-.logo__text{ white-space:nowrap; }
+.logo__text{
+  font-weight:900;
+  line-height:1.1;
+  white-space:nowrap;
+}
 
-/* DESKTOP NAV */
+/* NAV DESKTOP */
 .nav{
-display:flex;
-gap:16px;
-align-items:center;
+  display:flex;
+  gap:16px;
+  align-items:center;
 }
-
 .nav__link{
-padding:10px 12px;
-border-radius:12px;
-color:var(--text);
-opacity:.9;
+  padding:10px 12px;
+  border-radius:12px;
+  color:var(--text);
+  opacity:.9;
+  border:1px solid transparent;
 }
-.nav__link:hover{
-background:rgba(255,255,255,.06);
-opacity:1;
+.nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
+.nav__link--active{
+  border-color:#333;
+  background:linear-gradient(180deg,#14141c,#0f0f15);
 }
 
-/* BURGER */
+/* BURGER BUTTON */
 .burger{
-display:none;
-background:none;
-border:0;
-padding:10px;
-cursor:pointer;
+  display:none;
+  background:transparent;
+  border:0;
+  cursor:pointer;
+  padding:10px;
+  border-radius:12px;
+  -webkit-tap-highlight-color:transparent;
 }
 .burger span{
-display:block;
-width:26px;
-height:3px;
-background:#fff;
-margin:5px 0;
-border-radius:3px;
+  display:block;
+  width:26px;
+  height:3px;
+  background:#fff;
+  margin:5px 0;
+  border-radius:3px;
 }
 
-/* === MOBILE MENU (CONTENT HEIGHT, NOT FULLSCREEN) === */
+/* прибираємо outline у хедері */
+.header *:focus,
+.header *:focus-visible,
+.header a:focus,
+.header a:focus-visible,
+.header button:focus,
+.header button:focus-visible{
+  outline:none !important;
+}
+
+/* =========================
+   MOBILE MENU (light, translucent, compact)
+   - column buttons
+   - background only to end of buttons
+   ========================= */
 @media (max-width:860px){
-.burger{ display:block; }
-.header-login{ display:none; }
+  .burger{ display:block; }
 
-/* 🔴 ОЦЕ КЛЮЧОВА ЧАСТИНА */
-.nav{
-position:absolute;
-top:calc(var(--header-height) + 8px);
-left:50%;
-transform:translateX(-50%) translateY(-10px);
+  /* щоб справа не тиснуло (у тебе в index є кнопка Увійти) */
+  .header-login{ display:none; }
 
-flex-direction:column;
-align-items:center;
-gap:12px;
+  /* Робимо nav як плаваючу панель */
+  .nav{
+    position:fixed;
+    top:calc(var(--header-height) + env(safe-area-inset-top) + 10px);
+    left:50%;
+    transform:translateX(-50%) translateY(-10px);
 
-width:min(92vw, 520px);
-padding:14px 14px 16px;
+    width:min(92vw, 560px);
+    padding:12px 14px 14px;
+    border-radius:22px;
 
-background:
-linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
-url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
 
-border-radius:22px;
-box-shadow:0 18px 40px rgba(0,0,0,.6);
+    /* компактніше, щоб не було “величезних” кнопок */
+    gap:10px;
 
-opacity:0;
-pointer-events:none;
-transition:opacity .2s ease, transform .2s ease;
-z-index:1900;
-}
+    /* ✅ прозоріше, щоб було видно фон/сторінку */
+    background:
+      linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.42)),
+      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
-.nav.open{
-opacity:1;
-transform:translateX(-50%) translateY(0);
-pointer-events:auto;
-}
+    /* ✅ скло */
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
 
-/* КНОПКИ — СУВОРО СТОВПЕЦЬ */
-.nav__link{
-width:100%;
-padding:14px 18px;
-border-radius:999px;
-display:flex;
-justify-content:center;
-background:rgba(0,0,0,.38);
-border:1px solid rgba(255,255,255,.18);
-backdrop-filter:blur(6px);
-font-size:1.05rem;
-white-space:nowrap;
-}
+    box-shadow:0 18px 40px rgba(0,0,0,.55);
+    border:1px solid rgba(255,255,255,.10);
+
+    /* CLOSED */
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+
+    transition:opacity .18s ease, transform .18s ease, visibility .18s ease;
+    z-index:3000;
+
+    /* панель по висоті контенту (НЕ на весь екран) */
+    overflow:hidden;
+  }
+
+  .nav.open{
+    opacity:1;
+    visibility:visible;
+    pointer-events:auto;
+    transform:translateX(-50%) translateY(0);
+  }
+
+  /* ПІГУЛКИ — компактні, у стовпець */
+  .nav__link{
+    width:100%;
+    max-width:520px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    /* ✅ менший розмір */
+    padding:11px 16px;
+    border-radius:999px;
+
+    /* ✅ більше “скла”, менше “чорного” */
+    background:rgba(0,0,0,.18);
+    border:1px solid rgba(255,255,255,.18);
+
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+
+    font-size:1rem;
+    white-space:nowrap;
+    color:rgba(255,255,255,.92);
+  }
+
+  .nav__link:hover{
+    background:rgba(0,0,0,.26);
+    border-color:rgba(246,195,76,.35);
+  }
 }
 
 /* === LAYOUT === */
 .main{ padding:28px 0 60px; }
 .section{ margin-top:40px; }
+
+.card{
+  background:var(--panel);
+  border:1px solid #262636;
+  border-radius:16px;
+  padding:18px;
+}
+
+/* === TABLES === */
+.table{ width:100%; border-collapse:collapse; }
+.table th,.table td{
+  border:1px solid #262636;
+  padding:10px 12px;
+  text-align:left;
+}
+.table th{ background:#15151e; }
+.table tr:nth-child(even){ background:#0f0f16; }
+
+/* === GRID === */
+.grid{ display:grid; gap:16px; }
+.grid-2{ grid-template-columns:repeat(2,1fr); }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+@media (max-width:900px){
+  .grid-2,.grid-3{ grid-template-columns:1fr; }
+}
+
+/* === BUTTONS === */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:12px 16px;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:800;
+  border:1px solid #333;
+  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
+.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
+.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
+.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
+.btn--ghost{ background:#0d0d13; color:var(--text); }
+
+/* === BADGES === */
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid #333;
+  color:#ddd;
+}
+
+/* === INPUTS (базові, без реєстру) === */
+.input,.select,.textarea{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #2b2b36;
+  background:#0d0d14;
+  color:#fff;
+}
+.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
+.form{ display:grid; gap:14px; }
+.form__hint{ color:var(--muted); font-size:12px; }
+
+/* === FOOTER === */
+.footer{ border-top:1px solid #222; background:#0c0c12; }
+.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
+.footer__links{ display:flex; gap:12px; }
+
+/* === HERO (як було) === */
+.hero{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:26px;
+  align-items:center;
+  margin-top:18px;
+}
+.hero__card{
+  background:linear-gradient(180deg,#161620,#0d0d13);
+  border:1px solid #262636;
+  border-radius:20px;
+  padding:26px;
+  box-shadow:var(--shadow);
+}
+.hero__kicker{
+  display:inline-block;
+  font-weight:800;
+  letter-spacing:.08em;
+  color:#000;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  padding:6px 10px;
+  border-radius:999px;
+  margin-bottom:12px;
+}
+.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
+.hero p{ color:var(--muted); margin:0 0 18px; }
+.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
+@media (max-width:900px){
+  .hero{ grid-template-columns:1fr; }
+  .hero h1{ font-size:34px; }
+}
+
+/* === CABINET small fixes (окремо від register) === */
+.avatar-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.avatar-actions input[type="file"]{ max-width:100%; }
+@media (max-width:560px){
+  .avatar-actions{ align-items:stretch; }
+  .avatar-actions input[type="file"]{ width:100%; }
+  .avatar-small-btn{ width:100%; justify-content:center; }
+}
+
+body.cabinet-page .avatar-upload{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+body.cabinet-page .avatar-upload input[type="file"]{
+  max-width:100% !important;
+}
+@media (max-width:560px){
+  body.cabinet-page .avatar-upload{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
+  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
+}

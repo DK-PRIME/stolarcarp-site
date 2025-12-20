@@ -13,16 +13,14 @@
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    body.register-page{background:var(--bg);}
+    body.register-page{background:var(--bg); overflow-x:hidden;}
     .section--narrow{max-width:1100px;margin:0 auto;}
 
-    /* hero */
     .register-hero{
-      margin-top:14px;margin-bottom:22px;
-      padding:18px 16px 16px;border-radius:16px;
-      background:linear-gradient(145deg,#14141d,#08080d);
-      border:1px solid #262636;
+      margin-top:14px;margin-bottom:22px;padding:18px 16px 16px;border-radius:16px;
+      background:linear-gradient(145deg,#14141d,#08080d);border:1px solid #262636;
       box-shadow:var(--shadow);
+      overflow:hidden; /* щоб нічого не вилазило */
     }
     .register-hero__kicker{
       font-size:.72rem;text-transform:uppercase;letter-spacing:.18em;
@@ -34,26 +32,24 @@
       background:linear-gradient(135deg,var(--accent),var(--accent-2));
       font-weight:800;font-size:.75rem;color:#000;
       box-shadow:0 0 8px rgba(0,0,0,.7);
+      flex:0 0 auto;
     }
     .register-hero h1{
-      margin:0 0 8px;
-      font-size:clamp(22px,3.4vw,30px);
-      font-weight:900;
-      letter-spacing:.06em;
-      text-transform:uppercase;
+      margin:0 0 8px;font-size:clamp(22px,3.4vw,28px);
+      font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+      line-height:1.15;
     }
     .register-hero .title-gradient{
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent;
     }
-    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:760px;}
+    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:720px;}
     .register-hero__divider{
       margin-top:10px;width:120px;height:2px;border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
       box-shadow:0 0 10px rgba(246,195,76,.5);
     }
 
-    /* layout */
     .register-layout{
       display:grid;
       grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
@@ -75,18 +71,19 @@
 
     .register-page input[type="number"]{
       background:#0f0f14;border:1px solid #2a2a39;color:#fff;
-      padding:10px 14px;border-radius:10px;font-size:.96rem;
+      padding:10px 14px;border-radius:12px;font-size:.96rem;
+      width:100%;
     }
     .register-page input::placeholder{color:#6b7280;}
     .register-page input:focus{
       outline:none;border-color:var(--accent);
-      box-shadow:0 0 6px rgba(246,195,76,0.5);
+      box-shadow:0 0 10px rgba(246,195,76,0.35);
     }
 
     .radio-row{display:flex;flex-wrap:wrap;gap:16px;}
-    .radio-row label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.95rem;}
+    .radio-row label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;}
 
-    .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;}
+    .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
     .spinner{
       width:18px;height:18px;border-radius:50%;
       border:3px solid rgba(255,255,255,.2);border-top-color:#fff;
@@ -94,10 +91,12 @@
     }
     .spinner--on{display:inline-block;animation:spin .9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
-
     .form-msg{margin-top:6px;font-weight:700;font-size:.92rem;}
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
+
+    .profile-summary{font-size:.85rem;color:var(--muted);margin-bottom:10px;}
+    .profile-summary b{color:#e5e7eb;}
 
     .card--payment{background:#05060c;border:1px solid #262636;box-shadow:var(--shadow);}
     .card-payment-title{
@@ -111,13 +110,133 @@
       font-size:.9rem;color:#000;font-weight:900;
     }
     .card-number{
-      font-weight:800;letter-spacing:.16em;padding:9px 10px;border-radius:12px;
+      font-weight:800;letter-spacing:.16em;padding:10px 12px;border-radius:12px;
       background:#020308;border:1px solid #33384a;display:inline-block;
-      margin:4px 0;font-size:.9rem;
+      margin:4px 0;font-size:.92rem;
+      max-width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
-    .card-note{font-size:.82rem;color:var(--muted);margin-top:6px;}
-    .profile-summary{font-size:.9rem;color:var(--muted);margin-bottom:10px;}
-    .profile-summary b{color:#e5e7eb;}
+    .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
+
+    /* ===== Premium stage picker (В РАМЦІ і НЕ ВИЛАЗИТЬ) ===== */
+    .event-options{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:10px;
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,.18);
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      overflow:hidden;              /* ключ: обрізає все що вилізло */
+      max-width:100%;
+    }
+
+    .event-item{
+      position:relative;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:12px 12px;
+      border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(148,163,184,.22);
+      box-shadow:0 10px 26px rgba(0,0,0,.35);
+      transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+      width:100%;
+      max-width:100%;
+      box-sizing:border-box;
+      overflow:hidden;              /* ключ: контент не вилізає */
+    }
+    .event-item:hover{
+      transform:translateY(-1px);
+      border-color:rgba(246,195,76,.55);
+      box-shadow:0 14px 34px rgba(0,0,0,.45);
+    }
+    .event-item input[type="radio"]{
+      width:18px;height:18px;
+      accent-color:var(--accent);
+      margin-top:2px;
+      flex:0 0 auto;
+    }
+
+    .event-content{min-width:0;flex:1;}
+    .event-title{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:900;
+      letter-spacing:.02em;
+      line-height:1.2;
+    }
+    .event-title .text{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .event-meta{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .event-badges{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      flex:0 0 auto;
+    }
+
+    .pill-b{
+      font-size:11px;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+      white-space:nowrap;
+      font-weight:900;
+    }
+
+    /* кольори типів */
+    .pill-b--stage{   background:rgba(59,130,246,.16);  border-color:rgba(59,130,246,.35);  color:#bfe0ff; }
+    .pill-b--final{   background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b); border-color:transparent; color:#120a00; }
+    .pill-b--oneoff{  background:rgba(168,85,247,.16);  border-color:rgba(168,85,247,.35);  color:#efd6ff; }
+    .pill-b--stalker{ background:rgba(239,68,68,.16);   border-color:rgba(239,68,68,.35);   color:#ffb4b4; }
+
+    .pill-b--open{
+      background:linear-gradient(135deg,#22c55e,#16a34a);
+      border-color:transparent;
+      color:#04110a;
+    }
+    .pill-b--closed{
+      background:rgba(239,68,68,.15);
+      border-color:rgba(239,68,68,.35);
+      color:#ffb4b4;
+    }
+    .pill-b--active{
+      background:rgba(246,195,76,.16);
+      border-color:rgba(246,195,76,.35);
+      color:#ffe7a6;
+    }
+
+    .event-item.is-closed{opacity:.6; filter:saturate(.9);}
+    .event-item.is-closed:hover{transform:none; box-shadow:0 10px 26px rgba(0,0,0,.35);}
+
+    /* щоб на малих екранах не “упиралось” у край */
+    @media (max-width:520px){
+      .register-hero{padding:16px 14px;}
+      .card{padding:16px;}
+      .event-options{padding:10px;}
+      .event-item{padding:12px 10px;}
+      .event-title .text{max-width:220px;}
+    }
   </style>
 </head>
 
@@ -140,7 +259,7 @@
       <a href="/events/index.html" class="nav__link">Архів</a>
       <a href="/auth.html" class="nav__link">Акаунт</a>
     </nav>
-    <button class="burger" id="burger" aria-label="Меню"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -150,10 +269,10 @@
     <div class="register-hero">
       <div class="register-hero__kicker">
         <span class="register-hero__kicker-tag">SC</span>
-        STOLAR CARP · ENTRY
+        STOLAR CARP · REGISTRATION
       </div>
       <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ ЗМАГАНЬ STOLAR CARP</span></h1>
-      <p>Оберіть відкрите змагання / етап, налаштуйте харчування — і подайте заявку. Дані команди беруться з вашого акаунта.</p>
+      <p>Оберіть відкрите змагання/етап, налаштуйте харчування — і подайте заявку.</p>
       <div class="register-hero__divider"></div>
     </div>
 
@@ -172,7 +291,7 @@
           <div class="field">
             <label>Оберіть змагання / етап <span style="color:var(--accent);">*</span></label>
             <div id="eventOptions" class="event-options">
-              <p class="form__hint">Завантаження актуальних змагань...</p>
+              <p class="form__hint">Завантаження списку...</p>
             </div>
           </div>
 
@@ -193,9 +312,9 @@
 
           <div class="field">
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-              <input type="checkbox" id="rules" required style="transform:scale(1.25);accent-color:var(--accent);">
+              <input type="checkbox" id="rules" required style="transform:scale(1.25);accent-color:#f6c34c;">
               <span>Підтверджую, що ознайомлений із
-                <a href="rules.html" target="_blank" style="color:var(--accent);text-decoration:underline;">регламентом турніру</a>
+                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
               </span>
             </label>
           </div>
@@ -208,7 +327,7 @@
           <div id="msg" class="form-msg"></div>
 
           <p class="form__hint" style="margin-top:6px;">
-            Після подачі заявки організатор бачить її в адмінці й підтверджує участь після оплати внеску.
+            Після подачі заявки організатор бачить її в адмінці та підтверджує участь після оплати внеску.
           </p>
         </form>
       </div>
@@ -242,7 +361,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
+<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
+
+<!-- logic -->
 <script src="assets/js/register_firebase.js"></script>
 
 </body>

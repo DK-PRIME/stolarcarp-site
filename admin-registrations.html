@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STOLAR CARP • Реєстрація команд (Адмін)</title>
+
+  <link rel="stylesheet" href="assets/css/main.css" />
+</head>
+<body class="admin-page">
+  <header class="header">
+    <div class="container header__row">
+      <a class="logo" href="admin.html">
+        <span class="logo__mark">SC</span>
+        <span class="logo__text">STOLAR CARP</span>
+      </a>
+
+      <button class="burger" id="burger" aria-label="Меню">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav" id="nav">
+        <a class="nav__link" href="admin.html">Адмінка</a>
+        <a class="nav__link" href="admin-registrations.html">Реєстрація команд</a>
+        <a class="nav__link" href="index.html">На сайт</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="container">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">Реєстрація команд (Адмін)</h2>
+
+        <div id="msg" class="form__hint" style="margin:8px 0 14px;"></div>
+
+        <div class="row" style="margin-bottom:12px;">
+          <div>
+            <label class="form__hint">Фільтр статусу</label>
+            <select id="statusFilter" class="select">
+              <option value="all">Усі</option>
+              <option value="pending_payment">Очікує оплату</option>
+              <option value="confirmed">Підтверджено</option>
+              <option value="cancelled">Скасовано</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form__hint">Пошук (команда/капітан/телефон)</label>
+            <input id="q" class="input" placeholder="Напр. DK, Роман, 063..." />
+          </div>
+        </div>
+
+        <div id="list" class="grid" style="gap:12px;"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ВАЖЛИВО: тут має бути твій firebase-init (compat) який створює window.scAuth/window.scDb -->
+  <script src="assets/js/firebase_init.js"></script>
+
+  <!-- твій shared config (бургер/іконки) -->
+  <script src="assets/js/config.js"></script>
+
+  <!-- логіка цієї сторінки -->
+  <script src="assets/js/admin_registrations.js"></script>
+</body>
+</html>

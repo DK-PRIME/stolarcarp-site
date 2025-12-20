@@ -477,3 +477,61 @@ body.cabinet-page .avatar-upload input[type="file"]{
   .stage-title{ font-size: .94rem; }
   .stage-dates{ font-size: .84rem; }
 }
+/* ===== REGISTER: stage pick visual selection ===== */
+
+.stage-card{
+  position:relative;
+  display:block;
+  border-radius:22px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(10,10,16,.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor:pointer;
+  transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+
+.stage-card:hover{
+  border-color: rgba(246,195,76,.28);
+  background:rgba(10,10,16,.55);
+}
+
+.stage-card:active{ transform: scale(.995); }
+
+/* коли radio всередині вибраний — даємо чітку ознаку */
+.stage-card:has(input[name="stagePick"]:checked){
+  border-color: rgba(255,204,0,.55);
+  box-shadow: 0 12px 35px rgba(0,0,0,.45);
+  background: linear-gradient(180deg, rgba(255,204,0,.06), rgba(0,0,0,.45));
+}
+
+/* галочка справа зверху */
+.stage-card:has(input[name="stagePick"]:checked)::after{
+  content:"✓";
+  position:absolute;
+  top:12px;
+  right:14px;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background: linear-gradient(135deg, #ffcc00, #ffd84d);
+  color:#000;
+  font-weight:900;
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+
+/* тонка “плашка” з текстом ОБРАНО (опціонально) */
+.stage-card:has(input[name="stagePick"]:checked) .stage-title::after{
+  content:" • ОБРАНО";
+  font-weight:800;
+  color:rgba(255,204,0,.95);
+}
+
+/* якщо disabled radio — курсор і вигляд */
+.stage-card:has(input[name="stagePick"]:disabled){
+  cursor:not-allowed;
+  opacity:.65;
+}

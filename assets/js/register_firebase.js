@@ -1,8 +1,8 @@
 // assets/js/register_firebase.js
 // STOLAR CARP • Registration
-// competitions + events[] → показує картки етапів
-// Лампочка: зелена = відкрита реєстрація, жовта = найближча до відкриття, червона = ще не відкрита
-// Показує: Назву + Дата старт/фініш. НЕ показує reg open/close, НЕ показує "closed/active".
+// competitions + events[] → cards with lamp status (red/yellow/green)
+// Shows: title + start/finish dates. No "closed/active" text. No reg open/close dates.
+// Submit enabled ONLY when a GREEN (open) stage selected + rules checkbox checked.
 
 (function () {
   const auth = window.scAuth;
@@ -19,6 +19,7 @@
   const profileSummary = document.getElementById("profileSummary");
   const copyCardBtn    = document.getElementById("copyCard");
   const cardNumEl      = document.getElementById("cardNum");
+  const rulesChk       = document.getElementById("rules");
 
   if (!auth || !db || !window.firebase) {
     if (eventOptionsEl) eventOptionsEl.innerHTML =
@@ -30,6 +31,18 @@
   let currentUser = null;
   let profile = null;
 
+  // cache last rendered items
+  let lastItems = [];
+  let nearestUpcomingValue = null; // `${compId}||${stageKey}` для ЖОВТОЇ лампи
+
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function setMsg(text, ok = true) {
     if (!msgEl) return;
     msgEl.textContent = text || "";
@@ -39,12 +52,7 @@
 
   function setLoading(v) {
     if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
-    if (submitBtn) submitBtn.disabled = !!v;
-  }
-
-  function nowKyiv() {
-    // ти задаєш дати як 12:00 Київ — для логіки достатньо локального now()
-    return new Date();
+    refreshSubmitState();
   }
 
   function fmtDate(d) {
@@ -63,6 +71,11 @@
       if (x && typeof x.toDate === "function") return x.toDate(); // Firestore Timestamp
     } catch {}
     return null;
+  }
+
+  function nowKyiv() {
+    // ти виставляєш дати як "12:00 Київ", локального now() достатньо
+    return new Date();
   }
 
   function getRegDatesFromEvent(ev) {
@@ -90,14 +103,57 @@
   }
 
   function isUpcoming(item) {
+    // true якщо реєстрація ще не відкрилась, але є regOpenAt в майбутньому (auto)
     const mode = String(item.regMode || "auto").toLowerCase();
-    if (mode === "manual") return !item.manualOpen; // ручний: якщо не відкрито — вважаємо "ще не відкрита"
+    if (mode === "manual") return false;
     const openAt = toDateMaybe(item.regOpenAt);
     if (!openAt) return false;
     return openAt > nowKyiv();
   }
 
-  // copy card
+  function calcNearestUpcoming(items) {
+    let best = null; // { value, openAt }
+    items.forEach(it => {
+      const mode = String(it.regMode || "auto").toLowerCase();
+      if (mode === "manual") return;
+      const openAt = toDateMaybe(it.regOpenAt);
+      if (!openAt) return;
+      if (openAt <= nowKyiv()) return;
+      const value = `${it.compId}||${it.stageKey || ""}`;
+      if (!best || openAt < best.openAt) best = { value, openAt };
+    });
+    nearestUpcomingValue = best ? best.value : null;
+  }
+
+  function lampClassFor(it, value) {
+    if (isOpenWindow(it)) return "lamp-green";
+    if (nearestUpcomingValue && value === nearestUpcomingValue) return "lamp-yellow";
+    return "lamp-red";
+  }
+
+  function refreshSubmitState() {
+    if (!submitBtn) return;
+
+    const loading = spinnerEl && spinnerEl.classList.contains("spinner--on");
+    if (loading) {
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const picked = document.querySelector('input[name="stagePick"]:checked');
+    const rulesOk = rulesChk ? !!rulesChk.checked : true;
+
+    // можна подати тільки коли вибраний ВІДКРИТИЙ (зелений) етап
+    const selectedValue = picked ? String(picked.value) : "";
+    const selectedItem = selectedValue
+      ? lastItems.find(x => `${x.compId}||${x.stageKey || ""}` === selectedValue)
+      : null;
+
+    const ok = !!(picked && rulesOk && selectedItem && isOpenWindow(selectedItem));
+    submitBtn.disabled = !ok;
+  }
+
+  // копіювання карти
   if (copyCardBtn && cardNumEl) {
     copyCardBtn.addEventListener("click", async () => {
       try {
@@ -150,9 +206,9 @@
 
     if (profileSummary) {
       profileSummary.innerHTML =
-        `Команда: <b>${profile.teamName}</b><br>` +
-        `Капітан: <b>${profile.captain}</b><br>` +
-        `Телефон: <b>${profile.phone || "не вказано"}</b>`;
+        `Команда: <b>${escapeHtml(profile.teamName)}</b><br>` +
+        `Капітан: <b>${escapeHtml(profile.captain)}</b><br>` +
+        `Телефон: <b>${escapeHtml(profile.phone || "не вказано")}</b>`;
     }
   }
 
@@ -189,9 +245,8 @@
             items.push({
               compId,
               brand,
-              compTitle: title,
               year,
-
+              compTitle: title,
               stageKey: key,
               stageTitle,
 
@@ -204,17 +259,45 @@
               regCloseAt
             });
           });
+        } else {
+          // одноразове змагання без events[]
+          const startAt = toDateMaybe(c.startAt || c.startDate);
+          const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
+          const { regOpenAt, regCloseAt } = {
+            regOpenAt: c.regOpenAt || c.regOpenDate || null,
+            regCloseAt: c.regCloseAt || c.regCloseDate || null
+          };
+
+          items.push({
+            compId,
+            brand,
+            year,
+            compTitle: title,
+            stageKey: null,
+            stageTitle: null,
+
+            startAt,
+            endAt,
+
+            regMode: c.regMode || "auto",
+            manualOpen: !!c.manualOpen,
+            regOpenAt,
+            regCloseAt
+          });
         }
       });
 
-      // сортування по даті старту (найближчі/майбутні вище)
+      // сортування за датою старту (щоб логічно)
       items.sort((a, b) => {
         const ad = a.startAt ? a.startAt.getTime() : 0;
         const bd = b.startAt ? b.startAt.getTime() : 0;
         return ad - bd;
       });
 
-      renderStageCards(items);
+      lastItems = items;
+      calcNearestUpcoming(items);
+      renderItems(items);
+      refreshSubmitState();
     } catch (e) {
       console.error("loadCompetitions error:", e);
       eventOptionsEl.innerHTML =
@@ -223,7 +306,7 @@
     }
   }
 
-  function renderStageCards(items) {
+  function renderItems(items) {
     if (!eventOptionsEl) return;
     eventOptionsEl.innerHTML = "";
 
@@ -233,37 +316,10 @@
       return;
     }
 
-    // шукаємо найближчу майбутню (для жовтої лампочки)
-    let nearestUpcomingKey = null;
-    let nearestTime = Infinity;
-
     items.forEach(it => {
-      if (!isOpenWindow(it) && isUpcoming(it)) {
-        const d = toDateMaybe(it.regOpenAt);
-        if (d) {
-          const t = d.getTime();
-          if (t < nearestTime) {
-            nearestTime = t;
-            nearestUpcomingKey = `${it.compId}||${it.stageKey || ""}`;
-          }
-        }
-      }
-    });
-
-    // submit активний лише якщо є хоч один OPEN
-    const anyOpen = items.some(isOpenWindow);
-    if (submitBtn) submitBtn.disabled = !anyOpen;
-
-    items.forEach(it => {
-      const value = `${it.compId}||${it.stageKey || ""}`;
       const open = isOpenWindow(it);
-      const upcoming = !open && isUpcoming(it);
-
-      let lampClass = "lamp-red";
-      if (open) lampClass = "lamp-green";
-      else if (upcoming && nearestUpcomingKey && value === nearestUpcomingKey) lampClass = "lamp-yellow";
-      else if (upcoming) lampClass = "lamp-red";
-      else lampClass = "lamp-red"; // минулі/закриті — теж червона (щоб не плодити 4-й статус)
+      const value = `${it.compId}||${it.stageKey || ""}`;
+      const lamp = lampClassFor(it, value);
 
       const titleText =
         `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
@@ -271,49 +327,39 @@
 
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
 
-      // радіо лишаємо для форми, але ховаємо (клік по картці вибирає)
-      const card = document.createElement("div");
-      card.className = "stage-card" + (open ? "" : " is-disabled");
-      card.setAttribute("role", "button");
-      card.setAttribute("tabindex", open ? "0" : "-1");
-      card.dataset.value = value;
+      // label щоб по кліку вибирався radio
+      const label = document.createElement("label");
+      label.className = "stage-card";
+      label.setAttribute("role", "button");
 
-      card.innerHTML = `
-        <input type="radio" name="stagePick" value="${value}" ${open ? "" : "disabled"}
-               style="position:absolute;opacity:0;pointer-events:none;">
+      // якщо не open — робимо як “приглушену” картку
+      if (!open) {
+        label.style.opacity = "0.65";
+        label.style.filter = "saturate(.9)";
+      }
+
+      label.innerHTML = `
+        <input type="radio" name="stagePick" value="${escapeHtml(value)}" ${open ? "" : "disabled"} style="position:absolute;left:-9999px;opacity:0;">
         <div class="stage-head">
-          <span class="lamp ${lampClass}"></span>
+          <span class="lamp ${lamp}"></span>
           <div class="stage-info">
-            <div class="stage-title">${titleText}</div>
-            <div class="stage-dates">${dateLine}</div>
+            <div class="stage-title">${escapeHtml(titleText)}</div>
+            <div class="stage-dates">${escapeHtml(dateLine)}</div>
           </div>
         </div>
       `;
 
-      function selectThis() {
-        if (!open) return;
-        // відмітити radio
-        const radio = card.querySelector('input[type="radio"]');
-        if (radio) radio.checked = true;
-
-        // підсвітити вибране
-        document.querySelectorAll(".stage-card.is-selected").forEach(el => el.classList.remove("is-selected"));
-        card.classList.add("is-selected");
-
-        setMsg("");
-      }
-
-      card.addEventListener("click", selectThis);
-      card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          selectThis();
-        }
-      });
-
-      eventOptionsEl.appendChild(card);
+      eventOptionsEl.appendChild(label);
     });
   }
+
+  // react on selection + rules checkbox
+  document.addEventListener("change", (e) => {
+    if (!e.target) return;
+    if (e.target.name === "stagePick" || e.target.id === "rules") {
+      refreshSubmitState();
+    }
+  });
 
   auth.onAuthStateChanged(async (user) => {
     currentUser = user || null;
@@ -355,7 +401,14 @@
 
       const picked = document.querySelector('input[name="stagePick"]:checked');
       if (!picked) {
-        setMsg("Оберіть ВІДКРИТЕ змагання/етап (зелена лампочка).", false);
+        setMsg("Оберіть ВІДКРИТЕ (зелена лампа) змагання/етап.", false);
+        return;
+      }
+
+      const selectedValue = String(picked.value);
+      const selectedItem = lastItems.find(x => `${x.compId}||${x.stageKey || ""}` === selectedValue);
+      if (!selectedItem || !isOpenWindow(selectedItem)) {
+        setMsg("Цей етап ще не відкритий для реєстрації. Оберіть зелений.", false);
         return;
       }
 
@@ -375,7 +428,12 @@
         foodQty = q;
       }
 
-      const [competitionId, stageKeyRaw] = String(picked.value).split("||");
+      if (rulesChk && !rulesChk.checked) {
+        setMsg("Підтвердіть ознайомлення з регламентом.", false);
+        return;
+      }
+
+      const [competitionId, stageKeyRaw] = selectedValue.split("||");
       const stageId = (stageKeyRaw || "").trim() || null;
 
       try {
@@ -403,9 +461,6 @@
         setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
         form.reset();
         initFoodLogic();
-
-        // прибрати підсвітку вибору після reset
-        document.querySelectorAll(".stage-card.is-selected").forEach(el => el.classList.remove("is-selected"));
       } catch (err) {
         console.error("submit error:", err);
         setMsg("Помилка відправки заявки (Rules/доступ).", false);

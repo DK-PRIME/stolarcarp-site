@@ -1,6 +1,7 @@
 /* =========================
    STOLAR CARP • main.css
-   RESTORE STABLE HEADER + BURGER OVERLAY (classic)
+   STABLE HEADER + BURGER OVERLAY (bg photo)
+   NO register-page styling here
    ========================= */
 
 /* === BASE COLORS & FONTS === */
@@ -13,7 +14,6 @@
   --accent-2:#d72638;
   --radius:16px;
   --shadow:0 10px 30px rgba(0,0,0,.35);
-  --header-height:72px;
 }
 
 *{ box-sizing:border-box; }
@@ -47,8 +47,7 @@ img{ max-width:100%; height:auto; display:block; }
   align-items:center;
   justify-content:space-between;
   padding:12px 0;
-  min-height:var(--header-height);
-  gap:12px;
+  min-height:72px;
 }
 
 /* LOGO */
@@ -59,6 +58,7 @@ img{ max-width:100%; height:auto; display:block; }
   color:var(--text);
   font-weight:900;
   letter-spacing:.5px;
+  overflow:visible;
 }
 .logo__mark{
   width:44px; height:44px; min-width:44px;
@@ -72,6 +72,8 @@ img{ max-width:100%; height:auto; display:block; }
   line-height:1;
   font-weight:900;
   font-size:16px;
+  overflow:visible;
+  padding:0;
 }
 .logo__text{
   font-weight:900;
@@ -85,7 +87,6 @@ img{ max-width:100%; height:auto; display:block; }
   gap:16px;
   align-items:center;
 }
-
 .nav__link{
   padding:10px 12px;
   border-radius:12px;
@@ -128,48 +129,37 @@ img{ max-width:100%; height:auto; display:block; }
   outline:none !important;
 }
 
-/* =========================
-   MOBILE MENU OVERLAY (RESTORED)
-   - opens full screen
-   - column
-   - background image
-   - scroll only if needed
-   ========================= */
+/* === MOBILE MENU OVERLAY (FULL HEIGHT, NO SCROLL) === */
 @media (max-width:860px){
   .burger{ display:block; }
   .header-login{ display:none; }
 
-  /* IMPORTANT: do not show desktop row on mobile */
   .nav{
     position:fixed;
-    left:0; right:0;
-    top:var(--header-height);
-    bottom:0;
+    inset:0;
     z-index:1900;
 
-    /* column list */
+    padding-top:86px;
+    padding-bottom:24px;
+    padding-left:18px;
+    padding-right:18px;
+
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:flex-start;
-
     gap:14px;
-    padding:24px 18px calc(env(safe-area-inset-bottom) + 18px);
 
-    /* bg (like before) */
     background:
-      linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.82)),
+      linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
       url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
-    /* hidden by default */
     transform:translateY(-110%);
     opacity:0;
     pointer-events:none;
-    transition:transform .28s ease, opacity .28s ease;
 
-    /* allow scroll ONLY if реально не влазить */
-    overflow:auto;
-    -webkit-overflow-scrolling:touch;
+    transition:transform .28s ease, opacity .28s ease;
+    overflow:hidden;
   }
 
   .nav.open{
@@ -178,24 +168,20 @@ img{ max-width:100%; height:auto; display:block; }
     pointer-events:auto;
   }
 
-  /* pill buttons */
   .nav__link{
     display:inline-flex;
     align-items:center;
     justify-content:center;
-
-    width:min(520px, 92vw);
+    width:auto;
+    max-width:92vw;
     padding:12px 22px;
     border-radius:999px;
-
     background:rgba(0,0,0,.38);
     border:1px solid rgba(255,255,255,.18);
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
-
     font-size:1.05rem;
     white-space:nowrap;
-    text-align:center;
   }
 
   .nav__link:hover{
@@ -252,96 +238,7 @@ img{ max-width:100%; height:auto; display:block; }
 .btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
 .btn--ghost{ background:#0d0d13; color:var(--text); }
 
-/* === BADGES === */
-.badge{
-  display:inline-block;
-  padding:4px 10px;
-  border-radius:999px;
-  font-size:12px;
-  border:1px solid #333;
-  color:#ddd;
-}
-
-/* === INPUTS === */
-.input,.select,.textarea{
-  width:100%;
-  padding:12px 14px;
-  border-radius:12px;
-  border:1px solid #2b2b36;
-  background:#0d0d14;
-  color:#fff;
-}
-.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
-.form{ display:grid; gap:14px; }
-.form__hint{ color:var(--muted); font-size:12px; }
-
 /* === FOOTER === */
 .footer{ border-top:1px solid #222; background:#0c0c12; }
 .footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
 .footer__links{ display:flex; gap:12px; }
-
-/* === HERO === */
-.hero{
-  display:grid;
-  grid-template-columns:1.2fr .8fr;
-  gap:26px;
-  align-items:center;
-  margin-top:18px;
-}
-.hero__card{
-  background:linear-gradient(180deg,#161620,#0d0d13);
-  border:1px solid #262636;
-  border-radius:20px;
-  padding:26px;
-  box-shadow:var(--shadow);
-}
-.hero__kicker{
-  display:inline-block;
-  font-weight:800;
-  letter-spacing:.08em;
-  color:#000;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  padding:6px 10px;
-  border-radius:999px;
-  margin-bottom:12px;
-}
-.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
-.hero p{ color:var(--muted); margin:0 0 18px; }
-.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-@media (max-width:900px){
-  .hero{ grid-template-columns:1fr; }
-  .hero h1{ font-size:34px; }
-}
-
-/* === CABINET fixes === */
-.avatar-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-.avatar-actions input[type="file"]{ max-width:100%; }
-@media (max-width:560px){
-  .avatar-actions{ align-items:stretch; }
-  .avatar-actions input[type="file"]{ width:100%; }
-  .avatar-small-btn{ width:100%; justify-content:center; }
-}
-
-body.cabinet-page .avatar-upload{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-body.cabinet-page .avatar-upload input[type="file"]{
-  max-width:100% !important;
-}
-@media (max-width:560px){
-  body.cabinet-page .avatar-upload{
-    flex-direction:column;
-    align-items:stretch;
-  }
-  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
-  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
-}

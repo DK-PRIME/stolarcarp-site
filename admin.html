@@ -17,7 +17,6 @@
       border:1px solid rgba(148,163,184,.35);
       box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
-
     .muted{ color:#9ca3af; }
     .admin-card{
       margin-top:14px;
@@ -27,12 +26,13 @@
       border:1px solid rgba(148,163,184,.35);
       box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
-
     .hidden{ display:none !important; }
-    .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
 
     .stack{ display:flex; flex-direction:column; gap:10px; }
     .stack .btn{ width:100%; justify-content:center; padding:12px 14px; border-radius:14px; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
 
     .mini-form{
       margin-top:12px;
@@ -42,7 +42,7 @@
     }
     .mini-form input, .mini-form select{
       width:100%;
-      padding:12px 12px;
+      padding:10px 12px;
       border-radius:12px;
       border:1px solid rgba(148,163,184,.35);
       background:rgba(2,6,23,.55);
@@ -54,6 +54,17 @@
     .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
 
+    /* login */
+    .login-title{ font-weight:900; letter-spacing:.06em; text-transform:uppercase; font-size:1rem; }
+    .login-hint{ color:#9ca3af; font-size:.9rem; margin-top:6px; }
+    .login-box{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+
+    /* window cards */
     .win-card{
       padding:12px;
       border-radius:14px;
@@ -63,10 +74,10 @@
     }
     .win-title{
       font-weight:900;
-      letter-spacing:.08em;
+      letter-spacing:.06em;
       text-transform:uppercase;
       font-size:.85rem;
-      margin-bottom:8px;
+      margin-bottom:10px;
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -74,39 +85,26 @@
     }
     .pill{
       font-size:.72rem;
-      padding:4px 8px;
+      padding:6px 10px;
       border-radius:999px;
       border:1px solid rgba(148,163,184,.25);
       color:#e5e7eb;
-      background:rgba(15,23,42,.6);
+      background:rgba(2,6,23,.45);
       white-space:nowrap;
+    }
+    .calc{
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      border:1px dashed rgba(148,163,184,.28);
+      color:#cbd5e1;
+      background:rgba(2,6,23,.25);
+      font-size:.88rem;
+      line-height:1.35;
     }
     .ok{ color:#22c55e; font-weight:800; }
     .err{ color:#ef4444; font-weight:800; }
-
-    /* Login UI */
-    .login-grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-      margin-top:10px;
-    }
-    .login-actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-    .login-actions .btn{ flex:1; min-width:180px; }
-
-    .softbox{
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.20);
-      background:rgba(2,6,23,.35);
-      color:#cbd5e1;
-      font-size:.92rem;
-    }
+    .warn{ color:#fbbf24; font-weight:800; }
   </style>
 </head>
 
@@ -136,42 +134,38 @@
       <div class="muted" id="adminDebug" style="margin-top:6px;"></div>
     </div>
 
-    <!-- LOGIN (показується, якщо немає адмін-сесії) -->
-    <div id="adminLogin" class="admin-card">
-      <div style="font-weight:900; letter-spacing:.06em; text-transform:uppercase;">Вхід адміністратора</div>
-      <div class="softbox" style="margin-top:10px;">
-        Вхід тільки для адміна. Якщо бачиш “Запуск…” довго — значить не піднявся Firebase init.
-      </div>
+    <!-- LOGIN -->
+    <div id="adminLogin" class="admin-card hidden">
+      <div class="login-title">Вхід адміністратора</div>
+      <div class="login-hint">Вхід тільки для адміна (email + пароль). Якщо бачиш “Missing permissions” — значить Rules або не адмін-UID.</div>
 
-      <div class="login-grid">
+      <div class="login-box">
         <input id="admEmail" type="email" placeholder="Email адміна">
-        <input id="admPass" type="password" placeholder="Пароль адміна">
-        <div class="login-actions">
-          <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
-          <button class="btn btn--ghost" id="btnAdminLogout" type="button">Вийти</button>
-        </div>
+        <input id="admPass" type="password" placeholder="Пароль">
+        <button class="btn btn--accent" id="btnAdminLogin">Увійти</button>
       </div>
 
       <div class="muted" id="adminLoginMsg" style="margin-top:10px;"></div>
     </div>
 
     <!-- APP -->
-    <div id="adminApp" class="admin-card hidden">
-      <div style="font-weight:900; letter-spacing:.06em; text-transform:uppercase;">Меню</div>
-      <div class="hr"></div>
+    <div id="adminApp" class="hidden">
 
-      <div class="stack">
-        <button class="btn btn--primary" id="btnOpenCreate">1) Створити / редагувати змагання</button>
-        <button class="btn btn--accent"  id="btnOpenEdit">2) Редагувати існуючі (календар)</button>
+      <!-- MENU -->
+      <div class="admin-card">
+        <div class="stack">
+          <button class="btn btn--primary" id="btnOpenCreate">1) Створити змагання</button>
+          <button class="btn btn--accent"  id="btnOpenEdit">2) Редагувати (вибрати зі списку)</button>
 
-        <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
-        <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
-        <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування</a>
+          <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
+          <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
+          <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування (судді/адмін)</a>
+        </div>
       </div>
 
       <!-- CREATE -->
-      <div id="modCreate" class="admin-card" style="margin-top:16px;">
-        <div style="font-weight:900; letter-spacing:.06em; text-transform:uppercase;">Створити змагання</div>
+      <div id="modCreate" class="admin-card hidden">
+        <div style="font-weight:900; margin-bottom:8px;">Створити змагання</div>
 
         <div class="mini-form">
           <select id="inpType">
@@ -179,11 +173,11 @@
             <option value="oneoff">Тип: ОДНОРАЗОВЕ змагання</option>
           </select>
 
-          <input id="inpYear" inputmode="numeric" placeholder="Рік (наприклад: 2026)">
+          <input id="inpYear" inputmode="numeric" placeholder="Рік (наприклад: 2026)" />
 
-          <input id="inpBrand" value="STOLAR CARP" readonly>
+          <input id="inpBrand" value="STOLAR CARP" readonly />
 
-          <input id="inpName" placeholder="Назва (наприклад: Season STOLAR CARP 2026 / Осінній короп)">
+          <input id="inpName" placeholder="Назва (наприклад: Season STOLAR CARP 2026 / Осінній короп)" />
 
           <div id="seasonOnly">
             <select id="inpStagesCount">
@@ -202,33 +196,26 @@
             </select>
           </div>
 
-          <select id="inpRegMode">
-            <option value="auto" selected>Реєстрація: AUTO (від старту -28/-14)</option>
-            <option value="manual">Реєстрація: MANUAL (якщо потім захочеш руками)</option>
-          </select>
+          <div id="windowsWrap"></div>
 
-          <div id="scheduleWrap"></div>
-
-          <div class="grid2">
-            <button class="btn btn--accent" id="btnSaveCompetition" type="button">Зберегти змагання</button>
-            <button class="btn btn--primary" id="btnMakeActive" type="button">Зробити активним</button>
-          </div>
+          <button class="btn btn--accent" id="btnSaveCompetition">Зберегти змагання</button>
+          <button class="btn btn--primary" id="btnMakeActive">Зробити активним</button>
         </div>
 
         <div class="muted" id="createMsg" style="margin-top:10px;"></div>
       </div>
 
       <!-- EDIT -->
-      <div id="modEdit" class="admin-card hidden" style="margin-top:16px;">
-        <div style="font-weight:900; letter-spacing:.06em; text-transform:uppercase;">Редагувати змагання</div>
+      <div id="modEdit" class="admin-card hidden">
+        <div style="font-weight:900; margin-bottom:8px;">Редагувати змагання</div>
 
         <div class="mini-form">
           <select id="selCompetition"></select>
-          <div id="editScheduleWrap"></div>
+          <div id="editWrap"></div>
 
           <div class="grid2">
-            <button class="btn btn--accent" id="btnSaveEdit" type="button">Зберегти зміни</button>
-            <button class="btn btn--ghost" id="btnReloadList" type="button">Оновити список</button>
+            <button class="btn btn--accent" id="btnSaveEdit">Зберегти зміни</button>
+            <button class="btn btn--primary" id="btnReloadList">Оновити список</button>
           </div>
         </div>
 
@@ -236,7 +223,6 @@
       </div>
 
     </div>
-
   </section>
 </main>
 
@@ -249,270 +235,246 @@
 <script src="assets/js/firebase-init.js"></script>
 
 <script>
+(function(){
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   const $ = (id)=>document.getElementById(id);
+  const show = (el)=>el && el.classList.remove("hidden");
+  const hide = (el)=>el && el.classList.add("hidden");
   const setStatus = (t)=>{ const e=$("adminStatus"); if(e) e.textContent=t; };
   const setDebug  = (t)=>{ const e=$("adminDebug");  if(e) e.textContent=t||""; };
 
-  function show(el){ el && el.classList.remove("hidden"); }
-  function hide(el){ el && el.classList.add("hidden"); }
+  const adminLogin = $("adminLogin");
+  const adminApp   = $("adminApp");
+  const modCreate  = $("modCreate");
+  const modEdit    = $("modEdit");
+
+  function openModule(name){
+    hide(modCreate); hide(modEdit);
+    if(name==="create") show(modCreate);
+    if(name==="edit") show(modEdit);
+  }
 
   function esc(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
 
-  // YYYY-MM-DD
-  function normDate(v){
-    const s = (v||"").trim();
-    if(!s) return "";
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
-    return s;
-  }
+  function isDate(s){ return /^\d{4}-\d{2}-\d{2}$/.test(String(s||"").trim()); }
 
-  function addDays(yyyy_mm_dd, days){
-    const s = normDate(yyyy_mm_dd);
-    if(!s) return "";
-    const [Y,M,D] = s.split("-").map(Number);
-    const dt = new Date(Date.UTC(Y, M-1, D, 12, 0, 0)); // 12:00 UTC base (не критично, ми зберігаємо дату)
-    dt.setUTCDate(dt.getUTCDate() + days);
-    const y = dt.getUTCFullYear();
-    const m = String(dt.getUTCMonth()+1).padStart(2,"0");
-    const d = String(dt.getUTCDate()).padStart(2,"0");
+  function addDays(ymd, days){
+    if(!isDate(ymd)) return "";
+    const [Y,M,D] = ymd.split("-").map(Number);
+    const dt = new Date(Y, M-1, D, 12, 0, 0, 0);
+    dt.setDate(dt.getDate() + Number(days||0));
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth()+1).padStart(2,"0");
+    const d = String(dt.getDate()).padStart(2,"0");
     return `${y}-${m}-${d}`;
   }
 
-  function regOpenFromStart(startDate){ return addDays(startDate, -28); }
-  function regCloseFromStart(startDate){ return addDays(startDate, -14); }
+  function calcRegOpen(startDate){ return isDate(startDate) ? addDays(startDate, -28) : ""; }
+  function calcRegClose(startDate){ return isDate(startDate) ? addDays(startDate, -14) : ""; }
 
-  function renderScheduleBlock(key, title){
-    const isFinal = key==="final";
-    const pill = isFinal ? `<span class="pill" style="border-color:rgba(246,195,76,.6); color:#f6c34c;">ФІНАЛ</span>` : `<span class="pill">ЕТАП</span>`;
+  function renderWindowBlock(key, title, isFinal=false){
     return `
-      <div class="win-card" data-block="${esc(key)}">
+      <div class="win-card" data-win="${esc(key)}" data-final="${isFinal ? "1":"0"}">
         <div class="win-title">
           <span>${esc(title)}</span>
-          ${pill}
+          <span class="pill">${isFinal ? "ФІНАЛ" : "ЕТАП"}</span>
         </div>
 
         <div class="grid2">
           <div>
-            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Старт</div>
+            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Старт (дата)</div>
             <input type="date" data-start>
           </div>
           <div>
-            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Фініш</div>
+            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Фініш (дата)</div>
             <input type="date" data-end>
           </div>
         </div>
 
-        <div class="softbox" style="margin-top:10px;">
-          Реєстрація (AUTO, 12:00 Київ):
-          <div style="margin-top:6px;">
-            <span class="ok">Відкриття:</span> <span data-reg-open>—</span>
-            &nbsp;&nbsp;•&nbsp;&nbsp;
-            <span class="err">Закриття:</span> <span data-reg-close>—</span>
-          </div>
+        <div class="calc" data-calc>
+          <div><b>Реєстрація (авто):</b></div>
+          <div>Відкриття: <span data-open class="muted">—</span> (12:00 Київ)</div>
+          <div>Закриття: <span data-close class="muted">—</span> (12:00 Київ)</div>
         </div>
       </div>
     `;
   }
 
-  function buildScheduleUI(container, {type, stagesCount, hasFinal}){
+  function buildWindows(container, type, stagesCount, hasFinal){
     const blocks = [];
     const count = (type==="season") ? Number(stagesCount||3) : 1;
 
     for(let i=1;i<=count;i++){
-      blocks.push(renderScheduleBlock(`stage-${i}`, `Етап ${i}`));
+      blocks.push(renderWindowBlock(`stage-${i}`, `Етап ${i}`, false));
     }
-    if(type==="season" && hasFinal==="yes"){
-      blocks.push(renderScheduleBlock("final", "Фінал"));
+    if(type==="season" && hasFinal){
+      blocks.push(renderWindowBlock("final", "Фінал", true));
     }
-
     container.innerHTML = blocks.join("");
+    hookCalc(container);
+  }
 
-    // bind auto reg preview
-    container.querySelectorAll("[data-block]").forEach(card=>{
-      const startEl = card.querySelector("[data-start]");
-      const regOpenEl = card.querySelector("[data-reg-open]");
-      const regCloseEl= card.querySelector("[data-reg-close]");
+  function hookCalc(container){
+    container.querySelectorAll("[data-win]").forEach(card=>{
+      const startInp = card.querySelector("[data-start]");
+      const endInp   = card.querySelector("[data-end]");
+      const openEl   = card.querySelector("[data-open]");
+      const closeEl  = card.querySelector("[data-close]");
 
-      function refresh(){
-        const s = normDate(startEl.value);
-        if(!s){
-          regOpenEl.textContent = "—";
-          regCloseEl.textContent= "—";
-          return;
+      function recalc(){
+        const start = startInp?.value || "";
+        if(start && (!endInp.value || !isDate(endInp.value))){
+          // авто фініш +2 дні (48 годин)
+          endInp.value = addDays(start, 2);
         }
-        regOpenEl.textContent = regOpenFromStart(s);
-        regCloseEl.textContent= regCloseFromStart(s);
+        const o = calcRegOpen(start);
+        const c = calcRegClose(start);
+        if(openEl)  openEl.textContent  = o ? o : "—";
+        if(closeEl) closeEl.textContent = c ? c : "—";
       }
 
-      startEl.addEventListener("change", refresh);
-      refresh();
+      startInp && startInp.addEventListener("change", recalc);
+      endInp && endInp.addEventListener("change", recalc);
+      recalc();
     });
   }
 
-  function readSchedule(container){
-    const out = [];
-    container.querySelectorAll("[data-block]").forEach(card=>{
-      const key = card.getAttribute("data-block");
-      const start = normDate(card.querySelector("[data-start]")?.value || "");
-      const end   = normDate(card.querySelector("[data-end]")?.value || "");
-      const regOpen = start ? regOpenFromStart(start) : "";
-      const regClose= start ? regCloseFromStart(start) : "";
+  function readWindows(container){
+    const res = [];
+    container.querySelectorAll("[data-win]").forEach(card=>{
+      const key = card.getAttribute("data-win");
+      const isFinal = card.getAttribute("data-final")==="1";
+      const title = isFinal ? "Фінал" : (key==="final" ? "Фінал" : `Етап ${String(key).replace("stage-","")}`);
 
-      out.push({
+      const startDate = (card.querySelector("[data-start]")?.value || "").trim();
+      const endDate   = (card.querySelector("[data-end]")?.value || "").trim();
+
+      const regOpenDate  = calcRegOpen(startDate);
+      const regCloseDate = calcRegClose(startDate);
+
+      res.push({
         key,
-        startDate: start,
-        endDate: end,
-        regOpenDate: regOpen,
-        regCloseDate: regClose
+        title,
+        isFinal: !!isFinal,
+        startDate: isDate(startDate) ? startDate : "",
+        endDate: isDate(endDate) ? endDate : "",
+        regOpenDate,
+        regCloseDate
       });
     });
-    return out;
+    return res;
   }
 
-  function fillSchedule(container, schedule){
-    const map = new Map((schedule||[]).map(x=>[x.key,x]));
-    container.querySelectorAll("[data-block]").forEach(card=>{
-      const key = card.getAttribute("data-block");
-      const d = map.get(key) || {};
-      const s = card.querySelector("[data-start]");
-      const e = card.querySelector("[data-end]");
-      if(s) s.value = d.startDate || "";
-      if(e) e.value = d.endDate || "";
-
-      // force refresh preview
-      const regOpenEl = card.querySelector("[data-reg-open]");
-      const regCloseEl= card.querySelector("[data-reg-close]");
-      const start = normDate(s?.value || "");
-      regOpenEl.textContent = start ? regOpenFromStart(start) : "—";
-      regCloseEl.textContent= start ? regCloseFromStart(start) : "—";
+  function fillWindows(container, windows){
+    const map = new Map((windows||[]).map(w=>[w.key,w]));
+    container.querySelectorAll("[data-win]").forEach(card=>{
+      const key = card.getAttribute("data-win");
+      const w = map.get(key) || {};
+      const startInp = card.querySelector("[data-start]");
+      const endInp   = card.querySelector("[data-end]");
+      if(startInp) startInp.value = w.startDate || "";
+      if(endInp)   endInp.value   = w.endDate || "";
     });
+    hookCalc(container);
   }
 
   async function waitForFirebase(){
     for(let i=0;i<200;i++){
-      if(window.scAuth && window.scDb && window.firebase) return true;
-      await new Promise(r=>setTimeout(r,100));
+      if(window.scAuth && window.scDb && window.firebase) return;
+      await new Promise(r=>setTimeout(r,80));
     }
-    return false;
+    throw new Error("Firebase init не підняв scAuth/scDb. Перевір підключення assets/js/firebase-init.js");
   }
 
   async function init(){
-    // НІКОЛИ не робимо пустий екран
-    show($("adminLogin"));
-    hide($("adminApp"));
-
-    const ok = await waitForFirebase();
-    if(!ok){
-      setStatus("Firebase init не піднявся ❌");
-      setDebug("Перевір: assets/js/firebase-init.js, підключення compat SDK, console errors.");
-      $("adminLoginMsg").textContent = "Firebase не завантажився. Відкрий консоль (F12) і скинь першу помилку.";
+    // НЕ даємо “злетіти”: навіть якщо помилка — показуємо її
+    try{
+      await waitForFirebase();
+    }catch(e){
+      setStatus("Помилка ініціалізації ❌");
+      setDebug(e.message || String(e));
+      show(adminLogin);
+      hide(adminApp);
       return;
     }
 
     const auth = window.scAuth;
     const db   = window.scDb;
 
-    const modCreate = $("modCreate");
-    const modEdit   = $("modEdit");
-
-    function openModule(name){
-      if(name==="create"){ show(modCreate); hide(modEdit); }
-      if(name==="edit"){ hide(modCreate); show(modEdit); }
-    }
-
-    // buttons top
-    $("btnOpenCreate").onclick = ()=>openModule("create");
-    $("btnOpenEdit").onclick = async ()=>{
-      openModule("edit");
-      await loadCompetitionsList();
-    };
-
-    // login/logout
+    // login
     $("btnAdminLogin").onclick = async ()=>{
-      const email = $("admEmail").value.trim();
-      const pass  = $("admPass").value.trim();
+      const email = ($("admEmail").value||"").trim();
+      const pass  = ($("admPass").value||"").trim();
       const msg   = $("adminLoginMsg");
-      msg.textContent = "";
-
-      if(!email || !pass){
-        msg.textContent = "Введи email і пароль.";
-        return;
-      }
-      msg.textContent = "Вхід…";
+      if(!email || !pass){ msg.textContent="Введи email і пароль"; return; }
+      msg.textContent="Вхід…";
       try{
         await auth.signInWithEmailAndPassword(email, pass);
       }catch(e){
-        msg.textContent = e?.message || "Помилка входу.";
+        msg.textContent = e?.message || "Помилка входу";
       }
     };
 
-    $("btnAdminLogout").onclick = async ()=>{
-      try{ await auth.signOut(); }catch{}
+    $("btnOpenCreate").onclick = ()=>openModule("create");
+    $("btnOpenEdit").onclick = async ()=>{
+      openModule("edit");
+      await loadCompetitions();
     };
 
-    // dynamic UI create
+    // dynamic create UI
     const typeSel = $("inpType");
     const seasonOnly = $("seasonOnly");
-    const scheduleWrap = $("scheduleWrap");
+    const wrap = $("windowsWrap");
 
     function syncCreateUI(){
       const type = typeSel.value;
       if(type==="season") show(seasonOnly); else hide(seasonOnly);
 
-      const stagesCount = Number($("inpStagesCount").value || 3);
-      const hasFinal = $("inpHasFinal").value || "yes";
-      buildScheduleUI(scheduleWrap, { type, stagesCount, hasFinal });
+      const stagesCount = Number($("inpStagesCount")?.value || 3);
+      const hasFinal = (type==="season") ? ($("inpHasFinal")?.value==="yes") : false;
+      buildWindows(wrap, type, stagesCount, hasFinal);
     }
     typeSel.onchange = syncCreateUI;
     $("inpStagesCount").onchange = syncCreateUI;
     $("inpHasFinal").onchange = syncCreateUI;
     syncCreateUI();
 
-    // slug helper for oneoff id
-    function slugify(s){
-      return String(s||"")
+    function makeCompId(type, year, name){
+      if(type==="season") return `season-${year}`;
+      const slug = String(name||"event")
         .toLowerCase()
         .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
         .replace(/-+/g,"-")
-        .replace(/^-|-$/g,"") || "event";
+        .replace(/^-|-$/g,"");
+      return `oneoff-${year}-${slug || "event"}`;
     }
 
-    function buildCompId(type, year, name){
-      if(type==="season") return `season-${year}`;
-      return `oneoff-${year}-${slugify(name)}`;
-    }
-
-    // save
     $("btnSaveCompetition").onclick = async ()=>{
       const msg = $("createMsg");
-      msg.textContent = "Збереження…";
+      msg.innerHTML = "Збереження…";
 
       try{
-        const type = $("inpType").value; // season|oneoff
+        const type = $("inpType").value;
         const year = ($("inpYear").value||"").trim();
         const brand = "STOLAR CARP";
         const name = ($("inpName").value||"").trim();
-        const regMode = $("inpRegMode").value;
 
-        if(!/^\d{4}$/.test(year)) throw new Error("Вкажи рік (4 цифри), напр. 2026.");
+        if(!/^\d{4}$/.test(year)) throw new Error("Вкажи рік (4 цифри), наприклад 2026.");
         if(!name) throw new Error("Вкажи назву змагання.");
 
         const stagesCount = (type==="season") ? Number($("inpStagesCount").value) : 1;
-        const hasFinal = (type==="season") ? ($("inpHasFinal").value === "yes") : false;
+        const hasFinal = (type==="season") ? ($("inpHasFinal").value==="yes") : false;
 
-        const schedule = readSchedule(scheduleWrap);
+        const windows = readWindows(wrap);
 
-        // мінімальна перевірка дат
-        schedule.forEach(x=>{
-          if(!x.startDate) throw new Error(`Заповни старт для "${x.key}".`);
-          if(!x.endDate) throw new Error(`Заповни фініш для "${x.key}".`);
-        });
+        // мінімальна перевірка: старт має бути заданий
+        const missingStart = windows.some(w => !w.startDate);
+        if(missingStart) throw new Error("Заповни старт (дату) для кожного етапу/фіналу.");
 
-        const compId = buildCompId(type, year, name);
+        const compId = makeCompId(type, year, name);
 
-        const data = {
+        await db.collection("competitions").doc(compId).set({
           compId,
           type,
           year: Number(year),
@@ -520,13 +482,19 @@
           name,
           stagesCount,
           hasFinal,
-          regMode,
-          schedule,
+
+          // часи по правилах:
+          startTime: "10:00",
+          durationHours: 48,
+          regTime: "12:00",
+          regOpenOffsetDays: -28,
+          regCloseOffsetDays: -14,
+
+          windows,
+
           updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
           createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        await db.collection("competitions").doc(compId).set(data, { merge:true });
+        }, { merge:true });
 
         msg.innerHTML = `<span class="ok">✅ Збережено:</span> ${esc(compId)}`;
       }catch(e){
@@ -534,20 +502,18 @@
       }
     };
 
-    // make active
     $("btnMakeActive").onclick = async ()=>{
       const msg = $("createMsg");
-      msg.textContent = "Збереження активного…";
+      msg.innerHTML = "Роблю активним…";
 
       try{
         const type = $("inpType").value;
         const year = ($("inpYear").value||"").trim();
         const name = ($("inpName").value||"").trim();
-
-        if(!/^\d{4}$/.test(year)) throw new Error("Вкажи рік (4 цифри), напр. 2026.");
+        if(!/^\d{4}$/.test(year)) throw new Error("Вкажи рік.");
         if(!name) throw new Error("Вкажи назву.");
 
-        const compId = buildCompId(type, year, name);
+        const compId = makeCompId(type, year, name);
 
         await db.collection("settings").doc("app").set({
           activeCompetitionId: compId,
@@ -561,37 +527,69 @@
     };
 
     // EDIT
-    const selCompetition = $("selCompetition");
-    const editScheduleWrap = $("editScheduleWrap");
-
     $("btnReloadList").onclick = async ()=>{
       $("editMsg").textContent = "Оновлення…";
-      await loadCompetitionsList();
+      await loadCompetitions();
       $("editMsg").textContent = "";
     };
 
-    selCompetition.onchange = async ()=>{
-      await loadSelectedCompetition();
-    };
+    $("selCompetition").onchange = async ()=>loadSelected();
 
     $("btnSaveEdit").onclick = async ()=>{
       const msg = $("editMsg");
-      msg.textContent = "Збереження…";
+      msg.innerHTML = "Збереження…";
+
       try{
-        const compId = selCompetition.value;
+        const compId = $("selCompetition").value;
         if(!compId) throw new Error("Нема вибраного змагання.");
 
-        const schedule = readSchedule(editScheduleWrap);
-        schedule.forEach(x=>{
-          if(!x.startDate) throw new Error(`Заповни старт для "${x.key}".`);
-          if(!x.endDate) throw new Error(`Заповни фініш для "${x.key}".`);
-        });
+        const editor = $("editWrap");
+        const windows = readWindows(editor);
+
+        const missingStart = windows.some(w => !w.startDate);
+        if(missingStart) throw new Error("Заповни старт (дату) для кожного етапу/фіналу.");
 
         await db.collection("competitions").doc(compId).set({
-          schedule,
+          windows,
           updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
         }, { merge:true });
 
         msg.innerHTML = `<span class="ok">✅ Збережено</span>`;
       }catch(e){
-        msg.innerH
+        msg.innerHTML = `<span class="err">❌</span> ${esc(e.message || String(e))}`;
+      }
+    };
+
+    async function loadCompetitions(){
+      const sel = $("selCompetition");
+      const editor = $("editWrap");
+      sel.innerHTML = `<option value="">Завантаження…</option>`;
+      editor.innerHTML = "";
+
+      let activeId = "";
+      try{
+        const s = await db.collection("settings").doc("app").get();
+        if(s.exists) activeId = (s.data()||{}).activeCompetitionId || "";
+      }catch(_){}
+
+      const snap = await db.collection("competitions").get();
+      const items = snap.docs.map(d=>{
+        const x = d.data() || {};
+        return {
+          id: d.id,
+          year: Number(x.year||0),
+          name: x.name || d.id
+        };
+      });
+
+      items.sort((a,b)=>{
+        if(b.year!==a.year) return b.year-a.year;
+        return (a.name||"").localeCompare(b.name||"","uk");
+      });
+
+      if(!items.length){
+        sel.innerHTML = `<option value="">Нема змагань. Створи спочатку.</option>`;
+        return;
+      }
+
+      sel.innerHTML 

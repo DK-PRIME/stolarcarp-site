@@ -1,6 +1,7 @@
 // assets/js/register_firebase.js
 // STOLAR CARP • Registration
-// читає competitions + season.events[]; показує список; дозволяє реєстрацію лише коли OPEN.
+// читає competitions + season.events[]; показує список з лампочками;
+// реєстрація дозволена ЛИШЕ коли OPEN (зелена).
 
 (function () {
   const auth = window.scAuth;
@@ -17,6 +18,7 @@
   const profileSummary = document.getElementById("profileSummary");
   const copyCardBtn    = document.getElementById("copyCard");
   const cardNumEl      = document.getElementById("cardNum");
+  const rulesChk       = document.getElementById("rules"); // є в твоєму HTML
 
   if (!auth || !db || !window.firebase) {
     if (eventOptionsEl) eventOptionsEl.innerHTML =
@@ -27,7 +29,10 @@
 
   let currentUser = null;
   let profile = null;
-  let activeCompetitionId = null;
+
+  // збираємо всі items і визначаємо “найближчу” (жовту)
+  let lastItems = [];
+  let nearestUpcomingId = null; // value === `${compId}||${stageKey||""}`
 
   function setMsg(text, ok = true) {
     if (!msgEl) return;
@@ -38,7 +43,8 @@
 
   function setLoading(v) {
     if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
-    if (submitBtn) submitBtn.disabled = !!v;
+    // не блокуємо кнопку назавжди — далі керуємо через refreshSubmitState()
+    if (submitBtn) submitBtn.disabled = !!v ? true : submitBtn.disabled;
   }
 
   function fmtDate(d) {
@@ -50,19 +56,21 @@
     if (!x) return null;
     try {
       if (x instanceof Date) return x;
-      if (typeof x === "string") return new Date(x);
+      if (typeof x === "string") {
+        const d = new Date(x);
+        return isFinite(d.getTime()) ? d : null;
+      }
       if (x && typeof x.toDate === "function") return x.toDate(); // Timestamp
     } catch {}
     return null;
   }
 
   function nowKyiv() {
-    // дати ти задаєш як 12:00 Київ — нам достатньо локального now()
+    // ти задаєш 12:00 Київ — тут вистачає локального now()
     return new Date();
   }
 
   function getRegDatesFromEvent(ev) {
-    // підтримка різних назв полів з твоїх скрінів
     const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen || null;
     const regClose = ev.regCloseAt || ev.regCloseDate || ev.regClose || null;
     return { regOpenAt: regOpen, regCloseAt: regClose };
@@ -75,7 +83,6 @@
   }
 
   function isOpenWindow(item) {
-    // item: { regMode, manualOpen, regOpenAt, regCloseAt }
     const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
 
@@ -85,6 +92,17 @@
 
     const n = nowKyiv();
     return n >= openAt && n <= closeAt;
+  }
+
+  function isUpcoming(item) {
+    // upcoming = ще НЕ відкрито, але є regOpenAt у майбутньому
+    const mode = String(item.regMode || "auto").toLowerCase();
+    if (mode === "manual") return false; // ручний режим не прогнозуємо жовтим
+
+    const openAt = toDateMaybe(item.regOpenAt);
+    if (!openAt) return false;
+
+    return openAt > nowKyiv();
   }
 
   function isStalkerComp(c) {
@@ -147,20 +165,18 @@
 
     if (profileSummary) {
       profileSummary.innerHTML =
-        `Команда: <b>${profile.teamName}</b><br>` +
-        `Капітан: <b>${profile.captain}</b><br>` +
-        `Телефон: <b>${profile.phone || "не вказано"}</b>`;
+        `Команда: <b>${escapeHtml(profile.teamName)}</b><br>` +
+        `Капітан: <b>${escapeHtml(profile.captain)}</b><br>` +
+        `Телефон: <b>${escapeHtml(profile.phone || "не вказано")}</b>`;
     }
   }
 
-  async function loadActiveCompetitionId() {
-    try {
-      const s = await db.collection("settings").doc("app").get();
-      if (s.exists) {
-        const d = s.data() || {};
-        activeCompetitionId = d.activeCompetitionId || d.activeCompetition || null;
-      }
-    } catch {}
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   async function loadCompetitions() {
@@ -168,8 +184,6 @@
     eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
 
     try {
-      await loadActiveCompetitionId();
-
       const snap = await db.collection("competitions").get();
       const items = [];
 
@@ -247,18 +261,18 @@
         }
       });
 
-      // сортування: нові роки зверху, далі назва, далі stageKey
+      // сортування по старту (щоб бачили нормальну послідовність)
       items.sort((a, b) => {
-        const ay = String(a.year || "");
-        const by = String(b.year || "");
-        if (ay !== by) return by.localeCompare(ay, "uk");
-        const at = String(a.compTitle || "");
-        const bt = String(b.compTitle || "");
-        if (at !== bt) return at.localeCompare(bt, "uk");
-        return String(a.stageKey || "").localeCompare(String(b.stageKey || ""), "uk");
+        const ad = a.startAt ? a.startAt.getTime() : 9999999999999;
+        const bd = b.startAt ? b.startAt.getTime() : 9999999999999;
+        return ad - bd;
       });
 
+      lastItems = items;
+      nearestUpcomingId = computeNearestUpcomingId(items);
+
       renderCompetitionItems(items);
+      refreshSubmitState();
     } catch (e) {
       console.error("loadCompetitions error:", e);
       eventOptionsEl.innerHTML =
@@ -266,8 +280,33 @@
     }
   }
 
-  function badge(type, text) {
-    return `<span class="pill-b ${type}">${text}</span>`;
+  function computeNearestUpcomingId(items) {
+    // шукаємо тільки future regOpenAt (auto). Беремо найближче.
+    const future = items
+      .filter(isUpcoming)
+      .map(it => ({
+        it,
+        openAt: toDateMaybe(it.regOpenAt)
+      }))
+      .filter(x => x.openAt)
+      .sort((a, b) => a.openAt - b.openAt);
+
+    if (!future.length) return null;
+    const it = future[0].it;
+    return `${it.compId}||${it.stageKey || ""}`;
+  }
+
+  function getLampClass(it, value) {
+    if (isOpenWindow(it)) return "green";
+    if (nearestUpcomingId && value === nearestUpcomingId) return "yellow";
+    return "red";
+  }
+
+  function getLampTitle(it, value) {
+    const c = getLampClass(it, value);
+    if (c === "green") return "Реєстрація відкрита";
+    if (c === "yellow") return "Найближче відкриття реєстрації";
+    return "Реєстрація ще не відкрита або вже закрита";
   }
 
   function renderCompetitionItems(items) {
@@ -280,57 +319,68 @@
       return;
     }
 
-    const anyOpen = items.some(isOpenWindow);
-    if (submitBtn) submitBtn.disabled = !anyOpen;
-
     items.forEach(it => {
       const open = isOpenWindow(it);
       const value = `${it.compId}||${it.stageKey || ""}`;
 
-      const regOpenD  = toDateMaybe(it.regOpenAt);
-      const regCloseD = toDateMaybe(it.regCloseAt);
-
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
-      const regLine  = (regOpenD && regCloseD)
-        ? `Реєстрація: ${fmtDate(regOpenD)} — ${fmtDate(regCloseD)}`
-        : `Реєстрація: —`;
 
-      // типові бейджі кольорами:
-      const badges = [];
-      if (it.kind === "stage" && it.isFinal) badges.push(badge("pill-b--final", "ФІНАЛ"));
-      else if (it.kind === "stage") badges.push(badge("pill-b--stage", "ЕТАП"));
-      else if (it.stalker) badges.push(badge("pill-b--stalker", "STALKER"));
-      else badges.push(badge("pill-b--oneoff", "ЗМАГАННЯ"));
-
-      if (open) badges.push(badge("pill-b--open", "ВІДКРИТО"));
-      else badges.push(badge("pill-b--closed", "ЗАКРИТО"));
-
-      if (activeCompetitionId && it.compId === activeCompetitionId) {
-        badges.push(badge("pill-b--active", "ACTIVE"));
-      }
-
-      const label = document.createElement("label");
-      label.className = "event-item" + (open ? "" : " is-closed");
-
-      // Текст який не лізе за межі (ellipsis)
+      // ✅ ГОЛОВНЕ: щоб читалась назва етапу/змагання
       const titleText =
         `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
         (it.stageTitle ? ` — ${it.stageTitle}` : "");
 
+      const lampCls = getLampClass(it, value);
+      const lampTitle = getLampTitle(it, value);
+
+      const label = document.createElement("label");
+      label.className = "event-item" + (open ? "" : " is-closed");
+
+      // ✅ БЕЗ "ЗАКРИТО / ACTIVE"
+      // ✅ Показуємо тільки: лампа + назва + Start–Finish
+      // ✅ Радіо активне лише коли OPEN
       label.innerHTML = `
-        <input type="radio" name="stagePick" value="${value}" ${open ? "" : "disabled"}>
+        <input type="radio" name="stagePick" value="${escapeHtml(value)}" ${open ? "" : "disabled"}>
+        <span class="event-lamp ${lampCls}" title="${escapeHtml(lampTitle)}" aria-hidden="true"></span>
+
         <div class="event-content">
           <div class="event-title">
-            <div class="text" title="${titleText.replaceAll('"','&quot;')}">${titleText}</div>
-            <div class="event-badges">${badges.join("")}</div>
+            <div class="text"
+              style="white-space:normal; overflow:visible; text-overflow:unset; line-height:1.25;"
+              title="${escapeHtml(titleText)}">${escapeHtml(titleText)}</div>
           </div>
-          <div class="event-meta" title="${dateLine} · ${regLine}">${dateLine} · ${regLine}</div>
+
+          <div class="event-meta"
+            style="white-space:normal; overflow:visible; text-overflow:unset;"
+            title="${escapeHtml(dateLine)}">${escapeHtml(dateLine)}</div>
         </div>
       `;
 
       eventOptionsEl.appendChild(label);
     });
   }
+
+  function refreshSubmitState() {
+    if (!submitBtn) return;
+
+    const loading = spinnerEl && spinnerEl.classList.contains("spinner--on");
+    if (loading) {
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const picked = document.querySelector('input[name="stagePick"]:checked');
+    const rulesOk = rulesChk ? !!rulesChk.checked : true; // якщо немає — не блокуємо
+    submitBtn.disabled = !(picked && rulesOk);
+  }
+
+  // слухаємо вибір етапу + чекбокс регламенту
+  document.addEventListener("change", (e) => {
+    if (!e.target) return;
+    if (e.target.name === "stagePick" || e.target.id === "rules") {
+      refreshSubmitState();
+    }
+  });
 
   auth.onAuthStateChanged(async (user) => {
     currentUser = user || null;
@@ -349,6 +399,7 @@
       await loadProfile(user);
       initFoodLogic();
       await loadCompetitions();
+      refreshSubmitState();
     } catch (e) {
       console.error(e);
       if (submitBtn) submitBtn.disabled = true;
@@ -370,9 +421,29 @@
         return;
       }
 
+      if (rulesChk && !rulesChk.checked) {
+        setMsg("Потрібно підтвердити ознайомлення з регламентом.", false);
+        return;
+      }
+
       const picked = document.querySelector('input[name="stagePick"]:checked');
       if (!picked) {
-        setMsg("Оберіть відкрите змагання/етап.", false);
+        setMsg("Оберіть відкрите (зелене) змагання/етап.", false);
+        return;
+      }
+
+      // ✅ Захист: навіть якщо хтось “підмінив” disabled — перевіряємо OPEN по item
+      const pickedValue = String(picked.value);
+      const [competitionId, stageKeyRaw] = pickedValue.split("||");
+      const stageId = (stageKeyRaw || "").trim() || null;
+
+      const it = (lastItems || []).find(x => {
+        const v = `${x.compId}||${x.stageKey || ""}`;
+        return v === pickedValue;
+      });
+
+      if (!it || !isOpenWindow(it)) {
+        setMsg("Ця реєстрація зараз закрита. Оберіть зелену лампочку.", false);
         return;
       }
 
@@ -392,12 +463,10 @@
         foodQty = q;
       }
 
-      const [competitionId, stageKeyRaw] = String(picked.value).split("||");
-      const stageId = (stageKeyRaw || "").trim() || null;
-
       try {
         setLoading(true);
         setMsg("");
+        refreshSubmitState();
 
         await db.collection("registrations").add({
           uid: profile.uid,
@@ -420,11 +489,13 @@
         setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
         form.reset();
         initFoodLogic();
+        refreshSubmitState();
       } catch (err) {
         console.error("submit error:", err);
         setMsg("Помилка відправки заявки (Rules/доступ).", false);
       } finally {
         setLoading(false);
+        refreshSubmitState();
       }
     });
   }

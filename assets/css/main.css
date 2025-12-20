@@ -128,16 +128,18 @@ img{ max-width:100%; height:auto; display:block; }
   outline:none !important;
 }
 
-/* === MOBILE MENU OVERLAY === */
+/* === MOBILE MENU OVERLAY (FULLSCREEN, NO SCROLL) === */
 @media (max-width:860px){
   .burger{ display:block; }
 
   /* робимо нав як фулскрін оверлей */
   .nav{
     position:fixed;
-    left:0; right:0;
-    top:72px;
-    bottom:0;
+    inset:0;                 /* ✅ повний екран */
+    z-index:1900;
+
+    /* щоб не залазило під хедер, але оверлей лишається фулскрін */
+    padding-top:72px;
 
     display:flex;
     flex-direction:column;
@@ -145,7 +147,8 @@ img{ max-width:100%; height:auto; display:block; }
     justify-content:center;
 
     gap:14px;
-    padding:34px 18px 26px;
+    padding-inline:18px;
+    padding-bottom:26px;
 
     /* ✅ фон-фото (шлях ВІД assets/css/main.css) */
     background:
@@ -158,11 +161,9 @@ img{ max-width:100%; height:auto; display:block; }
     pointer-events:none;
 
     transition:transform .28s ease, opacity .28s ease;
-    z-index:1900;
 
-    /* ✅ якщо пунктів багато */
-    overflow:auto;
-    -webkit-overflow-scrolling:touch;
+    /* ✅ БЕЗ бігунка */
+    overflow:hidden;
   }
 
   .nav.open{
@@ -195,6 +196,12 @@ img{ max-width:100%; height:auto; display:block; }
     background:rgba(0,0,0,.48);
     border-color:rgba(246,195,76,.35);
   }
+}
+
+/* ✅ блокуємо скрол сторінки, коли бургер відкритий */
+body.menu-open{
+  overflow:hidden !important;
+  touch-action:none;
 }
 
 /* === LAYOUT === */

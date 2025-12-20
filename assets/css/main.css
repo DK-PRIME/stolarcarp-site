@@ -273,3 +273,30 @@ body.cabinet-page .avatar-upload input[type="file"]{
     justify-content:center;
   }
 }
+/* FIX: не обрізає SC в хедері (mobile-safe) */
+.header { overflow: visible; }
+
+.header__row{
+  align-items: center;
+  min-height: 64px;          /* якщо мало — зроби 68 */
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.logo{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo__mark{
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 12px;
+  display: inline-flex;      /* важливо */
+  align-items: center;
+  justify-content: center;
+  line-height: 1;            /* щоб не тягнуло вверх */
+  overflow: visible;         /* щоб точно не різало */
+}

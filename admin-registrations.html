@@ -3,66 +3,65 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>STOLAR CARP • Реєстрація команд (Адмін)</title>
-
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <title>Адмін • Реєстрація команд</title>
+  <link rel="stylesheet" href="../assets/css/main.css" />
 </head>
 <body class="admin-page">
   <header class="header">
     <div class="container header__row">
-      <a class="logo" href="admin.html">
-        <span class="logo__mark">SC</span>
-        <span class="logo__text">STOLAR CARP</span>
-      </a>
-
+      <div class="logo">
+        <div class="logo__mark">SC</div>
+        <div class="logo__text">STOLAR CARP</div>
+      </div>
       <button class="burger" id="burger" aria-label="Меню">
         <span></span><span></span><span></span>
       </button>
-
       <nav class="nav" id="nav">
-        <a class="nav__link" href="admin.html">Адмінка</a>
-        <a class="nav__link" href="admin-registrations.html">Реєстрація команд</a>
-        <a class="nav__link" href="index.html">На сайт</a>
+        <a class="nav__link" href="../admin.html">Адмінка</a>
+        <a class="nav__link nav__link--active" href="./registrations.html">Реєстрація команд</a>
+        <a class="nav__link" href="./draw.html">Жеребкування</a>
       </nav>
     </div>
   </header>
 
   <main class="main">
     <div class="container">
+
       <div class="card">
-        <h2 style="margin:0 0 10px;">Реєстрація команд (Адмін)</h2>
+        <h2 style="margin:0 0 10px;">Реєстрація команд</h2>
+        <p class="form__hint" id="admMsg">Завантаження…</p>
 
-        <div id="msg" class="form__hint" style="margin:8px 0 14px;"></div>
-
-        <div class="row" style="margin-bottom:12px;">
+        <div class="row" style="margin-top:12px;">
           <div>
-            <label class="form__hint">Фільтр статусу</label>
-            <select id="statusFilter" class="select">
-              <option value="all">Усі</option>
+            <label class="form__hint">Фільтр за статусом</label>
+            <select class="select" id="statusFilter">
               <option value="pending_payment">Очікує оплату</option>
-              <option value="confirmed">Підтверджено</option>
-              <option value="cancelled">Скасовано</option>
+              <option value="paid">Оплачено</option>
+              <option value="rejected">Відхилено</option>
+              <option value="all">Усі</option>
             </select>
           </div>
-
           <div>
-            <label class="form__hint">Пошук (команда/капітан/телефон)</label>
-            <input id="q" class="input" placeholder="Напр. DK, Роман, 063..." />
+            <label class="form__hint">Пошук (команда/телефон)</label>
+            <input class="input" id="q" placeholder="DK Два Кума / 063..." />
           </div>
         </div>
-
-        <div id="list" class="grid" style="gap:12px;"></div>
       </div>
+
+      <div style="height:14px;"></div>
+
+      <div id="list" class="grid" style="grid-template-columns: 1fr; gap: 14px;"></div>
+
     </div>
   </main>
 
-  <!-- ВАЖЛИВО: тут має бути твій firebase-init (compat) який створює window.scAuth/window.scDb -->
-  <script src="assets/js/firebase_init.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <!-- твій shared config (бургер/іконки) -->
-  <script src="assets/js/config.js"></script>
-
-  <!-- логіка цієї сторінки -->
-  <script src="assets/js/admin_registrations.js"></script>
+  <script src="../assets/js/firebase-init.js"></script>
+  <script src="../assets/js/config.js"></script>
+  <script src="../assets/js/admin_registrations.js"></script>
 </body>
 </html>

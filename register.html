@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Реєстрація змагань — STOLAR CARP</title>
 
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" href="/assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
 
-  <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <script defer src="/assets/js/config.js"></script>
 
   <style>
     body.register-page{background:var(--bg); overflow-x:hidden;}
@@ -20,7 +20,7 @@
       margin-top:14px;margin-bottom:22px;padding:18px 16px 16px;border-radius:16px;
       background:linear-gradient(145deg,#14141d,#08080d);border:1px solid #262636;
       box-shadow:var(--shadow);
-      overflow:hidden; /* щоб нічого не вилазило */
+      overflow:hidden;
     }
     .register-hero__kicker{
       font-size:.72rem;text-transform:uppercase;letter-spacing:.18em;
@@ -120,7 +120,6 @@
     }
     .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
 
-    /* ===== Premium stage picker (В РАМЦІ і НЕ ВИЛАЗИТЬ) ===== */
     .event-options{
       display:flex;
       flex-direction:column;
@@ -129,7 +128,7 @@
       border-radius:16px;
       border:1px solid rgba(148,163,184,.18);
       background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      overflow:hidden;              /* ключ: обрізає все що вилізло */
+      overflow:hidden;
       max-width:100%;
     }
 
@@ -147,7 +146,7 @@
       width:100%;
       max-width:100%;
       box-sizing:border-box;
-      overflow:hidden;              /* ключ: контент не вилізає */
+      overflow:hidden;
     }
     .event-item:hover{
       transform:translateY(-1px);
@@ -204,7 +203,6 @@
       font-weight:900;
     }
 
-    /* кольори типів */
     .pill-b--stage{   background:rgba(59,130,246,.16);  border-color:rgba(59,130,246,.35);  color:#bfe0ff; }
     .pill-b--final{   background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b); border-color:transparent; color:#120a00; }
     .pill-b--oneoff{  background:rgba(168,85,247,.16);  border-color:rgba(168,85,247,.35);  color:#efd6ff; }
@@ -229,7 +227,6 @@
     .event-item.is-closed{opacity:.6; filter:saturate(.9);}
     .event-item.is-closed:hover{transform:none; box-shadow:0 10px 26px rgba(0,0,0,.35);}
 
-    /* щоб на малих екранах не “упиралось” у край */
     @media (max-width:520px){
       .register-hero{padding:16px 14px;}
       .card{padding:16px;}
@@ -244,10 +241,11 @@
 
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
+    <a class="logo" href="/index.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
+
     <nav class="nav" id="nav">
       <a href="/index.html" class="nav__link">Головна</a>
       <a href="/rules.html" class="nav__link">Регламент</a>
@@ -259,6 +257,7 @@
       <a href="/events/index.html" class="nav__link">Архів</a>
       <a href="/auth.html" class="nav__link">Акаунт</a>
     </nav>
+
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
 </header>
@@ -314,7 +313,7 @@
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
               <input type="checkbox" id="rules" required style="transform:scale(1.25);accent-color:#f6c34c;">
               <span>Підтверджую, що ознайомлений із
-                <a href="rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
+                <a href="/rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
               </span>
             </label>
           </div>
@@ -362,10 +361,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <!-- init -->
-<script src="assets/js/firebase-init.js"></script>
+<script src="/assets/js/firebase-init.js"></script>
 
 <!-- logic -->
-<script src="assets/js/register_firebase.js"></script>
+<script src="/assets/js/register_firebase.js"></script>
 
 </body>
 </html>

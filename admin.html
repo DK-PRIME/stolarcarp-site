@@ -12,6 +12,35 @@
 
     .admin-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
 
+    /* FIX: щоб "SC" не обрізало в хедері */
+.header .header__row{ align-items:center; }
+
+.header .logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-height:56px;          /* трошки більша висота хедера */
+  padding:8px 0;
+}
+
+.header .logo__mark{
+  width:42px;
+  height:42px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;            /* ключове */
+  overflow:visible;         /* ключове */
+  padding:0;                /* щоб нічого не зсувало */
+}
+
+.header .logo__text{
+  line-height:1.1;
+}
+
+/* якщо десь є обрізання контейнером */
+.header, .header .container{ overflow:visible; }
+
     /* FIX: щоб лого не обрізало */
     .header{ overflow: visible; }
     .logo{ display:flex; align-items:center; gap:10px; }

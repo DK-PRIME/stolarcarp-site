@@ -1,6 +1,6 @@
 // assets/js/register_firebase.js
-// STOLAR CARP — Registration (competitions/events)
-// shows competitions + stages, allows submit only if registration open
+// STOLAR CARP • Registration
+// читає competitions + season.events[]; показує список; дозволяє реєстрацію лише коли OPEN.
 
 (function () {
   const auth = window.scAuth;
@@ -19,16 +19,15 @@
   const cardNumEl      = document.getElementById("cardNum");
 
   if (!auth || !db || !window.firebase) {
-    if (eventOptionsEl) {
-      eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
-    }
+    if (eventOptionsEl) eventOptionsEl.innerHTML =
+      '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
     if (submitBtn) submitBtn.disabled = true;
     return;
   }
 
   let currentUser = null;
   let profile = null;
+  let activeCompetitionId = null;
 
   function setMsg(text, ok = true) {
     if (!msgEl) return;
@@ -39,7 +38,7 @@
 
   function setLoading(v) {
     if (spinnerEl) spinnerEl.classList.toggle("spinner--on", !!v);
-    // submitBtn керуємо окремо нижче (бо є логіка “є відкриті/нема”)
+    if (submitBtn) submitBtn.disabled = !!v;
   }
 
   function fmtDate(d) {
@@ -49,28 +48,34 @@
 
   function toDateMaybe(x) {
     if (!x) return null;
-
-    // Firestore Timestamp
-    if (x && typeof x.toDate === "function") return x.toDate();
-
-    // ISO string "2026-04-17" (як у тебе) — ставимо 12:00 локально, щоб вікно не “плавало”
-    if (typeof x === "string") {
-      const s = x.trim();
-      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(`${s}T12:00:00`);
-      const d = new Date(s);
-      return isNaN(d.getTime()) ? null : d;
-    }
-
-    if (x instanceof Date) return x;
+    try {
+      if (x instanceof Date) return x;
+      if (typeof x === "string") return new Date(x);
+      if (x && typeof x.toDate === "function") return x.toDate(); // Timestamp
+    } catch {}
     return null;
   }
 
-  function nowLocal() {
+  function nowKyiv() {
+    // дати ти задаєш як 12:00 Київ — нам достатньо локального now()
     return new Date();
   }
 
+  function getRegDatesFromEvent(ev) {
+    // підтримка різних назв полів з твоїх скрінів
+    const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen || null;
+    const regClose = ev.regCloseAt || ev.regCloseDate || ev.regClose || null;
+    return { regOpenAt: regOpen, regCloseAt: regClose };
+  }
+
+  function getRunDatesFromEvent(ev) {
+    const start  = ev.startAt  || ev.startDate  || null;
+    const finish = ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
+    return { startAt: start, endAt: finish };
+  }
+
   function isOpenWindow(item) {
-    // regMode: "auto" (by dates) or "manual" (manualOpen)
+    // item: { regMode, manualOpen, regOpenAt, regCloseAt }
     const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
 
@@ -78,22 +83,15 @@
     const closeAt = toDateMaybe(item.regCloseAt);
     if (!openAt || !closeAt) return false;
 
-    const n = nowLocal();
+    const n = nowKyiv();
     return n >= openAt && n <= closeAt;
   }
 
-  function detectKind(it) {
-    // 4 типи: stage, final, comp, stalker
-    if (it.isFinal) return "final";
-
-    const t = (it.type || "").toLowerCase();
-    const name = `${it.compTitle || ""} ${it.stageTitle || ""}`.toLowerCase();
-
-    const isStalker = t.includes("stalker") || name.includes("stalker") || !!it.isSolo;
-    if (isStalker) return "stalker";
-
-    if (it.stageKey) return "stage";
-    return "comp";
+  function isStalkerComp(c) {
+    const t = `${c.title || ""} ${c.name || ""}`.toLowerCase();
+    const type = String(c.type || "").toLowerCase();
+    const fmt  = String(c.format || "").toLowerCase();
+    return t.includes("stalker") || type === "stalker" || fmt === "solo";
   }
 
   // copy card
@@ -127,7 +125,7 @@
 
   async function loadProfile(user) {
     const uSnap = await db.collection("users").doc(user.uid).get();
-    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на «Акаунт» і створіть профіль.");
+    if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль.");
 
     const u = uSnap.data() || {};
     const teamId = u.teamId || null;
@@ -155,11 +153,23 @@
     }
   }
 
+  async function loadActiveCompetitionId() {
+    try {
+      const s = await db.collection("settings").doc("app").get();
+      if (s.exists) {
+        const d = s.data() || {};
+        activeCompetitionId = d.activeCompetitionId || d.activeCompetition || null;
+      }
+    } catch {}
+  }
+
   async function loadCompetitions() {
     if (!eventOptionsEl) return;
-    eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження змагань...</p>`;
+    eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
 
     try {
+      await loadActiveCompetitionId();
+
       const snap = await db.collection("competitions").get();
       const items = [];
 
@@ -169,72 +179,75 @@
 
         const brand = c.brand || "STOLAR CARP";
         const year  = c.year || c.seasonYear || "";
-        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+        const title = c.name || c.title || (year ? `Season ${year}` : compId);
 
-        const type = (c.type || "").toLowerCase();
+        const type = String(c.type || "").toLowerCase(); // season / competition / stalker...
+        const stalker = isStalkerComp(c);
 
-        // === MAIN: у тебе це events[] ===
-        const evArr = Array.isArray(c.events) ? c.events : null;
-        const stArr = Array.isArray(c.stages) ? c.stages : null;
+        const eventsArr = Array.isArray(c.events) ? c.events : null;
 
-        const arr = evArr || stArr;
+        if (eventsArr && eventsArr.length) {
+          eventsArr.forEach((ev, idx) => {
+            const key = ev.key || ev.stageId || ev.id || `stage-${idx+1}`;
+            const isFinal = String(key).toLowerCase().includes("final") || !!ev.isFinal;
 
-        if (arr && arr.length) {
-          arr.forEach((ev, idx) => {
-            const stageKey   = ev.key || ev.stageId || ev.id || `stage-${idx + 1}`;
-            const isFinal    = !!ev.isFinal || stageKey === "final";
-            const stageTitle = ev.title || ev.name || (isFinal ? "Фінал" : `Етап ${idx + 1}`);
+            const { startAt, endAt } = getRunDatesFromEvent(ev);
+            const { regOpenAt, regCloseAt } = getRegDatesFromEvent(ev);
 
-            const startAt  = toDateMaybe(ev.startDate || ev.startAt);
-            const finishAt = toDateMaybe(ev.finishDate || ev.endDate || ev.endAt);
+            const stageTitle =
+              ev.title || ev.name || ev.label ||
+              (isFinal ? "Фінал" : `Етап ${idx + 1}`);
 
             items.push({
+              kind: "stage",
               compId,
-              compTitle,
+              compTitle: title,
               brand,
               year,
-              type,
-              stageKey,
+              stalker,
+              type: type || "season",
+              stageKey: key,
               stageTitle,
               isFinal,
 
-              startAt,
-              endAt: finishAt,
+              startAt: toDateMaybe(startAt),
+              endAt: toDateMaybe(endAt),
 
               regMode: ev.regMode || c.regMode || "auto",
               manualOpen: !!(ev.manualOpen ?? c.manualOpen),
-              regOpenAt: ev.regOpenAt || c.regOpenAt || null,
-              regCloseAt: ev.regCloseAt || c.regCloseAt || null,
-
-              isSolo: !!ev.isSolo || !!c.isSolo
+              regOpenAt,
+              regCloseAt
             });
           });
         } else {
-          // no stages/events => single competition
+          // одноразові змагання без events[]
+          const startAt = toDateMaybe(c.startAt || c.startDate);
+          const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
+
           items.push({
+            kind: "oneoff",
             compId,
-            compTitle,
+            compTitle: title,
             brand,
             year,
-            type,
+            stalker,
+            type: stalker ? "stalker" : (type || "competition"),
             stageKey: null,
             stageTitle: null,
             isFinal: false,
 
-            startAt: toDateMaybe(c.startDate || c.startAt),
-            endAt:   toDateMaybe(c.finishDate || c.endDate || c.endAt),
+            startAt,
+            endAt,
 
             regMode: c.regMode || "auto",
             manualOpen: !!c.manualOpen,
-            regOpenAt: c.regOpenAt || null,
-            regCloseAt: c.regCloseAt || null,
-
-            isSolo: !!c.isSolo
+            regOpenAt: c.regOpenAt || c.regOpenDate || null,
+            regCloseAt: c.regCloseAt || c.regCloseDate || null
           });
         }
       });
 
-      // sort: newest year first
+      // сортування: нові роки зверху, далі назва, далі stageKey
       items.sort((a, b) => {
         const ay = String(a.year || "");
         const by = String(b.year || "");
@@ -250,8 +263,11 @@
       console.error("loadCompetitions error:", e);
       eventOptionsEl.innerHTML =
         '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ).</p>';
-      if (submitBtn) submitBtn.disabled = true;
     }
+  }
+
+  function badge(type, text) {
+    return `<span class="pill-b ${type}">${text}</span>`;
   }
 
   function renderCompetitionItems(items) {
@@ -259,57 +275,61 @@
     eventOptionsEl.innerHTML = "";
 
     if (!items.length) {
-      eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань.</p>`;
+      eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань. Додай їх в адмінці.</p>`;
       if (submitBtn) submitBtn.disabled = true;
       return;
     }
 
+    const anyOpen = items.some(isOpenWindow);
+    if (submitBtn) submitBtn.disabled = !anyOpen;
+
     items.forEach(it => {
       const open = isOpenWindow(it);
-      const kind = detectKind(it);
-
       const value = `${it.compId}||${it.stageKey || ""}`;
-
-      const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
 
       const regOpenD  = toDateMaybe(it.regOpenAt);
       const regCloseD = toDateMaybe(it.regCloseAt);
 
-      const regLine = (regOpenD && regCloseD)
+      const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
+      const regLine  = (regOpenD && regCloseD)
         ? `Реєстрація: ${fmtDate(regOpenD)} — ${fmtDate(regCloseD)}`
         : `Реєстрація: —`;
 
+      // типові бейджі кольорами:
       const badges = [];
-      badges.push(open ? `<span class="pill-b pill-b--open">ВІДКРИТО</span>` : `<span class="pill-b pill-b--closed">ЗАКРИТО</span>`);
+      if (it.kind === "stage" && it.isFinal) badges.push(badge("pill-b--final", "ФІНАЛ"));
+      else if (it.kind === "stage") badges.push(badge("pill-b--stage", "ЕТАП"));
+      else if (it.stalker) badges.push(badge("pill-b--stalker", "STALKER"));
+      else badges.push(badge("pill-b--oneoff", "ЗМАГАННЯ"));
 
-      if (kind === "final") badges.push(`<span class="pill-b pill-b--final">ФІНАЛ</span>`);
-      else if (kind === "stage") badges.push(`<span class="pill-b pill-b--stage">ЕТАП</span>`);
-      else if (kind === "stalker") badges.push(`<span class="pill-b pill-b--stalker">STALKER</span>`);
-      else badges.push(`<span class="pill-b pill-b--comp">ЗМАГАННЯ</span>`);
+      if (open) badges.push(badge("pill-b--open", "ВІДКРИТО"));
+      else badges.push(badge("pill-b--closed", "ЗАКРИТО"));
 
-      const titleLeft =
-        `${it.brand ? `${it.brand} · ` : ""}${it.compTitle}${it.stageTitle ? ` — ${it.stageTitle}` : ""}`;
+      if (activeCompetitionId && it.compId === activeCompetitionId) {
+        badges.push(badge("pill-b--active", "ACTIVE"));
+      }
 
-      const el = document.createElement("label");
-      el.className = "event-item" + (open ? "" : " is-closed");
+      const label = document.createElement("label");
+      label.className = "event-item" + (open ? "" : " is-closed");
 
-      el.innerHTML = `
+      // Текст який не лізе за межі (ellipsis)
+      const titleText =
+        `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
+        (it.stageTitle ? ` — ${it.stageTitle}` : "");
+
+      label.innerHTML = `
         <input type="radio" name="stagePick" value="${value}" ${open ? "" : "disabled"}>
-        <div class="event-body">
+        <div class="event-content">
           <div class="event-title">
-            <div class="event-name" title="${titleLeft.replaceAll('"', "&quot;")}">${titleLeft}</div>
+            <div class="text" title="${titleText.replaceAll('"','&quot;')}">${titleText}</div>
             <div class="event-badges">${badges.join("")}</div>
           </div>
-          <div class="event-meta">${dateLine} · ${regLine}</div>
+          <div class="event-meta" title="${dateLine} · ${regLine}">${dateLine} · ${regLine}</div>
         </div>
       `;
 
-      eventOptionsEl.appendChild(el);
+      eventOptionsEl.appendChild(label);
     });
-
-    // кнопка активна тільки якщо є відкриті
-    const anyOpen = items.some(isOpenWindow);
-    if (submitBtn) submitBtn.disabled = !anyOpen;
   }
 
   auth.onAuthStateChanged(async (user) => {
@@ -320,7 +340,7 @@
       if (submitBtn) submitBtn.disabled = true;
       if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Акаунт» і поверніться сюди.";
       if (eventOptionsEl) eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу.</p>';
+        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу в акаунт.</p>';
       setMsg("Увійдіть у акаунт, щоб бачити змагання та подати заявку.", false);
       return;
     }
@@ -381,6 +401,7 @@
 
         await db.collection("registrations").add({
           uid: profile.uid,
+
           competitionId,
           stageId,
 
@@ -399,16 +420,11 @@
         setMsg("Заявка подана ✔ Після оплати підтверджу в адмінці.", true);
         form.reset();
         initFoodLogic();
-        // перерендер залишаємо як є (не треба знов грузити)
       } catch (err) {
         console.error("submit error:", err);
         setMsg("Помилка відправки заявки (Rules/доступ).", false);
       } finally {
         setLoading(false);
-        // після сабміту кнопку не “вбиваємо” — вона залежить від відкритих етапів
-        // її стан оновлюється при рендері
-        const anyOpen = !!document.querySelector('.event-item:not(.is-closed) input[type="radio"]');
-        if (submitBtn) submitBtn.disabled = !anyOpen;
       }
     });
   }

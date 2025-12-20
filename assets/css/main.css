@@ -1,6 +1,8 @@
 /* =========================
    STOLAR CARP • main.css
    clean + mobile safe header (SC not cropped)
+   + burger menu BG image restore
+   + register stage picker "framed" + no overflow
    ========================= */
 
 /* === BASE COLORS & FONTS === */
@@ -16,6 +18,10 @@
   --danger:#ff4757;
   --radius:16px;
   --shadow:0 10px 30px rgba(0,0,0,.35);
+
+  /* extra */
+  --panel-2:#0f0f16;
+  --stroke:rgba(148,163,184,.22);
 }
 
 *{ box-sizing:border-box; }
@@ -40,7 +46,7 @@ img{ max-width:100%; height:auto; display:block; }
   background:rgba(11,11,15,.75);
   backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
-  overflow:visible; /* важливо: щоб нічого не різало */
+  overflow:visible;
 }
 
 .header__row{
@@ -48,7 +54,7 @@ img{ max-width:100%; height:auto; display:block; }
   align-items:center;
   justify-content:space-between;
   padding:12px 0;
-  min-height:72px; /* запас по висоті — SC не обрізає */
+  min-height:72px;
 }
 
 .logo{
@@ -75,12 +81,12 @@ img{ max-width:100%; height:auto; display:block; }
   align-items:center;
   justify-content:center;
 
-  line-height:1;      /* ключове */
+  line-height:1;
   font-weight:900;
   font-size:16px;
 
-  overflow:visible;   /* ключове */
-  padding:0;          /* НЕ ставимо padding, щоб не ламало квадрат */
+  overflow:visible;
+  padding:0;
 }
 
 .logo__text{
@@ -89,7 +95,7 @@ img{ max-width:100%; height:auto; display:block; }
   white-space:nowrap;
 }
 
-/* nav */
+/* nav (desktop) */
 .nav{
   display:flex;
   gap:16px;
@@ -123,25 +129,71 @@ img{ max-width:100%; height:auto; display:block; }
   border-radius:2px;
 }
 
-/* mobile nav panel */
+/* mobile nav panel + BACKGROUND IMAGE RESTORE */
 @media (max-width:860px){
   .burger{ display:block; }
+
   .nav{
     position:fixed;
     left:0; right:0;
-    top:72px; /* = min-height header */
+    top:72px;
     flex-direction:column;
     align-items:stretch;
     gap:10px;
     padding:14px;
-    background:linear-gradient(180deg, rgba(0,0,0,0.86), rgba(0,0,0,0.95));
+
+    /* фото як фон (як ти просив) */
+    background-image:url("../dk-dva-kuma-banner.jpg");
+    background-size:cover;
+    background-position:center;
+    background-repeat:no-repeat;
+
     border-bottom-left-radius:var(--radius);
     border-bottom-right-radius:var(--radius);
+
     transform:translateY(-130%);
     transition:transform .25s ease;
+
+    /* щоб нічого не “вилазило” */
+    overflow:hidden;
   }
+
+  /* темний оверлей щоб текст читався */
+  .nav::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,.90));
+    pointer-events:none;
+  }
+
+  /* легкий блиск/шум щоб преміально */
+  .nav::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(1200px 420px at 20% 0%, rgba(246,195,76,.10), transparent 55%),
+      radial-gradient(900px 380px at 90% 20%, rgba(122,15,43,.12), transparent 55%);
+    pointer-events:none;
+  }
+
+  /* щоб лінки були поверх оверлеїв */
+  .nav > *{ position:relative; z-index:1; }
+
   .nav.open{ transform:translateY(0); }
-  .nav__link{ text-align:center; }
+
+  .nav__link{
+    text-align:center;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.10);
+    backdrop-filter:blur(6px);
+  }
+  .nav__link:hover{
+    background:rgba(0,0,0,.55);
+    border-color:rgba(246,195,76,.35);
+  }
 }
 
 /* прибираємо білі outline-лінії у хедері */
@@ -163,6 +215,9 @@ img{ max-width:100%; height:auto; display:block; }
   border:1px solid #262636;
   border-radius:16px;
   padding:18px;
+
+  /* щоб внутрішні елементи не вилазили */
+  overflow:hidden;
 }
 
 /* === TABLES === */
@@ -244,7 +299,7 @@ img{ max-width:100%; height:auto; display:block; }
   display:inline-block;
 }
 
-/* === HERO (як було) === */
+/* === HERO === */
 .hero{
   display:grid;
   grid-template-columns:1.2fr .8fr;
@@ -278,7 +333,7 @@ img{ max-width:100%; height:auto; display:block; }
   .hero h1{ font-size:34px; }
 }
 
-/* === REGISTER/CABINET fixes that you had (залишив ключові) === */
+/* === REGISTER/CABINET fixes === */
 .avatar-actions{
   display:flex;
   gap:10px;
@@ -308,4 +363,147 @@ body.cabinet-page .avatar-upload input[type="file"]{
   }
   body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
   body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
+}
+
+/* =========================
+   REGISTER • STAGE PICKER
+   "в рамці" + не вилазить
+   ========================= */
+
+/* контейнер зі списком */
+.event-options{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:10px;
+  border-radius:14px;
+  border:1px solid rgba(148,163,184,.18);
+  background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+
+  /* головне: ніяких вилазів */
+  overflow:hidden;
+}
+
+/* кожен пункт */
+.event-item{
+  position:relative;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+
+  padding:12px 12px;
+  border-radius:14px;
+
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border:1px solid rgba(148,163,184,.22);
+  box-shadow:0 10px 26px rgba(0,0,0,.25);
+
+  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
+
+  /* знов: не вилазить */
+  overflow:hidden;
+}
+
+.event-item:hover{
+  transform:translateY(-1px);
+  border-color:rgba(246,195,76,.55);
+  box-shadow:0 14px 34px rgba(0,0,0,.35);
+}
+
+.event-item input[type="radio"]{
+  width:18px;height:18px;
+  accent-color:var(--accent);
+  margin-top:2px;
+  flex:0 0 auto;
+}
+
+/* Оце вирішує твою “карявість” і обрізання: */
+.event-item > div{
+  min-width:0;               /* ключ */
+  flex:1 1 auto;
+}
+.event-item div,
+.event-item span{
+  overflow-wrap:anywhere;    /* ключ */
+  word-break:break-word;     /* ключ */
+}
+
+/* якщо в тебе довгі рядки типу "STOLAR CARP · Season ... — Етап 3" */
+.event-item > div > div:first-child{
+  font-weight:800;
+  letter-spacing:.02em;
+  line-height:1.25;
+}
+
+/* мета-рядок (дата/реєстрація) */
+.event-item > div > div:nth-child(2){
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.25;
+}
+
+/* OPTIONAL класи (на майбутнє, якщо захочеш): */
+.event-title{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  font-weight:800;
+}
+.event-meta{
+  margin-top:4px;
+  font-size:12px;
+  color:var(--muted);
+}
+.event-badges{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+/* pill badges (як ти хотів преміум) */
+.pill-b{
+  font-size:11px;
+  padding:5px 10px;
+  border-radius:999px;
+  border:1px solid rgba(148,163,184,.25);
+  background:rgba(2,6,23,.55);
+  color:#e5e7eb;
+  white-space:nowrap;
+}
+.pill-b--open{
+  background:linear-gradient(135deg,#22c55e,#16a34a);
+  border-color:transparent;
+  color:#04110a;
+  font-weight:900;
+}
+.pill-b--closed{
+  background:rgba(239,68,68,.15);
+  border-color:rgba(239,68,68,.35);
+  color:#ffb4b4;
+}
+.pill-b--final{
+  background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);
+  border-color:transparent;
+  color:#120a00;
+  font-weight:900;
+}
+.pill-b--active{
+  background:rgba(246,195,76,.15);
+  border-color:rgba(246,195,76,.35);
+  color:#ffe7a6;
+  font-weight:900;
+}
+
+/* disabled look (якщо label має class is-closed) */
+.event-item.is-closed{
+  opacity:.58;
+  filter:saturate(.85);
+}
+.event-item.is-closed:hover{
+  transform:none;
+  box-shadow:0 10px 26px rgba(0,0,0,.25);
 }

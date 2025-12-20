@@ -1,6 +1,7 @@
 /* =========================
    STOLAR CARP • main.css
-   FINAL FIX • burger bg + pills by text
+   FINAL • header ok + burger ok + burger bg restored
+   (NO register page styling here)
    ========================= */
 
 /* === BASE COLORS & FONTS === */
@@ -17,13 +18,14 @@
 
 *{ box-sizing:border-box; }
 html,body{
-  margin:0;
-  padding:0;
+  margin:0; padding:0;
   background:var(--bg);
   color:var(--text);
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.55;
 }
 a{ color:var(--accent); text-decoration:none; }
+img{ max-width:100%; height:auto; display:block; }
 .container{ width:min(1100px,92%); margin-inline:auto; }
 .hidden{ display:none !important; }
 
@@ -36,12 +38,14 @@ a{ color:var(--accent); text-decoration:none; }
   backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
 }
+
 .header__row{
+  position:relative;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  min-height:72px;
   padding:12px 0;
+  min-height:72px; /* щоб SC не обрізало */
 }
 
 /* LOGO */
@@ -49,40 +53,67 @@ a{ color:var(--accent); text-decoration:none; }
   display:flex;
   align-items:center;
   gap:10px;
+  color:var(--text);
   font-weight:900;
+  letter-spacing:.5px;
+  overflow:visible;
+  z-index:1002; /* поверх моб.меню */
 }
 .logo__mark{
-  width:44px;height:44px;
+  width:44px;
+  height:44px;
+  min-width:44px;
   border-radius:12px;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
   color:#000;
-  display:flex;
+  box-shadow:var(--shadow);
+  display:inline-flex;
   align-items:center;
   justify-content:center;
+  line-height:1;
   font-weight:900;
+  font-size:16px;
+  overflow:visible;
+  padding:0;
 }
-.logo__text{ white-space:nowrap; }
+.logo__text{
+  font-weight:900;
+  line-height:1.1;
+  white-space:nowrap;
+}
 
-/* NAV DESKTOP */
+/* NAV (DESKTOP) */
 .nav{
   display:flex;
-  gap:14px;
+  gap:16px;
   align-items:center;
 }
 .nav__link{
-  padding:8px 12px;
-  border-radius:999px;
-  color:#fff;
-  opacity:.85;
+  padding:10px 12px;
+  border-radius:12px;
+  color:var(--text);
+  opacity:.9;
+  border:1px solid transparent;
 }
 .nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
+.nav__link--active{
+  border-color:#333;
+  background:linear-gradient(180deg,#14141c,#0f0f15);
+}
 
 /* BURGER */
 .burger{
-  display:none;
-  background:none;
+  display:none;           /* включаємо лише на моб */
+  width:44px;
+  height:44px;
   border:0;
+  background:transparent;
   cursor:pointer;
+  border-radius:12px;
+  align-items:center;
+  justify-content:center;
+  padding:10px;
+  z-index:1002;           /* поверх меню */
 }
 .burger span{
   display:block;
@@ -90,54 +121,70 @@ a{ color:var(--accent); text-decoration:none; }
   height:2px;
   background:#fff;
   margin:5px 0;
+  border-radius:2px;
+}
+
+/* прибираємо білі outline-лінії у хедері */
+.header *:focus,
+.header *:focus-visible,
+.header a:focus,
+.header a:focus-visible,
+.header button:focus,
+.header button:focus-visible{
+  outline:none !important;
 }
 
 /* === MOBILE MENU === */
 @media (max-width:860px){
-  .burger{ display:block; }
+  .burger{ display:flex; }
 
+  /* меню як оверлей під хедером */
   .nav{
     position:fixed;
-    inset:72px 0 0 0;
-    display:flex;
+    left:0; right:0;
+    top:72px;             /* рівно висота хедера */
+    bottom:0;
+    z-index:1001;
+
     flex-direction:column;
     align-items:center;
     justify-content:center;
     gap:14px;
-    padding:40px 20px;
+    padding:28px 18px;
 
-    /* 🔥 ФОН ПОВЕРНУТО */
+    /* ✅ ПОВЕРНУТИЙ ФОН (твоя картинка) */
     background:
-      linear-gradient(
-        rgba(0,0,0,.72),
-        rgba(0,0,0,.85)
-      ),
-      url("/assets/dk-dva-kuma-banner.jpg") center/cover no-repeat;
+      linear-gradient(rgba(0,0,0,.68), rgba(0,0,0,.86)),
+      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
     transform:translateY(-120%);
     transition:transform .35s ease;
+    will-change:transform;
   }
 
-  .nav.open{
-    transform:translateY(0);
-  }
+  .nav.open{ transform:translateY(0); }
 
-  /* 🔥 КНОПКИ ПО ДОВЖИНІ ТЕКСТУ */
+  /* ✅ “плашки” по довжині тексту */
   .nav__link{
     display:inline-flex;
+    width:auto;
+    max-width:92vw;
     justify-content:center;
     padding:12px 22px;
     border-radius:999px;
+
     background:rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.18);
+    border:1px solid rgba(255,255,255,.16);
+
     backdrop-filter:blur(6px);
     font-size:1.05rem;
     white-space:nowrap;
   }
 }
 
-/* === MAIN === */
+/* === LAYOUT === */
 .main{ padding:28px 0 60px; }
+.section{ margin-top:40px; }
 
 /* === CARDS === */
 .card{
@@ -145,32 +192,145 @@ a{ color:var(--accent); text-decoration:none; }
   border:1px solid #262636;
   border-radius:16px;
   padding:18px;
+  box-shadow:var(--shadow);
+}
+
+/* === TABLES === */
+.table{ width:100%; border-collapse:collapse; }
+.table th,.table td{
+  border:1px solid #262636;
+  padding:10px 12px;
+  text-align:left;
+}
+.table th{ background:#15151e; }
+.table tr:nth-child(even){ background:#0f0f16; }
+
+/* === GRID === */
+.grid{ display:grid; gap:16px; }
+.grid-2{ grid-template-columns:repeat(2,1fr); }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+@media (max-width:900px){
+  .grid-2,.grid-3{ grid-template-columns:1fr; }
 }
 
 /* === BUTTONS === */
 .btn{
-  padding:12px 18px;
-  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:12px 16px;
+  border-radius:12px;
+  text-decoration:none;
   font-weight:800;
-  border:0;
+  border:1px solid #333;
+  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
 }
+.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
 .btn--primary{
   background:linear-gradient(135deg,var(--accent),#ffd84d);
   color:#000;
+  border-color:transparent;
+}
+.btn--accent{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#000;
+  border-color:transparent;
 }
 .btn--danger{
   background:linear-gradient(135deg,var(--accent-2),#8b1020);
   color:#fff;
+  border-color:transparent;
 }
+.btn--ghost{ background:#0d0d13; color:var(--text); }
+
+/* === INPUTS (generic only) === */
+.input,.select,.textarea{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #2b2b36;
+  background:#0d0d14;
+  color:#fff;
+}
+.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
+.form{ display:grid; gap:14px; }
+.form__hint{ color:var(--muted); font-size:12px; }
 
 /* === FOOTER === */
-.footer{
-  border-top:1px solid #222;
-  background:#0c0c12;
-}
+.footer{ border-top:1px solid #222; background:#0c0c12; }
 .footer__row{
   display:flex;
+  align-items:center;
   justify-content:space-between;
   padding:18px 0;
-  color:#aaa;
+  color:#aab;
+}
+.footer__links{ display:flex; gap:12px; }
+
+/* === HERO (як було) === */
+.hero{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:26px;
+  align-items:center;
+  margin-top:18px;
+}
+.hero__card{
+  background:linear-gradient(180deg,#161620,#0d0d13);
+  border:1px solid #262636;
+  border-radius:20px;
+  padding:26px;
+  box-shadow:var(--shadow);
+}
+.hero__kicker{
+  display:inline-block;
+  font-weight:800;
+  letter-spacing:.08em;
+  color:#000;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  padding:6px 10px;
+  border-radius:999px;
+  margin-bottom:12px;
+}
+.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
+.hero p{ color:var(--muted); margin:0 0 18px; }
+.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
+
+@media (max-width:900px){
+  .hero{ grid-template-columns:1fr; }
+  .hero h1{ font-size:34px; }
+}
+
+/* === CABINET avatar fixes (ok to keep) === */
+.avatar-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.avatar-actions input[type="file"]{ max-width:100%; }
+@media (max-width:560px){
+  .avatar-actions{ align-items:stretch; }
+  .avatar-actions input[type="file"]{ width:100%; }
+  .avatar-small-btn{ width:100%; justify-content:center; }
+}
+
+body.cabinet-page .avatar-upload{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+body.cabinet-page .avatar-upload input[type="file"]{
+  max-width:100% !important;
+}
+@media (max-width:560px){
+  body.cabinet-page .avatar-upload{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
+  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
 }

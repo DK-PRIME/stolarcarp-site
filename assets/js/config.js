@@ -3,16 +3,91 @@
   "use strict";
 
   /* =========================
-     Header / burger
+     Small helpers
      ========================= */
-  const burger = document.getElementById("burger");
-  const nav = document.getElementById("nav");
-  if (burger && nav) {
-    burger.addEventListener("click", () => nav.classList.toggle("open"));
-  }
+  const $ = (sel, root = document) => root.querySelector(sel);
+
+  const safeURL = (path) => {
+    // builds absolute URL respecting <base href="...">
+    try {
+      return new URL(path, document.baseURI).href;
+    } catch {
+      return path;
+    }
+  };
+
+  /* =========================
+     Header / burger (STABLE)
+     ========================= */
+  (function headerBurger() {
+    const burger = document.getElementById("burger");
+    const nav = document.getElementById("nav");
+    if (!burger || !nav) return;
+
+    const OPEN_CLASS = "open";
+
+    const isOpen = () => nav.classList.contains(OPEN_CLASS);
+
+    const openMenu = () => {
+      nav.classList.add(OPEN_CLASS);
+      burger.setAttribute("aria-expanded", "true");
+      // lock body scroll on mobile
+      document.documentElement.classList.add("nav-open");
+      document.body.classList.add("nav-open");
+    };
+
+    const closeMenu = () => {
+      nav.classList.remove(OPEN_CLASS);
+      burger.setAttribute("aria-expanded", "false");
+      document.documentElement.classList.remove("nav-open");
+      document.body.classList.remove("nav-open");
+    };
+
+    const toggleMenu = () => (isOpen() ? closeMenu() : openMenu());
+
+    // a11y attrs
+    burger.setAttribute("aria-controls", "nav");
+    burger.setAttribute("aria-expanded", "false");
+
+    burger.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleMenu();
+    });
+
+    // close when clicking any nav link (mobile UX)
+    nav.addEventListener("click", (e) => {
+      const a = e.target.closest("a");
+      if (a && isOpen()) closeMenu();
+    });
+
+    // close on click outside (overlay behaviour)
+    document.addEventListener("click", (e) => {
+      if (!isOpen()) return;
+      const insideNav = nav.contains(e.target);
+      const insideBurger = burger.contains(e.target);
+      if (!insideNav && !insideBurger) closeMenu();
+    });
+
+    // close on ESC
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && isOpen()) closeMenu();
+    });
+
+    // close on resize to desktop
+    const mq = window.matchMedia("(max-width: 860px)");
+    const onMQ = () => {
+      if (!mq.matches) closeMenu();
+    };
+    if (mq.addEventListener) mq.addEventListener("change", onMQ);
+    else mq.addListener(onMQ);
+
+    // expose for debug if needed
+    window.__scCloseMenu = closeMenu;
+  })();
 
   /* =========================
      Inject favicon & theme meta (once)
+     FIXED PATHS for <base href>
      ========================= */
   (function injectIcons() {
     const head = document.head;
@@ -22,7 +97,7 @@
       if (head.querySelector(`link[rel="${rel}"]`)) return;
       const l = document.createElement("link");
       l.rel = rel;
-      l.href = href;
+      l.href = safeURL(href);
       if (type) l.type = type;
       head.appendChild(l);
     };
@@ -37,6 +112,7 @@
       m.setAttribute("content", content);
     };
 
+    // IMPORTANT: resolve from baseURI
     addLink("icon", "assets/favicon.png", "image/png");
     addLink("apple-touch-icon", "assets/favicon.png");
     addMeta("theme-color", "#1a1a1a");
@@ -193,7 +269,9 @@
       const winners = ["A", "B", "C"].map((z) => byZ[z][0]).filter(Boolean);
       winners.sort((a, b) => b.weight - a.weight);
       topLake.innerHTML = winners.length
-        ? winners.map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join("")
+        ? winners
+            .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
+            .join("")
         : `<tr><td colspan="3">Немає даних</td></tr>`;
     };
 
@@ -204,7 +282,9 @@
           const arr = byZ[z];
           const awards = [arr[1], arr[2], arr[3]].filter(Boolean);
           const rows = awards.length
-            ? awards.map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`).join("")
+            ? awards
+                .map((w, i) => `<tr><td>${i + 1}</td><td>${escapeHTML(w.team)}</td><td>${kg(w.weight)}</td></tr>`)
+                .join("")
             : '<tr><td colspan="3">Недостатньо даних</td></tr>';
           return `
             <div class="card">
@@ -254,7 +334,9 @@
 
       let regBtn = card.querySelector("[data-reg]");
       if (!regBtn) {
-        const btns = card.querySelector(".btns") || card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
+        const btns =
+          card.querySelector(".btns") ||
+          card.appendChild(Object.assign(document.createElement("div"), { className: "btns" }));
         regBtn = document.createElement("a");
         regBtn.className = "btn btn--primary";
         regBtn.setAttribute("data-reg", "");

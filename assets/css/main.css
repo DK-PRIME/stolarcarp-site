@@ -1,151 +1,176 @@
 /* =========================
-   REGISTER • Premium stage picker (mobile-safe, framed)
+   STOLAR CARP • main.css
+   FINAL FIX • burger bg + pills by text
    ========================= */
 
-/* трошки повітря на мобілці щоб нічого не липло до країв */
-body.register-page .section--narrow{
-  width:min(1100px, 94%);
+/* === BASE COLORS & FONTS === */
+:root{
+  --bg:#0b0b0f;
+  --panel:#13131a;
+  --muted:#8a8f98;
+  --text:#f2f3f5;
+  --accent:#ffcc00;
+  --accent-2:#d72638;
+  --radius:16px;
+  --shadow:0 10px 30px rgba(0,0,0,.35);
 }
 
-/* контейнер списку */
-.event-options{ 
+*{ box-sizing:border-box; }
+html,body{
+  margin:0;
+  padding:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+}
+a{ color:var(--accent); text-decoration:none; }
+.container{ width:min(1100px,92%); margin-inline:auto; }
+.hidden{ display:none !important; }
+
+/* === HEADER === */
+.header{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  background:rgba(11,11,15,.75);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid #222;
+}
+.header__row{
   display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-/* рамка самого “пункту” + обрізка щоб НЕ вилазило */
-.event-item{
-  position:relative;
-  display:flex;
-  gap:10px;
-  align-items:flex-start;
-
-  padding:12px 12px;
-  border-radius:14px;
-
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid rgba(148,163,184,.22);
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
-
-  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
-
-  overflow:hidden;            /* ключ: обрізає все що “вилазить” */
-  max-width:100%;             /* ключ */
-}
-
-.event-item:hover{
-  transform:translateY(-1px);
-  border-color:rgba(246,195,76,.55);
-  box-shadow:0 14px 34px rgba(0,0,0,.45);
-}
-
-.event-item input[type="radio"]{
-  width:18px;height:18px;
-  margin-top:2px;
-  flex:0 0 auto;
-  accent-color:var(--accent);
-}
-
-/* внутрішній блок з текстом і бейджами */
-.event-body{
-  flex:1 1 auto;
-  min-width:0;                /* ключ: дозволяє ellipsis */
-}
-
-/* верхня лінія: назва + бейджі */
-.event-title{
-  display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
-  gap:10px;
+  min-height:72px;
+  padding:12px 0;
 }
 
-/* назва з обрізкою */
-.event-name{
-  font-weight:900;
-  letter-spacing:.02em;
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;         /* 1 рядок, без “вилазів” */
-}
-
-/* підрядок */
-.event-meta{
-  margin-top:4px;
-  font-size:12px;
-  color:var(--muted);
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* бейджі */
-.event-badges{
+/* LOGO */
+.logo{
   display:flex;
-  gap:6px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  flex:0 0 auto;
+  align-items:center;
+  gap:10px;
+  font-weight:900;
 }
+.logo__mark{
+  width:44px;height:44px;
+  border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+}
+.logo__text{ white-space:nowrap; }
 
-.pill-b{
-  font-size:11px;
-  padding:5px 10px;
+/* NAV DESKTOP */
+.nav{
+  display:flex;
+  gap:14px;
+  align-items:center;
+}
+.nav__link{
+  padding:8px 12px;
   border-radius:999px;
-  border:1px solid rgba(148,163,184,.25);
-  background:rgba(2,6,23,.55);
-  color:#e5e7eb;
-  white-space:nowrap;
+  color:#fff;
+  opacity:.85;
+}
+.nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
+
+/* BURGER */
+.burger{
+  display:none;
+  background:none;
+  border:0;
+  cursor:pointer;
+}
+.burger span{
+  display:block;
+  width:24px;
+  height:2px;
+  background:#fff;
+  margin:5px 0;
 }
 
-/* статус реєстрації */
-.pill-b--open{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  border-color:transparent;
-  color:#04110a;
-  font-weight:900;
-}
-.pill-b--closed{
-  background:rgba(239,68,68,.15);
-  border-color:rgba(239,68,68,.35);
-  color:#ffb4b4;
-  font-weight:900;
+/* === MOBILE MENU === */
+@media (max-width:860px){
+  .burger{ display:block; }
+
+  .nav{
+    position:fixed;
+    inset:72px 0 0 0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    padding:40px 20px;
+
+    /* 🔥 ФОН ПОВЕРНУТО */
+    background:
+      linear-gradient(
+        rgba(0,0,0,.72),
+        rgba(0,0,0,.85)
+      ),
+      url("/assets/dk-dva-kuma-banner.jpg") center/cover no-repeat;
+
+    transform:translateY(-120%);
+    transition:transform .35s ease;
+  }
+
+  .nav.open{
+    transform:translateY(0);
+  }
+
+  /* 🔥 КНОПКИ ПО ДОВЖИНІ ТЕКСТУ */
+  .nav__link{
+    display:inline-flex;
+    justify-content:center;
+    padding:12px 22px;
+    border-radius:999px;
+    background:rgba(0,0,0,.45);
+    border:1px solid rgba(255,255,255,.18);
+    backdrop-filter:blur(6px);
+    font-size:1.05rem;
+    white-space:nowrap;
+  }
 }
 
-/* типи (кольори як ти хотів) */
-.pill-b--stage{
-  background:rgba(59,130,246,.14);
-  border-color:rgba(59,130,246,.35);
-  color:#b9d7ff;
-  font-weight:900;
-}
-.pill-b--final{
-  background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);
-  border-color:transparent;
-  color:#120a00;
-  font-weight:900;
-}
-.pill-b--comp{
-  background:rgba(168,85,247,.14);
-  border-color:rgba(168,85,247,.35);
-  color:#e6c7ff;
-  font-weight:900;
-}
-.pill-b--stalker{
-  background:rgba(34,197,94,.12);
-  border-color:rgba(34,197,94,.35);
-  color:#b7f7cd;
-  font-weight:900;
+/* === MAIN === */
+.main{ padding:28px 0 60px; }
+
+/* === CARDS === */
+.card{
+  background:var(--panel);
+  border:1px solid #262636;
+  border-radius:16px;
+  padding:18px;
 }
 
-/* disabled look */
-.event-item.is-closed{
-  opacity:.58;
-  filter:saturate(.85);
+/* === BUTTONS === */
+.btn{
+  padding:12px 18px;
+  border-radius:999px;
+  font-weight:800;
+  border:0;
 }
-.event-item.is-closed:hover{
-  transform:none;
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
+.btn--primary{
+  background:linear-gradient(135deg,var(--accent),#ffd84d);
+  color:#000;
+}
+.btn--danger{
+  background:linear-gradient(135deg,var(--accent-2),#8b1020);
+  color:#fff;
+}
+
+/* === FOOTER === */
+.footer{
+  border-top:1px solid #222;
+  background:#0c0c12;
+}
+.footer__row{
+  display:flex;
+  justify-content:space-between;
+  padding:18px 0;
+  color:#aaa;
 }

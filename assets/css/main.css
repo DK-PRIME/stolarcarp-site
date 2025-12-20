@@ -1,10 +1,9 @@
 /* =========================
    STOLAR CARP • main.css
-   STABLE HEADER + COMPACT BURGER PANEL
-   Mobile menu DOES NOT overlay page
+   STABLE HEADER + BURGER PANEL (mobile)
+   Mobile menu: column, background only to end of buttons
    ========================= */
 
-/* === BASE COLORS & FONTS === */
 :root{
   --bg:#0b0b0f;
   --panel:#13131a;
@@ -25,14 +24,13 @@ html,body{
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   line-height:1.55;
 }
-
 a{ color:var(--accent); text-decoration:none; }
 img{ max-width:100%; height:auto; display:block; }
 
 .container{ width:min(1100px,92%); margin-inline:auto; }
 .hidden{ display:none !important; }
 
-/* ================= HEADER ================= */
+/* === HEADER === */
 .header{
   position:sticky;
   top:0;
@@ -59,44 +57,50 @@ img{ max-width:100%; height:auto; display:block; }
   gap:10px;
   color:var(--text);
   font-weight:900;
+  letter-spacing:.5px;
 }
 .logo__mark{
-  width:44px; height:44px;
+  width:44px; height:44px; min-width:44px;
   border-radius:12px;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
   color:#000;
-  display:flex;
+  box-shadow:var(--shadow);
+  display:inline-flex;
   align-items:center;
   justify-content:center;
   font-weight:900;
+  font-size:16px;
 }
 .logo__text{ white-space:nowrap; }
 
-/* DESKTOP NAV */
+/* NAV (desktop default) */
 .nav{
   display:flex;
-  align-items:center;
   gap:16px;
+  align-items:center;
 }
-
 .nav__link{
   padding:10px 12px;
   border-radius:12px;
   color:var(--text);
   opacity:.9;
+  border:1px solid transparent;
 }
-.nav__link:hover{
-  opacity:1;
-  background:rgba(255,255,255,.06);
+.nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
+.nav__link--active{
+  border-color:#333;
+  background:linear-gradient(180deg,#14141c,#0f0f15);
 }
 
-/* BURGER */
+/* BURGER BUTTON */
 .burger{
   display:none;
-  background:none;
+  background:transparent;
   border:0;
-  padding:10px;
   cursor:pointer;
+  padding:10px;
+  border-radius:12px;
+  -webkit-tap-highlight-color:transparent;
 }
 .burger span{
   display:block;
@@ -107,12 +111,24 @@ img{ max-width:100%; height:auto; display:block; }
   border-radius:3px;
 }
 
-/* ================= MOBILE MENU ================= */
+/* прибираємо outline у хедері */
+.header *:focus,
+.header *:focus-visible,
+.header a:focus,
+.header a:focus-visible,
+.header button:focus,
+.header button:focus-visible{
+  outline:none !important;
+}
+
+/* =========================
+   MOBILE MENU (column, not fullscreen, no overlay)
+   ========================= */
 @media (max-width:860px){
   .burger{ display:block; }
   .header-login{ display:none; }
 
-  /* ❗ контейнер НІЧОГО не перекриває */
+  /* ✅ головне: на мобілці нав НЕ в рядок і не показується поки закритий */
   .nav{
     position:fixed;
     left:0;
@@ -120,47 +136,50 @@ img{ max-width:100%; height:auto; display:block; }
     top:calc(var(--header-height) + env(safe-area-inset-top));
     z-index:1900;
 
-    background:transparent;
-    display:flex;
-    justify-content:center;
-    padding:10px 14px;
+    /* ✅ приховано */
+    display:none;
 
-    pointer-events:none;
+    /* контейнер без фону */
+    background:transparent;
+
+    /* центруємо панель */
+    justify-content:center;
+    padding:12px 14px;
   }
 
-  /* ❗ ЄДИНЕ що зʼявляється */
+  /* ✅ відкрито */
+  .nav.open{
+    display:flex;
+  }
+
+  /* ✅ панель: фон тільки ДО КІНЦЯ КНОПОК */
   .nav__panel{
     width:min(560px, 92vw);
     padding:14px 14px 16px;
 
-    background:
-      linear-gradient(rgba(0,0,0,.75), rgba(0,0,0,.88)),
-      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
-
     border-radius:22px;
-    box-shadow:0 18px 55px rgba(0,0,0,.65);
     border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 18px 55px rgba(0,0,0,.65);
+
+    background:
+      linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
+      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
     display:flex;
     flex-direction:column;
     align-items:center;
     gap:12px;
-
-    pointer-events:auto;
-
-    opacity:0;
-    transform:translateY(-10px);
-    transition:opacity .2s ease, transform .2s ease;
   }
 
-  .nav.open .nav__panel{
-    opacity:1;
-    transform:translateY(0);
-  }
-
+  /* ✅ кнопки в стовпець */
   .nav__link{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
     width:100%;
     max-width:520px;
+
     padding:14px 18px;
     border-radius:18px;
 
@@ -169,13 +188,18 @@ img{ max-width:100%; height:auto; display:block; }
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
 
-    text-align:center;
     font-size:1.05rem;
     white-space:nowrap;
+    text-align:center;
+  }
+
+  .nav__link:hover{
+    background:rgba(0,0,0,.48);
+    border-color:rgba(246,195,76,.35);
   }
 }
 
-/* ================= LAYOUT ================= */
+/* === LAYOUT === */
 .main{ padding:28px 0 60px; }
 .section{ margin-top:40px; }
 
@@ -186,15 +210,133 @@ img{ max-width:100%; height:auto; display:block; }
   padding:18px;
 }
 
-/* ================= FOOTER ================= */
-.footer{
-  border-top:1px solid #222;
-  background:#0c0c12;
+/* === TABLES === */
+.table{ width:100%; border-collapse:collapse; }
+.table th,.table td{
+  border:1px solid #262636;
+  padding:10px 12px;
+  text-align:left;
 }
-.footer__row{
-  display:flex;
-  justify-content:space-between;
+.table th{ background:#15151e; }
+.table tr:nth-child(even){ background:#0f0f16; }
+
+/* === GRID === */
+.grid{ display:grid; gap:16px; }
+.grid-2{ grid-template-columns:repeat(2,1fr); }
+.grid-3{ grid-template-columns:repeat(3,1fr); }
+@media (max-width:900px){
+  .grid-2,.grid-3{ grid-template-columns:1fr; }
+}
+
+/* === BUTTONS === */
+.btn{
+  display:inline-flex;
   align-items:center;
-  padding:18px 0;
-  color:#aab;
+  justify-content:center;
+  gap:8px;
+  padding:12px 16px;
+  border-radius:12px;
+  text-decoration:none;
+  font-weight:800;
+  border:1px solid #333;
+  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
+.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
+.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
+.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
+.btn--ghost{ background:#0d0d13; color:var(--text); }
+
+/* === BADGES === */
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid #333;
+  color:#ddd;
+}
+
+/* === INPUTS (базові) === */
+.input,.select,.textarea{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid #2b2b36;
+  background:#0d0d14;
+  color:#fff;
+}
+.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
+.form{ display:grid; gap:14px; }
+.form__hint{ color:var(--muted); font-size:12px; }
+
+/* === FOOTER === */
+.footer{ border-top:1px solid #222; background:#0c0c12; }
+.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
+.footer__links{ display:flex; gap:12px; }
+
+/* === HERO (як було) === */
+.hero{
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:26px;
+  align-items:center;
+  margin-top:18px;
+}
+.hero__card{
+  background:linear-gradient(180deg,#161620,#0d0d13);
+  border:1px solid #262636;
+  border-radius:20px;
+  padding:26px;
+  box-shadow:var(--shadow);
+}
+.hero__kicker{
+  display:inline-block;
+  font-weight:800;
+  letter-spacing:.08em;
+  color:#000;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  padding:6px 10px;
+  border-radius:999px;
+  margin-bottom:12px;
+}
+.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
+.hero p{ color:var(--muted); margin:0 0 18px; }
+.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
+@media (max-width:900px){
+  .hero{ grid-template-columns:1fr; }
+  .hero h1{ font-size:34px; }
+}
+
+/* === CABINET small fixes === */
+.avatar-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.avatar-actions input[type="file"]{ max-width:100%; }
+@media (max-width:560px){
+  .avatar-actions{ align-items:stretch; }
+  .avatar-actions input[type="file"]{ width:100%; }
+  .avatar-small-btn{ width:100%; justify-content:center; }
+}
+
+body.cabinet-page .avatar-upload{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+body.cabinet-page .avatar-upload input[type="file"]{
+  max-width:100% !important;
+}
+@media (max-width:560px){
+  body.cabinet-page .avatar-upload{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
+  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
 }

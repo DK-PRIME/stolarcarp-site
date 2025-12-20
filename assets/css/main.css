@@ -1,7 +1,7 @@
 /* =========================
    STOLAR CARP • main.css
-   FINAL • header ok + burger ok + burger bg restored
-   (NO register page styling here)
+   STABLE HEADER + BURGER OVERLAY (bg photo)
+   NO register-page styling here
    ========================= */
 
 /* === BASE COLORS & FONTS === */
@@ -26,6 +26,7 @@ html,body{
 }
 a{ color:var(--accent); text-decoration:none; }
 img{ max-width:100%; height:auto; display:block; }
+
 .container{ width:min(1100px,92%); margin-inline:auto; }
 .hidden{ display:none !important; }
 
@@ -33,19 +34,19 @@ img{ max-width:100%; height:auto; display:block; }
 .header{
   position:sticky;
   top:0;
-  z-index:1000;
+  z-index:2000;
   background:rgba(11,11,15,.75);
   backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
+  overflow:visible;
 }
 
 .header__row{
-  position:relative;
   display:flex;
   align-items:center;
   justify-content:space-between;
   padding:12px 0;
-  min-height:72px; /* щоб SC не обрізало */
+  min-height:72px;
 }
 
 /* LOGO */
@@ -57,12 +58,9 @@ img{ max-width:100%; height:auto; display:block; }
   font-weight:900;
   letter-spacing:.5px;
   overflow:visible;
-  z-index:1002; /* поверх моб.меню */
 }
 .logo__mark{
-  width:44px;
-  height:44px;
-  min-width:44px;
+  width:44px; height:44px; min-width:44px;
   border-radius:12px;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
   color:#000;
@@ -82,7 +80,7 @@ img{ max-width:100%; height:auto; display:block; }
   white-space:nowrap;
 }
 
-/* NAV (DESKTOP) */
+/* NAV DESKTOP */
 .nav{
   display:flex;
   gap:16px;
@@ -101,30 +99,26 @@ img{ max-width:100%; height:auto; display:block; }
   background:linear-gradient(180deg,#14141c,#0f0f15);
 }
 
-/* BURGER */
+/* BURGER BUTTON */
 .burger{
-  display:none;           /* включаємо лише на моб */
-  width:44px;
-  height:44px;
-  border:0;
+  display:none;
   background:transparent;
+  border:0;
   cursor:pointer;
-  border-radius:12px;
-  align-items:center;
-  justify-content:center;
   padding:10px;
-  z-index:1002;           /* поверх меню */
+  border-radius:12px;
+  -webkit-tap-highlight-color:transparent;
 }
 .burger span{
   display:block;
-  width:24px;
-  height:2px;
+  width:26px;
+  height:3px;
   background:#fff;
   margin:5px 0;
-  border-radius:2px;
+  border-radius:3px;
 }
 
-/* прибираємо білі outline-лінії у хедері */
+/* прибираємо outline у хедері */
 .header *:focus,
 .header *:focus-visible,
 .header a:focus,
@@ -134,51 +128,72 @@ img{ max-width:100%; height:auto; display:block; }
   outline:none !important;
 }
 
-/* === MOBILE MENU === */
+/* === MOBILE MENU OVERLAY === */
 @media (max-width:860px){
-  .burger{ display:flex; }
+  .burger{ display:block; }
 
-  /* меню як оверлей під хедером */
+  /* робимо нав як фулскрін оверлей */
   .nav{
     position:fixed;
     left:0; right:0;
-    top:72px;             /* рівно висота хедера */
+    top:72px;
     bottom:0;
-    z-index:1001;
 
+    display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:14px;
-    padding:28px 18px;
 
-    /* ✅ ПОВЕРНУТИЙ ФОН (твоя картинка) */
+    gap:14px;
+    padding:34px 18px 26px;
+
+    /* ✅ фон-фото (шлях ВІД assets/css/main.css) */
     background:
-      linear-gradient(rgba(0,0,0,.68), rgba(0,0,0,.86)),
+      linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
       url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
-    transform:translateY(-120%);
-    transition:transform .35s ease;
-    will-change:transform;
+    /* ✅ повністю ховаємо */
+    transform:translateY(-110%);
+    opacity:0;
+    pointer-events:none;
+
+    transition:transform .28s ease, opacity .28s ease;
+    z-index:1900;
+
+    /* ✅ якщо пунктів багато */
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
   }
 
-  .nav.open{ transform:translateY(0); }
+  .nav.open{
+    transform:translateY(0);
+    opacity:1;
+    pointer-events:auto;
+  }
 
-  /* ✅ “плашки” по довжині тексту */
+  /* ✅ “пігулки” по довжині слова */
   .nav__link{
     display:inline-flex;
+    align-items:center;
+    justify-content:center;
+
     width:auto;
     max-width:92vw;
-    justify-content:center;
+
     padding:12px 22px;
     border-radius:999px;
 
-    background:rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.16);
-
+    background:rgba(0,0,0,.38);
+    border:1px solid rgba(255,255,255,.18);
     backdrop-filter:blur(6px);
+
     font-size:1.05rem;
     white-space:nowrap;
+  }
+
+  .nav__link:hover{
+    background:rgba(0,0,0,.48);
+    border-color:rgba(246,195,76,.35);
   }
 }
 
@@ -186,13 +201,11 @@ img{ max-width:100%; height:auto; display:block; }
 .main{ padding:28px 0 60px; }
 .section{ margin-top:40px; }
 
-/* === CARDS === */
 .card{
   background:var(--panel);
   border:1px solid #262636;
   border-radius:16px;
   padding:18px;
-  box-shadow:var(--shadow);
 }
 
 /* === TABLES === */
@@ -227,24 +240,22 @@ img{ max-width:100%; height:auto; display:block; }
   transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
 }
 .btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
-.btn--primary{
-  background:linear-gradient(135deg,var(--accent),#ffd84d);
-  color:#000;
-  border-color:transparent;
-}
-.btn--accent{
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
-  color:#000;
-  border-color:transparent;
-}
-.btn--danger{
-  background:linear-gradient(135deg,var(--accent-2),#8b1020);
-  color:#fff;
-  border-color:transparent;
-}
+.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
+.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
+.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
 .btn--ghost{ background:#0d0d13; color:var(--text); }
 
-/* === INPUTS (generic only) === */
+/* === BADGES === */
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  border:1px solid #333;
+  color:#ddd;
+}
+
+/* === INPUTS (базові, без реєстру) === */
 .input,.select,.textarea{
   width:100%;
   padding:12px 14px;
@@ -260,13 +271,7 @@ img{ max-width:100%; height:auto; display:block; }
 
 /* === FOOTER === */
 .footer{ border-top:1px solid #222; background:#0c0c12; }
-.footer__row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:18px 0;
-  color:#aab;
-}
+.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
 .footer__links{ display:flex; gap:12px; }
 
 /* === HERO (як було) === */
@@ -297,13 +302,12 @@ img{ max-width:100%; height:auto; display:block; }
 .hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
 .hero p{ color:var(--muted); margin:0 0 18px; }
 .cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-
 @media (max-width:900px){
   .hero{ grid-template-columns:1fr; }
   .hero h1{ font-size:34px; }
 }
 
-/* === CABINET avatar fixes (ok to keep) === */
+/* === CABINET small fixes (окремо від register) === */
 .avatar-actions{
   display:flex;
   gap:10px;

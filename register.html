@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Реєстрація — STOLAR CARP</title>
+  <title>Реєстрація змагань — STOLAR CARP</title>
 
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
@@ -16,9 +16,12 @@
     body.register-page{background:var(--bg);}
     .section--narrow{max-width:1100px;margin:0 auto;}
 
+    /* hero */
     .register-hero{
-      margin-top:14px;margin-bottom:22px;padding:18px 16px 16px;border-radius:16px;
-      background:linear-gradient(145deg,#14141d,#08080d);border:1px solid #262636;
+      margin-top:14px;margin-bottom:22px;
+      padding:18px 16px 16px;border-radius:16px;
+      background:linear-gradient(145deg,#14141d,#08080d);
+      border:1px solid #262636;
       box-shadow:var(--shadow);
     }
     .register-hero__kicker{
@@ -33,27 +36,37 @@
       box-shadow:0 0 8px rgba(0,0,0,.7);
     }
     .register-hero h1{
-      margin:0 0 8px;font-size:clamp(22px,3.4vw,28px);
-      font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+      margin:0 0 8px;
+      font-size:clamp(22px,3.4vw,30px);
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
     }
     .register-hero .title-gradient{
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent;
     }
-    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:720px;}
+    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:760px;}
     .register-hero__divider{
       margin-top:10px;width:120px;height:2px;border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
       box-shadow:0 0 10px rgba(246,195,76,.5);
     }
 
+    /* layout */
     .register-layout{
-      display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
+      display:grid;
+      grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
       gap:18px;align-items:flex-start;
     }
     @media (max-width:860px){.register-layout{grid-template-columns:1fr;}}
 
-    .register-form-card h2{margin:0 0 6px;font-size:1.05rem;text-transform:uppercase;letter-spacing:.10em;}
+    .register-form-card h2{
+      margin:0 0 6px;
+      font-size:1.05rem;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
     .form__hint{font-size:.8rem;color:var(--muted);}
 
     .field{display:grid;gap:6px;margin-bottom:12px;}
@@ -62,16 +75,16 @@
 
     .register-page input[type="number"]{
       background:#0f0f14;border:1px solid #2a2a39;color:#fff;
-      padding:10px 14px;border-radius:12px;font-size:.96rem;
+      padding:10px 14px;border-radius:10px;font-size:.96rem;
     }
     .register-page input::placeholder{color:#6b7280;}
     .register-page input:focus{
       outline:none;border-color:var(--accent);
-      box-shadow:0 0 8px rgba(246,195,76,0.35);
+      box-shadow:0 0 6px rgba(246,195,76,0.5);
     }
 
     .radio-row{display:flex;flex-wrap:wrap;gap:16px;}
-    .radio-row label{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:.9rem;}
+    .radio-row label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.95rem;}
 
     .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;}
     .spinner{
@@ -81,7 +94,8 @@
     }
     .spinner--on{display:inline-block;animation:spin .9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .form-msg{margin-top:6px;font-weight:800;font-size:.9rem;}
+
+    .form-msg{margin-top:6px;font-weight:700;font-size:.92rem;}
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
 
@@ -97,131 +111,13 @@
       font-size:.9rem;color:#000;font-weight:900;
     }
     .card-number{
-      font-weight:800;letter-spacing:.16em;padding:8px 10px;border-radius:12px;
+      font-weight:800;letter-spacing:.16em;padding:9px 10px;border-radius:12px;
       background:#020308;border:1px solid #33384a;display:inline-block;
       margin:4px 0;font-size:.9rem;
     }
-    .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
-    .profile-summary{font-size:.88rem;color:var(--muted);margin-bottom:10px;}
+    .card-note{font-size:.82rem;color:var(--muted);margin-top:6px;}
+    .profile-summary{font-size:.9rem;color:var(--muted);margin-bottom:10px;}
     .profile-summary b{color:#e5e7eb;}
-
-    /* ===== Premium stage picker (вбудовано тут, щоб ти не шукав де ставити) ===== */
-    .event-options{ display:flex; flex-direction:column; gap:10px; padding-top:2px; }
-
-    .event-item{
-      position:relative;
-      display:flex; align-items:flex-start; gap:10px;
-      padding:12px 12px;
-      border-radius:14px;
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border:1px solid rgba(148,163,184,.22);
-      box-shadow:0 10px 26px rgba(0,0,0,.35);
-      transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
-      cursor:pointer;
-    }
-    .event-item:hover{
-      transform:translateY(-1px);
-      border-color:rgba(246,195,76,.55);
-      box-shadow:0 14px 34px rgba(0,0,0,.45);
-    }
-    .event-item input[type="radio"]{
-      width:18px;height:18px;
-      accent-color:var(--accent);
-      margin-top:2px;
-      flex-shrink:0;
-    }
-    .event-body{ flex:1; min-width:0; }
-    .event-title{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      font-weight:900;
-      letter-spacing:.02em;
-    }
-    .event-title .text{
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    .event-meta{
-      margin-top:4px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.35;
-    }
-
-    .event-badges{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      align-items:flex-start;
-      flex-shrink:0;
-    }
-    .pill-b{
-      font-size:11px;
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      white-space:nowrap;
-      font-weight:800;
-      letter-spacing:.03em;
-      text-transform:uppercase;
-    }
-
-    /* статус */
-    .pill-b--open{
-      background:linear-gradient(135deg,#22c55e,#16a34a);
-      border-color:transparent;
-      color:#04110a;
-      font-weight:900;
-    }
-    .pill-b--closed{
-      background:rgba(239,68,68,.15);
-      border-color:rgba(239,68,68,.35);
-      color:#ffb4b4;
-    }
-
-    /* типи (твої вимоги по кольорах) */
-    .pill-b--stage{
-      background:rgba(56,189,248,.14);
-      border-color:rgba(56,189,248,.35);
-      color:#bfefff;
-    }
-    .pill-b--final{
-      background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);
-      border-color:transparent;
-      color:#120a00;
-      font-weight:900;
-    }
-    .pill-b--oneoff{
-      background:rgba(168,85,247,.14);
-      border-color:rgba(168,85,247,.35);
-      color:#f2d7ff;
-    }
-    .pill-b--stalker{
-      background:linear-gradient(135deg,#ffcc00,#d72638);
-      border-color:transparent;
-      color:#120a00;
-      font-weight:900;
-    }
-
-    /* активний вибір */
-    .event-item.is-active{
-      border-color:rgba(246,195,76,.75);
-      box-shadow:0 18px 44px rgba(0,0,0,.55);
-    }
-
-    /* закриті */
-    .event-item.is-closed{
-      opacity:.58;
-      filter:saturate(.85);
-      cursor:not-allowed;
-    }
-    .event-item.is-closed:hover{ transform:none; box-shadow:0 10px 26px rgba(0,0,0,.35); }
   </style>
 </head>
 
@@ -254,10 +150,10 @@
     <div class="register-hero">
       <div class="register-hero__kicker">
         <span class="register-hero__kicker-tag">SC</span>
-        ENTRY · STOLAR CARP
+        STOLAR CARP · ENTRY
       </div>
       <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ ЗМАГАНЬ STOLAR CARP</span></h1>
-      <p>Виберіть відкрите змагання/етап, налаштуйте харчування — і подайте заявку. Дані команди беруться з вашого акаунта.</p>
+      <p>Оберіть відкрите змагання / етап, налаштуйте харчування — і подайте заявку. Дані команди беруться з вашого акаунта.</p>
       <div class="register-hero__divider"></div>
     </div>
 
@@ -312,7 +208,7 @@
           <div id="msg" class="form-msg"></div>
 
           <p class="form__hint" style="margin-top:6px;">
-            Після подачі заявки організатор бачить її в адмінці та підтверджує участь після оплати внеску.
+            Після подачі заявки організатор бачить її в адмінці й підтверджує участь після оплати внеску.
           </p>
         </form>
       </div>
@@ -346,10 +242,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
-
-<!-- logic -->
 <script src="assets/js/register_firebase.js"></script>
 
 </body>

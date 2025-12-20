@@ -176,7 +176,6 @@ img{ max-width:100%; height:auto; display:block; }
     border:1px solid rgba(255,255,255,.12);
     box-shadow:0 22px 60px rgba(0,0,0,.65);
 
-    /* ✅ затемнення + прозорість */
     background:
       linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.70)),
       url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
@@ -195,7 +194,6 @@ img{ max-width:100%; height:auto; display:block; }
     pointer-events:auto;
   }
 
-  /* ✅ кнопки ВУЖЧІ */
   .nav__link{
     display:inline-flex;
     align-items:center;
@@ -377,8 +375,24 @@ body.cabinet-page .avatar-upload input[type="file"]{
   border-radius: 18px;
   padding: 14px 14px;
   box-shadow: 0 10px 26px rgba(0,0,0,.35);
+  transition: transform .08s ease, border-color .18s ease, box-shadow .18s ease;
 }
+
 .stage-card + .stage-card{ margin-top: 12px; }
+
+.stage-card[role="button"]{ cursor:pointer; user-select:none; }
+.stage-card[role="button"]:active{ transform: translateY(1px); }
+
+.stage-card.is-selected{
+  border-color: rgba(255,204,0,.55);
+  box-shadow: 0 14px 34px rgba(0,0,0,.45);
+}
+
+.stage-card.is-disabled{
+  opacity:.55;
+  filter:saturate(.9);
+  cursor:not-allowed;
+}
 
 .stage-head{
   display:flex;
@@ -396,12 +410,14 @@ body.cabinet-page .avatar-upload input[type="file"]{
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(0,0,0,.25);
 }
+
 .lamp-red{
   background:#d72638;
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 10px rgba(215,38,56,.75);
 }
+
 .lamp-yellow{
   background:#ffcc00;
   box-shadow:
@@ -409,6 +425,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
     0 0 12px rgba(255,204,0,.75);
   animation: lampPulse 1.3s ease-in-out infinite;
 }
+
 .lamp-green{
   background:#2ecc71;
   box-shadow:
@@ -416,6 +433,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
     0 0 12px rgba(46,204,113,.75);
   animation: lampPulse 1.6s ease-in-out infinite;
 }
+
 @keyframes lampPulse{
   0%,100%{ transform: scale(1); filter: brightness(1); }
   50%{ transform: scale(1.08); filter: brightness(1.12); }
@@ -427,6 +445,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
   flex-direction:column;
   gap:4px;
 }
+
 .stage-title{
   font-weight: 800;
   font-size: .98rem;
@@ -438,6 +457,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
   text-overflow: unset;
   line-height: 1.25;
 }
+
 .stage-dates{
   font-size: .88rem;
   color: rgba(226,232,240,.78);
@@ -446,17 +466,10 @@ body.cabinet-page .avatar-upload input[type="file"]{
   gap:8px;
   flex-wrap: wrap;
 }
+
 .stage-sub{
   font-size: .78rem;
   color: rgba(148,163,184,.85);
-}
-
-.stage-card[role="button"]{
-  cursor: pointer;
-  user-select:none;
-}
-.stage-card[role="button"]:active{
-  transform: translateY(1px);
 }
 
 @media (max-width: 420px){

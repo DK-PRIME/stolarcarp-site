@@ -37,6 +37,7 @@ img{ max-width:100%; height:auto; display:block; }
   z-index:2000;
   background:rgba(11,11,15,.75);
   backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
   overflow:visible;
 }
@@ -128,41 +129,47 @@ img{ max-width:100%; height:auto; display:block; }
   outline:none !important;
 }
 
-/* === MOBILE MENU OVERLAY (FULLSCREEN, NO SCROLL) === */
+/* === MOBILE MENU OVERLAY (FULL HEIGHT, NO SCROLL, ALWAYS FITS 9 ITEMS) === */
 @media (max-width:860px){
   .burger{ display:block; }
 
-  /* робимо нав як фулскрін оверлей */
+  /* щоб справа не тиснуло (у тебе в index є кнопка Увійти) */
+  .header-login{ display:none; }
+
   .nav{
     position:fixed;
-    inset:0;                 /* ✅ повний екран */
+    inset:0;
     z-index:1900;
 
-    /* щоб не залазило під хедер, але оверлей лишається фулскрін */
-    padding-top:72px;
+    height:100dvh;
+
+    padding-top:calc(72px + env(safe-area-inset-top) + 14px);
+    padding-bottom:calc(env(safe-area-inset-bottom) + 18px);
+    padding-left:18px;
+    padding-right:18px;
 
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
 
-    gap:14px;
-    padding-inline:18px;
-    padding-bottom:26px;
+    /* ✅ НЕ центруємо, щоб нічого не “обрізало” */
+    justify-content:flex-start;
 
-    /* ✅ фон-фото (шлях ВІД assets/css/main.css) */
+    /* ✅ адаптивний gap — 9 пунктів влазять навіть на низьких екранах */
+    gap:clamp(8px, 1.5vh, 14px);
+
     background:
       linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
       url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
 
-    /* ✅ повністю ховаємо */
+    /* ✅ ховаємо */
     transform:translateY(-110%);
     opacity:0;
     pointer-events:none;
 
     transition:transform .28s ease, opacity .28s ease;
 
-    /* ✅ БЕЗ бігунка */
+    /* ✅ без бігунка */
     overflow:hidden;
   }
 
@@ -172,7 +179,7 @@ img{ max-width:100%; height:auto; display:block; }
     pointer-events:auto;
   }
 
-  /* ✅ “пігулки” по довжині слова */
+  /* ✅ “пігулки” + адаптивні розміри */
   .nav__link{
     display:inline-flex;
     align-items:center;
@@ -181,14 +188,15 @@ img{ max-width:100%; height:auto; display:block; }
     width:auto;
     max-width:92vw;
 
-    padding:12px 22px;
+    padding:clamp(10px, 1.6vh, 12px) clamp(18px, 3.2vh, 22px);
     border-radius:999px;
 
     background:rgba(0,0,0,.38);
     border:1px solid rgba(255,255,255,.18);
     backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
 
-    font-size:1.05rem;
+    font-size:clamp(.92rem, 2.1vh, 1.05rem);
     white-space:nowrap;
   }
 
@@ -196,12 +204,6 @@ img{ max-width:100%; height:auto; display:block; }
     background:rgba(0,0,0,.48);
     border-color:rgba(246,195,76,.35);
   }
-}
-
-/* ✅ блокуємо скрол сторінки, коли бургер відкритий */
-body.menu-open{
-  overflow:hidden !important;
-  touch-action:none;
 }
 
 /* === LAYOUT === */

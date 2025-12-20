@@ -367,3 +367,112 @@ body.cabinet-page .avatar-upload input[type="file"]{
   body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
   body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
 }
+/* =========================
+   REGISTER • stage cards 10/10
+   Lamp status + clean layout
+   ========================= */
+
+.stage-card{
+  background: rgba(15,23,42,.55);
+  border: 1px solid rgba(148,163,184,.22);
+  border-radius: 18px;
+  padding: 14px 14px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+
+.stage-card + .stage-card{ margin-top: 12px; }
+
+.stage-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-width: 0;
+}
+
+.lamp{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  flex-shrink:0;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.08),
+    0 0 12px rgba(0,0,0,.25);
+}
+
+.lamp-red{
+  background:#d72638;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.08),
+    0 0 10px rgba(215,38,56,.75);
+}
+
+.lamp-yellow{
+  background:#ffcc00;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.08),
+    0 0 12px rgba(255,204,0,.75);
+  animation: lampPulse 1.3s ease-in-out infinite;
+}
+
+.lamp-green{
+  background:#2ecc71;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.08),
+    0 0 12px rgba(46,204,113,.75);
+  animation: lampPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes lampPulse{
+  0%,100%{ transform: scale(1); filter: brightness(1); }
+  50%{ transform: scale(1.08); filter: brightness(1.12); }
+}
+
+.stage-info{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+
+.stage-title{
+  font-weight: 800;
+  font-size: .98rem;
+  color: #f2f3f5;
+  letter-spacing: .01em;
+
+  /* ✅ не обрізаємо назву — переносимо */
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.25;
+}
+
+.stage-dates{
+  font-size: .88rem;
+  color: rgba(226,232,240,.78);
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap: wrap;
+}
+
+.stage-sub{
+  font-size: .78rem;
+  color: rgba(148,163,184,.85);
+}
+
+/* маленька “стрілка” що це клікабельно */
+.stage-card[role="button"]{
+  cursor: pointer;
+  user-select:none;
+}
+.stage-card[role="button"]:active{
+  transform: translateY(1px);
+}
+
+/* мобільні — ще компактніше */
+@media (max-width: 420px){
+  .stage-card{ padding: 12px; }
+  .stage-title{ font-size: .94rem; }
+  .stage-dates{ font-size: .84rem; }
+}

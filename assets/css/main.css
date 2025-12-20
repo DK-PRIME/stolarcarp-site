@@ -1,9 +1,9 @@
 /* =========================
    STOLAR CARP • main.css
-   STABLE HEADER + BURGER PANEL (mobile)
-   Mobile menu: column, background only to end of buttons
+   RESTORE STABLE HEADER + BURGER OVERLAY (classic)
    ========================= */
 
+/* === BASE COLORS & FONTS === */
 :root{
   --bg:#0b0b0f;
   --panel:#13131a;
@@ -39,6 +39,7 @@ img{ max-width:100%; height:auto; display:block; }
   backdrop-filter:blur(10px);
   -webkit-backdrop-filter:blur(10px);
   border-bottom:1px solid #222;
+  overflow:visible;
 }
 
 .header__row{
@@ -68,17 +69,23 @@ img{ max-width:100%; height:auto; display:block; }
   display:inline-flex;
   align-items:center;
   justify-content:center;
+  line-height:1;
   font-weight:900;
   font-size:16px;
 }
-.logo__text{ white-space:nowrap; }
+.logo__text{
+  font-weight:900;
+  line-height:1.1;
+  white-space:nowrap;
+}
 
-/* NAV (desktop default) */
+/* NAV DESKTOP */
 .nav{
   display:flex;
   gap:16px;
   align-items:center;
 }
+
 .nav__link{
   padding:10px 12px;
   border-radius:12px;
@@ -122,66 +129,64 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* =========================
-   MOBILE MENU (column, not fullscreen, no overlay)
+   MOBILE MENU OVERLAY (RESTORED)
+   - opens full screen
+   - column
+   - background image
+   - scroll only if needed
    ========================= */
 @media (max-width:860px){
   .burger{ display:block; }
   .header-login{ display:none; }
 
-  /* ✅ головне: на мобілці нав НЕ в рядок і не показується поки закритий */
+  /* IMPORTANT: do not show desktop row on mobile */
   .nav{
     position:fixed;
-    left:0;
-    right:0;
-    top:calc(var(--header-height) + env(safe-area-inset-top));
+    left:0; right:0;
+    top:var(--header-height);
+    bottom:0;
     z-index:1900;
 
-    /* ✅ приховано */
-    display:none;
-
-    /* контейнер без фону */
-    background:transparent;
-
-    /* центруємо панель */
-    justify-content:center;
-    padding:12px 14px;
-  }
-
-  /* ✅ відкрито */
-  .nav.open{
-    display:flex;
-  }
-
-  /* ✅ панель: фон тільки ДО КІНЦЯ КНОПОК */
-  .nav__panel{
-    width:min(560px, 92vw);
-    padding:14px 14px 16px;
-
-    border-radius:22px;
-    border:1px solid rgba(255,255,255,.12);
-    box-shadow:0 18px 55px rgba(0,0,0,.65);
-
-    background:
-      linear-gradient(rgba(0,0,0,.72), rgba(0,0,0,.88)),
-      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
-
+    /* column list */
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:12px;
+    justify-content:flex-start;
+
+    gap:14px;
+    padding:24px 18px calc(env(safe-area-inset-bottom) + 18px);
+
+    /* bg (like before) */
+    background:
+      linear-gradient(rgba(0,0,0,.62), rgba(0,0,0,.82)),
+      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
+
+    /* hidden by default */
+    transform:translateY(-110%);
+    opacity:0;
+    pointer-events:none;
+    transition:transform .28s ease, opacity .28s ease;
+
+    /* allow scroll ONLY if реально не влазить */
+    overflow:auto;
+    -webkit-overflow-scrolling:touch;
   }
 
-  /* ✅ кнопки в стовпець */
+  .nav.open{
+    transform:translateY(0);
+    opacity:1;
+    pointer-events:auto;
+  }
+
+  /* pill buttons */
   .nav__link{
-    display:flex;
+    display:inline-flex;
     align-items:center;
     justify-content:center;
 
-    width:100%;
-    max-width:520px;
-
-    padding:14px 18px;
-    border-radius:18px;
+    width:min(520px, 92vw);
+    padding:12px 22px;
+    border-radius:999px;
 
     background:rgba(0,0,0,.38);
     border:1px solid rgba(255,255,255,.18);
@@ -257,7 +262,7 @@ img{ max-width:100%; height:auto; display:block; }
   color:#ddd;
 }
 
-/* === INPUTS (базові) === */
+/* === INPUTS === */
 .input,.select,.textarea{
   width:100%;
   padding:12px 14px;
@@ -276,7 +281,7 @@ img{ max-width:100%; height:auto; display:block; }
 .footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
 .footer__links{ display:flex; gap:12px; }
 
-/* === HERO (як було) === */
+/* === HERO === */
 .hero{
   display:grid;
   grid-template-columns:1.2fr .8fr;
@@ -309,7 +314,7 @@ img{ max-width:100%; height:auto; display:block; }
   .hero h1{ font-size:34px; }
 }
 
-/* === CABINET small fixes === */
+/* === CABINET fixes === */
 .avatar-actions{
   display:flex;
   gap:10px;

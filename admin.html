@@ -2,69 +2,172 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <title>STOLAR CARP • Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STOLAR CARP — Адмінка</title>
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta name="theme-color" content="#0b0b0f">
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-  <script src="assets/js/firebase-init.js"></script>
-  <script defer src="assets/js/admin.js"></script>
-
   <style>
-    body{background:#0b0b0f}
-    .admin-layout{
-      display:grid;
-      grid-template-columns:260px 1fr;
-      min-height:100vh;
+    body.admin-page{
+      background:var(--bg);
     }
-    .admin-menu{
-      border-right:1px solid #222;
-      padding:20px;
+
+    .admin-hero{
+      margin-top:20px;
+      margin-bottom:24px;
+      padding:22px;
+      border-radius:18px;
+      background:linear-gradient(145deg,#14141d,#08080d);
+      border:1px solid #262636;
+      box-shadow:var(--shadow);
     }
-    .admin-menu h2{
-      margin:0 0 20px;
-      font-size:18px;
+
+    .admin-hero h1{
+      margin:0;
+      font-size:clamp(22px,3.5vw,30px);
       letter-spacing:.08em;
+      text-transform:uppercase;
+      background:linear-gradient(90deg,#f6c34c,#cc6a2b,#7a0f2b);
+      -webkit-background-clip:text;
+      color:transparent;
     }
-    .admin-menu button{
-      width:100%;
-      margin-bottom:10px;
+
+    .admin-hero p{
+      margin-top:8px;
+      color:var(--muted);
+      max-width:720px;
     }
-    .admin-view{
-      padding:26px;
+
+    .admin-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:18px;
+    }
+
+    .admin-card{
+      background:var(--panel);
+      border:1px solid #262636;
+      border-radius:16px;
+      padding:20px;
+      box-shadow:var(--shadow);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .admin-card h3{
+      margin:0;
+      font-size:1rem;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+
+    .admin-card p{
+      margin:0;
+      font-size:.88rem;
+      color:var(--muted);
+      line-height:1.4;
+    }
+
+    .admin-card a{
+      margin-top:auto;
+      align-self:flex-start;
     }
   </style>
 </head>
 
-<body>
+<body class="admin-page">
 
-<div class="admin-layout">
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
 
-  <!-- LEFT MENU -->
-  <aside class="admin-menu">
-    <h2>STOLAR CARP<br>ADMIN</h2>
+    <nav class="nav">
+      <a class="nav__link nav__link--active" href="admin.html">Адмінка</a>
+      <a class="nav__link" href="index.html">Сайт</a>
+    </nav>
+  </div>
+</header>
 
-    <button class="btn btn--ghost" data-view="create">➕ Створення змагань</button>
-    <button class="btn btn--ghost" data-view="edit">✏️ Редагувати змагання</button>
-    <button class="btn btn--ghost" data-view="registrations">📋 Реєстр команд</button>
-    <button class="btn btn--ghost" data-view="draw">🎣 Жеребкування</button>
-    <button class="btn btn--ghost" data-view="weighing">⚖️ Зважування</button>
-    <button class="btn btn--ghost" data-view="bigfish">🐟 BigFish Total</button>
-    <button class="btn btn--ghost" data-view="users">👤 STOLAR USER</button>
-  </aside>
+<main class="main">
+  <section class="container">
 
-  <!-- MAIN VIEW -->
-  <main id="adminView" class="admin-view">
-    <h2>Адмін панель STOLAR CARP</h2>
-    <p class="form__hint">Оберіть розділ зліва</p>
-  </main>
+    <!-- HERO -->
+    <div class="admin-hero">
+      <h1>Адміністративна панель</h1>
+      <p>
+        Керування змаганнями STOLAR CARP: створення, заявки команд, жеребкування,
+        зважування, BigFish та користувачі сайту.
+      </p>
+    </div>
 
-</div>
+    <!-- GRID -->
+    <div class="admin-grid">
+
+      <!-- CREATE COMPETITION -->
+      <div class="admin-card">
+        <h3>Створення змагань</h3>
+        <p>Додавання нових змагань, сезонів, етапів, фіналів та форматів (STALKER).</p>
+        <a href="#" class="btn btn--primary">Відкрити</a>
+      </div>
+
+      <!-- EDIT COMPETITION -->
+      <div class="admin-card">
+        <h3>Редагування змагань</h3>
+        <p>Зміна дат, назв, статусів реєстрації, етапів та фіналів.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+      <!-- REGISTRATIONS -->
+      <div class="admin-card">
+        <h3>Реєстр команд</h3>
+        <p>Усі подані заявки команд із розподілом по змаганнях та етапах.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+      <!-- DRAW -->
+      <div class="admin-card">
+        <h3>Жеребкування</h3>
+        <p>Призначення зон і секторів (A1–C8). Без повторів. Вживу на водоймі.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+      <!-- WEIGHING -->
+      <div class="admin-card">
+        <h3>Зважування</h3>
+        <p>Внесення ваги риби суддями по командах, секторах і зонах.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+      <!-- BIG FISH -->
+      <div class="admin-card">
+        <h3>BigFish Total</h3>
+        <p>Окремий платний івент для команд. Увімкнення/вимкнення участі.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+      <!-- USERS -->
+      <div class="admin-card">
+        <h3>STOLAR USER</h3>
+        <p>Усі користувачі сайту. Редагування даних та фото профілю.</p>
+        <a href="#" class="btn btn--ghost">Відкрити</a>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Admin</div>
+  </div>
+</footer>
 
 </body>
 </html>

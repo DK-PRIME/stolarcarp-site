@@ -440,22 +440,62 @@
         setLoading(true);
         setMsg("");
 
-        await db.collection("registrations").add({
-          uid: profile.uid,
+        // визначаємо чи це "Сталкер"
+        const isStalker =
+          /сталкер/i.test(selectedItem.compTitle || "") ||
+          /сталкер/i.test(selectedItem.stageTitle || "") ||
+          /stalker/i.test(selectedItem.compId || "");
 
-          competitionId,
-          stageId,
+        // ключ унікальності:
+        // - звичайні: teamId
+        // - сталкер: uid (кожен учасник окремо)
+        const uniqKey = isStalker ? profile.uid : (profile.teamId || "no_team");
 
-          teamId: profile.teamId,
-          teamName: profile.teamName,
-          captain: profile.captain,
-          phone: profile.phone,
+        if (!uniqKey || uniqKey === "no_team") {
+          throw new Error("Нема teamId. Зайдіть в «Акаунт» і приєднайтесь до команди.");
+        }
 
-          food,
-          foodQty: foodQty ?? null,
+        const stageSafe = stageId || "main";
+        const regDocId = `${competitionId}__${stageSafe}__${uniqKey}`;
+        const regRef = db.collection("registrations").doc(regDocId);
 
-          status: "pending_payment",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        // атомарно: якщо документ вже є — не створюємо
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(regRef);
+          if (snap.exists) {
+            const d = snap.data() || {};
+            // якщо існує і НЕ скасовано — забороняємо повтор
+            if (d.status !== "cancelled") {
+              throw new Error(
+                isStalker
+                  ? "Ви вже подали заявку на цей етап (Сталкер)."
+                  : "Ваша команда вже подала заявку на цей етап."
+              );
+            }
+          }
+
+          tx.set(regRef, {
+            uid: profile.uid,
+
+            competitionId,
+            stageId,
+
+            teamId: profile.teamId,
+            teamName: profile.teamName,
+            captain: profile.captain,
+            phone: profile.phone,
+
+            food,
+            foodQty: foodQty ?? null,
+
+            // статуси як у тебе
+            status: "pending_payment",
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+
+            // службове
+            isStalker: !!isStalker,
+            uniqKey
+          });
         });
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
@@ -463,7 +503,10 @@
         initFoodLogic();
       } catch (err) {
         console.error("submit error:", err);
-        setMsg("Помилка відправки заявки (Rules/доступ).", false);
+
+        // якщо це наше повідомлення (дубль) — показуємо як є
+        const t = err?.message || "Помилка відправки заявки (Rules/доступ).";
+        setMsg(t, false);
       } finally {
         setLoading(false);
       }

@@ -1,10 +1,9 @@
 // assets/js/draw_admin.js
-// STOLAR CARP • Admin draw (sector assignment)
-// ✅ loads competitions -> stageSelect (value "compId||stageKey" or "compId||")
-// ✅ loads ALL confirmed registrations, then filters locally
-// ✅ assigns unique sectors A1..C8
-// ✅ saves: drawKey, drawZone, drawSector, bigFishTotal, drawAt
-// ✅ builds TSV export: Stage | Team | Sector | Zone | Big_Total
+// STOLAR CARP • Admin draw (table-like rows)
+// - loads competitions -> stageSelect
+// - loads ALL confirmed registrations once, filters locally
+// - assign unique sectors A1..C8 (A/B/C x 1..8)
+// - per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
 (function () {
   "use strict";
 
@@ -13,13 +12,10 @@
 
   const stageSelect = document.getElementById("stageSelect");
   const qInput      = document.getElementById("q");
-  const listNeed    = document.getElementById("listNeed");
-  const listDone    = document.getElementById("listDone");
   const msgEl       = document.getElementById("msg");
 
-  // optional: якщо додаси в HTML
-  const exportBtn = document.getElementById("exportDraw"); // button
-  const exportBox = document.getElementById("exportBox");  // textarea
+  const drawRows    = document.getElementById("drawRows");
+  const countInfo   = document.getElementById("countInfo");
 
   if (!auth || !db || !window.firebase) {
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
@@ -34,26 +30,19 @@
 
   const escapeHtml = (s) =>
     String(s ?? "")
-      .replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;")
-      .replace(/'/g,"&#39;");
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
-  const setMsg = (text, ok = true) => {
+  const setMsg = (text, ok=true) => {
     if (!msgEl) return;
     msgEl.textContent = text || "";
     msgEl.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
   };
 
-  const fmtDT = (ts) => {
-    try {
-      const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-      return d ? d.toLocaleString("uk-UA") : "—";
-    } catch { return "—"; }
-  };
-
-  const normStr = (v) => String(v ?? "").trim();
+  function normStr(v){ return String(v ?? "").trim(); }
 
   function parseStageValue(v){
     const [compId, stageKeyRaw] = String(v||"").split("||");
@@ -68,34 +57,18 @@
     return role === "admin";
   }
 
-  // ----- robust getters -----
+  // robust getters (щоб не ламалось від назв полів)
   function getCompIdFromReg(x){
-    return normStr(
-      x.competitionId ||
-      x.compId ||
-      x.competition ||
-      x.seasonId ||
-      x.season ||
-      x.eventCompetitionId ||
-      ""
-    );
+    return x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "";
   }
-
   function getStageIdFromReg(x){
-    const v =
-      x.stageId ||
-      x.stageKey ||
-      x.stage ||
-      x.eventId ||
-      x.eventKey ||
-      x.roundId ||
-      "";
+    const v = x.stageId || x.stageKey || x.stage || x.eventId || x.eventKey || x.roundId || "";
     return normStr(v) || null;
   }
 
-  function boolToNiTak(v){ return v ? "так" : "ні"; }
+  // stage label map: "compId||stageKey" -> label
+  let stageNameByKey = new Map();
 
-  // ----- state -----
   let currentUser = null;
   let isAdmin = false;
 
@@ -103,16 +76,12 @@
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
-  let stageNameByKey = new Map(); // "compId||stageKey" -> label
-  let competitionsFlat = [];      // [{value,label}]
-
-  // ----- competitions -> select -----
   async function loadStagesToSelect(){
     if (!stageSelect) return;
 
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
-    competitionsFlat = [];
     stageNameByKey = new Map();
+    const items = [];
 
     const snap = await db.collection("competitions").get();
     snap.forEach(docSnap => {
@@ -125,41 +94,35 @@
 
       const eventsArr = Array.isArray(c.events) ? c.events : null;
 
-      if (eventsArr && eventsArr.length){
+      if (eventsArr && eventsArr.length) {
         eventsArr.forEach((ev, idx) => {
           const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
           const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
           const label = `${brand} · ${compTitle} — ${stageTitle}`;
           const value = `${compId}||${key}`;
-          competitionsFlat.push({ value, label });
+          items.push({ value, label });
           stageNameByKey.set(value, label);
         });
       } else {
         const label = `${brand} · ${compTitle}`;
         const value = `${compId}||`;
-        competitionsFlat.push({ value, label });
+        items.push({ value, label });
         stageNameByKey.set(value, label);
       }
     });
 
-    competitionsFlat.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
 
     stageSelect.innerHTML =
       `<option value="">— Оберіть —</option>` +
-      competitionsFlat.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
+      items.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
   }
 
-  function labelForSelectedStage(){
-    const v = stageSelect?.value || "";
-    return stageNameByKey.get(v) || v || "";
-  }
-
-  // ----- load all confirmed once -----
   async function loadAllConfirmed(){
     setMsg("Завантаження підтверджених заявок…", true);
 
     const snap = await db.collection("registrations")
-      .where("status", "==", "confirmed")
+      .where("status","==","confirmed")
       .get();
 
     regsAllConfirmed = [];
@@ -167,286 +130,192 @@
       const x = d.data() || {};
       regsAllConfirmed.push({
         _id: d.id,
-
         teamName: x.teamName || x.team || x.name || "",
         captain: x.captain || x.captainName || "",
         phone: x.phone || x.captainPhone || "",
         createdAt: x.createdAt || null,
 
-        compId: getCompIdFromReg(x),
-        stageId: getStageIdFromReg(x),
+        compId: normStr(getCompIdFromReg(x)),
+        stageId: getStageIdFromReg(x), // null якщо нема
 
         drawKey: normStr(x.drawKey || ""),
-        drawZone: normStr(x.drawZone || ""),
-        drawSector: x.drawSector ?? null,
-
         bigFishTotal: !!x.bigFishTotal
       });
     });
 
-    setMsg(`✅ Підтверджених заявок: ${regsAllConfirmed.length}`, true);
-  }
-
-  // ----- filtering -----
-  function buildUsedSectors(){
-    usedSectorSet = new Set();
-    regsFiltered.forEach(r => { if (normStr(r.drawKey)) usedSectorSet.add(normStr(r.drawKey)); });
+    setMsg("", true);
   }
 
   function applyStageFilter(){
     const { compId, stageKey } = parseStageValue(stageSelect?.value || "");
 
-    if (!compId){
+    if (!compId) {
       regsFiltered = [];
       usedSectorSet = new Set();
       render();
-      buildExportBox();
-      setMsg("Оберіть змагання/етап.", true);
+      if (countInfo) countInfo.textContent = "";
       return;
     }
 
     regsFiltered = regsAllConfirmed.filter(r => {
       if (normStr(r.compId) !== normStr(compId)) return false;
-
-      // якщо вибраний stageKey — строго збігається
       if (stageKey) return normStr(r.stageId) === normStr(stageKey);
-
-      // oneoff або “без stageKey”: беремо все по цьому competitionId
+      // oneoff: приймаємо всіх по compId
       return true;
     });
 
-    regsFiltered.sort((a,b)=> (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+    // пошук
+    const q = normStr(qInput?.value || "").toLowerCase();
+    if (q) {
+      regsFiltered = regsFiltered.filter(r => {
+        const t = `${r.teamName} ${r.phone} ${r.captain}`.toLowerCase();
+        return t.includes(q);
+      });
+    }
 
-    buildUsedSectors();
+    regsFiltered.sort((a,b)=>(a.teamName||"").localeCompare(b.teamName||"","uk"));
+
+    usedSectorSet = new Set();
+    regsFiltered.forEach(r => { if (r.drawKey) usedSectorSet.add(r.drawKey); });
+
     render();
-    buildExportBox();
 
-    setMsg(`✅ Для вибраного: ${regsFiltered.length} команд (з підтверджених ${regsAllConfirmed.length})`, true);
+    if (countInfo) {
+      const totalAll = regsAllConfirmed.length;
+      const totalSel = regsFiltered.length;
+      countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
+    }
   }
 
-  function filteredBySearch(arr){
-    const q = (qInput?.value || "").trim().toLowerCase();
-    if (!q) return arr;
-    return arr.filter(r => (`${r.teamName||""} ${r.phone||""} ${r.captain||""}`).toLowerCase().includes(q));
-  }
-
-  // ----- UI -----
-  function sectorSelectHTML(current){
-    const cur = normStr(current);
+  function sectorOptionsHTML(cur, docId){
+    const current = normStr(cur);
     return `
-      <select class="select sectorPick" style="max-width:160px;">
+      <select class="select sectorPick" data-docid="${escapeHtml(docId)}" style="max-width:160px;">
         <option value="">—</option>
-        ${SECTORS.map(s => {
-          const taken = usedSectorSet.has(s) && s !== cur;
-          return `<option value="${s}" ${cur===s?"selected":""} ${taken?"disabled":""}>${s}${taken?" (зайнято)":""}</option>`;
+        ${SECTORS.map(s=>{
+          const taken = usedSectorSet.has(s) && s !== current;
+          return `<option value="${s}" ${s===current?"selected":""} ${taken?"disabled":""}>
+            ${s}${taken?" (зайнято)":""}
+          </option>`;
         }).join("")}
       </select>
     `;
   }
 
-  function bigFishHTML(val){
-    const on = !!val;
+  function rowHTML(r){
+    const sector = normStr(r.drawKey);
+    const phone  = normStr(r.phone);
     return `
-      <label style="display:flex;gap:10px;align-items:center;cursor:pointer;">
-        <input type="checkbox" class="bigFishChk" ${on?"checked":""} />
-        <span class="form__hint" style="margin:0;">BigFishTotal (платний)</span>
-      </label>
-    `;
-  }
-
-  function cardHTML(r){
-    const statusPill = r.drawKey ? "Призначено" : "Потрібно сектор";
-    return `
-      <div class="card" data-docid="${escapeHtml(r._id)}" style="padding:14px;">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
-          <div>
-            <div style="font-weight:900;font-size:18px;">${escapeHtml(r.teamName || "—")}</div>
-            <div class="form__hint" style="margin-top:2px;">
-              Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>
-              Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
-              Подано: ${escapeHtml(fmtDT(r.createdAt))}
-            </div>
-          </div>
-          <span class="badge">${escapeHtml(statusPill)}</span>
+      <div class="draw-row" data-docid="${escapeHtml(r._id)}">
+        <div>
+          <div class="draw-team">${escapeHtml(r.teamName || "—")}</div>
+          <div class="draw-sub">${escapeHtml(r.captain ? `Капітан: ${r.captain}` : "")}</div>
         </div>
 
-        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:12px;">
-          <div style="display:flex;gap:10px;align-items:center;">
-            <span class="form__hint" style="margin:0;">Сектор:</span>
-            ${sectorSelectHTML(r.drawKey || "")}
-          </div>
-
-          ${bigFishHTML(r.bigFishTotal)}
-
-          <button class="btn btn--ghost saveBtn" type="button">Зберегти</button>
-          ${r.drawKey ? `<button class="btn btn--danger clearBtn" type="button">Скинути</button>` : ``}
+        <div class="hide-sm">
+          <div class="draw-sub">${escapeHtml(phone || "—")}</div>
         </div>
 
-        <div class="form__hint rowMsg" style="margin-top:10px;"></div>
+        <div>
+          ${sectorOptionsHTML(sector, r._id)}
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
+        </div>
+
+        <div>
+          <button class="btn btn--ghost btn-mini saveBtn" type="button">Зберегти</button>
+          <div class="draw-sub rowMsg" style="margin-top:6px;"></div>
+        </div>
       </div>
     `;
   }
 
   function render(){
-    if (!listNeed || !listDone) return;
+    if (!drawRows) return;
 
-    const items = filteredBySearch(regsFiltered);
-    const need = items.filter(x => !normStr(x.drawKey));
-    const done = items.filter(x => !!normStr(x.drawKey));
-
-    listNeed.innerHTML = need.length ? need.map(cardHTML).join("") : `<p class="form__hint">Нема команд для жеребкування.</p>`;
-    listDone.innerHTML = done.length ? done.map(cardHTML).join("") : `<p class="form__hint">Поки нічого не призначено.</p>`;
-  }
-
-  function showRowMsg(wrap, text, ok=true){
-    const rowMsg = wrap.querySelector(".rowMsg");
-    if (!rowMsg) return;
-    rowMsg.textContent = text || "";
-    rowMsg.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
-  }
-
-  // ----- export (TSV for Google Sheets) -----
-  function buildDrawRowsTSV(){
-    const stageLabel = labelForSelectedStage();
-    const header = ["Етап","Команда","Сектор","Зона","Big_Total"];
-
-    const rows = regsFiltered.map(r => {
-      const sector = normStr(r.drawKey);
-      const zone = sector ? sector[0] : "";
-      const big = boolToNiTak(!!r.bigFishTotal);
-      return [stageLabel, r.teamName || "", sector, zone, big];
-    });
-
-    return [header, ...rows].map(a => a.join("\t")).join("\n");
-  }
-
-  function buildExportBox(){
-    if (!exportBox) return;
-    exportBox.value = buildDrawRowsTSV();
-  }
-
-  async function copyExportToClipboard(){
-    const tsv = buildDrawRowsTSV();
-    try{
-      await navigator.clipboard.writeText(tsv);
-      setMsg("✅ Скопійовано для вставки в Google Sheets", true);
-    }catch{
-      if (exportBox){
-        exportBox.focus();
-        exportBox.select();
-        document.execCommand("copy");
-        setMsg("✅ Скопійовано (fallback)", true);
-      } else {
-        setMsg("Не вдалося скопіювати. Додай textarea exportBox.", false);
-      }
-    }
-  }
-
-  exportBtn?.addEventListener("click", copyExportToClipboard);
-
-  // ----- actions (delegation) -----
-  document.addEventListener("click", async (e) => {
-    const saveBtn = e.target.closest(".saveBtn");
-    const clearBtn = e.target.closest(".clearBtn");
-    if (!saveBtn && !clearBtn) return;
-
-    const wrap = e.target.closest("[data-docid]");
-    if (!wrap) return;
-
-    if (!isAdmin){
-      showRowMsg(wrap, "Нема адмін-доступу.", false);
+    if (!regsFiltered.length) {
+      drawRows.innerHTML = `<div class="muted" style="padding:12px 2px;">Нема команд для жеребкування.</div>`;
       return;
     }
 
+    drawRows.innerHTML = regsFiltered.map(rowHTML).join("");
+  }
+
+  function showRowMsg(wrap, text, ok=true){
+    const el = wrap.querySelector(".rowMsg");
+    if (!el) return;
+    el.textContent = text || "";
+    el.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
+  }
+
+  // save per-row
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".saveBtn");
+    if (!btn) return;
+
+    const wrap = e.target.closest(".draw-row");
+    if (!wrap) return;
+
+    if (!isAdmin) return showRowMsg(wrap, "Нема адмін-доступу.", false);
+
     const docId = wrap.getAttribute("data-docid");
+    const sectorVal = normStr(wrap.querySelector(".sectorPick")?.value || "");
+    const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
 
-    try{
-      if (clearBtn){
-        await db.collection("registrations").doc(docId).update({
-          drawZone: window.firebase.firestore.FieldValue.delete(),
-          drawSector: window.firebase.firestore.FieldValue.delete(),
-          drawKey: window.firebase.firestore.FieldValue.delete(),
-          bigFishTotal: window.firebase.firestore.FieldValue.delete(),
-          drawAt: window.firebase.firestore.FieldValue.delete()
-        });
+    if (!sectorVal) return showRowMsg(wrap, "Оберіть сектор (A1…C8).", false);
 
-        const rr = regsAllConfirmed.find(x => x._id === docId);
-        if (rr){ rr.drawKey=""; rr.drawZone=""; rr.drawSector=null; }
-        showRowMsg(wrap, "Скинуто ✔", true);
+    // уникальність сектора
+    if (usedSectorSet.has(sectorVal)) {
+      const other = regsFiltered.find(r => r.drawKey === sectorVal && r._id !== docId);
+      if (other) return showRowMsg(wrap, `Сектор ${sectorVal} вже зайнятий: ${other.teamName}`, false);
+    }
 
-        applyStageFilter();
-        return;
-      }
+    const zone = sectorVal[0];
+    const sectorNum = parseInt(sectorVal.slice(1), 10);
 
-      const sectorVal = normStr(wrap.querySelector(".sectorPick")?.value || "");
-      const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
-
-      if (!sectorVal){
-        showRowMsg(wrap, "Оберіть сектор (A1…C8).", false);
-        return;
-      }
-
-      if (usedSectorSet.has(sectorVal)){
-        const other = regsFiltered.find(r => normStr(r.drawKey)===sectorVal && r._id!==docId);
-        if (other){
-          showRowMsg(wrap, `Сектор ${sectorVal} вже зайнятий: ${other.teamName}`, false);
-          return;
-        }
-      }
-
-      const zone = sectorVal[0];
-      const sectorNum = parseInt(sectorVal.slice(1), 10);
-
+    try {
       await db.collection("registrations").doc(docId).update({
+        drawKey: sectorVal,
         drawZone: zone,
         drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
-        drawKey: sectorVal,
         bigFishTotal: bigFish,
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      const rr = regsAllConfirmed.find(x => x._id === docId);
-      if (rr){
-        rr.drawKey = sectorVal;
-        rr.drawZone = zone;
-        rr.drawSector = Number.isFinite(sectorNum) ? sectorNum : null;
-        rr.bigFishTotal = bigFish;
-      }
+      // локально оновлюємо
+      const a = regsAllConfirmed.find(x=>x._id===docId);
+      if (a) { a.drawKey = sectorVal; a.bigFishTotal = bigFish; }
 
       showRowMsg(wrap, "Збережено ✔", true);
       applyStageFilter();
-    }catch(err){
+    } catch (err) {
       console.error(err);
       showRowMsg(wrap, "Помилка збереження (Rules/доступ).", false);
     }
   });
 
-  // ----- boot -----
   async function boot(){
     auth.onAuthStateChanged(async (user) => {
       currentUser = user || null;
-      setMsg("");
 
-      if (!user){
+      if (!user) {
         setMsg("Увійдіть як адмін.", false);
         if (stageSelect) stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
         regsAllConfirmed = [];
         regsFiltered = [];
-        usedSectorSet = new Set();
         render();
-        buildExportBox();
         return;
       }
 
-      try{
+      try {
         isAdmin = await requireAdmin(user);
-        if (!isAdmin){
+        if (!isAdmin) {
           setMsg("Доступ заборонено. Цей акаунт не є адміном.", false);
           regsAllConfirmed = [];
           regsFiltered = [];
-          usedSectorSet = new Set();
           render();
-          buildExportBox();
           return;
         }
 
@@ -454,14 +323,14 @@
         await loadAllConfirmed();
 
         setMsg("Оберіть змагання/етап.", true);
-      }catch(e){
+      } catch (e) {
         console.error(e);
-        setMsg("Помилка завантаження даних/перевірки адміна.", false);
+        setMsg("Помилка завантаження/перевірки адміна.", false);
       }
     });
 
-    stageSelect?.addEventListener("change", applyStageFilter);
-    qInput?.addEventListener("input", render);
+    stageSelect?.addEventListener("change", () => applyStageFilter());
+    qInput?.addEventListener("input", () => applyStageFilter());
   }
 
   boot();

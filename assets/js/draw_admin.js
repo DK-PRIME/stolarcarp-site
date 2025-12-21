@@ -4,8 +4,9 @@
 // ✅ loads ALL confirmed registrations once, filters locally
 // ✅ unique sectors A1..C8
 // ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
-// ✅ after save -> sorts by zone/sector like weighings (A1..C8)
-// ✅ visual feedback: row highlight + timestamp + button icon change
+// ✅ keeps selected stage (localStorage restore)
+// ✅ after save -> sorts by zone/sector like weighings
+// ✅ visual feedback (row highlight + time + icon)
 
 (function () {
   "use strict";
@@ -19,6 +20,8 @@
 
   const drawRows    = document.getElementById("drawRows");
   const countInfo   = document.getElementById("countInfo");
+
+  const LS_KEY_STAGE = "sc_draw_selected_stage_v1";
 
   if (!auth || !db || !window.firebase) {
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
@@ -69,7 +72,7 @@
     return normStr(v) || null;
   }
 
-  // ---- sort helpers (A1..C8) ----
+  // --- sort helpers (A1..C8) ---
   function parseSectorKey(drawKey){
     const s = normStr(drawKey).toUpperCase();
     if (!s) return null;
@@ -91,9 +94,7 @@
     if (!!sa && !sb) return -1;
     if (!sa && !!sb) return 1;
 
-    if (!sa && !sb) {
-      return (a.teamName||"").localeCompare(b.teamName||"", "uk");
-    }
+    if (!sa && !sb) return (a.teamName||"").localeCompare(b.teamName||"", "uk");
 
     const zr = zoneRank(sa.zone) - zoneRank(sb.zone);
     if (zr) return zr;
@@ -110,8 +111,8 @@
     return `${hh}:${mm}:${ss}`;
   }
 
-  // inject tiny CSS for feedback (щоб не чіпати HTML/CSS файл)
-  (function injectFeedbackCSS(){
+  // inject tiny CSS (feedback + button size)
+  (function injectCSS(){
     const css = `
       .draw-row.is-saving { opacity:.85; }
       .draw-row.is-ok {
@@ -124,11 +125,33 @@
       }
       .rowMsg.ok { color:#8fe39a !important; }
       .rowMsg.err{ color:#ff6c6c !important; }
+
+      /* компактніше для мобіли */
+      .sectorPick { max-width: 110px !important; padding: 8px 10px !important; }
+      .btn-icon { width: 44px; height: 44px; display:flex; align-items:center; justify-content:center; padding:0 !important; border-radius:12px; }
     `;
     const st = document.createElement("style");
     st.textContent = css;
     document.head.appendChild(st);
   })();
+
+  function saveStageToLS(v){
+    try { localStorage.setItem(LS_KEY_STAGE, String(v||"")); } catch {}
+  }
+  function loadStageFromLS(){
+    try { return localStorage.getItem(LS_KEY_STAGE) || ""; } catch { return ""; }
+  }
+  function restoreStageIfPossible(){
+    if (!stageSelect) return false;
+    const saved = loadStageFromLS();
+    if (!saved) return false;
+
+    const opt = stageSelect.querySelector(`option[value="${CSS.escape(saved)}"]`);
+    if (!opt) return false;
+
+    stageSelect.value = saved;
+    return true;
+  }
 
   // stage label map
   let stageNameByKey = new Map();
@@ -141,6 +164,8 @@
 
   async function loadStagesToSelect(){
     if (!stageSelect) return;
+
+    const keep = stageSelect.value || loadStageFromLS();
 
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
     stageNameByKey = new Map();
@@ -179,6 +204,12 @@
     stageSelect.innerHTML =
       `<option value="">— Оберіть —</option>` +
       items.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
+
+    // restore previous selection if exists
+    if (keep) {
+      const opt = stageSelect.querySelector(`option[value="${CSS.escape(keep)}"]`);
+      if (opt) stageSelect.value = keep;
+    }
   }
 
   async function loadAllConfirmed(){
@@ -215,7 +246,8 @@
   }
 
   function applyStageFilter(){
-    const { compId, stageKey } = parseStageValue(stageSelect?.value || "");
+    const selVal = stageSelect?.value || "";
+    const { compId, stageKey } = parseStageValue(selVal);
 
     if (!compId) {
       regsFiltered = [];
@@ -288,7 +320,7 @@
         </div>
 
         <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;">
-          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти" data-icon="save">💾</button>
+          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
           <div class="draw-sub rowMsg"></div>
         </div>
       </div>
@@ -344,6 +376,9 @@
       return;
     }
 
+    // ВАЖЛИВО: запам’ятовуємо вибір етапу перед будь-якими діями
+    saveStageToLS(stageSelect?.value || "");
+
     const docId = wrap.getAttribute("data-docid");
     const sectorVal = normStr(wrap.querySelector(".sectorPick")?.value || "");
     const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
@@ -356,7 +391,6 @@
       return;
     }
 
-    // унікальність сектора
     if (usedSectorSet.has(sectorVal)) {
       const other = regsFiltered.find(r => normStr(r.drawKey) === sectorVal && r._id !== docId);
       if (other) {
@@ -384,22 +418,19 @@
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // локально оновлюємо
       const a = regsAllConfirmed.find(x=>x._id===docId);
       if (a) {
         a.drawKey = sectorVal;
         a.bigFishTotal = bigFish;
       }
 
-      // ВІЗУАЛ: ОК + час
       setRowState(wrap, "is-ok");
       setBtnIcon(wrap, "ok");
       showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
 
-      // пересортувати як треба
+      // ГОЛОВНЕ: НЕ чіпаємо stageSelect, лише пересортуємо список
       applyStageFilter();
 
-      // після сортування рядок перемалюється, тому просто короткий глобальний меседж теж:
       setMsg("✅ Збережено", true);
       setTimeout(()=> setMsg("", true), 900);
     } catch (err) {
@@ -435,14 +466,26 @@
         await loadStagesToSelect();
         await loadAllConfirmed();
 
-        setMsg("Оберіть змагання/етап.", true);
+        // авто-відновлення вибору етапу
+        const restored = restoreStageIfPossible();
+        if (restored) {
+          setMsg("✅ Етап відновлено", true);
+          applyStageFilter();
+          setTimeout(()=> setMsg("", true), 700);
+        } else {
+          setMsg("Оберіть змагання/етап.", true);
+        }
       } catch (e) {
         console.error(e);
         setMsg("Помилка завантаження/перевірки адміна.", false);
       }
     });
 
-    stageSelect?.addEventListener("change", () => applyStageFilter());
+    stageSelect?.addEventListener("change", () => {
+      saveStageToLS(stageSelect.value || "");
+      applyStageFilter();
+    });
+
     qInput?.addEventListener("input", () => applyStageFilter());
   }
 

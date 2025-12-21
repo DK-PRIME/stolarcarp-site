@@ -4,7 +4,9 @@
 // ✅ loads ALL confirmed registrations once, filters locally
 // ✅ unique sectors A1..C8
 // ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
-// ✅ after save -> sorts by zone/sector like weighings (A1..C8), then by teamName
+// ✅ after save -> sorts by zone/sector like weighings (A1..C8)
+// ✅ visual feedback: row highlight + timestamp + button icon change
+
 (function () {
   "use strict";
 
@@ -58,7 +60,7 @@
     return role === "admin";
   }
 
-  // robust getters (щоб не ламалось від назв полів)
+  // robust getters
   function getCompIdFromReg(x){
     return x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "";
   }
@@ -86,29 +88,54 @@
     const sa = parseSectorKey(a.drawKey);
     const sb = parseSectorKey(b.drawKey);
 
-    // Призначені (з сектором) — вище, без сектора — внизу
     if (!!sa && !sb) return -1;
     if (!sa && !!sb) return 1;
 
-    // Обидва без сектора -> по назві
     if (!sa && !sb) {
       return (a.teamName||"").localeCompare(b.teamName||"", "uk");
     }
 
-    // Обидва з сектором -> зона -> сектор -> назва
     const zr = zoneRank(sa.zone) - zoneRank(sb.zone);
     if (zr) return zr;
-    const nr = (sa.n - sb.n);
+    const nr = sa.n - sb.n;
     if (nr) return nr;
     return (a.teamName||"").localeCompare(b.teamName||"", "uk");
   }
 
-  // stage label map: "compId||stageKey" -> label
+  function fmtTimeNow(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    const ss = String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  // inject tiny CSS for feedback (щоб не чіпати HTML/CSS файл)
+  (function injectFeedbackCSS(){
+    const css = `
+      .draw-row.is-saving { opacity:.85; }
+      .draw-row.is-ok {
+        border-color: rgba(143,227,154,.55) !important;
+        box-shadow: 0 0 0 1px rgba(143,227,154,.25) inset;
+      }
+      .draw-row.is-err {
+        border-color: rgba(255,108,108,.55) !important;
+        box-shadow: 0 0 0 1px rgba(255,108,108,.20) inset;
+      }
+      .rowMsg.ok { color:#8fe39a !important; }
+      .rowMsg.err{ color:#ff6c6c !important; }
+    `;
+    const st = document.createElement("style");
+    st.textContent = css;
+    document.head.appendChild(st);
+  })();
+
+  // stage label map
   let stageNameByKey = new Map();
 
   let isAdmin = false;
 
-  let regsAllConfirmed = []; // normalized
+  let regsAllConfirmed = [];
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
@@ -157,7 +184,6 @@
   async function loadAllConfirmed(){
     setMsg("Завантаження підтверджених заявок…", true);
 
-    // ВАЖЛИВО: підтверджені = confirmed
     const snap = await db.collection("registrations")
       .where("status","==","confirmed")
       .get();
@@ -173,7 +199,7 @@
         createdAt: x.createdAt || null,
 
         compId: normStr(getCompIdFromReg(x)),
-        stageId: getStageIdFromReg(x), // null якщо нема
+        stageId: getStageIdFromReg(x),
 
         drawKey: normStr(x.drawKey || ""),
         bigFishTotal: !!x.bigFishTotal
@@ -202,10 +228,9 @@
     regsFiltered = regsAllConfirmed.filter(r => {
       if (normStr(r.compId) !== normStr(compId)) return false;
       if (stageKey) return normStr(r.stageId) === normStr(stageKey);
-      return true; // oneoff
+      return true;
     });
 
-    // пошук
     const q = normStr(qInput?.value || "").toLowerCase();
     if (q) {
       regsFiltered = regsFiltered.filter(r => {
@@ -214,7 +239,6 @@
       });
     }
 
-    // сортування: як у зважуванні (A1..C8), без сектора — вниз
     regsFiltered.sort(sortLikeWeighings);
 
     rebuildUsedSectors();
@@ -263,9 +287,9 @@
           <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
         </div>
 
-        <div style="display:flex;justify-content:flex-end;">
-          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
-          <div class="draw-sub rowMsg" style="margin-left:8px;white-space:nowrap;"></div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;">
+          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти" data-icon="save">💾</button>
+          <div class="draw-sub rowMsg"></div>
         </div>
       </div>
     `;
@@ -286,7 +310,22 @@
     const el = wrap.querySelector(".rowMsg");
     if (!el) return;
     el.textContent = text || "";
-    el.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
+    el.classList.toggle("ok", !!ok);
+    el.classList.toggle("err", !ok);
+  }
+
+  function setRowState(wrap, state){
+    wrap.classList.remove("is-saving","is-ok","is-err");
+    if (state) wrap.classList.add(state);
+  }
+
+  function setBtnIcon(wrap, icon){
+    const btn = wrap.querySelector(".saveBtn");
+    if (!btn) return;
+    if (icon === "saving") btn.textContent = "⏳";
+    else if (icon === "ok") btn.textContent = "✅";
+    else if (icon === "err") btn.textContent = "⚠️";
+    else btn.textContent = "💾";
   }
 
   // save per-row
@@ -297,24 +336,46 @@
     const wrap = e.target.closest(".draw-row");
     if (!wrap) return;
 
-    if (!isAdmin) return showRowMsg(wrap, "Нема адмін-доступу.", false);
+    if (!isAdmin) {
+      setRowState(wrap, "is-err");
+      setBtnIcon(wrap, "err");
+      showRowMsg(wrap, "Нема адмін-доступу.", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1600);
+      return;
+    }
 
     const docId = wrap.getAttribute("data-docid");
     const sectorVal = normStr(wrap.querySelector(".sectorPick")?.value || "");
     const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
 
-    if (!sectorVal) return showRowMsg(wrap, "Оберіть сектор (A1…C8).", false);
+    if (!sectorVal) {
+      setRowState(wrap, "is-err");
+      setBtnIcon(wrap, "err");
+      showRowMsg(wrap, "Оберіть сектор.", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1600);
+      return;
+    }
 
     // унікальність сектора
     if (usedSectorSet.has(sectorVal)) {
       const other = regsFiltered.find(r => normStr(r.drawKey) === sectorVal && r._id !== docId);
-      if (other) return showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
+      if (other) {
+        setRowState(wrap, "is-err");
+        setBtnIcon(wrap, "err");
+        showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
+        setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1800);
+        return;
+      }
     }
 
     const zone = sectorVal[0];
     const sectorNum = parseInt(sectorVal.slice(1), 10);
 
     try {
+      setRowState(wrap, "is-saving");
+      setBtnIcon(wrap, "saving");
+      showRowMsg(wrap, "Збереження…", true);
+
       await db.collection("registrations").doc(docId).update({
         drawKey: sectorVal,
         drawZone: zone,
@@ -330,13 +391,23 @@
         a.bigFishTotal = bigFish;
       }
 
-      showRowMsg(wrap, "✔", true);
+      // ВІЗУАЛ: ОК + час
+      setRowState(wrap, "is-ok");
+      setBtnIcon(wrap, "ok");
+      showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
 
-      // одразу сортуємо по зонах/секторах
+      // пересортувати як треба
       applyStageFilter();
+
+      // після сортування рядок перемалюється, тому просто короткий глобальний меседж теж:
+      setMsg("✅ Збережено", true);
+      setTimeout(()=> setMsg("", true), 900);
     } catch (err) {
       console.error(err);
-      showRowMsg(wrap, "Rules/доступ", false);
+      setRowState(wrap, "is-err");
+      setBtnIcon(wrap, "err");
+      showRowMsg(wrap, "Помилка (Rules/доступ).", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1800);
     }
   });
 

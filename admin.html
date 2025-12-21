@@ -311,6 +311,11 @@
             <button class="btn btn--accent" id="btnSaveEdit">Зберегти зміни</button>
             <button class="btn btn--primary" id="btnReloadList">Оновити список</button>
           </div>
+
+          <!-- NEW: delete -->
+          <button class="btn btn--danger" id="btnDeleteCompetition" style="margin-top:10px;">
+            Видалити змагання
+          </button>
         </div>
 
         <div class="muted" id="editMsg" style="margin-top:10px;"></div>
@@ -547,7 +552,12 @@
         msg.textContent = e?.message || "Помилка входу";
       }
     };
-    $("btnAdminLogout").onclick = async ()=>{ try{ await auth.signOut(); }catch{} };
+
+    // !!! КНОПКИ "ВИЙТИ" НЕМА — тому не вішаємо onclick, щоб не було крашу
+    const btnLogout = $("btnAdminLogout");
+    if(btnLogout){
+      btnLogout.onclick = async ()=>{ try{ await auth.signOut(); }catch{} };
+    }
 
     // create ui build
     const syncCreateUI = ()=>{
@@ -724,6 +734,60 @@
         }, { merge:true });
 
         msg.innerHTML = `<span class="ok">✅ Збережено</span>`;
+      }catch(e){
+        msg.innerHTML = `<span class="err">❌</span> ${esc(e.message || String(e))}`;
+      }
+    };
+
+    // --- DELETE competition (clean Firebase) ---
+    async function deleteQueryInBatches(q){
+      while(true){
+        const snap = await q.limit(500).get();
+        if(snap.empty) break;
+
+        const batch = db.batch();
+        snap.docs.forEach(doc=>batch.delete(doc.ref));
+        await batch.commit();
+      }
+    }
+
+    $("btnDeleteCompetition").onclick = async ()=>{
+      const msg = $("editMsg");
+      msg.className = "muted";
+
+      try{
+        const compId = $("selCompetition").value;
+        if(!compId) throw new Error("Нема вибраного змагання.");
+
+        const typed = prompt(`УВАГА! Видалення без відновлення.\nВведи точно ID змагання для підтвердження:\n\n${compId}`);
+        if(typed !== compId){
+          msg.innerHTML = `<span class="err">❌</span> Видалення скасовано (ID не співпав).`;
+          return;
+        }
+
+        msg.textContent = "Видаляю…";
+
+        // якщо активне — прибираємо активність
+        try{
+          const s = await db.collection("settings").doc("app").get();
+          const activeId = s.exists ? ((s.data()||{}).activeCompetitionId || "") : "";
+          if(activeId === compId){
+            await db.collection("settings").doc("app").set({
+              activeCompetitionId: "",
+              updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge:true });
+          }
+        }catch(_){}
+
+        // best-effort: чистимо registrations, якщо є такі поля
+        try{ await deleteQueryInBatches(db.collection("registrations").where("competitionId","==",compId)); }catch(_){}
+        try{ await deleteQueryInBatches(db.collection("registrations").where("seasonId","==",compId)); }catch(_){}
+
+        // видаляємо competition
+        await db.collection("competitions").doc(compId).delete();
+
+        msg.innerHTML = `<span class="ok">✅</span> Видалено: ${esc(compId)}`;
+        await loadCompetitionsToSelect();
       }catch(e){
         msg.innerHTML = `<span class="err">❌</span> ${esc(e.message || String(e))}`;
       }

@@ -2,66 +2,90 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Адмін • Реєстрація команд</title>
-  <link rel="stylesheet" href="../assets/css/main.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STOLAR CARP • Адмін • Реєстрація команд</title>
+
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <style>
+    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
+    .wrap{ max-width:980px; margin:0 auto; padding:22px 0 80px; }
+    .card{
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      border-radius:18px;
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
+      padding:16px;
+      margin-bottom:12px;
+    }
+    .muted{ color:#9ca3af; }
+    .row2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    @media (max-width:720px){ .row2{ grid-template-columns:1fr; } }
+    select,input{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.45);
+      color:#e5e7eb;
+      outline:none;
+    }
+    input:focus,select:focus{ border-color:var(--accent); box-shadow:0 0 10px rgba(246,195,76,.25); }
+  </style>
 </head>
-<body class="admin-page">
-  <header class="header">
-    <div class="container header__row">
-      <div class="logo">
-        <div class="logo__mark">SC</div>
-        <div class="logo__text">STOLAR CARP</div>
-      </div>
-      <button class="burger" id="burger" aria-label="Меню">
-        <span></span><span></span><span></span>
-      </button>
-      <nav class="nav" id="nav">
-        <a class="nav__link" href="../admin.html">Адмінка</a>
-        <a class="nav__link nav__link--active" href="./registrations.html">Реєстрація команд</a>
-        <a class="nav__link" href="./draw.html">Жеребкування</a>
-      </nav>
-    </div>
-  </header>
 
-  <main class="main">
-    <div class="container">
+<body>
 
-      <div class="card">
-        <h2 style="margin:0 0 10px;">Реєстрація команд</h2>
-        <p class="form__hint" id="admMsg">Завантаження…</p>
+<!-- Header без бургер-меню -->
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="admin.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+  </div>
+</header>
 
-        <div class="row" style="margin-top:12px;">
-          <div>
-            <label class="form__hint">Фільтр за статусом</label>
-            <select class="select" id="statusFilter">
-              <option value="pending_payment">Очікує оплату</option>
-              <option value="paid">Оплачено</option>
-              <option value="rejected">Відхилено</option>
-              <option value="all">Усі</option>
-            </select>
-          </div>
-          <div>
-            <label class="form__hint">Пошук (команда/телефон)</label>
-            <input class="input" id="q" placeholder="DK Два Кума / 063..." />
-          </div>
+<main class="main">
+  <section class="section container wrap">
+
+    <div class="card">
+      <div class="title-gradient" style="font-size:1.4rem;font-weight:900;">Реєстрація команд</div>
+      <div class="muted" id="msg" style="margin-top:8px;"></div>
+
+      <div class="row2" style="margin-top:14px;">
+        <div>
+          <div class="muted" style="font-size:.85rem;margin-bottom:6px;">Фільтр за статусом</div>
+          <select id="statusFilter">
+            <option value="all">Усі</option>
+            <option value="pending_payment">Очікує оплату</option>
+            <option value="confirmed">Підтверджено</option>
+            <option value="cancelled">Скасовано</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="muted" style="font-size:.85rem;margin-bottom:6px;">Пошук (команда/телефон/капітан)</div>
+          <input id="q" placeholder="Напр.: DK Два Кума / 063..." />
         </div>
       </div>
-
-      <div style="height:14px;"></div>
-
-      <div id="list" class="grid" style="grid-template-columns: 1fr; gap: 14px;"></div>
-
     </div>
-  </main>
 
-  <!-- Firebase compat -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <div id="list"></div>
 
-  <script src="../assets/js/firebase-init.js"></script>
-  <script src="../assets/js/config.js"></script>
-  <script src="../assets/js/admin_registrations.js"></script>
+  </section>
+</main>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- init -->
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- logic -->
+<script src="assets/js/admin_registrations.js"></script>
+
 </body>
 </html>

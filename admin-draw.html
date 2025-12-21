@@ -32,7 +32,7 @@
     /* ===== Табличний список команд ===== */
     .draw-head, .draw-row{
       display:grid;
-      grid-template-columns: 1.6fr 1fr 140px 110px 120px;
+      grid-template-columns: 1.6fr 1fr 140px 110px 120px; /* desktop */
       gap:10px;
       align-items:center;
     }
@@ -71,12 +71,25 @@
     .btn-mini{
       padding:10px 12px;
       border-radius:12px;
+      min-width:120px;
+      white-space:nowrap;
     }
+
+    /* сектор компактніший */
+    .sectorPick{
+      max-width:140px;
+    }
+
+    /* ===== Mobile layout ===== */
     @media (max-width:740px){
+      /* 4 колонки: Команда | Сектор | BigFish | Кнопка */
       .draw-head, .draw-row{
-        grid-template-columns: 1.5fr 130px 92px 110px;
+        grid-template-columns: 1.4fr 92px 70px 120px;
       }
       .hide-sm{ display:none; }
+      .sectorPick{ max-width:92px; padding:8px 10px; }
+      .btn-mini{ min-width:120px; padding:10px 10px; }
+      .draw-sub{ display:none; } /* прибираємо “Капітан” на мобільному */
     }
   </style>
 </head>

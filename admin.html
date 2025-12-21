@@ -2,52 +2,11 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Жеребкування • STOLAR CARP</title>
-
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Адмінка STOLAR CARP</title>
   <link rel="stylesheet" href="assets/css/main.css" />
-
-  <!-- Firebase compat -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-  <script defer src="assets/js/firebase-init.js"></script>
-  <script defer src="assets/js/config.js"></script>
-  <script defer src="assets/js/draw_admin.js"></script>
-
-  <style>
-    /* маленькі стилі саме для жеребкування (щоб не ламати main.css) */
-    .draw-row{
-      display:grid;
-      grid-template-columns: 1.2fr .8fr .55fr;
-      gap:12px;
-      align-items:center;
-      padding:12px;
-      border:1px solid #262636;
-      border-radius:16px;
-      background: linear-gradient(180deg,#14141c,#0f0f15);
-      margin-bottom:10px;
-    }
-    .draw-row__title{font-weight:900}
-    .draw-row__meta{color:#8a8f98;font-size:12px;margin-top:4px}
-    .draw-controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .draw-controls .select{min-width:130px}
-    .tag{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:6px 10px;border-radius:999px;
-      border:1px solid #333;background:#0d0d13;color:#ddd;font-size:12px
-    }
-    .tag.ok{border-color:rgba(63,201,122,.35);color:#bff0d2}
-    .tag.warn{border-color:rgba(246,195,76,.35);color:#ffe6a6}
-    @media (max-width: 860px){
-      .draw-row{grid-template-columns:1fr; }
-      .draw-controls{justify-content:flex-start}
-    }
-  </style>
 </head>
-
-<body class="cabinet-page">
+<body class="admin-page">
   <header class="header">
     <div class="container header__row">
       <a class="logo" href="index.html">
@@ -55,53 +14,41 @@
         <span class="logo__text">STOLAR CARP</span>
       </a>
 
-      <nav id="nav" class="nav">
-        <a class="nav__link" href="index.html">Головна</a>
-        <a class="nav__link" href="rules.html">Регламент</a>
-        <a class="nav__link" href="register.html">Реєстрація</a>
-        <a class="nav__link" href="admin.html">Адмінка</a>
-      </nav>
-
-      <button id="burger" class="burger" aria-label="Меню">
+      <button class="burger" id="burger" aria-label="Меню">
         <span></span><span></span><span></span>
       </button>
+
+      <nav class="nav" id="nav">
+        <a class="nav__link" href="index.html">Головна</a>
+        <a class="nav__link nav__link--active" href="admin.html">Адмінка</a>
+        <a class="nav__link" href="register.html">Подати заявку</a>
+      </nav>
     </div>
   </header>
 
   <main class="main">
     <div class="container">
       <div class="card">
-        <h1 style="margin:0 0 10px;">Жеребкування</h1>
-        <p class="form__hint" id="accessHint">Перевіряю доступ…</p>
+        <h1>Адмінка STOLAR CARP</h1>
+        <p id="adminStatus" class="form__hint">Перевірка доступу…</p>
 
-        <div class="row" style="margin-top:14px;">
-          <div>
-            <label class="form__hint">Оберіть змагання/етап</label>
-            <select id="stageSelect" class="select"></select>
-          </div>
-          <div>
-            <label class="form__hint">Зони / сектори</label>
-            <div class="badge">A,B,C • 1…8 (можна змінити в коді)</div>
-          </div>
+        <div class="cta-row" style="margin-top:14px;">
+          <a class="btn btn--primary" href="admin-create.html">1) Створити змагання</a>
+          <a class="btn btn--accent" href="admin-edit.html">2) Редагувати змагання</a>
+          <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
+          <a class="btn btn--accent" href="draw.html">4) Жеребкування</a>
+          <a class="btn btn--danger" href="weighings.html">5) Зважування (судді/адмін)</a>
         </div>
-
-        <div id="msg" class="form__hint" style="margin-top:12px;"></div>
       </div>
-
-      <section class="section">
-        <div class="card">
-          <h2 style="margin-top:0;">Оплачені команди (потрібно призначити сектор)</h2>
-          <div id="needAssign"></div>
-        </div>
-      </section>
-
-      <section class="section">
-        <div class="card">
-          <h2 style="margin-top:0;">Призначені сектори</h2>
-          <div id="assigned"></div>
-        </div>
-      </section>
     </div>
   </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script src="assets/js/firebase-init.js"></script>
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
 </body>
 </html>

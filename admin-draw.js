@@ -1,99 +1,138 @@
-const db = window.scDb;
+(function () {
+  "use strict";
 
-const sectorList = [];
-["A","B","C"].forEach(z=>{
-  for(let i=1;i<=8;i++) sectorList.push(`${z}${i}`);
-});
+  const db = window.scDb;
+  const auth = window.scAuth;
 
-let usedSectors = new Set();
+  const stageSelect = document.getElementById("stageSelect");
+  const drawList = document.getElementById("drawList");
+  const saveBtn = document.getElementById("saveDrawBtn");
 
-function renderRow(reg) {
-  const row = document.createElement("div");
-  row.className = "draw-row";
+  let registrations = [];
+  let usedSectors = new Set();
 
-  const sectorSelect = document.createElement("select");
-  sectorSelect.innerHTML =
-    `<option value="">— сектор —</option>` +
-    sectorList.map(s =>
-      `<option value="${s}" ${usedSectors.has(s) ? "disabled" : ""}>${s}</option>`
-    ).join("");
+  const SECTORS = [];
+  ["A", "B", "C"].forEach(z =>
+    Array.from({ length: 8 }, (_, i) => SECTORS.push(`${z}${i + 1}`))
+  );
 
-  if (reg.sector) {
-    sectorSelect.value = reg.sector;
-    usedSectors.add(reg.sector);
+  /* =========================
+     Load stages
+     ========================= */
+  async function loadStages() {
+    const snap = await db.collection("competitions").get();
+    stageSelect.innerHTML = "";
+
+    snap.forEach(doc => {
+      const c = doc.data();
+      (c.events || []).forEach(ev => {
+        const opt = document.createElement("option");
+        opt.value = `${doc.id}||${ev.key}`;
+        opt.textContent = `${c.name} — ${ev.key}`;
+        stageSelect.appendChild(opt);
+      });
+    });
+
+    stageSelect.onchange = loadRegistrations;
+    loadRegistrations();
   }
 
-  sectorSelect.onchange = () => {
+  /* =========================
+     Load paid registrations
+     ========================= */
+  async function loadRegistrations() {
+    drawList.innerHTML = "Завантаження...";
     usedSectors.clear();
-    document.querySelectorAll(".draw-row select").forEach(sel=>{
-      if (sel.value) usedSectors.add(sel.value);
+
+    const [competitionId, stageId] = stageSelect.value.split("||");
+
+    const snap = await db.collection("registrations")
+      .where("competitionId", "==", competitionId)
+      .where("stageId", "==", stageId)
+      .where("status", "==", "paid")
+      .get();
+
+    registrations = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderList();
+  }
+
+  /* =========================
+     Render list
+     ========================= */
+  function renderList() {
+    drawList.innerHTML = "";
+
+    registrations.forEach(reg => {
+      const row = document.createElement("div");
+      row.className = "admin-card";
+
+      const sectorSelect = document.createElement("select");
+      sectorSelect.innerHTML = `<option value="">Сектор</option>` +
+        SECTORS.map(s => `<option value="${s}">${s}</option>`).join("");
+
+      sectorSelect.onchange = () => {
+        usedSectors.clear();
+        document.querySelectorAll("[data-sector]").forEach(sel => {
+          if (sel.value) usedSectors.add(sel.value);
+        });
+        updateSectorLocks();
+      };
+
+      sectorSelect.dataset.sector = "1";
+
+      const bigFish = document.createElement("select");
+      bigFish.innerHTML = `
+        <option value="no">BigFish Total — ні</option>
+        <option value="yes">BigFish Total — так</option>
+      `;
+
+      row.innerHTML = `<b>${reg.teamName}</b>`;
+      row.appendChild(sectorSelect);
+      row.appendChild(bigFish);
+
+      drawList.appendChild(row);
+
+      reg._sectorSelect = sectorSelect;
+      reg._bigFishSelect = bigFish;
     });
-    refreshAllSelects();
+  }
+
+  function updateSectorLocks() {
+    document.querySelectorAll("[data-sector]").forEach(sel => {
+      Array.from(sel.options).forEach(opt => {
+        if (!opt.value) return;
+        opt.disabled = usedSectors.has(opt.value) && sel.value !== opt.value;
+      });
+    });
+  }
+
+  /* =========================
+     Save draw
+     ========================= */
+  saveBtn.onclick = async () => {
+    for (const reg of registrations) {
+      if (!reg._sectorSelect.value) {
+        alert("Не всі команди мають сектор");
+        return;
+      }
+
+      await db.collection("registrations").doc(reg.id).update({
+        sector: reg._sectorSelect.value,
+        zone: reg._sectorSelect.value[0],
+        bigFishTotal: reg._bigFishSelect.value === "yes",
+        drawCompleted: true
+      });
+    }
+
+    alert("✅ Жеребкування збережено");
   };
 
-  const bigFish = document.createElement("select");
-  bigFish.innerHTML = `
-    <option value="">ні</option>
-    <option value="yes">так</option>
-  `;
-  bigFish.value = reg.bigFishTotal ? "yes" : "";
-
-  row.innerHTML = `<b>${reg.teamName}</b>`;
-  row.appendChild(sectorSelect);
-  row.appendChild(bigFish);
-
-  row.dataset.id = reg.id;
-
-  return row;
-}
-
-function refreshAllSelects() {
-  document.querySelectorAll(".draw-row").forEach(row=>{
-    const sel = row.querySelector("select");
-    const current = sel.value;
-    sel.innerHTML =
-      `<option value="">— сектор —</option>` +
-      sectorList.map(s =>
-        `<option value="${s}"
-          ${usedSectors.has(s) && s!==current ? "disabled" : ""}>
-          ${s}
-        </option>`
-      ).join("");
-    sel.value = current;
+  /* =========================
+     Init
+     ========================= */
+  auth.onAuthStateChanged(user => {
+    if (!user) return;
+    loadStages();
   });
-}
 
-async function loadDraw(stageId) {
-  const wrap = document.getElementById("drawList");
-  wrap.innerHTML = "";
-  usedSectors.clear();
-
-  const snap = await db.collection("registrations")
-    .where("stageId","==",stageId)
-    .where("status","==","paid")
-    .get();
-
-  snap.forEach(doc=>{
-    const data = doc.data();
-    const row = renderRow({ id: doc.id, ...data });
-    wrap.appendChild(row);
-  });
-}
-
-async function saveDraw() {
-  const rows = document.querySelectorAll(".draw-row");
-  for (const row of rows) {
-    const id = row.dataset.id;
-    const sector = row.querySelector("select").value;
-    const bigFish = row.querySelectorAll("select")[1].value === "yes";
-
-    if (!sector) continue;
-
-    await db.collection("registrations").doc(id).update({
-      sector,
-      zone: sector[0],
-      bigFishTotal: bigFish
-    });
-  }
-  alert("Жеребкування збережено ✅");
-}
+})();

@@ -1,112 +1,70 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8" />
-  <title>Адмінка STOLAR CARP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <title>STOLAR CARP • Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <link rel="stylesheet" href="assets/css/main.css">
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script src="assets/js/firebase-init.js"></script>
+  <script defer src="assets/js/admin.js"></script>
+
+  <style>
+    body{background:#0b0b0f}
+    .admin-layout{
+      display:grid;
+      grid-template-columns:260px 1fr;
+      min-height:100vh;
+    }
+    .admin-menu{
+      border-right:1px solid #222;
+      padding:20px;
+    }
+    .admin-menu h2{
+      margin:0 0 20px;
+      font-size:18px;
+      letter-spacing:.08em;
+    }
+    .admin-menu button{
+      width:100%;
+      margin-bottom:10px;
+    }
+    .admin-view{
+      padding:26px;
+    }
+  </style>
 </head>
 
-<body class="admin-page">
+<body>
 
-<!-- HEADER -->
-<header class="header">
-  <div class="container header__row">
-    <div class="logo">
-      <div class="logo__mark">SC</div>
-      <div class="logo__text">STOLAR CARP</div>
-    </div>
-  </div>
-</header>
+<div class="admin-layout">
 
-<!-- MAIN -->
-<main class="main">
-  <div class="container">
+  <!-- LEFT MENU -->
+  <aside class="admin-menu">
+    <h2>STOLAR CARP<br>ADMIN</h2>
 
-    <!-- ACCESS STATUS -->
-    <div id="accessBox" class="card">
-      <h2>Адмінка STOLAR CARP</h2>
-      <p id="accessStatus">Перевірка доступу...</p>
-    </div>
+    <button class="btn btn--ghost" data-view="create">➕ Створення змагань</button>
+    <button class="btn btn--ghost" data-view="edit">✏️ Редагувати змагання</button>
+    <button class="btn btn--ghost" data-view="registrations">📋 Реєстр команд</button>
+    <button class="btn btn--ghost" data-view="draw">🎣 Жеребкування</button>
+    <button class="btn btn--ghost" data-view="weighing">⚖️ Зважування</button>
+    <button class="btn btn--ghost" data-view="bigfish">🐟 BigFish Total</button>
+    <button class="btn btn--ghost" data-view="users">👤 STOLAR USER</button>
+  </aside>
 
-    <!-- ADMIN MENU -->
-    <div id="adminMenu" class="grid grid-1 hidden">
+  <!-- MAIN VIEW -->
+  <main id="adminView" class="admin-view">
+    <h2>Адмін панель STOLAR CARP</h2>
+    <p class="form__hint">Оберіть розділ зліва</p>
+  </main>
 
-      <a href="admin-create.html" class="btn btn--primary">
-        1) Створити змагання
-      </a>
-
-      <a href="admin-edit.html" class="btn btn--accent">
-        2) Редагувати змагання
-      </a>
-
-      <a href="admin-registrations.html" class="btn btn--primary">
-        3) Реєстр команд
-      </a>
-
-      <a href="admin-draw.html" class="btn btn--accent">
-        4) Жеребкування
-      </a>
-
-      <a href="admin-weighing.html" class="btn btn--danger">
-        5) Зважування
-      </a>
-
-      <a href="admin-bigfish.html" class="btn btn--danger">
-        6) BigFish Total
-      </a>
-
-      <a href="admin-users.html" class="btn btn--ghost">
-        7) STOLAR USER
-      </a>
-
-    </div>
-
-  </div>
-</main>
-
-<!-- SCRIPT -->
-<script>
-(function () {
-  const auth = window.scAuth;
-  const db   = window.scDb;
-
-  const accessStatus = document.getElementById("accessStatus");
-  const adminMenu    = document.getElementById("adminMenu");
-
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      accessStatus.innerHTML = "❌ Доступ заборонено. Увійдіть як адміністратор.";
-      return;
-    }
-
-    try {
-      const snap = await db.collection("users").doc(user.uid).get();
-      const data = snap.exists ? snap.data() : null;
-
-      if (!data || data.role !== "admin") {
-        accessStatus.innerHTML = "❌ Цей акаунт не є адміністратором.";
-        return;
-      }
-
-      accessStatus.innerHTML = "✅ Адмін-доступ підтверджено";
-      adminMenu.classList.remove("hidden");
-
-    } catch (e) {
-      accessStatus.innerHTML = "❌ Помилка перевірки доступу";
-      console.error(e);
-    }
-  });
-})();
-</script>
+</div>
 
 </body>
 </html>

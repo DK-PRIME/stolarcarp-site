@@ -2,7 +2,7 @@
 // STOLAR CARP • Admin draw (table-like rows)
 // - loads competitions -> stageSelect
 // - loads ALL confirmed registrations once, filters locally
-// - assign unique sectors A1..C8 (A/B/C x 1..8)
+// - assign unique sectors A1..C8
 // - per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
 (function () {
   "use strict";
@@ -57,7 +57,7 @@
     return role === "admin";
   }
 
-  // robust getters (щоб не ламалось від назв полів)
+  // robust getters
   function getCompIdFromReg(x){
     return x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "";
   }
@@ -66,13 +66,10 @@
     return normStr(v) || null;
   }
 
-  // stage label map: "compId||stageKey" -> label
-  let stageNameByKey = new Map();
-
   let currentUser = null;
   let isAdmin = false;
 
-  let regsAllConfirmed = []; // normalized
+  let regsAllConfirmed = [];
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
@@ -80,7 +77,6 @@
     if (!stageSelect) return;
 
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
-    stageNameByKey = new Map();
     const items = [];
 
     const snap = await db.collection("competitions").get();
@@ -101,13 +97,11 @@
           const label = `${brand} · ${compTitle} — ${stageTitle}`;
           const value = `${compId}||${key}`;
           items.push({ value, label });
-          stageNameByKey.set(value, label);
         });
       } else {
         const label = `${brand} · ${compTitle}`;
         const value = `${compId}||`;
         items.push({ value, label });
-        stageNameByKey.set(value, label);
       }
     });
 
@@ -136,7 +130,7 @@
         createdAt: x.createdAt || null,
 
         compId: normStr(getCompIdFromReg(x)),
-        stageId: getStageIdFromReg(x), // null якщо нема
+        stageId: getStageIdFromReg(x),
 
         drawKey: normStr(x.drawKey || ""),
         bigFishTotal: !!x.bigFishTotal
@@ -160,11 +154,10 @@
     regsFiltered = regsAllConfirmed.filter(r => {
       if (normStr(r.compId) !== normStr(compId)) return false;
       if (stageKey) return normStr(r.stageId) === normStr(stageKey);
-      // oneoff: приймаємо всіх по compId
-      return true;
+      return true; // oneoff
     });
 
-    // пошук
+    // search
     const q = normStr(qInput?.value || "").toLowerCase();
     if (q) {
       regsFiltered = regsFiltered.filter(r => {
@@ -190,7 +183,7 @@
   function sectorOptionsHTML(cur, docId){
     const current = normStr(cur);
     return `
-      <select class="select sectorPick" data-docid="${escapeHtml(docId)}" style="max-width:160px;">
+      <select class="select sectorPick" data-docid="${escapeHtml(docId)}">
         <option value="">—</option>
         ${SECTORS.map(s=>{
           const taken = usedSectorSet.has(s) && s !== current;
@@ -205,6 +198,7 @@
   function rowHTML(r){
     const sector = normStr(r.drawKey);
     const phone  = normStr(r.phone);
+
     return `
       <div class="draw-row" data-docid="${escapeHtml(r._id)}">
         <div>
@@ -220,7 +214,7 @@
           ${sectorOptionsHTML(sector, r._id)}
         </div>
 
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;justify-content:center;">
           <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
         </div>
 
@@ -266,7 +260,7 @@
 
     if (!sectorVal) return showRowMsg(wrap, "Оберіть сектор (A1…C8).", false);
 
-    // уникальність сектора
+    // uniqueness
     if (usedSectorSet.has(sectorVal)) {
       const other = regsFiltered.find(r => r.drawKey === sectorVal && r._id !== docId);
       if (other) return showRowMsg(wrap, `Сектор ${sectorVal} вже зайнятий: ${other.teamName}`, false);
@@ -284,7 +278,7 @@
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // локально оновлюємо
+      // local update
       const a = regsAllConfirmed.find(x=>x._id===docId);
       if (a) { a.drawKey = sectorVal; a.bigFishTotal = bigFish; }
 
@@ -321,7 +315,6 @@
 
         await loadStagesToSelect();
         await loadAllConfirmed();
-
         setMsg("Оберіть змагання/етап.", true);
       } catch (e) {
         console.error(e);

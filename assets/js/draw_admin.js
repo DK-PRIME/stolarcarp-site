@@ -1,9 +1,10 @@
 // assets/js/draw_admin.js
 // STOLAR CARP • Admin draw (table-like rows)
-// - loads competitions -> stageSelect
-// - loads ALL confirmed registrations once, filters locally
-// - assign unique sectors A1..C8
-// - per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
+// ✅ loads competitions -> stageSelect
+// ✅ loads ALL confirmed registrations once, filters locally
+// ✅ unique sectors A1..C8
+// ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
+// ✅ after save -> sorts by zone/sector like weighings (A1..C8), then by teamName
 (function () {
   "use strict";
 
@@ -57,7 +58,7 @@
     return role === "admin";
   }
 
-  // robust getters
+  // robust getters (щоб не ламалось від назв полів)
   function getCompIdFromReg(x){
     return x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "";
   }
@@ -66,10 +67,48 @@
     return normStr(v) || null;
   }
 
-  let currentUser = null;
+  // ---- sort helpers (A1..C8) ----
+  function parseSectorKey(drawKey){
+    const s = normStr(drawKey).toUpperCase();
+    if (!s) return null;
+    const zone = s[0];
+    const n = parseInt(s.slice(1), 10);
+    if (!["A","B","C"].includes(zone) || !Number.isFinite(n)) return null;
+    return { zone, n };
+  }
+  function zoneRank(z){
+    if (z === "A") return 1;
+    if (z === "B") return 2;
+    if (z === "C") return 3;
+    return 9;
+  }
+  function sortLikeWeighings(a, b){
+    const sa = parseSectorKey(a.drawKey);
+    const sb = parseSectorKey(b.drawKey);
+
+    // Призначені (з сектором) — вище, без сектора — внизу
+    if (!!sa && !sb) return -1;
+    if (!sa && !!sb) return 1;
+
+    // Обидва без сектора -> по назві
+    if (!sa && !sb) {
+      return (a.teamName||"").localeCompare(b.teamName||"", "uk");
+    }
+
+    // Обидва з сектором -> зона -> сектор -> назва
+    const zr = zoneRank(sa.zone) - zoneRank(sb.zone);
+    if (zr) return zr;
+    const nr = (sa.n - sb.n);
+    if (nr) return nr;
+    return (a.teamName||"").localeCompare(b.teamName||"", "uk");
+  }
+
+  // stage label map: "compId||stageKey" -> label
+  let stageNameByKey = new Map();
+
   let isAdmin = false;
 
-  let regsAllConfirmed = [];
+  let regsAllConfirmed = []; // normalized
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
@@ -77,6 +116,7 @@
     if (!stageSelect) return;
 
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+    stageNameByKey = new Map();
     const items = [];
 
     const snap = await db.collection("competitions").get();
@@ -97,11 +137,13 @@
           const label = `${brand} · ${compTitle} — ${stageTitle}`;
           const value = `${compId}||${key}`;
           items.push({ value, label });
+          stageNameByKey.set(value, label);
         });
       } else {
         const label = `${brand} · ${compTitle}`;
         const value = `${compId}||`;
         items.push({ value, label });
+        stageNameByKey.set(value, label);
       }
     });
 
@@ -115,6 +157,7 @@
   async function loadAllConfirmed(){
     setMsg("Завантаження підтверджених заявок…", true);
 
+    // ВАЖЛИВО: підтверджені = confirmed
     const snap = await db.collection("registrations")
       .where("status","==","confirmed")
       .get();
@@ -130,7 +173,7 @@
         createdAt: x.createdAt || null,
 
         compId: normStr(getCompIdFromReg(x)),
-        stageId: getStageIdFromReg(x),
+        stageId: getStageIdFromReg(x), // null якщо нема
 
         drawKey: normStr(x.drawKey || ""),
         bigFishTotal: !!x.bigFishTotal
@@ -138,6 +181,11 @@
     });
 
     setMsg("", true);
+  }
+
+  function rebuildUsedSectors(){
+    usedSectorSet = new Set();
+    regsFiltered.forEach(r => { if (normStr(r.drawKey)) usedSectorSet.add(normStr(r.drawKey)); });
   }
 
   function applyStageFilter(){
@@ -157,7 +205,7 @@
       return true; // oneoff
     });
 
-    // search
+    // пошук
     const q = normStr(qInput?.value || "").toLowerCase();
     if (q) {
       regsFiltered = regsFiltered.filter(r => {
@@ -166,11 +214,10 @@
       });
     }
 
-    regsFiltered.sort((a,b)=>(a.teamName||"").localeCompare(b.teamName||"","uk"));
+    // сортування: як у зважуванні (A1..C8), без сектора — вниз
+    regsFiltered.sort(sortLikeWeighings);
 
-    usedSectorSet = new Set();
-    regsFiltered.forEach(r => { if (r.drawKey) usedSectorSet.add(r.drawKey); });
-
+    rebuildUsedSectors();
     render();
 
     if (countInfo) {
@@ -196,9 +243,7 @@
   }
 
   function rowHTML(r){
-    const sector = normStr(r.drawKey);
     const phone  = normStr(r.phone);
-
     return `
       <div class="draw-row" data-docid="${escapeHtml(r._id)}">
         <div>
@@ -211,16 +256,16 @@
         </div>
 
         <div>
-          ${sectorOptionsHTML(sector, r._id)}
+          ${sectorOptionsHTML(r.drawKey, r._id)}
         </div>
 
         <div style="display:flex;align-items:center;justify-content:center;">
           <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
         </div>
 
-        <div>
-          <button class="btn btn--ghost btn-mini saveBtn" type="button">Зберегти</button>
-          <div class="draw-sub rowMsg" style="margin-top:6px;"></div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
+          <div class="draw-sub rowMsg" style="margin-left:8px;white-space:nowrap;"></div>
         </div>
       </div>
     `;
@@ -260,10 +305,10 @@
 
     if (!sectorVal) return showRowMsg(wrap, "Оберіть сектор (A1…C8).", false);
 
-    // uniqueness
+    // унікальність сектора
     if (usedSectorSet.has(sectorVal)) {
-      const other = regsFiltered.find(r => r.drawKey === sectorVal && r._id !== docId);
-      if (other) return showRowMsg(wrap, `Сектор ${sectorVal} вже зайнятий: ${other.teamName}`, false);
+      const other = regsFiltered.find(r => normStr(r.drawKey) === sectorVal && r._id !== docId);
+      if (other) return showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
     }
 
     const zone = sectorVal[0];
@@ -278,22 +323,25 @@
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      // local update
+      // локально оновлюємо
       const a = regsAllConfirmed.find(x=>x._id===docId);
-      if (a) { a.drawKey = sectorVal; a.bigFishTotal = bigFish; }
+      if (a) {
+        a.drawKey = sectorVal;
+        a.bigFishTotal = bigFish;
+      }
 
-      showRowMsg(wrap, "Збережено ✔", true);
+      showRowMsg(wrap, "✔", true);
+
+      // одразу сортуємо по зонах/секторах
       applyStageFilter();
     } catch (err) {
       console.error(err);
-      showRowMsg(wrap, "Помилка збереження (Rules/доступ).", false);
+      showRowMsg(wrap, "Rules/доступ", false);
     }
   });
 
   async function boot(){
     auth.onAuthStateChanged(async (user) => {
-      currentUser = user || null;
-
       if (!user) {
         setMsg("Увійдіть як адмін.", false);
         if (stageSelect) stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
@@ -315,6 +363,7 @@
 
         await loadStagesToSelect();
         await loadAllConfirmed();
+
         setMsg("Оберіть змагання/етап.", true);
       } catch (e) {
         console.error(e);

@@ -1,153 +1,112 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>Адмінка STOLAR CARP</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+  <!-- Styles -->
   <link rel="stylesheet" href="assets/css/main.css" />
-  <script src="assets/js/config.js" defer></script>
 
-  <!-- Firebase compat -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js" defer></script>
-
-  <script src="assets/js/firebase-init.js" defer></script>
-
-  <style>
-    /* маленький хак: секції ховаємо/показуємо */
-    .admin-section { display:none; }
-    .admin-section.is-active { display:block; }
-  </style>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="assets/js/firebase-init.js"></script>
 </head>
 
 <body class="admin-page">
-  <header class="header">
-    <div class="container header__row">
-      <a class="logo" href="index.html">
-        <span class="logo__mark">SC</span>
-        <span class="logo__text">STOLAR CARP</span>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="container header__row">
+    <div class="logo">
+      <div class="logo__mark">SC</div>
+      <div class="logo__text">STOLAR CARP</div>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="container">
+
+    <!-- ACCESS STATUS -->
+    <div id="accessBox" class="card">
+      <h2>Адмінка STOLAR CARP</h2>
+      <p id="accessStatus">Перевірка доступу...</p>
+    </div>
+
+    <!-- ADMIN MENU -->
+    <div id="adminMenu" class="grid grid-1 hidden">
+
+      <a href="admin-create.html" class="btn btn--primary">
+        1) Створити змагання
       </a>
 
-      <nav class="nav" id="nav">
-        <a class="nav__link" href="index.html">Головна</a>
-        <a class="nav__link" href="register.html">Подати заявку</a>
-        <a class="nav__link nav__link--active" href="admin.html">Адмінка</a>
-      </nav>
+      <a href="admin-edit.html" class="btn btn--accent">
+        2) Редагувати змагання
+      </a>
 
-      <button class="burger" id="burger" aria-label="Меню">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </header>
+      <a href="admin-registrations.html" class="btn btn--primary">
+        3) Реєстр команд
+      </a>
 
-  <main class="main">
-    <div class="container">
+      <a href="admin-draw.html" class="btn btn--accent">
+        4) Жеребкування
+      </a>
 
-      <div class="card" style="margin-bottom:16px;">
-        <h1 style="margin:0 0 6px;">Адмінка STOLAR CARP</h1>
-        <div id="adminStatus" class="form__hint">Перевірка доступу…</div>
-      </div>
+      <a href="admin-weighing.html" class="btn btn--danger">
+        5) Зважування
+      </a>
 
-      <div id="adminGate" class="card">
-        <div class="cta-row" style="justify-content:center;">
-          <a class="btn btn--primary" href="#create" data-go="create">1) Створити змагання</a>
-          <a class="btn btn--accent" href="#edit" data-go="edit">2) Редагувати змагання</a>
-          <a class="btn btn--primary" href="#regs" data-go="regs">3) Реєстрація команд</a>
-          <a class="btn btn--accent" href="#draw" data-go="draw">4) Жеребкування</a>
-          <a class="btn btn--danger" href="#weigh" data-go="weigh">5) Зважування</a>
-        </div>
-        <div class="form__hint" style="margin-top:10px;">
-          Вихід прибрали — адмінка відкривається тільки для admin/judge ролей.
-        </div>
-      </div>
+      <a href="admin-bigfish.html" class="btn btn--danger">
+        6) BigFish Total
+      </a>
 
-      <!-- СЕКЦІЇ (поки заглушки, щоб адмінка “не пропадала”) -->
-      <section id="sec-create" class="admin-section card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Створити змагання</h2>
-        <p class="form__hint">Тут твій існуючий блок створення (залишаємо як було).</p>
-      </section>
-
-      <section id="sec-edit" class="admin-section card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Редагувати змагання</h2>
-        <p class="form__hint">Тут твій існуючий блок редагування.</p>
-      </section>
-
-      <section id="sec-regs" class="admin-section card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Реєстрація команд</h2>
-        <a class="btn btn--primary" href="admin-registrations.html">Відкрити реєстр команд</a>
-      </section>
-
-      <section id="sec-draw" class="admin-section card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Жеребкування</h2>
-        <a class="btn btn--accent" href="draw.html">Відкрити жеребкування</a>
-      </section>
-
-      <section id="sec-weigh" class="admin-section card" style="margin-top:16px;">
-        <h2 style="margin-top:0;">Зважування</h2>
-        <a class="btn btn--danger" href="weighings.html">Відкрити зважування</a>
-      </section>
+      <a href="admin-users.html" class="btn btn--ghost">
+        7) STOLAR USER
+      </a>
 
     </div>
-  </main>
 
-  <script>
-    // Мінімальна логіка: доступ + секції (без окремих файлів)
-    (function(){
-      const statusEl = document.getElementById('adminStatus');
-      const gate = document.getElementById('adminGate');
+  </div>
+</main>
 
-      function showSection(key){
-        document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('is-active'));
-        const map = { create:'sec-create', edit:'sec-edit', regs:'sec-regs', draw:'sec-draw', weigh:'sec-weigh' };
-        const id = map[key];
-        if (id) document.getElementById(id).classList.add('is-active');
-      }
+<!-- SCRIPT -->
+<script>
+(function () {
+  const auth = window.scAuth;
+  const db   = window.scDb;
 
-      document.addEventListener('click', (e) => {
-        const a = e.target.closest('[data-go]');
-        if (!a) return;
-        e.preventDefault();
-        showSection(a.getAttribute('data-go'));
-      });
+  const accessStatus = document.getElementById("accessStatus");
+  const adminMenu    = document.getElementById("adminMenu");
 
-      // default section
-      if (location.hash) {
-        const key = location.hash.replace('#','');
-        showSection(key);
-      }
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      accessStatus.innerHTML = "❌ Доступ заборонено. Увійдіть як адміністратор.";
+      return;
+    }
 
-      // доступ
-      const auth = window.scAuth;
-      const db = window.scDb;
-      if (!auth || !db) {
-        statusEl.textContent = 'Firebase init не завантажився.';
+    try {
+      const snap = await db.collection("users").doc(user.uid).get();
+      const data = snap.exists ? snap.data() : null;
+
+      if (!data || data.role !== "admin") {
+        accessStatus.innerHTML = "❌ Цей акаунт не є адміністратором.";
         return;
       }
 
-      auth.onAuthStateChanged(async (user) => {
-        if (!user) {
-          statusEl.textContent = 'Не залогінений. Увійди в акаунт адміністратора.';
-          gate.style.opacity = '0.5';
-          gate.style.pointerEvents = 'none';
-          return;
-        }
-        try {
-          const uSnap = await db.collection('users').doc(user.uid).get();
-          const role = (uSnap.exists && (uSnap.data()||{}).role) || '';
-          const ok = (role === 'admin' || role === 'judge');
-          statusEl.textContent = ok ? 'Адмін-доступ ✅' : 'Доступ заборонено ❌ (не admin/judge)';
-          gate.style.opacity = ok ? '1' : '0.5';
-          gate.style.pointerEvents = ok ? 'auto' : 'none';
-        } catch (e) {
-          statusEl.textContent = 'Помилка перевірки ролі (rules/доступ).';
-          gate.style.opacity = '0.5';
-          gate.style.pointerEvents = 'none';
-        }
-      });
-    })();
-  </script>
+      accessStatus.innerHTML = "✅ Адмін-доступ підтверджено";
+      adminMenu.classList.remove("hidden");
+
+    } catch (e) {
+      accessStatus.innerHTML = "❌ Помилка перевірки доступу";
+      console.error(e);
+    }
+  });
+})();
+</script>
+
 </body>
 </html>

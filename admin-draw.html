@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>STOLAR CARP • Жеребкування</title>
+<link rel="stylesheet" href="assets/css/main.css">
+</head>
+
+<body>
+<header class="header">
+  <div class="container header__row">
+    <div class="logo">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </div>
+  </div>
+</header>
+
+<main class="main container">
+
+  <h2>🎣 Жеребкування</h2>
+
+  <div class="card">
+    <label>Змагання / Етап</label>
+    <select id="stageSelect"></select>
+  </div>
+
+  <div id="teamsWrap" class="card" style="margin-top:16px"></div>
+
+  <button class="btn btn--accent" id="saveDraw" style="margin-top:16px">
+    💾 Зберегти жеребкування
+  </button>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
+<script src="assets/js/admin-draw.js"></script>
+</body>
+</html>

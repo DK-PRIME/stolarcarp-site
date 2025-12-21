@@ -1,14 +1,14 @@
 // assets/js/admin_registrations.js
-// STOLAR CARP • Admin registrations (confirm payment, list, filters)
+// STOLAR CARP • Admin registrations (confirm, cancel, DELETE with archive, filters, search)
 
 (function () {
   const auth = window.scAuth;
-  const db = window.scDb;
+  const db   = window.scDb;
 
-  const msgEl = document.getElementById("msg");
-  const listEl = document.getElementById("list");
+  const msgEl        = document.getElementById("msg");
+  const listEl       = document.getElementById("list");
   const statusFilter = document.getElementById("statusFilter");
-  const qInput = document.getElementById("q");
+  const qInput       = document.getElementById("q");
 
   if (!auth || !db || !window.firebase) {
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
@@ -60,17 +60,21 @@
 
       if (eventsArr && eventsArr.length) {
         eventsArr.forEach((ev, idx) => {
-          const stageId = (ev.key || ev.stageId || ev.id || `stage-${idx + 1}`) + "";
+          const stageId = String(ev.key || ev.stageId || ev.id || `stage-${idx + 1}`);
           const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
           const key = `${compId}||${stageId}`;
           stageNameByKey.set(key, `${brand} · ${compTitle} — ${stageTitle}`);
         });
       } else {
-        // одноразове без events[]
         const key = `${compId}||`;
         stageNameByKey.set(key, `${brand} · ${compTitle}`);
       }
     });
+  }
+
+  function getStageLabel(r) {
+    const key = `${r.competitionId || ""}||${r.stageId || ""}`;
+    return stageNameByKey.get(key) || key;
   }
 
   function matchQuery(r, q) {
@@ -86,9 +90,20 @@
     return hay.includes(q);
   }
 
-  function getStageLabel(r) {
-    const key = `${r.competitionId || ""}||${r.stageId || ""}`;
-    return stageNameByKey.get(key) || key;
+  function badgeForStatus(status) {
+    const s = status || "unknown";
+    const label =
+      s === "pending_payment" ? "Очікує оплату" :
+      s === "confirmed" ? "Підтверджено" :
+      s === "cancelled" ? "Скасовано" :
+      s;
+
+    const style =
+      s === "confirmed" ? "background:rgba(124,255,178,.12);border-color:rgba(124,255,178,.35);" :
+      s === "pending_payment" ? "background:rgba(255,204,0,.10);border-color:rgba(255,204,0,.35);" :
+      "background:rgba(255,108,108,.10);border-color:rgba(255,108,108,.35);";
+
+    return { label, style };
   }
 
   function render(regs) {
@@ -101,18 +116,7 @@
     }
 
     regs.forEach((r) => {
-      const status = r.status || "unknown";
-
-      const statusBadge =
-        status === "pending_payment" ? "Очікує оплату" :
-        status === "confirmed" ? "Підтверджено" :
-        status === "cancelled" ? "Скасовано" :
-        status;
-
-      const badgeStyle =
-        status === "confirmed" ? "background:rgba(124,255,178,.12);border-color:rgba(124,255,178,.35);" :
-        status === "pending_payment" ? "background:rgba(255,204,0,.10);border-color:rgba(255,204,0,.35);" :
-        "background:rgba(255,108,108,.10);border-color:rgba(255,108,108,.35);";
+      const { label: statusLabel, style: badgeStyle } = badgeForStatus(r.status);
 
       const card = document.createElement("div");
       card.className = "card";
@@ -130,7 +134,7 @@
           </div>
 
           <span class="badge" style="${badgeStyle}">
-            ${escapeHtml(statusBadge)}
+            ${escapeHtml(statusLabel)}
           </span>
         </div>
 
@@ -139,16 +143,19 @@
           Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
           Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
           ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
+          ${r.cancelledAt ? `<br>Скасовано: <b>${escapeHtml(fmtTs(r.cancelledAt))}</b>` : ""}
         </div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-          <button class="btn btn--primary" data-act="confirm" ${status === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
-          <button class="btn btn--ghost" data-act="cancel" ${status === "cancelled" ? "disabled" : ""}>Скасувати</button>
+          <button class="btn btn--primary" data-act="confirm" ${r.status === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
+          <button class="btn btn--ghost" data-act="cancel" ${r.status === "cancelled" ? "disabled" : ""}>Скасувати</button>
+          <button class="btn btn--danger" data-act="delete">Видалити заявку</button>
         </div>
       `;
 
       const btnConfirm = card.querySelector('[data-act="confirm"]');
-      const btnCancel = card.querySelector('[data-act="cancel"]');
+      const btnCancel  = card.querySelector('[data-act="cancel"]');
+      const btnDelete  = card.querySelector('[data-act="delete"]');
 
       btnConfirm?.addEventListener("click", async () => {
         if (!isAdmin) return setMsg("Нема адмін-доступу.", false);
@@ -186,41 +193,77 @@
         }
       });
 
+      // DELETE (з архівацією)
+      btnDelete?.addEventListener("click", async () => {
+        if (!isAdmin) return setMsg("Нема адмін-доступу.", false);
+
+        const warn =
+          `ТОЧНО видалити заявку?\n\n` +
+          `Команда: ${r.teamName || "—"}\n` +
+          `Етап: ${getStageLabel(r)}\n\n` +
+          `Я збережу копію в registrations_deleted і тоді видалю.`;
+        if (!confirm(warn)) return;
+
+        try {
+          setMsg("Видаляю...", true);
+
+          const ref = db.collection("registrations").doc(r._id);
+
+          // batch: archive -> delete
+          const batch = db.batch();
+          batch.set(db.collection("registrations_deleted").doc(r._id), {
+            ...r,
+            _id: undefined, // не треба дублювати як поле
+            deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            deletedBy: currentUser.uid
+          }, { merge: true });
+          batch.delete(ref);
+
+          await batch.commit();
+
+          setMsg("Заявку видалено ✅ (копія збережена)", true);
+        } catch (e) {
+          console.error(e);
+          setMsg("Помилка видалення (Rules/доступ).", false);
+        }
+      });
+
       listEl.appendChild(card);
     });
   }
 
+  // один раз підписуємось, а фільтруємо локально (без перезапусків)
   let unsub = null;
+  let allRegs = [];
+
+  function applyFiltersAndRender() {
+    const sf = (statusFilter?.value || "all");
+    const q  = (qInput?.value || "").trim().toLowerCase();
+
+    const filtered = allRegs
+      .filter((r) => (sf === "all" ? true : (r.status === sf)))
+      .filter((r) => matchQuery(r, q));
+
+    render(filtered);
+  }
+
   function watchRegistrations() {
     if (unsub) unsub();
 
-    // беремо всі, сортуємо по даті подачі (нові зверху)
     unsub = db.collection("registrations")
       .orderBy("createdAt", "desc")
       .onSnapshot((snap) => {
-        const all = [];
-        snap.forEach((d) => all.push({ _id: d.id, ...(d.data() || {}) }));
-
-        const sf = (statusFilter?.value || "all");
-        const q = (qInput?.value || "").trim().toLowerCase();
-
-        const filtered = all
-          .filter((r) => (sf === "all" ? true : (r.status === sf)))
-          .filter((r) => matchQuery(r, q));
-
-        render(filtered);
+        allRegs = [];
+        snap.forEach((d) => allRegs.push({ _id: d.id, ...(d.data() || {}) }));
+        applyFiltersAndRender();
       }, (err) => {
         console.error(err);
         setMsg("Не вдалося завантажити заявки (Rules/доступ).", false);
       });
   }
 
-  statusFilter?.addEventListener("change", watchRegistrations);
-  qInput?.addEventListener("input", () => {
-    // просто перезапустимо рендер через повторну підписку
-    // (щоб не городити стан — швидко і надійно)
-    watchRegistrations();
-  });
+  statusFilter?.addEventListener("change", applyFiltersAndRender);
+  qInput?.addEventListener("input", applyFiltersAndRender);
 
   auth.onAuthStateChanged(async (user) => {
     currentUser = user || null;
@@ -232,7 +275,6 @@
     }
 
     try {
-      // перевірка ролі адміна через users/{uid}.role
       const uSnap = await db.collection("users").doc(user.uid).get();
       const role = (uSnap.data() || {}).role || "";
       isAdmin = role === "admin";

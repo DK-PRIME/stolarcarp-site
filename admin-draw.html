@@ -10,16 +10,16 @@
   <style>
     body { background:#020617; }
     .wrap { max-width:900px; margin:0 auto; padding:20px 0 80px; }
-    .card {
+    .card{
       background:rgba(15,23,42,.9);
       border:1px solid rgba(148,163,184,.3);
       border-radius:16px;
       padding:16px;
       margin-bottom:12px;
     }
-    .muted { color:#9ca3af; font-size:.85rem; }
-    .field { display:grid; gap:6px; margin-top:10px; }
-    .input, select {
+    .muted{ color:#9ca3af; font-size:.85rem; }
+    .field{ display:grid; gap:6px; margin-top:10px; }
+    .input, select{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
@@ -28,9 +28,55 @@
       border:1px solid rgba(148,163,184,.3);
       outline:none;
     }
-    .grid2 { display:grid; grid-template-columns:1fr; gap:12px; }
-    @media (min-width: 860px){
-      .grid2 { grid-template-columns:1fr 1fr; }
+
+    /* ===== Табличний список команд ===== */
+    .draw-head, .draw-row{
+      display:grid;
+      grid-template-columns: 1.6fr 1fr 140px 110px 120px;
+      gap:10px;
+      align-items:center;
+    }
+    .draw-head{
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.25);
+      font-size:.85rem;
+      color:#9ca3af;
+    }
+    .draw-row{
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.18);
+      background:rgba(2,6,23,.18);
+      margin-top:10px;
+    }
+    .draw-team{
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .draw-sub{
+      font-size:.82rem;
+      color:#9ca3af;
+      margin-top:2px;
+    }
+    .chk{
+      width:18px;
+      height:18px;
+      accent-color: var(--accent);
+    }
+    .btn-mini{
+      padding:10px 12px;
+      border-radius:12px;
+    }
+    @media (max-width:740px){
+      .draw-head, .draw-row{
+        grid-template-columns: 1.5fr 130px 92px 110px;
+      }
+      .hide-sm{ display:none; }
     }
   </style>
 </head>
@@ -51,6 +97,7 @@
 
     <h2>🎣 Жеребкування</h2>
 
+    <!-- Панель керування -->
     <div class="card">
       <div id="msg" class="muted" style="margin-bottom:10px;"></div>
 
@@ -65,16 +112,22 @@
       </div>
     </div>
 
-    <div class="grid2">
-      <div class="card">
-        <div style="font-weight:900;margin-bottom:8px;">Потрібно сектор</div>
-        <div id="listNeed"></div>
+    <!-- Табличний список -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div style="font-weight:900;">Список команд</div>
+        <div class="muted" id="countInfo"></div>
       </div>
 
-      <div class="card">
-        <div style="font-weight:900;margin-bottom:8px;">Призначено</div>
-        <div id="listDone"></div>
+      <div class="draw-head">
+        <div>Команда</div>
+        <div class="hide-sm">Телефон</div>
+        <div>Сектор</div>
+        <div>BigFish</div>
+        <div></div>
       </div>
+
+      <div id="drawRows"></div>
     </div>
 
   </section>

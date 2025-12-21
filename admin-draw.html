@@ -17,22 +17,21 @@
       padding:16px;
       margin-bottom:12px;
     }
-    .row {
-      display:grid;
-      grid-template-columns: 1fr 140px 120px;
-      gap:10px;
-      align-items:center;
-    }
-    select {
+    .muted { color:#9ca3af; font-size:.85rem; }
+    .field { display:grid; gap:6px; margin-top:10px; }
+    .input, select {
       width:100%;
-      padding:8px;
-      border-radius:10px;
+      padding:10px 12px;
+      border-radius:12px;
       background:#020617;
       color:#e5e7eb;
       border:1px solid rgba(148,163,184,.3);
+      outline:none;
     }
-    .btn { margin-top:16px; }
-    .muted { color:#9ca3af; font-size:.85rem; }
+    .grid2 { display:grid; grid-template-columns:1fr; gap:12px; }
+    @media (min-width: 860px){
+      .grid2 { grid-template-columns:1fr 1fr; }
+    }
   </style>
 </head>
 
@@ -53,17 +52,30 @@
     <h2>🎣 Жеребкування</h2>
 
     <div class="card">
-      <div class="muted">Змагання / етап</div>
-      <select id="stageSelect"></select>
+      <div id="msg" class="muted" style="margin-bottom:10px;"></div>
+
+      <div class="field">
+        <div class="muted">Змагання / етап</div>
+        <select id="stageSelect"></select>
+      </div>
+
+      <div class="field">
+        <div class="muted">Пошук (команда/телефон/капітан)</div>
+        <input id="q" class="input" placeholder="Напр.: DK Два Кума / 063..." />
+      </div>
     </div>
 
-    <div id="drawList"></div>
+    <div class="grid2">
+      <div class="card">
+        <div style="font-weight:900;margin-bottom:8px;">Потрібно сектор</div>
+        <div id="listNeed"></div>
+      </div>
 
-    <button class="btn btn--accent" id="saveBtn">
-      Зберегти жеребкування
-    </button>
-
-    <div id="msg" class="muted" style="margin-top:10px;"></div>
+      <div class="card">
+        <div style="font-weight:900;margin-bottom:8px;">Призначено</div>
+        <div id="listDone"></div>
+      </div>
+    </div>
 
   </section>
 </main>
@@ -72,135 +84,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
-<script>
-(async function () {
-  const db = window.scDb;
-
-  const stageSelect = document.getElementById("stageSelect");
-  const drawList = document.getElementById("drawList");
-  const msg = document.getElementById("msg");
-
-  const SECTORS = [];
-  ["A","B","C"].forEach(z=>{
-    for(let i=1;i<=8;i++) SECTORS.push(`${z}${i}`);
-  });
-
-  let currentItems = [];
-
-  // ---------- load stages ----------
-  const compSnap = await db.collection("competitions").get();
-  compSnap.forEach(doc=>{
-    const c = doc.data();
-    (c.events||[]).forEach(ev=>{
-      const key = `${doc.id}||${ev.key}`;
-      const label = `${c.name} — ${ev.key}`;
-      const opt = document.createElement("option");
-      opt.value = key;
-      opt.textContent = label;
-      stageSelect.appendChild(opt);
-    });
-  });
-
-  stageSelect.addEventListener("change", loadTeams);
-  loadTeams();
-
-  // ---------- load paid teams ----------
-  async function loadTeams(){
-    drawList.innerHTML = "";
-    msg.textContent = "";
-
-    const [competitionId, stageId] = stageSelect.value.split("||");
-
-    const snap = await db.collection("registrations")
-      .where("competitionId","==",competitionId)
-      .where("stageId","==",stageId)
-      .where("status","==","paid")
-      .get();
-
-    currentItems = [];
-
-    snap.forEach(doc=>{
-      currentItems.push({ id: doc.id, ...doc.data(), sector:"", big:false });
-    });
-
-    render();
-  }
-
-  function render(){
-    drawList.innerHTML = "";
-    currentItems.forEach((t, idx)=>{
-      const card = document.createElement("div");
-      card.className = "card";
-
-      card.innerHTML = `
-        <div class="row">
-          <div><b>${t.teamName}</b></div>
-
-          <select data-sector="${idx}">
-            <option value="">—</option>
-            ${SECTORS.map(s=>`<option>${s}</option>`).join("")}
-          </select>
-
-          <select data-big="${idx}">
-            <option value="no">ні</option>
-            <option value="yes">так</option>
-          </select>
-        </div>
-      `;
-
-      drawList.appendChild(card);
-    });
-
-    drawList.querySelectorAll("select").forEach(sel=>{
-      sel.addEventListener("change", onChange);
-    });
-  }
-
-  function onChange(){
-    const used = new Set();
-    drawList.querySelectorAll("[data-sector]").forEach(s=>{
-      if(s.value){
-        if(used.has(s.value)){
-          alert("❌ Сектор вже зайнятий!");
-          s.value = "";
-        }
-        used.add(s.value);
-      }
-    });
-  }
-
-  // ---------- save ----------
-  document.getElementById("saveBtn").onclick = async ()=>{
-    const [competitionId, stageId] = stageSelect.value.split("||");
-
-    const rows = [];
-    drawList.querySelectorAll(".card").forEach((card,i)=>{
-      const sector = card.querySelector("[data-sector]").value;
-      if(!sector) return;
-
-      rows.push({
-        teamId: currentItems[i].teamId,
-        teamName: currentItems[i].teamName,
-        sector,
-        bigFishTotal: card.querySelector("[data-big]").value === "yes"
-      });
-    });
-
-    await db.collection("draws")
-      .doc(`${competitionId}_${stageId}`)
-      .set({
-        competitionId,
-        stageId,
-        rows,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-
-    msg.textContent = "✅ Жеребкування збережено";
-  };
-})();
-</script>
+<!-- ✅ ЄДИНИЙ draw-скрипт -->
+<script src="assets/js/draw_admin.js"></script>
 
 </body>
 </html>

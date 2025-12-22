@@ -1,14 +1,18 @@
 // assets/js/admin_registrations.js
-// STOLAR CARP • Admin registrations (confirm, cancel, DELETE with archive, filters, search)
+// STOLAR CARP • Admin registrations
+// confirm / cancel / DELETE (archive -> delete), filters, search
+// FIX: archive uses fresh doc + removes undefined recursively to avoid Firestore errors
 
 (function () {
   const auth = window.scAuth;
-  const db   = window.scDb;
+  const db = window.scDb;
 
-  const msgEl        = document.getElementById("msg");
-  const listEl       = document.getElementById("list");
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2"; // твій адмін UID (як у rules)
+
+  const msgEl = document.getElementById("msg");
+  const listEl = document.getElementById("list");
   const statusFilter = document.getElementById("statusFilter");
-  const qInput       = document.getElementById("q");
+  const qInput = document.getElementById("q");
 
   if (!auth || !db || !window.firebase) {
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
@@ -38,10 +42,35 @@
     msgEl.style.color = text ? (ok ? "#7CFFB2" : "#ff6c6c") : "";
   };
 
-  let currentUser = null;
-  let isAdmin = false;
+  function showError(prefix, e) {
+    console.error(prefix, e);
+    const t = `${prefix}: ${e?.code ? e.code + " " : ""}${e?.message || e}`;
+    setMsg(t, false);
+  }
 
-  // map для назв змагань/етапів: "compId||stageId" -> "STOLAR CARP · ... — Етап ..."
+  // ✅ прибирає undefined рекурсивно (Firestore не дозволяє undefined)
+  function stripUndefinedDeep(v) {
+    if (Array.isArray(v)) {
+      return v
+        .map(stripUndefinedDeep)
+        .filter((x) => x !== undefined);
+    }
+    if (v && typeof v === "object" && !(v instanceof Date)) {
+      const out = {};
+      Object.keys(v).forEach((k) => {
+        const cleaned = stripUndefinedDeep(v[k]);
+        if (cleaned !== undefined) out[k] = cleaned;
+      });
+      return out;
+    }
+    return v === undefined ? undefined : v;
+  }
+
+  let currentUser = null;
+  let isAdminByRules = false;
+  let isAdminByRole = false;
+
+  // map: "compId||stageId" -> "STOLAR CARP · ... — Етап ..."
   let stageNameByKey = new Map();
 
   async function loadCompetitionsMap() {
@@ -85,7 +114,8 @@
       r.phone,
       r.competitionId,
       r.stageId,
-      r.status
+      r.status,
+      r._id
     ].join(" ").toLowerCase();
     return hay.includes(q);
   }
@@ -104,6 +134,14 @@
       "background:rgba(255,108,108,.10);border-color:rgba(255,108,108,.35);";
 
     return { label, style };
+  }
+
+  function ensureAdmin() {
+    if (!isAdminByRules) {
+      setMsg("Нема адмін-доступу за правилами (UID).", false);
+      return false;
+    }
+    return true;
   }
 
   function render(regs) {
@@ -144,6 +182,7 @@
           Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
           ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
           ${r.cancelledAt ? `<br>Скасовано: <b>${escapeHtml(fmtTs(r.cancelledAt))}</b>` : ""}
+          <br>ID: <span style="opacity:.7;">${escapeHtml(r._id || "—")}</span>
         </div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
@@ -158,7 +197,7 @@
       const btnDelete  = card.querySelector('[data-act="delete"]');
 
       btnConfirm?.addEventListener("click", async () => {
-        if (!isAdmin) return setMsg("Нема адмін-доступу.", false);
+        if (!ensureAdmin()) return;
         if (!confirm(`Підтвердити оплату для "${r.teamName}"?`)) return;
 
         try {
@@ -170,13 +209,12 @@
           });
           setMsg("Оплату підтверджено ✅", true);
         } catch (e) {
-          console.error(e);
-          setMsg("Помилка підтвердження (Rules/доступ).", false);
+          showError("Помилка підтвердження", e);
         }
       });
 
       btnCancel?.addEventListener("click", async () => {
-        if (!isAdmin) return setMsg("Нема адмін-доступу.", false);
+        if (!ensureAdmin()) return;
         if (!confirm(`Скасувати заявку "${r.teamName}"?`)) return;
 
         try {
@@ -188,43 +226,56 @@
           });
           setMsg("Заявку скасовано ✅", true);
         } catch (e) {
-          console.error(e);
-          setMsg("Помилка скасування (Rules/доступ).", false);
+          showError("Помилка скасування", e);
         }
       });
 
-      // DELETE (з архівацією)
+      // ✅ DELETE (archive -> delete) через fresh read + stripUndefinedDeep
       btnDelete?.addEventListener("click", async () => {
-        if (!isAdmin) return setMsg("Нема адмін-доступу.", false);
+        if (!ensureAdmin()) return;
 
         const warn =
           `ТОЧНО видалити заявку?\n\n` +
           `Команда: ${r.teamName || "—"}\n` +
           `Етап: ${getStageLabel(r)}\n\n` +
           `Я збережу копію в registrations_deleted і тоді видалю.`;
+
         if (!confirm(warn)) return;
 
         try {
           setMsg("Видаляю...", true);
 
-          const ref = db.collection("registrations").doc(r._id);
+          const regRef = db.collection("registrations").doc(r._id);
 
-          // batch: archive -> delete
+          // 1) беремо свіжі дані з бази (а не UI-об’єкт)
+          const freshSnap = await regRef.get();
+          if (!freshSnap.exists) {
+            setMsg("Заявка вже видалена/не існує.", false);
+            return;
+          }
+
+          const freshData = stripUndefinedDeep(freshSnap.data() || {});
           const batch = db.batch();
-          batch.set(db.collection("registrations_deleted").doc(r._id), {
-            ...r,
-            _id: undefined, // не треба дублювати як поле
-            deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            deletedBy: currentUser.uid
-          }, { merge: true });
-          batch.delete(ref);
+
+          // 2) архів
+          batch.set(
+            db.collection("registrations_deleted").doc(r._id),
+            stripUndefinedDeep({
+              ...freshData,
+              originalRegId: r._id,
+              deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              deletedBy: currentUser.uid
+            }),
+            { merge: true }
+          );
+
+          // 3) видалення
+          batch.delete(regRef);
 
           await batch.commit();
-
           setMsg("Заявку видалено ✅ (копія збережена)", true);
         } catch (e) {
-          console.error(e);
-          setMsg("Помилка видалення (Rules/доступ).", false);
+          showError("Помилка видалення", e);
         }
       });
 
@@ -232,7 +283,6 @@
     });
   }
 
-  // один раз підписуємось, а фільтруємо локально (без перезапусків)
   let unsub = null;
   let allRegs = [];
 
@@ -258,7 +308,7 @@
         applyFiltersAndRender();
       }, (err) => {
         console.error(err);
-        setMsg("Не вдалося завантажити заявки (Rules/доступ).", false);
+        setMsg("Не вдалося завантажити заявки.", false);
       });
   }
 
@@ -275,18 +325,23 @@
     }
 
     try {
+      // UI role
       const uSnap = await db.collection("users").doc(user.uid).get();
       const role = (uSnap.data() || {}).role || "";
-      isAdmin = role === "admin";
+      isAdminByRole = role === "admin";
 
-      if (!isAdmin) {
+      // rules admin (по UID)
+      isAdminByRules = user.uid === ADMIN_UID;
+
+      if (!isAdminByRole && !isAdminByRules) {
         setMsg("Доступ заборонено: цей акаунт не адмін.", false);
         return;
       }
 
+      setMsg(isAdminByRules ? "Адмін-доступ ✅" : "Увага: role=admin, але rules дозволяють адмін-доступ лише основному UID.", !!isAdminByRules);
+
       await loadCompetitionsMap();
       watchRegistrations();
-      setMsg("Адмін-доступ ✅", true);
     } catch (e) {
       console.error(e);
       setMsg("Помилка перевірки доступу/даних.", false);

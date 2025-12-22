@@ -1,7 +1,9 @@
 // assets/js/admin_registrations.js
 // STOLAR CARP • Admin registrations
-// confirm / cancel / DELETE (archive -> delete), filters, search
-// FIX: archive uses fresh doc + removes undefined recursively to avoid Firestore errors
+// ✅ confirm / cancel / DELETE (archive -> delete), filters, search
+// ✅ After CONFIRM: hide confirmed from list (doesn't delete)
+// ✅ After finishAt + 24h: hide ALL registrations for that stage/event
+// ✅ Archive uses fresh doc + removes undefined recursively to avoid Firestore errors
 
 (function () {
   const auth = window.scAuth;
@@ -18,6 +20,9 @@
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
     return;
   }
+
+  const GRACE_HOURS_AFTER_FINISH = 24;
+  const GRACE_MS = GRACE_HOURS_AFTER_FINISH * 60 * 60 * 1000;
 
   const escapeHtml = (s) =>
     String(s ?? "")
@@ -51,9 +56,7 @@
   // ✅ прибирає undefined рекурсивно (Firestore не дозволяє undefined)
   function stripUndefinedDeep(v) {
     if (Array.isArray(v)) {
-      return v
-        .map(stripUndefinedDeep)
-        .filter((x) => x !== undefined);
+      return v.map(stripUndefinedDeep).filter((x) => x !== undefined);
     }
     if (v && typeof v === "object" && !(v instanceof Date)) {
       const out = {};
@@ -66,15 +69,36 @@
     return v === undefined ? undefined : v;
   }
 
+  function toDateMaybe(x) {
+    if (!x) return null;
+    try {
+      if (x instanceof Date) return x;
+      if (typeof x === "string") {
+        const d = new Date(x);
+        return isFinite(d.getTime()) ? d : null;
+      }
+      if (x && typeof x.toDate === "function") return x.toDate(); // Firestore Timestamp
+    } catch {}
+    return null;
+  }
+
+  function now() {
+    return new Date();
+  }
+
   let currentUser = null;
   let isAdminByRules = false;
   let isAdminByRole = false;
 
-  // map: "compId||stageId" -> "STOLAR CARP · ... — Етап ..."
+  // map: "compId||stageId" -> label
   let stageNameByKey = new Map();
+
+  // map: "compId||stageId" -> endAt(Date|null)
+  let stageEndAtByKey = new Map();
 
   async function loadCompetitionsMap() {
     stageNameByKey = new Map();
+    stageEndAtByKey = new Map();
 
     const snap = await db.collection("competitions").get();
     snap.forEach((docSnap) => {
@@ -91,25 +115,47 @@
         eventsArr.forEach((ev, idx) => {
           const stageId = String(ev.key || ev.stageId || ev.id || `stage-${idx + 1}`);
           const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
+
           const key = `${compId}||${stageId}`;
           stageNameByKey.set(key, `${brand} · ${compTitle} — ${stageTitle}`);
+
+          const endRaw =
+            ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
+          stageEndAtByKey.set(key, toDateMaybe(endRaw));
         });
       } else {
+        // одноразове без events[]
         const key = `${compId}||`;
         stageNameByKey.set(key, `${brand} · ${compTitle}`);
+
+        const endRaw =
+          c.endAt || c.endDate || c.finishAt || c.finishDate || null;
+        stageEndAtByKey.set(key, toDateMaybe(endRaw));
       }
     });
   }
 
+  function getStageKeyFromReg(r) {
+    return `${r.competitionId || ""}||${r.stageId || ""}`;
+  }
+
   function getStageLabel(r) {
-    const key = `${r.competitionId || ""}||${r.stageId || ""}`;
+    const key = getStageKeyFromReg(r);
     return stageNameByKey.get(key) || key;
+  }
+
+  function isFinishedAndExpired(r) {
+    const key = getStageKeyFromReg(r);
+    const endAt = stageEndAtByKey.get(key) || null;
+    if (!endAt) return false; // якщо нема endAt — не ховаємо (щоб не зламати)
+    return now().getTime() > (endAt.getTime() + GRACE_MS);
   }
 
   function matchQuery(r, q) {
     if (!q) return true;
     const hay = [
       r.teamName,
+      r.participantName, // для SOLO
       r.captain,
       r.phone,
       r.competitionId,
@@ -156,6 +202,15 @@
     regs.forEach((r) => {
       const { label: statusLabel, style: badgeStyle } = badgeForStatus(r.status);
 
+      const titleMain =
+        r.teamName ? r.teamName :
+        (r.participantName ? r.participantName : "Без назви");
+
+      const subLine =
+        r.entryType === "solo"
+          ? `SOLO · ${escapeHtml(getStageLabel(r))}`
+          : escapeHtml(getStageLabel(r));
+
       const card = document.createElement("div");
       card.className = "card";
       card.style.padding = "14px";
@@ -164,10 +219,10 @@
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
           <div style="min-width:0;">
             <div style="font-weight:900;font-size:16px;line-height:1.25;">
-              ${escapeHtml(r.teamName || "Без назви")}
+              ${escapeHtml(titleMain)}
             </div>
             <div class="form__hint" style="margin-top:4px;">
-              ${escapeHtml(getStageLabel(r))}
+              ${subLine}
             </div>
           </div>
 
@@ -177,7 +232,10 @@
         </div>
 
         <div class="form__hint" style="margin-top:10px;">
-          Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>
+          ${r.entryType === "solo"
+            ? `Учасник: <b>${escapeHtml(r.participantName || r.captain || "—")}</b><br>`
+            : `Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>`
+          }
           Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
           Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
           ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
@@ -198,7 +256,7 @@
 
       btnConfirm?.addEventListener("click", async () => {
         if (!ensureAdmin()) return;
-        if (!confirm(`Підтвердити оплату для "${r.teamName}"?`)) return;
+        if (!confirm(`Підтвердити оплату для "${titleMain}"?`)) return;
 
         try {
           setMsg("Підтверджую...", true);
@@ -207,7 +265,8 @@
             confirmedAt: firebase.firestore.FieldValue.serverTimestamp(),
             confirmedBy: currentUser.uid
           });
-          setMsg("Оплату підтверджено ✅", true);
+          setMsg("Оплату підтверджено ✅ (заявка схована зі списку)", true);
+          // після оновлення snapshot перерендериться і підтверджена пропаде автоматом
         } catch (e) {
           showError("Помилка підтвердження", e);
         }
@@ -215,7 +274,7 @@
 
       btnCancel?.addEventListener("click", async () => {
         if (!ensureAdmin()) return;
-        if (!confirm(`Скасувати заявку "${r.teamName}"?`)) return;
+        if (!confirm(`Скасувати заявку "${titleMain}"?`)) return;
 
         try {
           setMsg("Скасовую...", true);
@@ -236,7 +295,7 @@
 
         const warn =
           `ТОЧНО видалити заявку?\n\n` +
-          `Команда: ${r.teamName || "—"}\n` +
+          `Запис: ${titleMain}\n` +
           `Етап: ${getStageLabel(r)}\n\n` +
           `Я збережу копію в registrations_deleted і тоді видалю.`;
 
@@ -247,7 +306,6 @@
 
           const regRef = db.collection("registrations").doc(r._id);
 
-          // 1) беремо свіжі дані з бази (а не UI-об’єкт)
           const freshSnap = await regRef.get();
           if (!freshSnap.exists) {
             setMsg("Заявка вже видалена/не існує.", false);
@@ -257,7 +315,6 @@
           const freshData = stripUndefinedDeep(freshSnap.data() || {});
           const batch = db.batch();
 
-          // 2) архів
           batch.set(
             db.collection("registrations_deleted").doc(r._id),
             stripUndefinedDeep({
@@ -269,7 +326,6 @@
             { merge: true }
           );
 
-          // 3) видалення
           batch.delete(regRef);
 
           await batch.commit();
@@ -287,11 +343,33 @@
   let allRegs = [];
 
   function applyFiltersAndRender() {
-    const sf = (statusFilter?.value || "all");
-    const q  = (qInput?.value || "").trim().toLowerCase();
+    // статус-фільтр:
+    // - якщо "confirmed" => показуємо тільки confirmed
+    // - якщо "all" => показуємо ВСІ, але confirmed ХОВАЄМО (щоб не заважали)
+    // - інакше => показуємо тільки обраний статус
+    const sfRaw = (statusFilter?.value || "all");
+    const sf = String(sfRaw || "all").toLowerCase();
+
+    const q = (qInput?.value || "").trim().toLowerCase();
 
     const filtered = allRegs
-      .filter((r) => (sf === "all" ? true : (r.status === sf)))
+      // 1) ховаємо завершені етапи (finish + 24h)
+      .filter((r) => !isFinishedAndExpired(r))
+      // 2) статуси
+      .filter((r) => {
+        const st = String(r.status || "").toLowerCase();
+
+        if (sf === "confirmed") return st === "confirmed";
+
+        if (sf === "all") {
+          // ✅ щоб не заважали: confirmed ховаємо у "all"
+          return st !== "confirmed";
+        }
+
+        // pending_payment / cancelled / etc.
+        return st === sf;
+      })
+      // 3) пошук
       .filter((r) => matchQuery(r, q));
 
     render(filtered);
@@ -325,12 +403,10 @@
     }
 
     try {
-      // UI role
       const uSnap = await db.collection("users").doc(user.uid).get();
       const role = (uSnap.data() || {}).role || "";
       isAdminByRole = role === "admin";
 
-      // rules admin (по UID)
       isAdminByRules = user.uid === ADMIN_UID;
 
       if (!isAdminByRole && !isAdminByRules) {
@@ -338,7 +414,12 @@
         return;
       }
 
-      setMsg(isAdminByRules ? "Адмін-доступ ✅" : "Увага: role=admin, але rules дозволяють адмін-доступ лише основному UID.", !!isAdminByRules);
+      setMsg(
+        isAdminByRules
+          ? "Адмін-доступ ✅"
+          : "Увага: role=admin, але rules дозволяють адмін-доступ лише основному UID.",
+        !!isAdminByRules
+      );
 
       await loadCompetitionsMap();
       watchRegistrations();

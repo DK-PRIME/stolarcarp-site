@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STOLAR CARP • QR для суддів</title>
+
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <style>
+    body{ background:#020617; }
+    .wrap{ max-width:980px; margin:0 auto; padding:20px 0 80px; }
+    .card{
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.3);
+      border-radius:16px;
+      padding:16px;
+      margin-bottom:12px;
+    }
+    .muted{ color:#9ca3af; font-size:.9rem; }
+    .field{ display:grid; gap:6px; margin-top:10px; }
+    select, input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#020617;
+      color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.3);
+      outline:none;
+    }
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media(min-width:860px){
+      .grid{ grid-template-columns:repeat(3,1fr); }
+    }
+    .qrBox{
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.25);
+      padding:12px;
+      display:grid;
+      gap:10px;
+    }
+    .qrTitle{
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .qrCanvasWrap{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:10px;
+      background:rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    canvas{ max-width:100%; height:auto; }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; }
+    .linkMini{
+      font-size:.85rem;
+      color:#cbd5e1;
+      word-break:break-all;
+    }
+    .ok{ color:#8fe39a; }
+    .err{ color:#ff6c6c; }
+  </style>
+</head>
+
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="admin.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+  </div>
+</header>
+
+<main class="main">
+  <section class="section container wrap">
+
+    <h2>QR для суддів (A/B/C)</h2>
+
+    <div class="card">
+      <div id="msg" class="muted"></div>
+
+      <div class="field">
+        <div class="muted">Змагання / етап</div>
+        <select id="stageSelect"></select>
+      </div>
+
+      <div class="field">
+        <div class="muted">Token доступу (після етапу просто міняєш → нові QR)</div>
+        <input id="token" placeholder="Напр.: SC-2026-1A (будь-який текст)" />
+      </div>
+
+      <div class="btnRow" style="margin-top:12px;">
+        <button class="btn btn--accent" id="btnBuild">Згенерувати QR</button>
+        <button class="btn btn--ghost" id="btnRandom">Зробити випадковий token</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px;">
+        Порада: після генерації натисни “Скачати” і відправ судді картинку в Telegram/Viber або нехай збереже в “Фото”.
+      </div>
+    </div>
+
+    <div class="grid" id="qrGrid" style="display:none;">
+      <div class="qrBox">
+        <div class="qrTitle">Зона A <span class="muted">scan</span></div>
+        <div class="qrCanvasWrap"><canvas id="qrA"></canvas></div>
+        <div class="linkMini" id="linkA"></div>
+        <div class="btnRow">
+          <button class="btn btn--primary" data-dl="A">Скачати PNG</button>
+          <button class="btn btn--ghost" data-copy="A">Копіювати лінк</button>
+        </div>
+      </div>
+
+      <div class="qrBox">
+        <div class="qrTitle">Зона B <span class="muted">scan</span></div>
+        <div class="qrCanvasWrap"><canvas id="qrB"></canvas></div>
+        <div class="linkMini" id="linkB"></div>
+        <div class="btnRow">
+          <button class="btn btn--primary" data-dl="B">Скачати PNG</button>
+          <button class="btn btn--ghost" data-copy="B">Копіювати лінк</button>
+        </div>
+      </div>
+
+      <div class="qrBox">
+        <div class="qrTitle">Зона C <span class="muted">scan</span></div>
+        <div class="qrCanvasWrap"><canvas id="qrC"></canvas></div>
+        <div class="linkMini" id="linkC"></div>
+        <div class="btnRow">
+          <button class="btn btn--primary" data-dl="C">Скачати PNG</button>
+          <button class="btn btn--ghost" data-copy="C">Копіювати лінк</button>
+        </div>
+      </div>
+    </div>
+
+  </section>
+</main>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- QR generator (легкий, без npm) -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
+<script>
+(function(){
+  "use strict";
+
+  const auth = window.scAuth;
+  const db   = window.scDb;
+
+  const stageSelect = document.getElementById("stageSelect");
+  const tokenInp    = document.getElementById("token");
+  const msgEl       = document.getElementById("msg");
+  const qrGrid      = document.getElementById("qrGrid");
+
+  const linkA = document.getElementById("linkA");
+  const linkB = document.getElementById("linkB");
+  const linkC = document.getElementById("linkC");
+
+  if (!auth || !db || !window.firebase) {
+    msgEl.textContent = "Firebase init не завантажився.";
+    return;
+  }
+
+  const esc = (s)=>String(s??"");
+  const setMsg = (t, ok=true)=>{
+    msgEl.textContent = t||"";
+    msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
+  };
+
+  function norm(v){ return String(v??"").trim(); }
+
+  async function requireAdmin(user){
+    const snap = await db.collection("users").doc(user.uid).get();
+    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+    return role === "admin";
+  }
+
+  async function loadStagesToSelect(){
+    stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+
+    const items = [];
+    const snap = await db.collection("competitions").get();
+    snap.forEach(docSnap=>{
+      const c = docSnap.data()||{};
+      const compId = docSnap.id;
+
+      const brand = c.brand || "STOLAR CARP";
+      const year  = c.year || c.seasonYear || "";
+      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+
+      const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+      if (eventsArr && eventsArr.length) {
+        eventsArr.forEach((ev, idx)=>{
+          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
+          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
+          const label = `${brand} · ${compTitle} — ${stageTitle}`;
+          items.push({ value:`${compId}||${key}`, label });
+        });
+      } else {
+        const label = `${brand} · ${compTitle}`;
+        items.push({ value:`${compId}||`, label });
+      }
+    });
+
+    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+
+    stageSelect.innerHTML =
+      `<option value="">— Оберіть —</option>` +
+      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
+  }
+
+  function parseStageValue(v){
+    const [compId, stageKeyRaw] = String(v||"").split("||");
+    const comp = norm(compId);
+    const stage = norm(stageKeyRaw);
+    return { compId: comp, stageId: stage ? stage : "" };
+  }
+
+  function baseUrl(){
+    // щоб працювало і на Netlify, і локально
+    return location.origin + location.pathname.replace(/\/[^\/]*$/, "/");
+  }
+
+  function buildJudgeUrl(zone, compId, stageId, token){
+    const p = new URLSearchParams();
+    p.set("zone", zone);
+    p.set("compId", compId);
+    if (stageId) p.set("stageId", stageId);
+    p.set("t", token);
+    return baseUrl() + "weigh_judge.html?" + p.toString();
+  }
+
+  function makeQR(canvasId, url){
+    const canvas = document.getElementById(canvasId);
+    const qr = new QRious({
+      element: canvas,
+      value: url,
+      size: 420
+    });
+    return qr;
+  }
+
+  function downloadCanvasPNG(canvasId, filename){
+    const canvas = document.getElementById(canvasId);
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      setMsg("Скопійовано ✅", true);
+    }catch{
+      setMsg("Не вдалося скопіювати (браузер блокує).", false);
+    }
+  }
+
+  function randomToken(){
+    const x = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const y = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SC-${x}-${y}`;
+  }
+
+  document.getElementById("btnRandom").onclick = ()=>{
+    tokenInp.value = randomToken();
+    setMsg("Згенеровано token ✅", true);
+  };
+
+  document.getElementById("btnBuild").onclick = async ()=>{
+    const v = stageSelect.value;
+    const { compId, stageId } = parseStageValue(v);
+    const token = norm(tokenInp.value);
+
+    if (!compId) return setMsg("Обери змагання/етап.", false);
+    if (!token) return setMsg("Впиши token (або натисни “випадковий”).", false);
+
+    const urlA = buildJudgeUrl("A", compId, stageId, token);
+    const urlB = buildJudgeUrl("B", compId, stageId, token);
+    const urlC = buildJudgeUrl("C", compId, stageId, token);
+
+    makeQR("qrA", urlA);
+    makeQR("qrB", urlB);
+    makeQR("qrC", urlC);
+
+    linkA.textContent = urlA;
+    linkB.textContent = urlB;
+    linkC.textContent = urlC;
+
+    qrGrid.style.display = "";
+    setMsg("QR готові ✅ Тепер “Скачати PNG” і суддям в телефон.", true);
+  };
+
+  document.addEventListener("click", async (e)=>{
+    const dl = e.target.closest("[data-dl]");
+    const cp = e.target.closest("[data-copy]");
+    if (!dl && !cp) return;
+
+    const zone = (dl?.getAttribute("data-dl") || cp?.getAttribute("data-copy") || "").trim();
+    if (!zone) return;
+
+    const link = zone==="A" ? linkA.textContent : zone==="B" ? linkB.textContent : linkC.textContent;
+
+    if (dl){
+      const { compId, stageId } = parseStageValue(stageSelect.value);
+      const token = norm(tokenInp.value);
+      const st = stageId ? stageId : "oneoff";
+      downloadCanvasPNG("qr"+zone, `SC_${compId}_${st}_ZONE-${zone}_${token}.png`);
+      setMsg("Скачано ✅ (якщо Android питає — “Download/Завантажити”)", true);
+    }
+
+    if (cp){
+      await copyText(link);
+    }
+  });
+
+  auth.onAuthStateChanged(async (user)=>{
+    if (!user){
+      setMsg("Увійди як адмін.", false);
+      stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
+      return;
+    }
+    try{
+      const ok = await requireAdmin(user);
+      if (!ok){
+        setMsg("Цей акаунт не адмін.", false);
+        stageSelect.innerHTML = `<option value="">Нема доступу</option>`;
+        return;
+      }
+      await loadStagesToSelect();
+      setMsg("Обери етап, введи token → “Згенерувати QR”.", true);
+    }catch(err){
+      console.error(err);
+      setMsg("Помилка завантаження списку.", false);
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>

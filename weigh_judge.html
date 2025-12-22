@@ -16,7 +16,11 @@
       margin-bottom:12px;
     }
     .muted{ color:#9ca3af; }
-    .big{ font-size:1.4rem; font-weight:900; }
+    .big{ font-size:1.35rem; font-weight:900; }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .ok{ color:#8fe39a; }
+    .err{ color:#ff6c6c; }
+    .kv{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.9rem; }
   </style>
 </head>
 <body>
@@ -31,39 +35,159 @@
 
 <main class="main">
   <section class="section container wrap">
+
     <div class="card">
       <div class="big" id="zoneTitle">Зона —</div>
-      <div class="muted" id="info"></div>
+      <div class="muted" id="status"></div>
+
+      <div class="muted" style="margin-top:10px;">
+        <div><b>Прив’язка пристрою:</b></div>
+        <div class="kv" id="bindInfo">—</div>
+      </div>
+
+      <div class="btnRow">
+        <button class="btn btn--primary" id="btnOpen">Відкрити мою зону</button>
+        <button class="btn btn--ghost" id="btnSaveHint">Як зберегти на телефон</button>
+        <button class="btn btn--danger" id="btnReset">Скинути прив’язку</button>
+      </div>
+
       <div class="muted" id="msg" style="margin-top:10px;"></div>
     </div>
 
     <div class="card">
       <div style="font-weight:900;margin-bottom:8px;">Далі тут буде “Зважування”</div>
       <div class="muted">
-        Ми підв’яжемо: список команд по зоні → внесення ваг → підтвердження командою → “Закрити зважування №1” → автоматично №2…
+        Тут ми підв’яжемо: список команд по зоні → внесення ваг → підтвердження командою → “Закрити зважування №1” → №2 → №3 → №4.
       </div>
     </div>
+
   </section>
 </main>
 
 <script>
 (function(){
-  const p = new URLSearchParams(location.search);
-  const zone  = (p.get("zone")  || "").toUpperCase();
-  const compId= p.get("compId") || "";
-  const stageId= p.get("stageId") || "";
-  const t     = p.get("t") || "";
+  "use strict";
+
+  const LS_KEY = "sc_judge_bind_v1";
 
   const zoneTitle = document.getElementById("zoneTitle");
-  const info = document.getElementById("info");
-  const msg  = document.getElementById("msg");
+  const statusEl  = document.getElementById("status");
+  const bindInfo  = document.getElementById("bindInfo");
+  const msgEl     = document.getElementById("msg");
 
-  zoneTitle.textContent = zone ? `Зона ${zone}` : `Зона —`;
-  info.textContent = `compId: ${compId} | stageId: ${stageId || "—"} | token: ${t || "—"}`;
+  const btnOpen   = document.getElementById("btnOpen");
+  const btnReset  = document.getElementById("btnReset");
+  const btnSaveHint = document.getElementById("btnSaveHint");
 
-  // Далі тут буде перевірка token/доступу і завантаження команд з Firestore
-  msg.textContent = zone && compId && t ? "✅ QR параметри отримано. Можна працювати." : "❌ Неповний QR / параметри.";
+  function setMsg(t, ok=true){
+    msgEl.textContent = t || "";
+    msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
+  }
+
+  function norm(v){ return String(v ?? "").trim(); }
+
+  function readBind(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch{
+      return null;
+    }
+  }
+
+  function writeBind(data){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+      return true;
+    }catch{
+      return false;
+    }
+  }
+
+  function clearBind(){
+    try{ localStorage.removeItem(LS_KEY); }catch{}
+  }
+
+  function currentParams(){
+    const p = new URLSearchParams(location.search);
+    const zone   = norm((p.get("zone")||"").toUpperCase());
+    const compId = norm(p.get("compId")||"");
+    const stageId= norm(p.get("stageId")||"");
+    const token  = norm(p.get("t")||"");
+    return { zone, compId, stageId, token };
+  }
+
+  function buildUrlFromBind(b){
+    const p = new URLSearchParams();
+    p.set("zone", b.zone);
+    p.set("compId", b.compId);
+    if (b.stageId) p.set("stageId", b.stageId);
+    p.set("t", b.token);
+    return location.origin + location.pathname + "?" + p.toString();
+  }
+
+  function renderState(){
+    const bind = readBind();
+    if (!bind){
+      zoneTitle.textContent = "Зона —";
+      statusEl.textContent = "❗ Нема прив’язки. Відкрий QR/лінк від адміна один раз — і зона збережеться.";
+      bindInfo.textContent = "—";
+      return;
+    }
+    zoneTitle.textContent = `Зона ${bind.zone}`;
+    statusEl.textContent = "✅ Прив’язка зони збережена на цьому телефоні.";
+    bindInfo.textContent = `zone=${bind.zone} | compId=${bind.compId} | stageId=${bind.stageId || "—"} | token=${bind.token}`;
+  }
+
+  // 1) Якщо прийшли параметри з QR/лінка — зберігаємо як прив’язку
+  const p = currentParams();
+  if (p.zone && p.compId && p.token){
+    const ok = writeBind({
+      zone: p.zone,
+      compId: p.compId,
+      stageId: p.stageId || "",
+      token: p.token,
+      savedAt: Date.now()
+    });
+    if (ok){
+      setMsg("✅ Зона збережена. Тепер можна просто відкривати цю сторінку — вона пам’ятає.", true);
+
+      // ПРИБИРАЄМО параметри з адреси (щоб випадково не губилися/не плутались)
+      // і щоб виглядало “чисто”
+      history.replaceState({}, "", location.pathname);
+    }else{
+      setMsg("⚠️ Не вдалося зберегти (браузер блокує сховище).", false);
+    }
+  }
+
+  renderState();
+
+  btnOpen.onclick = ()=>{
+    const bind = readBind();
+    if (!bind) return setMsg("Нема прив’язки. Спочатку відкрий QR/лінк від адміна.", false);
+    // Тут пізніше буде реальний перехід на сторінку зважування/екран з даними.
+    // Поки просто покажемо посилання, яке відкриває “його” зону.
+    const url = buildUrlFromBind(bind);
+    setMsg("✅ Відкриваю твою зону…", true);
+    location.href = url;
+  };
+
+  btnReset.onclick = ()=>{
+    if (!confirm("Скинути прив’язку зони на цьому телефоні?")) return;
+    clearBind();
+    renderState();
+    setMsg("✅ Прив’язку скинуто. Тепер треба знов 1 раз зайти по QR/лінку.", true);
+  };
+
+  btnSaveHint.onclick = ()=>{
+    setMsg(
+      "📌 Щоб було ідеально: у Chrome натисни ⋮ → “Додати на головний екран”. Тоді зона відкривається одним тапом.",
+      true
+    );
+  };
+
 })();
 </script>
+
 </body>
 </html>

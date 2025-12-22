@@ -1,6 +1,7 @@
 // assets/js/register_firebase.js
 // STOLAR CARP • Registration
-// Team vs Solo (STALKER) + anti-duplicate (1 заявку на 1 етап)
+// ✅ Team vs Solo + anti-duplicate (1 заявка на 1 етап)
+// ✅ FIX: no pre-read of /registrations (rules deny read). Use docRef.create().
 
 (function () {
   const auth = window.scAuth;
@@ -87,7 +88,6 @@
   }
 
   function entryTypeFromEvent(ev, comp) {
-    // нове поле: entryType: "team" | "solo"
     const t = String(ev?.entryType || comp?.entryType || "team").toLowerCase();
     return (t === "solo") ? "solo" : "team";
   }
@@ -142,7 +142,7 @@
     submitBtn.disabled = !ok;
   }
 
-  // копіювання карти
+  // copy card
   if (copyCardBtn && cardNumEl) {
     copyCardBtn.addEventListener("click", async () => {
       try {
@@ -232,7 +232,7 @@
               ev.title || ev.name || ev.label ||
               (isFinal ? "Фінал" : `Етап ${idx + 1}`);
 
-            const entryType = entryTypeFromEvent(ev, c); // team/solo
+            const entryType = entryTypeFromEvent(ev, c);
 
             items.push({
               compId,
@@ -241,7 +241,7 @@
               compTitle: title,
               stageKey: String(key),
               stageTitle,
-              entryType, // ✅ важливо
+              entryType,
 
               startAt: toDateMaybe(startAt),
               endAt: toDateMaybe(endAt),
@@ -253,7 +253,6 @@
             });
           });
         } else {
-          // одноразове без events[]
           const startAt = toDateMaybe(c.startAt || c.startDate);
           const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
 
@@ -345,9 +344,7 @@
 
   document.addEventListener("change", (e) => {
     if (!e.target) return;
-    if (e.target.name === "stagePick" || e.target.id === "rules") {
-      refreshSubmitState();
-    }
+    if (e.target.name === "stagePick" || e.target.id === "rules") refreshSubmitState();
   });
 
   auth.onAuthStateChanged(async (user) => {
@@ -375,17 +372,9 @@
   });
 
   function buildRegDocId({ competitionId, stageId, entryType }) {
-    if (entryType === "solo") {
-      return `${competitionId}__${stageId || "main"}__solo__${profile.uid}`;
-    }
-    // team
-    return `${competitionId}__${stageId || "main"}__team__${profile.teamId}`;
-  }
-
-  async function ensureNotDuplicate(docId) {
-    const ref = db.collection("registrations").doc(docId);
-    const snap = await ref.get();
-    return { ref, exists: snap.exists, data: snap.exists ? (snap.data() || {}) : null };
+    const st = stageId || "main";
+    if (entryType === "solo") return `${competitionId}__${st}__solo__${profile.uid}`;
+    return `${competitionId}__${st}__team__${profile.teamId}`;
   }
 
   if (form) {
@@ -439,70 +428,59 @@
       const [competitionId, stageKeyRaw] = selectedValue.split("||");
       const stageId = (stageKeyRaw || "").trim() || null;
 
-      // ✅ TEAM vs SOLO вимоги
       const entryType = selectedItem.entryType || "team";
       if (entryType === "team" && !profile.teamId) {
         setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Акаунт»).", false);
         return;
       }
 
+      const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
       const docId = buildRegDocId({ competitionId, stageId, entryType });
+      const ref = db.collection("registrations").doc(docId);
+
+      const payload = {
+        uid: profile.uid,
+        competitionId,
+        stageId,
+        entryType, // "team" | "solo"
+
+        teamId: entryType === "team" ? profile.teamId : null,
+        teamName: entryType === "team" ? profile.teamName : null,
+
+        participantName: entryType === "solo" ? participantName : null,
+
+        captain: entryType === "team" ? profile.captain : participantName,
+        phone: profile.phone || "",
+
+        food,
+        foodQty: foodQty ?? null,
+
+        status: "pending_payment",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
 
       try {
         setLoading(true);
         setMsg("");
 
-        // ✅ антидубль
-        const { ref, exists, data } = await ensureNotDuplicate(docId);
-        if (exists) {
-          const st = data.status || "pending_payment";
-          const human =
-            st === "confirmed" ? "вже підтверджена" :
-            st === "cancelled" ? "була скасована" :
-            "вже подана";
-          setMsg(`Ваша заявка на цей етап ${human}. Дубль не дозволено ✅`, false);
-          return;
-        }
-
-        const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
-
-        const payload = {
-          uid: profile.uid,
-          competitionId,
-          stageId,
-          entryType, // "team"|"solo"
-
-          // TEAM
-          teamId: entryType === "team" ? profile.teamId : null,
-          teamName: entryType === "team" ? profile.teamName : null,
-
-          // SOLO
-          participantName: entryType === "solo" ? participantName : null,
-
-          captain: entryType === "team" ? profile.captain : participantName,
-          phone: profile.phone || "",
-
-          food,
-          foodQty: foodQty ?? null,
-
-          status: "pending_payment",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        // ✅ фіксований docId => не дає створити дубль
-        await ref.set(payload, { merge: false });
+        // ✅ ключова правка: create() без pre-read
+        await ref.create(payload);
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
         form.reset();
         initFoodLogic();
       } catch (err) {
         console.error("submit error:", err);
-        // якщо раптом merge:false впав на дубль (гонка)
-        const msg = String(err?.message || "");
-        if (msg.toLowerCase().includes("already exists")) {
-          setMsg("Ви вже подали заявку на цей етап ✅", false);
+
+        const code = String(err?.code || "").toLowerCase();
+        const msg  = String(err?.message || "").toLowerCase();
+
+        if (code.includes("already") || msg.includes("already") || msg.includes("exists")) {
+          setMsg("Ви вже подали заявку на цей етап ✅ Дубль не дозволено.", false);
+        } else if (code.includes("permission") || msg.includes("permission")) {
+          setMsg("Нема доступу. Перевір: ви залогінені, є профіль users/{uid}, і для TEAM є teamId.", false);
         } else {
-          setMsg("Помилка відправки заявки (Rules/доступ).", false);
+          setMsg("Помилка відправки заявки. Перевір консоль.", false);
         }
       } finally {
         setLoading(false);

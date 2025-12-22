@@ -1,8 +1,6 @@
 // assets/js/register_firebase.js
 // STOLAR CARP • Registration
-// competitions + events[] → cards with lamp status (red/yellow/green)
-// Shows: title + start/finish dates. No "closed/active" text. No reg open/close dates.
-// Submit enabled ONLY when a GREEN (open) stage selected + rules checkbox checked.
+// Team vs Solo (STALKER) + anti-duplicate (1 заявку на 1 етап)
 
 (function () {
   const auth = window.scAuth;
@@ -31,9 +29,8 @@
   let currentUser = null;
   let profile = null;
 
-  // cache last rendered items
   let lastItems = [];
-  let nearestUpcomingValue = null; // `${compId}||${stageKey}` для ЖОВТОЇ лампи
+  let nearestUpcomingValue = null;
 
   function escapeHtml(s) {
     return String(s || "")
@@ -68,13 +65,12 @@
         const d = new Date(x);
         return isFinite(d.getTime()) ? d : null;
       }
-      if (x && typeof x.toDate === "function") return x.toDate(); // Firestore Timestamp
+      if (x && typeof x.toDate === "function") return x.toDate();
     } catch {}
     return null;
   }
 
   function nowKyiv() {
-    // ти виставляєш дати як "12:00 Київ", локального now() достатньо
     return new Date();
   }
 
@@ -90,6 +86,12 @@
     return { startAt: start, endAt: finish };
   }
 
+  function entryTypeFromEvent(ev, comp) {
+    // нове поле: entryType: "team" | "solo"
+    const t = String(ev?.entryType || comp?.entryType || "team").toLowerCase();
+    return (t === "solo") ? "solo" : "team";
+  }
+
   function isOpenWindow(item) {
     const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
@@ -102,17 +104,8 @@
     return n >= openAt && n <= closeAt;
   }
 
-  function isUpcoming(item) {
-    // true якщо реєстрація ще не відкрилась, але є regOpenAt в майбутньому (auto)
-    const mode = String(item.regMode || "auto").toLowerCase();
-    if (mode === "manual") return false;
-    const openAt = toDateMaybe(item.regOpenAt);
-    if (!openAt) return false;
-    return openAt > nowKyiv();
-  }
-
   function calcNearestUpcoming(items) {
-    let best = null; // { value, openAt }
+    let best = null;
     items.forEach(it => {
       const mode = String(it.regMode || "auto").toLowerCase();
       if (mode === "manual") return;
@@ -135,15 +128,11 @@
     if (!submitBtn) return;
 
     const loading = spinnerEl && spinnerEl.classList.contains("spinner--on");
-    if (loading) {
-      submitBtn.disabled = true;
-      return;
-    }
+    if (loading) { submitBtn.disabled = true; return; }
 
     const picked = document.querySelector('input[name="stagePick"]:checked');
     const rulesOk = rulesChk ? !!rulesChk.checked : true;
 
-    // можна подати тільки коли вибраний ВІДКРИТИЙ (зелений) етап
     const selectedValue = picked ? String(picked.value) : "";
     const selectedItem = selectedValue
       ? lastItems.find(x => `${x.compId}||${x.stageKey || ""}` === selectedValue)
@@ -198,16 +187,17 @@
     profile = {
       uid: user.uid,
       email: user.email || "",
+      fullName: (u.fullName || "").trim(),
       teamId,
       teamName: teamName || "Без назви",
-      captain: u.fullName || user.email || "",
-      phone: u.phone || ""
+      captain: (u.fullName || user.email || "").trim(),
+      phone: (u.phone || "").trim()
     };
 
     if (profileSummary) {
       profileSummary.innerHTML =
-        `Команда: <b>${escapeHtml(profile.teamName)}</b><br>` +
-        `Капітан: <b>${escapeHtml(profile.captain)}</b><br>` +
+        `Команда: <b>${escapeHtml(profile.teamId ? profile.teamName : "— (нема команди)")}</b><br>` +
+        `Користувач: <b>${escapeHtml(profile.fullName || profile.email || "—")}</b><br>` +
         `Телефон: <b>${escapeHtml(profile.phone || "не вказано")}</b>`;
     }
   }
@@ -242,13 +232,16 @@
               ev.title || ev.name || ev.label ||
               (isFinal ? "Фінал" : `Етап ${idx + 1}`);
 
+            const entryType = entryTypeFromEvent(ev, c); // team/solo
+
             items.push({
               compId,
               brand,
               year,
               compTitle: title,
-              stageKey: key,
+              stageKey: String(key),
               stageTitle,
+              entryType, // ✅ важливо
 
               startAt: toDateMaybe(startAt),
               endAt: toDateMaybe(endAt),
@@ -260,13 +253,9 @@
             });
           });
         } else {
-          // одноразове змагання без events[]
+          // одноразове без events[]
           const startAt = toDateMaybe(c.startAt || c.startDate);
           const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
-          const { regOpenAt, regCloseAt } = {
-            regOpenAt: c.regOpenAt || c.regOpenDate || null,
-            regCloseAt: c.regCloseAt || c.regCloseDate || null
-          };
 
           items.push({
             compId,
@@ -275,19 +264,19 @@
             compTitle: title,
             stageKey: null,
             stageTitle: null,
+            entryType: String(c.entryType || "team").toLowerCase() === "solo" ? "solo" : "team",
 
             startAt,
             endAt,
 
             regMode: c.regMode || "auto",
             manualOpen: !!c.manualOpen,
-            regOpenAt,
-            regCloseAt
+            regOpenAt: c.regOpenAt || c.regOpenDate || null,
+            regCloseAt: c.regCloseAt || c.regCloseDate || null
           });
         }
       });
 
-      // сортування за датою старту (щоб логічно)
       items.sort((a, b) => {
         const ad = a.startAt ? a.startAt.getTime() : 0;
         const bd = b.startAt ? b.startAt.getTime() : 0;
@@ -321,18 +310,19 @@
       const value = `${it.compId}||${it.stageKey || ""}`;
       const lamp = lampClassFor(it, value);
 
+      const typeBadge = it.entryType === "solo" ? "SOLO" : "TEAM";
+
       const titleText =
         `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
-        (it.stageTitle ? ` — ${it.stageTitle}` : "");
+        (it.stageTitle ? ` — ${it.stageTitle}` : "") +
+        ` · ${typeBadge}`;
 
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
 
-      // label щоб по кліку вибирався radio
       const label = document.createElement("label");
       label.className = "stage-card";
       label.setAttribute("role", "button");
 
-      // якщо не open — робимо як “приглушену” картку
       if (!open) {
         label.style.opacity = "0.65";
         label.style.filter = "saturate(.9)";
@@ -353,7 +343,6 @@
     });
   }
 
-  // react on selection + rules checkbox
   document.addEventListener("change", (e) => {
     if (!e.target) return;
     if (e.target.name === "stagePick" || e.target.id === "rules") {
@@ -384,6 +373,20 @@
       setMsg(e.message || "Помилка профілю.", false);
     }
   });
+
+  function buildRegDocId({ competitionId, stageId, entryType }) {
+    if (entryType === "solo") {
+      return `${competitionId}__${stageId || "main"}__solo__${profile.uid}`;
+    }
+    // team
+    return `${competitionId}__${stageId || "main"}__team__${profile.teamId}`;
+  }
+
+  async function ensureNotDuplicate(docId) {
+    const ref = db.collection("registrations").doc(docId);
+    const snap = await ref.get();
+    return { ref, exists: snap.exists, data: snap.exists ? (snap.data() || {}) : null };
+  }
 
   if (form) {
     form.addEventListener("submit", async (e) => {
@@ -436,77 +439,71 @@
       const [competitionId, stageKeyRaw] = selectedValue.split("||");
       const stageId = (stageKeyRaw || "").trim() || null;
 
+      // ✅ TEAM vs SOLO вимоги
+      const entryType = selectedItem.entryType || "team";
+      if (entryType === "team" && !profile.teamId) {
+        setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Акаунт»).", false);
+        return;
+      }
+
+      const docId = buildRegDocId({ competitionId, stageId, entryType });
+
       try {
         setLoading(true);
         setMsg("");
 
-        // визначаємо чи це "Сталкер"
-        const isStalker =
-          /сталкер/i.test(selectedItem.compTitle || "") ||
-          /сталкер/i.test(selectedItem.stageTitle || "") ||
-          /stalker/i.test(selectedItem.compId || "");
-
-        // ключ унікальності:
-        // - звичайні: teamId
-        // - сталкер: uid (кожен учасник окремо)
-        const uniqKey = isStalker ? profile.uid : (profile.teamId || "no_team");
-
-        if (!uniqKey || uniqKey === "no_team") {
-          throw new Error("Нема teamId. Зайдіть в «Акаунт» і приєднайтесь до команди.");
+        // ✅ антидубль
+        const { ref, exists, data } = await ensureNotDuplicate(docId);
+        if (exists) {
+          const st = data.status || "pending_payment";
+          const human =
+            st === "confirmed" ? "вже підтверджена" :
+            st === "cancelled" ? "була скасована" :
+            "вже подана";
+          setMsg(`Ваша заявка на цей етап ${human}. Дубль не дозволено ✅`, false);
+          return;
         }
 
-        const stageSafe = stageId || "main";
-        const regDocId = `${competitionId}__${stageSafe}__${uniqKey}`;
-        const regRef = db.collection("registrations").doc(regDocId);
+        const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
 
-        // атомарно: якщо документ вже є — не створюємо
-        await db.runTransaction(async (tx) => {
-          const snap = await tx.get(regRef);
-          if (snap.exists) {
-            const d = snap.data() || {};
-            // якщо існує і НЕ скасовано — забороняємо повтор
-            if (d.status !== "cancelled") {
-              throw new Error(
-                isStalker
-                  ? "Ви вже подали заявку на цей етап (Сталкер)."
-                  : "Ваша команда вже подала заявку на цей етап."
-              );
-            }
-          }
+        const payload = {
+          uid: profile.uid,
+          competitionId,
+          stageId,
+          entryType, // "team"|"solo"
 
-          tx.set(regRef, {
-            uid: profile.uid,
+          // TEAM
+          teamId: entryType === "team" ? profile.teamId : null,
+          teamName: entryType === "team" ? profile.teamName : null,
 
-            competitionId,
-            stageId,
+          // SOLO
+          participantName: entryType === "solo" ? participantName : null,
 
-            teamId: profile.teamId,
-            teamName: profile.teamName,
-            captain: profile.captain,
-            phone: profile.phone,
+          captain: entryType === "team" ? profile.captain : participantName,
+          phone: profile.phone || "",
 
-            food,
-            foodQty: foodQty ?? null,
+          food,
+          foodQty: foodQty ?? null,
 
-            // статуси як у тебе
-            status: "pending_payment",
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          status: "pending_payment",
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
 
-            // службове
-            isStalker: !!isStalker,
-            uniqKey
-          });
-        });
+        // ✅ фіксований docId => не дає створити дубль
+        await ref.set(payload, { merge: false });
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
         form.reset();
         initFoodLogic();
       } catch (err) {
         console.error("submit error:", err);
-
-        // якщо це наше повідомлення (дубль) — показуємо як є
-        const t = err?.message || "Помилка відправки заявки (Rules/доступ).";
-        setMsg(t, false);
+        // якщо раптом merge:false впав на дубль (гонка)
+        const msg = String(err?.message || "");
+        if (msg.toLowerCase().includes("already exists")) {
+          setMsg("Ви вже подали заявку на цей етап ✅", false);
+        } else {
+          setMsg("Помилка відправки заявки (Rules/доступ).", false);
+        }
       } finally {
         setLoading(false);
       }

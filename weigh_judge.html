@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STOLAR CARP • Суддя</title>
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <style>
+    body{ background:#020617; }
+    .wrap{ max-width:860px; margin:0 auto; padding:20px 0 80px; }
+    .card{
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.3);
+      border-radius:16px;
+      padding:16px;
+      margin-bottom:12px;
+    }
+    .muted{ color:#9ca3af; }
+    .big{ font-size:1.4rem; font-weight:900; }
+  </style>
+</head>
+<body>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+  </div>
+</header>
+
+<main class="main">
+  <section class="section container wrap">
+    <div class="card">
+      <div class="big" id="zoneTitle">Зона —</div>
+      <div class="muted" id="info"></div>
+      <div class="muted" id="msg" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;margin-bottom:8px;">Далі тут буде “Зважування”</div>
+      <div class="muted">
+        Ми підв’яжемо: список команд по зоні → внесення ваг → підтвердження командою → “Закрити зважування №1” → автоматично №2…
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const p = new URLSearchParams(location.search);
+  const zone  = (p.get("zone")  || "").toUpperCase();
+  const compId= p.get("compId") || "";
+  const stageId= p.get("stageId") || "";
+  const t     = p.get("t") || "";
+
+  const zoneTitle = document.getElementById("zoneTitle");
+  const info = document.getElementById("info");
+  const msg  = document.getElementById("msg");
+
+  zoneTitle.textContent = zone ? `Зона ${zone}` : `Зона —`;
+  info.textContent = `compId: ${compId} | stageId: ${stageId || "—"} | token: ${t || "—"}`;
+
+  // Далі тут буде перевірка token/доступу і завантаження команд з Firestore
+  msg.textContent = zone && compId && t ? "✅ QR параметри отримано. Можна працювати." : "❌ Неповний QR / параметри.";
+})();
+</script>
+</body>
+</html>

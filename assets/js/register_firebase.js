@@ -1,7 +1,10 @@
 // assets/js/register_firebase.js
 // STOLAR CARP • Registration
-// ✅ Team vs Solo + anti-duplicate (1 заявка на 1 етап)
-// ✅ FIX: no pre-read of /registrations (rules deny read). Use docRef.create().
+// ✅ Team vs Solo
+// ✅ Anti-duplicate via deterministic docId (duplicate becomes UPDATE -> denied by rules)
+// ✅ Better error diagnostics (shows err.code + err.message)
+// ✅ Payload строго під rules: uid==auth.uid, entryType, teamId==users.teamId for TEAM
+// ✅ No undefined fields (uses null)
 
 (function () {
   const auth = window.scAuth;
@@ -189,9 +192,9 @@
       email: user.email || "",
       fullName: (u.fullName || "").trim(),
       teamId,
-      teamName: teamName || "Без назви",
+      teamName: (teamName || "Без назви").trim(),
       captain: (u.fullName || user.email || "").trim(),
-      phone: (u.phone || "").trim()
+      phone: (u.phone || "").trim(),
     };
 
     if (profileSummary) {
@@ -429,19 +432,30 @@
       const stageId = (stageKeyRaw || "").trim() || null;
 
       const entryType = selectedItem.entryType || "team";
-      if (entryType === "team" && !profile.teamId) {
-        setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Акаунт»).", false);
-        return;
+
+      // TEAM вимога під rules
+      if (entryType === "team") {
+        if (!profile.teamId) {
+          setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Акаунт»).", false);
+          return;
+        }
+        if (!profile.teamName) {
+          setMsg("Не знайдено назву команди. Перевір teams/{teamId}.name", false);
+          return;
+        }
       }
 
+      // SOLO ім'я
       const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
+
       const docId = buildRegDocId({ competitionId, stageId, entryType });
       const ref = db.collection("registrations").doc(docId);
 
+      // ВАЖЛИВО: не відправляємо undefined — тільки null/""
       const payload = {
         uid: profile.uid,
         competitionId,
-        stageId,
+        stageId: stageId || null,
         entryType, // "team" | "solo"
 
         teamId: entryType === "team" ? profile.teamId : null,
@@ -453,7 +467,7 @@
         phone: profile.phone || "",
 
         food,
-        foodQty: foodQty ?? null,
+        foodQty: foodQty === null ? null : Number(foodQty),
 
         status: "pending_payment",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -463,8 +477,10 @@
         setLoading(true);
         setMsg("");
 
-        // ✅ ключова правка: create() без pre-read
-        await ref.create(payload);
+        // ✅ Працює з твоїми rules:
+        // - 1-й раз: це CREATE -> дозволено
+        // - 2-й раз: це UPDATE -> заборонено (і це і є "антидубль")
+        await ref.set(payload, { merge: false });
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
         form.reset();
@@ -472,15 +488,24 @@
       } catch (err) {
         console.error("submit error:", err);
 
-        const code = String(err?.code || "").toLowerCase();
-        const msg  = String(err?.message || "").toLowerCase();
+        const code = String(err?.code || "");
+        const message = String(err?.message || "");
 
-        if (code.includes("already") || msg.includes("already") || msg.includes("exists")) {
-          setMsg("Ви вже подали заявку на цей етап ✅ Дубль не дозволено.", false);
-        } else if (code.includes("permission") || msg.includes("permission")) {
-          setMsg("Нема доступу. Перевір: ви залогінені, є профіль users/{uid}, і для TEAM є teamId.", false);
+        // Показуємо реальну причину (це критично, щоб не гадати)
+        console.warn("REG SUBMIT FAIL:", { code, message, payload, docId });
+
+        // Найчастіше:
+        // 1) Дубль: документ вже існує -> set стає UPDATE -> rules блокує -> permission-denied
+        // 2) TEAM: teamId у payload не дорівнює users/{uid}.teamId -> rules блокує -> permission-denied
+        if (String(code).toLowerCase().includes("permission")) {
+          setMsg(
+            "Нема доступу (permission-denied). " +
+            "99% це або ДУБЛЬ (заявка вже існує), або teamId в заявці ≠ teamId у users/{uid}. " +
+            "Відкрий консоль — там є код/текст помилки.",
+            false
+          );
         } else {
-          setMsg("Помилка відправки заявки. Перевір консоль.", false);
+          setMsg(`Помилка відправки заявки. Перевір консоль. (${code || "no-code"})`, false);
         }
       } finally {
         setLoading(false);

@@ -1,9 +1,10 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
-// ✅ читає тільки settings/app + stageResults/{docId}
-// ✅ показує зони A/B/C + загальну таблицю
-// ✅ формат зон як у старому протоколі: Місце / Команда / Сектор / 1..4 / BIG-FISH / Загальна вага
-// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах з W="—"
+// ✅ читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
+// ✅ ніяких weighings для публіки — тільки агреговані результати
+// ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть/вага), Разом, BIG
+// ✅ оновлює плашку "Оновлено: ..."
+// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах (з сектором) з W = "—"
 
 (function () {
   "use strict";
@@ -46,22 +47,36 @@
     }
   };
 
-  // W formatting: {count, weight} => "к-сть – вага"
+  // W formatting: {count, weight} => "к-сть / кг"
   function fmtW(w) {
     if (!w) return "—";
-    const c  = w.count ?? w.c ?? w.qty ?? "";
-    const kg = w.weight ?? w.kg ?? w.w ?? "";
+    const c  = w.count  ?? w.c   ?? w.qty ?? "";
+    const kg = w.weight ?? w.kg  ?? w.w   ?? "";
     if (c === "" && kg === "") return "—";
-    return `${fmt(c)} – ${fmt(kg)}`;
+    return `${fmt(c)} / ${fmt(kg)}`;
   }
 
   // Нормалізуємо 1 рядок (і для зони, і для total)
   function normZoneItem(x) {
+    const drawKey = (x.drawKey || x.sectorKey || "").toString().toUpperCase();
+
+    // зона
+    const zoneRaw = x.zone || x.drawZone || (drawKey ? drawKey[0] : "") || "";
+    const zone = zoneRaw ? String(zoneRaw).toUpperCase() : "";
+
+    // сектор
+    let sector = x.sector ?? x.drawSector ?? null;
+    if (!sector && drawKey) {
+      const m = drawKey.match(/[A-C](\d+)/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (Number.isFinite(n)) sector = n;
+      }
+    }
+
     return {
       place:  x.place ?? x.p ?? "—",
       team:   x.team ?? x.teamName ?? "—",
-
-      sector: x.sector ?? x.drawSector ?? x.sectorNum ?? null,
 
       w1: x.w1 ?? x.W1 ?? null,
       w2: x.w2 ?? x.W2 ?? null,
@@ -73,11 +88,12 @@
       big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
       weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
 
-      zone: x.zone ?? x.drawZone ?? ""
+      zone,
+      sector
     };
   }
 
-  // ------------ ЗОНИ A/B/C -------------
+  // --- ЗОНИ A/B/C ---
   function renderZones(zones) {
     const zoneNames = ["A", "B", "C"];
 
@@ -106,6 +122,7 @@
           <td>${fmtW(row.w2)}</td>
           <td>${fmtW(row.w3)}</td>
           <td>${fmtW(row.w4)}</td>
+          <td>${fmtW(row.total)}</td>
           <td>${fmt(row.big)}</td>
           <td>${fmt(row.weight)}</td>
         </tr>
@@ -121,15 +138,16 @@
             <table class="table table-sm">
               <thead>
                 <tr>
-                  <th>Місце</th>
+                  <th>№</th>
                   <th>Команда</th>
                   <th>Сектор</th>
-                  <th>1</th>
-                  <th>2</th>
-                  <th>3</th>
-                  <th>4</th>
-                  <th>BIG-FISH</th>
-                  <th>Загальна вага</th>
+                  <th>W1</th>
+                  <th>W2</th>
+                  <th>W3</th>
+                  <th>W4</th>
+                  <th>Разом</th>
+                  <th>BIG</th>
+                  <th>Вага</th>
                 </tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
@@ -140,7 +158,7 @@
     }).join("");
   }
 
-  // ------------ ЗАГАЛЬНА ТАБЛИЦЯ -------------
+  // --- ЗАГАЛЬНА ТАБЛИЦЯ ---
   function renderTotal(total) {
     const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
 
@@ -211,16 +229,24 @@
 
     teams.forEach((t) => {
       const drawKey = (t.drawKey || t.sector || "").toString().toUpperCase();
-      const zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
+
+      let zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
       if (!["A","B","C"].includes(zone)) return;
 
-      const sectorNum = t.drawSector ?? t.sectorNum ?? parseInt(drawKey.slice(1), 10) || null;
+      let sector = t.drawSector ?? t.sector ?? null;
+      if (!sector && drawKey) {
+        const m = drawKey.match(/[A-C](\d+)/i);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (Number.isFinite(n)) sector = n;
+        }
+      }
 
       const base = {
         place: "—",
         team: t.teamName || t.team || "—",
         zone,
-        sector: sectorNum,
+        sector,
         w1: null,
         w2: null,
         w3: null,

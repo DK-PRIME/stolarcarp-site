@@ -1,8 +1,8 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
 // ✅ супер швидко: читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
-// ✅ ніяких weighings для публіки (rules не пускають) — тільки агреговані результати
-// ✅ відображає: зони A/B/C + загальна таблиця W1..W4 (к-сть/вага), Разом, BIG
+// ✅ ніяких weighings для публіки — тільки агреговані результати
+// ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть/вага), Разом, BIG
 // ✅ оновлює плашку "Оновлено: ..."
 
 (function () {
@@ -69,7 +69,6 @@
       total: x.total ?? x.sum ?? null,
 
       big:   x.big ?? x.BIG ?? x.bigFish ?? "—",
-      // для таблиці зон окремо можемо взяти чисту вагу, якщо вона є
       weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
 
       zone: x.zone ?? x.drawZone ?? ""
@@ -180,23 +179,18 @@
     }
   }
 
-  // Та сама логіка docId, що в bigfish_total_live.js:
+  // === головна домовленість ===
   // settings/app.activeKey = "compId||stageKey"
-  // -> stageResults документ: "compId__stageKey" (подвійне підкреслення)
+  // stageResults документ має МАти той самий id: "compId||stageKey"
   function stageDocIdFromApp(app) {
-    const keyRaw = app?.activeKey || app?.activeStageKey || "";
-    if (keyRaw) {
-      const [compId, stageKeyRaw] = String(keyRaw).split("||");
-      const comp  = (compId || "").trim();
-      const stage = (stageKeyRaw || "").trim();
-      if (!comp) return "";
-      return stage ? `${comp}__${stage}` : `${comp}__main`;
-    }
+    const key = app?.activeKey || app?.activeStageKey;
+    if (key) return String(key);
 
-    const compId  = (app?.activeCompetitionId || app?.competitionId || "").trim();
-    const stageId = (app?.activeStageId || app?.stageId || "").trim();
-    if (!compId) return "";
-    return stageId ? `${compId}__${stageId}` : `${compId}__main`;
+    const compId  = app?.activeCompetitionId || app?.competitionId || "";
+    const stageId = app?.activeStageId || app?.stageId || "";
+    if (compId && stageId) return `${compId}||${stageId}`;
+    if (compId && !stageId) return `${compId}||main`;
+    return "";
   }
 
   function startStageSub(docId) {
@@ -218,7 +212,6 @@
 
         const data = snap.data() || {};
 
-        // { stageName, zones:{A:[],B:[],C:[]}, total:[], updatedAt }
         const stageName = data.stageName || data.stage || data.title || docId;
         if (stageEl) stageEl.textContent = stageName;
 

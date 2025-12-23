@@ -7,6 +7,7 @@
 // ✅ keeps selected stage (localStorage restore)
 // ✅ after save -> сортую по зонах/секторах
 // ✅ після кожного збереження оновлює stageResults/{activeKey} (teams + bigFishTotal)
+// ✅ і виставляє settings/app.activeKey, щоб Live знав, який етап активний
 
 (function () {
   "use strict";
@@ -364,7 +365,7 @@
     else btn.textContent = "💾";
   }
 
-  // === ПУБЛІКАЦІЯ В stageResults (LIVE) ===
+  // === ПУБЛІКАЦІЯ В stageResults (LIVE) + settings/app ===
   async function publishStageResultsTeams() {
     if (!isAdmin) return;
 
@@ -403,14 +404,21 @@
 
     const stageName = stageNameByKey.get(selVal) || "";
 
+    // 1) stageResults для live + BigFish
     await db.collection("stageResults").doc(docId).set({
       stageName,
       updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
       teams,
       bigFishTotal,
-      // на всяк випадок — пусті структури для live_firebase
       zones: { A: [], B: [], C: [] },
       total: []
+    }, { merge: true });
+
+    // 2) activeKey для live_firebase/bigfish_total_live
+    await db.collection("settings").doc("app").set({
+      activeKey: docId,
+      activeCompetitionId: compId,
+      activeStageId: stageKey || null
     }, { merge: true });
 
     setMsg("✅ Live оновлено", true);

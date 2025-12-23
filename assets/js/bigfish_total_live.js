@@ -1,11 +1,7 @@
 // assets/js/bigfish_total_live.js
 // STOLAR CARP • BigFish Total (public)
-// ✅ одна відповідальність: toggle + підписка на stageResults
-// ✅ читає активний етап із settings/app (activeKey = "compId||stageKey")
-// ✅ ID документа stageResults: "compId__stageKey" (подвійне підкреслення)
-// ✅ показує:
-//    - якщо є stageResults.bigFishTotal → повноцінні результати (1 доба / 2 доба / MAX)
-//    - якщо bigFishTotal ще нема, але є teams[].bigFishTotal == true → список учасників з прочерками
+// ✅ одна відповідальність: кнопка BigFish Total + читання bigFishTotal з stageResults/{activeKey}
+// ✅ читає той самий stageResults, що й live_firebase.js
 
 (function () {
   "use strict";
@@ -13,17 +9,17 @@
   const db = window.scDb;
   if (!db) return;
 
-  const btn     = document.getElementById("toggleBigFishBtn");
-  const wrap    = document.getElementById("bigFishWrap");
-  const tbody   = document.querySelector("#bigFishTable tbody");
-  const countEl = document.getElementById("bfCount");
+  const btn      = document.getElementById("toggleBigFishBtn");
+  const wrap     = document.getElementById("bigFishWrap");
+  const tbody    = document.querySelector("#bigFishTable tbody");
+  const countEl  = document.getElementById("bfCount");
 
   if (!btn || !wrap || !tbody) return;
 
   const fmt = (v) =>
     v === null || v === undefined || v === "" ? "—" : String(v);
 
-  let started       = false;
+  let started = false;
   let unsubSettings = null;
   let unsubStage    = null;
 
@@ -34,66 +30,20 @@
     }
   }
 
-  // Той самий формат, що й у live_firebase.js:
-  // settings/app.activeKey = "compId||stageKey" -> stageResults docId = "compId__stageKey"
+  // Та сама домовленість: activeKey == id документа stageResults
   function stageDocIdFromApp(app) {
-    const keyRaw = app?.activeKey || app?.activeStageKey || "";
-    if (keyRaw) {
-      const [compId, stageKeyRaw] = String(keyRaw).split("||");
-      const comp  = (compId || "").trim();
-      const stage = (stageKeyRaw || "").trim();
-      if (!comp) return "";
-      return stage ? `${comp}__${stage}` : `${comp}__main`;
-    }
+    const key = app?.activeKey || app?.activeStageKey;
+    if (key) return String(key);
 
-    const compId  = (app?.activeCompetitionId || app?.competitionId || "").trim();
-    const stageId = (app?.activeStageId || app?.stageId || "").trim();
-    if (!compId) return "";
-    return stageId ? `${compId}__${stageId}` : `${compId}__main`;
+    const compId  = app?.activeCompetitionId || app?.competitionId || "";
+    const stageId = app?.activeStageId || app?.stageId || "";
+    if (compId && stageId) return `${compId}||${stageId}`;
+    if (compId && !stageId) return `${compId}||main`;
+    return "";
   }
 
-  // Нормалізація 1 рядка BigFish
-  function normBigFishRow(row) {
-    const team = row.team || row.teamName || "—";
-
-    const big1 = row.big1Day ?? row.day1 ?? row.bigDay1 ?? "—";
-    const big2 = row.big2Day ?? row.day2 ?? row.bigDay2 ?? "—";
-
-    const max =
-      row.teamMaxBig ??
-      row.maxBig ??
-      row.maxBIG ??
-      row.max ??
-      "—";
-
-    const isMax = !!row.isMax;
-
-    return { team, big1, big2, max, isMax };
-  }
-
-  function render(list, teamsFallback) {
-    let arr = [];
-
-    // 1) Якщо є повноцінний масив bigFishTotal з результатами — використовуємо його
-    if (Array.isArray(list) && list.length) {
-      arr = list.map(normBigFishRow);
-    }
-    // 2) Інакше, якщо є teams[] з жеребкування, показуємо тільки учасників (галочка bigFishTotal)
-    else if (Array.isArray(teamsFallback) && teamsFallback.length) {
-      const participants = teamsFallback.filter(
-        (t) => !!t.bigFishTotal || !!t.bigFish || !!t.bigFishOpt
-      );
-
-      arr = participants.map((t) =>
-        normBigFishRow({
-          team: t.teamName || t.team || "—",
-          big1Day: "—",
-          big2Day: "—",
-          teamMaxBig: "—",
-          isMax: false
-        })
-      );
-    }
+  function render(list) {
+    const arr = Array.isArray(list) ? list : [];
 
     if (countEl) {
       countEl.textContent = `Учасників: ${arr.length || 0}`;
@@ -106,13 +56,19 @@
     }
 
     tbody.innerHTML = arr
-      .map((r) => {
+      .map((row) => {
+        const team  = row.team || row.teamName || "—";
+        const big1  = row.big1Day ?? row.day1 ?? row.bigDay1 ?? "—";
+        const big2  = row.big2Day ?? row.day2 ?? row.bigDay2 ?? "—";
+        const max   = row.maxBig ?? row.max ?? row.maxBIG ?? "—";
+        const isMax = !!row.isMax;
+
         return `
-          <tr class="${r.isMax ? "bigfish-row--max" : ""}">
-            <td>${fmt(r.team)}</td>
-            <td>${fmt(r.big1)}</td>
-            <td>${fmt(r.big2)}</td>
-            <td><strong>${fmt(r.max)}</strong>${r.isMax ? " 🏆" : ""}</td>
+          <tr class="${isMax ? "bigfish-row--max" : ""}">
+            <td>${fmt(team)}</td>
+            <td>${fmt(big1)}</td>
+            <td>${fmt(big2)}</td>
+            <td><strong>${fmt(max)}</strong>${isMax ? " 🏆" : ""}</td>
           </tr>
         `;
       })
@@ -134,7 +90,7 @@
           stopStageSub();
 
           if (!docId) {
-            render([], []);
+            render([]);
             return;
           }
 
@@ -144,30 +100,26 @@
             .onSnapshot(
               (s) => {
                 if (!s.exists) {
-                  render([], []);
+                  render([]);
                   return;
                 }
                 const data = s.data() || {};
-
-                const list  = data.bigFishTotal || data.bigFish || [];
-                const teams = Array.isArray(data.teams) ? data.teams : [];
-
-                render(list, teams);
+                render(data.bigFishTotal || data.bigFish || []);
               },
               (err) => {
                 console.error("[BigFish] stageResults error:", err);
-                render([], []);
+                render([]);
               }
             );
         },
         (err) => {
           console.error("[BigFish] settings/app error:", err);
-          render([], []);
+          render([]);
         }
       );
   }
 
-  // Натискання на кнопку: відкриваємо/ховаємо панель + стартуємо підписку при першому відкритті
+  // Кнопка: відкриваємо панель + при першому відкритті стартуємо підписку
   btn.addEventListener("click", () => {
     wrap.classList.toggle("is-open");
     if (wrap.classList.contains("is-open")) {
@@ -175,7 +127,7 @@
     }
   });
 
-  // Якщо вже відкрито при завантаженні (раптом додаси клас is-open у HTML)
+  // Якщо панель раптом уже відкрита при завантаженні
   if (wrap.classList.contains("is-open")) {
     startSubscribe();
   }

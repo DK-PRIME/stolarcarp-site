@@ -1,10 +1,9 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
-// ✅ супер швидко: читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
-// ✅ ніяких weighings для публіки — тільки агреговані результати
-// ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть/вага), Разом, BIG
-// ✅ оновлює плашку "Оновлено: ..."
-// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах з W = "—"
+// ✅ читає тільки settings/app + stageResults/{docId}
+// ✅ показує зони A/B/C + загальну таблицю
+// ✅ формат зон як у старому протоколі: Місце / Команда / Сектор / 1..4 / BIG-FISH / Загальна вага
+// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах з W="—"
 
 (function () {
   "use strict";
@@ -47,13 +46,13 @@
     }
   };
 
-  // W formatting: {count, weight} => "к-сть / кг"
+  // W formatting: {count, weight} => "к-сть – вага"
   function fmtW(w) {
     if (!w) return "—";
     const c  = w.count ?? w.c ?? w.qty ?? "";
     const kg = w.weight ?? w.kg ?? w.w ?? "";
     if (c === "" && kg === "") return "—";
-    return `${fmt(c)} / ${fmt(kg)}`;
+    return `${fmt(c)} – ${fmt(kg)}`;
   }
 
   // Нормалізуємо 1 рядок (і для зони, і для total)
@@ -61,6 +60,8 @@
     return {
       place:  x.place ?? x.p ?? "—",
       team:   x.team ?? x.teamName ?? "—",
+
+      sector: x.sector ?? x.drawSector ?? x.sectorNum ?? null,
 
       w1: x.w1 ?? x.W1 ?? null,
       w2: x.w2 ?? x.W2 ?? null,
@@ -76,6 +77,7 @@
     };
   }
 
+  // ------------ ЗОНИ A/B/C -------------
   function renderZones(zones) {
     const zoneNames = ["A", "B", "C"];
 
@@ -99,7 +101,11 @@
         <tr>
           <td>${fmt(row.place)}</td>
           <td class="team-col">${fmt(row.team)}</td>
-          <td>${fmtW(row.total)}</td>
+          <td>${fmt(row.sector)}</td>
+          <td>${fmtW(row.w1)}</td>
+          <td>${fmtW(row.w2)}</td>
+          <td>${fmtW(row.w3)}</td>
+          <td>${fmtW(row.w4)}</td>
           <td>${fmt(row.big)}</td>
           <td>${fmt(row.weight)}</td>
         </tr>
@@ -115,11 +121,15 @@
             <table class="table table-sm">
               <thead>
                 <tr>
-                  <th>№</th>
+                  <th>Місце</th>
                   <th>Команда</th>
-                  <th>Разом W</th>
-                  <th>BIG</th>
-                  <th>Вага</th>
+                  <th>Сектор</th>
+                  <th>1</th>
+                  <th>2</th>
+                  <th>3</th>
+                  <th>4</th>
+                  <th>BIG-FISH</th>
+                  <th>Загальна вага</th>
                 </tr>
               </thead>
               <tbody>${rowsHtml}</tbody>
@@ -130,6 +140,7 @@
     }).join("");
   }
 
+  // ------------ ЗАГАЛЬНА ТАБЛИЦЯ -------------
   function renderTotal(total) {
     const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
 
@@ -203,10 +214,13 @@
       const zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
       if (!["A","B","C"].includes(zone)) return;
 
+      const sectorNum = t.drawSector ?? t.sectorNum ?? parseInt(drawKey.slice(1), 10) || null;
+
       const base = {
         place: "—",
         team: t.teamName || t.team || "—",
         zone,
+        sector: sectorNum,
         w1: null,
         w2: null,
         w3: null,

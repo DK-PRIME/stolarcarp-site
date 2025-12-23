@@ -181,7 +181,7 @@
       const compId = docSnap.id;
 
       const brand = c.brand || "STOLAR CARP";
-      const year  = c.year || c.seasonYear || "";
+      the year  = c.year || c.seasonYear || "";
       const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
 
       const eventsArr = Array.isArray(c.events) ? c.events : null;
@@ -404,10 +404,14 @@
 
     const stageName = stageNameByKey.get(selVal) || "";
 
+    const ts = window.firebase.firestore.FieldValue.serverTimestamp();
+
     // 1) stageResults для live + BigFish
     await db.collection("stageResults").doc(docId).set({
+      compId,
+      stageKey: stageKey || null,
       stageName,
-      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: ts,
       teams,
       bigFishTotal,
       zones: { A: [], B: [], C: [] },
@@ -418,7 +422,8 @@
     await db.collection("settings").doc("app").set({
       activeKey: docId,
       activeCompetitionId: compId,
-      activeStageId: stageKey || null
+      activeStageId: stageKey || null,
+      updatedAt: ts
     }, { merge: true });
 
     setMsg("✅ Live оновлено", true);

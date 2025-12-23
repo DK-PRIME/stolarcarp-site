@@ -4,6 +4,7 @@
 // ✅ ніяких weighings для публіки — тільки агреговані результати
 // ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть/вага), Разом, BIG
 // ✅ оновлює плашку "Оновлено: ..."
+// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах з W = "—"
 
 (function () {
   "use strict";
@@ -58,8 +59,8 @@
   // Нормалізуємо 1 рядок (і для зони, і для total)
   function normZoneItem(x) {
     return {
-      place: x.place ?? x.p ?? "—",
-      team:  x.team ?? x.teamName ?? "—",
+      place:  x.place ?? x.p ?? "—",
+      team:   x.team ?? x.teamName ?? "—",
 
       w1: x.w1 ?? x.W1 ?? null,
       w2: x.w2 ?? x.W2 ?? null,
@@ -68,7 +69,7 @@
 
       total: x.total ?? x.sum ?? null,
 
-      big:   x.big ?? x.BIG ?? x.bigFish ?? "—",
+      big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
       weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
 
       zone: x.zone ?? x.drawZone ?? ""
@@ -179,9 +180,7 @@
     }
   }
 
-  // === головна домовленість ===
   // settings/app.activeKey = "compId||stageKey"
-  // stageResults документ має МАти той самий id: "compId||stageKey"
   function stageDocIdFromApp(app) {
     const key = app?.activeKey || app?.activeStageKey;
     if (key) return String(key);
@@ -191,6 +190,37 @@
     if (compId && stageId) return `${compId}||${stageId}`;
     if (compId && !stageId) return `${compId}||main`;
     return "";
+  }
+
+  // fallback: з масиву teams робимо "порожні" зони/total
+  function buildFallbackFromTeams(teamsRaw) {
+    const teams = Array.isArray(teamsRaw) ? teamsRaw : [];
+    const zones = { A: [], B: [], C: [] };
+    const total = [];
+
+    teams.forEach((t) => {
+      const drawKey = (t.drawKey || t.sector || "").toString().toUpperCase();
+      const zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
+      if (!["A","B","C"].includes(zone)) return;
+
+      const base = {
+        place: "—",
+        team: t.teamName || t.team || "—",
+        zone,
+        w1: null,
+        w2: null,
+        w3: null,
+        w4: null,
+        total: null,
+        big: "—",
+        weight: "—"
+      };
+
+      zones[zone].push(base);
+      total.push(base);
+    });
+
+    return { zones, total };
   }
 
   function startStageSub(docId) {
@@ -218,8 +248,25 @@
         const updatedAt = data.updatedAt || data.updated || data.ts || null;
         if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
 
-        renderZones(data.zones || { A: [], B: [], C: [] });
-        renderTotal(data.total || []);
+        const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
+
+        let zonesData  = data.zones || { A: [], B: [], C: [] };
+        let totalData  = Array.isArray(data.total) ? data.total : [];
+
+        const hasZoneData =
+          (zonesData.A && zonesData.A.length) ||
+          (zonesData.B && zonesData.B.length) ||
+          (zonesData.C && zonesData.C.length);
+
+        // Якщо зважування ще нічого не записали, але є команди — показуємо fallback
+        if (!hasZoneData && !totalData.length && teamsRaw.length) {
+          const fb = buildFallbackFromTeams(teamsRaw);
+          zonesData = fb.zones;
+          totalData = fb.total;
+        }
+
+        renderZones(zonesData);
+        renderTotal(totalData);
 
         showContent();
       },

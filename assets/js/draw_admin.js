@@ -7,6 +7,7 @@
 // ✅ keeps selected stage (localStorage restore)
 // ✅ after save -> sorts by zone/sector like weighings
 // ✅ visual feedback (row highlight + time + icon)
+// ✅ sync stageResults snapshot (teams + BigFishTotal) для Live
 
 (function () {
   "use strict";
@@ -162,6 +163,62 @@
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
+  function labelForSelectedStage(){
+    const v = stageSelect?.value || "";
+    return stageNameByKey.get(v) || v || "";
+  }
+
+  // ===== SYNC SNAPSHOT ДЛЯ LIVE (teams + BigFishTotal) =====
+  async function syncStageResultsSnapshot(){
+    if (!isAdmin) return;
+
+    const selVal = stageSelect?.value || "";
+    const { compId, stageKey } = parseStageValue(selVal);
+    if (!compId) return;
+
+    const docId = stageKey ? `${compId}__${stageKey}` : `${compId}__main`;
+
+    // всі заявки цього етапу
+    const byStage = regsAllConfirmed.filter(r => {
+      if (normStr(r.compId) !== normStr(compId)) return false;
+      if (stageKey) return normStr(r.stageId) === normStr(stageKey);
+      return true;
+    });
+
+    const teams = byStage.map(r => {
+      const s = parseSectorKey(r.drawKey);
+      return {
+        regId: r._id,
+        teamId: r.teamId || null,
+        team:  r.teamName || "",
+        zone:  s ? s.zone : null,
+        sector: s ? s.n    : null,
+        drawKey: r.drawKey || null,
+        bigFishTotal: !!r.bigFishTotal
+      };
+    });
+
+    const bigFishTotal = teams.filter(t => t.bigFishTotal);
+
+    try {
+      await db.collection("stageResults").doc(docId).set({
+        compId,
+        stageKey: stageKey || null,
+        stageName: labelForSelectedStage() || null,
+        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+        teams,
+        bigFishTotal
+      }, { merge:true });
+
+      console.log("stageResults synced:", docId, {
+        teams: teams.length,
+        bigFishTotal: bigFishTotal.length
+      });
+    } catch (err) {
+      console.error("stageResults sync error:", err);
+    }
+  }
+
   async function loadStagesToSelect(){
     if (!stageSelect) return;
 
@@ -205,7 +262,6 @@
       `<option value="">— Оберіть —</option>` +
       items.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
 
-    // restore previous selection if exists
     if (keep) {
       const opt = stageSelect.querySelector(`option[value="${CSS.escape(keep)}"]`);
       if (opt) stageSelect.value = keep;
@@ -228,6 +284,8 @@
         captain: x.captain || x.captainName || "",
         phone: x.phone || x.captainPhone || "",
         createdAt: x.createdAt || null,
+
+        teamId: x.teamId || null,
 
         compId: normStr(getCompIdFromReg(x)),
         stageId: getStageIdFromReg(x),
@@ -281,6 +339,9 @@
       const totalSel = regsFiltered.length;
       countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
     }
+
+    // після будь-якої зміни відбору оновлюємо snapshot для Live
+    syncStageResultsSnapshot();
   }
 
   function sectorOptionsHTML(cur, docId){
@@ -376,7 +437,6 @@
       return;
     }
 
-    // ВАЖЛИВО: запам’ятовуємо вибір етапу перед будь-якими діями
     saveStageToLS(stageSelect?.value || "");
 
     const docId = wrap.getAttribute("data-docid");
@@ -428,7 +488,7 @@
       setBtnIcon(wrap, "ok");
       showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
 
-      // ГОЛОВНЕ: НЕ чіпаємо stageSelect, лише пересортуємо список
+      // пересортувати + одночасно оновити snapshot для Live
       applyStageFilter();
 
       setMsg("✅ Збережено", true);
@@ -466,7 +526,6 @@
         await loadStagesToSelect();
         await loadAllConfirmed();
 
-        // авто-відновлення вибору етапу
         const restored = restoreStageIfPossible();
         if (restored) {
           setMsg("✅ Етап відновлено", true);

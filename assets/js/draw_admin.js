@@ -5,9 +5,8 @@
 // ✅ unique sectors A1..C8
 // ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
 // ✅ keeps selected stage (localStorage restore)
-// ✅ after save -> sorts by zone/sector like weighings
-// ✅ visual feedback (row highlight + time + icon)
-// ✅ sync stageResults snapshot (teams + BigFishTotal) для Live
+// ✅ after save -> сортую по зонах/секторах
+// ✅ після кожного збереження оновлює stageResults/{activeKey} (teams + bigFishTotal)
 
 (function () {
   "use strict";
@@ -56,6 +55,10 @@
     const comp = normStr(compId);
     const stage = normStr(stageKeyRaw);
     return { compId: comp, stageKey: stage ? stage : null };
+  }
+
+  function currentStageKey() {
+    return stageSelect?.value || "";
   }
 
   async function requireAdmin(user){
@@ -127,7 +130,6 @@
       .rowMsg.ok { color:#8fe39a !important; }
       .rowMsg.err{ color:#ff6c6c !important; }
 
-      /* компактніше для мобіли */
       .sectorPick { max-width: 110px !important; padding: 8px 10px !important; }
       .btn-icon { width: 44px; height: 44px; display:flex; align-items:center; justify-content:center; padding:0 !important; border-radius:12px; }
     `;
@@ -163,62 +165,6 @@
   let regsFiltered = [];
   let usedSectorSet = new Set();
 
-  function labelForSelectedStage(){
-    const v = stageSelect?.value || "";
-    return stageNameByKey.get(v) || v || "";
-  }
-
-  // ===== SYNC SNAPSHOT ДЛЯ LIVE (teams + BigFishTotal) =====
-  async function syncStageResultsSnapshot(){
-    if (!isAdmin) return;
-
-    const selVal = stageSelect?.value || "";
-    const { compId, stageKey } = parseStageValue(selVal);
-    if (!compId) return;
-
-    const docId = stageKey ? `${compId}__${stageKey}` : `${compId}__main`;
-
-    // всі заявки цього етапу
-    const byStage = regsAllConfirmed.filter(r => {
-      if (normStr(r.compId) !== normStr(compId)) return false;
-      if (stageKey) return normStr(r.stageId) === normStr(stageKey);
-      return true;
-    });
-
-    const teams = byStage.map(r => {
-      const s = parseSectorKey(r.drawKey);
-      return {
-        regId: r._id,
-        teamId: r.teamId || null,
-        team:  r.teamName || "",
-        zone:  s ? s.zone : null,
-        sector: s ? s.n    : null,
-        drawKey: r.drawKey || null,
-        bigFishTotal: !!r.bigFishTotal
-      };
-    });
-
-    const bigFishTotal = teams.filter(t => t.bigFishTotal);
-
-    try {
-      await db.collection("stageResults").doc(docId).set({
-        compId,
-        stageKey: stageKey || null,
-        stageName: labelForSelectedStage() || null,
-        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-        teams,
-        bigFishTotal
-      }, { merge:true });
-
-      console.log("stageResults synced:", docId, {
-        teams: teams.length,
-        bigFishTotal: bigFishTotal.length
-      });
-    } catch (err) {
-      console.error("stageResults sync error:", err);
-    }
-  }
-
   async function loadStagesToSelect(){
     if (!stageSelect) return;
 
@@ -250,7 +196,7 @@
         });
       } else {
         const label = `${brand} · ${compTitle}`;
-        const value = `${compId}||`;
+        const value = `${compId}||main`;
         items.push({ value, label });
         stageNameByKey.set(value, label);
       }
@@ -262,6 +208,7 @@
       `<option value="">— Оберіть —</option>` +
       items.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
 
+    // restore previous selection if exists
     if (keep) {
       const opt = stageSelect.querySelector(`option[value="${CSS.escape(keep)}"]`);
       if (opt) stageSelect.value = keep;
@@ -284,8 +231,6 @@
         captain: x.captain || x.captainName || "",
         phone: x.phone || x.captainPhone || "",
         createdAt: x.createdAt || null,
-
-        teamId: x.teamId || null,
 
         compId: normStr(getCompIdFromReg(x)),
         stageId: getStageIdFromReg(x),
@@ -317,7 +262,8 @@
 
     regsFiltered = regsAllConfirmed.filter(r => {
       if (normStr(r.compId) !== normStr(compId)) return false;
-      if (stageKey) return normStr(r.stageId) === normStr(stageKey);
+      if (stageKey && normStr(r.stageId) !== normStr(stageKey)) return false;
+      if (!stageKey && r.stageId) return false;
       return true;
     });
 
@@ -339,9 +285,6 @@
       const totalSel = regsFiltered.length;
       countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
     }
-
-    // після будь-якої зміни відбору оновлюємо snapshot для Live
-    syncStageResultsSnapshot();
   }
 
   function sectorOptionsHTML(cur, docId){
@@ -421,6 +364,59 @@
     else btn.textContent = "💾";
   }
 
+  // === ПУБЛІКАЦІЯ В stageResults (LIVE) ===
+  async function publishStageResultsTeams() {
+    if (!isAdmin) return;
+
+    const selVal = currentStageKey();
+    if (!selVal) return;
+
+    const { compId, stageKey } = parseStageValue(selVal);
+    if (!compId) return;
+
+    const docId = stageKey ? `${compId}||${stageKey}` : `${compId}||main`;
+
+    const teams = regsFiltered.map(r => {
+      const drawKey = normStr(r.drawKey);
+      const zone    = drawKey ? drawKey[0] : null;
+      const n       = drawKey ? parseInt(drawKey.slice(1), 10) : null;
+      return {
+        regId: r._id,
+        teamName: r.teamName || "",
+        drawKey: drawKey || null,
+        drawZone: zone || null,
+        drawSector: Number.isFinite(n) ? n : null,
+        bigFishTotal: !!r.bigFishTotal
+      };
+    });
+
+    const bigFishTotal = teams
+      .filter(t => t.bigFishTotal)
+      .map(t => ({
+        regId: t.regId,
+        team: t.teamName,
+        big1Day: null,
+        big2Day: null,
+        maxBig: null,
+        isMax: false
+      }));
+
+    const stageName = stageNameByKey.get(selVal) || "";
+
+    await db.collection("stageResults").doc(docId).set({
+      stageName,
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+      teams,
+      bigFishTotal,
+      // на всяк випадок — пусті структури для live_firebase
+      zones: { A: [], B: [], C: [] },
+      total: []
+    }, { merge: true });
+
+    setMsg("✅ Live оновлено", true);
+    setTimeout(() => setMsg("", true), 1200);
+  }
+
   // save per-row
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest(".saveBtn");
@@ -488,8 +484,9 @@
       setBtnIcon(wrap, "ok");
       showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
 
-      // пересортувати + одночасно оновити snapshot для Live
+      // оновлюємо локальний список + Live
       applyStageFilter();
+      await publishStageResultsTeams();
 
       setMsg("✅ Збережено", true);
       setTimeout(()=> setMsg("", true), 900);

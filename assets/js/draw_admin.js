@@ -181,7 +181,7 @@
       const compId = docSnap.id;
 
       const brand = c.brand || "STOLAR CARP";
-      the year  = c.year || c.seasonYear || "";
+      const year  = c.year || c.seasonYear || "";
       const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
 
       const eventsArr = Array.isArray(c.events) ? c.events : null;

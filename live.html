@@ -125,26 +125,35 @@
         </div>
 
         <div class="card">
-          <h2 style="margin-top:0;margin-bottom:10px;">Загальна таблиця</h2>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <h2 style="margin:0;">Зважування по етапу</h2>
 
-          <div class="table-wrap" style="overflow-x:auto;">
-            <table class="table table-sm" id="totalTable">
-              <thead>
-                <tr>
-                  <th>№</th>
-                  <th>Команда</th>
-                  <th>Зона</th>
-                  <th>W1</th>
-                  <th>W2</th>
-                  <th>W3</th>
-                  <th>W4</th>
-                  <th>Разом</th>
-                  <th>BIG</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+    <div class="bf-toggle" id="wFilter">
+      <button type="button" class="btn btn--accent btn--xs" data-w-key="W1">W1</button>
+      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W2">W2</button>
+      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W3">W3</button>
+      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W4">W4</button>
+    </div>
+  </div>
+
+  <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
+    <table class="table table-sm" id="weighTable">
+      <thead>
+        <tr>
+          <th>№ (сектор)</th>
+          <th>Команда</th>
+          <th>Зона</th>
+          <th>W (шт / кг)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="live-note">
+    Обери W1–W4, щоб подивитися відповідне зважування. № = номер сектору.
+  </p>
+        </div>
 
           <p class="live-note">
             W = к-сть / вага (шт / кг). Місце — загальне (якщо записане), інакше “—”.

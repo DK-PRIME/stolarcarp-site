@@ -1,10 +1,12 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
-// ✅ читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
-// ✅ ніяких weighings для публіки — тільки агреговані результати
-// ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть/вага), Разом, BIG
-// ✅ оновлює плашку "Оновлено: ..."
-// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах (з сектором) з W = "—"
+// ✅ читає тільки settings/app + stageResults/{docId}
+// ✅ показує зони A/B/C (підсумки по етапу)
+// ✅ BigFish Total окремим скриптом
+// ✅ НОВЕ: "Зважування по етапу" з перемикачем W1–W4,
+//    де в рядках: №(сектор) / Команда / Зона / W (шт/кг)
+// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) —
+//    показує по зонах просто розсадку з W="—"
 
 (function () {
   "use strict";
@@ -13,12 +15,15 @@
 
   const stageEl    = document.getElementById("liveStageName");
   const zonesWrap  = document.getElementById("zonesContainer");
-  const totalTbody = document.querySelector("#totalTable tbody");
   const updatedEl  = document.getElementById("liveUpdatedAt");
 
   const loadingEl  = document.getElementById("liveLoading");
   const contentEl  = document.getElementById("liveContent");
   const errorEl    = document.getElementById("liveError");
+
+  // НОВЕ: таблиця зважувань
+  const weighTableBody = document.querySelector("#weighTable tbody");
+  const wFilterWrap    = document.getElementById("wFilter");
 
   if (!db) {
     if (errorEl) {
@@ -56,15 +61,21 @@
     return `${fmt(c)} / ${fmt(kg)}`;
   }
 
+  // сортування зон
+  function zoneRank(z) {
+    if (z === "A") return 1;
+    if (z === "B") return 2;
+    if (z === "C") return 3;
+    return 9;
+  }
+
   // Нормалізуємо 1 рядок (і для зони, і для total)
   function normZoneItem(x) {
     const drawKey = (x.drawKey || x.sectorKey || "").toString().toUpperCase();
 
-    // зона
-    const zoneRaw = x.zone || x.drawZone || (drawKey ? drawKey[0] : "") || "";
+    let zoneRaw = x.zone || x.drawZone || (drawKey ? drawKey[0] : "") || "";
     const zone = zoneRaw ? String(zoneRaw).toUpperCase() : "";
 
-    // сектор
     let sector = x.sector ?? x.drawSector ?? null;
     if (!sector && drawKey) {
       const m = drawKey.match(/[A-C](\d+)/i);
@@ -93,7 +104,7 @@
     };
   }
 
-  // --- ЗОНИ A/B/C ---
+  // --- ЗОНИ A/B/C (підсумки етапу) ---
   function renderZones(zones) {
     const zoneNames = ["A", "B", "C"];
 
@@ -158,30 +169,84 @@
     }).join("");
   }
 
-  // --- ЗАГАЛЬНА ТАБЛИЦЯ ---
-  function renderTotal(total) {
-    const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
+  // ---------- ЗВАЖУВАННЯ W1–W4 (загальна таблиця) ----------
+
+  let currentWKey = "W1";
+  let weighingsByKey = { W1: [], W2: [], W3: [], W4: [] };
+
+  function normWeighItem(x) {
+    const drawKey = (x.drawKey || x.sectorKey || "").toString().toUpperCase();
+
+    let zoneRaw = x.zone || x.drawZone || (drawKey ? drawKey[0] : "") || "";
+    const zone = zoneRaw ? String(zoneRaw).toUpperCase() : "";
+
+    let sector = x.sector ?? x.drawSector ?? null;
+    if (!sector && drawKey) {
+      const m = drawKey.match(/[A-C](\d+)/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (Number.isFinite(n)) sector = n;
+      }
+    }
+
+    const team   = x.team || x.teamName || "—";
+    const count  = x.count  ?? x.c   ?? x.qty ?? x.fish ?? null;
+    const weight = x.weight ?? x.kg  ?? x.w   ?? null;
+
+    return { zone, sector, team, count, weight };
+  }
+
+  function renderWeighings() {
+    if (!weighTableBody) return;
+
+    const listRaw = weighingsByKey[currentWKey] || [];
+    const arr = listRaw.map(normWeighItem);
 
     if (!arr.length) {
-      totalTbody.innerHTML =
-        `<tr><td colspan="9">Дані ще не заповнені.</td></tr>`;
+      weighTableBody.innerHTML =
+        `<tr><td colspan="4">Для ${currentWKey} ще немає зважувань.</td></tr>`;
       return;
     }
 
-    totalTbody.innerHTML = arr.map((row) => `
+    // сортуємо: зона A/B/C → сектор 1..8
+    arr.sort((a, b) => {
+      const zr = zoneRank(a.zone) - zoneRank(b.zone);
+      if (zr) return zr;
+      const sa = Number.isFinite(a.sector) ? a.sector : 999;
+      const sb = Number.isFinite(b.sector) ? b.sector : 999;
+      if (sa !== sb) return sa - sb;
+      return (a.team || "").localeCompare(b.team || "", "uk");
+    });
+
+    weighTableBody.innerHTML = arr.map((row) => `
       <tr>
-        <td>${fmt(row.place)}</td>
+        <td>${fmt(row.sector)}</td>
         <td class="team-col">${fmt(row.team)}</td>
         <td>${fmt(row.zone)}</td>
-        <td>${fmtW(row.w1)}</td>
-        <td>${fmtW(row.w2)}</td>
-        <td>${fmtW(row.w3)}</td>
-        <td>${fmtW(row.w4)}</td>
-        <td>${fmtW(row.total)}</td>
-        <td>${fmt(row.big)}</td>
+        <td>${fmtW({ count: row.count, weight: row.weight })}</td>
       </tr>
     `).join("");
   }
+
+  // клік по кнопках W1–W4
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-w-key]");
+    if (!btn) return;
+    const key = btn.getAttribute("data-w-key");
+    if (!key) return;
+
+    currentWKey = key;
+
+    // підсвітити активну кнопку
+    if (wFilterWrap) {
+      wFilterWrap.querySelectorAll("[data-w-key]").forEach((b) => {
+        b.classList.toggle("btn--accent", b === btn);
+        b.classList.toggle("btn--ghost", b !== btn);
+      });
+    }
+
+    renderWeighings();
+  });
 
   // ---- Підписки: settings/app -> activeKey -> stageResults/{docId} ----
   let unsubSettings = null;
@@ -209,7 +274,6 @@
     }
   }
 
-  // settings/app.activeKey = "compId||stageKey"
   function stageDocIdFromApp(app) {
     const key = app?.activeKey || app?.activeStageKey;
     if (key) return String(key);
@@ -305,8 +369,18 @@
           totalData = fb.total;
         }
 
+        // рендер зон (підсумки)
         renderZones(zonesData);
-        renderTotal(totalData);
+
+        // НОВЕ: зчитуємо публічні зважування
+        const wSrc = data.weighings || data.W || {};
+        weighingsByKey = {
+          W1: Array.isArray(wSrc.W1) ? wSrc.W1 : [],
+          W2: Array.isArray(wSrc.W2) ? wSrc.W2 : [],
+          W3: Array.isArray(wSrc.W3) ? wSrc.W3 : [],
+          W4: Array.isArray(wSrc.W4) ? wSrc.W4 : []
+        };
+        renderWeighings();
 
         showContent();
       },
@@ -317,7 +391,7 @@
     );
   }
 
-  // settings/app — публічний (rules дозволяють read)
+  // settings/app — публічний
   unsubSettings = db
     .collection("settings")
     .doc("app")

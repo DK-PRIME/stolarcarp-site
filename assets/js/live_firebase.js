@@ -1,454 +1,227 @@
-// assets/js/live_firebase.js
-// STOLAR CARP • Live (public)
-// ✅ супер швидко: читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
-// ✅ НІЯКИХ weighings колекцій для публіки – лише агрегований stageResults
-// ✅ показує зони A/B/C (результати або просто команди після жеребкування)
-// ✅ показує зважування W1..W4 у нижній таблиці (через кнопки)
-// ✅ fallback: якщо зон/зважувань ще нема, але є teams — показує команди з W="—"
-// ✅ оновлює "Оновлено: ..."
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live результати — STOLAR CARP</title>
 
-(function () {
-  "use strict";
+  <link rel="stylesheet" href="assets/css/main.css">
+  <script defer src="assets/js/config.js"></script>
 
-  const db = window.scDb;
+  <style>
+    .live-header{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
+    .live-kicker{display:inline-flex;align-items:center;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#fcd34d;background:rgba(252,211,77,.08);border-radius:999px;padding:4px 10px;border:1px solid rgba(252,211,77,.35);width:fit-content;}
+    .live-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px rgba(239,68,68,.9);}
+    .title-gradient{background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .live-stage-pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+    .live-stage-pill span{padding:4px 10px;border-radius:999px;border:1px solid #262636;background:#0d0d14;font-size:12px;}
 
-  const stageEl    = document.getElementById("liveStageName");
-  const zonesWrap  = document.getElementById("zonesContainer");
-  const updatedEl  = document.getElementById("liveUpdatedAt");
+    .live-layout{display:grid;grid-template-columns:1fr;gap:18px;}
 
-  const loadingEl  = document.getElementById("liveLoading");
-  const contentEl  = document.getElementById("liveContent");
-  const errorEl    = document.getElementById("liveError");
+    .live-zones-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+    @media (max-width: 980px){ .live-zones-grid{grid-template-columns:1fr;} }
 
-  // Зважування
-  const weighTbody = document.querySelector("#weighTable tbody");
-  const wFilterEl  = document.getElementById("wFilter");
+    .live-zone-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+    .live-zone-title span.badge{font-size:11px;padding:3px 8px;}
 
-  if (!db) {
-    if (errorEl) {
-      errorEl.style.display = "block";
-      errorEl.textContent = "Firebase init не завантажився.";
-    }
-    if (loadingEl) loadingEl.style.display = "none";
-    return;
-  }
+    .table-sm{font-size:12.5px;}
+    .table-sm th,.table-sm td{padding:4px 6px;white-space:nowrap;}
+    .table-sm td.team-col{max-width:220px;white-space:normal;}
+    .live-note{font-size:12px;color:var(--muted);margin-top:6px;}
 
-  const fmt = (v) =>
-    v === null || v === undefined || v === "" ? "—" : String(v);
+    .bf-toggle{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+    .bf-toggle .btn{padding:10px 12px;border-radius:12px;}
 
-  const fmtTs = (ts) => {
-    try {
-      const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-      if (!d) return "—";
-      return d.toLocaleString("uk-UA", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit"
-      });
-    } catch {
-      return "—";
-    }
-  };
+    /* BigFish Total block hide/show */
+    .bf-wrap{display:none;margin-top:10px;}
+    .bf-wrap.is-open{display:block;}
 
-  // W formatting: {count, weight} => "к-сть / кг"
-  function fmtW(w) {
-    if (!w) return "—";
-    const c  = w.count ?? w.c ?? w.qty ?? "";
-    const kg = w.weight ?? w.kg ?? w.w ?? "";
-    if (c === "" && kg === "") return "—";
-    return `${fmt(c)} / ${fmt(kg)}`;
-  }
-
-  // --- helpers для секторів/зон ---
-  function normStr(v) {
-    return String(v ?? "").trim();
-  }
-
-  function parseDrawKey(drawKey) {
-    const s = normStr(drawKey).toUpperCase();
-    if (!s) return null;
-    const zone = s[0];
-    const n = parseInt(s.slice(1), 10);
-    if (!["A", "B", "C"].includes(zone) || !Number.isFinite(n)) return null;
-    return { zone, n };
-  }
-
-  function zoneRank(z) {
-    if (z === "A") return 1;
-    if (z === "B") return 2;
-    if (z === "C") return 3;
-    return 9;
-  }
-
-  function sortByZoneSectorTeam(a, b) {
-    const pa = parseDrawKey(a.drawKey || a.sectorLabel || "");
-    const pb = parseDrawKey(b.drawKey || b.sectorLabel || "");
-    if (pa && !pb) return -1;
-    if (!pa && pb) return 1;
-
-    if (!pa && !pb) {
-      const za = (a.zone || "").toString().toUpperCase();
-      const zb = (b.zone || "").toString().toUpperCase();
-      const zr = zoneRank(za) - zoneRank(zb);
-      if (zr) return zr;
-      return (a.team || "").localeCompare(b.team || "", "uk");
+    /* Small helper badge */
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#cbd5e1;font-size:12px;
     }
 
-    const zr = zoneRank(pa.zone) - zoneRank(pb.zone);
-    if (zr) return zr;
-    const nr = pa.n - pb.n;
-    if (nr) return nr;
-    return (a.team || "").localeCompare(b.team || "", "uk");
-  }
+    .bigfish-row--max{background:rgba(250,204,21,0.08);}
 
-  // Нормалізуємо 1 рядок для зони/total
-  function normZoneItem(x) {
-    const rawZone  = x.zone ?? x.drawZone ?? "";
-    const rawSect  =
-      x.sector ??
-      x.drawSector ??
-      x.drawKey ??
-      "";
-
-    let sectorLabel = normStr(rawSect);
-    if (!sectorLabel && rawZone) {
-      // якщо нема drawKey, але є zone+sectorNum
-      const n = x.drawSector ?? x.sector ?? "";
-      if (n) sectorLabel = `${rawZone}${n}`;
+    /* Weighings section */
+    .weigh-toggle{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+    .weigh-toggle .btn-sm{
+      padding:6px 10px;
+      font-size:12px;
+      border-radius:999px;
+    }
+    .weigh-toggle .btn-sm.is-active{
+      box-shadow:0 0 0 1px rgba(250,204,21,.5);
     }
 
-    const totalObj = x.total ?? x.sum ?? null;
-
-    return {
-      place:  x.place ?? x.p ?? "—",
-      team:   x.team ?? x.teamName ?? "—",
-
-      w1: x.w1 ?? x.W1 ?? null,
-      w2: x.w2 ?? x.W2 ?? null,
-      w3: x.w3 ?? x.W3 ?? null,
-      w4: x.w4 ?? x.W4 ?? null,
-
-      total: totalObj,
-
-      big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
-      weight: x.weight ?? x.totalWeight ?? (totalObj?.weight ?? "") ?? "—",
-
-      zone: (rawZone || "").toString().toUpperCase(),
-      sectorLabel: sectorLabel || null,
-      drawKey: normStr(x.drawKey || rawSect || "")
-    };
-  }
-
-  // fallback з масиву teams (після жеребкування)
-  function buildFallbackFromTeams(teamsRaw) {
-    const teams = Array.isArray(teamsRaw) ? teamsRaw : [];
-    const zones = { A: [], B: [], C: [] };
-
-    teams.forEach((t) => {
-      const drawKey = normStr(t.drawKey || t.sector || "");
-      const parsed  = parseDrawKey(drawKey);
-      const zone    = (t.drawZone || t.zone || (parsed ? parsed.zone : "") || "").toUpperCase();
-      if (!["A", "B", "C"].includes(zone)) return;
-
-      const sectorLabel =
-        drawKey ||
-        (parsed ? `${parsed.zone}${parsed.n}` : zone);
-
-      zones[zone].push({
-        place:  "—",
-        team:   t.teamName || t.team || "—",
-        total:  null,
-        big:    "—",
-        weight: "—",
-        zone,
-        sectorLabel,
-        drawKey
-      });
-    });
-
-    // Сортуємо всередині зон по сектору
-    ["A", "B", "C"].forEach((z) => {
-      zones[z].sort(sortByZoneSectorTeam);
-    });
-
-    return zones;
-  }
-
-  function renderZones(zonesData, teamsRaw) {
-    const zoneNames = ["A", "B", "C"];
-
-    let zones = zonesData || { A: [], B: [], C: [] };
-    const hasData =
-      (zones.A && zones.A.length) ||
-      (zones.B && zones.B.length) ||
-      (zones.C && zones.C.length);
-
-    // fallback із teams, якщо зон ще нема
-    if (!hasData && Array.isArray(teamsRaw) && teamsRaw.length) {
-      zones = buildFallbackFromTeams(teamsRaw);
+    /* Нехай таблиця зважувань буде ще компактніша */
+    #weighTable.table-sm th,
+    #weighTable.table-sm td{
+      padding:3px 5px;
+      font-size:11.5px;
     }
+  </style>
+</head>
 
-    zonesWrap.innerHTML = zoneNames.map((z) => {
-      const listRaw = zones[z] || [];
-      const list    = listRaw.map(normZoneItem);
-      list.sort(sortByZoneSectorTeam);
+<body>
 
-      if (!list.length) {
-        return `
-          <div class="live-zone card">
-            <div class="live-zone-title">
-              <h3 style="margin:0;">Зона ${z}</h3>
-              <span class="badge">немає даних</span>
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+
+    <nav class="nav" id="nav">
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>
+
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+  <section class="container section">
+
+    <div class="live-header">
+      <div class="live-kicker">
+        <span class="live-dot"></span>
+        <span>Live протокол</span>
+      </div>
+
+      <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
+        Результати активного етапу
+      </h1>
+
+      <div class="live-stage-pill">
+        <span>Поточний етап: <strong id="liveStageName">—</strong></span>
+      </div>
+
+      <div class="bf-toggle">
+        <button class="btn btn--accent" id="toggleBigFishBtn" type="button">BigFish Total</button>
+        <span class="pill" id="liveUpdatedAt" title="Останнє оновлення">Оновлено: —</span>
+      </div>
+
+      <p class="lead" style="max-width:720px;margin:6px 0 0;">
+        W = <b>к-сть / вага</b>
+      </p>
+    </div>
+
+    <!-- BigFish Total тепер одразу під кнопкою -->
+    <div class="card bf-wrap" id="bigFishWrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <h2 style="margin:0;">BigFish — Total</h2>
+        <span class="pill" id="bfCount">Учасників: —</span>
+      </div>
+
+      <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
+        <table class="table table-sm" id="bigFishTable">
+          <thead>
+            <tr>
+              <th>Команда</th>
+              <th>BIG 1 доба</th>
+              <th>BIG 2 доба</th>
+              <th>MAX BIG</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <p class="live-note">
+        Учасники беруться з адмінки жеребкування (галочка BigFish Total).
+      </p>
+    </div>
+
+    <div id="liveError" class="form-msg err" style="display:none;"></div>
+
+    <div id="liveLoading" class="form__hint" style="margin-top:12px;">
+      Завантаження результатів...
+    </div>
+
+    <div id="liveContent" class="live-layout" style="display:none;">
+
+      <!-- LEFT: Зони + Зважування -->
+      <div class="live-left">
+        <div class="card" style="margin-bottom:16px;">
+          <h2 style="margin-top:0;margin-bottom:10px;">Зони A / B / C</h2>
+
+          <div class="live-zones-grid" id="zonesContainer"></div>
+
+          <p class="live-note">
+            Сортування: вага → BIG. Місце — в межах зони.
+          </p>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <h2 style="margin-top:0;margin-bottom:8px;">Зважування (W1–W4)</h2>
+
+            <div class="weigh-toggle" id="weighButtons">
+              <button type="button" class="btn btn--ghost btn-sm is-active" data-w="W1">W1</button>
+              <button type="button" class="btn btn--ghost btn-sm" data-w="W2">W2</button>
+              <button type="button" class="btn btn--ghost btn-sm" data-w="W3">W3</button>
+              <button type="button" class="btn btn--ghost btn-sm" data-w="W4">W4</button>
             </div>
-            <p class="form__hint">Результати для цієї зони ще не заповнені.</p>
           </div>
-        `;
-      }
 
-      const rowsHtml = list.map((row) => {
-        const sectorText =
-          row.sectorLabel ||
-          (row.zone ? row.zone : "—");
-
-        const totalText = row.total ? fmtW(row.total) : "—";
-
-        return `
-          <tr>
-            <td>${fmt(sectorText)}</td>
-            <td class="team-col">${fmt(row.team)}</td>
-            <td>${fmt(totalText)}</td>
-            <td>${fmt(row.big)}</td>
-            <td>${fmt(row.weight)}</td>
-            <td>${fmt(row.place)}</td>
-          </tr>
-        `;
-      }).join("");
-
-      return `
-        <div class="live-zone card">
-          <div class="live-zone-title">
-            <h3 style="margin:0;">Зона ${z}</h3>
-            <span class="badge badge--warn">команд: ${list.length}</span>
-          </div>
           <div class="table-wrap" style="overflow-x:auto;">
-            <table class="table table-sm">
+            <table class="table table-sm" id="weighTable">
               <thead>
                 <tr>
                   <th>Зона</th>
+                  <th>Сектор</th>
                   <th>Команда</th>
-                  <th>К-сть</th>
-                  <th>BIG</th>
+                  <th>Риба</th>
                   <th>Вага</th>
-                  <th>Місце</th>
                 </tr>
               </thead>
-              <tbody>${rowsHtml}</tbody>
+              <tbody></tbody>
             </table>
           </div>
+
+          <p class="live-note">
+            Показує риби по вибраному зважуванню (W1–W4). Для довгих списків — гортай по горизонталі.
+          </p>
         </div>
-      `;
-    }).join("");
-  }
+      </div>
+    </div>
+  </section>
+</main>
 
-  // ---------- ЗВАЖУВАННЯ (нижня таблиця) ----------
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
+</footer>
 
-  let currentWKey = "W1";
-  let lastStageData = null;
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
 
-  function setActiveWeighButton(key) {
-    if (!wFilterEl) return;
-    const btns = wFilterEl.querySelectorAll("[data-w-key]");
-    btns.forEach((b) => {
-      const k = b.getAttribute("data-w-key");
-      if (k === key) {
-        b.classList.remove("btn--ghost");
-        b.classList.add("btn--accent");
-      } else {
-        b.classList.add("btn--ghost");
-        b.classList.remove("btn--accent");
-      }
-    });
-  }
+<!-- Live читання -->
+<script src="assets/js/live_firebase.js"></script>
 
-  function renderWeighings(data) {
-    if (!weighTbody) return;
+<!-- BigFish Total -->
+<script src="assets/js/bigfish_total_live.js"></script>
 
-    const teamsRaw = Array.isArray(data?.teams) ? data.teams : [];
-    const weighings = data?.weighings || data?.weigh || {};
-
-    const key = currentWKey || "W1";
-    let listRaw = Array.isArray(weighings[key]) ? weighings[key] : [];
-
-    // Якщо конкретного зважування ще нема, але є команди — показуємо список команд
-    if (!listRaw.length && teamsRaw.length) {
-      listRaw = teamsRaw.map((t) => {
-        const drawKey = normStr(t.drawKey || t.sector || "");
-        const parsed  = parseDrawKey(drawKey);
-        const zone    = (t.drawZone || t.zone || (parsed ? parsed.zone : "") || "").toUpperCase();
-        const sectorLabel =
-          drawKey ||
-          (parsed ? `${parsed.zone}${parsed.n}` : zone);
-
-        return {
-          team: t.teamName || t.team || "—",
-          zone,
-          sectorLabel,
-          count: null,
-          weight: null,
-          drawKey
-        };
-      });
-    }
-
-    if (!listRaw.length) {
-      weighTbody.innerHTML =
-        `<tr><td colspan="4">Зважування ще не внесені для ${fmt(key)}.</td></tr>`;
-      return;
-    }
-
-    const list = listRaw.map((x) => {
-      const drawKey = normStr(x.drawKey || x.sector || "");
-      const parsed  = parseDrawKey(drawKey);
-      const zone    = (x.zone || x.drawZone || (parsed ? parsed.zone : "") || "").toUpperCase();
-      const sectorLabel =
-        x.sectorLabel ||
-        drawKey ||
-        (parsed ? `${parsed.zone}${parsed.n}` : zone);
-
-      return {
-        team: x.teamName || x.team || "—",
-        zone,
-        sectorLabel,
-        drawKey,
-        w: {
-          count: x.count ?? x.c ?? x.qty ?? x.pieces ?? null,
-          weight: x.weight ?? x.kg ?? x.w ?? null
-        }
-      };
-    });
-
-    list.sort(sortByZoneSectorTeam);
-
-    weighTbody.innerHTML = list.map((row, idx) => `
-      <tr>
-        <td>${idx + 1}</td>
-        <td class="team-col">${fmt(row.team)}</td>
-        <td>${fmt(row.sectorLabel || row.zone || "—")}</td>
-        <td>${fmtW(row.w)}</td>
-      </tr>
-    `).join("");
-  }
-
-  if (wFilterEl) {
-    wFilterEl.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-w-key]");
-      if (!btn) return;
-      const key = btn.getAttribute("data-w-key");
-      if (!key || key === currentWKey) return;
-      currentWKey = key;
-      setActiveWeighButton(key);
-      if (lastStageData) {
-        renderWeighings(lastStageData);
-      }
-    });
-
-    // Початково активний W1
-    setActiveWeighButton(currentWKey);
-  }
-
-  // ---- Підписки: settings/app -> activeKey -> stageResults/{docId} ----
-  let unsubSettings = null;
-  let unsubStage    = null;
-
-  function showError(text) {
-    if (errorEl) {
-      errorEl.style.display = "block";
-      errorEl.textContent   = text;
-    }
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "none";
-  }
-
-  function showContent() {
-    if (errorEl)   errorEl.style.display   = "none";
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
-  }
-
-  function stopStageSub() {
-    if (unsubStage) {
-      unsubStage();
-      unsubStage = null;
-    }
-  }
-
-  // settings/app.activeKey = "compId||stageKey"
-  function stageDocIdFromApp(app) {
-    const key = app?.activeKey || app?.activeStageKey;
-    if (key) return String(key);
-
-    const compId  = app?.activeCompetitionId || app?.competitionId || "";
-    const stageId = app?.activeStageId || app?.stageId || "";
-    if (compId && stageId) return `${compId}||${stageId}`;
-    if (compId && !stageId) return `${compId}||main`;
-    return "";
-  }
-
-  function startStageSub(docId) {
-    stopStageSub();
-
-    if (!docId) {
-      showError("Нема активного етапу (settings/app).");
-      return;
-    }
-
-    const ref = db.collection("stageResults").doc(docId);
-
-    unsubStage = ref.onSnapshot(
-      (snap) => {
-        if (!snap.exists) {
-          showError("Live ще не опублікований для цього етапу (нема stageResults).");
-          return;
-        }
-
-        const data = snap.data() || {};
-        lastStageData = data;
-
-        const stageName = data.stageName || data.stage || data.title || docId;
-        if (stageEl) stageEl.textContent = stageName;
-
-        const updatedAt = data.updatedAt || data.updated || data.ts || null;
-        if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
-
-        const zonesData = data.zones || { A: [], B: [], C: [] };
-        const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
-
-        renderZones(zonesData, teamsRaw);
-        renderWeighings(data);
-
-        showContent();
-      },
-      (err) => {
-        console.error(err);
-        showError("Помилка читання Live (stageResults).");
-      }
-    );
-  }
-
-  // settings/app — публічний
-  unsubSettings = db
-    .collection("settings")
-    .doc("app")
-    .onSnapshot(
-      (snap) => {
-        const app = snap.exists ? (snap.data() || {}) : {};
-        const docId = stageDocIdFromApp(app);
-        startStageSub(docId);
-      },
-      (err) => {
-        console.error(err);
-        showError("Помилка читання settings/app.");
-      }
-    );
-})();
+</body>
+</html>

@@ -3,216 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP — сезон коропових турнірів</title>
-
-  <meta name="description" content="STOLAR CARP — серія коропових турнірів з прозорою онлайн-системою реєстрації, live-результатами та благодійною місією.">
-  <meta name="theme-color" content="#050814">
+  <title>STOLAR CARP — Головна</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
-
-  <!-- Глобальна конфігурація сайту (бургер, іконки, базові налаштування) -->
-  <script defer src="/assets/js/config.js"></script>
+  <script defer src="assets/js/config.js"></script>
 </head>
-<body class="page page--dark">
+
+<body>
 
 <header class="header">
-  <div class="container header__inner">
-    <a href="index.html" class="logo">
+  <div class="container header__row">
+
+    <!-- LOGO -->
+    <a class="logo" href="/index.html">
       <span class="logo__mark">SC</span>
-      <span class="logo__text">Stolar Carp</span>
+      <span class="logo__text">STOLAR CARP</span>
     </a>
 
+    <!-- NAV -->
     <nav class="nav" id="nav">
-      <a href="index.html" class="nav__link nav__link--active">Головна</a>
-      <a href="rules.html" class="nav__link">Регламент</a>
-      <a href="register.html" class="nav__link">Реєстрація</a>
-      <a href="live.html" class="nav__link">Live</a>
-      <a href="rating.html" class="nav__link">Рейтинг</a>
-      <a href="lakes.html" class="nav__link">Водойми</a>
-      <a href="sponsors.html" class="nav__link">Спонсори</a>
-      <a href="events/2026.html" class="nav__link">Турнір 2026</a>
-
-      <!-- auth / кабінет -->
-      <a href="auth.html" class="nav__link" data-auth-toggle>Мій кабінет</a>
-      <a href="#" class="nav__link" data-auth="signout" id="signOutLink" style="display:none;">Вийти</a>
+      <a href="/index.html" class="nav__link nav__link--active">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger js-burger" id="burger" type="button" aria-label="Меню">
+    <!-- LOGIN BUTTON -->
+    <a href="/login.html" class="btn-login" id="loginBtn">Увійти</a>
+
+    <!-- BURGER RIGHT -->
+    <button class="burger" id="burger">
+      <span></span>
       <span></span>
       <span></span>
     </button>
+
   </div>
 </header>
 
 <main class="main">
-  <!-- HERO -->
-  <section class="section hero">
-    <div class="container hero__inner">
-      <div class="hero__content">
-        <p class="kicker">STOLAR CARP · SEASON SYSTEM</p>
-        <h1 class="title-gradient hero__title">
-          Сезонні коропові турніри<br> з live-результатами
-        </h1>
-        <p class="hero__text">
-          STOLAR CARP — серія коропових змагань з прозорою системою підрахунку,
-          онлайн-таблицями, чесним суддівством і сильною благодійною складовою.
-          Усі етапи сезону та фінал зведені в одну систему.
-        </p>
+  <section class="container section">
 
-        <div class="hero__actions">
-          <a href="register.html" class="btn btn--primary">Реєстрація змагань</a>
-          <a href="auth.html" class="btn btn--ghost" data-auth-toggle>Мій кабінет</a>
-        </div>
+    <h1 style="margin-top:0;">STOLAR CARP — Головна</h1>
 
-        <p class="hero__note">
-          Частина внесків з кожного етапу йде на підтримку наших захисників:
-          дрони, акумулятори, зв’язок та інше спорядження.
-        </p>
-      </div>
+    <p>
+      Ласкаво просимо на офіційний сайт STOLAR CARP.  
+      Оберіть розділ у меню, щоб переглянути регламент, зареєструватися на змагання,
+      переглянути LIVE-протокол, рейтинг учасників чи інформацію про водойми.
+    </p>
 
-      <div class="hero__side">
-        <div class="card hero-card">
-          <p class="card__kicker">Сезон 2026</p>
-          <h2 class="card__title">2–8 етапів + Фінал</h2>
-          <ul class="card__list">
-            <li>Загальний рейтинг сезону з кожного етапу</li>
-            <li>Автоматичні live-таблиці зон A/B/C та Big Fish</li>
-            <li>Персональні сторінки команд і учасників</li>
-            <li>Окремий фінальний турнір з бонусами</li>
-          </ul>
-          <a href="events/2026.html" class="card__link">Детальніше про сезон 2026 →</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Блок про систему -->
-  <section class="section section--alt">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Що дає система STOLAR CARP</h2>
-        <p class="section-subtitle">
-          Сезон побудований так, щоб і учасникам, і організаторам було максимально комфортно
-          стежити за турнірами онлайн.
-        </p>
-      </div>
-
-      <div class="grid grid--3">
-        <article class="card">
-          <h3 class="card__title">Прозора реєстрація</h3>
-          <p class="card__text">
-            Команди та соло-учасники реєструються через сайт, заявки автоматично потрапляють
-            в адмінку, а дублікати блокуються системою.
-          </p>
-        </article>
-
-        <article class="card">
-          <h3 class="card__title">Live-таблиці та рейтинг</h3>
-          <p class="card__text">
-            Судді вводять зважування на водоймі, і глядачі одразу бачать оновлення на сторінці
-            Live та у загальному рейтингу сезону.
-          </p>
-        </article>
-
-        <article class="card">
-          <h3 class="card__title">Благодійна місія</h3>
-          <p class="card__text">
-            Кожен етап має окрему ціль збору. Ми відкрито показуємо суми та звіт по закупівлях:
-            FPV-дрони, батареї, зарядні станції та інше.
-          </p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- Блок з найближчими подіями (коротко, щоб не дублювати всю events-сторінку) -->
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <h2 class="section-title">Найближчі події сезону 2026</h2>
-        <p class="section-subtitle">
-          Повний календар дивись на сторінці «Турнір 2026», а тут — короткий огляд стартів.
-        </p>
-      </div>
-
-      <div class="timeline">
-        <div class="timeline__item">
-          <div class="timeline__date">15–17.05.2026</div>
-          <div class="timeline__body">
-            <h3 class="timeline__title">Етап 1 · STOLAR CARP Season 2026</h3>
-            <p class="timeline__text">
-              Класичний командний формат, зона A/B/C, залік за загальною вагою.
-            </p>
-          </div>
-        </div>
-
-        <div class="timeline__item">
-          <div class="timeline__date">12–14.06.2026</div>
-          <div class="timeline__body">
-            <h3 class="timeline__title">Етап 2 · STOLAR CARP Season 2026</h3>
-            <p class="timeline__text">
-              Другий етап сезону: боротьба за очки та місця у фіналі.
-            </p>
-          </div>
-        </div>
-
-        <div class="timeline__item">
-          <div class="timeline__date">11–13.09.2026</div>
-          <div class="timeline__body">
-            <h3 class="timeline__title">Фінал STOLAR CARP 2026</h3>
-            <p class="timeline__text">
-              Окремий фінальний турнір для кращих команд сезону з підвищеними призами.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-cta">
-        <a href="register.html" class="btn btn--primary">Подати заявку на етап</a>
-        <a href="events/2026.html" class="btn btn--ghost">Подивитись повний календар</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- Фінальний call-to-action -->
-  <section class="section section--alt">
-    <div class="container">
-      <div class="cta">
-        <h2 class="section-title">Готові до сезону STOLAR CARP 2026?</h2>
-        <p class="section-subtitle">
-          Створюйте команду, заходьте в «Мій кабінет», реєструйтеся на етапи
-          та ловіть свій трофейний короп разом із нами.
-        </p>
-        <div class="cta__actions">
-          <a href="auth.html" class="btn btn--primary" data-auth-toggle>Мій кабінет</a>
-          <a href="rules.html" class="btn btn--ghost">Регламент турніру</a>
-        </div>
-      </div>
-    </div>
   </section>
 </main>
 
 <footer class="footer">
-  <div class="container footer__inner">
-    <div class="footer__left">
-      <span class="footer__brand">STOLAR CARP</span>
-      <span class="footer__copy">© 2026. Усі права захищені.</span>
-    </div>
-    <div class="footer__right">
-      <a href="https://t.me/" target="_blank" rel="noreferrer" class="footer__link">Telegram</a>
-      <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" class="footer__link">YouTube</a>
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
     </div>
   </div>
 </footer>
 
-<!-- Firebase COMPAT -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
 
-<!-- Твої ініціалізації + авторизація -->
-<script src="/assets/js/firebase-init.js"></script>
-<script src="/assets/js/auth.js"></script>
+<script src="assets/js/auth.js"></script>
 
 </body>
 </html>

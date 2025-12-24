@@ -1,9 +1,8 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
-// ✅ читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
-// ✅ показує зони A/B/C + fallback з жеребкування
-// ✅ показує зважування W1–W4 як таблицю секторів + риби по колонках (1,2,3…)
-// ✅ компактні таблиці, не рвуть фон, все в горизонтальному скролі
+// читає settings/app + stageResults/{docId}
+// зони A/B/C + fallback з жеребкування
+// зважування W1–W4 компактною таблицею (сектор / команда / зона / риби 1..N)
 
 (function () {
   "use strict";
@@ -12,20 +11,20 @@
 
   const stageEl    = document.getElementById("liveStageName");
   const zonesWrap  = document.getElementById("zonesContainer");
-  const totalTbody = document.querySelector("#totalTable tbody");
+  const totalTbody = document.querySelector("#totalTable tbody"); // може бути null
   const updatedEl  = document.getElementById("liveUpdatedAt");
 
   const loadingEl  = document.getElementById("liveLoading");
   const contentEl  = document.getElementById("liveContent");
   const errorEl    = document.getElementById("liveError");
 
-  // --- елементи для зважувань ---
+  // елементи зважувань
   const w1Btn = document.getElementById("wBtn1");
   const w2Btn = document.getElementById("wBtn2");
   const w3Btn = document.getElementById("wBtn3");
   const w4Btn = document.getElementById("wBtn4");
   const weighTableBody = document.querySelector("#weighTable tbody");
-  const weighInfoEl = document.getElementById("weighInfo");
+  const weighInfoEl    = document.getElementById("weighInfo");
 
   if (!db) {
     if (errorEl) {
@@ -36,7 +35,8 @@
     return;
   }
 
-  // ---- форматування ----
+  // ---------- helpers ----------
+
   const fmt = (v) =>
     v === null || v === undefined || v === "" ? "—" : String(v);
 
@@ -57,8 +57,8 @@
 
   function fmtWObject(w) {
     if (!w) return "";
-    const c  = w.count ?? w.c ?? w.qty ?? null;
     const kg = w.weight ?? w.kg ?? w.w ?? w.totalWeight ?? null;
+    const c  = w.count ?? w.c ?? w.qty ?? null;
 
     const num = (val) => {
       if (typeof val === "number") {
@@ -68,11 +68,10 @@
     };
 
     if (kg != null) return num(kg);
-    if (c != null) return num(c);
+    if (c  != null) return num(c);
     return "";
   }
 
-  // Нормалізація рядка для зон/total
   function normZoneItem(x) {
     return {
       place:  x.place ?? x.p ?? "—",
@@ -88,8 +87,11 @@
     };
   }
 
-  // --- зони A/B/C ---
+  // ---------- зони A/B/C ----------
+
   function renderZones(zones) {
+    if (!zonesWrap) return;
+
     const zoneNames = ["A", "B", "C"];
 
     zonesWrap.innerHTML = zoneNames.map((z) => {
@@ -153,8 +155,11 @@
     }).join("");
   }
 
-  // --- загальна таблиця ---
+  // ---------- загальна таблиця (якщо є) ----------
+
   function renderTotal(total) {
+    if (!totalTbody) return; // таблицю могли прибрати з HTML
+
     const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
 
     if (!arr.length) {
@@ -178,7 +183,7 @@
     `).join("");
   }
 
-  // --- ЗВАЖУВАННЯ W1–W4 ---
+  // ---------- ЗВАЖУВАННЯ ----------
 
   let currentWIndex = 1;
   let currentStageWeighings = [];
@@ -191,7 +196,6 @@
     });
   }
 
-  // 1 запис зважування (одна риба / одна вага)
   function normWeighRow(x) {
     const wIndex =
       x.wIndex ?? x.wi ?? x.index ?? x.round ?? x.weighIndex ?? 1;
@@ -203,15 +207,12 @@
     const team = x.teamName ?? x.team ?? x.name ?? "—";
 
     let weightObj = null;
-
     if (x.w && typeof x.w === "object") {
       weightObj = x.w;
     } else if (typeof x.weight === "object") {
       weightObj = x.weight;
     } else if (x.weightKg || x.kg || x.w || x.totalWeight) {
-      weightObj = {
-        weight: x.weightKg ?? x.kg ?? x.w ?? x.totalWeight
-      };
+      weightObj = { weight: x.weightKg ?? x.kg ?? x.w ?? x.totalWeight };
     } else if (x.fishWeight || x.fish) {
       weightObj = { weight: x.fishWeight ?? x.fish };
     }
@@ -219,7 +220,6 @@
     return { wIndex, sector, zone, team, weightObj };
   }
 
-  // Групуємо по сектору -> масив риб
   function groupWeighingsBySector(allWeighings, wIndex) {
     const normAll = Array.isArray(allWeighings)
       ? allWeighings.map(normWeighRow)
@@ -278,8 +278,6 @@
       return;
     }
 
-    // будуємо заголовок колонок 1..N (але це в HTML, не тут)
-    // тут тільки рядки
     const html = rows.map((r) => {
       const fishes = [];
       for (let i = 0; i < maxFish; i++) {
@@ -302,19 +300,17 @@
 
     if (weighInfoEl) {
       weighInfoEl.textContent =
-        `Показано зважування W${wIndex}. № = номер сектору, колонки 1–… = окремі риби.`;
+        `Показано зважування W${wIndex}. № = сектор, колонки 1–… = окремі риби.`;
     }
 
-    // Оновлюємо заголовок для риб (th) динамічно
     const thead = document.querySelector("#weighTable thead tr");
     if (thead) {
-      // очищаємо все, крім перших трьох колонок
       while (thead.children.length > 3) {
         thead.removeChild(thead.lastElementChild);
       }
       for (let i = 1; i <= maxFish; i++) {
         const th = document.createElement("th");
-        th.textContent = String(i);
+        th.textContent = String(i); // 1,2,3...
         th.className = "cell-fish";
         thead.appendChild(th);
       }
@@ -326,7 +322,7 @@
     renderWeighings(currentStageWeighings, currentWIndex);
   }
 
-  // --- підписки Firestore ---
+  // ---------- Firestore subscriptions ----------
 
   let unsubSettings = null;
   let unsubStage    = null;
@@ -451,7 +447,6 @@
     );
   }
 
-  // settings/app — публічний
   unsubSettings = db
     .collection("settings")
     .doc("app")
@@ -467,21 +462,15 @@
       }
     );
 
-  // --- таби W1–W4 ---
+  // таби W1–W4
   if (w1Btn) w1Btn.addEventListener("click", () => handleWeighTabClick(1));
   if (w2Btn) w2Btn.addEventListener("click", () => handleWeighTabClick(2));
   if (w3Btn) w3Btn.addEventListener("click", () => handleWeighTabClick(3));
   if (w4Btn) w4Btn.addEventListener("click", () => handleWeighTabClick(4));
 
-  // --- компактний адаптивний CSS ---
+  // компактний CSS для таблиць
   (function injectLiveCSS () {
     const css = `
-      .live-zone.card,
-      .card {
-        max-width: 100%;
-        overflow: hidden;
-      }
-
       .live-zone .table-wrap,
       #weighTableWrap {
         width: 100%;
@@ -509,26 +498,8 @@
         text-overflow: ellipsis;
       }
 
-      #weighTable.table-sm th:nth-child(1),
-      #weighTable.table-sm td:nth-child(1) {
-        width: 40px;
-        text-align: center;
-      }
-
-      #weighTable.table-sm th:nth-child(3),
-      #weighTable.table-sm td:nth-child(3) {
-        width: 36px;
-        text-align: center;
-      }
-
-      .cell-num, .cell-zone {
-        text-align: center;
-      }
-
-      .cell-fish {
-        min-width: 42px;
-        text-align: center;
-      }
+      .cell-num, .cell-zone { text-align: center; }
+      .cell-fish    { min-width: 42px; text-align: center; }
 
       @media (max-width: 480px) {
         .live-zone .table-sm th,
@@ -536,22 +507,6 @@
         #weighTable.table-sm th,
         #weighTable.table-sm td {
           font-size: 10px;
-        }
-
-        /* трішки обрізаємо зони, щоб не вилазило */
-        .live-zone .table-sm thead tr th:nth-child(4),
-        .live-zone .table-sm thead tr th:nth-child(5),
-        .live-zone .table-sm thead tr th:nth-child(6),
-        .live-zone .table-sm thead tr th:nth-child(7),
-        .live-zone .table-sm thead tr th:nth-child(8),
-        .live-zone .table-sm thead tr th:nth-child(9),
-        .live-zone .table-sm tbody tr td:nth-child(4),
-        .live-zone .table-sm tbody tr td:nth-child(5),
-        .live-zone .table-sm tbody tr td:nth-child(6),
-        .live-zone .table-sm tbody tr td:nth-child(7),
-        .live-zone .table-sm tbody tr td:nth-child(8),
-        .live-zone .table-sm tbody tr td:nth-child(9) {
-          display: none;
         }
       }
     `;

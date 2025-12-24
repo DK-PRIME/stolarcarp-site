@@ -1,9 +1,9 @@
 // assets/js/register_firebase.js
-// STOLAR CARP • Registration
+// STOLAR CARP • Registration (FAST)
 // ✅ Team vs Solo
 // ✅ Anti-duplicate via deterministic docId (duplicate becomes UPDATE -> denied by rules)
-// ✅ Better error diagnostics (shows err.code + err.message)
-// ✅ Payload строго під rules: uid==auth.uid, entryType, teamId==users.teamId for TEAM
+// ✅ FAST: render competitions instantly from localStorage cache, then refresh in background
+// ✅ Parallel loads: profile + competitions
 // ✅ No undefined fields (uses null)
 
 (function () {
@@ -29,6 +29,13 @@
     if (submitBtn) submitBtn.disabled = true;
     return;
   }
+
+  // ======= PERF CACHE =======
+  const COMP_CACHE_KEY = "sc_competitions_cache_v1";
+  const COMP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 хв (достатньо, щоб відчувалось швидко)
+
+  const TEAM_CACHE_PREFIX = "sc_team_cache_";
+  const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 год
 
   let currentUser = null;
   let profile = null;
@@ -74,9 +81,7 @@
     return null;
   }
 
-  function nowKyiv() {
-    return new Date();
-  }
+  function nowKyiv() { return new Date(); }
 
   function getRegDatesFromEvent(ev) {
     const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen  || null;
@@ -141,7 +146,7 @@
       ? lastItems.find(x => `${x.compId}||${x.stageKey || ""}` === selectedValue)
       : null;
 
-    const ok = !!(picked && rulesOk && selectedItem && isOpenWindow(selectedItem));
+    const ok = !!(currentUser && picked && rulesOk && selectedItem && isOpenWindow(selectedItem));
     submitBtn.disabled = !ok;
   }
 
@@ -174,6 +179,37 @@
     update();
   }
 
+  // ======= TEAM NAME CACHE =======
+  function getTeamCacheKey(teamId) { return TEAM_CACHE_PREFIX + String(teamId || ""); }
+
+  function readTeamNameCache(teamId) {
+    try {
+      const raw = localStorage.getItem(getTeamCacheKey(teamId));
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || !obj.name || !obj.ts) return null;
+      if ((Date.now() - obj.ts) > TEAM_CACHE_TTL_MS) return null;
+      return String(obj.name);
+    } catch { return null; }
+  }
+
+  function writeTeamNameCache(teamId, name) {
+    try {
+      localStorage.setItem(getTeamCacheKey(teamId), JSON.stringify({ ts: Date.now(), name: String(name || "") }));
+    } catch {}
+  }
+
+  async function getTeamName(teamId) {
+    if (!teamId) return "";
+    const cached = readTeamNameCache(teamId);
+    if (cached) return cached;
+
+    const tSnap = await db.collection("teams").doc(teamId).get();
+    const name = tSnap.exists ? ((tSnap.data() || {}).name || "") : "";
+    if (name) writeTeamNameCache(teamId, name);
+    return name;
+  }
+
   async function loadProfile(user) {
     const uSnap = await db.collection("users").doc(user.uid).get();
     if (!uSnap.exists) throw new Error("Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль.");
@@ -181,11 +217,7 @@
     const u = uSnap.data() || {};
     const teamId = u.teamId || null;
 
-    let teamName = "";
-    if (teamId) {
-      const tSnap = await db.collection("teams").doc(teamId).get();
-      if (tSnap.exists) teamName = (tSnap.data() || {}).name || "";
-    }
+    const teamName = teamId ? await getTeamName(teamId) : "";
 
     profile = {
       uid: user.uid,
@@ -205,9 +237,67 @@
     }
   }
 
-  async function loadCompetitions() {
+  // ======= COMPETITIONS CACHE =======
+  function normalizeDateForCache(x) {
+    const d = toDateMaybe(x);
+    return d ? d.toISOString() : (typeof x === "string" ? x : null);
+  }
+
+  function hydrateItemFromCache(it) {
+    // Дати повертаємо як строки/Date-обʼєкти по потребі (openWindow працює зі строками ок)
+    return {
+      ...it,
+      startAt: toDateMaybe(it.startAt),
+      endAt: toDateMaybe(it.endAt),
+    };
+  }
+
+  function tryRenderCompetitionsFromCache() {
+    try {
+      const raw = localStorage.getItem(COMP_CACHE_KEY);
+      if (!raw) return false;
+      const obj = JSON.parse(raw);
+      if (!obj || !Array.isArray(obj.items) || !obj.ts) return false;
+
+      // навіть якщо протермінований — все одно малюємо одразу (перцептивно швидко),
+      // а потім перезавантажимо з Firestore
+      const items = obj.items.map(hydrateItemFromCache);
+
+      lastItems = items;
+      calcNearestUpcoming(items);
+      renderItems(items);
+      refreshSubmitState();
+
+      // легка підказка (можеш прибрати)
+      if (eventOptionsEl) {
+        const hint = document.createElement("div");
+        hint.className = "form__hint";
+        hint.style.marginTop = "8px";
+        hint.textContent = "Оновлюю список…";
+        eventOptionsEl.appendChild(hint);
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function saveCompetitionsToCache(items) {
+    try {
+      const packed = items.map(it => ({
+        ...it,
+        startAt: it.startAt ? it.startAt.toISOString() : null,
+        endAt: it.endAt ? it.endAt.toISOString() : null,
+        regOpenAt: normalizeDateForCache(it.regOpenAt),
+        regCloseAt: normalizeDateForCache(it.regCloseAt),
+      }));
+      localStorage.setItem(COMP_CACHE_KEY, JSON.stringify({ ts: Date.now(), items: packed }));
+    } catch {}
+  }
+
+  async function loadCompetitionsFresh() {
     if (!eventOptionsEl) return;
-    eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
 
     try {
       const snap = await db.collection("competitions").get();
@@ -285,14 +375,20 @@
         return ad - bd;
       });
 
+      // оновлюємо UI
       lastItems = items;
       calcNearestUpcoming(items);
       renderItems(items);
       refreshSubmitState();
+
+      // кешуємо
+      saveCompetitionsToCache(items);
     } catch (e) {
-      console.error("loadCompetitions error:", e);
-      eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ).</p>';
+      console.error("loadCompetitionsFresh error:", e);
+      if (!lastItems.length) {
+        eventOptionsEl.innerHTML =
+          '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання (Rules/доступ).</p>';
+      }
       if (submitBtn) submitBtn.disabled = true;
     }
   }
@@ -350,23 +446,32 @@
     if (e.target.name === "stagePick" || e.target.id === "rules") refreshSubmitState();
   });
 
+  // 1) ПЕРШЕ — показуємо кешований список одразу (миттєво)
+  if (eventOptionsEl) eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
+  tryRenderCompetitionsFromCache();
+
+  // 2) Далі — фоном тягнемо актуальний список (і перерендер)
+  // щоб не “красти” перший рендер — штовхаємо в micro-delay
+  setTimeout(() => { loadCompetitionsFresh(); }, 50);
+
   auth.onAuthStateChanged(async (user) => {
     currentUser = user || null;
     setMsg("");
 
+    initFoodLogic();
+    refreshSubmitState();
+
     if (!user) {
       if (submitBtn) submitBtn.disabled = true;
-      if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Акаунт» і поверніться сюди.";
-      if (eventOptionsEl) eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Список змагань доступний після входу в акаунт.</p>';
-      setMsg("Увійдіть у акаунт, щоб бачити змагання та подати заявку.", false);
+      if (profileSummary) profileSummary.textContent = "Ви не залогінені. Зайдіть у «Мій кабінет» і поверніться сюди.";
+      setMsg("Увійдіть у акаунт, щоб подати заявку.", false);
       return;
     }
 
     try {
+      // профіль важливий тільки для відправки, тому вантажимо окремо
       await loadProfile(user);
-      initFoodLogic();
-      await loadCompetitions();
+      refreshSubmitState();
     } catch (e) {
       console.error(e);
       if (submitBtn) submitBtn.disabled = true;
@@ -436,7 +541,7 @@
       // TEAM вимога під rules
       if (entryType === "team") {
         if (!profile.teamId) {
-          setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Акаунт»).", false);
+          setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Мій кабінет»).", false);
           return;
         }
         if (!profile.teamName) {
@@ -445,18 +550,16 @@
         }
       }
 
-      // SOLO ім'я
       const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
 
       const docId = buildRegDocId({ competitionId, stageId, entryType });
       const ref = db.collection("registrations").doc(docId);
 
-      // ВАЖЛИВО: не відправляємо undefined — тільки null/""
       const payload = {
         uid: profile.uid,
         competitionId,
         stageId: stageId || null,
-        entryType, // "team" | "solo"
+        entryType,
 
         teamId: entryType === "team" ? profile.teamId : null,
         teamName: entryType === "team" ? profile.teamName : null,
@@ -477,9 +580,7 @@
         setLoading(true);
         setMsg("");
 
-        // ✅ Працює з твоїми rules:
-        // - 1-й раз: це CREATE -> дозволено
-        // - 2-й раз: це UPDATE -> заборонено (і це і є "антидубль")
+        // Anti-duplicate: 1-й раз create, 2-й раз => update (заборонено rules) => permission-denied
         await ref.set(payload, { merge: false });
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
@@ -488,24 +589,11 @@
       } catch (err) {
         console.error("submit error:", err);
 
-        const code = String(err?.code || "");
-        const message = String(err?.message || "");
-
-        // Показуємо реальну причину (це критично, щоб не гадати)
-        console.warn("REG SUBMIT FAIL:", { code, message, payload, docId });
-
-        // Найчастіше:
-        // 1) Дубль: документ вже існує -> set стає UPDATE -> rules блокує -> permission-denied
-        // 2) TEAM: teamId у payload не дорівнює users/{uid}.teamId -> rules блокує -> permission-denied
-        if (String(code).toLowerCase().includes("permission")) {
-          setMsg(
-            "Нема доступу (permission-denied). " +
-            "99% це або ДУБЛЬ (заявка вже існує), або teamId в заявці ≠ teamId у users/{uid}. " +
-            "Відкрий консоль — там є код/текст помилки.",
-            false
-          );
+        const code = String(err?.code || "").toLowerCase();
+        if (code.includes("permission")) {
+          setMsg("Заявка вже існує (дубль) або не збігається teamId з профілю. Перевір «Мій кабінет».", false);
         } else {
-          setMsg(`Помилка відправки заявки. Перевір консоль. (${code || "no-code"})`, false);
+          setMsg(`Помилка відправки заявки. (${err?.code || "no-code"})`, false);
         }
       } finally {
         setLoading(false);

@@ -1,227 +1,312 @@
-<!doctype html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live результати — STOLAR CARP</title>
+// assets/js/live_firebase.js
+// STOLAR CARP • Live (public)
+// ✅ супер швидко: читає тільки 2 документи (settings/app + stageResults/{docId}) через onSnapshot
+// ✅ ніяких weighings для публіки — тільки агреговані результати
+// ✅ показує зони A/B/C + загальну таблицю W1..W4 (к-сть - вага), Разом, BIG
+// ✅ оновлює плашку "Оновлено: ..."
+// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) — показує команди по зонах з W = "—"
 
-  <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
+(function () {
+  "use strict";
 
-  <style>
-    .live-header{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;}
-    .live-kicker{display:inline-flex;align-items:center;gap:6px;font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#fcd34d;background:rgba(252,211,77,.08);border-radius:999px;padding:4px 10px;border:1px solid rgba(252,211,77,.35);width:fit-content;}
-    .live-dot{width:8px;height:8px;border-radius:50%;background:#ef4444;box-shadow:0 0 10px rgba(239,68,68,.9);}
-    .title-gradient{background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
-    .live-stage-pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
-    .live-stage-pill span{padding:4px 10px;border-radius:999px;border:1px solid #262636;background:#0d0d14;font-size:12px;}
+  const db = window.scDb;
 
-    .live-layout{display:grid;grid-template-columns:1fr;gap:18px;}
+  const stageEl    = document.getElementById("liveStageName");
+  const zonesWrap  = document.getElementById("zonesContainer");
+  const totalTbody = document.querySelector("#totalTable tbody");
+  const updatedEl  = document.getElementById("liveUpdatedAt");
 
-    .live-zones-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-    @media (max-width: 980px){ .live-zones-grid{grid-template-columns:1fr;} }
+  const loadingEl  = document.getElementById("liveLoading");
+  const contentEl  = document.getElementById("liveContent");
+  const errorEl    = document.getElementById("liveError");
 
-    .live-zone-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-    .live-zone-title span.badge{font-size:11px;padding:3px 8px;}
+  if (!db) {
+    if (errorEl) {
+      errorEl.style.display = "block";
+      errorEl.textContent = "Firebase init не завантажився.";
+    }
+    if (loadingEl) loadingEl.style.display = "none";
+    return;
+  }
 
-    .table-sm{font-size:12.5px;}
-    .table-sm th,.table-sm td{padding:4px 6px;white-space:nowrap;}
-    .table-sm td.team-col{max-width:220px;white-space:normal;}
-    .live-note{font-size:12px;color:var(--muted);margin-top:6px;}
+  const fmt = (v) =>
+    v === null || v === undefined || v === "" ? "—" : String(v);
 
-    .bf-toggle{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;}
-    .bf-toggle .btn{padding:10px 12px;border-radius:12px;}
+  const fmtTs = (ts) => {
+    try {
+      const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
+      if (!d) return "—";
+      return d.toLocaleString("uk-UA", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit"
+      });
+    } catch {
+      return "—";
+    }
+  };
 
-    /* BigFish Total block hide/show */
-    .bf-wrap{display:none;margin-top:10px;}
-    .bf-wrap.is-open{display:block;}
+  // W formatting: {count, weight} => "к-сть - вага", напр. "5 - 26.780"
+  function fmtW(w) {
+    if (!w) return "—";
 
-    /* Small helper badge */
-    .pill{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:6px 10px;border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.35);
-      color:#cbd5e1;font-size:12px;
+    let c  = w.count ?? w.c ?? w.qty ?? "";
+    let kg = w.weight ?? w.kg ?? w.w ?? "";
+
+    if (c === "" && kg === "") return "—";
+
+    if (typeof kg === "number") {
+      kg = kg.toFixed(3);
     }
 
-    .bigfish-row--max{background:rgba(250,204,21,0.08);}
+    return `${fmt(c)} - ${fmt(kg)}`;
+  }
 
-    /* Weighings section */
-    .weigh-toggle{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
-    .weigh-toggle .btn-sm{
-      padding:6px 10px;
-      font-size:12px;
-      border-radius:999px;
-    }
-    .weigh-toggle .btn-sm.is-active{
-      box-shadow:0 0 0 1px rgba(250,204,21,.5);
-    }
+  // Нормалізуємо 1 рядок (і для зони, і для total)
+  function normZoneItem(x) {
+    const rawZone   = x.zone ?? x.drawZone ?? "";
+    const drawKey   = x.drawKey || x.sector || "";
+    const zoneLabel = drawKey || rawZone || "—";
 
-    /* Нехай таблиця зважувань буде ще компактніша */
-    #weighTable.table-sm th,
-    #weighTable.table-sm td{
-      padding:3px 5px;
-      font-size:11.5px;
-    }
-  </style>
-</head>
+    return {
+      place:  x.place ?? x.p ?? "—",
+      team:   x.team ?? x.teamName ?? "—",
 
-<body>
+      w1: x.w1 ?? x.W1 ?? null,
+      w2: x.w2 ?? x.W2 ?? null,
+      w3: x.w3 ?? x.W3 ?? null,
+      w4: x.w4 ?? x.W4 ?? null,
 
-<header class="header">
-  <div class="container header__row">
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
-    </a>
+      total: x.total ?? x.sum ?? null,
 
-    <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-    </nav>
+      big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
+      weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
-  </div>
-</header>
+      zone: zoneLabel
+    };
+  }
 
-<main class="main">
-  <section class="container section">
+  // ЗОНИ A/B/C
+  function renderZones(zones) {
+    const zoneNames = ["A", "B", "C"];
 
-    <div class="live-header">
-      <div class="live-kicker">
-        <span class="live-dot"></span>
-        <span>Live протокол</span>
-      </div>
+    zonesWrap.innerHTML = zoneNames.map((z) => {
+      const listRaw = zones?.[z] || [];
+      const list    = listRaw.map(normZoneItem);
 
-      <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
-        Результати активного етапу
-      </h1>
-
-      <div class="live-stage-pill">
-        <span>Поточний етап: <strong id="liveStageName">—</strong></span>
-      </div>
-
-      <div class="bf-toggle">
-        <button class="btn btn--accent" id="toggleBigFishBtn" type="button">BigFish Total</button>
-        <span class="pill" id="liveUpdatedAt" title="Останнє оновлення">Оновлено: —</span>
-      </div>
-
-      <p class="lead" style="max-width:720px;margin:6px 0 0;">
-        W = <b>к-сть / вага</b>
-      </p>
-    </div>
-
-    <!-- BigFish Total тепер одразу під кнопкою -->
-    <div class="card bf-wrap" id="bigFishWrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <h2 style="margin:0;">BigFish — Total</h2>
-        <span class="pill" id="bfCount">Учасників: —</span>
-      </div>
-
-      <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
-        <table class="table table-sm" id="bigFishTable">
-          <thead>
-            <tr>
-              <th>Команда</th>
-              <th>BIG 1 доба</th>
-              <th>BIG 2 доба</th>
-              <th>MAX BIG</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <p class="live-note">
-        Учасники беруться з адмінки жеребкування (галочка BigFish Total).
-      </p>
-    </div>
-
-    <div id="liveError" class="form-msg err" style="display:none;"></div>
-
-    <div id="liveLoading" class="form__hint" style="margin-top:12px;">
-      Завантаження результатів...
-    </div>
-
-    <div id="liveContent" class="live-layout" style="display:none;">
-
-      <!-- LEFT: Зони + Зважування -->
-      <div class="live-left">
-        <div class="card" style="margin-bottom:16px;">
-          <h2 style="margin-top:0;margin-bottom:10px;">Зони A / B / C</h2>
-
-          <div class="live-zones-grid" id="zonesContainer"></div>
-
-          <p class="live-note">
-            Сортування: вага → BIG. Місце — в межах зони.
-          </p>
-        </div>
-
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <h2 style="margin-top:0;margin-bottom:8px;">Зважування (W1–W4)</h2>
-
-            <div class="weigh-toggle" id="weighButtons">
-              <button type="button" class="btn btn--ghost btn-sm is-active" data-w="W1">W1</button>
-              <button type="button" class="btn btn--ghost btn-sm" data-w="W2">W2</button>
-              <button type="button" class="btn btn--ghost btn-sm" data-w="W3">W3</button>
-              <button type="button" class="btn btn--ghost btn-sm" data-w="W4">W4</button>
+      if (!list.length) {
+        return `
+          <div class="live-zone card">
+            <div class="live-zone-title">
+              <h3 style="margin:0;">Зона ${z}</h3>
+              <span class="badge">немає даних</span>
             </div>
+            <p class="form__hint">Результати для цієї зони ще не заповнені.</p>
           </div>
+        `;
+      }
 
+      const rowsHtml = list.map((row) => `
+        <tr>
+          <td>${fmt(row.zone)}</td>
+          <td class="team-col">${fmt(row.team)}</td>
+          <td>${fmtW(row.total)}</td>
+          <td>${fmt(row.big)}</td>
+          <td>${fmt(row.weight)}</td>
+          <td>${fmt(row.place)}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <div class="live-zone card">
+          <div class="live-zone-title">
+            <h3 style="margin:0;">Зона ${z}</h3>
+            <span class="badge badge--warn">команд: ${list.length}</span>
+          </div>
           <div class="table-wrap" style="overflow-x:auto;">
-            <table class="table table-sm" id="weighTable">
+            <table class="table table-sm">
               <thead>
                 <tr>
                   <th>Зона</th>
-                  <th>Сектор</th>
                   <th>Команда</th>
-                  <th>Риба</th>
+                  <th>Разом W</th>
+                  <th>BIG</th>
                   <th>Вага</th>
+                  <th>Місце</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody>${rowsHtml}</tbody>
             </table>
           </div>
-
-          <p class="live-note">
-            Показує риби по вибраному зважуванню (W1–W4). Для довгих списків — гортай по горизонталі.
-          </p>
         </div>
-      </div>
-    </div>
-  </section>
-</main>
+      `;
+    }).join("");
+  }
 
-<footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
-    </div>
-  </div>
-</footer>
+  // ЗАГАЛЬНА ТАБЛИЦЯ (W1..W4 + Разом + BIG)
+  function renderTotal(total) {
+    const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
 
-<!-- Firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="assets/js/firebase-init.js"></script>
+    if (!arr.length) {
+      totalTbody.innerHTML =
+        `<tr><td colspan="9">Дані ще не заповнені.</td></tr>`;
+      return;
+    }
 
-<!-- Live читання -->
-<script src="assets/js/live_firebase.js"></script>
+    totalTbody.innerHTML = arr.map((row) => `
+      <tr>
+        <td>${fmt(row.place)}</td>
+        <td class="team-col">${fmt(row.team)}</td>
+        <td>${fmt(row.zone)}</td>
+        <td>${fmtW(row.w1)}</td>
+        <td>${fmtW(row.w2)}</td>
+        <td>${fmtW(row.w3)}</td>
+        <td>${fmtW(row.w4)}</td>
+        <td>${fmtW(row.total)}</td>
+        <td>${fmt(row.big)}</td>
+      </tr>
+    `).join("");
+  }
 
-<!-- BigFish Total -->
-<script src="assets/js/bigfish_total_live.js"></script>
+  // ---- Підписки: settings/app -> activeKey -> stageResults/{docId} ----
+  let unsubSettings = null;
+  let unsubStage    = null;
 
-</body>
-</html>
+  function showError(text) {
+    if (errorEl) {
+      errorEl.style.display = "block";
+      errorEl.textContent   = text;
+    }
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) contentEl.style.display = "none";
+  }
+
+  function showContent() {
+    if (errorEl)   errorEl.style.display   = "none";
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) contentEl.style.display = "grid";
+  }
+
+  function stopStageSub() {
+    if (unsubStage) {
+      unsubStage();
+      unsubStage = null;
+    }
+  }
+
+  // settings/app.activeKey = "compId||stageKey"
+  function stageDocIdFromApp(app) {
+    const key = app?.activeKey || app?.activeStageKey;
+    if (key) return String(key);
+
+    const compId  = app?.activeCompetitionId || app?.competitionId || "";
+    const stageId = app?.activeStageId || app?.stageId || "";
+    if (compId && stageId) return `${compId}||${stageId}`;
+    if (compId && !stageId) return `${compId}||main`;
+    return "";
+  }
+
+  // fallback: з масиву teams робимо "порожні" зони/total (після жеребкування, до першого зважування)
+  function buildFallbackFromTeams(teamsRaw) {
+    const teams = Array.isArray(teamsRaw) ? teamsRaw : [];
+    const zones = { A: [], B: [], C: [] };
+    const total = [];
+
+    teams.forEach((t) => {
+      const drawKey   = (t.drawKey || t.sector || "").toString().toUpperCase();
+      const zoneLetter =
+        (t.drawZone || (drawKey ? drawKey[0] : "") || "").toString().toUpperCase();
+
+      if (!["A","B","C"].includes(zoneLetter)) return;
+
+      const base = {
+        place:  "—",
+        team:   t.teamName || t.team || "—",
+        zone:   drawKey || zoneLetter || "—",
+        w1: null,
+        w2: null,
+        w3: null,
+        w4: null,
+        total: null,
+        big: "—",
+        weight: "—"
+      };
+
+      zones[zoneLetter].push(base);
+      total.push(base);
+    });
+
+    return { zones, total };
+  }
+
+  function startStageSub(docId) {
+    stopStageSub();
+
+    if (!docId) {
+      showError("Нема активного етапу (settings/app).");
+      return;
+    }
+
+    const ref = db.collection("stageResults").doc(docId);
+
+    unsubStage = ref.onSnapshot(
+      (snap) => {
+        if (!snap.exists) {
+          showError("Live ще не опублікований для цього етапу (нема stageResults).");
+          return;
+        }
+
+        const data = snap.data() || {};
+
+        const stageName = data.stageName || data.stage || data.title || docId;
+        if (stageEl) stageEl.textContent = stageName;
+
+        const updatedAt = data.updatedAt || data.updated || data.ts || null;
+        if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
+
+        const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
+
+        let zonesData  = data.zones || { A: [], B: [], C: [] };
+        let totalData  = Array.isArray(data.total) ? data.total : [];
+
+        const hasZoneData =
+          (zonesData.A && zonesData.A.length) ||
+          (zonesData.B && zonesData.B.length) ||
+          (zonesData.C && zonesData.C.length);
+
+        // Якщо зважування ще нічого не записали, але є команди — показуємо fallback
+        if (!hasZoneData && !totalData.length && teamsRaw.length) {
+          const fb = buildFallbackFromTeams(teamsRaw);
+          zonesData = fb.zones;
+          totalData = fb.total;
+        }
+
+        renderZones(zonesData);
+        renderTotal(totalData);
+
+        showContent();
+      },
+      (err) => {
+        console.error(err);
+        showError("Помилка читання Live (stageResults).");
+      }
+    );
+  }
+
+  // settings/app — публічний (rules дозволяють read)
+  unsubSettings = db
+    .collection("settings")
+    .doc("app")
+    .onSnapshot(
+      (snap) => {
+        const app = snap.exists ? (snap.data() || {}) : {};
+        const docId = stageDocIdFromApp(app);
+        startStageSub(docId);
+      },
+      (err) => {
+        console.error(err);
+        showError("Помилка читання settings/app.");
+      }
+    );
+})();

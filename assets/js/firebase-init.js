@@ -1,20 +1,18 @@
-// assets/js/firebase-init.js
 (function () {
   "use strict";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBU7BSwGl0laDvHGhrvu14nJWpabsjSoNo",
-    authDomain: "stolar-carp.firebaseapp.com",
-    projectId: "stolar-carp",
-    storageBucket: "stolar-carp.appspot.com", // ✅ ВАЖЛИВО: правильний bucket
-    messagingSenderId: "1019636788370",
-    appId: "1:1019636788370:web:af1c1ecadb683df212ca4b",
-    measurementId: "G-VWC07QNS7P"
-  };
+  // ✅ захист від подвійної ініціалізації (інколи скрипт можуть підключити двічі)
+  if (window.__SC_FIREBASE_READY__) return;
 
   function init() {
+    const firebaseConfig = window.__SC_FIREBASE_CONFIG__;
+    if (!firebaseConfig) {
+      console.warn("Firebase config missing: window.__SC_FIREBASE_CONFIG__");
+      return;
+    }
+
     if (!window.firebase) {
-      console.warn("Firebase compat SDK не підключений на сторінці.");
+      console.warn("Firebase SDK not loaded");
       return;
     }
 
@@ -25,13 +23,15 @@
     window.scAuth = window.firebase.auth();
     window.scDb = window.firebase.firestore();
 
-    // storage буде тільки якщо підключений firebase-storage-compat.js
+    // ✅ дуже корисно: Firestore ігнорує undefined (менше шансів на “undefined is not allowed”)
     try {
-      window.scStorage = window.firebase.storage();
-    } catch (e) {
-      window.scStorage = null;
-    }
+      window.scDb.settings({ ignoreUndefinedProperties: true });
+    } catch {}
+
+    window.__SC_FIREBASE_READY__ = true;
   }
 
+  // якщо SDK вже підвантажився — інітимо одразу
+  // якщо ні — defer скрипти все одно виконаються в порядку, і init відпрацює
   init();
 })();

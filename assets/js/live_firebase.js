@@ -109,6 +109,51 @@
 
       const rowsHtml = list.map((row) => `
         <tr>
+          <td>${fmt(row.zone || z)}</td>
+          <td class="team-col">${fmt(row.team)}</td>
+          <td>${fmtW(row.w1)}</td>
+          <td>${fmtW(row.w2)}</td>
+          <td>${fmtW(row.w3)}</td>
+          <td>${fmtW(row.w4)}</td>
+          <td>${fmtW(row.total)}</td>
+          <td>${fmt(row.big)}</td>
+          <td>${fmt(row.weight)}</td>
+          <td>${fmt(row.place)}</td>
+        </tr>
+      `).join("");
+
+      return `
+        <div class="live-zone card">
+          <div class="live-zone-title">
+            <h3 style="margin:0;">Зона ${z}</h3>
+            <span class="badge">команд: ${list.length}</span>
+          </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Зона</th>
+                  <th>Команда</th>
+                  <th>W1</th>
+                  <th>W2</th>
+                  <th>W3</th>
+                  <th>W4</th>
+                  <th>Разом</th>
+                  <th>BIG</th>
+                  <th>Вага</th>
+                  <th>Місце</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+      const rowsHtml = list.map((row) => `
+        <tr>
           <td>${fmt(row.zone)}</td>
           <td class="team-col">${fmt(row.team)}</td>
           <td>${fmtW(row.total)}</td>

@@ -55,74 +55,65 @@
     }
   };
 
-  // формат для окремого числа (вага АБО к-сть)
-  function fmtNumber(val) {
-    if (val == null || val === "") return "";
-    if (typeof val === "number") {
-      return String(val.toFixed(3)).replace(".", ",");
-    }
-    return String(val);
-  }
-
-  // пара "к-сть – вага" для W1..W4 і Разом у зонах / загальній таблиці
-  function fmtWPair(w) {
-    if (!w) return "—";
-
-    const count = w.count ?? w.c ?? w.qty ?? null;
-    const weight =
-      w.weight ?? w.kg ?? w.w ?? w.totalWeight ?? null;
-
-    if (count == null && weight == null) return "—";
-
-    const cStr = count != null ? String(count) : "0";
-    const wStr = weight != null ? fmtNumber(weight) : "0";
-
-    return `${cStr} – ${wStr}`;
-  }
-
-  // формат об'єкта ваги для окремої рибки (зважування W1–W4)
+  // формат для «одна вага» (вага однієї риби або сумарна вага)
   function fmtWObject(w) {
     if (!w) return "";
     const kg = w.weight ?? w.kg ?? w.w ?? w.totalWeight ?? null;
     const c  = w.count ?? w.c ?? w.qty ?? null;
 
-    if (kg != null) return fmtNumber(kg);
-    if (c  != null) return fmtNumber(c);
+    const num = (val) => {
+      if (typeof val === "number") {
+        return String(val.toFixed(3)).replace(".", ",");
+      }
+      return String(val);
+    };
+
+    if (kg != null) return num(kg);
+    if (c  != null) return num(c);
     return "";
   }
 
+  // формат для W1–W4 і «Разом» в зонах:
+  // "к-сть - вага" => "5 - 26,780"
+  function fmtWCatchPair(w) {
+    if (!w || typeof w !== "object") return "—";
+
+    const c  = w.count ?? w.c ?? w.qty ?? null;
+    const kg = w.weight ?? w.kg ?? w.w ?? w.totalWeight ?? null;
+
+    if (c == null && kg == null) return "—";
+
+    const num = (val, digits = 3) => {
+      if (val == null) return "—";
+      if (typeof val === "number") {
+        return String(val.toFixed(digits)).replace(".", ",");
+      }
+      return String(val);
+    };
+
+    const cStr  = num(c, 0);
+    const kgStr = num(kg, 3);
+
+    if (c != null && kg != null) return `${cStr} - ${kgStr}`;
+    if (c != null) return cStr;
+    return kgStr;
+  }
+
   function normZoneItem(x) {
-    const zoneRaw   = x.zone ?? x.drawZone ?? "";
-    const sectorRaw =
-      x.sector ?? x.drawSector ?? x.sectorNum ?? null;
-
-    const zone = zoneRaw ? String(zoneRaw).toUpperCase() : "";
-    const sector = sectorRaw != null ? Number(sectorRaw) : null;
-
-    // те, що показуємо в колонці "Зона": A1, B5, C2, або просто A / B / C / номер
-    let zoneLabel = "";
-    if (zone && Number.isFinite(sector)) {
-      zoneLabel = `${zone}${sector}`;
-    } else if (zone) {
-      zoneLabel = zone;
-    } else if (Number.isFinite(sector)) {
-      zoneLabel = String(sector);
-    } else {
-      zoneLabel = "—";
-    }
-
     return {
-      place:  x.place ?? x.p ?? "—",            // місце
+      place:  x.place ?? x.p ?? "—",
       team:   x.team ?? x.teamName ?? "—",
+
       w1:     x.w1 ?? x.W1 ?? null,
       w2:     x.w2 ?? x.W2 ?? null,
       w3:     x.w3 ?? x.W3 ?? null,
       w4:     x.w4 ?? x.W4 ?? null,
       total:  x.total ?? x.sum ?? null,
+
       big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
-      weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? null,
-      zone,          // літера зони A/B/C
-      zoneLabel      // те, що показуємо в таблиці (A1, B5…)
+      weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
+
+      zone:   x.zone ?? x.drawZone ?? ""
     };
   }
 
@@ -151,15 +142,15 @@
 
       const rowsHtml = list.map((row) => `
         <tr>
-          <td>${fmt(row.zoneLabel)}</td>
+          <td>${fmt(row.zone)}</td>
           <td class="team-col">${fmt(row.team)}</td>
-          <td>${fmtWPair(row.w1)}</td>
-          <td>${fmtWPair(row.w2)}</td>
-          <td>${fmtWPair(row.w3)}</td>
-          <td>${fmtWPair(row.w4)}</td>
-          <td>${fmtWPair(row.total)}</td>
+          <td>${fmtWCatchPair(row.w1)}</td>
+          <td>${fmtWCatchPair(row.w2)}</td>
+          <td>${fmtWCatchPair(row.w3)}</td>
+          <td>${fmtWCatchPair(row.w4)}</td>
+          <td>${fmtWCatchPair(row.total)}</td>
           <td>${fmt(row.big)}</td>
-          <td>${fmtNumber(row.weight) || "—"}</td>
+          <td>${fmt(row.weight)}</td>
           <td>${fmt(row.place)}</td>
         </tr>
       `).join("");
@@ -194,7 +185,7 @@
     }).join("");
   }
 
-  // ---------- загальна таблиця (якщо є) ----------
+  // ---------- загальна таблиця (підсумок по етапу) ----------
 
   function renderTotal(total) {
     if (!totalTbody) return; // таблицю могли прибрати з HTML
@@ -202,26 +193,35 @@
     const arr = Array.isArray(total) ? total.map(normZoneItem) : [];
 
     if (!arr.length) {
-      // 10 колонок: Зона, Команда, W1, W2, W3, W4, Разом, BIG, Вага, Місце
       totalTbody.innerHTML =
-        `<tr><td colspan="10">Дані ще не заповнені.</td></tr>`;
+        `<tr><td colspan="6">Дані ще не заповнені.</td></tr>`;
       return;
     }
 
-    totalTbody.innerHTML = arr.map((row) => `
-      <tr>
-        <td>${fmt(row.zoneLabel)}</td>
-        <td class="team-col">${fmt(row.team)}</td>
-        <td>${fmtWPair(row.w1)}</td>
-        <td>${fmtWPair(row.w2)}</td>
-        <td>${fmtWPair(row.w3)}</td>
-        <td>${fmtWPair(row.w4)}</td>
-        <td>${fmtWPair(row.total)}</td>
-        <td>${fmt(row.big)}</td>
-        <td>${fmtNumber(row.weight) || "—"}</td>
-        <td>${fmt(row.place)}</td>
-      </tr>
-    `).join("");
+    totalTbody.innerHTML = arr.map((row) => {
+      let totalCount = null;
+      if (row.total && typeof row.total === "object") {
+        totalCount = row.total.count ?? row.total.c ?? row.total.qty ?? null;
+      }
+
+      const totalCountStr = totalCount == null ? "—" : fmt(totalCount);
+
+      const weightStr =
+        row.weight && row.weight !== "—"
+          ? fmtWObject({ weight: row.weight })
+          : "—";
+
+      return `
+        <tr>
+          <td>${fmt(row.zone)}</td>
+          <td class="team-col">${fmt(row.team)}</td>
+          <td>${totalCountStr}</td>
+          <td>${fmt(row.big)}</td>
+          <td>${weightStr}</td>
+          <td>${fmt(row.place)}</td>
+        </tr>
+      `;
+    }).join("");
   }
 
   // ---------- ЗВАЖУВАННЯ ----------
@@ -274,6 +274,8 @@
 
     filtered.forEach((r) => {
       if (r.sector == null) return;
+
+      // ключ за зоною і сектором
       const key = `${r.zone || ""}|${r.sector}`;
       let entry = map.get(key);
       const weightStr = fmtWObject(r.weightObj);
@@ -346,9 +348,11 @@
 
     const thead = document.querySelector("#weighTable thead tr");
     if (thead) {
+      // залишаємо тільки перші три (№, Команда, Зона)
       while (thead.children.length > 3) {
         thead.removeChild(thead.lastElementChild);
       }
+      // додаємо колонки 1..maxFish
       for (let i = 1; i <= maxFish; i++) {
         const th = document.createElement("th");
         th.textContent = String(i); // 1,2,3...
@@ -421,7 +425,7 @@
         w4: null,
         total: null,
         big: "—",
-        weight: null
+        weight: "—"
       };
 
       zones[zone].push(base);
@@ -475,7 +479,7 @@
         renderZones(zonesData);
         renderTotal(totalData);
 
-        // зважування з stageResults.weighings
+        // зважування
         currentStageWeighings = Array.isArray(data.weighings) ? data.weighings : [];
         setActiveWeighTab(currentWIndex || 1);
         renderWeighings(currentStageWeighings, currentWIndex);
@@ -541,7 +545,7 @@
       }
 
       .cell-num, .cell-zone { text-align: center; }
-      .cell-fish    { min-width: 42px; text-align: center; }
+      .cell-fish    { min-width: 36px; text-align: center; }
 
       @media (max-width: 480px) {
         .live-zone .table-sm th,

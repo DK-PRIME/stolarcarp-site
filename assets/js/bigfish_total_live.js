@@ -1,20 +1,45 @@
 // assets/js/bigfish_total_live.js
 // STOLAR CARP • BigFish Total (public)
-// ✅ одна відповідальність: кнопка BigFish Total + читання bigFishTotal з stageResults/{activeKey}
-// ✅ читає той самий stageResults, що й live_firebase.js
 
 (function () {
   "use strict";
 
-  const db = window.scDb;
-  if (!db) return;
-
-  const btn      = document.getElementById("toggleBigFishBtn");
-  const wrap     = document.getElementById("bigFishWrap");
-  const tbody    = document.querySelector("#bigFishTable tbody");
-  const countEl  = document.getElementById("bfCount");
+  const btn     = document.getElementById("toggleBigFishBtn");
+  const wrap    = document.getElementById("bigFishWrap");
+  const tbody   = document.querySelector("#bigFishTable tbody");
+  const countEl = document.getElementById("bfCount");
 
   if (!btn || !wrap || !tbody) return;
+
+  // --- тільки відкривання/закривання блоку (працює навіть без Firebase) ---
+
+  function setOpen(isOpen) {
+    if (isOpen) {
+      wrap.classList.add("is-open");
+      btn.textContent = "Сховати BigFish Total";
+    } else {
+      wrap.classList.remove("is-open");
+      btn.textContent = "BigFish Total";
+    }
+  }
+
+  // стан з localStorage (щоб після перезавантаження памʼятало)
+  let isOpen = localStorage.getItem("bf-is-open") === "1";
+  setOpen(isOpen);
+
+  btn.addEventListener("click", () => {
+    isOpen = !isOpen;
+    localStorage.setItem("bf-is-open", isOpen ? "1" : "0");
+    setOpen(isOpen);
+    if (isOpen) {
+      startSubscribe(); // при першому відкритті – підписка на дані
+    }
+  });
+
+  // --- Далі – завантаження даних з Firestore ---
+
+  const db = window.scDb;
+  if (!db) return;
 
   const fmt = (v) =>
     v === null || v === undefined || v === "" ? "—" : String(v);
@@ -119,16 +144,9 @@
       );
   }
 
-  // Кнопка: відкриваємо панель + при першому відкритті стартуємо підписку
-  btn.addEventListener("click", () => {
-    wrap.classList.toggle("is-open");
-    if (wrap.classList.contains("is-open")) {
-      startSubscribe();
-    }
-  });
-
-  // Якщо панель раптом уже відкрита при завантаженні
+  // Якщо блок уже відкритий класом is-open по HTML – відразу стартуємо
   if (wrap.classList.contains("is-open")) {
+    isOpen = true;
     startSubscribe();
   }
 })();

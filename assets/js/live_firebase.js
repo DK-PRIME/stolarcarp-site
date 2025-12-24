@@ -3,10 +3,10 @@
 // ✅ читає тільки settings/app + stageResults/{docId}
 // ✅ показує зони A/B/C (підсумки по етапу)
 // ✅ BigFish Total окремим скриптом
-// ✅ НОВЕ: "Зважування по етапу" з перемикачем W1–W4,
-//    де в рядках: №(сектор) / Команда / Зона / W (шт/кг)
-// ✅ якщо zones/total ще пусті, але є teams (після жеребкування) —
-//    показує по зонах просто розсадку з W="—"
+// ✅ "Зважування по етапу" з перемикачем W1–W4:
+//    №(сектор) / Команда / Зона / W (шт/кг)
+// ✅ навіть якщо немає зважувань, у таблиці будуть усі команди (по зоні/сектору)
+// ✅ компактні таблиці для мобілок
 
 (function () {
   "use strict";
@@ -33,6 +33,37 @@
     if (loadingEl) loadingEl.style.display = "none";
     return;
   }
+
+  // --- компактні таблиці для live ---
+  (function injectLiveCSS () {
+    const css = `
+      .live-zone .table-sm th,
+      .live-zone .table-sm td,
+      #weighTable.table-sm th,
+      #weighTable.table-sm td {
+        padding: 4px 6px;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .live-zone .table-wrap,
+      .card .table-wrap {
+        overflow-x: auto;
+      }
+
+      @media (max-width: 600px) {
+        .live-zone .table-sm th,
+        .live-zone .table-sm td,
+        #weighTable.table-sm th,
+        #weighTable.table-sm td {
+          font-size: 11px;
+        }
+      }
+    `;
+    const st = document.createElement("style");
+    st.textContent = css;
+    document.head.appendChild(st);
+  })();
 
   const fmt = (v) =>
     v === null || v === undefined || v === "" ? "—" : String(v);
@@ -145,7 +176,7 @@
             <h3 style="margin:0;">Зона ${z}</h3>
             <span class="badge badge--warn">команд: ${list.length}</span>
           </div>
-          <div class="table-wrap" style="overflow-x:auto;">
+          <div class="table-wrap">
             <table class="table table-sm">
               <thead>
                 <tr>
@@ -173,6 +204,7 @@
 
   let currentWKey = "W1";
   let weighingsByKey = { W1: [], W2: [], W3: [], W4: [] };
+  let teamsBaseForWeigh = []; // список команд з зон: {zone, sector, team}
 
   function normWeighItem(x) {
     const drawKey = (x.drawKey || x.sectorKey || "").toString().toUpperCase();
@@ -199,12 +231,42 @@
   function renderWeighings() {
     if (!weighTableBody) return;
 
+    // 1) базові рядки з команд (зон/секторів), навіть якщо немає зважувань
+    const base = new Map();
+    teamsBaseForWeigh.forEach((t) => {
+      const key = `${t.zone}|${t.sector}`;
+      base.set(key, {
+        zone:   t.zone,
+        sector: t.sector,
+        team:   t.team,
+        count:  null,
+        weight: null
+      });
+    });
+
+    // 2) поверх додаємо фактичні зважування для поточного W
     const listRaw = weighingsByKey[currentWKey] || [];
-    const arr = listRaw.map(normWeighItem);
+    listRaw.forEach((w) => {
+      const n = normWeighItem(w);
+      const key = `${n.zone}|${n.sector}`;
+      const item = base.get(key) || {
+        zone: n.zone,
+        sector: n.sector,
+        team: n.team,
+        count: null,
+        weight: null
+      };
+      item.team   = n.team || item.team;
+      item.count  = n.count;
+      item.weight = n.weight;
+      base.set(key, item);
+    });
+
+    const arr = Array.from(base.values());
 
     if (!arr.length) {
       weighTableBody.innerHTML =
-        `<tr><td colspan="4">Для ${currentWKey} ще немає зважувань.</td></tr>`;
+        `<tr><td colspan="4">Для ${currentWKey} ще немає зважувань і команд.</td></tr>`;
       return;
     }
 
@@ -369,10 +431,25 @@
           totalData = fb.total;
         }
 
-        // рендер зон (підсумки)
+        // 1) рендер зон (підсумки)
         renderZones(zonesData);
 
-        // НОВЕ: зчитуємо публічні зважування
+        // 2) підготовка бази команд для "Зважування по етапу"
+        teamsBaseForWeigh = [];
+        ["A","B","C"].forEach((z) => {
+          const list = (zonesData[z] || []).map(normZoneItem);
+          list.forEach((row) => {
+            if (!["A","B","C"].includes(row.zone)) return;
+            if (!row.sector) return;
+            teamsBaseForWeigh.push({
+              zone:   row.zone,
+              sector: row.sector,
+              team:   row.team
+            });
+          });
+        });
+
+        // 3) зчитуємо публічні зважування зі stageResults
         const wSrc = data.weighings || data.W || {};
         weighingsByKey = {
           W1: Array.isArray(wSrc.W1) ? wSrc.W1 : [],
@@ -380,6 +457,8 @@
           W3: Array.isArray(wSrc.W3) ? wSrc.W3 : [],
           W4: Array.isArray(wSrc.W4) ? wSrc.W4 : []
         };
+
+        // 4) оновлюємо таблицю зважувань
         renderWeighings();
 
         showContent();

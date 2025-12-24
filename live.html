@@ -27,19 +27,27 @@
     .live-zone-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
     .live-zone-title span.badge{font-size:11px;padding:3px 8px;}
 
-    .table-sm{font-size:12.5px;}
-    .table-sm th,.table-sm td{padding:6px 8px;white-space:nowrap;}
-    .table-sm td.team-col{max-width:220px;white-space:normal;}
-    .live-note{font-size:12px;color:var(--muted);margin-top:6px;}
+    /* більш компактні таблиці */
+    .table-sm{font-size:11.5px;line-height:1.2;}
+    .table-sm th,
+    .table-sm td{
+      padding:4px 6px;
+      white-space:nowrap;
+    }
+    .table-sm td.team-col{
+      max-width:180px;
+      white-space:normal;
+    }
+
+    .live-note{font-size:11.5px;color:var(--muted);margin-top:6px;}
 
     .bf-toggle{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;}
-    .bf-toggle .btn{padding:10px 12px;border-radius:12px;}
+    .bf-toggle .btn{padding:8px 11px;border-radius:12px;font-size:13px;}
 
-    /* BigFish Total block hide/show */
+    /* блок BigFish Total: ховаємо/показуємо класом is-open (робить скрипт bigfish_total_live.js) */
     .bf-wrap{display:none;}
     .bf-wrap.is-open{display:block;}
 
-    /* Small helper badge */
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:6px 10px;border-radius:999px;
@@ -87,11 +95,11 @@
       </div>
 
       <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
-        Результати активних змагань
+        Результати активного етапу
       </h1>
 
       <div class="live-stage-pill">
-        <span>Активні: <strong id="liveStageName">—</strong></span>
+        <span>Поточний етап: <strong id="liveStageName">—</strong></span>
       </div>
 
       <div class="bf-toggle">
@@ -100,7 +108,8 @@
       </div>
 
       <p class="lead" style="max-width:720px;margin:6px 0 0;">
-        W = <b>к-сть / вага</b>
+        W = <b>к-сть / вага</b>. Таблиці оновлюються автоматично з Firebase.
+      </p>
     </div>
 
     <div id="liveError" class="form-msg err" style="display:none;"></div>
@@ -119,43 +128,31 @@
           <div class="live-zones-grid" id="zonesContainer"></div>
 
           <p class="live-note">
-            STOLAR CARP
+            Сортування: вага → BIG. Місце — в межах зони.
           </p>
         </div>
 
         <div class="card">
-  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <h2 style="margin:0;">Зважування</h2>
+          <h2 style="margin-top:0;margin-bottom:10px;">Загальна таблиця</h2>
 
-    <div class="bf-toggle" id="wFilter">
-      <button type="button" class="btn btn--accent btn--xs" data-w-key="W1">W1</button>
-      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W2">W2</button>
-      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W3">W3</button>
-      <button type="button" class="btn btn--ghost btn--xs"  data-w-key="W4">W4</button>
-    </div>
-  </div>
-
-  <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
-    <table class="table table-sm" id="weighTable">
-      <thead>
-        <tr>
-          <th>№</th>
-          <th>Команда</th>
-          <th>Зона</th>
-          <th>W</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-
-  <p class="live-note">
-    Переглянути зважування W1–W4,
-  </p>
-        </div>
+          <div class="table-wrap" style="overflow-x:auto;">
+            <table class="table table-sm" id="totalTable">
+              <thead>
+                <tr>
+                  <th>Зона</th>
+                  <th>Команда</th>
+                  <th>К-сть риб</th>
+                  <th>BIG</th>
+                  <th>Вага</th>
+                  <th>Місце</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
 
           <p class="live-note">
-            W = к-сть / вага .
+            К-сть риб — загальна по етапу. Місце — загальне (якщо записане), інакше “—”.
           </p>
         </div>
       </div>
@@ -183,7 +180,7 @@
           </div>
 
           <p class="live-note">
-            STOLAR CARP
+            Учасники беруться з адмінки жеребкування (галочка BigFish Total).
           </p>
         </div>
       </div>

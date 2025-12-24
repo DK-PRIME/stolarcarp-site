@@ -162,22 +162,66 @@
     text-align:center;
   }
 
-  /* ===== BigFish Total: тільки helper-и, сама табличка вже ок ===== */
-  .bf-wrap{margin-top:10px;}
-  .pill{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding:6px 10px;
-    border-radius:999px;
-    border:1px solid rgba(148,163,184,.25);
-    background:rgba(2,6,23,.35);
-    color:#cbd5e1;
-    font-size:12px;
-  }
-  .bigfish-row--max{
-    background:rgba(250,204,21,0.08);
-  }
+  /* ============================
+   BigFish Total – компактна версія
+   ============================ */
+
+.bf-wrap{
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+}
+
+.bf-wrap h2{
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0;
+}
+
+/* Лічильник "Учасників" */
+.bf-wrap .pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(148,163,184,.25);
+  background: rgba(2,6,23,.35);
+  color: #cbd5e1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Таблиця BigFish – компактна, як зони та зважування */
+.bf-wrap .table-sm{
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.bf-wrap .table-sm th,
+.bf-wrap .table-sm td{
+  padding: 3px 5px;
+  white-space: nowrap;
+}
+
+/* Команда трохи ширша, але компактна */
+.bf-wrap .table-sm th:nth-child(1),
+.bf-wrap .table-sm td:nth-child(1){
+  max-width: 130px;
+  white-space: normal;
+}
+
+/* BIG 1, BIG 2, MAX BIG – по центру */
+.bf-wrap .table-sm th:nth-child(n+2),
+.bf-wrap .table-sm td:nth-child(n+2){
+  text-align: center;
+}
+
+/* Виділення MAX */
+.bigfish-row--max{
+  background: rgba(250,204,21,0.08);
+}
 
   /* ===== Зважування по етапу ===== */
   .weigh-toggle{

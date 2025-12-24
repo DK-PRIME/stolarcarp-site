@@ -119,70 +119,89 @@
 
   // ---------- зони A/B/C ----------
 
-  function renderZones(zones) {
-    if (!zonesWrap) return;
+  function renderZones(zonesData) {
+  const container = document.getElementById("zonesContainer");
+  if (!container) return;
 
-    const zoneNames = ["A", "B", "C"];
+  container.innerHTML = "";
 
-    zonesWrap.innerHTML = zoneNames.map((z) => {
-      const listRaw = zones?.[z] || [];
-      const list    = listRaw.map(normZoneItem);
+  const zoneKeys = ["A", "B", "C"];
 
-      if (!list.length) {
-        return `
-          <div class="live-zone card">
-            <div class="live-zone-title">
-              <h3 style="margin:0;">Зона ${z}</h3>
-              <span class="badge">немає даних</span>
-            </div>
-            <p class="form__hint">Результати для цієї зони ще не заповнені.</p>
-          </div>
-        `;
-      }
+  zoneKeys.forEach((key) => {
+    const list = Array.isArray(zonesData[key]) ? zonesData[key] : [];
 
-      const rowsHtml = list.map((row) => `
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const titleRow = document.createElement("div");
+    titleRow.className = "live-zone-title";
+    titleRow.innerHTML = `
+      <h3 style="margin:0;">Зона ${key}</h3>
+      <span class="badge">команд: ${list.length}</span>
+    `;
+    card.appendChild(titleRow);
+
+    if (!list.length) {
+      const p = document.createElement("p");
+      p.className = "live-note";
+      p.textContent = "Результати для цієї зони ще не заповнені.";
+      card.appendChild(p);
+      container.appendChild(card);
+      return;
+    }
+
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "table-wrap";
+    tableWrap.style.overflowX = "auto";
+
+    const table = document.createElement("table");
+    table.className = "table table-sm";
+
+    table.innerHTML = `
+      <thead>
         <tr>
-          <td>${fmt(row.zone)}</td>
-          <td class="team-col">${fmt(row.team)}</td>
-          <td>${fmtWCatchPair(row.w1)}</td>
-          <td>${fmtWCatchPair(row.w2)}</td>
-          <td>${fmtWCatchPair(row.w3)}</td>
-          <td>${fmtWCatchPair(row.w4)}</td>
-          <td>${fmtWCatchPair(row.total)}</td>
-          <td>${fmt(row.big)}</td>
-          <td>${fmt(row.weight)}</td>
-          <td>${fmt(row.place)}</td>
+          <th>Зона</th>
+          <th>Команда</th>
+          <th>W1</th>
+          <th>W2</th>
+          <th>W3</th>
+          <th>W4</th>
+          <th>Разом</th>
+          <th>BIG</th>
+          <th>Вага</th>
+          <th>Місце</th>
         </tr>
-      `).join("");
+      </thead>
+      <tbody></tbody>
+    `;
 
-      return `
-        <div class="live-zone card">
-          <div class="live-zone-title">
-            <h3 style="margin:0;">Зона ${z}</h3>
-            <span class="badge badge--warn">команд: ${list.length}</span>
-          </div>
-          <div class="table-wrap">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Зона</th>
-                  <th>Команда</th>
-                  <th>W1</th>
-                  <th>W2</th>
-                  <th>W3</th>
-                  <th>W4</th>
-                  <th>Разом</th>
-                  <th>BIG</th>
-                  <th>Вага</th>
-                  <th>Місце</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }).join("");
+    const tbody = table.querySelector("tbody");
+
+    tbody.innerHTML = list
+      .map((row) => {
+        const zoneLabel = row.zoneLabel || row.zone || key || "—";
+
+        return `
+          <tr>
+            <td>${fmt(zoneLabel)}</td>
+            <td class="team-col">${fmt(row.team)}</td>
+            <td>${fmtW(row.w1)}</td>
+            <td>${fmtW(row.w2)}</td>
+            <td>${fmtW(row.w3)}</td>
+            <td>${fmtW(row.w4)}</td>
+            <td>${fmtW(row.total)}</td>
+            <td>${fmt(row.big)}</td>
+            <td>${fmt(row.weight)}</td>
+            <td>${fmt(row.place)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    tableWrap.appendChild(table);
+    card.appendChild(tableWrap);
+    container.appendChild(card);
+  });
   }
 
   // ---------- загальна таблиця (підсумок по етапу) ----------

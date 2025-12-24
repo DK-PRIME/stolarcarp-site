@@ -48,6 +48,33 @@
     .bf-wrap{display:none;}
     .bf-wrap.is-open{display:block;}
 
+          <!-- RIGHT: BigFish Total -->
+      <div class="live-right">
+        <div class="card bf-wrap" id="bigFishWrap">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <h2 style="margin:0;">BigFish — Total</h2>
+            <span class="pill" id="bfCount">Учасників: —</span>
+          </div>
+
+          <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
+            <table class="table table-sm" id="bigFishTable">
+              <thead>
+                <tr>
+                  <th>Команда</th>
+                  <th>BIG 1 доба</th>
+                  <th>BIG 2 доба</th>
+                  <th>MAX BIG</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <p class="live-note">
+            Учасники беруться з адмінки жеребкування (галочка BigFish Total).
+          </p>
+        </div>
+
     .pill{
       display:inline-flex;align-items:center;gap:8px;
       padding:6px 10px;border-radius:999px;
@@ -154,35 +181,6 @@
           <p class="live-note">
             К-сть риб — загальна по етапу. Місце — загальне (якщо записане), інакше “—”.
           </p>
-        </div>
-      </div>
-
-      <!-- RIGHT: BigFish Total -->
-      <div class="live-right">
-        <div class="card bf-wrap" id="bigFishWrap">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-            <h2 style="margin:0;">BigFish — Total</h2>
-            <span class="pill" id="bfCount">Учасників: —</span>
-          </div>
-
-          <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
-            <table class="table table-sm" id="bigFishTable">
-              <thead>
-                <tr>
-                  <th>Команда</th>
-                  <th>BIG 1 доба</th>
-                  <th>BIG 2 доба</th>
-                  <th>MAX BIG</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-
-          <p class="live-note">
-            Учасники беруться з адмінки жеребкування (галочка BigFish Total).
-          </p>
-        </div>
       </div>
 
     </div>

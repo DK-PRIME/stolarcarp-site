@@ -9,8 +9,26 @@
   <link rel="apple-touch-icon" href="/assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
 
+  <!-- ✅ SPEED: швидший старт мережі під Firebase -->
+  <link rel="dns-prefetch" href="https://www.gstatic.com">
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+
+  <!-- ✅ SPEED: швидше підтягуються стилі -->
+  <link rel="preload" href="/assets/css/main.css" as="style">
   <link rel="stylesheet" href="/assets/css/main.css">
+
+  <!-- твій конфіг (бургер/хедер/іконки тощо) -->
   <script defer src="/assets/js/config.js"></script>
+
+  <!-- ✅ SPEED: Firebase завантажується раніше, але НЕ блокує HTML (defer зберігає порядок) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <!-- init + логіка реєстрації (теж defer, щоб не блокувати рендер) -->
+  <script defer src="/assets/js/firebase-init.js"></script>
+  <script defer src="/assets/js/register_firebase.js"></script>
 
   <style>
     body.register-page{background:var(--bg); overflow-x:hidden;}
@@ -353,18 +371,6 @@
     </div>
   </div>
 </footer>
-
-<!-- Firebase COMPAT -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
-<!-- init -->
-<script src="/assets/js/firebase-init.js"></script>
-
-<!-- logic -->
-<script src="/assets/js/register_firebase.js"></script>
 
 </body>
 </html>

@@ -3,391 +3,190 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP — офіційний сайт турнірів</title>
-
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
-  <meta name="theme-color" content="#1a1a1a">
+  <title>Live результати — STOLAR CARP</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    body.home-page{
-      background:
-        radial-gradient(circle at top,#111827 0,#020617 55%);
+    /* ---------- Заголовок live ---------- */
+    .live-header{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:18px;
     }
-
-    .hero-main{
-      max-width:980px;
-      margin:0 auto;
-      padding:70px 0 60px;
-      text-align:center;
+    .live-kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+      color:#fcd34d;
+      background:rgba(252,211,77,.08);
+      border-radius:999px;
+      padding:4px 10px;
+      border:1px solid rgba(252,211,77,.35);
+      width:fit-content;
     }
-
-    .hero-kicker{
+    .live-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:#ef4444;
+      box-shadow:0 0 10px rgba(239,68,68,.9);
+    }
+    .title-gradient{
+      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+    .live-stage-pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:4px 12px;
+      font-size:13px;
+      color:var(--muted);
+    }
+    .live-stage-pill span{
+      padding:4px 10px;
       border-radius:999px;
-      font-size:.75rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      background:rgba(0,0,0,.6);
-      border:1px solid rgba(148,163,184,.5);
-      color:#e5e7eb;
-      margin-bottom:14px;
-      margin-left:89px;
+      border:1px solid #262636;
+      background:#0d0d14;
+      font-size:12px;
     }
 
-    .hero-kicker-icon{
-      width:20px;
-      height:20px;
-      border-radius:50%;
-      flex-shrink:0;
-      background:url('assets/fish-gold.png') center/cover no-repeat;
+    /* ---------- Layout ---------- */
+    .live-layout{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:18px;
+    }
+    @media (min-width:980px){
+      .live-layout{
+        grid-template-columns:2fr 1.1fr;
+      }
     }
 
-    .hero-kicker-text{
-      font-size:.75rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-    }
-
-    /* Головний логотип STOLAR CARP */
-    .hero-title{
-      position:relative;
-      z-index:1;
-      font-size:clamp(40px,7vw,64px);
-      font-weight:900;
-      letter-spacing:.06em;
-      margin:0 0 36px;
-      text-transform:uppercase;
-
-      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-
-      text-shadow:
-        0 1px 0 rgba(255,255,255,0.3),
-        0 2px 0 rgba(140,90,0,0.9),
-        0 5px 10px rgba(0,0,0,0.85);
-
-      opacity:0;
-      transform:translateY(14px);
-      animation:heroTitleFade 0.9s ease-out forwards;
-    }
-
-    /* Підсвітка фону позаду STOLAR CARP */
-    .hero-title::before{
-      content:"";
-      position:absolute;
-      z-index:-1;
-      left:50%;
-      top:50%;
-      transform:translate(-50%,-50%);
-
-      width:340px;
-      height:110px;
-
-      background:
-        radial-gradient(circle at 50% 40%,
-          rgba(255,215,0,0.28) 0%,
-          rgba(255,140,0,0.18) 35%,
-          rgba(217,4,41,0.14) 60%,
-          transparent 80%);
-
-      filter:blur(16px);
-      opacity:0;
-      pointer-events:none;
-      animation:heroGlow 1.1s ease-out forwards 0.1s;
-    }
-
-    /* Лінія під STOLAR CARP */
-    .hero-title::after{
-      content:"";
-      position:absolute;
-      left:50%;
-      transform:translateX(-50%);
-      bottom:-14px;
-
-      width:240px;
-      height:3px;
-      border-radius:999px;
-
-      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
-      box-shadow:0 0 6px rgba(255,180,0,.6);
-
-      opacity:0;
-      animation:heroLineFade 1.1s ease-out forwards;
-    }
-
-    .hero-subtitle{
-      margin:14px auto 0;
-      max-width:640px;
-      color:#d1d5db;
-      font-size:1.02rem;
-    }
-
-    .hero-tags{
-      margin-top:18px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      justify-content:center;
-    }
-    .hero-tag{
-      padding:4px 12px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.55);
-      font-size:.8rem;
-      color:#e5e7eb;
-      background:rgba(15,23,42,.9);
-    }
-
-    .hero-cta{
-      margin-top:30px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      justify-content:center;
-    }
-    .btn-lg{
-      padding:12px 22px;
-      font-size:.98rem;
-      border-radius:999px;
-    }
-
-    .btn--accent{
-      background:linear-gradient(135deg,#f6c34c,#f28b2b);
-      color:#111;
-      border:none;
-    }
-    .btn--accent:hover{
-      filter:brightness(1.05);
-    }
-
-    .hero-meta{
-      margin-top:22px;
-      font-size:.88rem;
-      color:#9ca3af;
-    }
-
-    .hero-season-card{
-      margin-top:40px;
-      padding:22px 18px;
-      border-radius:22px;
-      background:radial-gradient(circle at top,#1e293b 0,#020617 65%);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.8);
-      text-align:center;
-    }
-    .hero-season-card h2{
-      margin:0 0 10px;
-    }
-    .hero-season-card p{
-      margin:0 0 16px;
-      color:#e5e7eb;
-      font-size:.95rem;
-    }
-
-    @media (max-width:640px){
-      .hero-main{padding:60px 0 40px;}
-    }
-
-    .hero-kicker-wrap{
-      position: relative;
-      display: inline-block;
-    }
-
-    .hero-fish-overlay{
-      position: absolute;
-      left: -15px;
-      top: 0%;
-      transform: translateY(-50%);
-      width: 105px;
-      height: 105px;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    /* ---- НОВІ БЛОКИ ГОЛОВНОЇ ---- */
-
-    .info-block{
-      max-width:720px;
-      margin:0 auto;
-      padding:40px 0;
-      color:#e5e7eb;
-      text-align:left;
-    }
-
-    .info-text{
-      max-width:none;
-      margin:12px 0 0;
-      color:#d1d5db;
-      font-size:.98rem;
-    }
-
-    .info-list,
-    .stage-list,
-    .advantages-list{
-      list-style:none;
-      padding:0;
-      margin:20px 0 0;
-      max-width:none;
-      text-align:left;
-      color:#e5e7eb;
-      font-size:.95rem;
-    }
-
-    .info-list li,
-    .stage-list li,
-    .advantages-list li{
-      padding:6px 0;
-      border-bottom:1px solid rgba(148,163,184,.18);
-    }
-
-    .final-highlight{
-      color:#facc15;
-      font-weight:600;
-    }
-
-    /* Заголовки секцій + бренд */
-    .section-title{
-      position:relative;
-      display:inline-block;      /* щоб лінія була по ширині тексту */
-      margin:0 0 18px;
-      font-size:1.35rem;
-      font-weight:700;
-      color:#e5e7eb;
-      padding-bottom:6px;
-    }
-
-    .section-title__brand{
-      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-      font-weight:800;
-      letter-spacing:.04em;
-    }
-
-    .section-title::after{
-      content:"";
-      position:absolute;
-      left:0;
-      bottom:0;
-      width:100%;
-      height:2px;
-      border-radius:999px;
-      background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
-      box-shadow:0 0 6px rgba(255,180,0,.35);
-    }
-
-    /* Місія: чистий вертикальний стовпець по лівому краю */
-    .mission-cards{
-      margin-top:22px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-
-    .lake-cards{
-      margin-top:22px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      justify-content:center;
-    }
-
-    .mission-card,
-    .lake-card{
-      padding:10px 16px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(15,23,42,.9);
-      font-size:.9rem;
-    }
-
-    .mission-card{
-      width:100%;
-      margin:0;
-    }
-
-    .call-to-action{
-      text-align:left;
-    }
-
-    .call-to-action .btn{
+    .live-left > .card + .card{
       margin-top:16px;
     }
 
-    .section.highlight{
-      text-align:center;
-      padding:60px 0;
+    /* ---------- Зони ---------- */
+    .live-zones-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:12px;
     }
-
-    @media (max-width:640px){
-      .info-block{
-        padding:28px 0;
+    @media (max-width:980px){
+      .live-zones-grid{
+        grid-template-columns:1fr;
       }
     }
 
-    /* КНОПКА "УВІЙТИ" В ХЕДЕРІ */
-    .header-login{
-      margin-left:12px;
-      padding:6px 14px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.6);
-      background:rgba(15,23,42,.9);
-      color:#e5e7eb;
-      font-size:.85rem;
-      text-decoration:none;
+    .live-zone-title{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom:6px;
+    }
+    .live-zone-title .badge{
+      font-size:11px;
+      padding:3px 8px;
+    }
+
+    /* ---------- Таблиці компактні ---------- */
+    .table-sm{
+      font-size:11.5px;
+      line-height:1.2;
+    }
+    .table-sm th,
+    .table-sm td{
+      padding:4px 6px;
       white-space:nowrap;
     }
-    .header-login:hover{
-      border-color:#facc15;
-      color:#facc15;
+    .table-sm td.team-col{
+      max-width:160px;
+      white-space:normal;
     }
 
-    /* Анімації */
-    @keyframes heroTitleFade{
-      0%{
-        opacity:0;
-        transform:translateY(22px);
-      }
-      100%{
-        opacity:1;
-        transform:translateY(0);
-      }
+    .table-wrap{
+      overflow-x:auto;
     }
 
-    @keyframes heroLineFade{
-      0%{
-        opacity:0;
-        width:0;
-      }
-      100%{
-        opacity:1;
-        width:240px;
-      }
+    .live-note{
+      font-size:11.5px;
+      color:var(--muted);
+      margin-top:6px;
     }
 
-    @keyframes heroGlow{
-      0%{
-        opacity:0;
-        transform:translate(-50%,-55%) scale(0.9);
-      }
-      100%{
-        opacity:1;
-        transform:translate(-50%,-50%) scale(1);
-      }
+    /* ---------- BigFish Total ---------- */
+    .bf-toggle{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .bf-toggle .btn{
+      padding:8px 11px;
+      border-radius:12px;
+      font-size:13px;
+    }
+
+    .bf-wrap{
+      display:block; /* Поки що завжди видно; потім повішаємо toggle класом is-open */
+      margin-bottom:18px;
+    }
+    .bf-wrap.is-hidden{
+      display:none;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#cbd5e1;
+      font-size:12px;
+    }
+
+    .bigfish-row--max{
+      background:rgba(250,204,21,0.08);
+    }
+
+    /* ---------- Зважування ---------- */
+    .weigh-toggle{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+    .weigh-toggle .btn{
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:13px;
+    }
+
+    .btn--chip{
+      background:transparent;
+      border:1px solid rgba(148,163,184,.4);
+      color:#e5e7eb;
+    }
+    .btn--chip-active{
+      background:linear-gradient(135deg,#f6c34c,#b45309);
+      border-color:transparent;
+      color:#0f172a;
     }
   </style>
 </head>
-<body class="home-page">
+
+<body>
 
 <header class="header">
   <div class="container header__row">
@@ -400,7 +199,7 @@
       <a href="/index.html" class="nav__link">Головна</a>
       <a href="/rules.html" class="nav__link">Регламент</a>
       <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/live.html" class="nav__link nav__link--active">Live</a>
       <a href="/rating.html" class="nav__link">Рейтинг</a>
       <a href="/lakes.html" class="nav__link">Водойми</a>
       <a href="/sponsors.html" class="nav__link">Спонсори</a>
@@ -408,187 +207,283 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <!-- ОНОВЛЕНА КНОПКА -->
-    <a href="/auth.html" class="header-login">Увійти</a>
-
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
+
 <main class="main">
-  <section class="section container hero-main">
+  <section class="container section">
 
-    <div class="hero-kicker-wrap">
-      <img src="assets/fish-gold.png" class="hero-fish-overlay" alt="">
-      <div class="hero-kicker">
-        <span class="hero-kicker-text">Твій рівень. Твій трофей. Твоя перемога.</span>
+    <!-- ========= HEADER ========= -->
+    <div class="live-header">
+      <div class="live-kicker">
+        <span class="live-dot"></span>
+        <span>Live протокол</span>
       </div>
-    </div>
 
-    <h1 class="hero-title">STOLAR CARP</h1>
+      <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
+        Результати активних змагань
+      </h1>
 
-    <p class="hero-subtitle">
-      STOLAR CARP — це поєднання:
-спортивної боротьби, дружньої атмосфери, драйву, командного духу та поваги до справжніх цінностей карпфішингу.
+      <div class="live-stage-pill">
+        <span>Активні: <strong id="liveStageName">STOLAR CARP · Сталкер Відкриття — Етап 1</strong></span>
+      </div>
 
-    </p>
+      <div class="bf-toggle">
+        <button class="btn btn--accent" id="toggleBigFishBtn" type="button">BigFish Total</button>
+        <span class="pill" id="liveUpdatedAt" title="Останнє оновлення">Оновлено: 24.12, 01:11</span>
+      </div>
 
-    <div class="hero-tags">
-      <span class="hero-tag">Сезон 2026 · з Етапів + Фінал</span>
-      <span class="hero-tag">Зони A · B · C</span>
-      <span class="hero-tag">Live-таблиці та рейтинг онлайн</span>
-    </div>
-
-    <div class="hero-cta">
-      <a class="btn btn--primary btn-lg" href="rules.html">
-        Переглянути регламент
-      </a>
-      <a class="btn btn--accent btn-lg" href="register.html">
-        Змагання
-      </a>
-      <a class="btn btn--danger btn-lg" href="live.html">
-        Live протоколи
-      </a>
-    </div>
-
-
-    <div class="hero-season-card">
-      <h2 class="title-gradient">🏆 Сезон STOLAR CARP 2026</h2>
-      <p>
-        Слідкуй за всіма етапами та Фіналом в одному місці.
-        Архів, Live результати та підсумковий рейтинг команд.
+      <p class="lead" style="max-width:720px;margin:6px 0 0;">
+        W = <b>к-сть / вага</b>. Таблиці оновлюються автоматично з Firebase.
       </p>
-      <a href="events/season-2026.html" class="btn btn--primary btn-lg">
-        Переглянути сезон 2026
-      </a>
+    </div>
+
+    <!-- ========= BIGFISH TOTAL ПІД КНОПКОЮ ========= -->
+    <div class="card bf-wrap" id="bigFishWrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <h2 style="margin:0;">BigFish — Total</h2>
+        <span class="pill" id="bfCount">Учасників: 2</span>
+      </div>
+
+      <div class="table-wrap" style="margin-top:10px;">
+        <table class="table table-sm" id="bigFishTable">
+          <thead>
+          <tr>
+            <th>Команда</th>
+            <th>BIG 1 доба</th>
+            <th>BIG 2 доба</th>
+            <th>MAX BIG</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr class="bigfish-row--max">
+            <td class="team-col">DK Два Кума</td>
+            <td>14,325</td>
+            <td>12,780</td>
+            <td>14,325</td>
+          </tr>
+          <tr>
+            <td class="team-col">Ти</td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="live-note">
+        Учасники беруться з адмінки жеребкування (галочка BigFish Total).
+      </p>
+    </div>
+
+    <!-- ========= СТАТУС / ПОМИЛКИ ========= -->
+    <div id="liveError" class="form-msg err" style="display:none;"></div>
+    <div id="liveLoading" class="form__hint" style="margin-top:12px;display:none;">
+      Завантаження результатів...
+    </div>
+
+    <!-- ========= ОСНОВНИЙ КОНТЕНТ ========= -->
+    <div id="liveContent" class="live-layout">
+
+      <!-- ===== LEFT: ЗОНИ + ЗВАЖУВАННЯ ===== -->
+      <div class="live-left">
+
+        <!-- ЗОНИ A / B / C -->
+        <div class="card">
+          <h2 style="margin-top:0;margin-bottom:10px;">Зони A / B / C</h2>
+
+          <div class="live-zones-grid" id="zonesContainer">
+            <!-- Зона A -->
+            <div class="card">
+              <div class="live-zone-title">
+                <h3 style="margin:0;">Зона A</h3>
+                <span class="badge">команд: 1</span>
+              </div>
+              <div class="table-wrap">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Зона</th>
+                    <th>Команда</th>
+                    <th>W1</th>
+                    <th>W2</th>
+                    <th>W3</th>
+                    <th>W4</th>
+                    <th>Разом</th>
+                    <th>BIG</th>
+                    <th>Вага</th>
+                    <th>Місце</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr>
+                    <td>A1</td>
+                    <td class="team-col">DK Два Кума</td>
+                    <td>5 / 26,780</td>
+                    <td>7 / 37,700</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>12 / 64,480</td>
+                    <td>10,440</td>
+                    <td>64,480</td>
+                    <td>1</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Зона B -->
+            <div class="card">
+              <div class="live-zone-title">
+                <h3 style="margin:0;">Зона B</h3>
+                <span class="badge">команд: 1</span>
+              </div>
+              <div class="table-wrap">
+                <table class="table table-sm">
+                  <thead>
+                  <tr>
+                    <th>Зона</th>
+                    <th>Команда</th>
+                    <th>W1</th>
+                    <th>W2</th>
+                    <th>W3</th>
+                    <th>W4</th>
+                    <th>Разом</th>
+                    <th>BIG</th>
+                    <th>Вага</th>
+                    <th>Місце</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <tr>
+                    <td>B5</td>
+                    <td class="team-col">Ти</td>
+                    <td>3 / 14,320</td>
+                    <td>4 / 18,250</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>7 / 32,570</td>
+                    <td>8,975</td>
+                    <td>32,570</td>
+                    <td>1</td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Зона C -->
+            <div class="card">
+              <div class="live-zone-title">
+                <h3 style="margin:0;">Зона C</h3>
+                <span class="badge">немає даних</span>
+              </div>
+              <p class="live-note">Результати для цієї зони ще не заповнені.</p>
+            </div>
+          </div>
+
+          <p class="live-note">
+            Сортування: вага → BIG. Місце — в межах зони.
+          </p>
+        </div>
+
+        <!-- ЗВАЖУВАННЯ ПО ЕТАПУ -->
+        <div class="card">
+          <h2 style="margin-top:0;margin-bottom:10px;">Зважування по етапу</h2>
+
+          <div class="weigh-toggle">
+            <button type="button" class="btn btn--chip btn--chip-active" id="wBtn1">W1</button>
+            <button type="button" class="btn btn--chip" id="wBtn2">W2</button>
+            <button type="button" class="btn btn--chip" id="wBtn3">W3</button>
+            <button type="button" class="btn btn--chip" id="wBtn4">W4</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table table-sm" id="weighTable">
+              <thead>
+              <tr>
+                <th>Зона</th>
+                <th>Команда</th>
+                <th>Р1</th>
+                <th>Р2</th>
+                <th>Р3</th>
+                <th>Р4</th>
+                <th>Р5</th>
+                <th>Р6</th>
+                <th>Р7</th>
+                <th>Р8</th>
+              </tr>
+              </thead>
+              <tbody>
+              <tr>
+                <td>A1</td>
+                <td class="team-col">DK Два Кума</td>
+                <td>5,010</td>
+                <td>5,450</td>
+                <td>6,200</td>
+                <td>4,220</td>
+                <td>3,140</td>
+                <td>6,130</td>
+                <td>4,110</td>
+                <td>6,610</td>
+              </tr>
+              <tr>
+                <td>B5</td>
+                <td class="team-col">Ти</td>
+                <td>3,430</td>
+                <td>5,750</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+                <td>—</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p class="live-note" id="weighInfo">
+            W1–W4 — зважування. У таблиці показані окремі риби (кожна вага у своїй клітинці) для вибраного зважування.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- ===== RIGHT (можна буде використати під графіки / нотатки) ===== -->
+      <div class="live-right">
+        <!-- Поки пусто, щоб не заважати мобільній версії -->
+      </div>
+
     </div>
 
   </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">Хто може взяти участь?</h2>
-    <p class="info-text">
-      STOLAR CARP відкритий для всіх, хто живе карпфішингом та цінує не лише перемогу, а й шлях до неї. Професійний досвід не є обов’язковим — головне бажання розвиватися, змагатися, поважати природу та суперників .
-
-До участі запрошуються:
-  </p>
-
-    <ul class="info-list">
-      <li>• Команди з 2–3 учасників</li>
-      <li>• Початківці та аматори, які хочуть пройти свій перший турнір</li>
-      <li>• Досвідчені рибалки та спортивні команди</li>
-      <li>• Риболовні клуби та спільноти</li>
-      <li>• Ті, хто готовий пройти сезон із етапів та гранд-фіналом</li>
-    </ul>
-  </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">
-      Місія <span class="section-title__brand">STOLAR CARP</span>
-    </h2>
-    <p class="info-text">
-      Ми створили новий стандарт коропових турнірів в Україні: організований, 
-      прозорий та створений для розвитку та популяризацію карпфішингу як сучасний вид спорту. Кожне змагання — це не лише боротьба 
-      за кубок, а й зустріч однодумців на березі водойми.
-    </p>
-
-    <div class="mission-cards">
-      <div class="mission-card">✅ Інноваційна система відкритого Зважування</div>
-      <div class="mission-card">📊 Сучасний формат та live-таблиці</div>
-      <div class="mission-card">🤝 бережне ставлення до риби та природи</div>
-      <div class="mission-card">🎣 популяризації спортивного карпфішингу</div>
-    </div>
-  </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">Структура сезону</h2>
-    <p class="info-text">
-      Сезон STOLAR CARP складається з рейтингових етапів. 
-      Команди набирають бали на кожному з них, а за підсумком сезону найкращі потрапляють 
-      у Великий Фінал, де і визначається Чемпіон сезону.
-    </p>
-
-    <ul class="stage-list">
-      <li class="final-highlight">Фінал — битва найкращих команд за титул Чемпіона сезону STOLAR CARP</li>
-    </ul>
-  </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">Локації сезону</h2>
-    <p class="info-text">
-      Водойми обрані так, щоб поєднати комфортні умови та спортивний інтерес. 
-      Кожна локація має свій характер, що робить сезон різноманітним і непередбачуваним.
-    </p>
-
-    <div class="lake-cards">
-      <div class="lake-card">Лелехівка</div>
-      <div class="lake-card">...</div>
-      <div class="lake-card">...</div>
-    </div>
-
-    <a href="lakes.html" class="btn btn--primary" style="margin-top:20px;">
-      Переглянути водойми детальніше
-    </a>
-  </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">
-      Чому саме <span class="section-title__brand">STOLAR CARP</span>?
-    </h2>
-
-    <ul class="advantages-list">
-      <li>Незалежне суддівство та інноваційний цифровий контроль.</li>
-      <li>Онлайн-результати 24/7: live-протоколи та рейтинг команд</li>
-      <li>Жеребкування секторів у відкритому форматі</li>
-      <li>Big Fish, окремі номінації та фінальний кубок</li>
-      <li>Дружня атмосфера та сильна спільнота учасників</li>
-    </ul>
-  </section>
-
-  <section class="section container info-block call-to-action">
-    <h2 class="section-title">
-      Готовий до сезону <span class="section-title__brand">STOLAR CARP</span>?
-    </h2>
-    <p class="info-text">
-      Зареєструйте команду та приєднуйтесь до сезону STOLAR CARP.
-    </p>
-
-    <a href="register.html" class="btn btn--accent btn-lg">Подати заявку на участь</a>
-  </section>
-
 </main>
-
-<section class="section container highlight">
-  <h2 class="title-gradient">🎬 Ми в TikTok</h2>
-  <p>Дивись короткі відео з наших турнірів, зважувань та нагороджень!</p>
-  <a href="https://www.tiktok.com/@stolar.carp" class="btn btn--primary" target="_blank">
-    Перейти у TikTok
-  </a>
-</section>
 
 <footer class="footer">
   <div class="container footer__row">
-    <div>
-      <span id="scAdminEntry" role="button" tabindex="0">
-        © 2025 STOLAR CARP · Львів
-      </span>
-    </div>
+    <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=...">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
     </div>
   </div>
 </footer>
 
-<script>
-  (function(){
-    const el = document.getElementById("scAdminEntry");
-    if(!el) return;
+<!-- Firebase (поки логіку не чіпаємо, можна лишити або закоментити) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
 
-    el.addEventListener("click", () => {
-      window.location.href = "/admin.html";
-    });
-  })();
-</script>
+<!-- Тут ПІЗНІШЕ будемо під’єднувати live_firebase.js і bigfish_total_live.js -->
+<!-- <script src="assets/js/live_firebase.js"></script>
+<script src="assets/js/bigfish_total_live.js"></script> -->
 
 </body>
 </html>

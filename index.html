@@ -2,81 +2,424 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP — Головна</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>STOLAR CARP — головна</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
+  <style>
+    /* Тільки дрібні правки під головну, все інше — в main.css */
+    body {
+      background: radial-gradient(120% 160% at 0% 0%, #1f2937 0, #020617 40%, #020617 100%);
+      color: #e5e7eb;
+      min-height: 100vh;
+    }
+
+    .page-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 16px 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 0 18px;
+    }
+
+    .topbar__left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      background: linear-gradient(135deg,#fbbf24,#f97316,#b91c1c);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      font-size:18px;
+      color:#111827;
+      box-shadow:0 0 0 1px rgba(15,23,42,.6),0 12px 30px rgba(0,0,0,.65);
+      flex-shrink:0;
+    }
+
+    .brand-name {
+      font-weight:800;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-size:14px;
+      color:#f9fafb;
+    }
+
+    .topbar__nav-wrap {
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .nav {
+      display:flex;
+      gap:10px;
+      font-size:13px;
+      text-transform:uppercase;
+      letter-spacing:.12em;
+    }
+
+    .nav a {
+      color:#9ca3af;
+      padding:6px 8px;
+      border-radius:999px;
+      text-decoration:none;
+      transition:.15s ease;
+      white-space:nowrap;
+    }
+
+    .nav a:hover {
+      color:#f9fafb;
+      background:rgba(249,250,251,.06);
+    }
+
+    .nav a.is-active {
+      color:#111827;
+      background:linear-gradient(135deg,#fbbf24,#f97316);
+      box-shadow:0 0 0 1px rgba(15,23,42,.8);
+    }
+
+    .burger {
+      width:34px;
+      height:34px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.6);
+      background:rgba(15,23,42,.85);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+
+    .burger-lines {
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+    }
+
+    .burger-lines span {
+      width:14px;
+      height:2px;
+      border-radius:999px;
+      background:#f9fafb;
+      display:block;
+    }
+
+    @media (max-width: 880px) {
+      .nav {
+        position:fixed;
+        inset:56px 12px auto 12px;
+        background:rgba(15,23,42,.98);
+        border-radius:18px;
+        box-shadow:0 18px 40px rgba(0,0,0,.8);
+        padding:10px;
+        flex-wrap:wrap;
+        justify-content:flex-start;
+        gap:4px;
+        opacity:0;
+        pointer-events:none;
+        transform:translateY(-6px);
+        transition:.18s ease;
+        z-index:40;
+      }
+      .nav.nav--open {
+        opacity:1;
+        pointer-events:auto;
+        transform:translateY(0);
+      }
+      .burger {
+        display:flex;
+      }
+    }
+
+    /* Hero */
+    .hero {
+      margin-top:10px;
+      border-radius:24px;
+      padding:22px 18px 22px;
+      background:
+        radial-gradient(circle at 0% 0%, rgba(251,191,36,.14), transparent 55%),
+        radial-gradient(circle at 100% 0%, rgba(248,113,113,.16), transparent 55%),
+        rgba(15,23,42,.94);
+      box-shadow:0 24px 60px rgba(0,0,0,.8);
+      border:1px solid rgba(148,163,184,.3);
+    }
+
+    .hero-kicker {
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#fde68a;
+      margin-bottom:6px;
+    }
+
+    .hero-title {
+      font-size:24px;
+      line-height:1.25;
+      font-weight:800;
+      color:#f9fafb;
+      margin-bottom:6px;
+    }
+
+    .hero-sub {
+      font-size:14px;
+      color:#9ca3af;
+      max-width:520px;
+    }
+
+    .hero-actions {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:16px;
+    }
+
+    .btn {
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:8px 14px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-size:13px;
+      font-weight:600;
+      text-decoration:none;
+      transition:.15s ease;
+    }
+
+    .btn--primary {
+      background:linear-gradient(135deg,#fbbf24,#f97316,#b91c1c);
+      color:#111827;
+      box-shadow:0 10px 25px rgba(0,0,0,.7);
+    }
+
+    .btn--primary:hover {
+      transform:translateY(-1px);
+      box-shadow:0 14px 30px rgba(0,0,0,.85);
+    }
+
+    .btn--ghost {
+      background:rgba(15,23,42,.8);
+      color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.5);
+    }
+
+    .btn--ghost:hover {
+      background:rgba(15,23,42,1);
+    }
+
+    /* Секції */
+    .section {
+      margin-top:26px;
+    }
+
+    .section-title {
+      font-size:16px;
+      font-weight:700;
+      color:#e5e7eb;
+      margin-bottom:10px;
+    }
+
+    .cards-grid {
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;
+    }
+
+    @media (max-width:880px){
+      .cards-grid {
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+    }
+
+    @media (max-width:640px){
+      .cards-grid {
+        grid-template-columns:minmax(0,1fr);
+      }
+    }
+
+    .card {
+      border-radius:18px;
+      padding:14px 14px 13px;
+      background:radial-gradient(circle at 0 0,rgba(248,250,252,.04),transparent 55%),
+                 rgba(15,23,42,.9);
+      border:1px solid rgba(30,64,175,.5);
+      box-shadow:0 14px 32px rgba(0,0,0,.7);
+    }
+
+    .card-title {
+      font-size:14px;
+      font-weight:700;
+      color:#e5e7eb;
+      margin-bottom:4px;
+    }
+
+    .card-text {
+      font-size:13px;
+      color:#9ca3af;
+      margin-bottom:10px;
+    }
+
+    .card a {
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.16em;
+      color:#fbbf24;
+      text-decoration:none;
+    }
+
+    .card a:hover {
+      color:#fde68a;
+    }
+
+    .footer {
+      margin-top:32px;
+      padding-top:14px;
+      border-top:1px solid rgba(31,41,55,.9);
+      font-size:12px;
+      color:#6b7280;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      justify-content:space-between;
+      align-items:center;
+    }
+  </style>
 </head>
-
 <body>
+  <div class="page-shell">
+    <!-- Хедер -->
+    <header class="topbar">
+      <div class="topbar__left">
+        <div class="brand-logo">SC</div>
+        <div class="brand-name">STOLAR CARP</div>
+      </div>
 
-<header class="header">
-  <div class="container header__row">
+      <div class="topbar__nav-wrap">
+        <nav class="nav" id="mainNav">
+          <a href="index.html" class="is-active">Головна</a>
+          <a href="rules.html">Регламент</a>
+          <a href="register.html">Реєстрація</a>
+          <a href="live.html">Live</a>
+          <a href="rating.html">Рейтинг</a>
+          <a href="lakes.html">Водойми</a>
+          <a href="sponsors.html">Спонсори</a>
+          <a href="events/2026.html">Турнір 2026</a>
+        </nav>
 
-    <!-- LOGO -->
-    <a class="logo" href="/index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
-    </a>
+        <!-- бургер праворуч, 3 риски у стовпчик -->
+        <button class="burger" id="burgerBtn" aria-label="Меню">
+          <div class="burger-lines">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </button>
+      </div>
+    </header>
 
-    <!-- NAV -->
-    <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link nav__link--active">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-    </nav>
+    <!-- Hero блок -->
+    <section class="hero">
+      <div class="hero-kicker">карпові турніри • львівщина</div>
+      <h1 class="hero-title">STOLAR CARP — турнірна серія та благодійні змагання</h1>
+      <p class="hero-sub">
+        Офіційний сайт турнірів STOLAR CARP. Тут реєстрація команд, live-результати,
+        рейтинги сезону та вся інформація по водоймах і спонсорах.
+      </p>
 
-    <!-- LOGIN BUTTON -->
-    <a href="/login.html" class="btn-login" id="loginBtn">Увійти</a>
+      <div class="hero-actions">
+        <a href="register.html" class="btn btn--primary">Подати заявку</a>
+        <a href="live.html" class="btn btn--ghost">Переглянути Live</a>
+        <a href="admin.html" class="btn btn--ghost">Увійти в адмінку</a>
+      </div>
+    </section>
 
-    <!-- BURGER RIGHT -->
-    <button class="burger" id="burger">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+    <!-- Блок швидких посилань -->
+    <section class="section">
+      <h2 class="section-title">Швидкі розділи</h2>
+      <div class="cards-grid">
+        <article class="card">
+          <div class="card-title">Поточний турнір</div>
+          <div class="card-text">
+            Усі етапи й фінал сезону STOLAR CARP. Опис, дати, умови участі.
+          </div>
+          <a href="events/2026.html">Перейти до турніру</a>
+        </article>
 
+        <article class="card">
+          <div class="card-title">Регламент</div>
+          <div class="card-text">
+            Повні правила змагань, система нарахування балів, зони та штрафи.
+          </div>
+          <a href="rules.html">Дивитися регламент</a>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Live-таблиця</div>
+          <div class="card-text">
+            Онлайн-оновлення зважувань: зони, риба, Big Fish та загальний рейтинг.
+          </div>
+          <a href="live.html">Відкрити Live</a>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Рейтинг сезону</div>
+          <div class="card-text">
+            Сумарні результати команд по етапах сезону STOLAR CARP.
+          </div>
+          <a href="rating.html">Переглянути рейтинг</a>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Водойми</div>
+          <div class="card-text">
+            Опис водойм, сектори, глибини, карта та особливості кожного ставка.
+          </div>
+          <a href="lakes.html">Перейти до водойм</a>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Спонсори та партнери</div>
+          <div class="card-text">
+            Бренди, які підтримують STOLAR CARP, призи та подарунки для учасників.
+          </div>
+          <a href="sponsors.html">Подивитися спонсорів</a>
+        </article>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>© STOLAR CARP, 2026.</span>
+      <span>Організатор: команда STOLAR CARP • DK Два Кума</span>
+    </footer>
   </div>
-</header>
 
-<main class="main">
-  <section class="container section">
-
-    <h1 style="margin-top:0;">STOLAR CARP — Головна</h1>
-
-    <p>
-      Ласкаво просимо на офіційний сайт STOLAR CARP.  
-      Оберіть розділ у меню, щоб переглянути регламент, зареєструватися на змагання,
-      переглянути LIVE-протокол, рейтинг учасників чи інформацію про водойми.
-    </p>
-
-  </section>
-</main>
-
-<footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
-    </div>
-  </div>
-</footer>
-
-<!-- Firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="assets/js/firebase-init.js"></script>
-
-<script src="assets/js/auth.js"></script>
-
+  <script>
+    // простий бургер
+    (function () {
+      const btn = document.getElementById("burgerBtn");
+      const nav = document.getElementById("mainNav");
+      if (!btn || !nav) return;
+      btn.addEventListener("click", () => {
+        nav.classList.toggle("nav--open");
+      });
+    })();
+  </script>
 </body>
 </html>

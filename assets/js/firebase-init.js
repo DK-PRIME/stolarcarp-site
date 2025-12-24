@@ -1,37 +1,31 @@
+// assets/js/firebase-init.js
+// STOLAR CARP • Firebase Init (глобальна ініціалізація)
 (function () {
-  "use strict";
+  if (window.scApp) return; // щоб не дублювалось
 
-  // ✅ захист від подвійної ініціалізації (інколи скрипт можуть підключити двічі)
-  if (window.__SC_FIREBASE_READY__) return;
+  const firebaseConfig = {
+    apiKey: "AIzaSy...твій_ключ...",
+    authDomain: "stolar-carp.firebaseapp.com",
+    projectId: "stolar-carp",
+    storageBucket: "stolar-carp.appspot.com",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:xxxxxxxxxxxxxx",
+    measurementId: "G-XXXXXXXXXX"
+  };
 
-  function init() {
-    const firebaseConfig = window.__SC_FIREBASE_CONFIG__;
-    if (!firebaseConfig) {
-      console.warn("Firebase config missing: window.__SC_FIREBASE_CONFIG__");
-      return;
-    }
+  try {
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const storage = firebase.storage();
 
-    if (!window.firebase) {
-      console.warn("Firebase SDK not loaded");
-      return;
-    }
+    window.scApp = app;
+    window.scAuth = auth;
+    window.scDb = db;
+    window.scStorage = storage;
 
-    if (!window.firebase.apps || !window.firebase.apps.length) {
-      window.firebase.initializeApp(firebaseConfig);
-    }
-
-    window.scAuth = window.firebase.auth();
-    window.scDb = window.firebase.firestore();
-
-    // ✅ дуже корисно: Firestore ігнорує undefined (менше шансів на “undefined is not allowed”)
-    try {
-      window.scDb.settings({ ignoreUndefinedProperties: true });
-    } catch {}
-
-    window.__SC_FIREBASE_READY__ = true;
+    console.log("✅ Firebase ініціалізовано успішно.");
+  } catch (err) {
+    console.error("🔥 Помилка ініціалізації Firebase:", err);
   }
-
-  // якщо SDK вже підвантажився — інітимо одразу
-  // якщо ні — defer скрипти все одно виконаються в порядку, і init відпрацює
-  init();
 })();

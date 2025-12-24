@@ -3,311 +3,216 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Live результати — STOLAR CARP</title>
+  <title>STOLAR CARP — сезон коропових турнірів</title>
+
+  <meta name="description" content="STOLAR CARP — серія коропових турнірів з прозорою онлайн-системою реєстрації, live-результатами та благодійною місією.">
+  <meta name="theme-color" content="#050814">
 
   <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
 
-  <style>
-    .live-header{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      margin-bottom:18px;
-    }
-    .live-kicker{
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      font-size:12px;
-      text-transform:uppercase;
-      letter-spacing:.12em;
-      color:#fcd34d;
-      background:rgba(252,211,77,.08);
-      border-radius:999px;
-      padding:4px 10px;
-      border:1px solid rgba(252,211,77,.35);
-      width:fit-content;
-    }
-    .live-dot{
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:#ef4444;
-      box-shadow:0 0 10px rgba(239,68,68,.9);
-    }
-    .title-gradient{
-      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-    }
-    .live-stage-pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      font-size:13px;
-      color:var(--muted);
-    }
-    .live-stage-pill span{
-      padding:4px 10px;
-      border-radius:999px;
-      border:1px solid #262636;
-      background:#0d0d14;
-      font-size:12px;
-    }
-
-    .live-layout{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:18px;
-    }
-
-    .live-zones-grid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:12px;
-    }
-    @media (max-width: 980px){
-      .live-zones-grid{grid-template-columns:1fr;}
-    }
-
-    .live-zone-title{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      margin-bottom:6px;
-    }
-    .live-zone-title span.badge{
-      font-size:11px;
-      padding:3px 8px;
-    }
-
-    /* компактні таблиці */
-    .table-sm{
-      font-size:11.5px;
-      line-height:1.2;
-    }
-    .table-sm th,
-    .table-sm td{
-      padding:4px 6px;
-      white-space:nowrap;
-    }
-    .table-sm td.team-col{
-      max-width:180px;
-      white-space:normal;
-    }
-
-    .live-note{
-      font-size:11.5px;
-      color:var(--muted);
-      margin-top:6px;
-    }
-
-    /* BigFish Total */
-    .bf-toggle{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
-    .bf-toggle .btn{
-      padding:8px 11px;
-      border-radius:12px;
-      font-size:13px;
-    }
-    .bf-wrap{
-      display:none;
-      margin-top:12px;
-      margin-bottom:18px;
-    }
-    .bf-wrap.is-open{
-      display:block;
-    }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.35);
-      color:#cbd5e1;
-      font-size:12px;
-    }
-
-    .bigfish-row--max{
-      background:rgba(250,204,21,0.08);
-    }
-
-    /* Зважування W1–W4 */
-    .weigh-toggle{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-bottom:10px;
-    }
-    .weigh-toggle .btn{
-      padding:6px 10px;
-      border-radius:999px;
-      font-size:13px;
-    }
-  </style>
+  <!-- Глобальна конфігурація сайту (бургер, іконки, базові налаштування) -->
+  <script defer src="/assets/js/config.js"></script>
 </head>
-
-<body>
+<body class="page page--dark">
 
 <header class="header">
-  <div class="container header__row">
-    <a class="logo" href="index.html">
+  <div class="container header__inner">
+    <a href="index.html" class="logo">
       <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
+      <span class="logo__text">Stolar Carp</span>
     </a>
 
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      <a href="index.html" class="nav__link nav__link--active">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="events/2026.html" class="nav__link">Турнір 2026</a>
+
+      <!-- auth / кабінет -->
+      <a href="auth.html" class="nav__link" data-auth-toggle>Мій кабінет</a>
+      <a href="#" class="nav__link" data-auth="signout" id="signOutLink" style="display:none;">Вийти</a>
     </nav>
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger js-burger" id="burger" type="button" aria-label="Меню">
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </header>
 
 <main class="main">
-  <section class="container section">
+  <!-- HERO -->
+  <section class="section hero">
+    <div class="container hero__inner">
+      <div class="hero__content">
+        <p class="kicker">STOLAR CARP · SEASON SYSTEM</p>
+        <h1 class="title-gradient hero__title">
+          Сезонні коропові турніри<br> з live-результатами
+        </h1>
+        <p class="hero__text">
+          STOLAR CARP — серія коропових змагань з прозорою системою підрахунку,
+          онлайн-таблицями, чесним суддівством і сильною благодійною складовою.
+          Усі етапи сезону та фінал зведені в одну систему.
+        </p>
 
-    <!-- HEADER -->
-    <div class="live-header">
-      <div class="live-kicker">
-        <span class="live-dot"></span>
-        <span>Live протокол</span>
-      </div>
-
-      <h1 class="title-gradient" style="margin:4px 0 4px;font-size:clamp(26px,4.5vw,34px);">
-        Результати активного етапу
-      </h1>
-
-      <div class="live-stage-pill">
-        <span>Поточний етап: <strong id="liveStageName">—</strong></span>
-      </div>
-
-      <div class="bf-toggle">
-        <button class="btn btn--accent" id="toggleBigFishBtn" type="button">BigFish Total</button>
-        <span class="pill" id="liveUpdatedAt" title="Останнє оновлення">Оновлено: —</span>
-      </div>
-    </div>
-
-    <!-- BIGFISH TOTAL ПІД КНОПКОЮ -->
-    <div class="card bf-wrap" id="bigFishWrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <h2 style="margin:0;">BigFish — Total</h2>
-        <span class="pill" id="bfCount">Учасників: —</span>
-      </div>
-
-      <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
-        <table class="table table-sm" id="bigFishTable">
-          <thead>
-            <tr>
-              <th>Команда</th>
-              <th>BIG 1 доба</th>
-              <th>BIG 2 доба</th>
-              <th>MAX BIG</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-
-      <p class="live-note">
-        Учасники беруться з адмінки жеребкування (галочка BigFish Total).
-      </p>
-    </div>
-
-    <!-- СТАН / ПОМИЛКИ -->
-    <div id="liveError" class="form-msg err" style="display:none;"></div>
-
-    <div id="liveLoading" class="form__hint" style="margin-top:12px;">
-      Завантаження результатів...
-    </div>
-
-    <!-- ОСНОВНИЙ КОНТЕНТ -->
-    <div id="liveContent" class="live-layout" style="display:none;">
-
-      <!-- LEFT: Зони + Зважування -->
-      <div class="live-left">
-
-        <!-- ЗОНИ A/B/C -->
-        <div class="card" style="margin-bottom:16px;">
-          <h2 style="margin-top:0;margin-bottom:10px;">Зони A / B / C</h2>
-
-          <div class="live-zones-grid" id="zonesContainer"></div>
-
-          <p class="live-note">
-            Сортування: вага → BIG. Місце — в межах зони.
-          </p>
+        <div class="hero__actions">
+          <a href="register.html" class="btn btn--primary">Реєстрація змагань</a>
+          <a href="auth.html" class="btn btn--ghost" data-auth-toggle>Мій кабінет</a>
         </div>
 
-        <!-- ЗВАЖУВАННЯ ПО ЕТАПУ -->
-        <div class="card">
-          <h2 style="margin-top:0;margin-bottom:10px;">Зважування по етапу</h2>
-
-          <div class="weigh-toggle">
-            <button type="button" class="btn btn--accent" id="wBtn1">W1</button>
-            <button type="button" class="btn btn--ghost"  id="wBtn2">W2</button>
-            <button type="button" class="btn btn--ghost"  id="wBtn3">W3</button>
-            <button type="button" class="btn btn--ghost"  id="wBtn4">W4</button>
-          </div>
-
-          <div class="table-wrap" style="overflow-x:auto;">
-            <table class="table table-sm" id="weighTable">
-              <!-- JS повністю малює thead + tbody -->
-            </table>
-          </div>
-
-          <p class="live-note" id="weighInfo">
-            W1–W4 — зважування. Показуються всі риби команди у вибраному зважуванні.
-          </p>
-        </div>
-
+        <p class="hero__note">
+          Частина внесків з кожного етапу йде на підтримку наших захисників:
+          дрони, акумулятори, зв’язок та інше спорядження.
+        </p>
       </div>
 
-      <!-- RIGHT: запас під майбутні модулі -->
-      <div class="live-right"></div>
+      <div class="hero__side">
+        <div class="card hero-card">
+          <p class="card__kicker">Сезон 2026</p>
+          <h2 class="card__title">2–8 етапів + Фінал</h2>
+          <ul class="card__list">
+            <li>Загальний рейтинг сезону з кожного етапу</li>
+            <li>Автоматичні live-таблиці зон A/B/C та Big Fish</li>
+            <li>Персональні сторінки команд і учасників</li>
+            <li>Окремий фінальний турнір з бонусами</li>
+          </ul>
+          <a href="events/2026.html" class="card__link">Детальніше про сезон 2026 →</a>
+        </div>
+      </div>
     </div>
+  </section>
 
+  <!-- Блок про систему -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Що дає система STOLAR CARP</h2>
+        <p class="section-subtitle">
+          Сезон побудований так, щоб і учасникам, і організаторам було максимально комфортно
+          стежити за турнірами онлайн.
+        </p>
+      </div>
+
+      <div class="grid grid--3">
+        <article class="card">
+          <h3 class="card__title">Прозора реєстрація</h3>
+          <p class="card__text">
+            Команди та соло-учасники реєструються через сайт, заявки автоматично потрапляють
+            в адмінку, а дублікати блокуються системою.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3 class="card__title">Live-таблиці та рейтинг</h3>
+          <p class="card__text">
+            Судді вводять зважування на водоймі, і глядачі одразу бачать оновлення на сторінці
+            Live та у загальному рейтингу сезону.
+          </p>
+        </article>
+
+        <article class="card">
+          <h3 class="card__title">Благодійна місія</h3>
+          <p class="card__text">
+            Кожен етап має окрему ціль збору. Ми відкрито показуємо суми та звіт по закупівлях:
+            FPV-дрони, батареї, зарядні станції та інше.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Блок з найближчими подіями (коротко, щоб не дублювати всю events-сторінку) -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <h2 class="section-title">Найближчі події сезону 2026</h2>
+        <p class="section-subtitle">
+          Повний календар дивись на сторінці «Турнір 2026», а тут — короткий огляд стартів.
+        </p>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline__item">
+          <div class="timeline__date">15–17.05.2026</div>
+          <div class="timeline__body">
+            <h3 class="timeline__title">Етап 1 · STOLAR CARP Season 2026</h3>
+            <p class="timeline__text">
+              Класичний командний формат, зона A/B/C, залік за загальною вагою.
+            </p>
+          </div>
+        </div>
+
+        <div class="timeline__item">
+          <div class="timeline__date">12–14.06.2026</div>
+          <div class="timeline__body">
+            <h3 class="timeline__title">Етап 2 · STOLAR CARP Season 2026</h3>
+            <p class="timeline__text">
+              Другий етап сезону: боротьба за очки та місця у фіналі.
+            </p>
+          </div>
+        </div>
+
+        <div class="timeline__item">
+          <div class="timeline__date">11–13.09.2026</div>
+          <div class="timeline__body">
+            <h3 class="timeline__title">Фінал STOLAR CARP 2026</h3>
+            <p class="timeline__text">
+              Окремий фінальний турнір для кращих команд сезону з підвищеними призами.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-cta">
+        <a href="register.html" class="btn btn--primary">Подати заявку на етап</a>
+        <a href="events/2026.html" class="btn btn--ghost">Подивитись повний календар</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Фінальний call-to-action -->
+  <section class="section section--alt">
+    <div class="container">
+      <div class="cta">
+        <h2 class="section-title">Готові до сезону STOLAR CARP 2026?</h2>
+        <p class="section-subtitle">
+          Створюйте команду, заходьте в «Мій кабінет», реєструйтеся на етапи
+          та ловіть свій трофейний короп разом із нами.
+        </p>
+        <div class="cta__actions">
+          <a href="auth.html" class="btn btn--primary" data-auth-toggle>Мій кабінет</a>
+          <a href="rules.html" class="btn btn--ghost">Регламент турніру</a>
+        </div>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+  <div class="container footer__inner">
+    <div class="footer__left">
+      <span class="footer__brand">STOLAR CARP</span>
+      <span class="footer__copy">© 2026. Усі права захищені.</span>
+    </div>
+    <div class="footer__right">
+      <a href="https://t.me/" target="_blank" rel="noreferrer" class="footer__link">Telegram</a>
+      <a href="https://www.youtube.com/" target="_blank" rel="noreferrer" class="footer__link">YouTube</a>
     </div>
   </div>
 </footer>
 
-<!-- Firebase compat -->
+<!-- Firebase COMPAT -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="assets/js/firebase-init.js"></script>
 
-<!-- Live читання (зони + зважування) -->
-<script src="assets/js/live_firebase.js"></script>
-
-<!-- BigFish Total логіка -->
-<script src="assets/js/bigfish_total_live.js"></script>
+<!-- Твої ініціалізації + авторизація -->
+<script src="/assets/js/firebase-init.js"></script>
+<script src="/assets/js/auth.js"></script>
 
 </body>
 </html>

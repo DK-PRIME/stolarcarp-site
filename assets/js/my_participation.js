@@ -39,18 +39,27 @@
     }
   }
 
+  function niceTitle(it) {
+    // Показуємо красиву назву турніру, якщо вона є.
+    // ВАЖЛИВО: compId (oneoff-...) НІКОЛИ не показуємо.
+    const compName = it.competitionName || it.compName || it.competition || "";
+    const stage = it.stageName || "Етап";
+    if (compName) return `${esc(compName)} · ${esc(stage)}`;
+    return esc(stage);
+  }
+
   function renderItems(items) {
-    // красивий компактний список у стилі твоїх карточок
     let html = "";
     items.forEach((it) => {
       html += `
         <div class="stat-card" style="margin-bottom:10px;">
-          <div class="stat-label">${esc(it.stageName || "Етап")}</div>
+          <div class="stat-label">${niceTitle(it)}</div>
+
           <div class="cabinet-small-muted">
-            ${esc(it.compId || "—")}
-            ${it.zone ? ` · Зона: <strong style="color:#facc15;">${esc(it.zone)}</strong>` : ""}
-            ${it.sectorNumber ? ` · Сектор: <strong style="color:#facc15;">${esc(it.sectorNumber)}</strong>` : ""}
+            ${it.zone ? `Зона: <strong style="color:#facc15;">${esc(it.zone)}</strong>` : ""}
+            ${it.sectorNumber ? `${it.zone ? " · " : ""}Сектор: <strong style="color:#facc15;">${esc(it.sectorNumber)}</strong>` : ""}
           </div>
+
           <div class="cabinet-small-muted" style="margin-top:6px;">
             Команда: <strong style="color:#e5e7eb;">${esc(it.teamName || "—")}</strong>
             ${it.updatedAt ? ` · Оновлено: ${esc(formatDate(it.updatedAt))}` : ""}
@@ -64,7 +73,7 @@
   async function loadParticipation(user) {
     const db = window.scDb;
 
-    // 1) беремо teamId користувача
+    // 1) teamId користувача
     const uSnap = await db.collection("users").doc(user.uid).get();
     if (!uSnap.exists) {
       showError("Немає профілю користувача");
@@ -78,8 +87,7 @@
       return;
     }
 
-    // 2) читаємо stageResults і шукаємо teamId всередині масиву teams
-    //    (так, це повний перегляд колекції — але stageResults небагато і це ок)
+    // 2) stageResults -> шукаємо teamId всередині data.teams[]
     const snap = await db.collection("stageResults").get();
 
     const items = [];
@@ -92,11 +100,17 @@
 
         items.push({
           stageName: data.stageName || t.stageName || "Етап",
-          compId: data.compId || t.compId || "",
+          // гарні назви (якщо є в stageResults)
+          competitionName: data.competitionName || data.compName || data.competition || "",
+          compName: data.compName || "",
+          // команда/зона/сектор
           teamName: t.team || data.teamName || "",
           zone: t.zone || "",
           sectorNumber: t.sectorNumber || "",
+          // дата
           updatedAt: data.updatedAt || data.createdAt || null,
+          // технічне лишаємо в даних (на майбутнє), але НЕ показуємо
+          compId: data.compId || t.compId || "",
           regId: t.regId || data.regId || ""
         });
       });
@@ -107,7 +121,7 @@
       return;
     }
 
-    // 3) сортування: найновіше зверху (якщо є updatedAt/createdAt)
+    // 3) сортування: найновіше зверху
     items.sort((a, b) => {
       const at = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? +new Date(a.updatedAt) : 0);
       const bt = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? +new Date(b.updatedAt) : 0);
@@ -120,8 +134,6 @@
   (async () => {
     try {
       await waitFirebase();
-
-      // якщо вже показано "Завантаження..." — замінимо на реальний статус
       showMuted("Завантаження участі…");
 
       window.scAuth.onAuthStateChanged(async (user) => {

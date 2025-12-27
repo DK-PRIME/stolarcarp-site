@@ -2,43 +2,106 @@
 (function(){
   "use strict";
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
+  // ---------- helpers: анти-білий екран ----------
+  function ensureEl(id, parent, className, styleText){
+    let el = document.getElementById(id);
+    if(el) return el;
+    el = document.createElement("div");
+    el.id = id;
+    if(className) el.className = className;
+    if(styleText) el.style.cssText = styleText;
+    (parent || document.body).appendChild(el);
+    return el;
+  }
 
   const $ = (id)=>document.getElementById(id);
 
-  const stageSelect = $("stageSelect");
-  const btnLoad     = $("btnLoad") || $("btnLoadData") || document.querySelector("[data-load]") || $("btnLoadData"); // якщо різні id
-  const btnRefresh  = $("btnRefresh") || $("btnReload") || $("btnReloadList") || $("btnRefreshList");
+  const safeRoot =
+    document.querySelector(".section.container") ||
+    document.querySelector(".section") ||
+    document.querySelector("main") ||
+    document.body;
 
-  const msgEl   = $("weighMsg") || $("msg");
-  const dbgEl   = $("weighDebug") || $("debug");
-  const wrapEl  = $("tablesWrap") || $("tables") || $("wrap");
+  // гарантовано маємо місця для повідомлень/таблиць
+  const msgEl  = ensureEl("weighMsg",  safeRoot, "muted", "margin-top:10px;");
+  const dbgEl  = ensureEl("weighDebug",safeRoot, "muted", "margin-top:6px; white-space:pre-wrap;");
+  const wrapEl = ensureEl("tablesWrap",safeRoot, "",      "margin-top:12px;");
 
   const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  const norm = (v)=>String(v??"").trim();
 
-  const setMsg = (t, ok=true)=>{
-    if(!msgEl) return;
-    msgEl.textContent = t||"";
+  function setMsg(t, ok=true){
+    msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
-  };
-  const setDbg = (t)=>{
-    if(!dbgEl) return;
-    dbgEl.textContent = t||"";
-  };
-
-  function norm(v){ return String(v??"").trim(); }
-
-  function parseStageValue(v){
-    // у тебе value типу: compId||stageKey
-    const [compId, stageIdRaw] = String(v||"").split("||");
-    return { compId: norm(compId), stageId: norm(stageIdRaw) || "" };
+  }
+  function setDbg(t){
+    dbgEl.textContent = t || "";
   }
 
+  // показуємо помилки на екрані
+  window.addEventListener("error", (e)=>{
+    setMsg("JS помилка ❌", false);
+    setDbg(e?.message || "error");
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    setMsg("Promise помилка ❌", false);
+    setDbg(e?.reason?.message || String(e?.reason || "promise error"));
+  });
+
+  // ---------- Firebase ----------
+  const auth = window.scAuth;
+  const db   = window.scDb;
+  const fb   = window.firebase;
+
+  if(!auth || !db || !fb){
+    setMsg("Firebase init не завантажився (scAuth/scDb).", false);
+    setDbg("Перевір підключення compat SDK та assets/js/firebase-init.js");
+    return;
+  }
+
+  // ---------- DOM: селект/кнопки (робастно) ----------
+  const stageSelect =
+    $("stageSelect") ||
+    $("stage") ||
+    document.querySelector("select#stageSelect") ||
+    document.querySelector("select");
+
+  if(!stageSelect){
+    setMsg("Не знайдено select для етапу ❌", false);
+    setDbg("Додай <select id='stageSelect'></select> у верхню картку.");
+    return;
+  }
+
+  function findButtonByText(re){
+    return Array.from(document.querySelectorAll("button, a.btn"))
+      .find(b => re.test((b.textContent||"").trim()));
+  }
+
+  const btnLoad =
+    $("btnLoad") || $("btnLoadData") || document.querySelector("[data-load]") ||
+    findButtonByText(/завантаж/i);
+
+  const btnRefresh =
+    $("btnRefresh") || $("btnReload") || $("btnReloadList") || $("btnRefreshList") ||
+    findButtonByText(/оновит/i);
+
+  if(!btnLoad){
+    setMsg("Не знайдено кнопку “Завантажити дані” ❌", false);
+    setDbg("Дай кнопці id='btnLoadData' або переконайся, що в тексті кнопки є слово “Завантажити”.");
+    return;
+  }
+
+  // ---------- auth/roles ----------
   async function requireAdmin(user){
     const snap = await db.collection("users").doc(user.uid).get();
     const role = (snap.exists ? (snap.data()||{}).role : "") || "";
     return role === "admin";
+  }
+
+  // value: compId||stageKey
+  function parseStageValue(v){
+    const [compId, stageIdRaw] = String(v||"").split("||");
+    return { compId: norm(compId), stageId: norm(stageIdRaw) || "" };
   }
 
   async function loadStagesToSelect(){
@@ -57,14 +120,13 @@
 
       const eventsArr = Array.isArray(c.events) ? c.events : null;
 
-      if (eventsArr && eventsArr.length) {
+      if(eventsArr && eventsArr.length){
         eventsArr.forEach((ev, idx)=>{
           const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
           const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
-          const label = `${brand} · ${compTitle} — ${stageTitle}`;
-          items.push({ value:`${compId}||${key}`, label });
+          items.push({ value:`${compId}||${key}`, label:`${brand} · ${compTitle} — ${stageTitle}` });
         });
-      } else {
+      }else{
         items.push({ value:`${compId}||`, label:`${brand} · ${compTitle}` });
       }
     });
@@ -78,61 +140,51 @@
 
   // ---------- ГОЛОВНЕ: знайти жеребкування ----------
   async function findDrawDoc(compId, stageId){
-    // 1) найчастіший варіант: draws/{compId}_{stageId}
+    // якщо stageId пустий — теж пробуємо по compId
+    const sid = stageId || "stage-1";
+
     const candidates = [
-      { col:"draws", doc:`${compId}_${stageId}` },
-      { col:"draws", doc:`${compId}__${stageId}` },
-      { col:"draws", doc:`${compId}||${stageId}` },
-      { col:"draws", doc:`${compId}-${stageId}` },
-      // 2) якщо збережено просто по compId (а stage в полі)
+      { col:"draws", doc:`${compId}_${sid}` },
+      { col:"draws", doc:`${compId}__${sid}` },
+      { col:"draws", doc:`${compId}||${sid}` },
+      { col:"draws", doc:`${compId}-${sid}` },
       { col:"draws", doc:`${compId}` },
-      // 3) інші можливі назви колекцій
-      { col:"draw", doc:`${compId}_${stageId}` },
-      { col:"drawings", doc:`${compId}_${stageId}` }
+
+      { col:"draw", doc:`${compId}_${sid}` },
+      { col:"drawings", doc:`${compId}_${sid}` },
     ];
 
-    // 4) якщо в підколекції competitions/{compId}/draws/{stageId}
-    const subPath = db.collection("competitions").doc(compId).collection("draws").doc(stageId);
-
-    // пробуємо підколекцію першою (часто так роблять)
+    // 1) competitions/{compId}/draws/{stageId}
     try{
-      const s = await subPath.get();
-      if(s.exists) return { ref: s.ref, data: s.data()||{}, where: `competitions/${compId}/draws/${stageId}` };
-    }catch(e){ /* ignore */ }
+      const s = await db.collection("competitions").doc(compId).collection("draws").doc(sid).get();
+      if(s.exists) return { ref:s.ref, data:s.data()||{}, where:`competitions/${compId}/draws/${sid}` };
+    }catch(_){}
 
-    // пробуємо candidates
+    // 2) прямі docs
     for(const c of candidates){
       try{
         const s = await db.collection(c.col).doc(c.doc).get();
-        if(s.exists){
-          return { ref: s.ref, data: s.data()||{}, where: `${c.col}/${c.doc}` };
-        }
-      }catch(e){ /* ignore */ }
+        if(s.exists) return { ref:s.ref, data:s.data()||{}, where:`${c.col}/${c.doc}` };
+      }catch(_){}
     }
 
-    // 5) fallback: query where compId/stageId збережені як поля
-    // (це теж частий варіант)
+    // 3) query (якщо збережено як документи з полями compId/stageId)
     try{
       const q = await db.collection("draws")
         .where("compId","==",compId)
-        .where("stageId","==",stageId)
+        .where("stageId","==",sid)
         .limit(1)
         .get();
       if(!q.empty){
         const d = q.docs[0];
-        return { ref: d.ref, data: d.data()||{}, where: `draws(query compId+stageId) -> ${d.id}` };
+        return { ref:d.ref, data:d.data()||{}, where:`draws(query)->${d.id}` };
       }
-    }catch(e){ /* ignore */ }
+    }catch(_){}
 
     return null;
   }
 
   function extractZones(drawData){
-    // Підтримуємо всі формати:
-    // A/B/C напряму
-    // zones: {A:[],B:[],C:[]}
-    // zones: [{zone:"A", teams:[...]}] тощо
-
     let A = drawData.A || drawData.zoneA || drawData.a || null;
     let B = drawData.B || drawData.zoneB || drawData.b || null;
     let C = drawData.C || drawData.zoneC || drawData.c || null;
@@ -140,7 +192,6 @@
     if(!A && !B && !C && drawData.zones){
       const z = drawData.zones;
       if(Array.isArray(z)){
-        // [{zone:"A", teams:[...]}]
         for(const item of z){
           const zn = String(item.zone || item.key || "").toUpperCase();
           const teams = item.teams || item.items || item.list || [];
@@ -155,29 +206,28 @@
       }
     }
 
-    // гарантуємо масиви
-    A = Array.isArray(A) ? A : [];
-    B = Array.isArray(B) ? B : [];
-    C = Array.isArray(C) ? C : [];
-
-    return { A, B, C };
+    return {
+      A: Array.isArray(A) ? A : [],
+      B: Array.isArray(B) ? B : [],
+      C: Array.isArray(C) ? C : [],
+    };
   }
 
   // ---------- UI таблиць ----------
-  function teamLabel(t){
-    const sector = t.sector || t.place || t.slot || t.position || "";
+  function teamLabel(t, idx){
+    const sector = t.sector || t.place || t.slot || t.position || (idx+1);
     const name   = t.teamName || t.name || t.team || t.title || "Команда";
-    return { sector: sector, name: name, teamId: t.teamId || t.id || "" };
+    const teamId = t.teamId || t.id || "";
+    return { sector, name, teamId };
   }
 
   function renderZoneTable(zone, teams){
     const rows = teams.map((t, idx)=>{
-      const x = teamLabel(t);
-      const sectorText = x.sector ? esc(x.sector) : esc(idx+1);
+      const x = teamLabel(t, idx);
       return `
         <div class="win-card" data-zone="${zone}" data-team="${esc(x.teamId)}" style="margin-top:10px;">
           <div class="win-title">
-            <span>Сектор ${sectorText} — ${esc(x.name)}</span>
+            <span>Сектор ${esc(x.sector)} — ${esc(x.name)}</span>
             <span class="badge">${zone}</span>
           </div>
 
@@ -187,7 +237,7 @@
           </div>
 
           <div class="muted" style="margin-top:8px;">Внесені ваги:</div>
-          <div class="muted" data-list style="margin-top:6px;"></div>
+          <div class="muted" data-list style="margin-top:6px;">—</div>
 
           <div class="hr"></div>
 
@@ -210,26 +260,24 @@
   }
 
   function renderAllTables(zones){
-    if(!wrapEl) return;
     wrapEl.innerHTML =
       renderZoneTable("A", zones.A) +
       renderZoneTable("B", zones.B) +
       renderZoneTable("C", zones.C);
   }
 
-  // ----- локальний список ваг для зручності -----
+  // ---------- local storage ----------
   function keyLocal(compId, stageId, zone, teamId){
     return `sc_weights_${compId}_${stageId}_${zone}_${teamId||"noid"}`;
   }
   function loadLocal(compId, stageId, zone, teamId){
-    try{
-      return JSON.parse(localStorage.getItem(keyLocal(compId, stageId, zone, teamId)) || "[]");
-    }catch{ return []; }
+    try{ return JSON.parse(localStorage.getItem(keyLocal(compId, stageId, zone, teamId)) || "[]"); }
+    catch{ return []; }
   }
   function saveLocal(compId, stageId, zone, teamId, arr){
-    try{ localStorage.setItem(keyLocal(compId, stageId, zone, teamId), JSON.stringify(arr||[])); }catch{}
+    try{ localStorage.setItem(keyLocal(compId, stageId, zone, teamId), JSON.stringify(arr||[])); }
+    catch{}
   }
-
   function refreshCardList(card, arr){
     const list = card.querySelector("[data-list]");
     if(!list) return;
@@ -237,19 +285,22 @@
     list.textContent = arr.map(x=>Number(x).toFixed(3)).join(" | ");
   }
 
-  // ---------- ТУТ тимчасово: просто зберігаємо у Firestore (weighings) ----------
-  // (Потім ми підв’яжемо до weighings №1..№4, підтвердження командою і т.д.)
+  // ---------- Firestore save (тимчасово в weighings) ----------
   async function saveWeighing(compId, stageId, zone, teamId, weights){
-    const id = `${compId}_${stageId}_${zone}_${(teamId||"noid")}`;
+    const sid = stageId || "stage-1";
+    const id = `${compId}_${sid}_${zone}_${(teamId||"noid")}`;
     await db.collection("weighings").doc(id).set({
-      compId, stageId, zone,
+      compId,
+      stageId: sid,
+      zone,
       teamId: teamId || "",
       weights: weights || [],
       totalWeight: (weights||[]).reduce((s,v)=>s+Number(v||0),0),
-      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+      updatedAt: fb.firestore.FieldValue.serverTimestamp()
     }, { merge:true });
   }
 
+  // ---------- main: load & build ----------
   async function loadAndBuild(){
     const { compId, stageId } = parseStageValue(stageSelect.value);
     if(!compId) return setMsg("Обери змагання/етап.", false);
@@ -259,25 +310,26 @@
 
     const found = await findDrawDoc(compId, stageId);
     if(!found){
-      setMsg("❌ Жеребкування НЕ знайдено тим шляхом, який читає адмінка.", false);
+      setMsg("❌ Жеребкування не знайдено шляхом, який читає адмінка.", false);
       setDbg(
-        "Я пробував:\n" +
+        "Пробував:\n" +
         "- competitions/{compId}/draws/{stageId}\n" +
         "- draws/{compId}_{stageId}\n" +
         "- draws/{compId}\n" +
         "- draws query where compId+stageId\n\n" +
-        "Висновок: твій draw збережений інакше. Дай 1 скрін Firestore або шматок saveDraw()."
+        "Покажи 1 скрін Firestore: де лежить жеребкування і які поля (A/B/C або zones)."
       );
+      wrapEl.innerHTML = "";
       return;
     }
 
-    setDbg("✅ Знайдено жеребкування тут:\n" + found.where);
+    setDbg("✅ Знайдено жеребкування:\n" + found.where);
 
     const zones = extractZones(found.data);
     renderAllTables(zones);
 
-    // навісити кнопки +/save
-    wrapEl.querySelectorAll("[data-zone]").forEach(card=>{
+    // events for cards
+    wrapEl.querySelectorAll(".win-card[data-zone]").forEach(card=>{
       const zone = card.getAttribute("data-zone");
       const teamId = card.getAttribute("data-team") || "";
       const inp = card.querySelector("[data-weight]");
@@ -286,14 +338,20 @@
       const btnClear = card.querySelector("[data-clear]");
       const st = card.querySelector("[data-status]");
 
-      let arr = loadLocal(compId, stageId, zone, teamId);
+      const sid = stageId || "stage-1";
+      let arr = loadLocal(compId, sid, zone, teamId);
       refreshCardList(card, arr);
 
       btnAdd.onclick = ()=>{
-        const v = Number(String(inp.value||"").replace(",","."));
-        if(!v || v<=0){ st.textContent = "Введи вагу (наприклад 4.560)"; st.className="muted err"; return; }
+        const raw = String(inp.value||"").replace(",",".");
+        const v = Number(raw);
+        if(!v || v<=0){
+          st.textContent = "Введи вагу (наприклад 4.560)";
+          st.className="muted err";
+          return;
+        }
         arr.push(v);
-        saveLocal(compId, stageId, zone, teamId, arr);
+        saveLocal(compId, sid, zone, teamId, arr);
         refreshCardList(card, arr);
         inp.value = "";
         st.textContent = "Додано ✅";
@@ -302,7 +360,7 @@
 
       btnClear.onclick = ()=>{
         arr = [];
-        saveLocal(compId, stageId, zone, teamId, arr);
+        saveLocal(compId, sid, zone, teamId, arr);
         refreshCardList(card, arr);
         st.textContent = "Очищено локально";
         st.className="muted";
@@ -312,13 +370,13 @@
         st.textContent = "Зберігаю…";
         st.className="muted";
         try{
-          await saveWeighing(compId, stageId, zone, teamId, arr);
+          await saveWeighing(compId, sid, zone, teamId, arr);
           st.textContent = "Збережено у Firestore ✅";
           st.className="muted ok";
         }catch(e){
           st.textContent = "Помилка збереження ❌";
           st.className="muted err";
-          setDbg((dbgEl?.textContent||"") + "\n\nSAVE ERROR:\n" + (e?.message||String(e)));
+          setDbg((dbgEl.textContent||"") + "\n\nSAVE ERROR:\n" + (e?.message||String(e)));
         }
       };
     });
@@ -326,35 +384,36 @@
     setMsg("✅ Таблиці згенеровані (A/B/C).", true);
   }
 
+  // ---------- init ----------
   async function init(){
-    if(!auth || !db || !window.firebase){
-      setMsg("Firebase init не завантажився.", false);
-      return;
-    }
-
     auth.onAuthStateChanged(async (user)=>{
       if(!user){
         setMsg("Увійди як адмін.", false);
         return;
       }
-      const ok = await requireAdmin(user);
-      if(!ok){
-        setMsg("Цей акаунт не адмін.", false);
-        return;
-      }
+      try{
+        const ok = await requireAdmin(user);
+        if(!ok){
+          setMsg("Цей акаунт не адмін.", false);
+          return;
+        }
 
-      await loadStagesToSelect();
-      setMsg("Обери етап → натисни “Завантажити дані”.", true);
-
-      // якщо кнопки мають інші id — підстраховка:
-      const loadBtn = btnLoad || document.querySelector("button.btn--accent");
-      if(loadBtn) loadBtn.onclick = loadAndBuild;
-
-      if(btnRefresh) btnRefresh.onclick = async ()=>{
-        setMsg("Оновлюю список…", true);
         await loadStagesToSelect();
-        setMsg("Оновлено ✅", true);
-      };
+        setMsg("Обери етап → натисни “Завантажити дані”.", true);
+
+        btnLoad.onclick = loadAndBuild;
+
+        if(btnRefresh){
+          btnRefresh.onclick = async ()=>{
+            setMsg("Оновлюю список…", true);
+            await loadStagesToSelect();
+            setMsg("Оновлено ✅", true);
+          };
+        }
+      }catch(e){
+        setMsg("Помилка ініціалізації ❌", false);
+        setDbg(e?.message || String(e));
+      }
     });
   }
 

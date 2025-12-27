@@ -1,423 +1,129 @@
-<script>
-(function(){
-  "use strict";
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STOLAR CARP • Зважування (адмін)</title>
 
-  // ---------- helpers: анти-білий екран ----------
-  function ensureEl(id, parent, className, styleText){
-    let el = document.getElementById(id);
-    if(el) return el;
-    el = document.createElement("div");
-    el.id = id;
-    if(className) el.className = className;
-    if(styleText) el.style.cssText = styleText;
-    (parent || document.body).appendChild(el);
-    return el;
-  }
-
-  const $ = (id)=>document.getElementById(id);
-
-  const safeRoot =
-    document.querySelector(".section.container") ||
-    document.querySelector(".section") ||
-    document.querySelector("main") ||
-    document.body;
-
-  // гарантовано маємо місця для повідомлень/таблиць
-  const msgEl  = ensureEl("weighMsg",  safeRoot, "muted", "margin-top:10px;");
-  const dbgEl  = ensureEl("weighDebug",safeRoot, "muted", "margin-top:6px; white-space:pre-wrap;");
-  const wrapEl = ensureEl("tablesWrap",safeRoot, "",      "margin-top:12px;");
-
-  const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
-  const norm = (v)=>String(v??"").trim();
-
-  function setMsg(t, ok=true){
-    msgEl.textContent = t || "";
-    msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
-  }
-  function setDbg(t){
-    dbgEl.textContent = t || "";
-  }
-
-  // показуємо помилки на екрані
-  window.addEventListener("error", (e)=>{
-    setMsg("JS помилка ❌", false);
-    setDbg(e?.message || "error");
-  });
-  window.addEventListener("unhandledrejection", (e)=>{
-    setMsg("Promise помилка ❌", false);
-    setDbg(e?.reason?.message || String(e?.reason || "promise error"));
-  });
-
-  // ---------- Firebase ----------
-  const auth = window.scAuth;
-  const db   = window.scDb;
-  const fb   = window.firebase;
-
-  if(!auth || !db || !fb){
-    setMsg("Firebase init не завантажився (scAuth/scDb).", false);
-    setDbg("Перевір підключення compat SDK та assets/js/firebase-init.js");
-    return;
-  }
-
-  // ---------- DOM: селект/кнопки (робастно) ----------
-  const stageSelect =
-    $("stageSelect") ||
-    $("stage") ||
-    document.querySelector("select#stageSelect") ||
-    document.querySelector("select");
-
-  if(!stageSelect){
-    setMsg("Не знайдено select для етапу ❌", false);
-    setDbg("Додай <select id='stageSelect'></select> у верхню картку.");
-    return;
-  }
-
-  function findButtonByText(re){
-    return Array.from(document.querySelectorAll("button, a.btn"))
-      .find(b => re.test((b.textContent||"").trim()));
-  }
-
-  const btnLoad =
-    $("btnLoad") || $("btnLoadData") || document.querySelector("[data-load]") ||
-    findButtonByText(/завантаж/i);
-
-  const btnRefresh =
-    $("btnRefresh") || $("btnReload") || $("btnReloadList") || $("btnRefreshList") ||
-    findButtonByText(/оновит/i);
-
-  if(!btnLoad){
-    setMsg("Не знайдено кнопку “Завантажити дані” ❌", false);
-    setDbg("Дай кнопці id='btnLoadData' або переконайся, що в тексті кнопки є слово “Завантажити”.");
-    return;
-  }
-
-  // ---------- auth/roles ----------
-  async function requireAdmin(user){
-    const snap = await db.collection("users").doc(user.uid).get();
-    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return role === "admin";
-  }
-
-  // value: compId||stageKey
-  function parseStageValue(v){
-    const [compId, stageIdRaw] = String(v||"").split("||");
-    return { compId: norm(compId), stageId: norm(stageIdRaw) || "" };
-  }
-
-  async function loadStagesToSelect(){
-    stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
-
-    const items = [];
-    const snap = await db.collection("competitions").get();
-
-    snap.forEach(docSnap=>{
-      const c = docSnap.data()||{};
-      const compId = docSnap.id;
-
-      const brand = c.brand || "STOLAR CARP";
-      const year  = c.year || c.seasonYear || "";
-      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
-
-      const eventsArr = Array.isArray(c.events) ? c.events : null;
-
-      if(eventsArr && eventsArr.length){
-        eventsArr.forEach((ev, idx)=>{
-          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
-          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
-          items.push({ value:`${compId}||${key}`, label:`${brand} · ${compTitle} — ${stageTitle}` });
-        });
-      }else{
-        items.push({ value:`${compId}||`, label:`${brand} · ${compTitle}` });
-      }
-    });
-
-    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
-
-    stageSelect.innerHTML =
-      `<option value="">— Оберіть —</option>` +
-      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
-  }
-
-  // ---------- ГОЛОВНЕ: знайти жеребкування ----------
-  async function findDrawDoc(compId, stageId){
-    // якщо stageId пустий — теж пробуємо по compId
-    const sid = stageId || "stage-1";
-
-    const candidates = [
-      { col:"draws", doc:`${compId}_${sid}` },
-      { col:"draws", doc:`${compId}__${sid}` },
-      { col:"draws", doc:`${compId}||${sid}` },
-      { col:"draws", doc:`${compId}-${sid}` },
-      { col:"draws", doc:`${compId}` },
-
-      { col:"draw", doc:`${compId}_${sid}` },
-      { col:"drawings", doc:`${compId}_${sid}` },
-    ];
-
-    // 1) competitions/{compId}/draws/{stageId}
-    try{
-      const s = await db.collection("competitions").doc(compId).collection("draws").doc(sid).get();
-      if(s.exists) return { ref:s.ref, data:s.data()||{}, where:`competitions/${compId}/draws/${sid}` };
-    }catch(_){}
-
-    // 2) прямі docs
-    for(const c of candidates){
-      try{
-        const s = await db.collection(c.col).doc(c.doc).get();
-        if(s.exists) return { ref:s.ref, data:s.data()||{}, where:`${c.col}/${c.doc}` };
-      }catch(_){}
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <style>
+    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
+    .wrap{ max-width:980px; margin:0 auto; padding:20px 0 80px; }
+    .card{
+      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.35);
+      border-radius:18px;
+      padding:16px;
+      margin-bottom:12px;
+      box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
-
-    // 3) query (якщо збережено як документи з полями compId/stageId)
-    try{
-      const q = await db.collection("draws")
-        .where("compId","==",compId)
-        .where("stageId","==",sid)
-        .limit(1)
-        .get();
-      if(!q.empty){
-        const d = q.docs[0];
-        return { ref:d.ref, data:d.data()||{}, where:`draws(query)->${d.id}` };
-      }
-    }catch(_){}
-
-    return null;
-  }
-
-  function extractZones(drawData){
-    let A = drawData.A || drawData.zoneA || drawData.a || null;
-    let B = drawData.B || drawData.zoneB || drawData.b || null;
-    let C = drawData.C || drawData.zoneC || drawData.c || null;
-
-    if(!A && !B && !C && drawData.zones){
-      const z = drawData.zones;
-      if(Array.isArray(z)){
-        for(const item of z){
-          const zn = String(item.zone || item.key || "").toUpperCase();
-          const teams = item.teams || item.items || item.list || [];
-          if(zn==="A") A = teams;
-          if(zn==="B") B = teams;
-          if(zn==="C") C = teams;
-        }
-      }else if(typeof z === "object"){
-        A = z.A || z.zoneA || null;
-        B = z.B || z.zoneB || null;
-        C = z.C || z.zoneC || null;
-      }
+    .muted{ color:#9ca3af; }
+    .ok{ color:#22c55e; }
+    .err{ color:#ef4444; }
+    .field{ display:grid; gap:6px; margin-top:10px; }
+    select{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#020617;
+      color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.3);
+      outline:none;
     }
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
+    .win-card{
+      padding:12px;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      margin-top:10px;
+    }
+    .win-title{
+      font-weight:900;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      font-size:.85rem;
+      margin-bottom:8px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+    .badge{
+      font-size:.72rem;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.45);
+      color:#e5e7eb;
+      white-space:nowrap;
+    }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
+    input[type=number]{
+      width:100%;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+      outline:none;
+    }
+  </style>
+</head>
 
-    return {
-      A: Array.isArray(A) ? A : [],
-      B: Array.isArray(B) ? B : [],
-      C: Array.isArray(C) ? C : [],
-    };
-  }
+<body>
 
-  // ---------- UI таблиць ----------
-  function teamLabel(t, idx){
-    const sector = t.sector || t.place || t.slot || t.position || (idx+1);
-    const name   = t.teamName || t.name || t.team || t.title || "Команда";
-    const teamId = t.teamId || t.id || "";
-    return { sector, name, teamId };
-  }
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="admin.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+  </div>
+</header>
 
-  function renderZoneTable(zone, teams){
-    const rows = teams.map((t, idx)=>{
-      const x = teamLabel(t, idx);
-      return `
-        <div class="win-card" data-zone="${zone}" data-team="${esc(x.teamId)}" style="margin-top:10px;">
-          <div class="win-title">
-            <span>Сектор ${esc(x.sector)} — ${esc(x.name)}</span>
-            <span class="badge">${zone}</span>
-          </div>
+<main class="main">
+  <section class="section container wrap">
 
-          <div class="grid2" style="grid-template-columns: 1fr auto; gap:10px;">
-            <input type="number" step="0.001" placeholder="Вага (наприклад 4.560)" data-weight />
-            <button class="btn btn--accent" type="button" data-add>+</button>
-          </div>
+    <div class="card">
+      <div style="font-weight:900;">Зважування (адмін)</div>
+      <div class="muted" style="margin-top:6px;">Підтягує команди з жеребкування і дає вносити ваги кнопкою “+”.</div>
 
-          <div class="muted" style="margin-top:8px;">Внесені ваги:</div>
-          <div class="muted" data-list style="margin-top:6px;">—</div>
-
-          <div class="hr"></div>
-
-          <div class="grid2">
-            <button class="btn btn--primary" type="button" data-save>Зберегти</button>
-            <button class="btn btn--ghost" type="button" data-clear>Очистити локально</button>
-          </div>
-
-          <div class="muted" data-status style="margin-top:8px;"></div>
-        </div>
-      `;
-    }).join("");
-
-    return `
-      <div class="admin-card">
-        <div style="font-weight:900; margin-bottom:6px;">Зона ${zone}</div>
-        ${teams.length ? rows : `<div class="muted">Нема команд у зоні ${zone}.</div>`}
+      <div class="field">
+        <div class="muted">Змагання / етап</div>
+        <select id="stageSelect"></select>
       </div>
-    `;
-  }
 
-  function renderAllTables(zones){
-    wrapEl.innerHTML =
-      renderZoneTable("A", zones.A) +
-      renderZoneTable("B", zones.B) +
-      renderZoneTable("C", zones.C);
-  }
+      <div class="btnRow">
+        <button class="btn btn--accent" id="btnLoadData" type="button">Завантажити дані</button>
+        <button class="btn btn--ghost" id="btnRefreshList" type="button">Оновити список</button>
+      </div>
 
-  // ---------- local storage ----------
-  function keyLocal(compId, stageId, zone, teamId){
-    return `sc_weights_${compId}_${stageId}_${zone}_${teamId||"noid"}`;
-  }
-  function loadLocal(compId, stageId, zone, teamId){
-    try{ return JSON.parse(localStorage.getItem(keyLocal(compId, stageId, zone, teamId)) || "[]"); }
-    catch{ return []; }
-  }
-  function saveLocal(compId, stageId, zone, teamId, arr){
-    try{ localStorage.setItem(keyLocal(compId, stageId, zone, teamId), JSON.stringify(arr||[])); }
-    catch{}
-  }
-  function refreshCardList(card, arr){
-    const list = card.querySelector("[data-list]");
-    if(!list) return;
-    if(!arr.length){ list.textContent = "—"; return; }
-    list.textContent = arr.map(x=>Number(x).toFixed(3)).join(" | ");
-  }
+      <!-- ОЦЕ САМЕ ТУТ -->
+      <div id="weighMsg" class="muted" style="margin-top:10px;"></div>
+      <div id="weighDebug" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
+    </div>
 
-  // ---------- Firestore save (тимчасово в weighings) ----------
-  async function saveWeighing(compId, stageId, zone, teamId, weights){
-    const sid = stageId || "stage-1";
-    const id = `${compId}_${sid}_${zone}_${(teamId||"noid")}`;
-    await db.collection("weighings").doc(id).set({
-      compId,
-      stageId: sid,
-      zone,
-      teamId: teamId || "",
-      weights: weights || [],
-      totalWeight: (weights||[]).reduce((s,v)=>s+Number(v||0),0),
-      updatedAt: fb.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-  }
+    <!-- ТАБЛИЦІ ТУТ -->
+    <div id="tablesWrap"></div>
 
-  // ---------- main: load & build ----------
-  async function loadAndBuild(){
-    const { compId, stageId } = parseStageValue(stageSelect.value);
-    if(!compId) return setMsg("Обери змагання/етап.", false);
+  </section>
+</main>
 
-    setMsg("Шукаю жеребкування…", true);
-    setDbg("");
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-    const found = await findDrawDoc(compId, stageId);
-    if(!found){
-      setMsg("❌ Жеребкування не знайдено шляхом, який читає адмінка.", false);
-      setDbg(
-        "Пробував:\n" +
-        "- competitions/{compId}/draws/{stageId}\n" +
-        "- draws/{compId}_{stageId}\n" +
-        "- draws/{compId}\n" +
-        "- draws query where compId+stageId\n\n" +
-        "Покажи 1 скрін Firestore: де лежить жеребкування і які поля (A/B/C або zones)."
-      );
-      wrapEl.innerHTML = "";
-      return;
-    }
+<!-- init -->
+<script src="assets/js/firebase-init.js"></script>
 
-    setDbg("✅ Знайдено жеребкування:\n" + found.where);
-
-    const zones = extractZones(found.data);
-    renderAllTables(zones);
-
-    // events for cards
-    wrapEl.querySelectorAll(".win-card[data-zone]").forEach(card=>{
-      const zone = card.getAttribute("data-zone");
-      const teamId = card.getAttribute("data-team") || "";
-      const inp = card.querySelector("[data-weight]");
-      const btnAdd = card.querySelector("[data-add]");
-      const btnSave = card.querySelector("[data-save]");
-      const btnClear = card.querySelector("[data-clear]");
-      const st = card.querySelector("[data-status]");
-
-      const sid = stageId || "stage-1";
-      let arr = loadLocal(compId, sid, zone, teamId);
-      refreshCardList(card, arr);
-
-      btnAdd.onclick = ()=>{
-        const raw = String(inp.value||"").replace(",",".");
-        const v = Number(raw);
-        if(!v || v<=0){
-          st.textContent = "Введи вагу (наприклад 4.560)";
-          st.className="muted err";
-          return;
-        }
-        arr.push(v);
-        saveLocal(compId, sid, zone, teamId, arr);
-        refreshCardList(card, arr);
-        inp.value = "";
-        st.textContent = "Додано ✅";
-        st.className="muted ok";
-      };
-
-      btnClear.onclick = ()=>{
-        arr = [];
-        saveLocal(compId, sid, zone, teamId, arr);
-        refreshCardList(card, arr);
-        st.textContent = "Очищено локально";
-        st.className="muted";
-      };
-
-      btnSave.onclick = async ()=>{
-        st.textContent = "Зберігаю…";
-        st.className="muted";
-        try{
-          await saveWeighing(compId, sid, zone, teamId, arr);
-          st.textContent = "Збережено у Firestore ✅";
-          st.className="muted ok";
-        }catch(e){
-          st.textContent = "Помилка збереження ❌";
-          st.className="muted err";
-          setDbg((dbgEl.textContent||"") + "\n\nSAVE ERROR:\n" + (e?.message||String(e)));
-        }
-      };
-    });
-
-    setMsg("✅ Таблиці згенеровані (A/B/C).", true);
-  }
-
-  // ---------- init ----------
-  async function init(){
-    auth.onAuthStateChanged(async (user)=>{
-      if(!user){
-        setMsg("Увійди як адмін.", false);
-        return;
-      }
-      try{
-        const ok = await requireAdmin(user);
-        if(!ok){
-          setMsg("Цей акаунт не адмін.", false);
-          return;
-        }
-
-        await loadStagesToSelect();
-        setMsg("Обери етап → натисни “Завантажити дані”.", true);
-
-        btnLoad.onclick = loadAndBuild;
-
-        if(btnRefresh){
-          btnRefresh.onclick = async ()=>{
-            setMsg("Оновлюю список…", true);
-            await loadStagesToSelect();
-            setMsg("Оновлено ✅", true);
-          };
-        }
-      }catch(e){
-        setMsg("Помилка ініціалізації ❌", false);
-        setDbg(e?.message || String(e));
-      }
-    });
-  }
-
-  init();
-
-})();
+<!-- твій “переписаний” скрипт зважувань: встав сюди 1:1 -->
+<script>
+/* ВСТАВ ТУТ МІЙ ПЕРЕПИСАНИЙ СКРИПТ (той що я дав раніше) */
 </script>
+
+</body>
+</html>

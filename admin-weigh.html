@@ -9,25 +9,10 @@
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-    .admin-wrap{ max-width:1100px; margin:0 auto; padding:22px 0 70px; }
 
-    /* header fix */
-    .header .header__row{ align-items:center; }
-    .header .logo{ display:flex; align-items:center; gap:10px; min-height:56px; padding:8px 0; }
-    .header .logo__mark{ width:42px; height:42px; display:flex; align-items:center; justify-content:center; line-height:1; overflow:visible; padding:0; }
-    .header .logo__text{ line-height:1.1; }
-    .header, .header .container{ overflow:visible; }
-
-    .admin-top{
-      padding:14px 16px; border-radius:18px;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.6);
-    }
-    .admin-card{
-      margin-top:14px;
-      padding:16px;
-      border-radius:18px;
+    .wrap{ max-width:1100px; margin:0 auto; padding:18px 0 70px; }
+    .card{
+      margin-top:14px; padding:16px; border-radius:18px;
       background:rgba(15,23,42,.9);
       border:1px solid rgba(148,163,184,.35);
       box-shadow:0 18px 40px rgba(0,0,0,.6);
@@ -35,124 +20,29 @@
     .muted{ color:#9ca3af; }
     .ok{ color:#22c55e; }
     .err{ color:#ef4444; }
+    .hidden{ display:none !important; }
 
-    .mini-form{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-    }
-    .mini-form input, .mini-form select{
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .row > *{ flex: 1 1 auto; }
+
+    select, input{
       width:100%;
-      padding:10px 12px;
-      border-radius:12px;
+      padding:12px 14px;
+      border-radius:14px;
       border:1px solid rgba(148,163,184,.35);
       background:rgba(2,6,23,.55);
       color:#e5e7eb;
       outline:none;
     }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
 
-    /* ---------- TABLE UI ---------- */
-    .zoneBlock{
-      margin-top:14px;
-      padding:14px;
-      border-radius:18px;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.6);
-    }
+    .btnline{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .btnline .btn{ border-radius:14px; padding:12px 14px; }
+
     .zoneTitle{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      font-weight:900;
-      margin-bottom:10px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; margin-bottom:10px;
+      font-weight:900; font-size:1.15rem;
     }
-
-    .tableWrap{ overflow:auto; border-radius:14px; border:1px solid rgba(148,163,184,.25); }
-    table.scTable{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      min-width:760px;
-      background:rgba(2,6,23,.35);
-    }
-    .scTable th, .scTable td{
-      padding:10px 10px;
-      border-bottom:1px solid rgba(148,163,184,.16);
-      vertical-align:middle;
-      color:#e5e7eb;
-    }
-    .scTable th{
-      position:sticky;
-      top:0;
-      background:rgba(2,6,23,.85);
-      backdrop-filter: blur(6px);
-      z-index:2;
-      font-size:.85rem;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      color:#cbd5e1;
-    }
-    .scTable tr:last-child td{ border-bottom:none; }
-    .colSector{ width:90px; white-space:nowrap; }
-    .colTeam{ min-width:220px; }
-    .colSum{ width:140px; white-space:nowrap; font-weight:900; }
-
-    .weightsCell{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-    }
-    .wInp{
-      width:120px;
-      padding:10px 10px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      outline:none;
-    }
-    .wInp:focus{
-      border-color:var(--accent);
-      box-shadow:0 0 10px rgba(246,195,76,.25);
-    }
-
-    .miniBtn{
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .miniBtn--add{
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      color:#000;
-      border-color:transparent;
-    }
-    .miniBtn--save{
-      background:rgba(34,197,94,.18);
-      border-color:rgba(34,197,94,.35);
-    }
-    .miniBtn--clear{
-      background:rgba(239,68,68,.16);
-      border-color:rgba(239,68,68,.35);
-    }
-    .rowActions{
-      display:flex;
-      gap:8px;
-      justify-content:flex-end;
-      flex-wrap:wrap;
-    }
-    .hintSmall{ color:#9ca3af; font-size:.85rem; margin-top:8px; }
-
-    /* QR block (UI only; logic can be added later) */
     .badge{
       font-size:.72rem;
       padding:5px 10px;
@@ -161,6 +51,69 @@
       background:rgba(2,6,23,.45);
       color:#e5e7eb;
       white-space:nowrap;
+    }
+
+    /* tables */
+    .tableWrap{ overflow:auto; border-radius:14px; border:1px solid rgba(148,163,184,.25); }
+    table{ width:100%; border-collapse:collapse; min-width:780px; }
+    th, td{
+      border-bottom:1px solid rgba(148,163,184,.18);
+      padding:10px 10px;
+      text-align:left;
+      vertical-align:top;
+      color:#e5e7eb;
+    }
+    th{
+      position:sticky; top:0;
+      background:rgba(2,6,23,.92);
+      z-index:2;
+      font-size:.85rem;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+    }
+    td small{ color:#94a3b8; display:block; margin-top:3px; }
+
+    .sector{ width:84px; }
+    .teamcol{ min-width:220px; }
+    .fishcol{ min-width:360px; }
+    .sumcol{ width:120px; text-align:right; }
+    .actcol{ width:140px; }
+
+    .fishList{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .fishInput{
+      width:110px;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.35);
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+    }
+    .miniBtn{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:42px; height:42px;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.35);
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#000;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+    }
+    .miniBtn--ghost{
+      background:rgba(2,6,23,.55);
+      color:#e5e7eb;
+    }
+    .right{ text-align:right; }
+    .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
+
+    .hint{ font-size:.9rem; line-height:1.35; color:#9ca3af; }
+    .hint b{ color:#e5e7eb; }
+
+    .topTitle{
+      font-size:1.4rem;
+      font-weight:900;
+      letter-spacing:.04em;
+      margin:0 0 4px;
     }
   </style>
 </head>
@@ -182,54 +135,49 @@
 </header>
 
 <main class="main">
-  <section class="section container admin-wrap">
+  <section class="section container wrap">
 
-    <div class="admin-top">
-      <div class="title-gradient" style="font-size:1.2rem; font-weight:900;">Зважування (адмін)</div>
-      <div class="muted">Таблиці по зонах A/B/C. У рядку команди: ваги + кнопка “+” додає нову клітинку.</div>
-      <div class="muted" id="adminStatus" style="margin-top:6px;">Запуск…</div>
-    </div>
+    <div class="card">
+      <div class="topTitle">⚖️ Зважування (адмін)</div>
+      <div class="hint">
+        1) Обери <b>етап</b> → 2) Обери <b>номер зважування</b> → 3) По командах натискай <b>+</b> і вводь рибу → <b>Зберегти</b>.
+        <br>Дані пишуться в <b>stageResults</b>, тому <b>LIVE</b> має їх бачити.
+      </div>
 
-    <!-- CONTROL -->
-    <div class="admin-card">
-      <div style="font-weight:900; margin-bottom:8px;">Змагання / етап</div>
+      <div class="hr"></div>
 
-      <div class="mini-form">
-        <select id="stageSelect">
-          <option value="">— Завантаження… —</option>
-        </select>
+      <div class="row">
+        <div style="flex:2 1 320px">
+          <div class="muted" style="margin-bottom:6px;">Етап (stageResults)</div>
+          <select id="stageSelect"></select>
+        </div>
 
-        <div>
-          <div class="muted" style="font-size:.9rem; margin-bottom:6px;">Номер зважування</div>
+        <div style="flex:1 1 200px">
+          <div class="muted" style="margin-bottom:6px;">Номер зважування</div>
           <select id="weighNo">
-            <option value="1" selected>Зважування №1</option>
-            <option value="2">Зважування №2</option>
-            <option value="3">Зважування №3</option>
-            <option value="4">Зважування №4</option>
+            <option value="0">W1</option>
+            <option value="1">W2</option>
+            <option value="2">W3</option>
+            <option value="3" selected>W4</option>
+            <option value="4">W5</option>
+            <option value="5">W6</option>
+            <option value="6">W7</option>
+            <option value="7">W8</option>
+            <option value="8">W9</option>
           </select>
         </div>
-
-        <div class="grid2">
-          <button class="btn btn--accent" id="btnLoadData" type="button">Завантажити дані</button>
-          <button class="btn btn--primary" id="btnRefreshList" type="button">Оновити список</button>
-        </div>
-
-        <div id="weighMsg" class="muted" style="margin-top:10px;"></div>
-        <div id="weighDebug" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
       </div>
+
+      <div class="btnline">
+        <button class="btn btn--accent" id="btnLoad">Завантажити таблиці</button>
+        <button class="btn btn--primary" id="btnReload">Оновити список етапів</button>
+      </div>
+
+      <div id="msg" class="muted" style="margin-top:10px;"></div>
+      <div id="dbg" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
     </div>
 
-    <!-- TABLES -->
-    <div id="tablesWrap" style="margin-top:12px;"></div>
-
-    <!-- QR (тільки UI заглушка; логіку доробимо наступним кроком) -->
-    <div class="admin-card">
-      <div style="font-weight:900; margin-bottom:8px;">QR для суддів (A/B/C)</div>
-      <div class="muted">
-        Це блок наступного кроку: будемо генерувати token + QR на <b>weigh_judge.html</b> для зон A/B/C.
-      </div>
-      <div class="hintSmall">Зараз зосереджено на таблицях і внесенні риби.</div>
-    </div>
+    <div id="zonesWrap"></div>
 
   </section>
 </main>
@@ -246,366 +194,373 @@
 (function(){
   "use strict";
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
-
   const $ = (id)=>document.getElementById(id);
+  const msgEl = $("msg");
+  const dbgEl = $("dbg");
 
   const stageSelect = $("stageSelect");
   const weighNoSel  = $("weighNo");
-  const btnLoad     = $("btnLoadData");
-  const btnRefresh  = $("btnRefreshList");
+  const zonesWrap   = $("zonesWrap");
 
-  const msgEl  = $("weighMsg");
-  const dbgEl  = $("weighDebug");
-  const wrapEl = $("tablesWrap");
-  const statusTop = $("adminStatus");
-
-  const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
-  const setTop = (t)=>{ if(statusTop) statusTop.textContent = t || ""; };
-
-  const setMsg = (t, ok=true)=>{
-    if(!msgEl) return;
-    msgEl.textContent = t||"";
+  function esc(s){ return String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+  function setMsg(t, ok=true){
+    msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
-  };
-  const setDbg = (t)=>{ if(dbgEl) dbgEl.textContent = t||""; };
+  }
+  function setDbg(t){ dbgEl.textContent = t || ""; }
 
-  function norm(v){ return String(v??"").trim(); }
-
-  function parseStageValue(v){
-    const [compId, stageIdRaw] = String(v||"").split("||");
-    return { compId: norm(compId), stageId: norm(stageIdRaw) || "" };
+  function toNum(x){
+    const v = Number(String(x||"").replace(",", "."));
+    return Number.isFinite(v) ? v : 0;
   }
 
-  async function requireAdmin(user){
-    const snap = await db.collection("users").doc(user.uid).get();
-    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return role === "admin";
-  }
-
-  async function waitFirebase(){
-    for(let i=0;i<140;i++){
+  async function waitFirebase(maxMs=12000){
+    const t0 = Date.now();
+    while(Date.now()-t0 < maxMs){
       if(window.scAuth && window.scDb && window.firebase) return;
       await new Promise(r=>setTimeout(r,100));
     }
-    throw new Error("Firebase init не підняв scAuth/scDb.");
+    throw new Error("Firebase not ready (scAuth/scDb).");
   }
 
-  // ---- Список етапів ----
-  async function loadStagesToSelect(){
+  // доступ: admin або judge (під себе можеш лишити тільки admin)
+  async function requireRole(user){
+    const db = window.scDb;
+    const snap = await db.collection("users").doc(user.uid).get();
+    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+    return (role === "admin" || role === "judge");
+  }
+
+  // ---------- Stage list ----------
+  async function loadStageResultsList(){
+    const db = window.scDb;
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
 
-    const items = [];
-    const snap = await db.collection("competitions").get();
-
-    snap.forEach(docSnap=>{
-      const c = docSnap.data()||{};
-      const compId = docSnap.id;
-
-      const brand = c.brand || "STOLAR CARP";
-      const compTitle = c.name || c.title || compId;
-
-      const eventsArr = Array.isArray(c.events) ? c.events : null;
-      if (eventsArr && eventsArr.length) {
-        eventsArr.forEach((ev, idx)=>{
-          const key = String(ev.key || `stage-${idx+1}`);
-          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
-          items.push({ value:`${compId}||${key}`, label:`${brand} · ${compTitle} — ${stageTitle}` });
-        });
-      } else {
-        items.push({ value:`${compId}||stage-1`, label:`${brand} · ${compTitle} — Етап 1` });
-      }
+    const snap = await db.collection("stageResults").get();
+    const items = snap.docs.map(d=>{
+      const x = d.data() || {};
+      return {
+        id: d.id,
+        name: x.stageName || x.name || x.title || d.id,
+        compId: x.compId || "",
+        stageKey: x.stageKey || x.stageId || ""
+      };
     });
 
-    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+    items.sort((a,b)=> (a.name||"").localeCompare(b.name||"","uk"));
 
     stageSelect.innerHTML =
-      `<option value="">— Оберіть —</option>` +
-      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
+      `<option value="">— Обери етап —</option>` +
+      items.map(it=>{
+        const label = it.name;
+        return `<option value="${esc(it.id)}">${esc(label)}</option>`;
+      }).join("");
   }
 
-  // ---- Команди беремо з registrations (бо там точно є drawZone/drawSector) ----
-  async function loadTeamsFromRegistrations(compId, stageId){
+  // ---------- Rendering ----------
+  function splitZones(teams){
     const zones = { A:[], B:[], C:[] };
-
-    const q = await db.collection("registrations")
-      .where("competitionId", "==", compId)
-      .where("stageId", "==", stageId)
-      .where("status", "==", "confirmed")
-      .get();
-
-    q.forEach(doc=>{
-      const r = doc.data() || {};
-      const zone = String(r.drawZone || "").toUpperCase().trim(); // A/B/C
-      const sector = r.drawSector || r.drawKey || "";
-      const name = r.teamName || r.team || "Команда";
-      const teamId = r.teamId || "";
-      if(!zone || !zones[zone]) return;
-      zones[zone].push({ zone, sector, name, teamId, regId: doc.id });
+    (teams||[]).forEach(t=>{
+      const z = String(t.zone || "").toUpperCase();
+      if(zones[z]) zones[z].push(t);
     });
-
-    const sortSector = (a,b)=>String(a.sector||"").localeCompare(String(b.sector||""),"uk",{numeric:true});
-    zones.A.sort(sortSector); zones.B.sort(sortSector); zones.C.sort(sortSector);
-
+    // сортуємо по сектору (якщо A4/B5 — то по числу)
+    ["A","B","C"].forEach(z=>{
+      zones[z].sort((x,y)=>{
+        const sx = String(x.sector||"");
+        const sy = String(y.sector||"");
+        // витягаємо число
+        const nx = Number((sx.match(/\d+/)||["0"])[0]);
+        const ny = Number((sy.match(/\d+/)||["0"])[0]);
+        return nx-ny || sx.localeCompare(sy,"uk");
+      });
+    });
     return zones;
   }
 
-  // ---- Local weights ----
-  function keyLocal(compId, stageId, weighNo, zone, teamId){
-    return `sc_w_${compId}_${stageId}_w${weighNo}_${zone}_${teamId||"noid"}`;
-  }
-  function loadLocal(compId, stageId, weighNo, zone, teamId){
-    try{ return JSON.parse(localStorage.getItem(keyLocal(compId, stageId, weighNo, zone, teamId)) || "[]"); }
-    catch{ return []; }
-  }
-  function saveLocal(compId, stageId, weighNo, zone, teamId, arr){
-    try{ localStorage.setItem(keyLocal(compId, stageId, weighNo, zone, teamId), JSON.stringify(arr||[])); }catch{}
-  }
-
-  function sumWeights(arr){
-    return (arr||[]).reduce((s,v)=>s + (Number(v)||0), 0);
+  function ensureFishStruct(team){
+    // fish = [ [..], [..], ... ] (до 9)
+    if(!Array.isArray(team.fish)) team.fish = [];
+    for(let i=0;i<9;i++){
+      if(!Array.isArray(team.fish[i])) team.fish[i] = [];
+    }
+    // weights = [sumW1..] (до 9)
+    if(!Array.isArray(team.weights)) team.weights = [];
+    for(let i=0;i<9;i++){
+      if(typeof team.weights[i] !== "number") team.weights[i] = 0;
+    }
   }
 
-  // ---- Save Firestore (weighings) ----
-  async function saveWeighing(compId, stageId, weighNo, zone, teamId, teamName, sector, weights){
-    const id = `${compId}_${stageId}_w${weighNo}_${zone}_${(teamId||"noid")}`;
-    await db.collection("weighings").doc(id).set({
-      compId, stageId,
-      weighNo: Number(weighNo),
-      zone,
-      teamId: teamId || "",
-      teamName: teamName || "",
-      sector: sector || "",
-      weights: weights || [],
-      totalWeight: sumWeights(weights),
-      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
+  function calcSums(team){
+    ensureFishStruct(team);
+    for(let i=0;i<9;i++){
+      team.weights[i] = (team.fish[i] || []).reduce((s,v)=>s + toNum(v), 0);
+    }
+    team.totalWeight = team.weights.reduce((s,v)=>s + toNum(v), 0);
   }
 
-  // ---- Render ----
-  function renderZone(zone, list, compId, stageId, weighNo){
-    const rows = list.map((t, idx)=>{
-      const sector = t.sector || (idx+1);
-      const teamId = t.teamId || "";
-      const teamName = t.name || "Команда";
+  function renderZoneTable(zone, teams, wIndex, stageId){
+    const countBadge = teams.length ? `команд: ${teams.length}` : `нема даних`;
 
-      const arr = loadLocal(compId, stageId, weighNo, zone, teamId);
-      const arrForInputs = (arr.length ? arr : [""]);
+    const rows = teams.map(t=>{
+      const teamId = t.teamId || t.id || "";
+      const sector = t.sector || "";
+      const name   = t.team || t.teamName || t.name || "Команда";
 
-      const inputs = arrForInputs.map(v =>
-        `<input class="wInp" value="${esc(v)}" placeholder="4.560" inputmode="decimal">`
-      ).join("");
+      ensureFishStruct(t);
+      calcSums(t);
+
+      const fishArr = t.fish[wIndex] || [];
+      const sumW = t.weights[wIndex] || 0;
 
       return `
-        <tr data-row data-zone="${esc(zone)}" data-team="${esc(teamId)}" data-name="${esc(teamName)}" data-sector="${esc(sector)}">
-          <td class="colSector">${esc(sector)}</td>
-          <td class="colTeam"><b>${esc(teamName)}</b></td>
+        <tr data-team="${esc(teamId)}" data-zone="${esc(zone)}">
+          <td class="sector"><b>${esc(sector)}</b><small>${esc(zone)}</small></td>
+          <td class="teamcol"><b>${esc(name)}</b><small>${esc(teamId)}</small></td>
 
-          <td>
-            <div class="weightsCell" data-cell>
-              ${inputs}
-              <button class="miniBtn miniBtn--add" type="button" data-add>+</button>
+          <td class="fishcol">
+            <div class="fishList" data-fishlist>
+              ${fishArr.map((v,idx)=>`
+                <input class="fishInput" inputmode="decimal" placeholder="0.000"
+                  value="${esc((Number(v)||0).toFixed(3))}"
+                  data-fish="${idx}" />
+              `).join("")}
+              <span class="miniBtn" data-add title="Додати рибу">+</span>
+              <span class="miniBtn miniBtn--ghost" data-clear title="Очистити W">⟲</span>
             </div>
-            <div class="hintSmall" data-hint></div>
+            <small class="muted">Вводиш вагу → Enter / вихід з поля → Зберегти</small>
           </td>
 
-          <td class="colSum" data-sum>${sumWeights(arr).toFixed(3)} кг</td>
+          <td class="sumcol right">
+            <b data-sum>${sumW.toFixed(3)}</b>
+            <small>W${wIndex+1}</small>
+            <div class="muted" style="margin-top:4px;">Загалом: <b>${(t.totalWeight||0).toFixed(3)}</b></div>
+          </td>
 
-          <td>
-            <div class="rowActions">
-              <button class="miniBtn miniBtn--save" type="button" data-save>Зберегти</button>
-              <button class="miniBtn miniBtn--clear" type="button" data-clear>Очистити</button>
-            </div>
-            <div class="hintSmall" data-status></div>
+          <td class="actcol">
+            <button class="btn btn--accent" type="button" data-save>Зберегти</button>
+            <div class="muted" data-status style="margin-top:6px;"></div>
           </td>
         </tr>
       `;
     }).join("");
 
     return `
-      <div class="zoneBlock">
+      <div class="card">
         <div class="zoneTitle">
-          <div>Зона ${esc(zone)}</div>
-          <div class="badge">Команд: ${list.length}</div>
+          <div>Зона ${esc(zone)} — W${wIndex+1}</div>
+          <div class="badge">${esc(countBadge)}</div>
         </div>
-        <div class="tableWrap">
-          <table class="scTable">
-            <thead>
-              <tr>
-                <th class="colSector">Сектор</th>
-                <th class="colTeam">Команда</th>
-                <th>Риба (ваги, кг) +</th>
-                <th class="colSum">Сума</th>
-                <th>Дії</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows || `<tr><td colspan="5" class="muted">Нема команд у зоні ${esc(zone)}</td></tr>`}
-            </tbody>
-          </table>
-        </div>
-        <div class="hintSmall">Ввів вагу → “+” додає нову клітинку → “Зберегти” пише в Firestore.</div>
+
+        ${teams.length ? `
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sector">Сектор</th>
+                  <th class="teamcol">Команда</th>
+                  <th class="fishcol">Риба (натискай “+”)</th>
+                  <th class="sumcol right">Сума</th>
+                  <th class="actcol">Дія</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </div>
+        ` : `
+          <div class="muted">Результати для цієї зони ще не заповнені.</div>
+        `}
       </div>
     `;
   }
 
-  function readRowWeights(row){
-    const arr = [];
-    row.querySelectorAll("input.wInp").forEach(inp=>{
-      const raw = String(inp.value||"").trim().replace(",",".");
-      if(!raw) return;
-      const v = Number(raw);
-      if(v>0) arr.push(v);
-    });
-    return arr;
-  }
+  async function renderAll(stageDocId, stageData){
+    const wIndex = Number(weighNoSel.value || 0);
 
-  function attachRowHandlers(compId, stageId, weighNo){
-    wrapEl.querySelectorAll("[data-row]").forEach(row=>{
-      const zone = row.getAttribute("data-zone");
-      const teamId = row.getAttribute("data-team") || "";
-      const teamName = row.getAttribute("data-name") || "";
-      const sector = row.getAttribute("data-sector") || "";
+    const teams = Array.isArray(stageData.teams) ? stageData.teams : [];
+    if(!teams.length){
+      zonesWrap.innerHTML = `<div class="card"><div class="err">Нема команд у stageResults/${esc(stageDocId)} (поле teams[] пусте).</div></div>`;
+      return;
+    }
 
-      const cell = row.querySelector("[data-cell]");
-      const btnAdd = row.querySelector("[data-add]");
-      const btnSave = row.querySelector("[data-save]");
-      const btnClear = row.querySelector("[data-clear]");
-      const sumEl = row.querySelector("[data-sum]");
-      const stEl = row.querySelector("[data-status]");
+    // ensure structure
+    teams.forEach(t=>{ ensureFishStruct(t); calcSums(t); });
 
-      const recalc = ()=>{
-        const arr = readRowWeights(row);
-        sumEl.textContent = sumWeights(arr).toFixed(3) + " кг";
-        saveLocal(compId, stageId, weighNo, zone, teamId, arr);
+    const zones = splitZones(teams);
+
+    zonesWrap.innerHTML =
+      renderZoneTable("A", zones.A, wIndex, stageDocId) +
+      renderZoneTable("B", zones.B, wIndex, stageDocId) +
+      renderZoneTable("C", zones.C, wIndex, stageDocId);
+
+    // навішуємо дії на таблиці
+    zonesWrap.querySelectorAll("tr[data-team]").forEach(tr=>{
+      const teamId = tr.getAttribute("data-team") || "";
+      const zone   = tr.getAttribute("data-zone") || "";
+      const stEl   = tr.querySelector("[data-status]");
+      const sumEl  = tr.querySelector("[data-sum]");
+      const fishWrap = tr.querySelector("[data-fishlist]");
+      const btnAdd  = tr.querySelector("[data-add]");
+      const btnClear= tr.querySelector("[data-clear]");
+      const btnSave = tr.querySelector("[data-save]");
+
+      // знаходимо team у локальних teams[]
+      const teamObj = teams.find(x => (x.teamId||x.id||"") === teamId);
+      if(!teamObj) return;
+
+      function refreshRow(){
+        calcSums(teamObj);
+        if(sumEl) sumEl.textContent = (teamObj.weights[wIndex]||0).toFixed(3);
+
+        // перечитати inputs → fish
+        const inputs = [...fishWrap.querySelectorAll("input[data-fish]")];
+        const arr = inputs.map(i => toNum(i.value)).filter(v=>v>0);
+        teamObj.fish[wIndex] = arr;
+        calcSums(teamObj);
+        if(sumEl) sumEl.textContent = (teamObj.weights[wIndex]||0).toFixed(3);
+      }
+
+      // add new fish input
+      btnAdd.onclick = ()=>{
+        const idx = fishWrap.querySelectorAll("input[data-fish]").length;
+        const inp = document.createElement("input");
+        inp.className = "fishInput";
+        inp.setAttribute("inputmode","decimal");
+        inp.setAttribute("placeholder","0.000");
+        inp.setAttribute("data-fish", String(idx));
+        inp.value = "";
+        fishWrap.insertBefore(inp, btnAdd);
+
+        inp.addEventListener("change", ()=>{ refreshRow(); });
+        inp.addEventListener("blur", ()=>{ refreshRow(); });
+        inp.addEventListener("keydown", (e)=>{
+          if(e.key === "Enter"){ e.preventDefault(); inp.blur(); }
+        });
+
+        inp.focus();
       };
 
-      row.addEventListener("input", (e)=>{
-        if(e.target && e.target.classList.contains("wInp")) recalc();
+      // clear W
+      btnClear.onclick = ()=>{
+        teamObj.fish[wIndex] = [];
+        calcSums(teamObj);
+
+        // видалити всі inputs і лишити 0
+        fishWrap.querySelectorAll("input[data-fish]").forEach(x=>x.remove());
+        if(sumEl) sumEl.textContent = "0.000";
+        if(stEl){ stEl.textContent = "Очищено локально"; stEl.className="muted"; }
+      };
+
+      // on change existing inputs
+      fishWrap.querySelectorAll("input[data-fish]").forEach(inp=>{
+        inp.addEventListener("change", ()=>{ refreshRow(); });
+        inp.addEventListener("blur", ()=>{ refreshRow(); });
+        inp.addEventListener("keydown", (e)=>{
+          if(e.key === "Enter"){ e.preventDefault(); inp.blur(); }
+        });
       });
 
-      btnAdd.onclick = ()=>{
-        const inp = document.createElement("input");
-        inp.className = "wInp";
-        inp.placeholder = "4.560";
-        inp.setAttribute("inputmode","decimal");
-        cell.insertBefore(inp, btnAdd);
-        inp.focus();
-        if(stEl) stEl.textContent = "";
-      };
-
-      btnClear.onclick = ()=>{
-        const inputs = cell.querySelectorAll("input.wInp");
-        inputs.forEach((x,i)=>{
-          if(i===0) x.value = "";
-          else x.remove();
-        });
-        recalc();
-        if(stEl) stEl.textContent = "Очищено";
-      };
-
+      // save to Firestore
       btnSave.onclick = async ()=>{
-        const arr = readRowWeights(row);
-        if(stEl){ stEl.textContent = "Зберігаю…"; }
         try{
-          await saveWeighing(compId, stageId, weighNo, zone, teamId, teamName, sector, arr);
-          if(stEl){ stEl.textContent = "Збережено ✅"; }
+          if(stEl){ stEl.textContent="Збереження…"; stEl.className="muted"; }
+
+          refreshRow();
+
+          // оновлюємо teams[] і пишемо в stageResults
+          const db = window.scDb;
+          const ref = db.collection("stageResults").doc(stageDocId);
+
+          // ВАЖЛИВО: пишемо всю команду назад у teams[] (з оновленими fish/weights/totalWeight)
+          await ref.update({ teams });
+
+          if(stEl){ stEl.textContent="✅ Збережено (LIVE має бачити)"; stEl.className="muted ok"; }
+          setMsg("✅ Збережено у stageResults (LIVE має підтягнути).", true);
         }catch(e){
-          if(stEl){ stEl.textContent = "Помилка ❌"; }
-          setDbg((dbgEl?.textContent||"") + "\nSAVE ERROR:\n" + (e?.message||String(e)));
+          if(stEl){ stEl.textContent="❌ Помилка збереження"; stEl.className="muted err"; }
+          setMsg("❌ Помилка. Дивись Debug.", false);
+          setDbg("SAVE ERROR:\n" + (e?.message || String(e)));
         }
       };
-
-      recalc();
     });
   }
 
-  async function loadAndRender(){
-    const { compId, stageId } = parseStageValue(stageSelect.value);
-    const weighNo = norm(weighNoSel?.value || "1");
+  // ---------- Load stage doc ----------
+  async function loadAndBuild(){
+    const stageId = String(stageSelect.value||"").trim();
+    if(!stageId) return setMsg("Обери етап.", false);
 
-    if(!compId || !stageId){
-      setMsg("Обери змагання/етап.", false);
-      return;
+    try{
+      setMsg("Завантажую stageResults…", true);
+      setDbg("");
+
+      const db = window.scDb;
+      const doc = await db.collection("stageResults").doc(stageId).get();
+      if(!doc.exists){
+        setMsg("Нема stageResults/" + stageId, false);
+        return;
+      }
+
+      const data = doc.data() || {};
+      await renderAll(stageId, data);
+
+      setMsg("✅ Таблиці готові. Працюй з рибою через “+” і Зберегти.", true);
+    }catch(e){
+      setMsg("❌ Помилка завантаження. Дивись Debug.", false);
+      setDbg("LOAD ERROR:\n" + (e?.message || String(e)));
     }
-
-    setMsg("Завантажую команди…", true);
-    setDbg("");
-
-    const zones = await loadTeamsFromRegistrations(compId, stageId);
-
-    const a = zones.A || [], b = zones.B || [], c = zones.C || [];
-    if(!a.length && !b.length && !c.length){
-      setMsg("Нема підтверджених команд (перевір registrations: competitionId + stageId + status=confirmed + drawZone/drawSector).", false);
-      wrapEl.innerHTML = "";
-      return;
-    }
-
-    wrapEl.innerHTML =
-      renderZone("A", a, compId, stageId, weighNo) +
-      renderZone("B", b, compId, stageId, weighNo) +
-      renderZone("C", c, compId, stageId, weighNo);
-
-    attachRowHandlers(compId, stageId, weighNo);
-    setMsg("✅ Таблиці згенеровані.", true);
   }
 
+  // ---------- INIT ----------
   async function init(){
     try{
       await waitFirebase();
-    }catch(e){
-      setTop("Firebase не запустився ❌");
-      setMsg("Firebase init не підняв scAuth/scDb.", false);
-      setDbg(e?.message || String(e));
-      return;
-    }
 
-    setTop("Перевіряю доступ…");
+      const auth = window.scAuth;
+      auth.onAuthStateChanged(async (user)=>{
+        if(!user){
+          setMsg("Увійди як адмін/суддя.", false);
+          return;
+        }
 
-    auth.onAuthStateChanged(async (user)=>{
-      if(!user){
-        setTop("Потрібен вхід");
-        setMsg("Увійди як адмін.", false);
-        return;
-      }
+        const ok = await requireRole(user);
+        if(!ok){
+          setMsg("Доступ заборонено ❌ (нема ролі admin/judge).", false);
+          return;
+        }
 
-      const ok = await requireAdmin(user);
-      if(!ok){
-        setTop("Доступ заборонено ❌");
-        setMsg("Цей акаунт не адмін.", false);
-        return;
-      }
+        await loadStageResultsList();
+        setMsg("Обери етап та W → натисни “Завантажити таблиці”.", true);
+      });
 
-      setTop("Адмін-доступ ✅");
-      await loadStagesToSelect();
-      setMsg("Обери етап → натисни “Завантажити дані”.", true);
-
-      if(btnLoad) btnLoad.onclick = loadAndRender;
-
-      if(btnRefresh) btnRefresh.onclick = async ()=>{
+      $("btnLoad").onclick = loadAndBuild;
+      $("btnReload").onclick = async ()=>{
         setMsg("Оновлюю список…", true);
-        await loadStagesToSelect();
-        setMsg("Оновлено ✅", true);
+        await loadStageResultsList();
+        setMsg("✅ Оновлено список етапів.", true);
       };
 
-      if(weighNoSel){
-        weighNoSel.addEventListener("change", ()=>{
-          if(stageSelect.value) loadAndRender();
-        });
-      }
-    });
+      // якщо змінили W — перерендер з поточного doc (не ліземо в Firestore, якщо ще не завантажено)
+      weighNoSel.onchange = ()=>{
+        // просто підказка, щоб ти натиснув завантажити заново
+        setMsg("Змінився номер W. Натисни “Завантажити таблиці”.", true);
+      };
+
+    }catch(e){
+      setMsg("Firebase не піднявся ❌", false);
+      setDbg(e?.message || String(e));
+    }
   }
 
   window.addEventListener("error", (e)=>{
-    setTop("Помилка JS ❌");
-    setMsg("Сталася помилка JS. Дивись debug.", false);
+    setMsg("JS помилка ❌", false);
     setDbg(e?.message || "error");
   });
   window.addEventListener("unhandledrejection", (e)=>{
-    setTop("Помилка Promise ❌");
-    setMsg("Promise error. Дивись debug.", false);
-    setDbg(e?.reason?.message || String(e?.reason || "Promise error"));
+    setMsg("Promise помилка ❌", false);
+    setDbg(e?.reason?.message || String(e?.reason || "promise"));
   });
 
   init();

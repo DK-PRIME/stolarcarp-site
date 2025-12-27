@@ -3,118 +3,60 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP • Зважування (адмін)</title>
+  <title>Зважування — Адмін</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-
-    .wrap{ max-width:1100px; margin:0 auto; padding:18px 0 70px; }
-    .card{
-      margin-top:14px; padding:16px; border-radius:18px;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.6);
-    }
-    .muted{ color:#9ca3af; }
-    .ok{ color:#22c55e; }
-    .err{ color:#ef4444; }
-    .hidden{ display:none !important; }
-
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .row > *{ flex: 1 1 auto; }
-
+    body{background:#020617}
+    .card{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:14px;margin-top:14px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row > *{flex:1 1 auto}
     select, input{
       width:100%;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      outline:none;
+      background:#020617;color:#fff;border:1px solid #475569;border-radius:10px;
+      padding:10px 12px;
     }
+    .btnWide{min-width:160px}
+    .muted{opacity:.85}
+    .ok{color:#22c55e}
+    .err{color:#ef4444}
+    .zoneTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .zoneTitle h3{margin:0;font-weight:900}
+    .badge{border:1px solid #334155;border-radius:999px;padding:4px 10px;font-size:.85rem;opacity:.9}
 
-    .btnline{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .btnline .btn{ border-radius:14px; padding:12px 14px; }
+    .tblWrap{overflow:auto;border:1px solid #334155;border-radius:14px}
+    table{width:100%;border-collapse:collapse;min-width:860px}
+    th,td{border-bottom:1px solid #334155;padding:10px 10px;text-align:left;vertical-align:top}
+    th{background:#020617;position:sticky;top:0;z-index:2}
+    td.num, th.num{text-align:center}
 
-    .zoneTitle{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; margin-bottom:10px;
-      font-weight:900; font-size:1.15rem;
-    }
-    .badge{
-      font-size:.72rem;
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      white-space:nowrap;
-    }
-
-    /* tables */
-    .tableWrap{ overflow:auto; border-radius:14px; border:1px solid rgba(148,163,184,.25); }
-    table{ width:100%; border-collapse:collapse; min-width:780px; }
-    th, td{
-      border-bottom:1px solid rgba(148,163,184,.18);
-      padding:10px 10px;
-      text-align:left;
-      vertical-align:top;
-      color:#e5e7eb;
-    }
-    th{
-      position:sticky; top:0;
-      background:rgba(2,6,23,.92);
-      z-index:2;
-      font-size:.85rem;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-    }
-    td small{ color:#94a3b8; display:block; margin-top:3px; }
-
-    .sector{ width:84px; }
-    .teamcol{ min-width:220px; }
-    .fishcol{ min-width:360px; }
-    .sumcol{ width:120px; text-align:right; }
-    .actcol{ width:140px; }
-
-    .fishList{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .fishList{display:flex;gap:8px;flex-wrap:wrap}
     .fishInput{
-      width:110px;
-      padding:10px 10px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
+      width:90px !important;
+      text-align:center;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid #475569;
+      background:#020617;
+      color:#fff;
     }
-    .miniBtn{
-      display:inline-flex; align-items:center; justify-content:center;
-      width:42px; height:42px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.35);
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      color:#000;
-      font-weight:900;
-      cursor:pointer;
-      user-select:none;
+    .btnPlus{
+      background:linear-gradient(90deg,#facc15,#fb7185);
+      color:#0b1220;border:none;border-radius:10px;
+      padding:8px 12px;font-weight:900;cursor:pointer
     }
-    .miniBtn--ghost{
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
+    .btnSaveRow{
+      background:#16a34a;color:#04110a;border:none;border-radius:10px;
+      padding:9px 12px;font-weight:900;cursor:pointer
     }
-    .right{ text-align:right; }
-    .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
-
-    .hint{ font-size:.9rem; line-height:1.35; color:#9ca3af; }
-    .hint b{ color:#e5e7eb; }
-
-    .topTitle{
-      font-size:1.4rem;
-      font-weight:900;
-      letter-spacing:.04em;
-      margin:0 0 4px;
+    .btnClearRow{
+      background:#334155;color:#fff;border:none;border-radius:10px;
+      padding:9px 12px;font-weight:700;cursor:pointer
     }
+    .sumBox{font-weight:900}
+    .small{font-size:.88rem;opacity:.85}
+    .hr{height:1px;background:#334155;opacity:.7;margin:12px 0}
   </style>
 </head>
 
@@ -122,448 +64,568 @@
 
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
-    </a>
-    <nav class="nav">
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/auth.html" class="nav__link">Акаунт</a>
-    </nav>
+    <div class="logo"><span class="logo__mark">SC</span> STOLAR CARP</div>
   </div>
 </header>
 
-<main class="main">
-  <section class="section container wrap">
+<main class="container">
 
-    <div class="card">
-      <div class="topTitle">⚖️ Зважування (адмін)</div>
-      <div class="hint">
-        1) Обери <b>етап</b> → 2) Обери <b>номер зважування</b> → 3) По командах натискай <b>+</b> і вводь рибу → <b>Зберегти</b>.
-        <br>Дані пишуться в <b>stageResults</b>, тому <b>LIVE</b> має їх бачити.
-      </div>
-
-      <div class="hr"></div>
-
-      <div class="row">
-        <div style="flex:2 1 320px">
-          <div class="muted" style="margin-bottom:6px;">Етап (stageResults)</div>
-          <select id="stageSelect"></select>
-        </div>
-
-        <div style="flex:1 1 200px">
-          <div class="muted" style="margin-bottom:6px;">Номер зважування</div>
-          <select id="weighNo">
-            <option value="0">W1</option>
-            <option value="1">W2</option>
-            <option value="2">W3</option>
-            <option value="3" selected>W4</option>
-            <option value="4">W5</option>
-            <option value="5">W6</option>
-            <option value="6">W7</option>
-            <option value="7">W8</option>
-            <option value="8">W9</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="btnline">
-        <button class="btn btn--accent" id="btnLoad">Завантажити таблиці</button>
-        <button class="btn btn--primary" id="btnReload">Оновити список етапів</button>
-      </div>
-
-      <div id="msg" class="muted" style="margin-top:10px;"></div>
-      <div id="dbg" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
+  <div class="card">
+    <h2 style="margin:0 0 6px 0;">⚖️ Зважування (адмін)</h2>
+    <div class="muted small">
+      1) Обери змагання/етап → 2) Обери номер зважування (W1..W4) → 3) По командах натискай <b>+</b> і вводь рибу → <b>Зберегти</b>.<br>
+      Дані пишуться в <b>stageResults</b>, тому <b>LIVE</b> має їх бачити одразу.
     </div>
 
-    <div id="zonesWrap"></div>
+    <div class="hr"></div>
 
-  </section>
+    <div class="row">
+      <div style="flex:2 1 260px">
+        <div class="muted small" style="margin-bottom:6px">Змагання / етап</div>
+        <select id="stageSelect">
+          <option value="">— Завантаження… —</option>
+        </select>
+      </div>
+
+      <div style="flex:1 1 160px">
+        <div class="muted small" style="margin-bottom:6px">Номер зважування</div>
+        <select id="wSelect">
+          <option value="W1">W1</option>
+          <option value="W2">W2</option>
+          <option value="W3">W3</option>
+          <option value="W4">W4</option>
+        </select>
+      </div>
+
+      <div style="flex:0 0 auto;display:flex;gap:10px;align-items:end">
+        <button id="btnRefresh" class="btn btn--ghost btnWide" type="button">Оновити список</button>
+        <button id="btnLoad" class="btn btn--accent btnWide" type="button">Завантажити таблиці</button>
+      </div>
+    </div>
+
+    <div id="msg" class="muted" style="margin-top:10px;"></div>
+    <div id="debug" class="muted small" style="margin-top:6px;white-space:pre-wrap;"></div>
+  </div>
+
+  <div id="zonesWrap"></div>
+
 </main>
 
-<!-- Firebase compat SDK -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
 <script>
 (function(){
   "use strict";
 
+  const auth = window.scAuth;
+  const db   = window.scDb;
+  const ff   = window.firebase?.firestore?.FieldValue;
+
   const $ = (id)=>document.getElementById(id);
-  const msgEl = $("msg");
-  const dbgEl = $("dbg");
 
   const stageSelect = $("stageSelect");
-  const weighNoSel  = $("weighNo");
-  const zonesWrap   = $("zonesWrap");
+  const wSelect     = $("wSelect");
+  const btnLoad     = $("btnLoad");
+  const btnRefresh  = $("btnRefresh");
 
-  function esc(s){ return String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+  const msgEl   = $("msg");
+  const dbgEl   = $("debug");
+  const zonesWrap = $("zonesWrap");
+
+  const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  const norm = (v)=>String(v??"").trim();
+
   function setMsg(t, ok=true){
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
   }
   function setDbg(t){ dbgEl.textContent = t || ""; }
 
-  function toNum(x){
-    const v = Number(String(x||"").replace(",", "."));
-    return Number.isFinite(v) ? v : 0;
+  function parseStageValue(v){
+    // value = compId||stageKey
+    const [compId, stageKey] = String(v||"").split("||");
+    return { compId: norm(compId), stageKey: norm(stageKey) };
   }
 
-  async function waitFirebase(maxMs=12000){
-    const t0 = Date.now();
-    while(Date.now()-t0 < maxMs){
-      if(window.scAuth && window.scDb && window.firebase) return;
-      await new Promise(r=>setTimeout(r,100));
-    }
-    throw new Error("Firebase not ready (scAuth/scDb).");
-  }
-
-  // доступ: admin або judge (під себе можеш лишити тільки admin)
-  async function requireRole(user){
-    const db = window.scDb;
+  async function requireAdmin(user){
     const snap = await db.collection("users").doc(user.uid).get();
     const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return (role === "admin" || role === "judge");
+    return role === "admin";
   }
 
-  // ---------- Stage list ----------
-  async function loadStageResultsList(){
-    const db = window.scDb;
+  // ---------------------------
+  // 1) Список змагань/етапів
+  // ---------------------------
+  async function loadStagesToSelect(){
     stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+    const items = [];
 
-    const snap = await db.collection("stageResults").get();
-    const items = snap.docs.map(d=>{
-      const x = d.data() || {};
-      return {
-        id: d.id,
-        name: x.stageName || x.name || x.title || d.id,
-        compId: x.compId || "",
-        stageKey: x.stageKey || x.stageId || ""
-      };
+    const snap = await db.collection("competitions").get();
+    snap.forEach(docSnap=>{
+      const c = docSnap.data()||{};
+      const compId = docSnap.id;
+
+      const brand = c.brand || "STOLAR CARP";
+      const year  = c.year || c.seasonYear || "";
+      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+
+      const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+      if (eventsArr && eventsArr.length){
+        eventsArr.forEach((ev, idx)=>{
+          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
+          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
+          const label = `${brand} · ${compTitle} — ${stageTitle}`;
+          items.push({ value:`${compId}||${key}`, label, compId, stageKey:key });
+        });
+      } else {
+        items.push({ value:`${compId}||stage-1`, label:`${brand} · ${compTitle} — Етап 1`, compId, stageKey:"stage-1" });
+      }
     });
 
-    items.sort((a,b)=> (a.name||"").localeCompare(b.name||"","uk"));
+    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
 
     stageSelect.innerHTML =
       `<option value="">— Обери етап —</option>` +
-      items.map(it=>{
-        const label = it.name;
-        return `<option value="${esc(it.id)}">${esc(label)}</option>`;
-      }).join("");
+      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
   }
 
-  // ---------- Rendering ----------
-  function splitZones(teams){
-    const zones = { A:[], B:[], C:[] };
-    (teams||[]).forEach(t=>{
-      const z = String(t.zone || "").toUpperCase();
-      if(zones[z]) zones[z].push(t);
-    });
-    // сортуємо по сектору (якщо A4/B5 — то по числу)
-    ["A","B","C"].forEach(z=>{
-      zones[z].sort((x,y)=>{
-        const sx = String(x.sector||"");
-        const sy = String(y.sector||"");
-        // витягаємо число
-        const nx = Number((sx.match(/\d+/)||["0"])[0]);
-        const ny = Number((sy.match(/\d+/)||["0"])[0]);
-        return nx-ny || sx.localeCompare(sy,"uk");
+  // -------------------------------------------------------
+  // 2) StageResults DocId (СТАБІЛЬНО ДЛЯ LIVE)
+  // -------------------------------------------------------
+  function stageDocId(compId, stageKey){
+    // як у тебе на скріні: oneoff-2026-...__stage-1
+    return `${compId}__${stageKey}`;
+  }
+
+  // -------------------------------------------------------
+  // 3) Команди беремо з registrations (де є drawZone/drawSector)
+  // -------------------------------------------------------
+  async function loadTeamsFromRegistrations(compId, stageKey){
+    // В registrations на скрінах є поля:
+    // drawZone ("A"/"B"/"C"), drawSector (number), teamId, teamName, stageId
+    // Тому тут читаємо confirmed для цього compId + stageKey.
+    const q = await db.collection("registrations")
+      .where("competitionId","==",compId)
+      .where("stageId","==",stageKey)
+      .where("status","==","confirmed")
+      .get();
+
+    const teams = [];
+    q.forEach(d=>{
+      const r = d.data()||{};
+      const teamId = r.teamId || "";
+      const teamName = r.teamName || r.team || r.name || "Команда";
+      const zone = (r.drawZone || r.zone || "").toString().toUpperCase();
+      const sector = r.drawSector ?? r.sector ?? "";
+      if(!zone) return; // без зони не беремо
+      teams.push({
+        teamId,
+        teamName,
+        zone,
+        sector: sector==="" ? "" : String(sector),
+        regId: d.id
       });
     });
-    return zones;
+
+    // сортування по сектору
+    teams.sort((a,b)=>{
+      const za = a.zone.localeCompare(b.zone);
+      if(za!==0) return za;
+      const sa = Number(a.sector||0), sb = Number(b.sector||0);
+      return sa - sb;
+    });
+
+    return teams;
   }
 
-  function ensureFishStruct(team){
-    // fish = [ [..], [..], ... ] (до 9)
-    if(!Array.isArray(team.fish)) team.fish = [];
-    for(let i=0;i<9;i++){
-      if(!Array.isArray(team.fish[i])) team.fish[i] = [];
-    }
-    // weights = [sumW1..] (до 9)
-    if(!Array.isArray(team.weights)) team.weights = [];
-    for(let i=0;i<9;i++){
-      if(typeof team.weights[i] !== "number") team.weights[i] = 0;
-    }
+  // -------------------------------------------------------
+  // 4) Створити/оновити stageResults (teamsMap + teams масив)
+  // -------------------------------------------------------
+  function emptyWeighings(){
+    return {
+      W1: { total:0, count:0 },
+      W2: { total:0, count:0 },
+      W3: { total:0, count:0 },
+      W4: { total:0, count:0 }
+    };
   }
 
-  function calcSums(team){
-    ensureFishStruct(team);
-    for(let i=0;i<9;i++){
-      team.weights[i] = (team.fish[i] || []).reduce((s,v)=>s + toNum(v), 0);
-    }
-    team.totalWeight = team.weights.reduce((s,v)=>s + toNum(v), 0);
+  function computeTotalWeight(weighings){
+    return (weighings?.W1?.total||0) + (weighings?.W2?.total||0) + (weighings?.W3?.total||0) + (weighings?.W4?.total||0);
   }
 
-  function renderZoneTable(zone, teams, wIndex, stageId){
-    const countBadge = teams.length ? `команд: ${teams.length}` : `нема даних`;
+  function mapToArray(teamsMap){
+    const arr = Object.values(teamsMap || {});
+    // сортування A/B/C + сектор
+    arr.sort((a,b)=>{
+      const za = String(a.zone||"").localeCompare(String(b.zone||""));
+      if(za!==0) return za;
+      return Number(a.sector||0) - Number(b.sector||0);
+    });
+    return arr;
+  }
 
-    const rows = teams.map(t=>{
-      const teamId = t.teamId || t.id || "";
-      const sector = t.sector || "";
-      const name   = t.team || t.teamName || t.name || "Команда";
+  async function ensureStageResults(compId, stageKey, stageNameLabel){
+    const id = stageDocId(compId, stageKey);
+    const ref = db.collection("stageResults").doc(id);
+    const snap = await ref.get();
 
-      ensureFishStruct(t);
-      calcSums(t);
+    if(snap.exists){
+      // оновимо stageName, але teams не чіпаємо
+      await ref.set({
+        compId, stageKey,
+        stageName: stageNameLabel || snap.data().stageName || id,
+        updatedAt: ff?.serverTimestamp?.() || new Date()
+      }, { merge:true });
+      return { id, ref, data: snap.data() };
+    }
 
-      const fishArr = t.fish[wIndex] || [];
-      const sumW = t.weights[wIndex] || 0;
+    // якщо нема — будуємо з registrations
+    const teams = await loadTeamsFromRegistrations(compId, stageKey);
+    const teamsMap = {};
 
-      return `
-        <tr data-team="${esc(teamId)}" data-zone="${esc(zone)}">
-          <td class="sector"><b>${esc(sector)}</b><small>${esc(zone)}</small></td>
-          <td class="teamcol"><b>${esc(name)}</b><small>${esc(teamId)}</small></td>
+    teams.forEach(t=>{
+      const w = emptyWeighings();
+      teamsMap[t.teamId] = {
+        teamId: t.teamId,
+        teamName: t.teamName,
+        zone: t.zone,
+        sector: t.sector,
+        weighings: w,
+        totalWeight: 0,
+        bigFish: 0,
+        updatedAt: ff?.serverTimestamp?.() || new Date()
+      };
+    });
 
-          <td class="fishcol">
-            <div class="fishList" data-fishlist>
-              ${fishArr.map((v,idx)=>`
-                <input class="fishInput" inputmode="decimal" placeholder="0.000"
-                  value="${esc((Number(v)||0).toFixed(3))}"
-                  data-fish="${idx}" />
-              `).join("")}
-              <span class="miniBtn" data-add title="Додати рибу">+</span>
-              <span class="miniBtn miniBtn--ghost" data-clear title="Очистити W">⟲</span>
-            </div>
-            <small class="muted">Вводиш вагу → Enter / вихід з поля → Зберегти</small>
-          </td>
+    await ref.set({
+      compId,
+      stageKey,
+      stageName: stageNameLabel || id,
+      createdAt: ff?.serverTimestamp?.() || new Date(),
+      updatedAt: ff?.serverTimestamp?.() || new Date(),
+      teamsMap: teamsMap,
+      teams: mapToArray(teamsMap) // для LIVE
+    }, { merge:true });
 
-          <td class="sumcol right">
-            <b data-sum>${sumW.toFixed(3)}</b>
-            <small>W${wIndex+1}</small>
-            <div class="muted" style="margin-top:4px;">Загалом: <b>${(t.totalWeight||0).toFixed(3)}</b></div>
-          </td>
+    const created = await ref.get();
+    return { id, ref, data: created.data() };
+  }
 
-          <td class="actcol">
-            <button class="btn btn--accent" type="button" data-save>Зберегти</button>
-            <div class="muted" data-status style="margin-top:6px;"></div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-
-    return `
+  // -------------------------------------------------------
+  // 5) UI: таблиці зон
+  // -------------------------------------------------------
+  function zoneBlock(zone, rows){
+    const count = rows.length;
+    const head = `
       <div class="card">
         <div class="zoneTitle">
-          <div>Зона ${esc(zone)} — W${wIndex+1}</div>
-          <div class="badge">${esc(countBadge)}</div>
+          <h3>Зона ${zone}</h3>
+          <span class="badge">${count ? ("команд: " + count) : "немає даних"}</span>
         </div>
-
-        ${teams.length ? `
-          <div class="tableWrap">
+        ${count ? `
+          <div class="tblWrap">
             <table>
               <thead>
                 <tr>
-                  <th class="sector">Сектор</th>
-                  <th class="teamcol">Команда</th>
-                  <th class="fishcol">Риба (натискай “+”)</th>
-                  <th class="sumcol right">Сума</th>
-                  <th class="actcol">Дія</th>
+                  <th class="num">Сектор</th>
+                  <th>Команда</th>
+                  <th class="num">Риба (кг) — натискай “+”</th>
+                  <th class="num">Сума (W)</th>
+                  <th class="num">Дії</th>
                 </tr>
               </thead>
               <tbody>
-                ${rows}
+                ${rows.map(r=>rowHtml(r)).join("")}
               </tbody>
             </table>
           </div>
-        ` : `
-          <div class="muted">Результати для цієї зони ще не заповнені.</div>
-        `}
+        ` : `<div class="muted">Результати для цієї зони ще не заповнені.</div>`}
       </div>
+    `;
+    return head;
+  }
+
+  function rowHtml(t){
+    const sector = esc(t.sector || "—");
+    const teamName = esc(t.teamName || "Команда");
+    const teamId = esc(t.teamId || "");
+    return `
+      <tr data-team="${teamId}">
+        <td class="num"><b>${sector}</b></td>
+        <td>
+          <div style="font-weight:900">${teamName}</div>
+          <div class="small muted">${teamId}</div>
+        </td>
+        <td class="num">
+          <div class="fishList" data-fishlist></div>
+          <div style="margin-top:8px;display:flex;gap:8px;justify-content:center">
+            <button class="btnPlus" type="button" data-plus>+</button>
+            <button class="btnClearRow" type="button" data-clear>Очистити</button>
+          </div>
+        </td>
+        <td class="num">
+          <div class="sumBox" data-sum>0.000</div>
+          <div class="small muted">кількість: <span data-count>0</span></div>
+        </td>
+        <td class="num">
+          <button class="btnSaveRow" type="button" data-save>Зберегти</button>
+          <div class="small muted" style="margin-top:6px" data-status></div>
+        </td>
+      </tr>
     `;
   }
 
-  async function renderAll(stageDocId, stageData){
-    const wIndex = Number(weighNoSel.value || 0);
+  function addFishInput(fishListEl, value=""){
+    const inp = document.createElement("input");
+    inp.type = "number";
+    inp.step = "0.001";
+    inp.placeholder = "0.000";
+    inp.className = "fishInput";
+    inp.value = value;
+    fishListEl.appendChild(inp);
+    return inp;
+  }
 
-    const teams = Array.isArray(stageData.teams) ? stageData.teams : [];
-    if(!teams.length){
-      zonesWrap.innerHTML = `<div class="card"><div class="err">Нема команд у stageResults/${esc(stageDocId)} (поле teams[] пусте).</div></div>`;
+  function getFishValues(fishListEl){
+    const arr = [];
+    fishListEl.querySelectorAll("input").forEach(inp=>{
+      const v = Number(String(inp.value||"").replace(",","."));
+      if(v>0) arr.push(v);
+    });
+    return arr;
+  }
+
+  function calc(arr){
+    const total = arr.reduce((s,v)=>s+Number(v||0),0);
+    const count = arr.length;
+    const big = count ? Math.max(...arr) : 0;
+    return { total, count, big };
+  }
+
+  // -------------------------------------------------------
+  // 6) Save: stageResults агрегати + teams масив (для LIVE) + weighingsLog (по рибі)
+  // -------------------------------------------------------
+  async function saveTeamWeighing(stageRef, stageId, wKey, teamId, zone, fishArr){
+    const pack = calc(fishArr);
+
+    await db.runTransaction(async tx=>{
+      const snap = await tx.get(stageRef);
+      if(!snap.exists) throw new Error("stageResults не знайдено");
+
+      const data = snap.data()||{};
+      const teamsMap = data.teamsMap || {};
+      const t = teamsMap[teamId];
+      if(!t) throw new Error("Команда не знайдена в teamsMap");
+
+      const weighings = t.weighings || emptyWeighings();
+      const prev = weighings[wKey] || { total:0, count:0 };
+
+      // додаємо до існуючого (щоб можна було зберігати частинами)
+      const newTotal = Number(prev.total||0) + Number(pack.total||0);
+      const newCount = Number(prev.count||0) + Number(pack.count||0);
+
+      weighings[wKey] = { total: newTotal, count: newCount };
+
+      // totalWeight по всіх W
+      const newTW = computeTotalWeight(weighings);
+
+      // bigFish беремо максимальний з (старий, новий)
+      const oldBig = Number(t.bigFish||0);
+      const newBig = Math.max(oldBig, Number(pack.big||0));
+
+      const updatedTeam = Object.assign({}, t, {
+        weighings,
+        totalWeight: newTW,
+        bigFish: newBig,
+        updatedAt: ff?.serverTimestamp?.() || new Date()
+      });
+
+      // оновлюємо teamsMap.{teamId}
+      tx.update(stageRef, {
+        [`teamsMap.${teamId}`]: updatedTeam,
+        updatedAt: ff?.serverTimestamp?.() || new Date()
+      });
+
+      // оновлюємо teams (масив) для LIVE сумісності
+      const teamsArr = mapToArray(Object.assign({}, teamsMap, { [teamId]: updatedTeam }));
+      tx.update(stageRef, { teams: teamsArr });
+    });
+
+    // журнал кожної риби (ОКРЕМО, без nested arrays)
+    // якщо не хочеш лог — можеш потім прибрати цей блок
+    const logCol = db.collection("weighingsLog");
+    const batch = db.batch();
+    fishArr.forEach(w=>{
+      const doc = logCol.doc();
+      batch.set(doc, {
+        stageId: stageId,
+        teamId: teamId,
+        zone: zone,
+        wKey: wKey,
+        weight: Number(w),
+        createdAt: ff?.serverTimestamp?.() || new Date()
+      });
+    });
+    await batch.commit();
+
+    return pack;
+  }
+
+  // -------------------------------------------------------
+  // 7) Завантажити таблиці (з stageResults)
+  // -------------------------------------------------------
+  async function loadAndRender(){
+    const v = stageSelect.value;
+    const { compId, stageKey } = parseStageValue(v);
+    const wKey = wSelect.value;
+
+    if(!compId || !stageKey){
+      setMsg("Обери етап.", false);
       return;
     }
 
-    // ensure structure
-    teams.forEach(t=>{ ensureFishStruct(t); calcSums(t); });
+    const stageLabel = stageSelect.options[stageSelect.selectedIndex]?.textContent || `${compId} — ${stageKey}`;
+    setMsg("Готую stageResults і таблиці…", true);
+    setDbg("");
 
-    const zones = splitZones(teams);
+    const ensured = await ensureStageResults(compId, stageKey, stageLabel);
+    const stageId = ensured.id;
+    const stageRef = ensured.ref;
+
+    // перечитати актуальні дані
+    const snap = await stageRef.get();
+    const data = snap.data()||{};
+    const teamsMap = data.teamsMap || {};
+    const teamsArr = mapToArray(teamsMap);
+
+    // розклад по зонах
+    const zones = { A:[], B:[], C:[] };
+    teamsArr.forEach(t=>{
+      const z = String(t.zone||"").toUpperCase();
+      if(zones[z]) zones[z].push(t);
+    });
 
     zonesWrap.innerHTML =
-      renderZoneTable("A", zones.A, wIndex, stageDocId) +
-      renderZoneTable("B", zones.B, wIndex, stageDocId) +
-      renderZoneTable("C", zones.C, wIndex, stageDocId);
+      zoneBlock("A", zones.A) +
+      zoneBlock("B", zones.B) +
+      zoneBlock("C", zones.C);
 
-    // навішуємо дії на таблиці
+    // навісити логіку + / очистити / зберегти
     zonesWrap.querySelectorAll("tr[data-team]").forEach(tr=>{
-      const teamId = tr.getAttribute("data-team") || "";
-      const zone   = tr.getAttribute("data-zone") || "";
-      const stEl   = tr.querySelector("[data-status]");
-      const sumEl  = tr.querySelector("[data-sum]");
-      const fishWrap = tr.querySelector("[data-fishlist]");
-      const btnAdd  = tr.querySelector("[data-add]");
-      const btnClear= tr.querySelector("[data-clear]");
+      const teamId = tr.getAttribute("data-team");
+      const team = teamsMap[teamId];
+      const zone = String(team?.zone||"").toUpperCase();
+
+      const fishListEl = tr.querySelector("[data-fishlist]");
+      const sumEl = tr.querySelector("[data-sum]");
+      const countEl = tr.querySelector("[data-count]");
+      const stEl = tr.querySelector("[data-status]");
+      const btnPlus = tr.querySelector("[data-plus]");
+      const btnClear = tr.querySelector("[data-clear]");
       const btnSave = tr.querySelector("[data-save]");
 
-      // знаходимо team у локальних teams[]
-      const teamObj = teams.find(x => (x.teamId||x.id||"") === teamId);
-      if(!teamObj) return;
-
-      function refreshRow(){
-        calcSums(teamObj);
-        if(sumEl) sumEl.textContent = (teamObj.weights[wIndex]||0).toFixed(3);
-
-        // перечитати inputs → fish
-        const inputs = [...fishWrap.querySelectorAll("input[data-fish]")];
-        const arr = inputs.map(i => toNum(i.value)).filter(v=>v>0);
-        teamObj.fish[wIndex] = arr;
-        calcSums(teamObj);
-        if(sumEl) sumEl.textContent = (teamObj.weights[wIndex]||0).toFixed(3);
+      function refresh(){
+        const fishArr = getFishValues(fishListEl);
+        const pack = calc(fishArr);
+        sumEl.textContent = pack.total.toFixed(3);
+        countEl.textContent = String(pack.count);
       }
 
-      // add new fish input
-      btnAdd.onclick = ()=>{
-        const idx = fishWrap.querySelectorAll("input[data-fish]").length;
-        const inp = document.createElement("input");
-        inp.className = "fishInput";
-        inp.setAttribute("inputmode","decimal");
-        inp.setAttribute("placeholder","0.000");
-        inp.setAttribute("data-fish", String(idx));
-        inp.value = "";
-        fishWrap.insertBefore(inp, btnAdd);
+      // старт: 1 поле
+      addFishInput(fishListEl, "");
+      fishListEl.addEventListener("input", refresh);
 
-        inp.addEventListener("change", ()=>{ refreshRow(); });
-        inp.addEventListener("blur", ()=>{ refreshRow(); });
-        inp.addEventListener("keydown", (e)=>{
-          if(e.key === "Enter"){ e.preventDefault(); inp.blur(); }
-        });
-
-        inp.focus();
+      btnPlus.onclick = ()=>{
+        addFishInput(fishListEl, "");
       };
 
-      // clear W
       btnClear.onclick = ()=>{
-        teamObj.fish[wIndex] = [];
-        calcSums(teamObj);
-
-        // видалити всі inputs і лишити 0
-        fishWrap.querySelectorAll("input[data-fish]").forEach(x=>x.remove());
-        if(sumEl) sumEl.textContent = "0.000";
-        if(stEl){ stEl.textContent = "Очищено локально"; stEl.className="muted"; }
+        fishListEl.innerHTML = "";
+        addFishInput(fishListEl, "");
+        refresh();
+        stEl.textContent = "Очищено.";
+        stEl.className = "small muted";
       };
 
-      // on change existing inputs
-      fishWrap.querySelectorAll("input[data-fish]").forEach(inp=>{
-        inp.addEventListener("change", ()=>{ refreshRow(); });
-        inp.addEventListener("blur", ()=>{ refreshRow(); });
-        inp.addEventListener("keydown", (e)=>{
-          if(e.key === "Enter"){ e.preventDefault(); inp.blur(); }
-        });
-      });
-
-      // save to Firestore
       btnSave.onclick = async ()=>{
         try{
-          if(stEl){ stEl.textContent="Збереження…"; stEl.className="muted"; }
+          const fishArr = getFishValues(fishListEl);
+          if(!fishArr.length){
+            stEl.textContent = "Нема введеної риби.";
+            stEl.className = "small err";
+            return;
+          }
 
-          refreshRow();
+          stEl.textContent = "Зберігаю…";
+          stEl.className = "small muted";
 
-          // оновлюємо teams[] і пишемо в stageResults
-          const db = window.scDb;
-          const ref = db.collection("stageResults").doc(stageDocId);
+          const pack = await saveTeamWeighing(stageRef, stageId, wKey, teamId, zone, fishArr);
 
-          // ВАЖЛИВО: пишемо всю команду назад у teams[] (з оновленими fish/weights/totalWeight)
-          await ref.update({ teams });
+          // після збереження — очищаємо поля (щоб не дублювати)
+          fishListEl.innerHTML = "";
+          addFishInput(fishListEl, "");
+          refresh();
 
-          if(stEl){ stEl.textContent="✅ Збережено (LIVE має бачити)"; stEl.className="muted ok"; }
-          setMsg("✅ Збережено у stageResults (LIVE має підтягнути).", true);
+          stEl.textContent = `✅ Додано: ${pack.total.toFixed(3)} кг (${pack.count} шт.)`;
+          stEl.className = "small ok";
+
+          setMsg("✅ Збережено. LIVE має бачити оновлення.", true);
+
         }catch(e){
-          if(stEl){ stEl.textContent="❌ Помилка збереження"; stEl.className="muted err"; }
-          setMsg("❌ Помилка. Дивись Debug.", false);
-          setDbg("SAVE ERROR:\n" + (e?.message || String(e)));
+          stEl.textContent = "❌ Помилка збереження";
+          stEl.className = "small err";
+          setMsg("❌ Помилка збереження", false);
+          setDbg((dbgEl.textContent||"") + "\n\nSAVE ERROR:\n" + (e?.message||String(e)));
         }
+      };
+
+      refresh();
+    });
+
+    setMsg(`✅ Таблиці готові. Етап: ${stageLabel} · режим: ${wKey}`, true);
+    setDbg(`stageResults doc: stageResults/${stageDocId(compId, stageKey)}\nДжерело команд: registrations (confirmed + drawZone/drawSector)`);
+  }
+
+  // ---------------------------
+  // INIT
+  // ---------------------------
+  async function init(){
+    if(!auth || !db){
+      setMsg("Firebase не ініціалізований (scAuth/scDb).", false);
+      return;
+    }
+
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){
+        setMsg("Увійди як адмін.", false);
+        return;
+      }
+      const ok = await requireAdmin(user);
+      if(!ok){
+        setMsg("Цей акаунт не адмін.", false);
+        return;
+      }
+
+      await loadStagesToSelect();
+      setMsg("Обери етап і W → натисни “Завантажити таблиці”.", true);
+
+      btnLoad.onclick = loadAndRender;
+      btnRefresh.onclick = async ()=>{
+        setMsg("Оновлюю список…", true);
+        await loadStagesToSelect();
+        setMsg("Оновлено ✅", true);
       };
     });
   }
 
-  // ---------- Load stage doc ----------
-  async function loadAndBuild(){
-    const stageId = String(stageSelect.value||"").trim();
-    if(!stageId) return setMsg("Обери етап.", false);
-
-    try{
-      setMsg("Завантажую stageResults…", true);
-      setDbg("");
-
-      const db = window.scDb;
-      const doc = await db.collection("stageResults").doc(stageId).get();
-      if(!doc.exists){
-        setMsg("Нема stageResults/" + stageId, false);
-        return;
-      }
-
-      const data = doc.data() || {};
-      await renderAll(stageId, data);
-
-      setMsg("✅ Таблиці готові. Працюй з рибою через “+” і Зберегти.", true);
-    }catch(e){
-      setMsg("❌ Помилка завантаження. Дивись Debug.", false);
-      setDbg("LOAD ERROR:\n" + (e?.message || String(e)));
-    }
-  }
-
-  // ---------- INIT ----------
-  async function init(){
-    try{
-      await waitFirebase();
-
-      const auth = window.scAuth;
-      auth.onAuthStateChanged(async (user)=>{
-        if(!user){
-          setMsg("Увійди як адмін/суддя.", false);
-          return;
-        }
-
-        const ok = await requireRole(user);
-        if(!ok){
-          setMsg("Доступ заборонено ❌ (нема ролі admin/judge).", false);
-          return;
-        }
-
-        await loadStageResultsList();
-        setMsg("Обери етап та W → натисни “Завантажити таблиці”.", true);
-      });
-
-      $("btnLoad").onclick = loadAndBuild;
-      $("btnReload").onclick = async ()=>{
-        setMsg("Оновлюю список…", true);
-        await loadStageResultsList();
-        setMsg("✅ Оновлено список етапів.", true);
-      };
-
-      // якщо змінили W — перерендер з поточного doc (не ліземо в Firestore, якщо ще не завантажено)
-      weighNoSel.onchange = ()=>{
-        // просто підказка, щоб ти натиснув завантажити заново
-        setMsg("Змінився номер W. Натисни “Завантажити таблиці”.", true);
-      };
-
-    }catch(e){
-      setMsg("Firebase не піднявся ❌", false);
-      setDbg(e?.message || String(e));
-    }
-  }
-
-  window.addEventListener("error", (e)=>{
-    setMsg("JS помилка ❌", false);
-    setDbg(e?.message || "error");
-  });
-  window.addEventListener("unhandledrejection", (e)=>{
-    setMsg("Promise помилка ❌", false);
-    setDbg(e?.reason?.message || String(e?.reason || "promise"));
-  });
-
   init();
+
 })();
 </script>
 

@@ -9,6 +9,7 @@
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
     .wrap{ max-width:980px; margin:0 auto; padding:20px 0 80px; }
+
     .card{
       background:rgba(15,23,42,.9);
       border:1px solid rgba(148,163,184,.35);
@@ -21,7 +22,7 @@
     .ok{ color:#22c55e; }
     .err{ color:#ef4444; }
     .field{ display:grid; gap:6px; margin-top:10px; }
-    select{
+    select, input{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
@@ -32,6 +33,7 @@
     }
     .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
     .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
+
     .win-card{
       padding:12px;
       border-radius:14px;
@@ -59,17 +61,32 @@
       color:#e5e7eb;
       white-space:nowrap;
     }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
-    input[type=number]{
-      width:100%;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      outline:none;
+    .grid2{ display:grid; grid-template-columns:1fr auto; gap:10px; }
+    .grid3{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    @media (max-width:640px){
+      .grid3{ grid-template-columns:1fr; }
     }
+    .listLine{ margin-top:6px; word-break:break-word; }
+
+    .qrGrid{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:12px; }
+    @media(min-width:860px){ .qrGrid{ grid-template-columns:repeat(3,1fr); } }
+    .qrBox{
+      border-radius:16px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.25);
+      padding:12px;
+      display:grid;
+      gap:10px;
+    }
+    .qrCanvasWrap{
+      display:flex; justify-content:center; align-items:center;
+      padding:10px;
+      background:rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    canvas{ max-width:100%; height:auto; }
   </style>
 </head>
 
@@ -87,6 +104,7 @@
 <main class="main">
   <section class="section container wrap">
 
+    <!-- CONTROL -->
     <div class="card">
       <div style="font-weight:900;">Зважування (адмін)</div>
       <div class="muted" style="margin-top:6px;">Підтягує команди з жеребкування і дає вносити ваги кнопкою “+”.</div>
@@ -96,33 +114,545 @@
         <select id="stageSelect"></select>
       </div>
 
+      <div class="field">
+        <div class="muted">Номер зважування</div>
+        <select id="weighNo">
+          <option value="1" selected>Зважування №1</option>
+          <option value="2">Зважування №2</option>
+          <option value="3">Зважування №3</option>
+          <option value="4">Зважування №4</option>
+          <option value="5">Зважування №5</option>
+          <option value="6">Зважування №6</option>
+          <option value="7">Зважування №7</option>
+          <option value="8">Зважування №8</option>
+          <option value="9">Зважування №9</option>
+        </select>
+      </div>
+
       <div class="btnRow">
         <button class="btn btn--accent" id="btnLoadData" type="button">Завантажити дані</button>
         <button class="btn btn--ghost" id="btnRefreshList" type="button">Оновити список</button>
       </div>
 
-      <!-- ОЦЕ САМЕ ТУТ -->
       <div id="weighMsg" class="muted" style="margin-top:10px;"></div>
       <div id="weighDebug" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
     </div>
 
-    <!-- ТАБЛИЦІ ТУТ -->
+    <!-- TABLES -->
     <div id="tablesWrap"></div>
+
+    <!-- QR -->
+    <div class="card" style="margin-top:14px;">
+      <div style="font-weight:900;">QR для суддів (A/B/C)</div>
+      <div class="muted" style="margin-top:6px;">Генерує посилання на <b>weigh_judge.html</b> з параметрами zone/compId/stageId/token.</div>
+
+      <div class="grid3" style="margin-top:12px;">
+        <div class="field" style="margin-top:0;">
+          <div class="muted">Token доступу</div>
+          <input id="token" placeholder="Напр.: SC-2026-ST1 (будь-який текст)" />
+        </div>
+        <div class="field" style="margin-top:0;">
+          <div class="muted">&nbsp;</div>
+          <button class="btn btn--ghost" id="btnRandom" type="button">Випадковий token</button>
+        </div>
+      </div>
+
+      <div class="btnRow">
+        <button class="btn btn--accent" id="btnBuildQR" type="button">Згенерувати QR A/B/C</button>
+      </div>
+
+      <div id="qrGrid" class="qrGrid" style="display:none;">
+        <div class="qrBox">
+          <div class="win-title">Зона A <span class="badge">scan</span></div>
+          <div class="qrCanvasWrap"><canvas id="qrA"></canvas></div>
+          <div class="muted" id="linkA" style="font-size:.85rem; word-break:break-all;"></div>
+          <div class="btnRow">
+            <button class="btn btn--primary" data-dl="A" type="button">Скачати PNG</button>
+            <button class="btn btn--ghost" data-copy="A" type="button">Копіювати лінк</button>
+          </div>
+        </div>
+
+        <div class="qrBox">
+          <div class="win-title">Зона B <span class="badge">scan</span></div>
+          <div class="qrCanvasWrap"><canvas id="qrB"></canvas></div>
+          <div class="muted" id="linkB" style="font-size:.85rem; word-break:break-all;"></div>
+          <div class="btnRow">
+            <button class="btn btn--primary" data-dl="B" type="button">Скачати PNG</button>
+            <button class="btn btn--ghost" data-copy="B" type="button">Копіювати лінк</button>
+          </div>
+        </div>
+
+        <div class="qrBox">
+          <div class="win-title">Зона C <span class="badge">scan</span></div>
+          <div class="qrCanvasWrap"><canvas id="qrC"></canvas></div>
+          <div class="muted" id="linkC" style="font-size:.85rem; word-break:break-all;"></div>
+          <div class="btnRow">
+            <button class="btn btn--primary" data-dl="C" type="button">Скачати PNG</button>
+            <button class="btn btn--ghost" data-copy="C" type="button">Копіювати лінк</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
   </section>
 </main>
 
-<!-- Firebase compat SDK -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
-<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- твій “переписаний” скрипт зважувань: встав сюди 1:1 -->
+<!-- QR -->
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+
 <script>
-/* ВСТАВ ТУТ МІЙ ПЕРЕПИСАНИЙ СКРИПТ (той що я дав раніше) */
+(function(){
+  "use strict";
+
+  const auth = window.scAuth;
+  const db   = window.scDb;
+
+  const $ = (id)=>document.getElementById(id);
+
+  const stageSelect = $("stageSelect");
+  const weighNoSel  = $("weighNo");
+
+  const btnLoad    = $("btnLoadData");
+  const btnRefresh = $("btnRefreshList");
+
+  const msgEl  = $("weighMsg");
+  const dbgEl  = $("weighDebug");
+  const wrapEl = $("tablesWrap");
+
+  const tokenInp = $("token");
+  const btnRandom = $("btnRandom");
+  const btnBuildQR = $("btnBuildQR");
+  const qrGrid = $("qrGrid");
+  const linkA = $("linkA"), linkB = $("linkB"), linkC = $("linkC");
+
+  const esc = (s)=>String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  const norm = (v)=>String(v??"").trim();
+
+  const setMsg = (t, ok=true)=>{
+    msgEl.textContent = t||"";
+    msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
+  };
+  const setDbg = (t)=>{ dbgEl.textContent = t||""; };
+
+  function parseStageValue(v){
+    const [compId, stageIdRaw] = String(v||"").split("||");
+    return { compId: norm(compId), stageId: norm(stageIdRaw) || "" };
+  }
+
+  async function requireAdmin(user){
+    const snap = await db.collection("users").doc(user.uid).get();
+    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+    return role === "admin";
+  }
+
+  async function loadStagesToSelect(){
+    stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+
+    const items = [];
+    const snap = await db.collection("competitions").get();
+
+    snap.forEach(docSnap=>{
+      const c = docSnap.data()||{};
+      const compId = docSnap.id;
+
+      const brand = c.brand || "STOLAR CARP";
+      const year  = c.year || c.seasonYear || "";
+      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+      const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+      if (eventsArr && eventsArr.length) {
+        eventsArr.forEach((ev, idx)=>{
+          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
+          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
+          items.push({ value:`${compId}||${key}`, label:`${brand} · ${compTitle} — ${stageTitle}` });
+        });
+      } else {
+        items.push({ value:`${compId}||`, label:`${brand} · ${compTitle}` });
+      }
+    });
+
+    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+
+    stageSelect.innerHTML =
+      `<option value="">— Оберіть —</option>` +
+      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
+  }
+
+  // ---------- пошук жеребкування ----------
+  async function findDrawDoc(compId, stageId){
+    // 1) competitions/{compId}/draws/{stageId}
+    try{
+      const sub = await db.collection("competitions").doc(compId).collection("draws").doc(stageId).get();
+      if(sub.exists) return { data: sub.data()||{}, where:`competitions/${compId}/draws/${stageId}` };
+    }catch(_){}
+
+    // 2) draws/{compId}_{stageId} і варіанти
+    const cands = [
+      `draws/${compId}_${stageId}`,
+      `draws/${compId}__${stageId}`,
+      `draws/${compId}||${stageId}`,
+      `draws/${compId}-${stageId}`,
+      `draws/${compId}`, // якщо stage лежить всередині
+      `draw/${compId}_${stageId}`,
+      `drawings/${compId}_${stageId}`
+    ];
+
+    for(const p of cands){
+      const [col, docId] = p.split("/");
+      try{
+        const s = await db.collection(col).doc(docId).get();
+        if(s.exists) return { data: s.data()||{}, where:p };
+      }catch(_){}
+    }
+
+    // 3) query: draws where compId/stageId
+    try{
+      const q = await db.collection("draws").where("compId","==",compId).where("stageId","==",stageId).limit(1).get();
+      if(!q.empty){
+        return { data: q.docs[0].data()||{}, where:`draws(query) -> ${q.docs[0].id}` };
+      }
+    }catch(_){}
+
+    return null;
+  }
+
+  function extractZones(drawData){
+    let A = drawData.A || drawData.zoneA || drawData.a || null;
+    let B = drawData.B || drawData.zoneB || drawData.b || null;
+    let C = drawData.C || drawData.zoneC || drawData.c || null;
+
+    if(!A && !B && !C && drawData.zones){
+      const z = drawData.zones;
+      if(Array.isArray(z)){
+        for(const item of z){
+          const zn = String(item.zone || item.key || "").toUpperCase();
+          const teams = item.teams || item.items || item.list || [];
+          if(zn==="A") A = teams;
+          if(zn==="B") B = teams;
+          if(zn==="C") C = teams;
+        }
+      }else if(typeof z === "object"){
+        A = z.A || z.zoneA || null;
+        B = z.B || z.zoneB || null;
+        C = z.C || z.zoneC || null;
+      }
+    }
+
+    return {
+      A: Array.isArray(A)?A:[],
+      B: Array.isArray(B)?B:[],
+      C: Array.isArray(C)?C:[]
+    };
+  }
+
+  function teamLabel(t, idx){
+    const sector = t.sector || t.place || t.slot || t.position || (idx+1);
+    const name = t.teamName || t.name || t.team || t.title || "Команда";
+    const teamId = t.teamId || t.id || "";
+    return { sector, name, teamId };
+  }
+
+  function localKey(compId, stageId, weighNo, zone, teamId){
+    return `sc_w_${compId}_${stageId}_${weighNo}_${zone}_${teamId||"noid"}`;
+  }
+  function loadLocal(compId, stageId, weighNo, zone, teamId){
+    try{ return JSON.parse(localStorage.getItem(localKey(compId,stageId,weighNo,zone,teamId)) || "[]"); }catch{ return []; }
+  }
+  function saveLocal(compId, stageId, weighNo, zone, teamId, arr){
+    try{ localStorage.setItem(localKey(compId,stageId,weighNo,zone,teamId), JSON.stringify(arr||[])); }catch{}
+  }
+
+  function sum(arr){ return (arr||[]).reduce((s,v)=>s+Number(v||0),0); }
+
+  function renderZone(zone, teams){
+    const rows = teams.map((t, idx)=>{
+      const x = teamLabel(t, idx);
+      return `
+        <div class="win-card" data-card data-zone="${esc(zone)}" data-team="${esc(x.teamId)}" data-name="${esc(x.name)}" data-sector="${esc(x.sector)}">
+          <div class="win-title">
+            <span>Сектор ${esc(x.sector)} — ${esc(x.name)}</span>
+            <span class="badge">${esc(zone)}</span>
+          </div>
+
+          <div class="grid2">
+            <input type="number" step="0.001" placeholder="Вага (наприклад 4.560)" data-weight />
+            <button class="btn btn--accent" type="button" data-add>+</button>
+          </div>
+
+          <div class="muted" style="margin-top:8px;">Внесені ваги:</div>
+          <div class="muted listLine" data-list>—</div>
+          <div class="muted listLine" data-total>Сума: 0.000 кг</div>
+
+          <div class="hr"></div>
+
+          <div class="btnRow">
+            <button class="btn btn--primary" type="button" data-save>Зберегти</button>
+            <button class="btn btn--ghost" type="button" data-clear>Очистити локально</button>
+          </div>
+
+          <div class="muted" data-status style="margin-top:8px;"></div>
+        </div>
+      `;
+    }).join("");
+
+    return `
+      <div class="card">
+        <div style="font-weight:900;">Зона ${esc(zone)}</div>
+        ${teams.length ? rows : `<div class="muted" style="margin-top:8px;">Нема команд у зоні ${esc(zone)}.</div>`}
+      </div>
+    `;
+  }
+
+  function refreshCardUI(card, arr){
+    const list = card.querySelector("[data-list]");
+    const total = card.querySelector("[data-total]");
+    if(list){
+      list.textContent = arr.length ? arr.map(x=>Number(x).toFixed(3)).join(" | ") : "—";
+    }
+    if(total){
+      total.textContent = `Сума: ${sum(arr).toFixed(3)} кг`;
+    }
+  }
+
+  async function saveWeighing(compId, stageId, weighNo, zone, teamId, teamName, sector, weights){
+    const id = `${compId}_${stageId}_${weighNo}_${zone}_${(teamId||"noid")}`;
+    await db.collection("weighings").doc(id).set({
+      compId, stageId, zone,
+      weighNo: Number(weighNo),
+      teamId: teamId || "",
+      teamName: teamName || "",
+      sector: String(sector||""),
+      weights: weights || [],
+      fishCount: (weights||[]).length,
+      totalWeight: sum(weights),
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true });
+  }
+
+  // ---------- QR ----------
+  function baseUrl(){
+    return location.origin + location.pathname.replace(/\/[^\/]*$/, "/");
+  }
+  function buildJudgeUrl(zone, compId, stageId, token){
+    const p = new URLSearchParams();
+    p.set("zone", zone);
+    p.set("compId", compId);
+    if(stageId) p.set("stageId", stageId);
+    p.set("t", token);
+    return baseUrl() + "weigh_judge.html?" + p.toString();
+  }
+  function makeQR(canvasId, url){
+    new QRious({ element: $(canvasId), value: url, size: 420 });
+  }
+  function downloadCanvasPNG(canvasId, filename){
+    const canvas = $(canvasId);
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      setMsg("Скопійовано ✅", true);
+    }catch{
+      setMsg("Не вдалося скопіювати (браузер блокує).", false);
+    }
+  }
+  function randomToken(){
+    const x = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const y = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SC-${x}-${y}`;
+  }
+
+  async function buildTables(){
+    const { compId, stageId } = parseStageValue(stageSelect.value);
+    const weighNo = norm(weighNoSel.value) || "1";
+
+    if(!compId) return setMsg("Обери змагання/етап.", false);
+
+    setMsg("Шукаю жеребкування…", true);
+    setDbg("");
+
+    const found = await findDrawDoc(compId, stageId);
+    if(!found){
+      setMsg("❌ Жеребкування не знайдено тим шляхом, який читає адмінка.", false);
+      setDbg(
+        "Я пробував:\n" +
+        "- competitions/{compId}/draws/{stageId}\n" +
+        "- draws/{compId}_{stageId} (і варіанти)\n" +
+        "- draws query where compId+stageId\n\n" +
+        "Покажи 1 скрін Firestore: де саме лежить жеребкування (колекція/док)."
+      );
+      return;
+    }
+
+    setDbg("✅ Знайдено жеребкування: " + found.where);
+
+    const zones = extractZones(found.data);
+
+    wrapEl.innerHTML =
+      renderZone("A", zones.A) +
+      renderZone("B", zones.B) +
+      renderZone("C", zones.C);
+
+    // навішуємо логіку на кожну карточку
+    wrapEl.querySelectorAll("[data-card]").forEach(card=>{
+      const zone = card.getAttribute("data-zone");
+      const teamId = card.getAttribute("data-team") || "";
+      const teamName = card.getAttribute("data-name") || "";
+      const sector = card.getAttribute("data-sector") || "";
+
+      const inp = card.querySelector("[data-weight]");
+      const btnAdd = card.querySelector("[data-add]");
+      const btnSave = card.querySelector("[data-save]");
+      const btnClear = card.querySelector("[data-clear]");
+      const st = card.querySelector("[data-status]");
+
+      let arr = loadLocal(compId, stageId, weighNo, zone, teamId);
+      refreshCardUI(card, arr);
+
+      btnAdd.onclick = ()=>{
+        const v = Number(String(inp.value||"").replace(",","."));
+        if(!v || v<=0){
+          st.textContent = "Введи вагу (наприклад 4.560)";
+          st.className = "muted err";
+          return;
+        }
+        arr.push(v);
+        saveLocal(compId, stageId, weighNo, zone, teamId, arr);
+        refreshCardUI(card, arr);
+        inp.value = "";
+        st.textContent = "Додано ✅";
+        st.className = "muted ok";
+      };
+
+      btnClear.onclick = ()=>{
+        arr = [];
+        saveLocal(compId, stageId, weighNo, zone, teamId, arr);
+        refreshCardUI(card, arr);
+        st.textContent = "Очищено локально";
+        st.className = "muted";
+      };
+
+      btnSave.onclick = async ()=>{
+        st.textContent = "Зберігаю…";
+        st.className = "muted";
+        try{
+          await saveWeighing(compId, stageId, weighNo, zone, teamId, teamName, sector, arr);
+          st.textContent = "Збережено у Firestore ✅";
+          st.className = "muted ok";
+        }catch(e){
+          st.textContent = "Помилка збереження ❌";
+          st.className = "muted err";
+          setDbg((dbgEl.textContent||"") + "\n\nSAVE ERROR:\n" + (e?.message||String(e)));
+        }
+      };
+    });
+
+    setMsg(`✅ Таблиці готові (зважування №${weighNo}).`, true);
+  }
+
+  async function init(){
+    if(!auth || !db || !window.firebase){
+      setMsg("Firebase init не завантажився.", false);
+      return;
+    }
+
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){
+        setMsg("Увійди як адмін.", false);
+        return;
+      }
+      const ok = await requireAdmin(user);
+      if(!ok){
+        setMsg("Цей акаунт не адмін.", false);
+        return;
+      }
+
+      await loadStagesToSelect();
+      setMsg("Обери етап → натисни “Завантажити дані”.", true);
+
+      btnLoad.onclick = buildTables;
+
+      btnRefresh.onclick = async ()=>{
+        setMsg("Оновлюю список…", true);
+        await loadStagesToSelect();
+        setMsg("Оновлено ✅", true);
+      };
+
+      // ---- QR buttons ----
+      btnRandom.onclick = ()=>{
+        tokenInp.value = randomToken();
+        setMsg("Згенеровано token ✅", true);
+      };
+
+      btnBuildQR.onclick = ()=>{
+        const { compId, stageId } = parseStageValue(stageSelect.value);
+        const token = norm(tokenInp.value);
+        if(!compId) return setMsg("Для QR спочатку обери етап.", false);
+        if(!token) return setMsg("Впиши token (або натисни випадковий).", false);
+
+        const urlA = buildJudgeUrl("A", compId, stageId, token);
+        const urlB = buildJudgeUrl("B", compId, stageId, token);
+        const urlC = buildJudgeUrl("C", compId, stageId, token);
+
+        makeQR("qrA", urlA);
+        makeQR("qrB", urlB);
+        makeQR("qrC", urlC);
+
+        linkA.textContent = urlA;
+        linkB.textContent = urlB;
+        linkC.textContent = urlC;
+
+        qrGrid.style.display = "";
+        setMsg("QR готові ✅ (скачай PNG і відправ суддям).", true);
+      };
+
+      document.addEventListener("click", async (e)=>{
+        const dl = e.target.closest("[data-dl]");
+        const cp = e.target.closest("[data-copy]");
+        if(!dl && !cp) return;
+
+        const zone = (dl?.getAttribute("data-dl") || cp?.getAttribute("data-copy") || "").trim();
+        if(!zone) return;
+
+        const link = zone==="A" ? linkA.textContent : zone==="B" ? linkB.textContent : linkC.textContent;
+
+        if(dl){
+          const { compId, stageId } = parseStageValue(stageSelect.value);
+          const token = norm(tokenInp.value);
+          const st = stageId ? stageId : "oneoff";
+          downloadCanvasPNG("qr"+zone, `SC_${compId}_${st}_ZONE-${zone}_${token}.png`);
+          setMsg("Скачано ✅", true);
+        }
+        if(cp){
+          await copyText(link);
+        }
+      });
+    });
+  }
+
+  // щоб не було “тихий білий екран”
+  window.addEventListener("error", (e)=>{
+    setMsg("JS помилка ❌", false);
+    setDbg(e?.message || "error");
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    setMsg("Promise помилка ❌", false);
+    setDbg(e?.reason?.message || String(e?.reason||"promise"));
+  });
+
+  init();
+})();
 </script>
 
 </body>

@@ -591,3 +591,48 @@ body.cabinet-page .avatar-upload input[type="file"]{
   font-size:9px;   /* <-- ОЦЕ відповідає за розмір цифр */
   min-width:28px;
 }
+/* --- FIX mobile overflow (бургер тікає через горизонтальний розпір) --- */
+html, body{
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* усі таблиці тримаємо в межах екрану */
+.table-wrap{
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* таблиця не повинна “розпирати” сторінку */
+.table{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* клітинка з рибами: скрол тільки тут, а не по всій сторінці */
+td.fish-cell{
+  padding: 8px 10px;
+}
+
+.fish-cell{
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fish-tag{
+  flex: 0 0 auto;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

@@ -372,9 +372,10 @@ let unsubAllWeigh = null;  // підписка на weighings (всі W)
   startWeighingsFor(currentWeighNo);
   }
 
-  function startWeighingsFor(no){
-    if (!db) return;
-    if (!activeCompId || !activeStageId) return;
+  function startWeighingsFor(weighNo) {
+  const db = window.scDb;
+  if (!db) return;
+  if (!activeCompId || !activeStageId) return;
 
     // registrations: порядок секторів
     if (!unsubRegs) {

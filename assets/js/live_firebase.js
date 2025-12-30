@@ -21,107 +21,8 @@
   const wBtn3 = document.getElementById("wBtn3");
   const wBtn4 = document.getElementById("wBtn4");
 
-  // ===== LIVE WEIGH TABLE (fish list per W button) =====
-let activeCompId = "";
-let activeStageId = "";
-let unsubRegs = null;
-let unsubWeigh = null;
-
-let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
-let weighByTeam = new Map(); // teamId -> weights[]
-
-function stopWeighSubs(){
-  if (unsubRegs) { unsubRegs(); unsubRegs = null; }
-  if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
-}
-
-function parseZoneKey(drawKey, drawZone, drawSector){
-  const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
-  const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
-  const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
-  const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
-  const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
-  return { label, sortKey };
-}
-
-function fmtNum(x){
-  const n = Number(x);
-  if (!isFinite(n)) return "—";
-  return n.toFixed(3);
-}
-
-function setWeighButtons(activeKey){
-  const map = { W1:wBtn1, W2:wBtn2, W3:wBtn3, W4:wBtn4 };
-  Object.entries(map).forEach(([k,btn])=>{
-    if(!btn) return;
-    btn.classList.toggle("btn--accent", k===activeKey);
-    btn.classList.toggle("btn--ghost",  k!==activeKey);
-  });
-  if (weighInfoEl) weighInfoEl.textContent = `${activeKey} — список риб`;
-}
-
-function startWeighingsFor(no){
-  if (!window.scDb) return;
-  if (!activeCompId || !activeStageId) return;
-
-  // registrations: порядок секторів
-  if (!unsubRegs) {
-    unsubRegs = window.scDb
-      .collection("registrations")
-      .where("competitionId", "==", activeCompId)
-      .where("stageId", "==", activeStageId)
-      .where("status", "==", "confirmed")
-      .onSnapshot((qs) => {
-        const rows = [];
-        qs.forEach((doc) => {
-          const d = doc.data() || {};
-          const teamId = d.teamId || "";
-          const teamName = d.teamName || d.team || "—";
-          const drawKey = d.drawKey || "";
-          const drawZone = d.drawZone || d.zone || "";
-          const drawSector = d.drawSector || d.sector || "";
-          const z = parseZoneKey(drawKey, drawZone, drawSector);
-          rows.push({ zoneLabel: z.label, sortKey: z.sortKey, teamId, teamName });
-        });
-        rows.sort((a,b)=>a.sortKey-b.sortKey);
-        regRows = rows;
-        renderWeighTable();
-      });
-  }
-
-  // weighings: конкретний W
-  if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
-  weighByTeam = new Map();
-
-  unsubWeigh = window.scDb
-    .collection("weighings")
-    .where("compId", "==", activeCompId)
-    .where("stageId", "==", activeStageId)
-    .where("weighNo", "==", no)
-    .onSnapshot((qs) => {
-      const map = new Map();
-      qs.forEach((doc) => {
-        const d = doc.data() || {};
-        const teamId = d.teamId || "";
-        const weights = Array.isArray(d.weights) ? d.weights : [];
-        if (teamId) map.set(teamId, weights);
-      });
-      weighByTeam = map;
-      renderWeighTable();
-    });
-}
-
-  if (!db) {
-    if (errorEl) {
-      errorEl.style.display = "block";
-      errorEl.textContent = "Firebase init не завантажився.";
-    }
-    if (loadingEl) loadingEl.style.display = "none";
-    return;
-  }
-
-  const fmt = (v) =>
-    v === null || v === undefined || v === "" ? "—" : String(v);
+  // ===== helpers =====
+  const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
 
   const fmtTs = (ts) => {
     try {
@@ -138,6 +39,28 @@ function startWeighingsFor(no){
     }
   };
 
+  function fmtNum(x) {
+    const n = Number(x);
+    if (!isFinite(n)) return null;
+    return n.toFixed(3);
+  }
+
+  function showError(text) {
+    if (errorEl) {
+      errorEl.style.display = "block";
+      errorEl.textContent   = text;
+    }
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) contentEl.style.display = "grid";
+  }
+
+  function showContent() {
+    if (errorEl)   errorEl.style.display   = "none";
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) contentEl.style.display = "grid";
+  }
+
+  // ======== ZONES (as було) ========
   function fmtW(w) {
     if (!w) return "—";
     const c  = w.count ?? w.c ?? w.qty ?? "";
@@ -172,7 +95,6 @@ function startWeighingsFor(no){
     };
   }
 
-  // ---------- ЗОНИ ----------
   function renderZones(zonesData, teamsRaw) {
     if (!zonesWrap) return;
 
@@ -270,121 +192,155 @@ function startWeighingsFor(no){
     }).join("");
   }
 
-  // ---------- ЗВАЖУВАННЯ ----------
-  let currentWeighKey = "W1";
-  let lastWeighings = null;
+  // ======== LIVE WEIGH TABLE (з Firestore weighings) ========
+  let activeCompId  = "";
+  let activeStageId = "";
 
-  function setActiveWeighButton(key) {
-    currentWeighKey = key;
-    const map = { W1: wBtn1, W2: wBtn2, W3: wBtn3, W4: wBtn4 };
-    Object.keys(map).forEach((k) => {
-      const btn = map[k];
-      if (!btn) return;
-      if (k === key) {
-        btn.classList.add("btn--accent");
-        btn.classList.remove("btn--ghost");
-      } else {
-        btn.classList.add("btn--ghost");
-        btn.classList.remove("btn--accent");
-      }
+  let unsubRegs  = null;
+  let unsubWeigh = null;
+
+  let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
+  let weighByTeam = new Map(); // teamId -> weights[]
+
+  let currentWeighNo  = 1;
+  let currentWeighKey = "W1";
+
+  function stopWeighSubs(){
+    if (unsubRegs) { unsubRegs(); unsubRegs = null; }
+    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+  }
+
+  function parseZoneKey(drawKey, drawZone, drawSector){
+    const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
+    const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
+    const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
+    const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
+    const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
+    return { label, sortKey };
+  }
+
+  function setWeighButtons(activeKey){
+    const map = { W1:wBtn1, W2:wBtn2, W3:wBtn3, W4:wBtn4 };
+    Object.entries(map).forEach(([k,btn])=>{
+      if(!btn) return;
+      btn.classList.toggle("btn--accent", k===activeKey);
+      btn.classList.toggle("btn--ghost",  k!==activeKey);
     });
-    renderWeighTable();
+  }
+
+  function setActiveWeigh(no){
+    currentWeighNo = no;
+    currentWeighKey = `W${no}`;
+    setWeighButtons(currentWeighKey);
+    startWeighingsFor(no);
+  }
+
+  function startWeighingsFor(no){
+    if (!db) return;
+    if (!activeCompId || !activeStageId) return;
+
+    // registrations: порядок секторів
+    if (!unsubRegs) {
+      unsubRegs = db
+        .collection("registrations")
+        .where("competitionId", "==", activeCompId)
+        .where("stageId", "==", activeStageId)
+        .where("status", "==", "confirmed")
+        .onSnapshot((qs) => {
+          const rows = [];
+          qs.forEach((doc) => {
+            const d = doc.data() || {};
+            const teamId = d.teamId || "";
+            const teamName = d.teamName || d.team || "—";
+            const drawKey = d.drawKey || "";
+            const drawZone = d.drawZone || d.zone || "";
+            const drawSector = d.drawSector || d.sector || "";
+            const z = parseZoneKey(drawKey, drawZone, drawSector);
+            rows.push({ zoneLabel: z.label, sortKey: z.sortKey, teamId, teamName });
+          });
+          rows.sort((a,b)=>a.sortKey-b.sortKey);
+          regRows = rows;
+          renderWeighTable();
+        }, (err) => {
+          console.error("registrations snapshot err:", err);
+        });
+    }
+
+    // weighings: конкретний W
+    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+    weighByTeam = new Map();
+
+    unsubWeigh = db
+      .collection("weighings")
+      .where("compId", "==", activeCompId)
+      .where("stageId", "==", activeStageId)
+      .where("weighNo", "==", no)
+      .onSnapshot((qs) => {
+        const map = new Map();
+        qs.forEach((doc) => {
+          const d = doc.data() || {};
+          const teamId = d.teamId || "";
+          const weights = Array.isArray(d.weights) ? d.weights : [];
+          if (teamId) map.set(teamId, weights);
+        });
+        weighByTeam = map;
+        renderWeighTable();
+      }, (err) => {
+        console.error("weighings snapshot err:", err);
+      });
+
+    if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
   }
 
   function renderWeighTable() {
     if (!weighTableEl) return;
 
-    const src = lastWeighings || {};
-    const key = currentWeighKey;
-    const raw = src[key] || src[key.toUpperCase()] || src[key.toLowerCase()] || [];
-
-    let list = [];
-    if (Array.isArray(raw)) {
-      list = raw;
-    } else if (raw && typeof raw === "object") {
-      list = Object.values(raw);
-    }
-
-    // якщо нічого – показуємо заглушку
-    if (!list.length) {
+    // якщо ще не підтягнуло порядок секторів
+    if (!regRows.length) {
       weighTableEl.innerHTML = `
         <thead>
           <tr>
             <th>Зона</th>
             <th>Команда</th>
-            <th>Риби (кг)</th>
+            <th>🐟</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="3">Для ${key} ще немає зважувань.</td></tr>
+          <tr><td colspan="3">Очікую список команд…</td></tr>
         </tbody>
       `;
-      if (weighInfoEl) {
-        weighInfoEl.textContent = `${key} — зважування. Поки що немає записаних риб.`;
-      }
       return;
     }
 
-    const rows = list.map((item) => {
-      const zoneLabel = item.zoneLabel || item.zone || item.drawKey || "—";
-      const teamName  = item.teamName || item.team || "—";
-      const weights   = Array.isArray(item.weights) ? item.weights : [];
-      return { zoneLabel, teamName, weights };
+    // рядки в правильному порядку
+    const rows = regRows.map((r) => {
+      const weights = weighByTeam.get(r.teamId) || [];
+      const nums = weights.map(fmtNum).filter(Boolean);
+      const fishCell = nums.length ? `| ${nums.join(" | ")} |` : "—";
+      return { zoneLabel: r.zoneLabel, teamName: r.teamName, fishCell };
     });
 
-    const maxLen = rows.reduce((m, r) => Math.max(m, r.weights.length), 0);
+    const bodyHtml = rows.map((r) => `
+      <tr>
+        <td>${fmt(r.zoneLabel)}</td>
+        <td class="team-col">${fmt(r.teamName)}</td>
+        <td style="white-space:nowrap; font-size:11px;">${r.fishCell}</td>
+      </tr>
+    `).join("");
 
-    let theadHtml = `
+    weighTableEl.innerHTML = `
       <thead>
         <tr>
           <th>Зона</th>
           <th>Команда</th>
-    `;
-    for (let i = 1; i <= maxLen; i++) {
-      theadHtml += `<th>Риба ${i}</th>`;
-    }
-    theadHtml += `
+          <th>🐟</th>
         </tr>
       </thead>
+      <tbody>${bodyHtml}</tbody>
     `;
-
-    const bodyHtml = rows.map((r) => {
-      const cells = r.weights.map((w) => `<td>${fmt(w)}</td>`).join("");
-      const padCount = maxLen - r.weights.length;
-      const pads = padCount > 0 ? "<td></td>".repeat(padCount) : "";
-      return `
-        <tr>
-          <td>${fmt(r.zoneLabel)}</td>
-          <td class="team-col">${fmt(r.teamName)}</td>
-          ${cells}${pads}
-        </tr>
-      `;
-    }).join("");
-
-    weighTableEl.innerHTML = theadHtml + `<tbody>${bodyHtml}</tbody>`;
-
-    if (weighInfoEl) {
-      weighInfoEl.textContent = `${key} — зважування. Показано всі риби по секторам.`;
-    }
   }
 
-  // ---------- СТАН / Firestore ----------
-
-  function showError(text) {
-    if (errorEl) {
-      errorEl.style.display = "block";
-      errorEl.textContent   = text;
-    }
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid"; // щоб хоч щось показати
-  }
-
-  function showContent() {
-    if (errorEl)   errorEl.style.display   = "none";
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
-  }
-
+  // ======== STAGE RESULTS SUB (як було) ========
   let unsubSettings = null;
   let unsubStage    = null;
 
@@ -396,22 +352,38 @@ function startWeighingsFor(no){
   }
 
   function stageDocIdFromApp(app) {
-  const key = app?.activeKey;
-  if (key) return String(key);
+    const key = app?.activeKey;
+    if (key) return String(key);
 
-  const compId =
-    app?.activeCompetitionId ||
-    app?.activeCompetition ||
-    app?.competitionId ||
-    "";
+    const compId =
+      app?.activeCompetitionId ||
+      app?.activeCompetition ||
+      app?.competitionId ||
+      "";
 
-  const stageId =
-    app?.activeStageId ||
-    app?.stageId ||
-    "stage-1";
+    const stageId =
+      app?.activeStageId ||
+      app?.stageId ||
+      "stage-1";
 
-  if (compId && stageId) return `${compId}||${stageId}`;
-  return "";
+    if (compId && stageId) return `${compId}||${stageId}`;
+    return "";
+  }
+
+  function readActiveIdsFromApp(app){
+    const compId =
+      app?.activeCompetitionId ||
+      app?.activeCompetition ||
+      app?.competitionId ||
+      "";
+
+    const stageId =
+      app?.activeStageId ||
+      app?.stageId ||
+      "stage-1";
+
+    activeCompId = String(compId || "");
+    activeStageId = String(stageId || "");
   }
 
   function startStageSub(docId) {
@@ -428,7 +400,10 @@ function startWeighingsFor(no){
       (snap) => {
         try {
           if (!snap.exists) {
-            showError("Live ще не опублікований для цього етапу (нема stageResults).");
+            // навіть якщо stageResults нема — таблиця зважувань все одно може працювати
+            if (stageEl) stageEl.textContent = docId;
+            if (updatedEl) updatedEl.textContent = "";
+            showContent();
             return;
           }
 
@@ -445,9 +420,6 @@ function startWeighingsFor(no){
 
           renderZones(zonesData, teamsRaw);
 
-          lastWeighings = data.weighings || null;
-          renderWeighTable();
-
           showContent();
         } catch (e) {
           console.error("Render error in stageResults snapshot:", e);
@@ -461,6 +433,12 @@ function startWeighingsFor(no){
     );
   }
 
+  // ======== INIT ========
+  if (!db) {
+    showError("Firebase init не завантажився.");
+    return;
+  }
+
   unsubSettings = db
     .collection("settings")
     .doc("app")
@@ -468,8 +446,19 @@ function startWeighingsFor(no){
       (snap) => {
         try {
           const app = snap.exists ? (snap.data() || {}) : {};
+
+          // ВАЖЛИВО: ставимо activeCompId/activeStageId для таблиці зважувань
+          readActiveIdsFromApp(app);
+
+          // старт підписки на stageResults (зони/рейтинги)
           const docId = stageDocIdFromApp(app);
           startStageSub(docId);
+
+          // старт таблиці зважувань (з колекції weighings)
+          stopWeighSubs();
+          unsubRegs = null;
+          setActiveWeigh(currentWeighNo);
+
         } catch (e) {
           console.error("settings/app error:", e);
           showError("Помилка читання settings/app.");
@@ -482,10 +471,11 @@ function startWeighingsFor(no){
     );
 
   // кнопки W1–W4
-  if (wBtn1) wBtn1.addEventListener("click", () => setActiveWeighButton("W1"));
-  if (wBtn2) wBtn2.addEventListener("click", () => setActiveWeighButton("W2"));
-  if (wBtn3) wBtn3.addEventListener("click", () => setActiveWeighButton("W3"));
-  if (wBtn4) wBtn4.addEventListener("click", () => setActiveWeighButton("W4"));
+  if (wBtn1) wBtn1.addEventListener("click", () => setActiveWeigh(1));
+  if (wBtn2) wBtn2.addEventListener("click", () => setActiveWeigh(2));
+  if (wBtn3) wBtn3.addEventListener("click", () => setActiveWeigh(3));
+  if (wBtn4) wBtn4.addEventListener("click", () => setActiveWeigh(4));
 
-  setActiveWeighButton("W1");
+  // дефолт
+  setActiveWeigh(1);
 })();

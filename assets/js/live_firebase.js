@@ -396,14 +396,22 @@ function startWeighingsFor(no){
   }
 
   function stageDocIdFromApp(app) {
-    const key = app?.activeKey || app?.activeStageKey;
-    if (key) return String(key);
+  const key = app?.activeKey;
+  if (key) return String(key);
 
-    const compId  = app?.activeCompetitionId || app?.competitionId || "";
-    const stageId = app?.activeStageId || app?.stageId || "";
-    if (compId && stageId) return `${compId}||${stageId}`;
-    if (compId && !stageId) return `${compId}||main`;
-    return "";
+  const compId =
+    app?.activeCompetitionId ||
+    app?.activeCompetition ||
+    app?.competitionId ||
+    "";
+
+  const stageId =
+    app?.activeStageId ||
+    app?.stageId ||
+    "stage-1";
+
+  if (compId && stageId) return `${compId}||${stageId}`;
+  return "";
   }
 
   function startStageSub(docId) {

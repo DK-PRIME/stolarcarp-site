@@ -476,7 +476,7 @@ if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список 
       <tbody>${bodyHtml}</tbody>
     `;
   }
-
+  }
   // ======== STAGE RESULTS SUB (як було) ========
   let unsubSettings = null;
   let unsubStage    = null;

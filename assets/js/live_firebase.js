@@ -429,13 +429,60 @@ unsubWeigh = db
 
 if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
 
-  function renderWeighTable() {
-    if (!weighTableEl) return;
+function renderWeighTable() {
+  if (!weighTableEl) return;
 
-    // якщо ще не підтягнуло порядок секторів
-    if (!regRows.length) {
-      weighTableEl.innerHTML = `
-    if (!regRows.length) {
+  // якщо ще не підтягнуло порядок секторів
+  if (!regRows.length) {
+    weighTableEl.innerHTML = `
+      <div class="table-wrap weigh-wrap">
+        <table class="table table-sm live-weigh-table">
+          <thead>
+            <tr>
+              <th class="sticky-col">Зона</th>
+              <th class="sticky-col-2">Команда</th>
+              <th>🐟</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="3">Очікую список команд…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+    return;
+  }
+
+  // рядки в правильному порядку
+  const rows = regRows.map((r) => {
+    const weights = weighByTeam.get(r.teamId) || [];
+    const nums = weights.map(fmtNum).filter(Boolean);
+    return { zoneLabel: r.zoneLabel, teamName: r.teamName, nums };
+  });
+
+  // скільки максимум риб є серед команд у цьому W
+  const maxFish = Math.max(1, ...rows.map((r) => r.nums.length));
+
+  const bodyHtml = rows.map((r) => {
+    const tds = [];
+    for (let i = 0; i < maxFish; i++) {
+      const v = r.nums[i];
+      tds.push(`<td class="fish-td">${v ? v : "—"}</td>`);
+    }
+
+    return `
+      <tr>
+        <td>${fmt(r.zoneLabel)}</td>
+        <td class="team-col">${fmt(r.teamName)}</td>
+        ${tds.join("")}
+      </tr>
+    `;
+  }).join("");
+
+  const fishHeaders = Array.from({ length: maxFish }, (_, i) =>
+    `<th class="fish-th">🐟${i + 1}</th>`
+  ).join("");
+
   weighTableEl.innerHTML = `
     <div class="table-wrap weigh-wrap">
       <table class="table table-sm live-weigh-table">
@@ -443,60 +490,14 @@ if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список 
           <tr>
             <th class="sticky-col">Зона</th>
             <th class="sticky-col-2">Команда</th>
-            <th>🐟</th>
+            ${fishHeaders}
           </tr>
         </thead>
-        <tbody>
-          <tr><td colspan="3">Очікую список команд…</td></tr>
-        </tbody>
+        <tbody>${bodyHtml}</tbody>
       </table>
     </div>
   `;
-  return;
 }
-
-    // рядки в правильному порядку
-const rows = regRows.map((r) => {
-  const weights = weighByTeam.get(r.teamId) || [];
-  const nums = weights.map(fmtNum).filter(Boolean);
-  return { zoneLabel: r.zoneLabel, teamName: r.teamName, nums };
-});
-
-// скільки максимум риб є серед команд у цьому W
-const maxFish = Math.max(1, ...rows.map(r => r.nums.length));
-
-    const bodyHtml = rows.map((r) => {
-  const tds = [];
-  for (let i = 0; i < maxFish; i++) {
-    const v = r.nums[i];
-    tds.push(`<td class="fish-td">${v ? v : "—"}</td>`);
-  }
-
-  return `
-    <tr>
-      <td>${fmt(r.zoneLabel)}</td>
-      <td class="team-col">${fmt(r.teamName)}</td>
-      ${tds.join("")}
-    </tr>
-  `;
-}).join("");
-
-    const fishHeaders = Array.from({ length: maxFish }, (_, i) =>
-  `<th class="fish-th">🐟${i + 1}</th>`
-).join("");
-
-weighTableEl.innerHTML = `
-  <thead>
-    <tr>
-      <th>Зона</th>
-      <th>Команда</th>
-      ${fishHeaders}
-    </tr>
-  </thead>
-  <tbody>${bodyHtml}</tbody>
-`;
-  }
-  }
   // ======== STAGE RESULTS SUB (як було) ========
   let unsubSettings = null;
   let unsubStage    = null;

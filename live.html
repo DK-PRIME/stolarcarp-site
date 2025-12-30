@@ -151,7 +151,7 @@
     text-align:center;
   }
 
-  /* Команда тримаємо, але теж без зайвого повітря */
+  /* Команда */
   .live-zone .table-sm th:nth-child(2),
   .live-zone .table-sm td:nth-child(2){
     max-width:110px;
@@ -163,113 +163,63 @@
   }
 
   /* ============================
-   BigFish Total – компактна версія
-   ============================ */
-
-.bf-wrap{
-  margin-top: 12px;
-  padding: 14px 16px;
-  border-radius: 14px;
-}
-
-.bf-wrap h2{
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.25;
-  margin: 0;
-}
-
-/* Лічильник "Учасників" */
-.bf-wrap .pill{
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border-radius: 999px;
-  border: 1px solid rgba(148,163,184,.25);
-  background: rgba(2,6,23,.35);
-  color: #cbd5e1;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-/* Таблиця BigFish – компактна, як зони та зважування */
-.bf-wrap .table-sm{
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.bf-wrap .table-sm th,
-.bf-wrap .table-sm td{
-  padding: 3px 5px;
-  white-space: nowrap;
-}
-
-/* Команда трохи ширша, але компактна */
-.bf-wrap .table-sm th:nth-child(1),
-.bf-wrap .table-sm td:nth-child(1){
-  max-width: 130px;
-  white-space: normal;
-}
-
-/* BIG 1, BIG 2, MAX BIG – по центру */
-.bf-wrap .table-sm th:nth-child(n+2),
-.bf-wrap .table-sm td:nth-child(n+2){
-  text-align: center;
-}
-
-/* Виділення MAX */
-.bigfish-row--max{
-  background: rgba(250,204,21,0.08);
-}
-
-  /* ===== Зважування по етапу ===== */
-  .weigh-toggle{
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
-    margin-bottom:10px;
-  }
-  .weigh-toggle .btn{
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:13px;
+     BigFish Total – компактна версія
+     ============================ */
+  .bf-wrap{
+    margin-top: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
   }
 
-  /* Таблиця зважувань — ще компактніше */
-  #weighTable{
-    font-size:11px;
-    border-collapse:collapse;
-  }
-  #weighTable th,
-  #weighTable td{
-    padding:3px 4px;
-    white-space:nowrap;
+  .bf-wrap h2{
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 0;
   }
 
-  /* Зона (A1/B5/С2) */
-  #weighTable th:nth-child(1),
-  #weighTable td:nth-child(1){
-    width:18px;
-    text-align:center;
+  .bf-wrap .pill{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    border: 1px solid rgba(148,163,184,.25);
+    background: rgba(2,6,23,.35);
+    color: #cbd5e1;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
-  /* Команда */
-  #weighTable th:nth-child(2),
-  #weighTable td:nth-child(2){
-    max-width:110px;
+  .bf-wrap .table-sm{
+    font-size: 11px;
+    line-height: 1.2;
   }
 
-  /* Рибки – всі цифри по центру */
-  #weighTable th:nth-child(n+3),
-  #weighTable td:nth-child(n+3){
-    text-align:center;
+  .bf-wrap .table-sm th,
+  .bf-wrap .table-sm td{
+    padding: 3px 5px;
+    white-space: nowrap;
   }
 
-  /* ===== Щоб сторінка НЕ скролилась горизонтально ===== */
-  body{
-    overflow-x:hidden;
+  .bf-wrap .table-sm th:nth-child(1),
+  .bf-wrap .table-sm td:nth-child(1){
+    max-width: 130px;
+    white-space: normal;
   }
+
+  .bf-wrap .table-sm th:nth-child(n+2),
+  .bf-wrap .table-sm td:nth-child(n+2){
+    text-align: center;
+  }
+
+  .bigfish-row--max{
+    background: rgba(250,204,21,0.08);
+  }
+
+  /* FIX: ховання/показ BigFish (бо ти перемикаєш класом is-open) */
+  #bigFishWrap{ display:none; }
+  #bigFishWrap.is-open{ display:block; }
   </style>
 </head>
 
@@ -283,18 +233,18 @@
     </a>
 
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      <a href="index.html" class="nav__link">Головна</a>
+      <a href="rules.html" class="nav__link">Регламент</a>
+      <a href="register.html" class="nav__link">Реєстрація</a>
+      <a href="live.html" class="nav__link nav__link--active">Live</a>
+      <a href="rating.html" class="nav__link">Рейтинг</a>
+      <a href="lakes.html" class="nav__link">Водойми</a>
+      <a href="sponsors.html" class="nav__link">Спонсори</a>
+      <a href="events/index.html" class="nav__link">Архів</a>
+      <a href="cabinet.html" class="nav__link" id="cabinetLink">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger" type="button"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -318,14 +268,13 @@
         <span class="pill" id="liveUpdatedAt">Оновлено: —</span>
       </div>
 
-      <!-- BigFish Total під кнопкою -->
       <div class="card bf-wrap" id="bigFishWrap">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
           <h2 style="margin:0;">BigFish — Total</h2>
           <span class="pill" id="bfCount">Учасників: —</span>
         </div>
 
-        <div class="table-wrap" style="overflow-x:auto;margin-top:10px;">
+        <div class="table-wrap" style="margin-top:10px;">
           <table class="table table-sm" id="bigFishTable">
             <thead>
               <tr>
@@ -338,7 +287,6 @@
             <tbody></tbody>
           </table>
         </div>
-
       </div>
 
       <p class="lead" style="max-width:720px;margin-top:10px;">
@@ -351,7 +299,6 @@
 
     <div id="liveContent" class="live-layout" style="display:none;">
 
-      <!-- LEFT SIDE -->
       <div class="live-left">
         <div class="card" style="margin-bottom:16px;">
           <h2 style="margin-top:0;">Зони A / B / C</h2>
@@ -365,17 +312,16 @@
           <h2 style="margin-top:0;">Таблиця зважувань</h2>
 
           <div class="bf-toggle" style="margin-top:18px;margin-bottom:12px">
-  <button class="btn btn--accent" id="wBtn1">W1</button>
-  <button class="btn btn--ghost"  id="wBtn2">W2</button>
-  <button class="btn btn--ghost"  id="wBtn3">W3</button>
-  <button class="btn btn--ghost"  id="wBtn4">W4</button>
-  <span id="weighInfo" class="form__hint" style="margin-left:auto;">перегляд зважування</span>
-    </div>
+            <button class="btn btn--accent" id="wBtn1" type="button">W1</button>
+            <button class="btn btn--ghost"  id="wBtn2" type="button">W2</button>
+            <button class="btn btn--ghost"  id="wBtn3" type="button">W3</button>
+            <button class="btn btn--ghost"  id="wBtn4" type="button">W4</button>
+            <span id="weighInfo" class="form__hint" style="margin-left:auto;">перегляд зважування</span>
+          </div>
 
-
-          
-          <div class="table-wrap" style="overflow-x:auto;">
-            <<table class="table table-sm" id="totalTable">
+          <div class="table-wrap">
+            <!-- FIX: було "<<table" -->
+            <table class="table table-sm" id="totalTable">
               <thead>
                 <tr>
                   <th>Зона</th>

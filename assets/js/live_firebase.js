@@ -602,10 +602,17 @@ if (hasStageZones) {
           const docId = stageDocIdFromApp(app);
           startStageSub(docId);
 
-          // старт таблиці зважувань (з колекції weighings)
-          stopWeighSubs();
-          unsubRegs = null;
-          setActiveWeigh(currentWeighNo);
+          // старт підписки на stageResults (якщо буде використано)
+const docId = stageDocIdFromApp(app);
+startStageSub(docId);
+
+// нижня таблиця зважувань (W1–W4, список риб)
+stopWeighSubs();
+unsubRegs = null;
+setActiveWeigh(currentWeighNo);
+
+// верхня таблиця ЗОНИ A / B / C (авто з weighings)
+startAllWeighingsSub();
 
         } catch (e) {
           console.error("settings/app error:", e);

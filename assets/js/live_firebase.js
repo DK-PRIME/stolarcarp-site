@@ -40,9 +40,9 @@
   };
 
   function fmtNum(x) {
-    const n = Number(x);
-    if (!isFinite(n)) return null;
-    return n.toFixed(3);
+  const n = Number(x);
+  if (!isFinite(n)) return null;
+  return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
   function showError(text) {

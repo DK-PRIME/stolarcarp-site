@@ -24,6 +24,10 @@ html,body{
   color:var(--text);
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   line-height:1.55;
+
+  /* FIX: сторінка не має розпиратись по X */
+  max-width:100%;
+  overflow-x:hidden;
 }
 a{ color:var(--accent); text-decoration:none; }
 img{ max-width:100%; height:auto; display:block; }
@@ -242,6 +246,13 @@ img{ max-width:100%; height:auto; display:block; }
 }
 .table th{ background:#15151e; }
 .table tr:nth-child(even){ background:#0f0f16; }
+
+/* FIX: скрол таблиць тільки всередині обгортки */
+.table-wrap{
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
 
 /* === GRID === */
 .grid{ display:grid; gap:16px; }
@@ -477,6 +488,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
   .stage-title{ font-size: .94rem; }
   .stage-dates{ font-size: .84rem; }
 }
+
 /* ===== REGISTER: stage pick visual selection ===== */
 
 .stage-card{
@@ -535,104 +547,55 @@ body.cabinet-page .avatar-upload input[type="file"]{
   cursor:not-allowed;
   opacity:.65;
 }
+
 /* =========================================================
-   LIVE: Таблиця зважувань (#totalTable) — компактно по контенту
-   НЕ ламає інші таблиці (.table)
+   LIVE: FIX overflow + таблиця зважувань (#totalTable)
+   (прибрано зайве/дублі, щоб НЕ вилазило за екран)
    ========================================================= */
 
-.table-wrap{ overflow-x:auto; }
-
-/* Головне: ширина по вмісту, а не 100% */
 #totalTable{
-  width: max-content;     /* таблиця займає рівно стільки, скільки треба */
-  max-width: 100%;
-  table-layout: auto;
-  border-collapse: collapse;
+  width:100%;
+  max-width:100%;
+  table-layout:auto;
+  border-collapse:collapse;
 }
 
-/* Клітинки компактні */
 #totalTable th,
 #totalTable td{
-  border: 1px solid #262636;
-  padding: 4px 6px;
-  white-space: nowrap;
-  vertical-align: middle;
+  border:1px solid #262636;
+  padding:4px 6px;
+  white-space:nowrap;
+  vertical-align:middle;
 }
 
-/* Фон як у твоїй .table, щоб стиль не "зник" */
 #totalTable th{ background:#15151e; }
 #totalTable tr:nth-child(even){ background:#0f0f16; }
 
-/* Колонка "Зона" — вузька */
 #totalTable th:nth-child(1),
 #totalTable td:nth-child(1){
-  width: 32px;
-  text-align: center;
-  padding-left: 2px;
-  padding-right: 2px;
+  width:32px;
+  text-align:center;
+  padding-left:2px;
+  padding-right:2px;
 }
 
-/* Колонка "Команда" — не розтягуємо, обрізаємо довгі назви */
 #totalTable th:nth-child(2),
 #totalTable td:nth-child(2){
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width:140px;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
-/* Усі "рибки/ваги" — по центру */
 #totalTable th:nth-child(n+3),
 #totalTable td:nth-child(n+3){
-  text-align: center;
+  text-align:center;
 }
-.fish-th, .fish-td{
+
+#totalTable .fish-th,
+#totalTable .fish-td{
   text-align:center;
   white-space:nowrap;
-  font-size:9px;   /* <-- ОЦЕ відповідає за розмір цифр */
+  font-size:11px;
   min-width:28px;
-}
-/* --- FIX mobile overflow (бургер тікає через горизонтальний розпір) --- */
-html, body{
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* усі таблиці тримаємо в межах екрану */
-.table-wrap{
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* таблиця не повинна “розпирати” сторінку */
-.table{
-  width: 100%;
-  border-collapse: collapse;
-}
-
-/* клітинка з рибами: скрол тільки тут, а не по всій сторінці */
-td.fish-cell{
-  padding: 8px 10px;
-}
-
-.fish-cell{
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  max-width: 100%;
-  -webkit-overflow-scrolling: touch;
-}
-
-.fish-tag{
-  flex: 0 0 auto;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 12px;
-  line-height: 1;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }

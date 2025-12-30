@@ -202,8 +202,11 @@
   let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
   let weighByTeam = new Map(); // teamId -> weights[]
 
-  let currentWeighNo  = 1;
-  let currentWeighKey = "W1";
+  let unsubRegs  = null;
+let unsubWeigh = null;
+
+  let allWeighDocs = [];     // ВСІ документи weighings W1..W4
+let unsubAllWeigh = null;  // підписка на weighings (всі W)
 
   function stopWeighSubs(){
     if (unsubRegs) { unsubRegs(); unsubRegs = null; }

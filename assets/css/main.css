@@ -599,3 +599,31 @@ body.cabinet-page .avatar-upload input[type="file"]{
   min-width:28px;
   font-variant-numeric: tabular-nums;
 }
+/* =========================
+   LIVE PAGE BACKGROUND (fixed)
+   ========================= */
+body.live-page{
+  background:
+    radial-gradient(1200px 700px at 20% 10%, rgba(255,204,0,.10), transparent 55%),
+    radial-gradient(900px 600px at 85% 20%, rgba(215,38,56,.10), transparent 60%),
+    linear-gradient(180deg, #07070b 0%, #0b0b0f 55%, #07070b 100%),
+    url("../dk-dva-kuma-banner.jpg") center/cover no-repeat fixed;
+  background-color: var(--bg);
+}
+
+/* щоб фон не “вилазив” і не давав горизонтальний скрол */
+body.live-page{
+  overflow-x: hidden;
+}
+body.live-page .main,
+body.live-page .section,
+body.live-page .container{
+  max-width: 100%;
+}
+
+/* на всякий — таблиці і обгортки не розпирають сторінку */
+body.live-page .table-wrap{
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

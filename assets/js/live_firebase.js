@@ -604,10 +604,6 @@ if (hasStageZones) {
           const docId = stageDocIdFromApp(app);
           startStageSub(docId);
 
-          // старт підписки на stageResults (якщо буде використано)
-const docId = stageDocIdFromApp(app);
-startStageSub(docId);
-
 // нижня таблиця зважувань (W1–W4, список ...)
 stopWeighSubs();
 setActiveWeigh(currentWeighNo);

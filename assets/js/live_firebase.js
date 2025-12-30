@@ -320,9 +320,6 @@ function startAllWeighingsSub() {
   let activeCompId  = "";
   let activeStageId = "";
 
-  let unsubRegs  = null;
-  let unsubWeigh = null;
-
   let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
   let weighByTeam = new Map(); // teamId -> weights[]
 

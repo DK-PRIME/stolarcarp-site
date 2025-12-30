@@ -325,6 +325,82 @@
   width: 100% !important;
   table-layout: fixed !important;
 }
+
+    /* ===============================
+   LIVE ZONES — КОМАНДА 40–50px
+   =============================== */
+
+.live-zone table{
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+/* ЗОНА */
+.live-zone th:nth-child(1),
+.live-zone td:nth-child(1){
+  width: 36px !important;
+  text-align: center;
+}
+
+/* 🔥 КОМАНДА — СТИСНУТА */
+.live-zone th:nth-child(2),
+.live-zone td:nth-child(2){
+  width: 48px !important;       /* ← ОЦЕ ГОЛОВНЕ */
+  max-width: 48px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  text-align: left;
+}
+
+/* W1–W4 */
+.live-zone th:nth-child(3),
+.live-zone td:nth-child(3),
+.live-zone th:nth-child(4),
+.live-zone td:nth-child(4),
+.live-zone th:nth-child(5),
+.live-zone td:nth-child(5),
+.live-zone th:nth-child(6),
+.live-zone td:nth-child(6){
+  width: 52px !important;
+  text-align: center;
+}
+
+/* РАЗОМ */
+.live-zone th:nth-child(7),
+.live-zone td:nth-child(7){
+  width: 40px !important;
+  text-align: center;
+}
+
+/* BIG */
+.live-zone th:nth-child(8),
+.live-zone td:nth-child(8){
+  width: 44px !important;
+  text-align: center;
+}
+
+/* ВАГА */
+.live-zone th:nth-child(9),
+.live-zone td:nth-child(9){
+  width: 58px !important;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* МІСЦЕ */
+.live-zone th:nth-child(10),
+.live-zone td:nth-child(10){
+  width: 38px !important;
+  text-align: center;
+}
+
+/* 🔻 АВТОЗМЕНШЕННЯ ШРИФТУ */
+.live-zone th,
+.live-zone td{
+  font-size: clamp(9px, 2.4vw, 11px) !important;
+  line-height: 1.15;
+}
     
   </style>
 </head>

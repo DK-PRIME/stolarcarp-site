@@ -585,3 +585,9 @@ body.cabinet-page .avatar-upload input[type="file"]{
 #totalTable td:nth-child(n+3){
   text-align: center;
 }
+.fish-th, .fish-td{
+  text-align:center;
+  white-space:nowrap;
+  font-size:11px;   /* <-- ОЦЕ відповідає за розмір цифр */
+  min-width:54px;
+}

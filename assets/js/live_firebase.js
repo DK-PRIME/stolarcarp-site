@@ -416,9 +416,20 @@
           if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
 
           const zonesData = data.zones || { A: [], B: [], C: [] };
-          const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
+const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
 
-          renderZones(zonesData, teamsRaw);
+// якщо суддя колись заповнить zones вручну — показуємо їх
+const hasStageZones =
+  (zonesData.A && zonesData.A.length) ||
+  (zonesData.B && zonesData.B.length) ||
+  (zonesData.C && zonesData.C.length);
+
+// якщо нема ручних зон — рахуємо автоматично з weighings
+if (hasStageZones) {
+  renderZones(zonesData, teamsRaw);
+} else {
+  renderZones(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
+}
 
           showContent();
         } catch (e) {

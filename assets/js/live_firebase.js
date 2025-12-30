@@ -8,7 +8,7 @@
 
   const stageEl      = document.getElementById("liveStageName");
   const zonesWrap    = document.getElementById("zonesContainer");
-  const weighTableEl = document.getElementById("weighTable");
+  const weighTableEl = document.getElementById("totalTable");
   const weighInfoEl  = document.getElementById("weighInfo");
   const updatedEl    = document.getElementById("liveUpdatedAt");
 

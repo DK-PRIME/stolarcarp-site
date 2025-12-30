@@ -21,6 +21,96 @@
   const wBtn3 = document.getElementById("wBtn3");
   const wBtn4 = document.getElementById("wBtn4");
 
+  // ===== LIVE WEIGH TABLE (fish list per W button) =====
+let activeCompId = "";
+let activeStageId = "";
+let unsubRegs = null;
+let unsubWeigh = null;
+
+let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
+let weighByTeam = new Map(); // teamId -> weights[]
+
+function stopWeighSubs(){
+  if (unsubRegs) { unsubRegs(); unsubRegs = null; }
+  if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+}
+
+function parseZoneKey(drawKey, drawZone, drawSector){
+  const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
+  const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
+  const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
+  const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
+  const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
+  return { label, sortKey };
+}
+
+function fmtNum(x){
+  const n = Number(x);
+  if (!isFinite(n)) return "—";
+  return n.toFixed(3);
+}
+
+function setWeighButtons(activeKey){
+  const map = { W1:wBtn1, W2:wBtn2, W3:wBtn3, W4:wBtn4 };
+  Object.entries(map).forEach(([k,btn])=>{
+    if(!btn) return;
+    btn.classList.toggle("btn--accent", k===activeKey);
+    btn.classList.toggle("btn--ghost",  k!==activeKey);
+  });
+  if (weighInfoEl) weighInfoEl.textContent = `${activeKey} — список риб`;
+}
+
+function startWeighingsFor(no){
+  if (!window.scDb) return;
+  if (!activeCompId || !activeStageId) return;
+
+  // registrations: порядок секторів
+  if (!unsubRegs) {
+    unsubRegs = window.scDb
+      .collection("registrations")
+      .where("competitionId", "==", activeCompId)
+      .where("stageId", "==", activeStageId)
+      .where("status", "==", "confirmed")
+      .onSnapshot((qs) => {
+        const rows = [];
+        qs.forEach((doc) => {
+          const d = doc.data() || {};
+          const teamId = d.teamId || "";
+          const teamName = d.teamName || d.team || "—";
+          const drawKey = d.drawKey || "";
+          const drawZone = d.drawZone || d.zone || "";
+          const drawSector = d.drawSector || d.sector || "";
+          const z = parseZoneKey(drawKey, drawZone, drawSector);
+          rows.push({ zoneLabel: z.label, sortKey: z.sortKey, teamId, teamName });
+        });
+        rows.sort((a,b)=>a.sortKey-b.sortKey);
+        regRows = rows;
+        renderWeighTable();
+      });
+  }
+
+  // weighings: конкретний W
+  if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+  weighByTeam = new Map();
+
+  unsubWeigh = window.scDb
+    .collection("weighings")
+    .where("compId", "==", activeCompId)
+    .where("stageId", "==", activeStageId)
+    .where("weighNo", "==", no)
+    .onSnapshot((qs) => {
+      const map = new Map();
+      qs.forEach((doc) => {
+        const d = doc.data() || {};
+        const teamId = d.teamId || "";
+        const weights = Array.isArray(d.weights) ? d.weights : [];
+        if (teamId) map.set(teamId, weights);
+      });
+      weighByTeam = map;
+      renderWeighTable();
+    });
+}
+
   if (!db) {
     if (errorEl) {
       errorEl.style.display = "block";

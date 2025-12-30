@@ -435,19 +435,25 @@ if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список 
     // якщо ще не підтягнуло порядок секторів
     if (!regRows.length) {
       weighTableEl.innerHTML = `
+    if (!regRows.length) {
+  weighTableEl.innerHTML = `
+    <div class="table-wrap weigh-wrap">
+      <table class="table table-sm live-weigh-table">
         <thead>
           <tr>
-            <th>Зона</th>
-            <th>Команда</th>
+            <th class="sticky-col">Зона</th>
+            <th class="sticky-col-2">Команда</th>
             <th>🐟</th>
           </tr>
         </thead>
         <tbody>
           <tr><td colspan="3">Очікую список команд…</td></tr>
         </tbody>
-      `;
-      return;
-    }
+      </table>
+    </div>
+  `;
+  return;
+}
 
     // рядки в правильному порядку
 const rows = regRows.map((r) => {

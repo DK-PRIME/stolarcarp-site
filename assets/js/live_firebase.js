@@ -365,10 +365,11 @@ let unsubAllWeigh = null;  // підписка на weighings (всі W)
   }
 
   function setActiveWeigh(no){
-    currentWeighNo = no;
-    currentWeighKey = `W${no}`;
-    setWeighButtons(currentWeighKey);
-    startWeighingsFor(no);
+  const n = Number(no);
+  currentWeighNo  = (n >= 1 && n <= 4) ? n : 1;
+  currentWeighKey = `W${currentWeighNo}`;
+  setWeighButtons(currentWeighKey);
+  startWeighingsFor(currentWeighNo);
   }
 
   function startWeighingsFor(no){

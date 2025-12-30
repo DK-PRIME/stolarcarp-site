@@ -461,7 +461,7 @@ if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список 
       <tr>
         <td>${fmt(r.zoneLabel)}</td>
         <td class="team-col">${fmt(r.teamName)}</td>
-        <td style="white-space:nowrap; font-size:7px;">${r.fishCell}</td>
+        <td style="white-space:nowrap; font-size:9px;">${r.fishCell}</td>
       </tr>
     `).join("");
 

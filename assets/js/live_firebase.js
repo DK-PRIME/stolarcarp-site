@@ -186,11 +186,19 @@ function startAllWeighingsSub() {
 
   // ======== ZONES (as було) ========
   function fmtW(w) {
-    if (!w) return "—";
-    const c  = w.count ?? w.c ?? w.qty ?? "";
-    const kg = w.weight ?? w.kg ?? w.w ?? "";
-    if (c === "" && kg === "") return "—";
-    return `${fmt(c)} / ${fmt(kg)}`;
+  if (w === null || w === undefined || w === "") return "—";
+
+  // якщо вже готовий рядок: "5 / 23.9", "0 / 0", "-"
+  if (typeof w === "string") return w;
+
+  // якщо число (наприклад total = 5)
+  if (typeof w === "number") return String(w);
+
+  // старий формат обʼєкта {count, weight}
+  const c  = w.count ?? w.c ?? w.qty ?? "";
+  const kg = w.weight ?? w.kg ?? w.w ?? "";
+  if (c === "" && kg === "") return "—";
+  return `${fmt(c)} / ${fmt(kg)}`;
   }
 
   function normZoneItem(x) {

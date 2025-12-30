@@ -60,6 +60,130 @@
     if (contentEl) contentEl.style.display = "grid";
   }
 
+  // ======== AUTO ZONES (from weighings) ========
+
+function kgShort(x) {
+  const n = Number(x || 0);
+  if (!isFinite(n)) return "0";
+  return n.toFixed(2).replace(/\.?0+$/, ""); // 23.900 -> 23.9 ; 31.560 -> 31.56
+}
+
+function wCell(hasDoc, weightsArr) {
+  // якщо зважування ще не відбулося — "-"
+  if (!hasDoc) return "-";
+
+  const arr = Array.isArray(weightsArr) ? weightsArr : [];
+  const cnt = arr.length;
+  const sum = arr.reduce((a, b) => a + Number(b || 0), 0);
+
+  // якщо документ є, але риби нема — 0/0
+  if (cnt === 0) return "0 / 0";
+  return `${cnt} / ${kgShort(sum)}`;
+}
+
+function buildZonesAuto(regRows, weighDocs) {
+  const zones = { A: [], B: [], C: [] };
+
+  // teamId -> { has:{1..4}, w:{1..4} }
+  const byTeam = new Map();
+  (weighDocs || []).forEach((d) => {
+    const teamId = d.teamId || "";
+    if (!teamId) return;
+
+    const no = Number(d.weighNo);
+    if (!(no >= 1 && no <= 4)) return;
+
+    if (!byTeam.has(teamId)) {
+      byTeam.set(teamId, {
+        has: { 1: false, 2: false, 3: false, 4: false },
+        w: { 1: [], 2: [], 3: [], 4: [] }
+      });
+    }
+    const t = byTeam.get(teamId);
+    t.has[no] = true;
+    t.w[no] = Array.isArray(d.weights) ? d.weights : [];
+  });
+
+  // будуємо рядки по порядку секторів з registrations
+  (regRows || []).forEach((r) => {
+    const zoneLetter = (r.zoneLabel || "")[0]?.toUpperCase();
+    if (!["A", "B", "C"].includes(zoneLetter)) return;
+
+    const t = byTeam.get(r.teamId) || {
+      has: { 1: false, 2: false, 3: false, 4: false },
+      w: { 1: [], 2: [], 3: [], 4: [] }
+    };
+
+    let totalCount = 0;
+    let totalWeight = 0;
+    let bigFish = 0;
+
+    [1, 2, 3, 4].forEach((n) => {
+      if (!t.has[n]) return; // якщо W ще не було — не рахуємо нічого
+
+      const arr = t.w[n] || [];
+      totalCount += arr.length;
+
+      const sum = arr.reduce((a, b) => a + Number(b || 0), 0);
+      totalWeight += sum;
+
+      arr.forEach((x) => (bigFish = Math.max(bigFish, Number(x || 0))));
+    });
+
+    const row = {
+      zoneLabel: r.zoneLabel,
+      team: r.teamName,
+
+      w1: wCell(t.has[1], t.w[1]),
+      w2: wCell(t.has[2], t.w[2]),
+      w3: wCell(t.has[3], t.w[3]),
+      w4: wCell(t.has[4], t.w[4]),
+
+      total: totalCount,                         // Разом = тільки кількість
+      big: bigFish ? kgShort(bigFish) : "—",      // BIG
+      weight: totalWeight ? kgShort(totalWeight) : "—", // Вага
+
+      _tw: totalWeight,
+      _bf: bigFish,
+      _tc: totalCount,
+    };
+
+    zones[zoneLetter].push(row);
+  });
+
+  // місця в зоні: вага -> big -> кількість
+  ["A", "B", "C"].forEach((z) => {
+    zones[z].sort((a, b) => {
+      if (b._tw !== a._tw) return b._tw - a._tw;
+      if (b._bf !== a._bf) return b._bf - a._bf;
+      return b._tc - a._tc;
+    });
+    zones[z].forEach((r, i) => (r.place = i + 1));
+  });
+
+  return zones;
+}
+
+function startAllWeighingsSub() {
+  if (!window.scDb) return;
+  if (!activeCompId || !activeStageId) return;
+
+  if (unsubAllWeigh) unsubAllWeigh();
+
+  unsubAllWeigh = window.scDb
+    .collection("weighings")
+    .where("compId", "==", activeCompId)
+    .where("stageId", "==", activeStageId)
+    .onSnapshot((qs) => {
+      const arr = [];
+      qs.forEach((doc) => arr.push(doc.data() || {}));
+      allWeighDocs = arr;
+
+      // якщо stageResults.zones пусті — оновлюємо зони автоматом
+      renderZones(buildZonesAuto(regRows, allWeighDocs), []);
+    });
+}
+
   // ======== ZONES (as було) ========
   function fmtW(w) {
     if (!w) return "—";

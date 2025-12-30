@@ -274,6 +274,122 @@
 .live-page .table-sm td:nth-child(2){
   white-space: normal;
 }
+    /* === ZONES: щоб вага/цифри не зникали === */
+
+/* таблиця зон: хай стискає шрифт, але цифри показує */
+.live-zone table{
+  width:100% !important;
+  table-layout: fixed !important;
+}
+
+/* всім клітинкам зон — компактно */
+.live-zone th,
+.live-zone td{
+  padding: 3px 4px !important;
+  font-size: clamp(9px, 2.55vw, 11px) !important;
+  line-height: 1.15 !important;
+}
+
+/* 1) "Зона" */
+.live-zone th:nth-child(1),
+.live-zone td:nth-child(1){
+  width: 40px !important;
+  text-align:center !important;
+}
+
+/* 2) "Команда" — може переноситись */
+.live-zone th:nth-child(2),
+.live-zone td:nth-child(2){
+  width: 92px !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+}
+
+/* 3..6 W1..W4 */
+.live-zone th:nth-child(3),
+.live-zone td:nth-child(3),
+.live-zone th:nth-child(4),
+.live-zone td:nth-child(4),
+.live-zone th:nth-child(5),
+.live-zone td:nth-child(5),
+.live-zone th:nth-child(6),
+.live-zone td:nth-child(6){
+  width: 52px !important;
+  text-align:center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* 7 Разом */
+.live-zone th:nth-child(7),
+.live-zone td:nth-child(7){
+  width: 44px !important;
+  text-align:center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* 8 BIG */
+.live-zone th:nth-child(8),
+.live-zone td:nth-child(8){
+  width: 48px !important;
+  text-align:center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* 9 Вага — головне! */
+.live-zone th:nth-child(9),
+.live-zone td:nth-child(9){
+  width: 60px !important;
+  text-align:center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 10 Місце */
+.live-zone th:nth-child(10),
+.live-zone td:nth-child(10){
+  width: 44px !important;
+  text-align:center !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+    /* === LIVE: менше рамок, більше місця === */
+
+/* контейнер ширший на мобілці */
+@media (max-width: 980px){
+  .container{ width: min(1100px, 96%) !important; }
+}
+
+/* card менш "товста" */
+.card{
+  padding: 14px !important;
+  border-color: rgba(255,255,255,.08) !important;
+}
+
+/* зони: ще компактніше, без зайвої товстої рамки */
+.live-zone.card{
+  padding: 10px !important;
+  border-color: rgba(255,255,255,.06) !important;
+}
+
+/* таблиці: тонша сітка */
+.table th, .table td{
+  border-color: rgba(255,255,255,.08) !important;
+}
+.table th{
+  background: rgba(255,255,255,.04) !important;
+}
+.table tr:nth-child(even){
+  background: rgba(255,255,255,.02) !important;
+}
     
   </style>
 </head>

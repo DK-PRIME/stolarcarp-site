@@ -405,11 +405,10 @@ let unsubAllWeigh = null;  // підписка на weighings (всі W)
     }
 
     // weighings: конкретний W
-    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
-    weighByTeam = new Map();
+if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+weighByTeam = new Map();
 
-    unsubWeigh = db
-    unsubWeigh = db
+unsubWeigh = db
   .collection("weighings")
   .where("compId", "==", activeCompId)
   .where("stageId", "==", activeStageId)
@@ -428,8 +427,7 @@ let unsubAllWeigh = null;  // підписка на weighings (всі W)
     console.error("weighings snapshot err:", err);
   });
 
-    if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
-  }
+if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
 
   function renderWeighTable() {
     if (!weighTableEl) return;

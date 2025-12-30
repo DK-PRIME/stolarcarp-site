@@ -535,3 +535,53 @@ body.cabinet-page .avatar-upload input[type="file"]{
   cursor:not-allowed;
   opacity:.65;
 }
+/* =========================================================
+   LIVE: Таблиця зважувань (#totalTable) — компактно по контенту
+   НЕ ламає інші таблиці (.table)
+   ========================================================= */
+
+.table-wrap{ overflow-x:auto; }
+
+/* Головне: ширина по вмісту, а не 100% */
+#totalTable{
+  width: max-content;     /* таблиця займає рівно стільки, скільки треба */
+  max-width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+/* Клітинки компактні */
+#totalTable th,
+#totalTable td{
+  border: 1px solid #262636;
+  padding: 4px 6px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Фон як у твоїй .table, щоб стиль не "зник" */
+#totalTable th{ background:#15151e; }
+#totalTable tr:nth-child(even){ background:#0f0f16; }
+
+/* Колонка "Зона" — вузька */
+#totalTable th:nth-child(1),
+#totalTable td:nth-child(1){
+  width: 32px;
+  text-align: center;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+/* Колонка "Команда" — не розтягуємо, обрізаємо довгі назви */
+#totalTable th:nth-child(2),
+#totalTable td:nth-child(2){
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Усі "рибки/ваги" — по центру */
+#totalTable th:nth-child(n+3),
+#totalTable td:nth-child(n+3){
+  text-align: center;
+}

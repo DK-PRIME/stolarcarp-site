@@ -330,8 +330,9 @@ let unsubWeigh = null;
 let unsubAllWeigh = null;  // підписка на weighings (всі W)
 
   function stopWeighSubs(){
-    if (unsubRegs) { unsubRegs(); unsubRegs = null; }
-    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+  if (unsubRegs) { unsubRegs(); unsubRegs = null; }
+  if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+  if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
   }
 
   function parseZoneKey(drawKey, drawZone, drawSector){

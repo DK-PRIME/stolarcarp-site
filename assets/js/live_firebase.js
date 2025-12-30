@@ -409,23 +409,24 @@ let unsubAllWeigh = null;  // підписка на weighings (всі W)
     weighByTeam = new Map();
 
     unsubWeigh = db
-      .collection("weighings")
-      .where("compId", "==", activeCompId)
-      .where("stageId", "==", activeStageId)
-      .where("weighNo", "==", no)
-      .onSnapshot((qs) => {
-        const map = new Map();
-        qs.forEach((doc) => {
-          const d = doc.data() || {};
-          const teamId = d.teamId || "";
-          const weights = Array.isArray(d.weights) ? d.weights : [];
-          if (teamId) map.set(teamId, weights);
-        });
-        weighByTeam = map;
-        renderWeighTable();
-      }, (err) => {
-        console.error("weighings snapshot err:", err);
-      });
+    unsubWeigh = db
+  .collection("weighings")
+  .where("compId", "==", activeCompId)
+  .where("stageId", "==", activeStageId)
+  .where("weighNo", "==", Number(weighNo))
+  .onSnapshot((qs) => {
+    const map = new Map();
+    qs.forEach((doc) => {
+      const d = doc.data() || {};
+      const teamId = d.teamId || "";
+      const weights = Array.isArray(d.weights) ? d.weights : [];
+      if (teamId) map.set(teamId, weights);
+    });
+    weighByTeam = map;
+    renderWeighTable();
+  }, (err) => {
+    console.error("weighings snapshot err:", err);
+  });
 
     if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
   }

@@ -221,180 +221,77 @@
   #bigFishWrap{ display:none; }
   #bigFishWrap.is-open{ display:block; }
 
-/* ===== LIVE: FIX "вилазить вправо" (портрет) ===== */
+  /* ===== LIVE: FIX "вилазить вправо" (портрет) ===== */
+  .live-page .table-wrap{
+    width:100%;
+    max-width:100%;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+  }
 
-/* контейнер не дає внутрішнім блокам розпирати */
-.live-page .container{
-  max-width:100%;
-}
+  /* ключ: таблиця 100% і fixed */
+  .live-page table.table{
+    width:100% !important;
+    table-layout:fixed !important;
+  }
 
-/* кожен блок/карта строго в межах */
-.live-page .live-header,
-.live-page .live-layout,
-.live-page .live-left,
-.live-page .card{
-  width:100%;
-  max-width:100%;
-}
+  /* авто-зменшення шрифтів */
+  .live-page .table-sm{
+    font-size: clamp(9px, 2.6vw, 11.5px);
+    line-height:1.15;
+  }
+  .live-page .table-sm th,
+  .live-page .table-sm td{
+    padding: clamp(3px, 1.1vw, 6px);
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
 
-/* якщо якийсь елемент все одно розширяє — ми його ріжемо */
-.live-page *{
-  max-width:100%;
-}
+  /* назва команди може переноситись */
+  .live-page .table-sm th:nth-child(2),
+  .live-page .table-sm td:nth-child(2){
+    white-space: normal;
+  }
 
-/* таблиці ніколи не розпирають сторінку */
-.live-page .table-wrap{
-  width:100%;
-  max-width:100%;
-  overflow-x:auto;
-  -webkit-overflow-scrolling:touch;
-}
+  /* === ZONES: щоб вага/цифри не зникали === */
+  .live-zone table{
+    width:100% !important;
+    table-layout: fixed !important;
+  }
+  .live-zone th,
+  .live-zone td{
+    padding: 3px 4px !important;
+    font-size: clamp(9px, 2.55vw, 11px) !important;
+    line-height: 1.15 !important;
+  }
+  .live-zone th:nth-child(1),
+  .live-zone td:nth-child(1){ width: 40px !important; text-align:center !important; }
+  .live-zone th:nth-child(2),
+  .live-zone td:nth-child(2){ width: 92px !important; white-space: normal !important; overflow: hidden !important; }
+  .live-zone th:nth-child(9),
+  .live-zone td:nth-child(9){
+    width: 60px !important;
+    text-align:center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-variant-numeric: tabular-nums;
+  }
 
-/* ключ: таблиця НЕ max-content, а 100% і fixed */
-.live-page table.table{
-  width:100% !important;
-  table-layout:fixed !important;
-}
-
-/* авто-зменшення шрифтів, як ти хочеш */
-.live-page .table-sm{
-  font-size: clamp(9px, 2.6vw, 11.5px);
-  line-height:1.15;
-}
-.live-page .table-sm th,
-.live-page .table-sm td{
-  padding: clamp(3px, 1.1vw, 6px);
-  white-space: nowrap;
-  overflow:hidden;
-  text-overflow: ellipsis;
-}
-
-/* назва команди може переноситись */
-.live-page .table-sm th:nth-child(2),
-.live-page .table-sm td:nth-child(2){
-  white-space: normal;
-}
-    /* === ZONES: щоб вага/цифри не зникали === */
-
-/* таблиця зон: хай стискає шрифт, але цифри показує */
-.live-zone table{
-  width:100% !important;
-  table-layout: fixed !important;
-}
-
-/* всім клітинкам зон — компактно */
-.live-zone th,
-.live-zone td{
-  padding: 3px 4px !important;
-  font-size: clamp(9px, 2.55vw, 11px) !important;
-  line-height: 1.15 !important;
-}
-
-/* 1) "Зона" */
-.live-zone th:nth-child(1),
-.live-zone td:nth-child(1){
-  width: 40px !important;
-  text-align:center !important;
-}
-
-/* 2) "Команда" — може переноситись */
-.live-zone th:nth-child(2),
-.live-zone td:nth-child(2){
-  width: 92px !important;
-  white-space: normal !important;
-  overflow: hidden !important;
-}
-
-/* 3..6 W1..W4 */
-.live-zone th:nth-child(3),
-.live-zone td:nth-child(3),
-.live-zone th:nth-child(4),
-.live-zone td:nth-child(4),
-.live-zone th:nth-child(5),
-.live-zone td:nth-child(5),
-.live-zone th:nth-child(6),
-.live-zone td:nth-child(6){
-  width: 52px !important;
-  text-align:center !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* 7 Разом */
-.live-zone th:nth-child(7),
-.live-zone td:nth-child(7){
-  width: 44px !important;
-  text-align:center !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* 8 BIG */
-.live-zone th:nth-child(8),
-.live-zone td:nth-child(8){
-  width: 48px !important;
-  text-align:center !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* 9 Вага — головне! */
-.live-zone th:nth-child(9),
-.live-zone td:nth-child(9){
-  width: 60px !important;
-  text-align:center !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 10 Місце */
-.live-zone th:nth-child(10),
-.live-zone td:nth-child(10){
-  width: 44px !important;
-  text-align:center !important;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-    /* === LIVE: менше рамок, більше місця === */
-
-/* контейнер ширший на мобілці */
-@media (max-width: 980px){
-  .container{ width: min(1100px, 96%) !important; }
-}
-
-/* card менш "товста" */
-.card{
-  padding: 14px !important;
-  border-color: rgba(255,255,255,.08) !important;
-}
-
-/* зони: ще компактніше, без зайвої товстої рамки */
-.live-zone.card{
-  padding: 10px !important;
-  border-color: rgba(255,255,255,.06) !important;
-}
-
-/* таблиці: тонша сітка */
-.table th, .table td{
-  border-color: rgba(255,255,255,.08) !important;
-}
-.table th{
-  background: rgba(255,255,255,.04) !important;
-}
-.table tr:nth-child(even){
-  background: rgba(255,255,255,.02) !important;
-}
-    
+  /* менше рамок */
+  @media (max-width: 980px){
+    .container{ width: min(1100px, 96%) !important; }
+  }
+  .card{ padding: 14px !important; border-color: rgba(255,255,255,.08) !important; }
+  .live-zone.card{ padding: 10px !important; border-color: rgba(255,255,255,.06) !important; }
+  .table th, .table td{ border-color: rgba(255,255,255,.08) !important; }
+  .table th{ background: rgba(255,255,255,.04) !important; }
+  .table tr:nth-child(even){ background: rgba(255,255,255,.02) !important; }
   </style>
 </head>
 
-<body>
+<body class="live-page">
 
 <header class="header">
   <div class="container header__row">
@@ -412,7 +309,9 @@
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
       <a href="events/index.html" class="nav__link">Архів</a>
-      <a href="cabinet.html" class="nav__link" id="cabinetLink">Мій кабінет</a>
+
+      <!-- ВАЖЛИВО: зроби посилання абсолютним, щоб ніколи не вело "криво" -->
+      <a href="/cabinet.html" class="nav__link" id="cabinetLink">Мій кабінет</a>
     </nav>
 
     <button class="burger" id="burger" type="button"><span></span><span></span><span></span></button>
@@ -469,13 +368,10 @@
     <div id="liveLoading" class="form__hint" style="margin-top:12px;">Завантаження...</div>
 
     <div id="liveContent" class="live-layout" style="display:none;">
-
       <div class="live-left">
         <div class="card" style="margin-bottom:16px;">
           <h2 style="margin-top:0;">Зони A / B / C</h2>
-
           <div class="live-zones-grid" id="zonesContainer"></div>
-
           <p class="live-note">Місця у зоні.</p>
         </div>
 
@@ -491,7 +387,6 @@
           </div>
 
           <div class="table-wrap">
-            <!-- FIX: було "<<table" -->
             <table class="table table-sm" id="totalTable">
               <thead>
                 <tr>
@@ -509,7 +404,6 @@
 
         </div>
       </div>
-
     </div>
 
   </section>
@@ -538,7 +432,13 @@
   document.getElementById("toggleBigFishBtn")?.addEventListener("click", () => {
     document.getElementById("bigFishWrap")?.classList.toggle("is-open");
   });
+
+  /* підстраховка: "Мій кабінет" завжди веде туди, куди треба */
+  (function(){
+    const a = document.getElementById("cabinetLink");
+    if (a) a.setAttribute("href", "/cabinet.html");
+  })();
 </script>
 
-<body class="live-page">
+</body>
 </html>

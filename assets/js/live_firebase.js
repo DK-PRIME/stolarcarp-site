@@ -607,9 +607,8 @@ if (hasStageZones) {
 const docId = stageDocIdFromApp(app);
 startStageSub(docId);
 
-// нижня таблиця зважувань (W1–W4, список риб)
+// нижня таблиця зважувань (W1–W4, список ...)
 stopWeighSubs();
-unsubRegs = null;
 setActiveWeigh(currentWeighNo);
 
 // верхня таблиця ЗОНИ A / B / C (авто з weighings)

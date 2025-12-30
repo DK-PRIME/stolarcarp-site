@@ -220,6 +220,61 @@
   /* FIX: ховання/показ BigFish (бо ти перемикаєш класом is-open) */
   #bigFishWrap{ display:none; }
   #bigFishWrap.is-open{ display:block; }
+
+/* ===== LIVE: FIX "вилазить вправо" (портрет) ===== */
+
+/* контейнер не дає внутрішнім блокам розпирати */
+.live-page .container{
+  max-width:100%;
+}
+
+/* кожен блок/карта строго в межах */
+.live-page .live-header,
+.live-page .live-layout,
+.live-page .live-left,
+.live-page .card{
+  width:100%;
+  max-width:100%;
+}
+
+/* якщо якийсь елемент все одно розширяє — ми його ріжемо */
+.live-page *{
+  max-width:100%;
+}
+
+/* таблиці ніколи не розпирають сторінку */
+.live-page .table-wrap{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* ключ: таблиця НЕ max-content, а 100% і fixed */
+.live-page table.table{
+  width:100% !important;
+  table-layout:fixed !important;
+}
+
+/* авто-зменшення шрифтів, як ти хочеш */
+.live-page .table-sm{
+  font-size: clamp(9px, 2.6vw, 11.5px);
+  line-height:1.15;
+}
+.live-page .table-sm th,
+.live-page .table-sm td{
+  padding: clamp(3px, 1.1vw, 6px);
+  white-space: nowrap;
+  overflow:hidden;
+  text-overflow: ellipsis;
+}
+
+/* назва команди може переноситись */
+.live-page .table-sm th:nth-child(2),
+.live-page .table-sm td:nth-child(2){
+  white-space: normal;
+}
+    
   </style>
 </head>
 

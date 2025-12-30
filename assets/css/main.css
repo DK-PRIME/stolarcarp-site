@@ -589,5 +589,5 @@ body.cabinet-page .avatar-upload input[type="file"]{
   text-align:center;
   white-space:nowrap;
   font-size:9px;   /* <-- ОЦЕ відповідає за розмір цифр */
-  min-width:54px;
+  min-width:34px;
 }

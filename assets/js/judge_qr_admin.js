@@ -1,13 +1,21 @@
 // assets/js/judge_qr_admin.js
 (function () {
+  "use strict";
+
   const out = document.getElementById("qrOut");
   if (!out) return;
+
+  const db   = window.scDb;
+  const auth = window.scAuth;
 
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
-      if (window.scDb && window.firebase) return;
-      await new Promise((r) => setTimeout(r, 100));
+      if (window.scDb && window.firebase) {
+        // якщо є auth — добре, але не блокуємо, якщо сторінка без нього
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 120));
     }
     throw new Error("Firebase not ready (scDb/firebase)");
   }
@@ -23,10 +31,12 @@
   async function getActiveCtx() {
     const snap = await window.scDb.collection("settings").doc("app").get();
     if (!snap.exists) return null;
+
     const d = snap.data() || {};
-    const compId = String(d.activeCompetitionId || "");
+    const compId  = String(d.activeCompetitionId || "");
     const stageId = String(d.activeStageId || "");
     const stageKey = compId && stageId ? `${compId}||${stageId}` : "";
+
     return { compId, stageId, stageKey };
   }
 
@@ -53,10 +63,37 @@
     // ✅ judge.html в корені сайту
     const urlObj = new URL("/judge.html", location.origin);
     urlObj.searchParams.set("token", token);
-    // зона дублюємо в URL (не обов'язково, але зручно)
-    urlObj.searchParams.set("zone", zone);
+    urlObj.searchParams.set("zone", String(zone || ""));
 
     return urlObj.toString();
+  }
+
+  function renderOk({ zone, ctx, url }) {
+    // ✅ word-break щоб нічого не вилазило на мобілці
+    out.innerHTML = `
+      <div style="margin-top:8px;">
+        <b>Зона ${zone}</b><br>
+        <div style="opacity:.85; font-size:12px; margin:4px 0 6px;">
+          compId: <code>${ctx.compId}</code><br>
+          stageId: <code>${ctx.stageId}</code>
+        </div>
+
+        <div style="padding:10px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.22); background:rgba(2,6,23,.35);">
+          <a href="${url}" target="_blank" rel="noopener"
+             style="display:block; color:#cbd5e1; text-decoration:none; overflow-wrap:anywhere; word-break:break-word;">
+            ${url}
+          </a>
+        </div>
+
+        <div style="margin-top:6px; opacity:.8; font-size:12px;">
+          Одноразовий вхід. Діє 24 год.
+        </div>
+      </div>
+    `;
+  }
+
+  function renderErr(html) {
+    out.innerHTML = `<div class="msg err">${html}</div>`;
   }
 
   async function gen(zone) {
@@ -66,27 +103,15 @@
 
       const ctx = await getActiveCtx();
       if (!ctx || !ctx.compId || !ctx.stageId) {
-        out.innerHTML =
-          `<div class="msg err">Немає activeCompetitionId / activeStageId у <b>settings/app</b>.</div>`;
+        renderErr(`Немає activeCompetitionId / activeStageId у <b>settings/app</b>.`);
         return;
       }
 
       const url = await createToken(ctx, zone);
-
-      out.innerHTML = `
-        <div style="margin-top:8px;">
-          <b>Зона ${zone}</b><br>
-          <div style="opacity:.85; font-size:12px; margin:4px 0 6px;">
-            compId: <code>${ctx.compId}</code><br>
-            stageId: <code>${ctx.stageId}</code>
-          </div>
-          <a href="${url}" target="_blank" rel="noopener">${url}</a><br>
-          <span style="opacity:.8;">Одноразовий вхід. Діє 24 год.</span>
-        </div>
-      `;
+      renderOk({ zone, ctx, url });
     } catch (e) {
       console.error(e);
-      out.innerHTML = `<div class="msg err">${String(e.message || e)}</div>`;
+      renderErr(String(e.message || e));
     }
   }
 

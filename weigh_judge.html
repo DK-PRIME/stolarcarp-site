@@ -472,7 +472,9 @@ async function loadTeamsForZone(){
 }
 
   function weighingDocId(teamId, wNo){
-    return `${seasonId}_${stageId}_${zone}_${teamId}_W${wNo}`;
+  // activeKey = compId||stageId (або settings/app.activeKey)
+  const key = `${compId}||${stageId || "main"}`;
+  return `${key}_${zone}_${teamId}_W${wNo}`;
   }
 
   async function loadWeighing(teamId, wNo){

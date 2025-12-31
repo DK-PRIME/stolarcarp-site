@@ -51,125 +51,83 @@
       color:#e5e7eb; font-size:.82rem; white-space:nowrap;
     }
 
-/* ===== Таблиця-сітка з автошириною під контент ===== */
-.tableWrap{
-  overflow:auto;
-  border-radius:12px;
-  border:1px solid rgba(148,163,184,.30);
-  background:rgba(2,6,23,.18);
-}
+    /* ===== Таблиця-сітка з автошириною під контент ===== */
+    .tableWrap{
+      overflow:auto;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.30);
+      background:rgba(2,6,23,.18);
+    }
 
-/* Важливо: width:max-content -> таблиця розширюється по контенту */
-table{
-  width:max-content;           /* авто-розширення */
-  min-width:100%;              /* але не менше контейнера */
-  border-collapse:collapse;    /* без зазорів між клітинками */
-}
+    table{
+      width:max-content;           /* авто-розширення */
+      min-width:100%;              /* але не менше контейнера */
+      border-collapse:collapse;    /* без зазорів між клітинками */
+    }
 
-th, td{
-  border:1px solid rgba(148,163,184,.22); /* перегородки */
-  padding:6px 8px;                        /* мінімальні відступи */
-  vertical-align:middle;
-  text-align:left;
-  color:#e5e7eb;
-  font-size:.92rem;
+    th, td{
+      border:1px solid rgba(148,163,184,.22); /* перегородки */
+      padding:6px 8px;                        /* мінімальні відступи */
+      vertical-align:middle;
+      text-align:left;
+      color:#e5e7eb;
+      font-size:.92rem;
 
-  white-space:nowrap;          /* весь текст в рядок */
-  overflow:visible;            /* нічого не ховаємо */
-}
+      white-space:nowrap;          /* весь текст в рядок */
+      overflow:visible;            /* нічого не ховаємо */
+    }
 
-/* Хедер липкий */
-th{
-  position:sticky;
-  top:0;
-  z-index:2;
-  background:rgba(2,6,23,.88);
-  backdrop-filter: blur(8px);
-  font-size:.78rem;
-  text-transform:uppercase;
-  letter-spacing:.10em;
-  color:#cbd5e1;
-}
+    th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:rgba(2,6,23,.88);
+      backdrop-filter: blur(8px);
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.10em;
+      color:#cbd5e1;
+    }
 
-/* Підсвітка рядка */
-tbody tr:hover td{
-  background:rgba(148,163,184,.06);
-}
+    tbody tr:hover td{
+      background:rgba(148,163,184,.06);
+    }
 
-/* ===== Вміст клітинок без “зазорів” і без капсул ===== */
-.mini{
-  width:100%;
-  margin:0;
-  padding:0;                 /* нема зазорів між клітинкою і текстом */
-  border:0;
-  outline:none;
-  background:transparent;
-  color:#e5e7eb;
-  font-size:inherit;
-  line-height:1.2;
-}
+    .mini{
+      width:100%;
+      margin:0;
+      padding:0;                 /* нема зазорів між клітинкою і текстом */
+      border:0;
+      outline:none;
+      background:transparent;
+      color:#e5e7eb;
+      font-size:inherit;
+      line-height:1.2;
+    }
 
-/* Щоб інпути не робили колонку широкою через мінімальну ширину */
-input.mini{ min-width:0; }
+    input.mini{ min-width:0; }
 
-/* Фокус — легке підсвічування, але без збільшення відступів */
-.mini:focus{
-  background:rgba(246,195,76,.10);
-  box-shadow: inset 0 0 0 2px rgba(246,195,76,.45);
-}
+    .mini:focus{
+      background:rgba(246,195,76,.10);
+      box-shadow: inset 0 0 0 2px rgba(246,195,76,.45);
+    }
 
-/* UID як моноширинний текст */
-.uidCell{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
-  font-size:.82rem;
-  color:#cbd5e1;
-}
-
-/* UID без плашки/обводки */
-.uidText{
-  display:inline-block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size:.82rem;
-  color:#cbd5e1;
-  opacity:.9;
-  white-space:nowrap;
-}
-
-/* Трохи “табличності” */
-tbody tr:hover td{
-  background: rgba(148,163,184,.05);
-}
-
-/* Кнопки в дії — компактно */
-.actions{
-  display:flex;
-  gap:8px;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-  margin:0;
-}
-.actions .btn{
-  padding:8px 10px;
-  border-radius:10px;
-  font-size:.86rem;
-}
     /* ===== Активні (є участь) ===== */
-tr.isActive td{
-  background: rgba(34,197,94,.08);
-}
-tr.isActive:hover td{
-  background: rgba(34,197,94,.12);
-}
-.activeDot{
-  display:inline-block;
-  width:8px;height:8px;
-  border-radius:999px;
-  background: rgba(34,197,94,.95);
-  box-shadow:0 0 0 3px rgba(34,197,94,.12);
-  margin-right:8px;
-  vertical-align:middle;
-}
-  
+    tr.isActive td{
+      background: rgba(34,197,94,.08);
+    }
+    tr.isActive:hover td{
+      background: rgba(34,197,94,.12);
+    }
+    .activeDot{
+      display:inline-block;
+      width:8px;height:8px;
+      border-radius:999px;
+      background: rgba(34,197,94,.95);
+      box-shadow:0 0 0 3px rgba(34,197,94,.12);
+      margin-right:8px;
+      vertical-align:middle;
+    }
   </style>
 </head>
 
@@ -246,11 +204,11 @@ tr.isActive:hover td{
 
     <div class="card">
       <div class="titleRow">
-  <div class="h2">Список користувачів</div>
-  <div style="text-align:right">
-    <div class="muted" id="count">—</div>
-    <div class="muted" id="totals" style="font-size:.85rem; margin-top:4px;">—</div>
-  </div>
+        <div class="h2">Список користувачів</div>
+        <div style="text-align:right">
+          <div class="muted" id="count">—</div>
+          <div class="muted" id="totals" style="font-size:.85rem; margin-top:4px;">—</div>
+        </div>
       </div>
 
       <div class="tableWrap">
@@ -290,8 +248,9 @@ tr.isActive:hover td{
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const $ = (id)=>document.getElementById(id);
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
+  // ВАЖЛИВО: не беремо window.scAuth/scDb ДО того як Firebase піднявся
+  let auth = null;
+  let db   = null;
 
   const msgEl = $("msg");
   const authPill = $("authPill");
@@ -299,11 +258,12 @@ tr.isActive:hover td{
   const tbody = $("tbody");
   const countEl = $("count");
   const totalsEl = $("totals");
-let activeUids = new Set();
 
   const qInp = $("q");
   const roleFilter = $("roleFilter");
   const limitSel = $("limitSel");
+
+  let activeUids = new Set();
 
   const setMsg = (t, ok=true)=>{
     msgEl.textContent = t || "";
@@ -328,6 +288,34 @@ let activeUids = new Set();
     return role === "admin";
   }
 
+  async function getTotalCountFallback(colName){
+    // Надійно, але може бути повільно на великій базі.
+    // Для твоїх масштабів ок.
+    let n = 0;
+    const snap = await db.collection(colName).get();
+    snap.forEach(()=>n++);
+    return n;
+  }
+
+  async function loadActiveUidsFromRegistrations(limit = 5000){
+    const set = new Set();
+    try{
+      let snap;
+      try{
+        snap = await db.collection("registrations").orderBy("createdAt","desc").limit(limit).get();
+      }catch{
+        snap = await db.collection("registrations").limit(limit).get();
+      }
+      snap.forEach(doc=>{
+        const d = doc.data() || {};
+        if (d.uid) set.add(String(d.uid));
+      });
+    }catch(err){
+      console.warn("Не вдалося завантажити registrations:", err);
+    }
+    return set;
+  }
+
   function rowHtml(u){
     const uid = esc(u.uid);
     const fullName = esc(u.fullName || "");
@@ -336,11 +324,12 @@ let activeUids = new Set();
     const city = esc(u.city || "");
     const role = esc(u.role || "user");
     const teamId = esc(u.teamId || "");
+
     const isActive = activeUids.has(u.uid);
 
     return `
-  <tr data-uid="${uid}" class="${isActive ? "isActive" : ""}">
-    <td>${isActive ? `<span class="activeDot"></span>` : ""}${uid}</td>
+      <tr data-uid="${uid}" class="${isActive ? "isActive" : ""}">
+        <td>${isActive ? `<span class="activeDot"></span>` : ""}${uid}</td>
         <td><input class="mini" data-k="fullName" value="${fullName}" placeholder="Імʼя" /></td>
         <td><input class="mini" data-k="email" value="${email}" placeholder="Email" /></td>
         <td><input class="mini" data-k="phone" value="${phone}" placeholder="Телефон" /></td>
@@ -385,16 +374,17 @@ let activeUids = new Set();
 
     tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
     setMsg("Завантажую users…", true);
-    // 1) хто активний (має хоч одну participation/registration)
-activeUids = await loadActiveUidsFromRegistrations(5000);
 
-// 2) totals
-let totalUsers = null;
-let totalRegs  = null;
+    // 1) хто активний (має хоч одну registration)
+    activeUids = await loadActiveUidsFromRegistrations(5000);
 
-try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
-try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
+    // 2) totals
+    let totalUsers = null;
+    let totalRegs  = null;
+    try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
+    try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
 
+    // 3) витягуємо users
     let snap;
     try{
       snap = await db.collection("users").orderBy("createdAt","desc").limit(limit).get();
@@ -404,13 +394,6 @@ try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
 
     const items = [];
     snap.forEach(doc=>{
-      const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
-
-// показати totals
-totalsEl.textContent =
-  `Всього зареєстровано (users): ${totalUsers ?? "—"} • ` +
-  `Активних (є участь): ${activeLoaded} • ` +
-  `Всього участей (registrations): ${totalRegs ?? "—"}`;
       const d = doc.data()||{};
       items.push({
         uid: doc.id,
@@ -422,6 +405,13 @@ totalsEl.textContent =
         teamId: d.teamId || ""
       });
     });
+
+    const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
+
+    totalsEl.textContent =
+      `Всього зареєстровано (users): ${totalUsers ?? "—"} • ` +
+      `Активних (є участь): ${activeLoaded} • ` +
+      `Всього участей (registrations): ${totalRegs ?? "—"}`;
 
     const filtered = items.filter(u=>{
       if(rf && (u.role||"user") !== rf) return false;
@@ -447,8 +437,6 @@ totalsEl.textContent =
   }
 
   async function deleteUser(uid){
-    // ВАЖЛИВО: тут видаляємо тільки Firestore users/{uid}
-    // (Auth акаунт потребує Cloud Function — додамо потім)
     await db.collection("users").doc(uid).delete();
   }
 
@@ -492,8 +480,11 @@ totalsEl.textContent =
   });
 
   async function boot(){
-    try{ await waitFirebase(); }
-    catch(e){
+    try{
+      await waitFirebase();
+      auth = window.scAuth;
+      db   = window.scDb;
+    }catch(e){
       subTitle.textContent = "Firebase не запустився ❌";
       setMsg(e.message || "Firebase init error", false);
       return;

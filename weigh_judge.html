@@ -438,57 +438,38 @@
   }
 
   async function loadTeamsForZone(){
-    try{
-      const snap = await db.collection("stageResults")
-        .where("seasonId","==",seasonId)
-        .where("stageId","==",stageId)
-        .where("zone","==",zone)
-        .get();
+async function loadTeamsForZone(){
+  // 1) беремо activeKey (як в Live)
+  let activeKey = "";
+  try{
+    const appSnap = await db.collection("settings").doc("app").get();
+    const app = appSnap.exists ? (appSnap.data()||{}) : {};
+    activeKey = String(app.activeKey || "").trim();
+  }catch(e){}
 
-      const arr = [];
-      snap.forEach(doc=>{
-        const d = doc.data() || {};
-        const teamId = String(d.teamId || doc.id || "");
-        if(!teamId) return;
-        arr.push({
-          teamId,
-          teamName: String(d.teamName || d.name || ""),
-          sector: Number(d.sector || 0)
-        });
-      });
-      if(arr.length){
-        arr.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||""));
-        return arr;
-      }
-    }catch(e){}
-
-    try{
-      const snap = await db.collection("registrations")
-        .where("seasonId","==",seasonId)
-        .where("stageId","==",stageId)
-        .where("zone","==",zone)
-        .get();
-
-      const map = new Map();
-      snap.forEach(doc=>{
-        const d = doc.data() || {};
-        const teamId = String(d.teamId || "");
-        if(!teamId) return;
-        if(!map.has(teamId)){
-          map.set(teamId, {
-            teamId,
-            teamName: String(d.teamName || ""),
-            sector: Number(d.sector || 0)
-          });
-        }
-      });
-      const arr = Array.from(map.values());
-      arr.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||""));
-      return arr;
-    }catch(e){}
-
-    return [];
+  // fallback: якщо activeKey пустий — беремо з прив’язки судді
+  if(!activeKey){
+    activeKey = `${compId}||${stageId || "main"}`;
   }
+
+  // 2) читаємо ОДИН stageResults/{activeKey}
+  const srSnap = await db.collection("stageResults").doc(activeKey).get();
+  const sr = srSnap.exists ? (srSnap.data()||{}) : {};
+  const teams = Array.isArray(sr.teams) ? sr.teams : [];
+
+  // 3) фільтр по зоні судді + сортування по сектору
+  const arr = teams
+    .filter(t => String(t.drawZone||"").toUpperCase() === String(zone||"").toUpperCase())
+    .map(t => ({
+      teamId: String(t.regId || t.teamId || ""),        // ВАЖЛИВО: regId з registrations
+      teamName: String(t.teamName || ""),
+      sector: Number(t.drawSector || 0)
+    }))
+    .filter(x => x.teamId);
+
+  arr.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+  return arr;
+}
 
   function weighingDocId(teamId, wNo){
     return `${seasonId}_${stageId}_${zone}_${teamId}_W${wNo}`;

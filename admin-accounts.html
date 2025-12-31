@@ -153,6 +153,22 @@ tbody tr:hover td{
   border-radius:10px;
   font-size:.86rem;
 }
+    /* ===== Активні (є участь) ===== */
+tr.isActive td{
+  background: rgba(34,197,94,.08);
+}
+tr.isActive:hover td{
+  background: rgba(34,197,94,.12);
+}
+.activeDot{
+  display:inline-block;
+  width:8px;height:8px;
+  border-radius:999px;
+  background: rgba(34,197,94,.95);
+  box-shadow:0 0 0 3px rgba(34,197,94,.12);
+  margin-right:8px;
+  vertical-align:middle;
+}
   
   </style>
 </head>
@@ -230,8 +246,11 @@ tbody tr:hover td{
 
     <div class="card">
       <div class="titleRow">
-        <div class="h2">Список користувачів</div>
-        <div class="muted" id="count">—</div>
+  <div class="h2">Список користувачів</div>
+  <div style="text-align:right">
+    <div class="muted" id="count">—</div>
+    <div class="muted" id="totals" style="font-size:.85rem; margin-top:4px;">—</div>
+  </div>
       </div>
 
       <div class="tableWrap">
@@ -279,6 +298,8 @@ tbody tr:hover td{
   const subTitle = $("subTitle");
   const tbody = $("tbody");
   const countEl = $("count");
+  const totalsEl = $("totals");
+let activeUids = new Set();
 
   const qInp = $("q");
   const roleFilter = $("roleFilter");
@@ -315,10 +336,11 @@ tbody tr:hover td{
     const city = esc(u.city || "");
     const role = esc(u.role || "user");
     const teamId = esc(u.teamId || "");
+    const isActive = activeUids.has(u.uid);
 
     return `
-      <tr data-uid="${uid}">
-        <td class="uidCell">${uid}</td>
+  <tr data-uid="${uid}" class="${isActive ? "isActive" : ""}">
+    <td>${isActive ? `<span class="activeDot"></span>` : ""}${uid}</td>
         <td><input class="mini" data-k="fullName" value="${fullName}" placeholder="Імʼя" /></td>
         <td><input class="mini" data-k="email" value="${email}" placeholder="Email" /></td>
         <td><input class="mini" data-k="phone" value="${phone}" placeholder="Телефон" /></td>
@@ -363,6 +385,15 @@ tbody tr:hover td{
 
     tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
     setMsg("Завантажую users…", true);
+    // 1) хто активний (має хоч одну participation/registration)
+activeUids = await loadActiveUidsFromRegistrations(5000);
+
+// 2) totals
+let totalUsers = null;
+let totalRegs  = null;
+
+try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
+try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
 
     let snap;
     try{
@@ -373,6 +404,13 @@ tbody tr:hover td{
 
     const items = [];
     snap.forEach(doc=>{
+      const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
+
+// показати totals
+totalsEl.textContent =
+  `Всього зареєстровано (users): ${totalUsers ?? "—"} • ` +
+  `Активних (є участь): ${activeLoaded} • ` +
+  `Всього участей (registrations): ${totalRegs ?? "—"}`;
       const d = doc.data()||{};
       items.push({
         uid: doc.id,

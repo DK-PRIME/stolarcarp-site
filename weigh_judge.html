@@ -34,7 +34,6 @@
     .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
     .rowTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 
-    /* ==== W switch (без скролу) ==== */
     .wbar{
       display:flex; align-items:center; justify-content:space-between;
       gap:10px; flex-wrap:wrap;
@@ -69,7 +68,6 @@
     .wstat{ text-align:right; }
     .wstat .big2{ font-size:1.1rem; font-weight:900; }
 
-    /* ==== Calls list ==== */
     .callItem{
       display:flex; align-items:center; justify-content:space-between;
       gap:10px; flex-wrap:wrap;
@@ -82,7 +80,6 @@
     .callLine{ font-size:1.0rem; }
     .callActions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
 
-    /* ==== Teams (без горизонтального скролу) ==== */
     .teams{
       display:grid;
       gap:10px;
@@ -182,7 +179,6 @@
 <main class="main">
   <section class="section container wrap">
 
-    <!-- Статус / прив'язка -->
     <div class="card">
       <div class="rowTop">
         <div>
@@ -206,7 +202,6 @@
       <div class="muted" id="msg" style="margin-top:10px;"></div>
     </div>
 
-    <!-- Зважування -->
     <div class="card" id="weighCard" style="display:none;">
       <div class="rowTop">
         <div>
@@ -231,13 +226,11 @@
 
       <div class="muted" id="wMsg" style="margin-top:10px;"></div>
 
-      <!-- Виклики -->
       <div style="margin-top:12px; font-weight:900;">Повідомлення з моєї зони</div>
       <div class="muted" id="callsCount" style="margin-top:6px;">—</div>
       <div id="callsList"></div>
       <div class="muted" id="callsEmpty" style="margin-top:8px;">—</div>
 
-      <!-- Команди -->
       <div style="margin-top:14px; font-weight:900;">Команди моєї зони</div>
       <div class="muted" id="teamsHint" style="margin-top:6px;">Сортування: сектор → час.</div>
 
@@ -247,7 +240,6 @@
   </section>
 </main>
 
-<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -293,11 +285,13 @@
   let db = null;
   let me = null;
 
-  let seasonId = "";
   let stageId  = "";
   let compId   = "";
   let zone     = "";
   let token    = "";
+
+  // ключ змагання/етапу (ізоляція на роки)
+  let activeKey = "";
 
   let maxW = DEFAULT_MAX_W;
   let currentW = 1;
@@ -351,7 +345,7 @@
     const p = new URLSearchParams(location.search);
     const z   = norm((p.get("zone")||"").toUpperCase());
     const cId = norm(p.get("compId")||"");
-    const sId = norm(p.get("stageId")||"");
+    const sId = norm(p.get("stageId")||""); // може бути пустий => main
     const t   = norm(p.get("t")||"");
     return { zone:z, compId:cId, stageId:sId, token:t };
   }
@@ -365,6 +359,10 @@
     return location.origin + location.pathname + "?" + p.toString();
   }
 
+  function makeActiveKey(compId, stageId){
+    return `${String(compId||"").trim()}||${String(stageId||"").trim() || "main"}`;
+  }
+
   function renderBindState(){
     const bind = readBind();
     if (!bind){
@@ -373,32 +371,25 @@
       bindInfo.textContent = "—";
       return;
     }
+    const ak = makeActiveKey(bind.compId, bind.stageId);
     zoneTitle.textContent = `Зона ${bind.zone}`;
     statusEl.textContent = "✅ Прив’язка зони збережена на цьому телефоні.";
-    bindInfo.textContent = `zone=${bind.zone} | compId=${bind.compId} | stageId=${bind.stageId || "—"} | token=${bind.token}`;
+    bindInfo.textContent = `zone=${bind.zone} | compId=${bind.compId} | stageId=${bind.stageId || "main"} | activeKey=${ak}`;
   }
 
-  async function getActiveSeasonIdFallback(){
-    try{
-      const snap = await db.collection("settings").doc("active").get();
-      const d = snap.exists ? (snap.data()||{}) : {};
-      return d.seasonId || d.activeSeasonId || "2026";
-    }catch{
-      return "2026";
-    }
-  }
-
-  function settingsDocId(seasonId, stageId){
-    return `weighing_${seasonId}_${stageId}`;
+  function settingsDocIdByActiveKey(activeKey){
+    return `weighing_${activeKey}`;
   }
 
   async function getOrCreateWeighingSettings(){
-    const ref = db.collection("settings").doc(settingsDocId(seasonId, stageId));
+    const ref = db.collection("settings").doc(settingsDocIdByActiveKey(activeKey));
     const snap = await ref.get();
     if(snap.exists) return { ref, data:(snap.data()||{}) };
 
     const init = {
-      seasonId, stageId,
+      activeKey,
+      compId,
+      stageId: stageId || "main",
       maxW: DEFAULT_MAX_W,
       current: { A:1, B:1, C:1 },
       updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
@@ -414,7 +405,7 @@
   }
 
   async function setCurrentWForZone(nextW){
-    const ref = db.collection("settings").doc(settingsDocId(seasonId, stageId));
+    const ref = db.collection("settings").doc(settingsDocIdByActiveKey(activeKey));
     await db.runTransaction(async (tx)=>{
       const snap = await tx.get(ref);
       const d = snap.data() || {};
@@ -437,44 +428,27 @@
     });
   }
 
+  // ✅ читає команди із stageResults/{activeKey}, тільки моя зона
   async function loadTeamsForZone(){
-async function loadTeamsForZone(){
-  // 1) беремо activeKey (як в Live)
-  let activeKey = "";
-  try{
-    const appSnap = await db.collection("settings").doc("app").get();
-    const app = appSnap.exists ? (appSnap.data()||{}) : {};
-    activeKey = String(app.activeKey || "").trim();
-  }catch(e){}
+    const srSnap = await db.collection("stageResults").doc(activeKey).get();
+    const sr = srSnap.exists ? (srSnap.data()||{}) : {};
+    const teams = Array.isArray(sr.teams) ? sr.teams : [];
 
-  // fallback: якщо activeKey пустий — беремо з прив’язки судді
-  if(!activeKey){
-    activeKey = `${compId}||${stageId || "main"}`;
+    const arr = teams
+      .filter(t => String(t.drawZone||"").toUpperCase() === String(zone||"").toUpperCase())
+      .map(t => ({
+        teamId: String(t.regId || t.teamId || ""),
+        teamName: String(t.teamName || ""),
+        sector: Number(t.drawSector || 0)
+      }))
+      .filter(x => x.teamId);
+
+    arr.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+    return arr;
   }
 
-  // 2) читаємо ОДИН stageResults/{activeKey}
-  const srSnap = await db.collection("stageResults").doc(activeKey).get();
-  const sr = srSnap.exists ? (srSnap.data()||{}) : {};
-  const teams = Array.isArray(sr.teams) ? sr.teams : [];
-
-  // 3) фільтр по зоні судді + сортування по сектору
-  const arr = teams
-    .filter(t => String(t.drawZone||"").toUpperCase() === String(zone||"").toUpperCase())
-    .map(t => ({
-      teamId: String(t.regId || t.teamId || ""),        // ВАЖЛИВО: regId з registrations
-      teamName: String(t.teamName || ""),
-      sector: Number(t.drawSector || 0)
-    }))
-    .filter(x => x.teamId);
-
-  arr.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
-  return arr;
-}
-
   function weighingDocId(teamId, wNo){
-  // activeKey = compId||stageId (або settings/app.activeKey)
-  const key = `${compId}||${stageId || "main"}`;
-  return `${key}_${zone}_${teamId}_W${wNo}`;
+    return `${activeKey}_${zone}_${teamId}_W${wNo}`;
   }
 
   async function loadWeighing(teamId, wNo){
@@ -484,50 +458,42 @@ async function loadTeamsForZone(){
   }
 
   async function saveWeighing(team, wNo, values){
-  const id = weighingDocId(team.teamId, wNo);
+    const id = weighingDocId(team.teamId, wNo);
+    const ts = window.firebase.firestore.FieldValue.serverTimestamp();
 
-  const ts = window.firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection("weighings").doc(id).set({
+      activeKey,
+      compId,
+      stageId: stageId || "main",
 
-  await db.collection("weighings").doc(id).set({
-    // ідентифікація етапу / змагання
-    compId: compId,
-    stageId: stageId || "main",
-    activeKey: `${compId}||${stageId || "main"}`,
+      zone,
+      sector: Number(team.sector || 0),
 
-    // зона і сектор
-    zone: zone,
-    sector: Number(team.sector || 0),
+      wNo: Number(wNo),
+      teamId: team.teamId,
+      teamName: team.teamName || "",
 
-    // зважування
-    wNo: Number(wNo),
-    teamId: team.teamId,
-    teamName: team.teamName || "",
+      fishCount: Number(values.fishCount || 0),
+      totalWeightKg: Number(values.totalWeightKg || 0),
+      bigFishKg: Number(values.bigFishKg || 0),
 
-    // результати
-    fishCount: Number(values.fishCount || 0),
-    totalWeightKg: Number(values.totalWeightKg || 0),
-    bigFishKg: Number(values.bigFishKg || 0),
+      status: "submitted",
 
-    // статус
-    status: "submitted",
+      judgeUid: me.uid,
+      judgeEmail: me.email || "",
 
-    // суддя
-    judgeUid: me.uid,
-    judgeEmail: me.email || "",
-
-    // час
-    updatedAt: ts,
-    createdAt: ts
-  }, { merge: true });
+      updatedAt: ts,
+      createdAt: ts
+    }, { merge: true });
   }
 
   async function maybeAdvanceAuto(teams){
     if(currentW >= maxW) return false;
     if(!teams.length) return false;
 
+    // ✅ ВАЖЛИВО: перевіряємо по activeKey + zone + wNo
     const wsnap = await db.collection("weighings")
-      .where("seasonId","==",seasonId)
-      .where("stageId","==",stageId)
+      .where("activeKey","==",activeKey)
       .where("zone","==",zone)
       .where("wNo","==",Number(currentW))
       .where("status","==","submitted")
@@ -592,16 +558,22 @@ async function loadTeamsForZone(){
   }
 
   async function createPenaltyFromCall(callId, callData, kind){
+    // ✅ тільки серійні (для одиночних ти просто не будеш читати penalties у рейтингу)
     await db.collection("penalties").add({
-      seasonId,
-      stageId,
+      activeKey,
       compType: "series",
+
+      compId,
+      stageId: stageId || "main",
+
       zone: String(callData.zone||zone),
       sector: Number(callData.sector||0),
       teamId: String(callData.teamId||""),
       teamName: String(callData.teamName||""),
+
       kind: String(kind||"verbal"),
       reason: String(callData.reason||""),
+
       judgeUid: me.uid,
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -617,9 +589,9 @@ async function loadTeamsForZone(){
     if(unsubCalls) try{ unsubCalls(); }catch(e){}
     lastOpenIds = new Set();
 
+    // ✅ ВАЖЛИВО: calls ізолюємо по activeKey + zone
     const q = db.collection("calls")
-      .where("seasonId","==",seasonId)
-      .where("stageId","==",stageId)
+      .where("activeKey","==",activeKey)
       .where("zone","==",zone)
       .where("status","==","open");
 
@@ -653,6 +625,9 @@ async function loadTeamsForZone(){
       }
       if(newOnes>0) playPing();
       lastOpenIds = cur;
+    }, (err)=>{
+      console.error(err);
+      callsEmptyEl.textContent = "Помилка realtime (Rules/індекси).";
     });
   }
 
@@ -737,7 +712,7 @@ async function loadTeamsForZone(){
     teamsCountEl.textContent = `Команд: ${teams.length}`;
 
     if(!teams.length){
-      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні. Перевір жеребкування/дані лайву.</div>`;
+      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні. Перевір жеребкування/дані stageResults.</div>`;
       setWMsg("❗ Нема списку команд для цієї зони.", false);
       return;
     }
@@ -937,17 +912,17 @@ async function loadTeamsForZone(){
 
         zone = String(bind.zone||"").toUpperCase();
         compId = String(bind.compId||"");
-        stageId = String(bind.stageId||"");
+        stageId = String(bind.stageId||""); // може бути пустий
         token = String(bind.token||"");
 
-        if(!zone || !stageId){
+        if(!zone || !compId){
           statusEl.textContent = "Неповна прив’язка ❗";
-          setMsg("Перевір QR: zone + stageId обов’язкові.", false);
+          setMsg("Перевір QR: zone + compId обов’язкові.", false);
           weighCard.style.display = "none";
           return;
         }
 
-        seasonId = await getActiveSeasonIdFallback();
+        activeKey = makeActiveKey(compId, stageId);
 
         zoneTitle.textContent = `Зона ${zone}`;
         statusEl.textContent = "✅ Суддя в зоні активний.";

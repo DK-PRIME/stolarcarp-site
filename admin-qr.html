@@ -3,357 +3,521 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>STOLAR CARP • QR для суддів</title>
+  <title>STOLAR CARP • Адмін • Акаунти</title>
 
   <link rel="stylesheet" href="assets/css/main.css" />
 
   <style>
-    body{ background:#020617; }
-    .wrap{ max-width:980px; margin:0 auto; padding:20px 0 80px; }
+    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
+    .wrap{ max-width:1080px; margin:0 auto; padding:20px 0 80px; }
     .card{
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.3);
-      border-radius:16px;
+      background:rgba(15,23,42,.92);
+      border:1px solid rgba(148,163,184,.28);
+      border-radius:18px;
       padding:16px;
       margin-bottom:12px;
+      box-shadow:0 18px 40px rgba(0,0,0,.55);
     }
-    .muted{ color:#9ca3af; font-size:.9rem; }
+    .titleRow{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .h2{ font-weight:900; font-size:1.15rem; letter-spacing:.02em; }
+    .muted{ color:#9ca3af; }
+    .ok{ color:#8fe39a; }
+    .err{ color:#ff6c6c; }
+
+    .grid2{ display:grid; grid-template-columns:1fr; gap:10px; }
+    @media(min-width:860px){ .grid2{ grid-template-columns:1.3fr 1fr; } }
+
     .field{ display:grid; gap:6px; margin-top:10px; }
-    select, input{
+    input, select{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
-      background:#020617;
+      background:rgba(2,6,23,.55);
       color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.3);
+      border:1px solid rgba(148,163,184,.28);
       outline:none;
     }
-    .grid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:12px;
-      margin-top:12px;
+    input:focus, select:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 10px rgba(246,195,76,.25);
     }
-    @media(min-width:860px){
-      .grid{ grid-template-columns:repeat(3,1fr); }
-    }
-    .qrBox{
-      border-radius:16px;
+
+    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
       border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.25);
-      padding:12px;
-      display:grid;
-      gap:10px;
-    }
-    .qrTitle{
-      font-weight:900;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .qrCanvasWrap{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      padding:10px;
       background:rgba(2,6,23,.35);
-      border:1px solid rgba(148,163,184,.18);
-      border-radius:14px;
-      overflow:hidden;
+      color:#e5e7eb; font-size:.82rem; white-space:nowrap;
     }
-    canvas{ max-width:100%; height:auto; }
-    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; }
-    .linkMini{
-      font-size:.85rem;
+
+    /* ===== Таблиця-сітка з автошириною під контент ===== */
+    .tableWrap{
+      overflow:auto;
+      border-radius:12px;
+      border:1px solid rgba(148,163,184,.30);
+      background:rgba(2,6,23,.18);
+    }
+
+    table{
+      width:max-content;           /* авто-розширення */
+      min-width:100%;              /* але не менше контейнера */
+      border-collapse:collapse;    /* без зазорів між клітинками */
+    }
+
+    th, td{
+      border:1px solid rgba(148,163,184,.22); /* перегородки */
+      padding:6px 8px;                        /* мінімальні відступи */
+      vertical-align:middle;
+      text-align:left;
+      color:#e5e7eb;
+      font-size:.92rem;
+
+      white-space:nowrap;          /* весь текст в рядок */
+      overflow:visible;            /* нічого не ховаємо */
+    }
+
+    th{
+      position:sticky;
+      top:0;
+      z-index:2;
+      background:rgba(2,6,23,.88);
+      backdrop-filter: blur(8px);
+      font-size:.78rem;
+      text-transform:uppercase;
+      letter-spacing:.10em;
       color:#cbd5e1;
-      word-break:break-all;
     }
-    .ok{ color:#8fe39a; }
-    .err{ color:#ff6c6c; }
+
+    tbody tr:hover td{
+      background:rgba(148,163,184,.06);
+    }
+
+    .mini{
+      width:100%;
+      margin:0;
+      padding:0;                 /* нема зазорів між клітинкою і текстом */
+      border:0;
+      outline:none;
+      background:transparent;
+      color:#e5e7eb;
+      font-size:inherit;
+      line-height:1.2;
+    }
+
+    input.mini{ min-width:0; }
+
+    .mini:focus{
+      background:rgba(246,195,76,.10);
+      box-shadow: inset 0 0 0 2px rgba(246,195,76,.45);
+    }
+
+    /* ===== Активні (є участь) ===== */
+    tr.isActive td{
+      background: rgba(34,197,94,.08);
+    }
+    tr.isActive:hover td{
+      background: rgba(34,197,94,.12);
+    }
+    .activeDot{
+      display:inline-block;
+      width:8px;height:8px;
+      border-radius:999px;
+      background: rgba(34,197,94,.95);
+      box-shadow:0 0 0 3px rgba(34,197,94,.12);
+      margin-right:8px;
+      vertical-align:middle;
+    }
   </style>
 </head>
 
 <body>
+
 <header class="header">
   <div class="container header__row">
     <a class="logo" href="admin.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
+    <nav class="nav">
+      <a href="/admin.html" class="nav__link">Адмінка</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/auth.html" class="nav__link">Акаунт</a>
+    </nav>
   </div>
 </header>
 
 <main class="main">
   <section class="section container wrap">
 
-    <h2>QR для суддів (A/B/C)</h2>
-
     <div class="card">
-      <div id="msg" class="muted"></div>
-
-      <div class="field">
-        <div class="muted">Змагання / етап</div>
-        <select id="stageSelect"></select>
+      <div class="titleRow">
+        <div>
+          <div class="h2">Акаунти STOLAR CARP</div>
+          <div class="muted" id="subTitle">Завантаження…</div>
+        </div>
+        <div class="pill" id="authPill">auth: …</div>
       </div>
 
-      <div class="field">
-        <div class="muted">Token доступу (після етапу просто міняєш → нові QR)</div>
-        <input id="token" placeholder="Напр.: SC-2026-1A (будь-який текст)" />
+      <div class="grid2" style="margin-top:10px;">
+        <div>
+          <div class="field">
+            <div class="muted">Пошук (ім’я / email / телефон / місто)</div>
+            <input id="q" placeholder="Напр.: Роман або @gmail або 067..." />
+          </div>
+
+          <div class="btnRow">
+            <button class="btn btn--primary" id="btnLoad">Оновити список</button>
+            <button class="btn btn--ghost" id="btnClear">Очистити пошук</button>
+          </div>
+
+          <div class="muted" style="margin-top:10px;">
+            Тут ти редагуєш і видаляєш <b>Firestore users</b>.<br>
+            <b>Auth-акаунт</b> (email/пароль) з браузера видалити не можна — для цього потрібна Cloud Function.
+          </div>
+        </div>
+
+        <div>
+          <div class="field">
+            <div class="muted">Фільтр ролі</div>
+            <select id="roleFilter">
+              <option value="">Усі</option>
+              <option value="admin">admin</option>
+              <option value="judge">judge</option>
+              <option value="user">user</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="muted">Ліміт</div>
+            <select id="limitSel">
+              <option value="50">50</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
+              <option value="500">500</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div class="btnRow" style="margin-top:12px;">
-        <button class="btn btn--accent" id="btnBuild">Згенерувати QR</button>
-        <button class="btn btn--ghost" id="btnRandom">Зробити випадковий token</button>
-      </div>
-
-      <div class="muted" style="margin-top:10px;">
-        Порада: після генерації натисни “Скачати” і відправ судді картинку в Telegram/Viber або нехай збереже в “Фото”.
-      </div>
+      <div class="muted" id="msg" style="margin-top:10px;"></div>
     </div>
 
-    <div class="grid" id="qrGrid" style="display:none;">
-      <div class="qrBox">
-        <div class="qrTitle">Зона A <span class="muted">scan</span></div>
-        <div class="qrCanvasWrap"><canvas id="qrA"></canvas></div>
-        <div class="linkMini" id="linkA"></div>
-        <div class="btnRow">
-          <button class="btn btn--primary" data-dl="A">Скачати PNG</button>
-          <button class="btn btn--ghost" data-copy="A">Копіювати лінк</button>
+    <div class="card">
+      <div class="titleRow">
+        <div class="h2">Список користувачів</div>
+        <div style="text-align:right">
+          <div class="muted" id="count">—</div>
+          <div class="muted" id="totals" style="font-size:.85rem; margin-top:4px;">—</div>
         </div>
       </div>
 
-      <div class="qrBox">
-        <div class="qrTitle">Зона B <span class="muted">scan</span></div>
-        <div class="qrCanvasWrap"><canvas id="qrB"></canvas></div>
-        <div class="linkMini" id="linkB"></div>
-        <div class="btnRow">
-          <button class="btn btn--primary" data-dl="B">Скачати PNG</button>
-          <button class="btn btn--ghost" data-copy="B">Копіювати лінк</button>
-        </div>
-      </div>
-
-      <div class="qrBox">
-        <div class="qrTitle">Зона C <span class="muted">scan</span></div>
-        <div class="qrCanvasWrap"><canvas id="qrC"></canvas></div>
-        <div class="linkMini" id="linkC"></div>
-        <div class="btnRow">
-          <button class="btn btn--primary" data-dl="C">Скачати PNG</button>
-          <button class="btn btn--ghost" data-copy="C">Копіювати лінк</button>
-        </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>UID</th>
+              <th>Імʼя</th>
+              <th>Email</th>
+              <th>Телефон</th>
+              <th>Місто</th>
+              <th>Роль</th>
+              <th>TeamId</th>
+              <th>Дії</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="8" class="muted">Завантаження…</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
   </section>
 </main>
 
-<!-- Firebase -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- QR generator (легкий, без npm) -->
-<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-
 <script>
 (function(){
   "use strict";
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+  const $ = (id)=>document.getElementById(id);
 
-  const stageSelect = document.getElementById("stageSelect");
-  const tokenInp    = document.getElementById("token");
-  const msgEl       = document.getElementById("msg");
-  const qrGrid      = document.getElementById("qrGrid");
+  // ВАЖЛИВО: не беремо window.scAuth/scDb ДО того як Firebase піднявся
+  let auth = null;
+  let db   = null;
 
-  const linkA = document.getElementById("linkA");
-  const linkB = document.getElementById("linkB");
-  const linkC = document.getElementById("linkC");
+  const msgEl = $("msg");
+  const authPill = $("authPill");
+  const subTitle = $("subTitle");
+  const tbody = $("tbody");
+  const countEl = $("count");
+  const totalsEl = $("totals");
 
-  if (!auth || !db || !window.firebase) {
-    msgEl.textContent = "Firebase init не завантажився.";
-    return;
-  }
+  const qInp = $("q");
+  const roleFilter = $("roleFilter");
+  const limitSel = $("limitSel");
 
-  const esc = (s)=>String(s??"");
+  let activeUids = new Set();
+
   const setMsg = (t, ok=true)=>{
-    msgEl.textContent = t||"";
-    msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
+    msgEl.textContent = t || "";
+    msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   };
 
+  async function waitFirebase(){
+    for(let i=0;i<140;i++){
+      if(window.scAuth && window.scDb && window.firebase) return;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    throw new Error("Firebase init не підняв scAuth/scDb.");
+  }
+
+  function esc(s){ return String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
   function norm(v){ return String(v??"").trim(); }
 
   async function requireAdmin(user){
+    if(user.uid === ADMIN_UID) return true;
     const snap = await db.collection("users").doc(user.uid).get();
     const role = (snap.exists ? (snap.data()||{}).role : "") || "";
     return role === "admin";
   }
 
-  async function loadStagesToSelect(){
-    stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+  async function getTotalCountFallback(colName){
+    // Надійно, але може бути повільно на великій базі.
+    // Для твоїх масштабів ок.
+    let n = 0;
+    const snap = await db.collection(colName).get();
+    snap.forEach(()=>n++);
+    return n;
+  }
+
+  async function loadActiveUidsFromRegistrations(limit = 5000){
+    const set = new Set();
+    try{
+      let snap;
+      try{
+        snap = await db.collection("registrations").orderBy("createdAt","desc").limit(limit).get();
+      }catch{
+        snap = await db.collection("registrations").limit(limit).get();
+      }
+      snap.forEach(doc=>{
+        const d = doc.data() || {};
+        if (d.uid) set.add(String(d.uid));
+      });
+    }catch(err){
+      console.warn("Не вдалося завантажити registrations:", err);
+    }
+    return set;
+  }
+
+  function rowHtml(u){
+    const uid = esc(u.uid);
+    const fullName = esc(u.fullName || "");
+    const email = esc(u.email || "");
+    const phone = esc(u.phone || "");
+    const city = esc(u.city || "");
+    const role = esc(u.role || "user");
+    const teamId = esc(u.teamId || "");
+
+    const isActive = activeUids.has(u.uid);
+
+    return `
+      <tr data-uid="${uid}" class="${isActive ? "isActive" : ""}">
+        <td>${isActive ? `<span class="activeDot"></span>` : ""}${uid}</td>
+        <td><input class="mini" data-k="fullName" value="${fullName}" placeholder="Імʼя" /></td>
+        <td><input class="mini" data-k="email" value="${email}" placeholder="Email" /></td>
+        <td><input class="mini" data-k="phone" value="${phone}" placeholder="Телефон" /></td>
+        <td><input class="mini" data-k="city" value="${city}" placeholder="Місто" /></td>
+        <td>
+          <select class="mini" data-k="role">
+            <option value="user" ${role==="user"?"selected":""}>user</option>
+            <option value="judge" ${role==="judge"?"selected":""}>judge</option>
+            <option value="admin" ${role==="admin"?"selected":""}>admin</option>
+          </select>
+        </td>
+        <td><input class="mini" data-k="teamId" value="${teamId}" placeholder="teamId" /></td>
+        <td>
+          <div class="btnRow" style="margin:0;">
+            <button class="btn btn--accent" data-save>Зберегти</button>
+            <button class="btn btn--danger" data-del>Видалити</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  function collectRow(tr){
+    const uid = tr.getAttribute("data-uid");
+    const get = (k)=> tr.querySelector(`[data-k="${k}"]`)?.value ?? "";
+    return {
+      uid,
+      fullName: norm(get("fullName")),
+      email: norm(get("email")),
+      phone: norm(get("phone")),
+      city: norm(get("city")),
+      role: norm(get("role")) || "user",
+      teamId: norm(get("teamId")),
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    };
+  }
+
+  async function loadUsers(){
+    const limit = Number(limitSel.value || 100);
+    const q = norm(qInp.value).toLowerCase();
+    const rf = norm(roleFilter.value);
+
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
+    setMsg("Завантажую users…", true);
+
+    // 1) хто активний (має хоч одну registration)
+    activeUids = await loadActiveUidsFromRegistrations(5000);
+
+    // 2) totals
+    let totalUsers = null;
+    let totalRegs  = null;
+    try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
+    try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
+
+    // 3) витягуємо users
+    let snap;
+    try{
+      snap = await db.collection("users").orderBy("createdAt","desc").limit(limit).get();
+    }catch{
+      snap = await db.collection("users").limit(limit).get();
+    }
 
     const items = [];
-    const snap = await db.collection("competitions").get();
-    snap.forEach(docSnap=>{
-      const c = docSnap.data()||{};
-      const compId = docSnap.id;
-
-      const brand = c.brand || "STOLAR CARP";
-      const year  = c.year || c.seasonYear || "";
-      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
-
-      const eventsArr = Array.isArray(c.events) ? c.events : null;
-
-      if (eventsArr && eventsArr.length) {
-        eventsArr.forEach((ev, idx)=>{
-          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
-          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
-          const label = `${brand} · ${compTitle} — ${stageTitle}`;
-          items.push({ value:`${compId}||${key}`, label });
-        });
-      } else {
-        const label = `${brand} · ${compTitle}`;
-        items.push({ value:`${compId}||`, label });
-      }
+    snap.forEach(doc=>{
+      const d = doc.data()||{};
+      items.push({
+        uid: doc.id,
+        fullName: d.fullName || "",
+        email: d.email || "",
+        phone: d.phone || "",
+        city: d.city || "",
+        role: d.role || "user",
+        teamId: d.teamId || ""
+      });
     });
 
-    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+    const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
 
-    stageSelect.innerHTML =
-      `<option value="">— Оберіть —</option>` +
-      items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
-  }
+    totalsEl.textContent =
+      `Всього зареєстровано (users): ${totalUsers ?? "—"} • ` +
+      `Активних (є участь): ${activeLoaded} • ` +
+      `Всього участей (registrations): ${totalRegs ?? "—"}`;
 
-  function parseStageValue(v){
-    const [compId, stageKeyRaw] = String(v||"").split("||");
-    const comp = norm(compId);
-    const stage = norm(stageKeyRaw);
-    return { compId: comp, stageId: stage ? stage : "" };
-  }
-
-  function baseUrl(){
-    // щоб працювало і на Netlify, і локально
-    return location.origin + location.pathname.replace(/\/[^\/]*$/, "/");
-  }
-
-  function buildJudgeUrl(zone, compId, stageId, token){
-    const p = new URLSearchParams();
-    p.set("zone", zone);
-    p.set("compId", compId);
-    if (stageId) p.set("stageId", stageId);
-    p.set("t", token);
-    return baseUrl() + "weigh_judge.html?" + p.toString();
-  }
-
-  function makeQR(canvasId, url){
-    const canvas = document.getElementById(canvasId);
-    const qr = new QRious({
-      element: canvas,
-      value: url,
-      size: 420
+    const filtered = items.filter(u=>{
+      if(rf && (u.role||"user") !== rf) return false;
+      if(!q) return true;
+      const hay = `${u.uid} ${u.fullName} ${u.email} ${u.phone} ${u.city} ${u.role} ${u.teamId}`.toLowerCase();
+      return hay.includes(q);
     });
-    return qr;
-  }
 
-  function downloadCanvasPNG(canvasId, filename){
-    const canvas = document.getElementById(canvasId);
-    const a = document.createElement("a");
-    a.href = canvas.toDataURL("image/png");
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
+    countEl.textContent = `Показано: ${filtered.length} (завантажено: ${items.length})`;
 
-  async function copyText(text){
-    try{
-      await navigator.clipboard.writeText(text);
-      setMsg("Скопійовано ✅", true);
-    }catch{
-      setMsg("Не вдалося скопіювати (браузер блокує).", false);
-    }
-  }
-
-  function randomToken(){
-    const x = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const y = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return `SC-${x}-${y}`;
-  }
-
-  document.getElementById("btnRandom").onclick = ()=>{
-    tokenInp.value = randomToken();
-    setMsg("Згенеровано token ✅", true);
-  };
-
-  document.getElementById("btnBuild").onclick = async ()=>{
-    const v = stageSelect.value;
-    const { compId, stageId } = parseStageValue(v);
-    const token = norm(tokenInp.value);
-
-    if (!compId) return setMsg("Обери змагання/етап.", false);
-    if (!token) return setMsg("Впиши token (або натисни “випадковий”).", false);
-
-    const urlA = buildJudgeUrl("A", compId, stageId, token);
-    const urlB = buildJudgeUrl("B", compId, stageId, token);
-    const urlC = buildJudgeUrl("C", compId, stageId, token);
-
-    makeQR("qrA", urlA);
-    makeQR("qrB", urlB);
-    makeQR("qrC", urlC);
-
-    linkA.textContent = urlA;
-    linkB.textContent = urlB;
-    linkC.textContent = urlC;
-
-    qrGrid.style.display = "";
-    setMsg("QR готові ✅ Тепер “Скачати PNG” і суддям в телефон.", true);
-  };
-
-  document.addEventListener("click", async (e)=>{
-    const dl = e.target.closest("[data-dl]");
-    const cp = e.target.closest("[data-copy]");
-    if (!dl && !cp) return;
-
-    const zone = (dl?.getAttribute("data-dl") || cp?.getAttribute("data-copy") || "").trim();
-    if (!zone) return;
-
-    const link = zone==="A" ? linkA.textContent : zone==="B" ? linkB.textContent : linkC.textContent;
-
-    if (dl){
-      const { compId, stageId } = parseStageValue(stageSelect.value);
-      const token = norm(tokenInp.value);
-      const st = stageId ? stageId : "oneoff";
-      downloadCanvasPNG("qr"+zone, `SC_${compId}_${st}_ZONE-${zone}_${token}.png`);
-      setMsg("Скачано ✅ (якщо Android питає — “Download/Завантажити”)", true);
-    }
-
-    if (cp){
-      await copyText(link);
-    }
-  });
-
-  auth.onAuthStateChanged(async (user)=>{
-    if (!user){
-      setMsg("Увійди як адмін.", false);
-      stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
+    if(!filtered.length){
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">Нічого не знайдено.</td></tr>`;
+      setMsg("Готово ✅", true);
       return;
     }
-    try{
-      const ok = await requireAdmin(user);
-      if (!ok){
-        setMsg("Цей акаунт не адмін.", false);
-        stageSelect.innerHTML = `<option value="">Нема доступу</option>`;
-        return;
+
+    tbody.innerHTML = filtered.map(rowHtml).join("");
+    setMsg("Готово ✅", true);
+  }
+
+  async function saveUser(uid, data){
+    await db.collection("users").doc(uid).set(data, { merge:true });
+  }
+
+  async function deleteUser(uid){
+    await db.collection("users").doc(uid).delete();
+  }
+
+  $("btnLoad").onclick = loadUsers;
+  $("btnClear").onclick = ()=>{ qInp.value=""; roleFilter.value=""; loadUsers(); };
+  roleFilter.onchange = loadUsers;
+
+  document.addEventListener("click", async (e)=>{
+    const tr = e.target.closest("tr[data-uid]");
+    if(!tr) return;
+
+    const uid = tr.getAttribute("data-uid");
+    const btnSave = e.target.closest("[data-save]");
+    const btnDel  = e.target.closest("[data-del]");
+    if(!btnSave && !btnDel) return;
+
+    if(btnSave){
+      try{
+        const data = collectRow(tr);
+        await saveUser(uid, data);
+        setMsg("Збережено ✅", true);
+      }catch(err){
+        console.error(err);
+        setMsg("Помилка збереження ❌", false);
       }
-      await loadStagesToSelect();
-      setMsg("Обери етап, введи token → “Згенерувати QR”.", true);
-    }catch(err){
-      console.error(err);
-      setMsg("Помилка завантаження списку.", false);
+    }
+
+    if(btnDel){
+      const ok = confirm(`Видалити користувача з Firestore?\n\nUID: ${uid}\n\n(Auth буде додано окремо через Function)`);
+      if(!ok) return;
+
+      try{
+        await deleteUser(uid);
+        tr.remove();
+        setMsg("Видалено ✅", true);
+      }catch(err){
+        console.error(err);
+        setMsg("Помилка видалення ❌", false);
+      }
     }
   });
+
+  async function boot(){
+    try{
+      await waitFirebase();
+      auth = window.scAuth;
+      db   = window.scDb;
+    }catch(e){
+      subTitle.textContent = "Firebase не запустився ❌";
+      setMsg(e.message || "Firebase init error", false);
+      return;
+    }
+
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){
+        authPill.textContent = "auth: ❌ (не увійшов)";
+        subTitle.textContent = "Потрібен вхід адміна";
+        setMsg("Увійди як адмін (auth.html).", false);
+        return;
+      }
+
+      authPill.textContent = "auth: ✅ " + (user.email || user.uid);
+
+      try{
+        const ok = await requireAdmin(user);
+        if(!ok){
+          subTitle.textContent = "Нема доступу ❌";
+          setMsg("Цей акаунт не адмін.", false);
+          return;
+        }
+
+        subTitle.textContent = "Тут можна редагувати/видаляти users у Firestore.";
+        await loadUsers();
+      }catch(err){
+        console.error(err);
+        setMsg("Помилка перевірки доступу.", false);
+      }
+    });
+  }
+
+  boot();
 
 })();
 </script>

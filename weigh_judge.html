@@ -484,23 +484,41 @@ async function loadTeamsForZone(){
   }
 
   async function saveWeighing(team, wNo, values){
-    const id = weighingDocId(team.teamId, wNo);
-    await db.collection("weighings").doc(id).set({
-      seasonId, stageId, compId,
-      zone,
-      sector: Number(team.sector||0),
-      wNo: Number(wNo),
-      teamId: team.teamId,
-      teamName: team.teamName || "",
-      fishCount: Number(values.fishCount||0),
-      totalWeightKg: Number(values.totalWeightKg||0),
-      bigFishKg: Number(values.bigFishKg||0),
-      status: "submitted",
-      judgeUid: me.uid,
-      judgeEmail: me.email || "",
-      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-      createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
+  const id = weighingDocId(team.teamId, wNo);
+
+  const ts = window.firebase.firestore.FieldValue.serverTimestamp();
+
+  await db.collection("weighings").doc(id).set({
+    // ідентифікація етапу / змагання
+    compId: compId,
+    stageId: stageId || "main",
+    activeKey: `${compId}||${stageId || "main"}`,
+
+    // зона і сектор
+    zone: zone,
+    sector: Number(team.sector || 0),
+
+    // зважування
+    wNo: Number(wNo),
+    teamId: team.teamId,
+    teamName: team.teamName || "",
+
+    // результати
+    fishCount: Number(values.fishCount || 0),
+    totalWeightKg: Number(values.totalWeightKg || 0),
+    bigFishKg: Number(values.bigFishKg || 0),
+
+    // статус
+    status: "submitted",
+
+    // суддя
+    judgeUid: me.uid,
+    judgeEmail: me.email || "",
+
+    // час
+    updatedAt: ts,
+    createdAt: ts
+  }, { merge: true });
   }
 
   async function maybeAdvanceAuto(teams){

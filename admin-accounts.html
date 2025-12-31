@@ -76,25 +76,54 @@
       letter-spacing:.08em;
       color:#cbd5e1;
     }
-    .mini{
-      width:100%;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(148,163,184,.22);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      outline:none;
-      font-size:.92rem;
-    }
-    .tag{
-      display:inline-flex; align-items:center;
-      padding:4px 10px; border-radius:999px;
-      border:1px solid rgba(148,163,184,.20);
-      background:rgba(2,6,23,.35);
-      color:#cbd5e1;
-      font-size:.8rem;
-      white-space:nowrap;
-    }
+    /* === Табличні поля без рамок (рамка тільки при редагуванні) === */
+.mini{
+  width:100%;
+  padding:8px 8px;
+  border-radius:10px;
+
+  border:1px solid transparent;   /* прибрали рамку */
+  background:transparent;         /* прибрали фон */
+  color:#e5e7eb;
+  outline:none;
+  font-size:.92rem;
+}
+
+.mini:focus{
+  border-color:var(--accent);
+  background:rgba(2,6,23,.55);
+  box-shadow:0 0 0 3px rgba(246,195,76,.16);
+}
+
+/* UID без плашки/обводки */
+.uidText{
+  display:inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:.82rem;
+  color:#cbd5e1;
+  opacity:.9;
+  white-space:nowrap;
+}
+
+/* Трохи “табличності” */
+tbody tr:hover td{
+  background: rgba(148,163,184,.05);
+}
+
+/* Кнопки в дії — компактно */
+.actions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  margin:0;
+}
+.actions .btn{
+  padding:8px 10px;
+  border-radius:10px;
+  font-size:.86rem;
+}
+  
   </style>
 </head>
 

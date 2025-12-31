@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>STOLAR CARP • Суддя</title>
+
   <link rel="stylesheet" href="assets/css/main.css" />
+
   <style>
     body{ background:#020617; }
     .wrap{ max-width:860px; margin:0 auto; padding:20px 0 80px; }
@@ -21,8 +23,17 @@
     .ok{ color:#8fe39a; }
     .err{ color:#ff6c6c; }
     .kv{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:.9rem; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:6px 10px; border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#e5e7eb; font-size:.82rem; white-space:nowrap;
+    }
   </style>
 </head>
+
 <body>
 <header class="header">
   <div class="container header__row">
@@ -30,6 +41,7 @@
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
+    <div class="pill" id="authPill">auth: …</div>
   </div>
 </header>
 
@@ -38,7 +50,7 @@
 
     <div class="card">
       <div class="big" id="zoneTitle">Зона —</div>
-      <div class="muted" id="status"></div>
+      <div class="muted" id="status">Завантаження…</div>
 
       <div class="muted" style="margin-top:10px;">
         <div><b>Прив’язка пристрою:</b></div>
@@ -64,20 +76,31 @@
   </section>
 </main>
 
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="assets/js/firebase-init.js"></script>
+
 <script>
 (function(){
   "use strict";
 
   const LS_KEY = "sc_judge_bind_v1";
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   const zoneTitle = document.getElementById("zoneTitle");
   const statusEl  = document.getElementById("status");
   const bindInfo  = document.getElementById("bindInfo");
   const msgEl     = document.getElementById("msg");
+  const authPill  = document.getElementById("authPill");
 
   const btnOpen   = document.getElementById("btnOpen");
   const btnReset  = document.getElementById("btnReset");
   const btnSaveHint = document.getElementById("btnSaveHint");
+
+  let auth = null;
+  let db = null;
 
   function setMsg(t, ok=true){
     msgEl.textContent = t || "";
@@ -85,6 +108,23 @@
   }
 
   function norm(v){ return String(v ?? "").trim(); }
+
+  async function waitFirebase(){
+    for(let i=0;i<140;i++){
+      if(window.scAuth && window.scDb && window.firebase) return;
+      await new Promise(r=>setTimeout(r,100));
+    }
+    throw new Error("Firebase init не підняв scAuth/scDb.");
+  }
+
+  async function requireJudgeOrAdmin(user){
+    if(!user) return false;
+    if(user.uid === ADMIN_UID) return true;
+
+    const snap = await db.collection("users").doc(user.uid).get();
+    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+    return role === "judge" || role === "admin";
+  }
 
   function readBind(){
     try{
@@ -139,52 +179,92 @@
     bindInfo.textContent = `zone=${bind.zone} | compId=${bind.compId} | stageId=${bind.stageId || "—"} | token=${bind.token}`;
   }
 
-  // 1) Якщо прийшли параметри з QR/лінка — зберігаємо як прив’язку
-  const p = currentParams();
-  if (p.zone && p.compId && p.token){
-    const ok = writeBind({
-      zone: p.zone,
-      compId: p.compId,
-      stageId: p.stageId || "",
-      token: p.token,
-      savedAt: Date.now()
-    });
-    if (ok){
-      setMsg("✅ Зона збережена. Тепер можна просто відкривати цю сторінку — вона пам’ятає.", true);
-
-      // ПРИБИРАЄМО параметри з адреси (щоб випадково не губилися/не плутались)
-      // і щоб виглядало “чисто”
-      history.replaceState({}, "", location.pathname);
-    }else{
-      setMsg("⚠️ Не вдалося зберегти (браузер блокує сховище).", false);
+  async function boot(){
+    // 0) Піднімаємо Firebase
+    try{
+      await waitFirebase();
+      auth = window.scAuth;
+      db = window.scDb;
+    }catch(e){
+      statusEl.textContent = "Firebase не запустився ❌";
+      setMsg(e.message || "Firebase init error", false);
+      return;
     }
+
+    // 1) Якщо прийшли параметри з QR/лінка — зберігаємо як прив’язку
+    const p = currentParams();
+    if (p.zone && p.compId && p.token){
+      const ok = writeBind({
+        zone: p.zone,
+        compId: p.compId,
+        stageId: p.stageId || "",
+        token: p.token,
+        savedAt: Date.now()
+      });
+      if (ok){
+        setMsg("✅ Зона збережена. Тепер можна просто відкривати цю сторінку — вона пам’ятає.", true);
+        history.replaceState({}, "", location.pathname); // чистий URL
+      }else{
+        setMsg("⚠️ Не вдалося зберегти (браузер блокує сховище).", false);
+      }
+    }
+
+    // 2) Auth + роль
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){
+        authPill.textContent = "auth: ❌ (не увійшов)";
+        statusEl.textContent = "Потрібен вхід судді/адміна (auth.html)";
+        setMsg("Увійди під суддею або адміном.", false);
+        renderState();
+        return;
+      }
+
+      authPill.textContent = "auth: ✅ " + (user.email || user.uid);
+
+      try{
+        const ok = await requireJudgeOrAdmin(user);
+        if(!ok){
+          statusEl.textContent = "Нема доступу ❌";
+          setMsg("Цей акаунт не суддя і не адмін.", false);
+          renderState();
+          return;
+        }
+
+        statusEl.textContent = "✅ Доступ судді підтверджено.";
+        setMsg("", true);
+        renderState();
+      }catch(err){
+        console.error(err);
+        statusEl.textContent = "Помилка перевірки доступу ❌";
+        setMsg("Перевір roles/users або правила Firestore.", false);
+        renderState();
+      }
+    });
+
+    // 3) Кнопки
+    btnOpen.onclick = ()=>{
+      const bind = readBind();
+      if (!bind) return setMsg("Нема прив’язки. Спочатку відкрий QR/лінк від адміна.", false);
+
+      // Поки це “відкрити мою зону” (наступний крок — реальний екран weighings)
+      const url = buildUrlFromBind(bind);
+      setMsg("✅ Відкриваю твою зону…", true);
+      location.href = url;
+    };
+
+    btnReset.onclick = ()=>{
+      if (!confirm("Скинути прив’язку зони на цьому телефоні?")) return;
+      clearBind();
+      renderState();
+      setMsg("✅ Прив’язку скинуто. Тепер треба знов 1 раз зайти по QR/лінку.", true);
+    };
+
+    btnSaveHint.onclick = ()=>{
+      setMsg("📌 Chrome: ⋮ → “Додати на головний екран”. Тоді зона відкривається одним тапом.", true);
+    };
   }
 
-  renderState();
-
-  btnOpen.onclick = ()=>{
-    const bind = readBind();
-    if (!bind) return setMsg("Нема прив’язки. Спочатку відкрий QR/лінк від адміна.", false);
-    // Тут пізніше буде реальний перехід на сторінку зважування/екран з даними.
-    // Поки просто покажемо посилання, яке відкриває “його” зону.
-    const url = buildUrlFromBind(bind);
-    setMsg("✅ Відкриваю твою зону…", true);
-    location.href = url;
-  };
-
-  btnReset.onclick = ()=>{
-    if (!confirm("Скинути прив’язку зони на цьому телефоні?")) return;
-    clearBind();
-    renderState();
-    setMsg("✅ Прив’язку скинуто. Тепер треба знов 1 раз зайти по QR/лінку.", true);
-  };
-
-  btnSaveHint.onclick = ()=>{
-    setMsg(
-      "📌 Щоб було ідеально: у Chrome натисни ⋮ → “Додати на головний екран”. Тоді зона відкривається одним тапом.",
-      true
-    );
-  };
+  boot();
 
 })();
 </script>

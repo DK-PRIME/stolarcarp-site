@@ -103,15 +103,6 @@
     }
     .teamMeta{ color:#9ca3af; font-size:.9rem; }
 
-    .gridInputs{
-      display:grid;
-      gap:8px;
-      grid-template-columns: 1fr 1fr 1fr;
-    }
-    @media (max-width:720px){
-      .gridInputs{ grid-template-columns: 1fr; }
-    }
-
     .inp{
       width:100%;
       padding:10px 12px;
@@ -133,17 +124,6 @@
       justify-content:flex-end;
     }
 
-    .hint{
-      margin-top:8px;
-      padding:10px;
-      border-radius:12px;
-      border:1px dashed rgba(148,163,184,.25);
-      background:rgba(2,6,23,.18);
-      color:#cbd5e1;
-      display:none;
-    }
-    .hint.isOn{ display:block; }
-
     .miniBadge{
       display:inline-flex;
       align-items:center;
@@ -162,6 +142,44 @@
       box-shadow:0 0 0 3px rgba(34,197,94,.12);
       display:inline-block;
     }
+
+    /* ==== Fish tiles (внесення кожної риби окремо) ==== */
+    .fishGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap:10px;
+      align-items:center;
+    }
+    @media (max-width:720px){
+      .fishGrid{ grid-template-columns: 1fr auto; }
+    }
+    .fishTile{ position:relative; }
+    .fishInp{ padding-right:44px; }
+    .fishDel{
+      position:absolute;
+      right:10px;
+      top:50%;
+      transform:translateY(-50%);
+      width:30px;height:30px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#e5e7eb;
+      font-weight:900;
+      cursor:pointer;
+    }
+    .fishDel:disabled{ opacity:.45; cursor:not-allowed; }
+    .fishAdd{
+      width:44px;height:44px;
+      border-radius:14px;
+      border:1px solid rgba(246,195,76,.35);
+      background:rgba(246,195,76,.18);
+      color:#fff;
+      font-weight:900;
+      font-size:20px;
+      cursor:pointer;
+    }
+    .fishAdd:disabled{ opacity:.45; cursor:not-allowed; }
   </style>
 </head>
 
@@ -290,7 +308,6 @@
   let zone     = "";
   let token    = "";
 
-  // ключ змагання/етапу (ізоляція на роки)
   let activeKey = "";
 
   let maxW = DEFAULT_MAX_W;
@@ -428,7 +445,6 @@
     });
   }
 
-  // ✅ читає команди із stageResults/{activeKey}, тільки моя зона
   async function loadTeamsForZone(){
     const srSnap = await db.collection("stageResults").doc(activeKey).get();
     const sr = srSnap.exists ? (srSnap.data()||{}) : {};
@@ -473,6 +489,10 @@
       teamId: team.teamId,
       teamName: team.teamName || "",
 
+      // ✅ ваги кожної риби
+      fishWeights: Array.isArray(values.fishWeights) ? values.fishWeights : [],
+
+      // ✅ автополя (рахуються з fishWeights)
       fishCount: Number(values.fishCount || 0),
       totalWeightKg: Number(values.totalWeightKg || 0),
       bigFishKg: Number(values.bigFishKg || 0),
@@ -491,7 +511,6 @@
     if(currentW >= maxW) return false;
     if(!teams.length) return false;
 
-    // ✅ ВАЖЛИВО: перевіряємо по activeKey + zone + wNo
     const wsnap = await db.collection("weighings")
       .where("activeKey","==",activeKey)
       .where("zone","==",zone)
@@ -558,7 +577,6 @@
   }
 
   async function createPenaltyFromCall(callId, callData, kind){
-    // ✅ тільки серійні (для одиночних ти просто не будеш читати penalties у рейтингу)
     await db.collection("penalties").add({
       activeKey,
       compType: "series",
@@ -589,7 +607,6 @@
     if(unsubCalls) try{ unsubCalls(); }catch(e){}
     lastOpenIds = new Set();
 
-    // ✅ ВАЖЛИВО: calls ізолюємо по activeKey + zone
     const q = db.collection("calls")
       .where("activeKey","==",activeKey)
       .where("zone","==",zone)
@@ -625,22 +642,65 @@
       }
       if(newOnes>0) playPing();
       lastOpenIds = cur;
-    }, (err)=>{
+    }, async (err)=>{
       console.error(err);
-      callsEmptyEl.textContent = "Помилка realtime (Rules/індекси).";
+      callsEmptyEl.textContent = "Помилка realtime (Rules/індекси). Показую без realtime…";
+      await loadCallsOnceFallback();
     });
+  }
+
+  async function loadCallsOnceFallback(){
+    try{
+      const snap = await db.collection("calls")
+        .where("activeKey","==",activeKey)
+        .where("zone","==",zone)
+        .where("status","==","open")
+        .get();
+
+      const items = [];
+      snap.forEach(doc=> items.push({ id: doc.id, d: doc.data()||{} }));
+
+      items.sort((a,b)=>{
+        const sa = Number(a.d.sector||0), sb = Number(b.d.sector||0);
+        if(sa!==sb) return sa-sb;
+        const ta = (a.d.createdAt && a.d.createdAt.toMillis) ? a.d.createdAt.toMillis() : 0;
+        const tb = (b.d.createdAt && b.d.createdAt.toMillis) ? b.d.createdAt.toMillis() : 0;
+        return ta-tb;
+      });
+
+      callsCountEl.textContent = `Нових: ${items.length}`;
+      if(!items.length){
+        callsListEl.innerHTML = "";
+        callsEmptyEl.textContent = "Нема викликів.";
+      }else{
+        callsEmptyEl.textContent = "";
+        callsListEl.innerHTML = items.map(x=>renderCallItem(x.id, x.d)).join("");
+      }
+    }catch(err){
+      console.error(err);
+      callsEmptyEl.textContent = "Нема доступу до викликів (Rules/індекси).";
+    }
   }
 
   function teamRowHtml(team, data, readOnly){
     const id = esc(team.teamId);
     const name = esc(team.teamName || "Команда");
     const sec = team.sector ? `Сектор ${team.sector}` : "Сектор —";
-
-    const fishCount = (data && data.fishCount!=null) ? Number(data.fishCount) : 0;
-    const totalWeightKg = (data && data.totalWeightKg!=null) ? Number(data.totalWeightKg) : 0;
-    const bigFishKg = (data && data.bigFishKg!=null) ? Number(data.bigFishKg) : 0;
-
     const dis = readOnly ? "disabled" : "";
+
+    const fish = Array.isArray(data?.fishWeights) ? data.fishWeights : [];
+
+    const fishCount = Number(data?.fishCount || 0);
+    const totalWeightKg = Number(data?.totalWeightKg || 0);
+    const bigFishKg = Number(data?.bigFishKg || 0);
+
+    const tiles = (fish.length ? fish : [""]).map((w)=>`
+      <div class="fishTile">
+        <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
+          data-fish value="${(Number(w)>0 ? String(w) : "")}" placeholder="напр. 4.560" ${dis}/>
+        <button class="fishDel" type="button" data-del ${dis} title="Видалити">×</button>
+      </div>
+    `).join("");
 
     return `
       <div class="teamRow" data-team="${id}">
@@ -652,57 +712,51 @@
           <div class="muted">W${viewW}</div>
         </div>
 
-        <div class="gridInputs">
-          <div>
-            <div class="muted" style="margin:0 0 6px;">К-сть риб</div>
-            <input class="inp" inputmode="numeric" type="number" min="0" step="1"
-              data-k="fishCount" value="${fishCount}" ${dis} />
-          </div>
+        <div class="muted" style="margin:0 0 8px;">
+          Впиши вагу кожної риби окремо (наприклад 4.560)
+        </div>
 
-          <div>
-            <div class="muted" style="margin:0 0 6px;">Вага (кг)</div>
-            <input class="inp" inputmode="decimal" type="number" min="0" step="0.001"
-              data-k="totalWeightKg" value="${totalWeightKg}" ${dis} />
-          </div>
+        <div class="fishGrid" data-fishbox>
+          ${tiles}
+          <button class="fishAdd" type="button" data-add ${dis} title="Додати рибу">+</button>
+        </div>
 
-          <div>
-            <div class="muted" style="margin:0 0 6px;">Big Fish (кг)</div>
-            <input class="inp" inputmode="decimal" type="number" min="0" step="0.001"
-              data-k="bigFishKg" value="${bigFishKg}" ${dis} />
-          </div>
+        <div class="muted" style="margin-top:10px;">
+          <span class="pill" data-totals>
+            Риб: <b>${fishCount}</b> • Сума W: <b>${totalWeightKg.toFixed(3)}</b> • Big: <b>${bigFishKg.toFixed(3)}</b>
+          </span>
         </div>
 
         <div class="teamBtns">
-          <button class="btn btn--ghost" data-show ${readOnly ? "style='display:none;'" : ""}>Показати команді</button>
           <button class="btn btn--accent" data-save ${readOnly ? "disabled" : ""}>Зберегти</button>
-        </div>
-
-        <div class="hint" data-hint>
-          <b>Показати команді:</b><br>
-          W${viewW} • Риб: <span data-out="fishCount">${fishCount}</span> • Вага: <span data-out="totalWeightKg">${totalWeightKg}</span> кг • Big Fish: <span data-out="bigFishKg">${bigFishKg}</span> кг
         </div>
       </div>
     `;
   }
 
   function readRowValues(row){
-    const get = (k)=> row.querySelector(`[data-k="${k}"]`)?.value ?? "";
-    const fishCount = Number(get("fishCount") || 0);
-    const totalWeightKg = Number(get("totalWeightKg") || 0);
-    const bigFishKg = Number(get("bigFishKg") || 0);
+    const inputs = Array.from(row.querySelectorAll("[data-fish]"));
+    const fishWeights = inputs
+      .map(i => Number(String(i.value || "").replace(",", ".")))
+      .filter(v => isFinite(v) && v > 0);
+
+    const fishCount = fishWeights.length;
+    const totalWeightKg = fishWeights.reduce((a,b)=>a+b, 0);
+    const bigFishKg = fishWeights.length ? Math.max(...fishWeights) : 0;
+
     return {
-      fishCount: (isFinite(fishCount) ? fishCount : 0),
-      totalWeightKg: (isFinite(totalWeightKg) ? totalWeightKg : 0),
-      bigFishKg: (isFinite(bigFishKg) ? bigFishKg : 0),
+      fishWeights,
+      fishCount,
+      totalWeightKg: +totalWeightKg.toFixed(3),
+      bigFishKg: +bigFishKg.toFixed(3),
     };
   }
 
   function updateHint(row, v){
-    const h = row.querySelector("[data-hint]");
-    if(!h) return;
-    h.querySelector(`[data-out="fishCount"]`).textContent = String(v.fishCount);
-    h.querySelector(`[data-out="totalWeightKg"]`).textContent = String(v.totalWeightKg);
-    h.querySelector(`[data-out="bigFishKg"]`).textContent = String(v.bigFishKg);
+    const t = row.querySelector("[data-totals]");
+    if(t){
+      t.innerHTML = `Риб: <b>${v.fishCount}</b> • Сума W: <b>${v.totalWeightKg.toFixed(3)}</b> • Big: <b>${v.bigFishKg.toFixed(3)}</b>`;
+    }
   }
 
   async function renderTeams(){
@@ -735,15 +789,56 @@
     };
   });
 
+  document.addEventListener("input", (e)=>{
+    const inp = e.target.closest("[data-fish]");
+    if(!inp) return;
+    const row = inp.closest(".teamRow");
+    if(!row) return;
+    const v = readRowValues(row);
+    updateHint(row, v);
+  });
+
   document.addEventListener("click", async (e)=>{
-    const showBtn = e.target.closest("[data-show]");
-    if(showBtn){
-      const row = showBtn.closest(".teamRow");
+    const addBtn = e.target.closest("[data-add]");
+    if(addBtn){
+      const row = addBtn.closest(".teamRow");
       if(!row) return;
+      addBtn.insertAdjacentHTML("beforebegin", `
+        <div class="fishTile">
+          <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
+            data-fish value="" placeholder="напр. 4.560"/>
+          <button class="fishDel" type="button" data-del title="Видалити">×</button>
+        </div>
+      `);
       const v = readRowValues(row);
       updateHint(row, v);
-      const h = row.querySelector("[data-hint]");
-      if(h) h.classList.toggle("isOn", true);
+      return;
+    }
+
+    const delBtn = e.target.closest("[data-del]");
+    if(delBtn){
+      const row = delBtn.closest(".teamRow");
+      if(!row) return;
+      const tile = delBtn.closest(".fishTile");
+      if(tile) tile.remove();
+
+      // якщо не лишилось жодного поля — лишаємо одне
+      const box = row.querySelector("[data-fishbox]");
+      if(box && box.querySelectorAll("[data-fish]").length === 0){
+        const add = box.querySelector("[data-add]");
+        if(add){
+          add.insertAdjacentHTML("beforebegin", `
+            <div class="fishTile">
+              <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
+                data-fish value="" placeholder="напр. 4.560"/>
+              <button class="fishDel" type="button" data-del title="Видалити">×</button>
+            </div>
+          `);
+        }
+      }
+
+      const v = readRowValues(row);
+      updateHint(row, v);
       return;
     }
 
@@ -769,8 +864,8 @@
         `${zone}${team.sector||""} • ${team.teamName}\n`+
         `W${currentW}\n`+
         `Риб: ${v.fishCount}\n`+
-        `Вага: ${v.totalWeightKg} кг\n`+
-        `Big Fish: ${v.bigFishKg} кг`
+        `Сума: ${v.totalWeightKg.toFixed(3)} кг\n`+
+        `Big: ${v.bigFishKg.toFixed(3)} кг`
       );
       if(!ok) return;
 
@@ -937,6 +1032,7 @@
         updateWButtons();
 
         setupCallsRealtime();
+        await loadCallsOnceFallback();
         await renderTeams();
 
       }catch(err){

@@ -320,12 +320,66 @@
   padding: 0 !important;
 }
 
-
 /* 🔻 АВТОЗМЕНШЕННЯ ШРИФТУ */
 .live-zone th,
 .live-zone td{
   font-size: clamp(9px, 2.4vw, 11px) !important;
   line-height: 1.15;
+}
+
+/* =======================================================
+   ✅ ПРАВКИ ТІЛЬКИ ПО ТВОЄМУ ЗАПИТУ (БЕЗ ІНШИХ ЗМІН)
+   1) Велика рамка зон — radius 5
+   2) В зоні: стискаємо "Команда" і даємо місце під "4/24.79"
+   ======================================================= */
+
+/* 1) тільки ПЕРША велика рамка (та що "Зони A/B/C") */
+.live-left > .card:first-child{
+  border-radius: 5px !important;
+}
+
+/* 2) ЗОНИ: "Команда" (заголовок+клітинки) — вузько, без переносу */
+.live-zone th:nth-child(2),
+.live-zone td:nth-child(2){
+  width: 50px !important;          /* було 92 */
+  max-width: 50px !important;
+  white-space: nowrap !important;  /* без переносу */
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+
+/* ЗОНИ: "Зона" — трохи компактніше */
+.live-zone th:nth-child(1),
+.live-zone td:nth-child(1){
+  width: 36px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+
+/* ЗОНИ: W1 має вміщати "4/24.79" */
+.live-zone th:nth-child(3),
+.live-zone td:nth-child(3){
+  width: 64px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;  /* НЕ "...", щоб цифри не різало */
+  font-variant-numeric: tabular-nums;
+}
+
+/* (не обов'язково, але стабільно): W2-W4 такі самі по ширині */
+.live-zone th:nth-child(4),
+.live-zone td:nth-child(4),
+.live-zone th:nth-child(5),
+.live-zone td:nth-child(5),
+.live-zone th:nth-child(6),
+.live-zone td:nth-child(6){
+  width: 48px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  font-variant-numeric: tabular-nums;
 }
     
   </style>

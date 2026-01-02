@@ -421,36 +421,40 @@
     // registrations: порядок секторів (тільки з жеребом)
 if (!unsubRegs) {
   unsubRegs = db
-    .collection("registrations")
-    .where("compId", "==", activeCompId)
-    .where("stageId", "==", activeStageId)
-    .where("drawKey", "!=", "")
-    .onSnapshot((qs) => {
-      const rows = [];
+  .collection("registrations")
+  .where("compId", "==", activeCompId)   // ⚠️ або competitionId — перевір
+  .where("stageId", "==", activeStageId)
+  .onSnapshot((qs) => {
+    const rows = [];
 
-      qs.forEach((doc) => {
-        const d = doc.data() || {};
-        const teamId   = d.teamId || "";
-        const teamName = d.teamName || d.team || "—";
+    qs.forEach((doc) => {
+      const d = doc.data() || {};
+      if (!d.drawKey) return;            // ✅ фільтр ТУТ
 
-        const z = parseZoneKey(d.drawKey, d.drawZone, d.drawSector);
+      const teamId   = d.teamId || "";
+      const teamName = d.teamName || d.team || "—";
 
-        rows.push({
-          zoneLabel: z.label,
-          sortKey: z.sortKey,
-          teamId,
-          teamName
-        });
+      const z = parseZoneKey(
+        d.drawKey,
+        d.drawZone,
+        d.drawSector
+      );
+
+      rows.push({
+        zoneLabel: z.label,
+        sortKey: z.sortKey,
+        teamId,
+        teamName
       });
-
-      rows.sort((a, b) => a.sortKey - b.sortKey);
-      regRows = rows;
-
-      renderWeighTable(); // нижня таблиця
-    }, (err) => {
-      console.error("registrations snapshot err:", err);
     });
-}
+
+    rows.sort((a, b) => a.sortKey - b.sortKey);
+    regRows = rows;
+
+    renderWeighTable();                  // 🔥 нижня таблиця оживе
+  }, (err) => {
+    console.error("registrations snapshot err:", err);
+  });
 
     // weighings: конкретний W
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }

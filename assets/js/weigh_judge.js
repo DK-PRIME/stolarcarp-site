@@ -1,11 +1,11 @@
 // assets/js/weigh_judge.js
-// STOLAR CARP • Суддя • Зважування (таблиця як Google Sheet + кілька риб)
+// STOLAR CARP • Суддя • Зважування (таблиця як на LIVE + додавання кількох риб)
 // - bind тільки zone (A/B/C) через ?zone=A + localStorage
-// - активний етап беремо з settings/app
+// - активний етап беремо з settings/app (activeCompetitionId/activeStageId/activeKey)
 // - команди беремо з registrations (confirmed) + drawZone/drawSector
-// - ваги пишемо в weighings у LIVE-сумісному форматі: compId, stageId, weighNo, teamId, weights:[...]
-// - кнопка + додає поле риби, × видаляє
-// - OK створює або оновлює документ (merge)
+// - ваги пишемо в weighings (LIVE-сумісно): compId, stageId, weighNo, teamId, weights:[...]
+// - + додає поле риби, × видаляє
+// - OK створює/оновлює документ (merge)
 
 (function(){
   "use strict";
@@ -122,11 +122,8 @@
 
       renderBindInfo();
 
-      // якщо вже відкрито — оновимо
       if(weighCard && weighCard.style.display !== "none" && zone){
-        try{
-          await openZone(false); // без зайвих msg
-        }catch(e){
+        try{ await openZone(false); } catch(e){
           setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
         }
       }
@@ -196,7 +193,7 @@
     wBtns.forEach(b=>{
       if(!b.el) return;
       b.el.classList.toggle("isActive", b.n === viewW);
-      // ✅ дозволяємо перемикати тільки до поточного W
+      // ВАЖЛИВО: перемикання дозволяємо до currentW (як у тебе було)
       b.el.disabled = (b.n > currentW);
     });
   }
@@ -248,7 +245,6 @@
 
   // ---------- weighings ----------
   function weighingDocId(teamId, wNo){
-    // якщо LIVE очікує саме так — лишаємо
     return `${compId}||${stageId}||W${Number(wNo)}||${teamId}`;
   }
 
@@ -348,186 +344,235 @@
     for(const t of teams){
       weighCache[t.teamId] = weighCache[t.teamId] || {};
       for(let w=1; w<=4; w++){
-        if(weighCache[t.teamId].hasOwnProperty(w)) continue;
         weighCache[t.teamId][w] = await loadWeighing(t.teamId, w);
       }
     }
   }
 
-  // ---------- TABLE (Google Sheet style) ----------
-  function cellSummary(doc){
-    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
-    if(!weights.length) return `<span class="muted">—</span>`;
-    const total = round2(weights.reduce((a,b)=>a+b,0)).toFixed(2);
-    const c = weights.length;
-    return `<b>${esc(total)}</b><div class="muted" style="font-size:.75rem;margin-top:2px;">🐟 ${c}</div>`;
-  }
-
-  function activeCellEditor(team, doc){
-    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
-    const safe = (weights.length ? weights : [""]); // мін 1 поле
-
-    return `
-      <div class="wj-editor" data-team="${esc(team.teamId)}">
-        <div class="wj-fish">
-          ${safe.map((v)=>`
-            <div class="wj-fishrow">
-              <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="${esc(v === "" ? "" : Number(v).toFixed(2))}">
-              <button class="wbtn wj-del" type="button" title="Видалити" ${safe.length<=1 ? "disabled":""}>×</button>
-            </div>
-          `).join("")}
-        </div>
-
-        <div class="wj-controls">
-          <button class="wbtn wj-add" type="button">+</button>
-          <button class="btn btn--primary wj-save" type="button">OK</button>
-        </div>
-
-        <div class="muted wj-hint" style="margin-top:6px;font-size:.85rem;"></div>
-      </div>
-    `;
-  }
-
-  function injectTableStyles(){
-    if(document.getElementById("wjTableStyles")) return;
+  // ---------- TABLE like LIVE ----------
+  function injectStyles(){
+    if(document.getElementById("wjLiveTableStyles")) return;
 
     const css = `
-      <style id="wjTableStyles">
-        .wj-tableWrap{ overflow:auto; border:1px solid rgba(148,163,184,.18); border-radius:14px; }
-        table.wj-table{ width:100%; border-collapse:separate; border-spacing:0; min-width:760px; }
-        .wj-table th, .wj-table td{
+      <style id="wjLiveTableStyles">
+        .wj-wrapTable{
+          border:1px solid rgba(148,163,184,.18);
+          border-radius:16px;
+          overflow:hidden;
+          background:rgba(2,6,23,.25);
+        }
+
+        .wj-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+        table.wj{
+          width:100%;
+          border-collapse:collapse;
+          min-width:620px; /* щоб W1..W4 вмістилися */
+        }
+
+        table.wj th, table.wj td{
           padding:10px 12px;
           border-bottom:1px solid rgba(148,163,184,.12);
           vertical-align:top;
         }
-        .wj-table thead th{
-          position:sticky; top:0;
+
+        table.wj thead th{
           background:rgba(2,6,23,.92);
-          backdrop-filter: blur(8px);
-          z-index:2;
-          border-bottom:1px solid rgba(148,163,184,.22);
+          font-weight:900;
+          text-transform:none;
+        }
+
+        .wj-col-sector{ width:92px; white-space:nowrap; }
+        .wj-col-team{ width:220px; }
+        .wj-col-w{ width:130px; text-align:center; }
+
+        .wj-pill{
+          display:inline-flex;
+          align-items:center;
+          justify-content:center;
+          width:54px;
+          height:54px;
+          border-radius:999px;
+          border:1px solid rgba(148,163,184,.25);
+          background:rgba(2,6,23,.35);
           font-weight:900;
         }
-        .wj-table th:first-child, .wj-table td:first-child{ position:sticky; left:0; z-index:1; background:rgba(2,6,23,.92); }
-        .wj-table th:nth-child(2), .wj-table td:nth-child(2){ position:sticky; left:110px; z-index:1; background:rgba(2,6,23,.92); }
-        .wj-table th:first-child{ left:0; }
-        .wj-table th:nth-child(2){ left:110px; }
 
-        .wj-sector{ width:110px; white-space:nowrap; }
-        .wj-team{ width:260px; }
-        .wj-wcol{ width:170px; text-align:center; }
-
-        .wj-pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
-          border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.35); color:#e5e7eb; font-weight:900; }
         .wj-teamName{ font-weight:900; }
 
-        .wbtn{
+        /* editor inside cell */
+        .wj-editor{
+          display:flex;
+          flex-direction:column;
+          gap:8px;
+          align-items:center;
+        }
+
+        .wj-fishes{
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap; /* ✅ на телефоні переноситься вниз */
+          justify-content:center;
+        }
+
+        .wj-fish{
+          display:flex;
+          gap:6px;
+          align-items:center;
+        }
+
+        .wj-inp{
+          width:90px;
+          text-align:center;
+          padding:10px 10px;
+          border-radius:12px;
+        }
+
+        .wj-miniBtn{
+          width:44px;
+          height:44px;
+          border-radius:14px;
           border:1px solid rgba(148,163,184,.25);
           background:rgba(2,6,23,.25);
           color:#e5e7eb;
-          border-radius:12px;
-          padding:10px 12px;
           font-weight:900;
-          cursor:pointer;
-          user-select:none;
         }
-        .wbtn:disabled{ opacity:.45; cursor:not-allowed; }
 
-        .wj-editor{ min-width:160px; }
-        .wj-fishrow{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:8px; }
-        .wj-inp{ max-width:140px; text-align:center; }
-        .wj-controls{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-        @media (max-width:720px){
-          table.wj-table{ min-width:720px; }
-          .wj-team{ width:220px; }
-          .wj-wcol{ width:160px; }
+        .wj-miniBtn:disabled{ opacity:.45; }
+
+        .wj-actions{
+          display:flex;
+          gap:10px;
+          justify-content:center;
+          align-items:center;
         }
+
+        .wj-hint{ font-size:.85rem; }
+        .wj-sum{ font-weight:900; }
+        .wj-sub{ font-size:.75rem; margin-top:2px; opacity:.75; }
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);
   }
 
+  function cellSummary(doc){
+    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
+    if(!weights.length) return `<span class="muted">—</span>`;
+    const total = round2(weights.reduce((a,b)=>a+b,0)).toFixed(2);
+    const c = weights.length;
+    return `<div class="wj-sum">${esc(total)}</div><div class="wj-sub">🐟 ${c}</div>`;
+  }
+
+  function editorCell(team, doc){
+    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
+    const safe = (weights.length ? weights : [""]); // мінімум 1 інпут
+
+    return `
+      <div class="wj-editor" data-team="${esc(team.teamId)}">
+        <div class="wj-fishes">
+          ${safe.map((v,idx)=>`
+            <div class="wj-fish">
+              <input class="inp wj-inp" inputmode="decimal" placeholder="вага"
+                value="${esc(v === "" ? "" : Number(v).toFixed(2))}" data-i="${idx}">
+              <button class="wj-miniBtn wj-del" type="button" title="Видалити" ${safe.length<=1 ? "disabled":""}>×</button>
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="wj-actions">
+          <button class="wj-miniBtn wj-add" type="button" title="Додати рибу">+</button>
+          <button class="btn btn--primary wj-save" type="button">OK</button>
+        </div>
+
+        <div class="muted wj-hint"></div>
+      </div>
+    `;
+  }
+
   function renderTable(teams){
+    injectStyles();
+
     if(!teamsBox) return;
-    injectTableStyles();
 
     if(!teams.length){
       teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір confirmed + drawZone/drawSector).</div>`;
       return;
     }
 
-    const table = `
-      <div class="wj-tableWrap">
-        <table class="wj-table">
-          <thead>
-            <tr>
-              <th class="wj-sector">Сектор</th>
-              <th class="wj-team">Команда</th>
-              ${[1,2,3,4].map(n=>`<th class="wj-wcol">W${n}</th>`).join("")}
-            </tr>
-          </thead>
-          <tbody>
-            ${teams.map(t=>{
-              const tRow = [1,2,3,4].map(n=>{
-                const doc = weighCache?.[t.teamId]?.[n] || null;
-                if(n === viewW){
-                  return `<td class="wj-wcol">${activeCellEditor(t, doc)}</td>`;
-                }
-                return `<td class="wj-wcol">${cellSummary(doc)}</td>`;
-              }).join("");
+    const html = `
+      <div class="wj-wrapTable">
+        <div class="wj-scroll">
+          <table class="wj">
+            <thead>
+              <tr>
+                <th class="wj-col-sector">Зона</th>
+                <th class="wj-col-team">Команда</th>
+                ${[1,2,3,4].map(n=>`<th class="wj-col-w">W${n}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${teams.map(t=>{
+                const cells = [1,2,3,4].map(n=>{
+                  const doc = weighCache?.[t.teamId]?.[n] || null;
+                  if(n === viewW){
+                    return `<td class="wj-col-w">${editorCell(t, doc)}</td>`;
+                  }
+                  return `<td class="wj-col-w">${cellSummary(doc)}</td>`;
+                }).join("");
 
-              return `
-                <tr>
-                  <td class="wj-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
-                  <td class="wj-team"><div class="wj-teamName">${esc(t.teamName)}</div></td>
-                  ${tRow}
-                </tr>
-              `;
-            }).join("")}
-          </tbody>
-        </table>
+                return `
+                  <tr>
+                    <td class="wj-col-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
+                    <td class="wj-col-team"><div class="wj-teamName">${esc(t.teamName)}</div></td>
+                    ${cells}
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
       </div>
     `;
 
-    teamsBox.innerHTML = table;
+    teamsBox.innerHTML = html;
 
-    // events in active editors
-    teamsBox.querySelectorAll(".wj-editor").forEach(editor=>{
-      const teamId = editor.getAttribute("data-team");
-      const hint = editor.querySelector(".wj-hint");
-      const fishWrap = editor.querySelector(".wj-fish");
+    // events in editors
+    teamsBox.querySelectorAll(".wj-editor").forEach(ed=>{
+      const teamId = ed.getAttribute("data-team");
+      const hint = ed.querySelector(".wj-hint");
+      const fishes = ed.querySelector(".wj-fishes");
 
       function refreshDel(){
-        const dels = editor.querySelectorAll(".wj-del");
+        const dels = ed.querySelectorAll(".wj-del");
         if(dels.length === 1) dels[0].disabled = true;
         else dels.forEach(b=> b.disabled = false);
       }
 
-      editor.querySelector(".wj-add")?.addEventListener("click", ()=>{
-        const row = document.createElement("div");
-        row.className = "wj-fishrow";
-        row.innerHTML = `
-          <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="">
-          <button class="wbtn wj-del" type="button" title="Видалити">×</button>
+      ed.querySelector(".wj-add")?.addEventListener("click", ()=>{
+        const wrap = document.createElement("div");
+        wrap.className = "wj-fish";
+        wrap.innerHTML = `
+          <input class="inp wj-inp" inputmode="decimal" placeholder="вага" value="">
+          <button class="wj-miniBtn wj-del" type="button" title="Видалити">×</button>
         `;
-        fishWrap.appendChild(row);
-        refreshDel();
+        fishes.appendChild(wrap);
         if(hint) hint.textContent = "";
+        refreshDel();
       });
 
-      editor.addEventListener("click", (e)=>{
+      ed.addEventListener("click", (e)=>{
         const btn = e.target;
         if(btn && btn.classList && btn.classList.contains("wj-del")){
-          const row = btn.closest(".wj-fishrow");
+          const row = btn.closest(".wj-fish");
           if(row){
             row.remove();
-            refreshDel();
             if(hint) hint.textContent = "";
+            refreshDel();
           }
         }
       });
 
-      editor.querySelector(".wj-save")?.addEventListener("click", async ()=>{
+      ed.querySelector(".wj-save")?.addEventListener("click", async ()=>{
         try{
           if(hint){
             hint.textContent = "Збереження…";
@@ -537,7 +582,7 @@
           const team = (window.__scTeamsMap || {})[teamId];
           if(!team) throw new Error("Команда не знайдена у списку.");
 
-          const raw = Array.from(editor.querySelectorAll(".wj-inp")).map(i => i.value);
+          const raw = Array.from(ed.querySelectorAll(".wj-inp")).map(i => i.value);
 
           await saveWeighingWeights(team, viewW, raw);
 
@@ -547,6 +592,7 @@
             hint.className = "muted wj-hint ok";
           }
 
+          // авто-прогрес W, якщо всі здали
           const teamsAll = window.__scTeamsArr || [];
           const advanced = await maybeAdvanceAuto(teamsAll);
           if(advanced){
@@ -562,10 +608,10 @@
           renderTable(window.__scTeamsArr || []);
           setWMsg("✅ Збережено у Firestore.", true);
 
-        }catch(e){
-          console.error(e);
+        }catch(err){
+          console.error(err);
           if(hint){
-            hint.textContent = "❌ " + (e?.message || e);
+            hint.textContent = "❌ " + (err?.message || err);
             hint.className = "muted wj-hint err";
           }
           setWMsg("❌ Помилка збереження.", false);
@@ -591,7 +637,6 @@
     maxW = Number(s.data.maxW || DEFAULT_MAX_W);
     currentW = getCurrentWForZone(s.data);
 
-    // ✅ старт завжди W1, але перемикати можна до currentW
     if(!viewW) viewW = 1;
     if(viewW > currentW) viewW = currentW;
 
@@ -620,7 +665,6 @@
       db = window.scDb;
       const auth = window.scAuth;
 
-      // zone from url or storage
       const zUrl = zoneFromUrl();
       if(zUrl) writeBindZone(zUrl);
 
@@ -694,7 +738,7 @@
       wBtns.forEach(b=>{
         if(!b.el) return;
         b.el.addEventListener("click", async ()=>{
-          if(b.n > currentW) return;
+          if(b.n > currentW) return; // як домовлялись: тільки до поточного
           viewW = b.n;
           updateWButtons();
           try{

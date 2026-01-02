@@ -1,8 +1,24 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public)
 
-(function () {
+(async function () {
   "use strict";
+
+  // ⏳ чекаємо Firebase init (scReady)
+  try {
+    if (window.scReady) {
+      await window.scReady;
+    }
+  } catch (e) {
+    const errorEl = document.getElementById("liveError");
+    const loadingEl = document.getElementById("liveLoading");
+    if (errorEl) {
+      errorEl.style.display = "block";
+      errorEl.textContent = "Помилка ініціалізації Firebase";
+    }
+    if (loadingEl) loadingEl.style.display = "none";
+    return;
+  }
 
   const db = window.scDb;
 

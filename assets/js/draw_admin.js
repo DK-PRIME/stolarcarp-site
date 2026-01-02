@@ -228,6 +228,10 @@
       const x = d.data() || {};
       regsAllConfirmed.push({
         _id: d.id,
+
+        // ✅ TEAMID (беремо з registration)
+        teamId: normStr(x.teamId || ""),
+
         teamName: x.teamName || x.team || x.name || "",
         captain: x.captain || x.captainName || "",
         phone: x.phone || x.captainPhone || "",
@@ -381,8 +385,13 @@
       const drawKey = normStr(r.drawKey);
       const zone    = drawKey ? drawKey[0] : null;
       const n       = drawKey ? parseInt(drawKey.slice(1), 10) : null;
+
       return {
         regId: r._id,
+
+        // ✅ TEAMID (ключ для weighings)
+        teamId: normStr(r.teamId || ""),
+
         teamName: r.teamName || "",
         drawKey: drawKey || null,
         drawZone: zone || null,
@@ -395,6 +404,10 @@
       .filter(t => t.bigFishTotal)
       .map(t => ({
         regId: t.regId,
+
+        // ✅ TEAMID (зручно для BigFish логіки/прив’язки)
+        teamId: t.teamId || null,
+
         team: t.teamName,
         big1Day: null,
         big2Day: null,

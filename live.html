@@ -387,6 +387,46 @@
   text-overflow: clip !important;
   font-variant-numeric: tabular-nums;
 }
+    /* ===============================
+   WEIGH TABLE — SCROLL + STICKY
+   =============================== */
+
+.weigh-wrap{
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* таблиця може бути ширша за екран */
+.live-weigh-table{
+  width: max-content;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+/* фіксована зона */
+.live-weigh-table .sticky-col{
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #0b0b12;
+}
+
+/* фіксована команда */
+.live-weigh-table .sticky-col-2{
+  position: sticky;
+  left: 40px;
+  z-index: 3;
+  background: #0b0b12;
+}
+
+/* 🐟 клітинки */
+.live-weigh-table th.fish-th,
+.live-weigh-table td.fish-td{
+  min-width: 56px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
     
   </style>
 </head>
@@ -488,7 +528,22 @@
   </span>
 </div>
 
-<div id="totalTable"></div>
+<div id="totalTable" class="table-wrap weigh-wrap">
+  <table class="table table-sm live-weigh-table">
+    <thead>
+      <tr>
+        <th class="sticky-col">Зона</th>
+        <th class="sticky-col-2">Команда</th>
+        <!-- 🐟 заголовки JS додасть сам -->
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="3">Очікую дані…</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
         </div>
       </div>

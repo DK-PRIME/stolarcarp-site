@@ -15,14 +15,14 @@
 
   if (!btn || !wrap || !tbody) return;
 
+  // ===== UI toggle (через hidden) =====
   function setOpen(isOpen) {
-    if (isOpen) {
-      wrap.classList.add("is-open");
-      btn.textContent = "Сховати BigFish Total";
-    } else {
-      wrap.classList.remove("is-open");
-      btn.textContent = "BigFish Total";
-    }
+    // isOpen=true => показати (hidden прибрати)
+    wrap.hidden = !isOpen;
+
+    // доступність + текст
+    btn.setAttribute("aria-expanded", String(isOpen));
+    btn.textContent = isOpen ? "Сховати BigFish Total" : "BigFish Total";
   }
 
   let isOpen = localStorage.getItem("bf-is-open") === "1";
@@ -32,28 +32,23 @@
     isOpen = !isOpen;
     localStorage.setItem("bf-is-open", isOpen ? "1" : "0");
     setOpen(isOpen);
-    if (isOpen) startSubscribe();
+    if (isOpen) startSubscribe(); // перше відкриття — старт підписок
   });
 
+  // ===== Firestore =====
   const db = window.scDb;
   if (!db) return;
 
   const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
   const fmtKg = (n) => (Number.isFinite(n) && n > 0 ? n.toFixed(2) : "—");
 
-  // ====== визначаємо активний етап зі settings/app ======
-
   function readStageFromApp(app) {
-    // 1) якщо ти зберігаєш готовий ключ stageResults - залишимо сумісність
-    const key = app?.activeKey || app?.activeStageKey;
-    // але нам треба compId + stageId (для weighings/registrations)
     const compId  = app?.activeCompetitionId || app?.competitionId || "";
     const stageId = app?.activeStageId || app?.stageId || "";
-    return { key: key ? String(key) : "", compId: String(compId || ""), stageId: String(stageId || "") };
+    return { compId: String(compId || ""), stageId: String(stageId || "") };
   }
 
-  // ====== логіка 3 призів (3 різні риби) ======
-
+  // ===== логіка 3 призів (3 різні риби) =====
   function byWeightDesc(a, b) { return b.weight - a.weight; }
 
   function pickBest(list, excludedIds) {
@@ -68,28 +63,24 @@
   function computeWinners(allFish) {
     const excluded = new Set();
 
-    // Overall
+    // Overall (W1-4)
     const overall = pickBest(allFish, excluded);
     if (overall) excluded.add(overall.fishId);
 
-    // Day1 (W1-2), але без overall-риби
-    const day1List = allFish.filter(f => f.day === 1);
-    const day1 = pickBest(day1List, excluded);
+    // Day1 (W1-2), без overall-риби
+    const day1 = pickBest(allFish.filter(f => f.day === 1), excluded);
     if (day1) excluded.add(day1.fishId);
 
-    // Day2 (W3-4), але без overall-риби
-    const day2List = allFish.filter(f => f.day === 2);
-    const day2 = pickBest(day2List, excluded);
+    // Day2 (W3-4), без overall-риби
+    const day2 = pickBest(allFish.filter(f => f.day === 2), excluded);
     if (day2) excluded.add(day2.fishId);
 
     return { day1, day2, overall };
   }
 
-  // ====== рендер таблиці BigFish Total ======
-
+  // ===== рендер таблиці BigFish Total =====
   function render(eligibleTeamsMap, allFish, winners) {
     const eligibleCount = eligibleTeamsMap.size;
-
     if (countEl) countEl.textContent = `Учасників: ${eligibleCount}`;
 
     if (!eligibleCount) {
@@ -97,7 +88,7 @@
       return;
     }
 
-    // Пер-тим: максимум по Day1/Day2/Overall
+    // per-team max по Day1/Day2/Overall
     const perTeam = new Map(); // teamId -> {teamName, d1, d2, all}
     for (const [teamId, teamName] of eligibleTeamsMap.entries()) {
       perTeam.set(teamId, { teamId, teamName, d1: 0, d2: 0, all: 0 });
@@ -121,6 +112,12 @@
     const wOverallW = winners?.overall?.weight ?? null;
     const wDay1W    = winners?.day1?.weight ?? null;
     const wDay2W    = winners?.day2?.weight ?? null;
+
+    // якщо риб ще нема — покажемо текст, але учасники є
+    if (!allFish.length) {
+      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
+      return;
+    }
 
     tbody.innerHTML = list.map(t => {
       const day1Cell = (t.teamId === wDay1Team && wDay1W !== null)
@@ -146,23 +143,16 @@
         </tr>
       `;
     }).join("");
-
-    // якщо риб ще нема — покажемо текст, але учасники є
-    const hasAnyFish = allFish.length > 0;
-    if (!hasAnyFish) {
-      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
-    }
   }
 
-  // ====== підписки Firestore ======
-
+  // ===== підписки Firestore =====
   let started = false;
   let unsubSettings = null;
   let unsubRegs = null;
   let unsubWeigh = null;
 
   function stopAllStageSubs() {
-    if (unsubRegs) { unsubRegs(); unsubRegs = null; }
+    if (unsubRegs)  { unsubRegs();  unsubRegs = null; }
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
   }
 
@@ -183,9 +173,7 @@
           return;
         }
 
-        // 1) Беремо підтверджених учасників BigFish Total з registrations
-        // Поле може бути bigFishTotal або bigfishTotal — підстрахуємось
-        // status: confirmed (як у тебе)
+        // 1) confirmed + bigFishTotal=true (або bigfishTotal)
         unsubRegs = db.collection("registrations")
           .where("competitionId", "==", compId)
           .where("stageId", "==", stageId)
@@ -193,6 +181,7 @@
           .onSnapshot(
             (qs) => {
               const eligibleTeams = new Map(); // teamId -> teamName
+
               qs.forEach(doc => {
                 const r = doc.data() || {};
                 const flag = (r.bigFishTotal === true) || (r.bigfishTotal === true);
@@ -203,7 +192,7 @@
                 if (teamId) eligibleTeams.set(teamId, teamName);
               });
 
-              // 2) Підписуємось на weighings цього етапу і фільтруємо по eligibleTeams
+              // 2) weighings цього етапу, фільтр по eligibleTeams
               if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
 
               unsubWeigh = db.collection("weighings")
@@ -229,9 +218,8 @@
                         const weight = Number(val);
                         if (!Number.isFinite(weight) || weight <= 0) return;
 
-                        // fishId унікальний: docId + index (це гарантує "1 риба не бере 2 призи")
                         allFish.push({
-                          fishId: `${d.id}::${idx}`,
+                          fishId: `${d.id}::${idx}`, // унікально => 1 риба не бере 2 призи
                           teamId,
                           teamName,
                           weighNo,
@@ -266,9 +254,6 @@
     );
   }
 
-  // якщо блок відкритий одразу
-  if (wrap.classList.contains("is-open")) {
-    isOpen = true;
-    startSubscribe();
-  }
+  // Якщо таблиця відкрита з localStorage — одразу підписуємось
+  if (isOpen) startSubscribe();
 })();

@@ -1,9 +1,11 @@
 // assets/js/weigh_judge.js
-// STOLAR CARP • Суддя • Зважування (таблиця як у Google Sheet)
+// STOLAR CARP • Суддя • Зважування (таблиця як у Google Sheet + кілька риб)
 // - bind тільки zone (A/B/C) через ?zone=A + localStorage
 // - активний етап беремо з settings/app
 // - команди беремо з registrations (confirmed) + drawZone/drawSector
-// - ваги пишемо в weighings у LIVE-сумісному форматі
+// - ваги пишемо в weighings у LIVE-сумісному форматі: compId, stageId, weighNo, teamId, weights:[...]
+// - кнопка + додає поле риби, × видаляє
+// - OK створює або оновлює документ (merge)
 
 (function(){
   "use strict";
@@ -12,7 +14,7 @@
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const DEFAULT_MAX_W = 4;
 
-  // ===== UI refs (існують у твоєму HTML) =====
+  // ===== UI refs =====
   const zoneTitle = document.getElementById("zoneTitle");
   const statusEl  = document.getElementById("status");
   const bindInfo  = document.getElementById("bindInfo");
@@ -41,27 +43,25 @@
   let db = null;
   let me = null;
 
-  // ===== Active stage (settings/app) =====
+  // ===== Active stage =====
   let compId = "";
   let stageId = "";
-  let activeKey = ""; // compId||stageId (для settings weighing_*)
-  let zone = ""; // A/B/C
+  let activeKey = "";
+  let zone = "";
 
   let maxW = DEFAULT_MAX_W;
-  let currentW = 1; // поточне для зони (авто)
-  let viewW = 1;    // яку колонку зараз вводимо
+  let currentW = 1;
+  let viewW = 1;
 
   // cache: weighings[teamId][wNo] = doc
   const weighCache = Object.create(null);
 
   // ---------- helpers ----------
   function setMsg(t, ok=true){
-    if(!msgEl) return;
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   }
   function setWMsg(t, ok=true){
-    if(!wMsgEl) return;
     wMsgEl.textContent = t || "";
     wMsgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   }
@@ -120,8 +120,7 @@
 
       renderBindInfo();
 
-      // якщо таблиця вже відкрита — перезавантажимо
-      if(weighCard && weighCard.style.display !== "none" && zone){
+      if(weighCard.style.display !== "none" && zone){
         openZone().catch(e=>{
           setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
         });
@@ -137,11 +136,11 @@
     const c = compId || "—";
     const s = stageId || "—";
     const ak = activeKey || "—";
-    if(zoneTitle) zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
-    if(bindInfo) bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
+    zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
+    bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
   }
 
-  // ---------- weighing settings (per activeKey) ----------
+  // ---------- weighing settings per activeKey ----------
   function settingsDocId(){
     return `weighing_${activeKey}`;
   }
@@ -188,20 +187,17 @@
   }
 
   function updateWButtons(){
-    if(curWEl) curWEl.textContent = `W${currentW}`;
+    curWEl.textContent = `W${currentW}`;
     wBtns.forEach(b=>{
-      if(!b.el) return;
       b.el.classList.toggle("isActive", b.n === viewW);
       b.el.disabled = (b.n > currentW);
     });
   }
 
-  // ---------- load teams (registrations) ----------
+  // ---------- teams (registrations) ----------
   function parseZoneFromReg(d){
-    // пріоритет: drawZone
     const z1 = norm(d.drawZone || "").toUpperCase();
     if(z1) return z1;
-    // запасний: drawKey типу A6
     const k = norm(d.drawKey || "").toUpperCase();
     if(k && /^[ABC]\d+/.test(k)) return k[0];
     return "";
@@ -243,7 +239,7 @@
     return rows;
   }
 
-  // ---------- weighings (LIVE compatible) ----------
+  // ---------- weighings (LIVE compatible: weights[]) ----------
   function weighingDocId(teamId, wNo){
     return `${compId}||${stageId}||W${Number(wNo)}||${teamId}`;
   }
@@ -261,35 +257,57 @@
   }
   function round2(x){ return Math.round(x*100)/100; }
 
-  // тут “простий режим” як у твоєму старому варіанті: одне поле “вага”
-  // якщо хочеш “кожну рибу окремо” — скажи, я переключу на weights:[...]
-  async function saveWeighingTotal(team, wNo, totalKg){
+  function cleanWeights(rawArr){
+    const arr = (Array.isArray(rawArr) ? rawArr : [])
+      .map(toNum)
+      .map(n => Number.isFinite(n) ? round2(Math.max(0, Math.min(n, 999.99))) : NaN)
+      .filter(n => Number.isFinite(n) && n > 0);
+    return arr;
+  }
+
+  function calcFromWeights(weights){
+    const fishCount = weights.length;
+    const total = round2(weights.reduce((a,b)=>a+b,0));
+    const big = fishCount ? Math.max(...weights) : 0;
+    return { fishCount, totalWeightKg: total, bigFishKg: round2(big) };
+  }
+
+  async function saveWeighingWeights(team, wNo, weightsRaw){
     const id = weighingDocId(team.teamId, wNo);
     const ts = window.firebase.firestore.FieldValue.serverTimestamp();
 
-    const w = round2(totalKg);
+    const weights = cleanWeights(weightsRaw);
+    const calc = calcFromWeights(weights);
 
+    // ✅ set(..., merge:true) = якщо нема документа → створить, якщо є → оновить
     await db.collection("weighings").doc(id).set({
-      // LIVE ключові поля:
+      // LIVE fields
       compId,
       stageId,
       weighNo: Number(wNo),
       teamId: team.teamId,
+      weights,
 
-      // Для простого лайву:
-      totalWeightKg: w,
-
-      // Додатково:
+      // helpful extra
       zone,
       sector: Number(team.sector||0),
       teamName: team.teamName || "",
+      fishCount: calc.fishCount,
+      totalWeightKg: calc.totalWeightKg,
+      bigFishKg: calc.bigFishKg,
       status: "submitted",
       updatedAt: ts,
       updatedBy: me.uid
     }, { merge:true });
 
     weighCache[team.teamId] = weighCache[team.teamId] || {};
-    weighCache[team.teamId][wNo] = { totalWeightKg: w, status:"submitted" };
+    weighCache[team.teamId][wNo] = {
+      weights,
+      fishCount: calc.fishCount,
+      totalWeightKg: calc.totalWeightKg,
+      bigFishKg: calc.bigFishKg,
+      status:"submitted"
+    };
   }
 
   async function maybeAdvanceAuto(teams){
@@ -318,11 +336,79 @@
     return true;
   }
 
-  // ---------- render table ----------
+  // ---------- preload ----------
+  async function preloadWeighings(teams){
+    for(const t of teams){
+      weighCache[t.teamId] = weighCache[t.teamId] || {};
+      for(let w=1; w<=4; w++){
+        if(weighCache[t.teamId].hasOwnProperty(w)) continue;
+        weighCache[t.teamId][w] = await loadWeighing(t.teamId, w);
+      }
+    }
+  }
+
+  // ---------- render table with + fish ----------
+  function weightsSummaryCell(doc){
+    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
+    if(!weights.length) return `<span class="muted">—</span>`;
+    const c = weights.length;
+    const total = round2(weights.reduce((a,b)=>a+b,0)).toFixed(2);
+    return `<b>${esc(total)}</b><div class="muted" style="font-size:.75rem;">🐟 ${c}</div>`;
+  }
+
+  function renderActiveCell(team, existingDoc){
+    const weights = Array.isArray(existingDoc?.weights) ? existingDoc.weights : [];
+    const safe = (weights.length ? weights : [""]); // мін 1 поле
+
+    return `
+      <div class="wj-wrap" data-team="${esc(team.teamId)}">
+        <div class="wj-list">
+          ${safe.map((v,i)=>`
+            <div class="wj-row" data-row="${i}">
+              <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="${esc(v === "" ? "" : Number(v).toFixed(2))}">
+              <button class="wbtn wj-del" type="button" title="Видалити" ${safe.length<=1 ? "disabled":""}>×</button>
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="wj-actions">
+          <button class="wbtn wj-add" type="button" title="Додати рибу">+</button>
+          <button class="btn btn--primary wj-save" type="button">OK</button>
+        </div>
+
+        <div class="muted wj-hint" style="margin-top:6px; font-size:.85rem;"></div>
+      </div>
+    `;
+  }
+
   function renderTable(teams){
     if(!teamsBox) return;
 
+    const style = `
+      <style>
+        .wj-actions{ display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
+        .wbtn{
+          border:1px solid rgba(148,163,184,.25);
+          background:rgba(2,6,23,.25);
+          color:#e5e7eb;
+          border-radius:12px;
+          padding:10px 12px;
+          font-weight:900;
+          cursor:pointer;
+          user-select:none;
+        }
+        .wbtn:disabled{ opacity:.45; cursor:not-allowed; }
+        .wj-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; justify-content:center; }
+        .wj-inp{ min-width:96px; max-width:140px; text-align:center; }
+        .wj-wrap{ min-width:220px; }
+        @media (max-width:720px){
+          .wj-wrap{ min-width:180px; }
+        }
+      </style>
+    `;
+
     const head = `
+      ${style}
       <div style="overflow:auto;">
         <table style="width:100%; border-collapse:collapse;">
           <thead>
@@ -344,33 +430,27 @@
     const body = teamsBox.querySelector("#tblBody");
     body.innerHTML = teams.map(t=>{
       const cells = [1,2,3,4].map(n=>{
-        const active = (n === viewW);
+        const doc = (weighCache[t.teamId] && weighCache[t.teamId][n]) ? weighCache[t.teamId][n] : null;
 
-        // значення з кешу (може бути null)
-        const d = (weighCache[t.teamId] && weighCache[t.teamId][n]) ? weighCache[t.teamId][n] : null;
-        const v = (d && Number.isFinite(Number(d.totalWeightKg))) ? Number(d.totalWeightKg).toFixed(2) : "";
-
-        if(active){
+        if(n === viewW){
           return `
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12);">
-              <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
-                <input class="inp" inputmode="decimal" data-inp="${esc(t.teamId)}" placeholder="0.00" value="${esc(v)}"
-                  style="min-width:92px; max-width:120px; text-align:center;">
-                <button class="btn btn--primary" data-save="${esc(t.teamId)}" style="padding:10px 12px; border-radius:12px;">OK</button>
-              </div>
+            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12); vertical-align:top;">
+              ${renderActiveCell(t, doc)}
             </td>
           `;
         }
 
-        // неактивна колонка — тільки показ
-        const show = v ? `<b>${esc(v)}</b>` : `<span class="muted">—</span>`;
-        return `<td style="padding:8px; text-align:center; border-bottom:1px solid rgba(148,163,184,.12);">${show}</td>`;
+        return `
+          <td style="padding:8px; text-align:center; border-bottom:1px solid rgba(148,163,184,.12); vertical-align:top;">
+            ${weightsSummaryCell(doc)}
+          </td>
+        `;
       }).join("");
 
       return `
         <tr>
           <td style="padding:10px; border-bottom:1px solid rgba(148,163,184,.12);">
-            <span class="pill">A${esc(t.sector)}</span>
+            <span class="pill">${esc(zone)}${esc(t.sector)}</span>
           </td>
           <td style="padding:10px; border-bottom:1px solid rgba(148,163,184,.12); font-weight:900;">
             ${esc(t.teamName)}
@@ -380,32 +460,62 @@
       `;
     }).join("");
 
-    // кнопки save
-    body.querySelectorAll("[data-save]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const teamId = btn.getAttribute("data-save");
-        const inp = body.querySelector(`[data-inp="${CSS.escape(teamId)}"]`);
-        const raw = inp ? inp.value : "";
-        const num = toNum(raw);
+    // events for active cells
+    body.querySelectorAll(".wj-wrap").forEach(wrap=>{
+      const teamId = wrap.getAttribute("data-team");
+      const hint = wrap.querySelector(".wj-hint");
+      const list = wrap.querySelector(".wj-list");
 
-        if(!Number.isFinite(num) || num < 0){
-          setWMsg("❌ Введи вагу числом, напр. 5.080", false);
-          return;
+      function refreshDelDisabled(){
+        const dels = wrap.querySelectorAll(".wj-del");
+        if(dels.length === 1) dels[0].disabled = true;
+        else dels.forEach(b=> b.disabled = false);
+      }
+
+      wrap.querySelector(".wj-add")?.addEventListener("click", ()=>{
+        const row = document.createElement("div");
+        row.className = "wj-row";
+        row.innerHTML = `
+          <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="">
+          <button class="wbtn wj-del" type="button" title="Видалити">×</button>
+        `;
+        list.appendChild(row);
+        refreshDelDisabled();
+        hint.textContent = "";
+      });
+
+      wrap.addEventListener("click", (e)=>{
+        const btn = e.target;
+        if(btn && btn.classList && btn.classList.contains("wj-del")){
+          const row = btn.closest(".wj-row");
+          if(row){
+            row.remove();
+            refreshDelDisabled();
+            hint.textContent = "";
+          }
         }
+      });
 
-        const teamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
-        const team = teamsMap[teamId];
-        if(!team){
-          setWMsg("❌ Не знайшов команду в списку.", false);
-          return;
-        }
-
+      wrap.querySelector(".wj-save")?.addEventListener("click", async ()=>{
         try{
-          setWMsg(`Зберігаю ${team.teamName} W${viewW}…`, true);
-          await saveWeighingTotal(team, viewW, num);
-          setWMsg(`✅ Збережено: ${team.teamName} W${viewW} = ${round2(num).toFixed(2)}`, true);
+          hint.textContent = "Збереження…";
+          hint.className = "muted wj-hint";
 
-          const advanced = await maybeAdvanceAuto(teams);
+          const inputs = Array.from(wrap.querySelectorAll(".wj-inp"));
+          const raw = inputs.map(i => i.value);
+
+          const teamsMap = window.__scTeamsMap || {};
+          const team = teamsMap[teamId];
+          if(!team) throw new Error("Команда не знайдена у списку.");
+
+          await saveWeighingWeights(team, viewW, raw);
+
+          const d = weighCache[teamId][viewW] || {};
+          hint.textContent = `✅ OK: 🐟 ${d.fishCount||0} • кг ${(d.totalWeightKg||0).toFixed(2)} • Big ${(d.bigFishKg||0).toFixed(2)}`;
+          hint.className = "muted wj-hint ok";
+
+          const teamsAll = window.__scTeamsArr || [];
+          const advanced = await maybeAdvanceAuto(teamsAll);
           if(advanced){
             const s = await getOrCreateWeighingSettings();
             maxW = Number(s.data.maxW || DEFAULT_MAX_W);
@@ -415,28 +525,22 @@
             setWMsg(`Авто: всі здані → переключив на W${currentW}`, true);
           }
 
-          // перерендер таблиці, щоб інші колонки показали значення
-          await preloadWeighings(teams);
-          renderTable(teams);
+          // оновимо таблицю (щоб в інших W були суми/🐟)
+          await preloadWeighings(window.__scTeamsArr || []);
+          renderTable(window.__scTeamsArr || []);
+
+          setWMsg("✅ Збережено у Firestore.", true);
 
         }catch(e){
           console.error(e);
-          setWMsg("❌ Помилка збереження: " + (e?.message || e), false);
+          hint.textContent = "❌ " + (e?.message || e);
+          hint.className = "muted wj-hint err";
+          setWMsg("❌ Помилка збереження.", false);
         }
       });
-    });
-  }
 
-  async function preloadWeighings(teams){
-    // підтягуємо усі W1..W4 (щоб таблиця одразу була “як у Sheet”)
-    for(const t of teams){
-      weighCache[t.teamId] = weighCache[t.teamId] || {};
-      for(let w=1; w<=4; w++){
-        // якщо вже є — не чіпаємо
-        if(weighCache[t.teamId].hasOwnProperty(w)) continue;
-        weighCache[t.teamId][w] = await loadWeighing(t.teamId, w);
-      }
-    }
+      refreshDelDisabled();
+    });
   }
 
   // ---------- open zone ----------
@@ -450,18 +554,18 @@
       return;
     }
 
-    // settings per activeKey
     const s = await getOrCreateWeighingSettings();
     maxW = Number(s.data.maxW || DEFAULT_MAX_W);
     currentW = getCurrentWForZone(s.data);
     if(viewW > currentW) viewW = currentW;
     updateWButtons();
 
-    // teams + weighings
     const teams = await loadTeamsForZone();
+    window.__scTeamsArr = teams;
+    window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
 
-    if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
-    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
+    teamsCountEl.textContent = `Команд: ${teams.length}`;
+    statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
 
     weighCard.style.display = "block";
     if(netBadge) netBadge.style.display = "inline-flex";
@@ -485,12 +589,13 @@
 
       const bind = readBindZone();
       zone = bind?.zone ? String(bind.zone).toUpperCase() : "";
-      if(zone && zoneTitle) zoneTitle.textContent = `Зона ${zone}`;
+
+      renderBindInfo();
 
       auth.onAuthStateChanged(async (user)=>{
         if(!user){
           authPill.textContent = "auth: ❌ увійди (суддя)";
-          if(statusEl) statusEl.textContent = "Потрібен вхід судді/адміна.";
+          statusEl.textContent = "Потрібен вхід судді/адміна.";
           weighCard.style.display = "none";
           return;
         }
@@ -500,16 +605,15 @@
 
         const ok = await requireJudgeOrAdmin(user);
         if(!ok){
-          if(statusEl) statusEl.textContent = "⛔ Нема доступу (потрібна роль judge/admin).";
+          statusEl.textContent = "⛔ Нема доступу (потрібна роль judge/admin).";
           weighCard.style.display = "none";
           return;
         }
 
-        if(statusEl) statusEl.textContent = "✅ Доступ судді підтверджено.";
+        statusEl.textContent = "✅ Доступ судді підтверджено.";
         setMsg("Готово. Натисни «Відкрити мою зону».", true);
 
         watchApp();
-        renderBindInfo();
       });
 
       btnOpen.addEventListener("click", async ()=>{
@@ -551,7 +655,7 @@
           viewW = b.n;
           updateWButtons();
           try{
-            const teams = await loadTeamsForZone();
+            const teams = window.__scTeamsArr || await loadTeamsForZone();
             await preloadWeighings(teams);
             renderTable(teams);
             setWMsg(`Активна колонка: W${viewW}`, true);
@@ -563,7 +667,7 @@
 
     }catch(e){
       console.error(e);
-      if(statusEl) statusEl.textContent = "❌ init: " + (e?.message || e);
+      statusEl.textContent = "❌ init: " + (e?.message || e);
     }
   })();
 

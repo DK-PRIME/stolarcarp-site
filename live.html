@@ -350,15 +350,24 @@
       </div>
 
       <div class="bf-toggle">
-        <button class="btn btn--accent" id="toggleBigFishBtn" type="button">BigFish Total</button>
-        <span class="pill" id="liveUpdatedAt">Оновлено: —</span>
+  <button
+    class="btn btn--accent"
+    id="toggleBigFishBtn"
+    type="button"
+    aria-expanded="false"
+    aria-controls="bigFishWrap"
+  >
+    BigFish Total
+  </button>
+
+  <span class="pill" id="liveUpdatedAt">Оновлено: —</span>
       </div>
 
-      <div class="card bf-wrap" id="bigFishWrap">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <h2 style="margin:0;">BigFish — Total</h2>
-          <span class="pill" id="bfCount">Учасників: —</span>
-        </div>
+      <div class="card bf-wrap" id="bigFishWrap" hidden>
+  <div class="bf-head">
+    <h2>BigFish — Total</h2>
+    <span class="pill" id="bfCount">Учасників: —</span>
+  </div>
 
         <div class="table-wrap" style="margin-top:10px;">
           <table class="table table-sm" id="bigFishTable">

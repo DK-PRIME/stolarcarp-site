@@ -226,132 +226,82 @@
   }
 
   /* ===================================================
-     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4)
-     - бігунок
-     - sticky зона+команда
-     - клітинка ваги = 20
-     =================================================== */
+   ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — ТІЛЬКИ СКРОЛ
+   - горизонтальний бігунок
+   - sticky Зона + Команда
+   - ширина ваги = 20
+   =================================================== */
 
-  /* wrapper scroll */
-  .live-left .table-wrap{
-    overflow-x:auto;
-    max-width:100%;
-    -webkit-overflow-scrolling:touch;
-  }
-
-  /* робимо таблицю ширшою ніж екран -> з’явиться бігунок */
-  #totalTable{
-    width:max-content;
-    table-layout:fixed;
-    border-collapse:collapse;
-  }
-
-  #totalTable th,
-  #totalTable td{
-    font-size:11px !important;
-    line-height:1.05 !important;
-    padding:2px !important;
-    text-align:center !important;
-    vertical-align:middle !important;
-    white-space:nowrap !important;
-    overflow:hidden !important;
-    text-overflow:clip !important;
-    font-variant-numeric: tabular-nums;
-    background:rgba(2,6,23,.35);
-  }
-
-  /* sticky ЗОНА */
-  #totalTable th:nth-child(1),
-  #totalTable td:nth-child(1){
-    width:27px !important;
-    position:sticky;
-    left:0;
-    z-index:5;
-    background:#0d0d14 !important;
-  }
-
-  /* sticky КОМАНДА */
-  #totalTable th:nth-child(2),
-  #totalTable td:nth-child(2){
-    width:45px !important;
-    position:sticky;
-    left:27px;
-    z-index:5;
-    background:#0d0d14 !important;
-    text-align:left !important;
-    padding-left:3px !important;
-    text-overflow:ellipsis !important;
-  }
-
-  /* всі ваги — по 20 */
-  #totalTable th:nth-child(n+3),
-  #totalTable td:nth-child(n+3){
-    width:20px !important;
-    min-width:20px !important;
-  }
-    /* ===============================
-   WEIGHINGS — SCROLL + STICKY
-   =============================== */
-
-.weigh-scroll{
-  width:100%;
-  max-width:100%;
-  overflow-x:auto;
-  overflow-y:hidden;
+/* контейнер скролу ТІЛЬКИ для weighings */
+.table-wrap.weigh-scroll{
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:auto !important;
+  overflow-y:hidden !important;
   -webkit-overflow-scrolling:touch;
-  padding-bottom:8px; /* щоб бігунок було видно */
+  padding-bottom:10px; /* щоб “бігунок” був видимий */
 }
 
+/* робимо таблицю ширшою за екран -> з’являється скрол */
 #totalTable{
   width:max-content !important;
-  min-width:100% !important;
-  table-layout:fixed;
+  min-width:max-content !important;
+  table-layout:auto !important;    /* 🔥 важливо */
   border-collapse:collapse;
 }
 
+/* загальні стилі клітинок (7px як ти хочеш) */
 #totalTable th,
 #totalTable td{
   font-size:7px !important;
   line-height:1.05 !important;
-  padding:2px !important;
+  padding:2px 2px !important;
   white-space:nowrap !important;
   text-align:center !important;
   vertical-align:middle !important;
+  overflow:hidden !important;
+  text-overflow:clip !important;
   font-variant-numeric: tabular-nums;
 }
 
-/* sticky Зона */
+/* sticky: Зона */
 #totalTable th:nth-child(1),
 #totalTable td:nth-child(1){
   width:27px !important;
   min-width:27px !important;
-  position:sticky;
-  left:0;
-  z-index:5;
+  position:sticky !important;
+  left:0 !important;
+  z-index:20 !important;
   background:#0d0d14 !important;
 }
 
-/* sticky Команда */
+/* sticky: Команда */
 #totalTable th:nth-child(2),
 #totalTable td:nth-child(2){
   width:45px !important;
   min-width:45px !important;
-  position:sticky;
-  left:27px;
-  z-index:5;
+  position:sticky !important;
+  left:27px !important;
+  z-index:20 !important;
   background:#0d0d14 !important;
   text-align:left !important;
   padding-left:3px !important;
-  overflow:hidden !important;
   text-overflow:ellipsis !important;
 }
 
-/* риби */
+/* всі “риби” — по 20 */
 #totalTable th:nth-child(n+3),
 #totalTable td:nth-child(n+3){
   width:20px !important;
   min-width:20px !important;
+  max-width:20px !important;
 }
+
+/* (опційно) щоб бігунок було видно на Android/Chrome */
+.table-wrap.weigh-scroll::-webkit-scrollbar{ height:10px; }
+.table-wrap.weigh-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
+.table-wrap.weigh-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,.06); border-radius:999px; }
+ 
 </style>
 </head>
 

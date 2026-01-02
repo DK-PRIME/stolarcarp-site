@@ -204,15 +204,21 @@
   .live-left > .card:nth-child(2){ border-radius:5px !important; }
 
   /* ===================================================
-     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — СВАЙП/СКРОЛ
+     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — СВАЙП/СКРОЛ (MOBILE PORTRAIT)
      - видно ~10–12 риб
      - решта свайпом
      - sticky зона+команда
-     - сторінка не розширюється
+     - СТОРІНКА НЕ РОЗШИРЮЄТЬСЯ (важливо!)
      =================================================== */
 
   /* 1) Забороняємо сторінці ставати ширшою */
   html, body{ max-width:100%; overflow-x:hidden; }
+
+  /* 1.1) Якщо main.css робить .container ширшим — ріжемо на телефоні */
+  @media (max-width:520px){
+    .container{ max-width:100% !important; width:100% !important; overflow-x:hidden !important; }
+    .card{ max-width:100% !important; overflow-x:hidden !important; }
+  }
 
   /* 2) Скрол тільки в цьому контейнері */
   .table-wrap.weigh-scroll{

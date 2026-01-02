@@ -306,14 +306,12 @@
   let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
   let weighByTeam = new Map(); // teamId -> weights[]
 
-  let unsubRegs  = null;
   let unsubWeigh = null;
 
   let allWeighDocs = [];     // ВСІ документи weighings W1..W4
   let unsubAllWeigh = null;  // підписка на weighings (всі W)
 
   function stopWeighSubs(){
-    if (unsubRegs) { unsubRegs(); unsubRegs = null; }
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
     if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
   }
@@ -325,6 +323,30 @@
     const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
     const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
     return { label, sortKey };
+  }
+
+  function buildRegRowsFromStageTeams(teamsRaw){
+    const rows = [];
+    (teamsRaw || []).forEach((t) => {
+      const teamId = String(t.teamId || "").trim();
+      if (!teamId) return;
+
+      // показуємо тільки ті, кому адмін задав жереб
+      const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
+      if (!hasDraw) return;
+
+      const z = parseZoneKey(t.drawKey, t.drawZone, t.drawSector);
+
+      rows.push({
+        zoneLabel: z.label,
+        sortKey: z.sortKey,
+        teamId,
+        teamName: t.teamName || t.team || "—"
+      });
+    });
+
+    rows.sort((a,b)=>a.sortKey-b.sortKey);
+    return rows;
   }
 
   function setWeighButtons(activeKey){
@@ -417,44 +439,6 @@
     const db = window.scDb;
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
-
-    // registrations: порядок секторів (тільки з жеребом)
-if (!unsubRegs) {
-  unsubRegs = db
-  .collection("registrations")
-  .where("compId", "==", activeCompId)   // ⚠️ або competitionId — перевір
-  .where("stageId", "==", activeStageId)
-  .onSnapshot((qs) => {
-    const rows = [];
-
-    qs.forEach((doc) => {
-      const d = doc.data() || {};
-      if (!d.drawKey) return;            // ✅ фільтр ТУТ
-
-      const teamId   = d.teamId || "";
-      const teamName = d.teamName || d.team || "—";
-
-      const z = parseZoneKey(
-        d.drawKey,
-        d.drawZone,
-        d.drawSector
-      );
-
-      rows.push({
-        zoneLabel: z.label,
-        sortKey: z.sortKey,
-        teamId,
-        teamName
-      });
-    });
-
-    rows.sort((a, b) => a.sortKey - b.sortKey);
-    regRows = rows;
-
-    renderWeighTable();                  // 🔥 нижня таблиця оживе
-  }, (err) => {
-    console.error("registrations snapshot err:", err);
-  });
 
     // weighings: конкретний W
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
@@ -578,6 +562,10 @@ if (!unsubRegs) {
 
           const zonesData = data.zones || { A: [], B: [], C: [] };
           const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
+
+          // ✅ головне: порядок секторів беремо ТІЛЬКИ зі stageResults.teams
+          regRows = buildRegRowsFromStageTeams(teamsRaw);
+          renderWeighTable();
 
           const hasStageZones =
             (zonesData.A && zonesData.A.length) ||

@@ -91,15 +91,15 @@
   }
 
   .table-sm{
-    font-size:7px;            /* ✅ як ти хочеш */
+    font-size:7px;
     line-height:1.05;
   }
   .table-sm th,
   .table-sm td{
     padding:2px 2px;
     white-space:nowrap;
-    text-align:center;         /* ✅ центр */
-    vertical-align:middle;     /* ✅ центр */
+    text-align:center;
+    vertical-align:middle;
     overflow:hidden;
     text-overflow:clip;
     font-variant-numeric: tabular-nums;
@@ -115,7 +115,7 @@
   .live-zones-grid{
     display:grid;
     grid-template-columns:repeat(3,1fr);
-    gap:0;                     /* ✅ як було "впритул" */
+    gap:0;
   }
   @media (max-width:980px){
     .live-zones-grid{
@@ -139,14 +139,12 @@
     padding:3px 8px;
   }
 
-  /* ✅ важливо: fixed layout + чіткі ширини */
   .live-zone table.table{
     width:100%;
     table-layout:fixed;
     border-collapse:collapse;
   }
 
-  /* ✅ БАЗА ДЛЯ ЗОН */
   .live-zone th,
   .live-zone td{
     font-size:7px !important;
@@ -160,13 +158,9 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* 1) ЗОНА — 20 */
   .live-zone th:nth-child(1),
-  .live-zone td:nth-child(1){
-    width:20px !important;
-  }
+  .live-zone td:nth-child(1){ width:20px !important; }
 
-  /* 2) КОМАНДА — 45 */
   .live-zone th:nth-child(2),
   .live-zone td:nth-child(2){
     width:45px !important;
@@ -175,7 +169,6 @@
     text-overflow:ellipsis !important;
   }
 
-  /* 3-6) W1..W4 — 40 */
   .live-zone th:nth-child(3),
   .live-zone td:nth-child(3),
   .live-zone th:nth-child(4),
@@ -183,126 +176,117 @@
   .live-zone th:nth-child(5),
   .live-zone td:nth-child(5),
   .live-zone th:nth-child(6),
-  .live-zone td:nth-child(6){
-    width:40px !important;
-  }
+  .live-zone td:nth-child(6){ width:40px !important; }
 
-  /* 7) К-ТЬ — 23 */
   .live-zone th:nth-child(7),
   .live-zone td:nth-child(7){
     width:23px !important;
     font-weight:700 !important;
   }
 
-  /* 8) BIG — 25 */
   .live-zone th:nth-child(8),
-  .live-zone td:nth-child(8){
-    width:25px !important;
-  }
+  .live-zone td:nth-child(8){ width:25px !important; }
 
-  /* 9) ВАГА — 30 */
   .live-zone th:nth-child(9),
   .live-zone td:nth-child(9){
     width:30px !important;
     font-weight:700 !important;
   }
 
-  /* 10) МІСЦЕ — 20 */
   .live-zone th:nth-child(10),
   .live-zone td:nth-child(10){
     width:20px !important;
     font-weight:800 !important;
   }
 
-  /* ===== LIVE: рамки лівих карточок як ти робив ===== */
-  .live-left > .card{
-    padding:3px !important;
-  }
-  .live-left > .card:first-child{
-    border-radius:5px !important;
-  }
-  .live-left > .card:nth-child(2){
-    border-radius:5px !important;
-  }
+  .live-left > .card{ padding:3px !important; }
+  .live-left > .card:first-child{ border-radius:5px !important; }
+  .live-left > .card:nth-child(2){ border-radius:5px !important; }
 
   /* ===================================================
-   ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — ТІЛЬКИ СКРОЛ
-   - горизонтальний бігунок
-   - sticky Зона + Команда
-   - ширина ваги = 20
-   =================================================== */
+     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — СВАЙП/СКРОЛ
+     - видно ~10–12 риб
+     - решта свайпом
+     - sticky зона+команда
+     - сторінка не розширюється
+     =================================================== */
 
-/* контейнер скролу ТІЛЬКИ для weighings */
-.table-wrap.weigh-scroll{
-  width:100% !important;
-  max-width:100% !important;
-  overflow-x:auto !important;
-  overflow-y:hidden !important;
-  -webkit-overflow-scrolling:touch;
-  padding-bottom:10px; /* щоб “бігунок” був видимий */
-}
+  /* 1) Забороняємо сторінці ставати ширшою */
+  html, body{ max-width:100%; overflow-x:hidden; }
 
-/* робимо таблицю ширшою за екран -> з’являється скрол */
-#totalTable{
-  width:max-content !important;
-  min-width:max-content !important;
-  table-layout:auto !important;    /* 🔥 важливо */
-  border-collapse:collapse;
-}
+  /* 2) Скрол тільки в цьому контейнері */
+  .table-wrap.weigh-scroll{
+    width:100% !important;
+    max-width:100% !important;
+    display:block;
+    overflow-x:auto !important;
+    overflow-y:hidden !important;
+    -webkit-overflow-scrolling:touch;
+    touch-action: pan-x;
+    padding-bottom:10px;
+  }
 
-/* загальні стилі клітинок (7px як ти хочеш) */
-#totalTable th,
-#totalTable td{
-  font-size:7px !important;
-  line-height:1.05 !important;
-  padding:2px 2px !important;
-  white-space:nowrap !important;
-  text-align:center !important;
-  vertical-align:middle !important;
-  overflow:hidden !important;
-  text-overflow:clip !important;
-  font-variant-numeric: tabular-nums;
-}
+  /* 3) Таблиця може бути хоч 50 колонок, але тільки всередині контейнера */
+  #totalTable{
+    border-collapse:separate;
+    border-spacing:0;
+    width:max-content !important;
+    min-width:max-content !important;
+    table-layout:auto !important;
+  }
 
-/* sticky: Зона */
-#totalTable th:nth-child(1),
-#totalTable td:nth-child(1){
-  width:27px !important;
-  min-width:27px !important;
-  position:sticky !important;
-  left:0 !important;
-  z-index:20 !important;
-  background:#0d0d14 !important;
-}
+  /* 4) Клітинки */
+  #totalTable th,
+  #totalTable td{
+    font-size:7px !important;
+    line-height:1.05 !important;
+    padding:2px 2px !important;
+    white-space:nowrap !important;
+    text-align:center !important;
+    vertical-align:middle !important;
+    font-variant-numeric: tabular-nums;
+    background:rgba(2,6,23,.35);
+  }
 
-/* sticky: Команда */
-#totalTable th:nth-child(2),
-#totalTable td:nth-child(2){
-  width:45px !important;
-  min-width:45px !important;
-  position:sticky !important;
-  left:27px !important;
-  z-index:20 !important;
-  background:#0d0d14 !important;
-  text-align:left !important;
-  padding-left:3px !important;
-  text-overflow:ellipsis !important;
-}
+  /* 5) Sticky: Зона */
+  #totalTable th:nth-child(1),
+  #totalTable td:nth-child(1){
+    position:sticky !important;
+    left:0 !important;
+    z-index:50 !important;
+    width:28px !important;
+    min-width:28px !important;
+    background:#0d0d14 !important;
+  }
 
-/* всі “риби” — по 20 */
-#totalTable th:nth-child(n+3),
-#totalTable td:nth-child(n+3){
-  width:20px !important;
-  min-width:20px !important;
-  max-width:20px !important;
-}
+  /* 6) Sticky: Команда */
+  #totalTable th:nth-child(2),
+  #totalTable td:nth-child(2){
+    position:sticky !important;
+    left:28px !important;
+    z-index:50 !important;
+    width:60px !important;
+    min-width:60px !important;
+    background:#0d0d14 !important;
+    text-align:left !important;
+    padding-left:4px !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
 
-/* (опційно) щоб бігунок було видно на Android/Chrome */
-.table-wrap.weigh-scroll::-webkit-scrollbar{ height:10px; }
-.table-wrap.weigh-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
-.table-wrap.weigh-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,.06); border-radius:999px; }
- 
-</style>
+  /* 7) Риби: робимо ширину так, щоб на мобільному було ~10–12 */
+  #totalTable th:nth-child(n+3),
+  #totalTable td:nth-child(n+3){
+    width:22px !important;
+    min-width:22px !important;
+    max-width:22px !important;
+  }
+
+  /* 8) Видимий “бігунок” */
+  .table-wrap.weigh-scroll::-webkit-scrollbar{ height:10px; }
+  .table-wrap.weigh-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
+  .table-wrap.weigh-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,.06); border-radius:999px; }
+  </style>
 </head>
 
 <body class="live-page">
@@ -323,8 +307,6 @@
       <a href="lakes.html" class="nav__link">Водойми</a>
       <a href="sponsors.html" class="nav__link">Спонсори</a>
       <a href="events/index.html" class="nav__link">Архів</a>
-
-      <!-- ВАЖЛИВО: зроби посилання абсолютним, щоб ніколи не вело "криво" -->
       <a href="/cabinet.html" class="nav__link" id="cabinetLink">Мій кабінет</a>
     </nav>
 
@@ -389,7 +371,7 @@
           <p class="live-note">Місця у зоні.</p>
         </div>
 
-        <div class="card">
+        <div class="card weigh-card">
           <h2 style="margin-top:0;">Таблиця зважувань</h2>
 
           <div class="bf-toggle" style="margin-top:18px;margin-bottom:12px">
@@ -401,19 +383,19 @@
           </div>
 
           <div class="table-wrap weigh-scroll">
-  <table class="table table-sm" id="totalTable">
-    <thead>
-      <tr>
-        <th>Зона</th>
-        <th>Команда</th>
-        <th>🐟</th>
-        <th>🐟</th>
-        <th>🐟</th>
-        <th>🐟</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+            <table class="table table-sm" id="totalTable">
+              <thead>
+                <tr>
+                  <th>Зона</th>
+                  <th>Команда</th>
+                  <th>🐟</th>
+                  <th>🐟</th>
+                  <th>🐟</th>
+                  <th>🐟</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
 
         </div>
@@ -447,7 +429,6 @@
     document.getElementById("bigFishWrap")?.classList.toggle("is-open");
   });
 
-  /* підстраховка: "Мій кабінет" завжди веде туди, куди треба */
   (function(){
     const a = document.getElementById("cabinetLink");
     if (a) a.setAttribute("href", "/cabinet.html");

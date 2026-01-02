@@ -289,32 +289,68 @@
     width:20px !important;
     min-width:20px !important;
   }
-    /* =====================================
-   WEIGHINGS TABLE — ONLY SCROLL
-   ===================================== */
+    /* ===============================
+   WEIGHINGS — SCROLL + STICKY
+   =============================== */
 
-/* контейнер з бігунком */
-#totalTable{
-  width: max-content;      /* ключове */
-  min-width: 100%;
-  table-layout: auto;      /* ❌ прибираємо fixed */
-}
-
-/* бігунок */
-.table-wrap{
+.weigh-scroll{
   width:100%;
   max-width:100%;
   overflow-x:auto;
+  overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
+  padding-bottom:8px; /* щоб бігунок було видно */
 }
 
-/* клітинки — стабільні */
+#totalTable{
+  width:max-content !important;
+  min-width:100% !important;
+  table-layout:fixed;
+  border-collapse:collapse;
+}
+
 #totalTable th,
 #totalTable td{
-  white-space: nowrap;
-  text-align: center;
-  font-size: 7px;
-  padding: 4px;
+  font-size:7px !important;
+  line-height:1.05 !important;
+  padding:2px !important;
+  white-space:nowrap !important;
+  text-align:center !important;
+  vertical-align:middle !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* sticky Зона */
+#totalTable th:nth-child(1),
+#totalTable td:nth-child(1){
+  width:27px !important;
+  min-width:27px !important;
+  position:sticky;
+  left:0;
+  z-index:5;
+  background:#0d0d14 !important;
+}
+
+/* sticky Команда */
+#totalTable th:nth-child(2),
+#totalTable td:nth-child(2){
+  width:45px !important;
+  min-width:45px !important;
+  position:sticky;
+  left:27px;
+  z-index:5;
+  background:#0d0d14 !important;
+  text-align:left !important;
+  padding-left:3px !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+}
+
+/* риби */
+#totalTable th:nth-child(n+3),
+#totalTable td:nth-child(n+3){
+  width:20px !important;
+  min-width:20px !important;
 }
 </style>
 </head>

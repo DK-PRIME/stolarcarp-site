@@ -418,33 +418,39 @@
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
-    // registrations: порядок секторів
-    if (!unsubRegs) {
-      unsubRegs = db
-        .collection("registrations")
-        .where("competitionId", "==", activeCompId)
-        .where("stageId", "==", activeStageId)
-        .where("status", "==", "confirmed")
-        .onSnapshot((qs) => {
-          const rows = [];
-          qs.forEach((doc) => {
-            const d = doc.data() || {};
-            const teamId = d.teamId || "";
-            const teamName = d.teamName || d.team || "—";
-            const drawKey = d.drawKey || "";
-            const drawZone = d.drawZone || d.zone || "";
-            const drawSector = d.drawSector || d.sector || "";
-            const z = parseZoneKey(drawKey, drawZone, drawSector);
-            rows.push({ zoneLabel: z.label, sortKey: z.sortKey, teamId, teamName });
-          });
-          rows.sort((a,b)=>a.sortKey-b.sortKey);
-          regRows = rows;
+    // registrations: порядок секторів (тільки з жеребом)
+if (!unsubRegs) {
+  unsubRegs = db
+    .collection("registrations")
+    .where("compId", "==", activeCompId)
+    .where("stageId", "==", activeStageId)
+    .where("drawKey", "!=", "")
+    .onSnapshot((qs) => {
+      const rows = [];
 
-          renderWeighTable();
-        }, (err) => {
-          console.error("registrations snapshot err:", err);
+      qs.forEach((doc) => {
+        const d = doc.data() || {};
+        const teamId   = d.teamId || "";
+        const teamName = d.teamName || d.team || "—";
+
+        const z = parseZoneKey(d.drawKey, d.drawZone, d.drawSector);
+
+        rows.push({
+          zoneLabel: z.label,
+          sortKey: z.sortKey,
+          teamId,
+          teamName
         });
-    }
+      });
+
+      rows.sort((a, b) => a.sortKey - b.sortKey);
+      regRows = rows;
+
+      renderWeighTable(); // нижня таблиця
+    }, (err) => {
+      console.error("registrations snapshot err:", err);
+    });
+}
 
     // weighings: конкретний W
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }

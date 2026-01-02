@@ -143,7 +143,7 @@
       display:inline-block;
     }
 
-    /* ==== Fish tiles (внесення кожної риби окремо) ==== */
+    /* ==== Fish tiles ==== */
     .fishGrid{
       display:grid;
       grid-template-columns: 1fr 1fr auto;
@@ -212,9 +212,9 @@
       </div>
 
       <div class="btnRow">
-        <button class="btn btn--primary" id="btnOpen">Відкрити мою зону</button>
-        <button class="btn btn--ghost" id="btnSaveHint">Як зберегти на телефон</button>
-        <button class="btn btn--danger" id="btnReset">Скинути прив’язку</button>
+        <button class="btn btn--primary" id="btnOpen" type="button">Відкрити мою зону</button>
+        <button class="btn btn--ghost" id="btnSaveHint" type="button">Як зберегти на телефон</button>
+        <button class="btn btn--danger" id="btnReset" type="button">Скинути прив’язку</button>
       </div>
 
       <div class="muted" id="msg" style="margin-top:10px;"></div>
@@ -231,10 +231,10 @@
 
       <div class="wbar">
         <div class="wBtns">
-          <button class="wbtn" id="w1">W1</button>
-          <button class="wbtn" id="w2">W2</button>
-          <button class="wbtn" id="w3">W3</button>
-          <button class="wbtn" id="w4">W4</button>
+          <button class="wbtn" id="w1" type="button">W1</button>
+          <button class="wbtn" id="w2" type="button">W2</button>
+          <button class="wbtn" id="w3" type="button">W3</button>
+          <button class="wbtn" id="w4" type="button">W4</button>
         </div>
         <div class="wstat">
           <div class="muted">Поточне</div>
@@ -244,14 +244,8 @@
 
       <div class="muted" id="wMsg" style="margin-top:10px;"></div>
 
-      <div style="margin-top:12px; font-weight:900;">Повідомлення з моєї зони</div>
-      <div class="muted" id="callsCount" style="margin-top:6px;">—</div>
-      <div id="callsList"></div>
-      <div class="muted" id="callsEmpty" style="margin-top:8px;">—</div>
-
       <div style="margin-top:14px; font-weight:900;">Команди моєї зони</div>
-      <div class="muted" id="teamsHint" style="margin-top:6px;">Сортування: сектор → час.</div>
-
+      <div class="muted" id="teamsHint" style="margin-top:6px;">Сортування: сектор → назва.</div>
       <div class="teams" id="teamsBox"></div>
     </div>
 
@@ -287,9 +281,6 @@
   const teamsCountEl = document.getElementById("teamsCount");
   const teamsBox = document.getElementById("teamsBox");
 
-  const callsCountEl = document.getElementById("callsCount");
-  const callsListEl  = document.getElementById("callsList");
-  const callsEmptyEl = document.getElementById("callsEmpty");
   const netBadge = document.getElementById("netBadge");
 
   const wBtns = [
@@ -314,9 +305,6 @@
   let currentW = 1;
   let viewW = 1;
 
-  let unsubCalls = null;
-  let lastOpenIds = new Set();
-
   function setMsg(t, ok=true){
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
@@ -325,8 +313,30 @@
     wMsgEl.textContent = t || "";
     wMsgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   }
+
   function norm(v){ return String(v ?? "").trim(); }
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+
+  function parseKg(v){
+    v = String(v ?? "").trim().replace(",", ".");
+    if(!v) return null;
+    const n = Number(v);
+    if(!Number.isFinite(n)) return null;
+    const clamped = Math.min(Math.max(n, 0), 999.99); // 000.00..999.99
+    return Math.round(clamped * 100) / 100;
+  }
+
+  function calcFromFishWeights(fishWeights){
+    const arr = (fishWeights || [])
+      .map(parseKg)
+      .filter(v => v !== null && v > 0);
+
+    const fishCount = arr.length;
+    const totalWeightKg = Math.round(arr.reduce((s,x)=>s+x,0) * 100) / 100;
+    const bigFishKg = fishCount ? Math.max(...arr) : 0;
+
+    return { fishWeights: arr, fishCount, totalWeightKg, bigFishKg };
+  }
 
   async function waitFirebase(){
     for(let i=0;i<140;i++){
@@ -367,17 +377,11 @@
     return { zone:z, compId:cId, stageId:sId, token:t };
   }
 
-  function buildUrlFromBind(b){
-    const p = new URLSearchParams();
-    p.set("zone", b.zone);
-    p.set("compId", b.compId);
-    if (b.stageId) p.set("stageId", b.stageId);
-    p.set("t", b.token);
-    return location.origin + location.pathname + "?" + p.toString();
-  }
-
   function makeActiveKey(compId, stageId){
     return `${String(compId||"").trim()}||${String(stageId||"").trim() || "main"}`;
+  }
+  function settingsDocIdByActiveKey(activeKey){
+    return `weighing_${activeKey}`;
   }
 
   function renderBindState(){
@@ -392,10 +396,6 @@
     zoneTitle.textContent = `Зона ${bind.zone}`;
     statusEl.textContent = "✅ Прив’язка зони збережена на цьому телефоні.";
     bindInfo.textContent = `zone=${bind.zone} | compId=${bind.compId} | stageId=${bind.stageId || "main"} | activeKey=${ak}`;
-  }
-
-  function settingsDocIdByActiveKey(activeKey){
-    return `weighing_${activeKey}`;
   }
 
   async function getOrCreateWeighingSettings(){
@@ -489,10 +489,7 @@
       teamId: team.teamId,
       teamName: team.teamName || "",
 
-      // ✅ ваги кожної риби
       fishWeights: Array.isArray(values.fishWeights) ? values.fishWeights : [],
-
-      // ✅ автополя (рахуються з fishWeights)
       fishCount: Number(values.fishCount || 0),
       totalWeightKg: Number(values.totalWeightKg || 0),
       bigFishKg: Number(values.bigFishKg || 0),
@@ -532,496 +529,213 @@
     return true;
   }
 
-  function reasonLabel(code){
-    return ({
-      "AMUR_2": "2 амури",
-      "FISH_10PLUS": "Риба 10+",
-      "BAGS_10": "10 мішків",
-      "SICK_FISH": "Поганий стан риби",
-      "OTHER_TEAM_VIOLATION": "Порушення іншої команди"
-    })[code] || code || "—";
-  }
-
-  function playPing(){
-    try{
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.frequency.value = 880;
-      g.gain.value = 0.04;
-      o.start();
-      setTimeout(()=>{ o.stop(); ctx.close(); }, 120);
-    }catch(e){}
-    try{ if(navigator.vibrate) navigator.vibrate([120, 80, 120]); }catch(e){}
-  }
-
-  function renderCallItem(id, d){
-    const z = esc(String(d.zone||"").toUpperCase());
-    const s = (d.sector!==undefined && d.sector!==null) ? String(d.sector) : "—";
-    const team = esc(d.teamName || d.teamId || "—");
-    const reason = esc(reasonLabel(d.reason));
-    const line = `<span class="callLine"><b>${z}${s}</b> | <b>${team}</b> | <b>${reason}</b></span>`;
-
+  function fishTileHtml(i, val){
+    const v = (val ?? "") === 0 ? "" : (val ?? "");
     return `
-      <div class="callItem">
-        <div>${line}</div>
-        <div class="callActions">
-          <button class="btn btn--primary" data-ack="${id}">Отримав</button>
-          <button class="btn btn--ghost" data-warn="${id}" data-kind="verbal">Усне</button>
-          <button class="btn btn--accent" data-warn="${id}" data-kind="yellow">Жовта</button>
-          <button class="btn btn--danger" data-warn="${id}" data-kind="red">Червона</button>
-        </div>
+      <div class="fishTile">
+        <input class="inp fishInp"
+               inputmode="decimal"
+               placeholder="0.00"
+               data-fish="${i}"
+               value="${esc(v)}" />
+        <button class="fishDel" type="button" data-del="${i}">×</button>
       </div>
     `;
   }
 
-  async function createPenaltyFromCall(callId, callData, kind){
-    await db.collection("penalties").add({
-      activeKey,
-      compType: "series",
+  function renderFishGrid(rootEl, fishWeights){
+    const arr = Array.isArray(fishWeights) ? fishWeights.slice() : [];
+    if(arr.length === 0) arr.push("");
 
-      compId,
-      stageId: stageId || "main",
-
-      zone: String(callData.zone||zone),
-      sector: Number(callData.sector||0),
-      teamId: String(callData.teamId||""),
-      teamName: String(callData.teamName||""),
-
-      kind: String(kind||"verbal"),
-      reason: String(callData.reason||""),
-
-      judgeUid: me.uid,
-      createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
-    });
-
-    await db.collection("calls").doc(callId).set({
-      status: "done",
-      judgeUid: me.uid,
-      doneAt: window.firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-  }
-
-  function setupCallsRealtime(){
-    if(unsubCalls) try{ unsubCalls(); }catch(e){}
-    lastOpenIds = new Set();
-
-    const q = db.collection("calls")
-      .where("activeKey","==",activeKey)
-      .where("zone","==",zone)
-      .where("status","==","open");
-
-    netBadge.style.display = "inline-flex";
-
-    unsubCalls = q.onSnapshot((snap)=>{
-      const items = [];
-      snap.forEach(doc=> items.push({ id: doc.id, d: doc.data()||{} }));
-
-      items.sort((a,b)=>{
-        const sa = Number(a.d.sector||0), sb = Number(b.d.sector||0);
-        if(sa!==sb) return sa-sb;
-        const ta = (a.d.createdAt && a.d.createdAt.toMillis) ? a.d.createdAt.toMillis() : 0;
-        const tb = (b.d.createdAt && b.d.createdAt.toMillis) ? b.d.createdAt.toMillis() : 0;
-        return ta-tb;
-      });
-
-      callsCountEl.textContent = `Нових: ${items.length}`;
-      if(!items.length){
-        callsListEl.innerHTML = "";
-        callsEmptyEl.textContent = "Нема викликів.";
-      }else{
-        callsEmptyEl.textContent = "";
-        callsListEl.innerHTML = items.map(x=>renderCallItem(x.id, x.d)).join("");
-      }
-
-      const cur = new Set(items.map(x=>x.id));
-      let newOnes = 0;
-      for(const id of cur){
-        if(!lastOpenIds.has(id)) newOnes++;
-      }
-      if(newOnes>0) playPing();
-      lastOpenIds = cur;
-    }, async (err)=>{
-      console.error(err);
-      callsEmptyEl.textContent = "Помилка realtime (Rules/індекси). Показую без realtime…";
-      await loadCallsOnceFallback();
-    });
-  }
-
-  async function loadCallsOnceFallback(){
-    try{
-      const snap = await db.collection("calls")
-        .where("activeKey","==",activeKey)
-        .where("zone","==",zone)
-        .where("status","==","open")
-        .get();
-
-      const items = [];
-      snap.forEach(doc=> items.push({ id: doc.id, d: doc.data()||{} }));
-
-      items.sort((a,b)=>{
-        const sa = Number(a.d.sector||0), sb = Number(b.d.sector||0);
-        if(sa!==sb) return sa-sb;
-        const ta = (a.d.createdAt && a.d.createdAt.toMillis) ? a.d.createdAt.toMillis() : 0;
-        const tb = (b.d.createdAt && b.d.createdAt.toMillis) ? b.d.createdAt.toMillis() : 0;
-        return ta-tb;
-      });
-
-      callsCountEl.textContent = `Нових: ${items.length}`;
-      if(!items.length){
-        callsListEl.innerHTML = "";
-        callsEmptyEl.textContent = "Нема викликів.";
-      }else{
-        callsEmptyEl.textContent = "";
-        callsListEl.innerHTML = items.map(x=>renderCallItem(x.id, x.d)).join("");
-      }
-    }catch(err){
-      console.error(err);
-      callsEmptyEl.textContent = "Нема доступу до викликів (Rules/індекси).";
-    }
-  }
-
-  function teamRowHtml(team, data, readOnly){
-    const id = esc(team.teamId);
-    const name = esc(team.teamName || "Команда");
-    const sec = team.sector ? `Сектор ${team.sector}` : "Сектор —";
-    const dis = readOnly ? "disabled" : "";
-
-    const fish = Array.isArray(data?.fishWeights) ? data.fishWeights : [];
-
-    const fishCount = Number(data?.fishCount || 0);
-    const totalWeightKg = Number(data?.totalWeightKg || 0);
-    const bigFishKg = Number(data?.bigFishKg || 0);
-
-    const tiles = (fish.length ? fish : [""]).map((w)=>`
-      <div class="fishTile">
-        <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
-          data-fish value="${(Number(w)>0 ? String(w) : "")}" placeholder="напр. 4.560" ${dis}/>
-        <button class="fishDel" type="button" data-del ${dis} title="Видалити">×</button>
+    rootEl.innerHTML = `
+      <div class="fishGrid">
+        ${arr.map((v,i)=>fishTileHtml(i, v)).join("")}
+        <button class="fishAdd" type="button" data-add>+</button>
       </div>
-    `).join("");
+      <div class="muted" style="margin-top:8px;">
+        Вага 0.00–999.99 (порожньо = нема риби). Нуль означає відсутність улову.
+      </div>
+    `;
+  }
 
+  function teamRowHtml(t){
     return `
-      <div class="teamRow" data-team="${id}">
+      <div class="teamRow" data-team="${esc(t.teamId)}">
         <div class="teamHead">
           <div>
-            <div class="teamTitle">${zone}${team.sector || ""} • ${name}</div>
-            <div class="teamMeta">${sec} • ${readOnly ? "перегляд" : "внесення"}</div>
+            <div class="teamTitle">${esc(t.teamName || "—")}</div>
+            <div class="teamMeta">Сектор: <b>${esc(t.sector)}</b> • Зона: <b>${esc(zone)}</b></div>
           </div>
-          <div class="muted">W${viewW}</div>
+          <div class="pill" data-state>W${viewW}: —</div>
         </div>
 
-        <div class="muted" style="margin:0 0 8px;">
-          Впиши вагу кожної риби окремо (наприклад 4.560)
-        </div>
-
-        <div class="fishGrid" data-fishbox>
-          ${tiles}
-          <button class="fishAdd" type="button" data-add ${dis} title="Додати рибу">+</button>
-        </div>
-
-        <div class="muted" style="margin-top:10px;">
-          <span class="pill" data-totals>
-            Риб: <b>${fishCount}</b> • Сума W: <b>${totalWeightKg.toFixed(3)}</b> • Big: <b>${bigFishKg.toFixed(3)}</b>
-          </span>
-        </div>
+        <div data-fishgrid></div>
 
         <div class="teamBtns">
-          <button class="btn btn--accent" data-save ${readOnly ? "disabled" : ""}>Зберегти</button>
+          <button class="btn btn--ghost" type="button" data-load>Оновити</button>
+          <button class="btn btn--primary" type="button" data-save>Здати W${viewW}</button>
         </div>
+
+        <div class="muted" style="margin-top:8px;" data-sum>—</div>
       </div>
     `;
   }
 
-  function readRowValues(row){
-    const inputs = Array.from(row.querySelectorAll("[data-fish]"));
-    const fishWeights = inputs
-      .map(i => Number(String(i.value || "").replace(",", ".")))
-      .filter(v => isFinite(v) && v > 0);
-
-    const fishCount = fishWeights.length;
-    const totalWeightKg = fishWeights.reduce((a,b)=>a+b, 0);
-    const bigFishKg = fishWeights.length ? Math.max(...fishWeights) : 0;
-
-    return {
-      fishWeights,
-      fishCount,
-      totalWeightKg: +totalWeightKg.toFixed(3),
-      bigFishKg: +bigFishKg.toFixed(3),
-    };
+  function getRowEl(teamId){
+    // CSS.escape не всюди є на старих браузерах, але на Android Chrome — є.
+    return teamsBox.querySelector(`[data-team="${CSS.escape(teamId)}"]`);
   }
 
-  function updateHint(row, v){
-    const t = row.querySelector("[data-totals]");
-    if(t){
-      t.innerHTML = `Риб: <b>${v.fishCount}</b> • Сума W: <b>${v.totalWeightKg.toFixed(3)}</b> • Big: <b>${v.bigFishKg.toFixed(3)}</b>`;
+  function summarizeToText(st){
+    const big = st.bigFishKg ? st.bigFishKg.toFixed(2) : "—";
+    return `Підсумок: 🐟 ${st.fishCount} • Вага ${st.totalWeightKg.toFixed(2)} кг • Big ${big}`;
+  }
+
+  async function fillTeamWeighingRow(rowEl, team){
+    const fishBox = rowEl.querySelector("[data-fishgrid]");
+    const stateEl = rowEl.querySelector("[data-state]");
+    const sumEl   = rowEl.querySelector("[data-sum]");
+
+    const existing = await loadWeighing(team.teamId, viewW);
+    const fishWeights = existing?.fishWeights || [];
+
+    renderFishGrid(fishBox, fishWeights);
+
+    const stats = calcFromFishWeights(fishWeights);
+    sumEl.textContent = summarizeToText(stats);
+
+    if(existing?.status === "submitted"){
+      stateEl.textContent = `W${viewW}: ✅ здано`;
+    }else{
+      stateEl.textContent = `W${viewW}: ⏳ нема`;
     }
+
+    // live перерахунок
+    fishBox.addEventListener("input", ()=>{
+      const vals = [...fishBox.querySelectorAll("input[data-fish]")].map(i=>i.value);
+      const st = calcFromFishWeights(vals);
+      sumEl.textContent = summarizeToText(st);
+    });
+
+    // add/del
+    fishBox.addEventListener("click", (e)=>{
+      const add = e.target?.closest?.("[data-add]");
+      const del = e.target?.closest?.("[data-del]");
+      if(add){
+        const inputs = [...fishBox.querySelectorAll("input[data-fish]")];
+        const vals = inputs.map(i=>i.value);
+        vals.push("");
+        renderFishGrid(fishBox, vals);
+        const st = calcFromFishWeights(vals);
+        sumEl.textContent = summarizeToText(st);
+      }
+      if(del){
+        const idx = Number(del.getAttribute("data-del"));
+        const inputs = [...fishBox.querySelectorAll("input[data-fish]")];
+        const vals = inputs.map(i=>i.value);
+        vals.splice(idx,1);
+        const next = vals.length ? vals : [""];
+        renderFishGrid(fishBox, next);
+        const st = calcFromFishWeights(next);
+        sumEl.textContent = summarizeToText(st);
+      }
+    });
+  }
+
+  async function submitTeamWeighing(rowEl, team){
+    const fishBox = rowEl.querySelector("[data-fishgrid]");
+    const stateEl = rowEl.querySelector("[data-state]");
+    const sumEl   = rowEl.querySelector("[data-sum]");
+
+    const vals = [...fishBox.querySelectorAll("input[data-fish]")].map(i=>i.value);
+    const st = calcFromFishWeights(vals);
+
+    await saveWeighing(team, viewW, st);
+
+    stateEl.textContent = `W${viewW}: ✅ здано`;
+    sumEl.textContent = summarizeToText(st);
   }
 
   async function renderTeams(){
-    setWMsg("Завантажую команди…", true);
-    teamsBox.innerHTML = "";
     const teams = await loadTeamsForZone();
-    teamsCountEl.textContent = `Команд: ${teams.length}`;
+    teamsCountEl.textContent = `Команд у зоні: ${teams.length}`;
+    teamsBox.innerHTML = teams.map(teamRowHtml).join("");
 
-    if(!teams.length){
-      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні. Перевір жеребкування/дані stageResults.</div>`;
-      setWMsg("❗ Нема списку команд для цієї зони.", false);
-      return;
-    }
-
-    const rows = [];
     for(const t of teams){
-      const wd = await loadWeighing(t.teamId, viewW);
-      const readOnly = (viewW < currentW);
-      rows.push(teamRowHtml(t, wd, readOnly));
+      const rowEl = getRowEl(t.teamId);
+      if(!rowEl) continue;
+
+      await fillTeamWeighingRow(rowEl, t);
+
+      rowEl.addEventListener("click", async (e)=>{
+        if(e.target.closest("[data-load]")){
+          await fillTeamWeighingRow(rowEl, t);
+        }
+        if(e.target.closest("[data-save]")){
+          await submitTeamWeighing(rowEl, t);
+
+          // автоперехід
+          try{
+            const advanced = await maybeAdvanceAuto(teams);
+            if(advanced){
+              setWMsg(`✅ Всі здані — перехід на наступне W`, true);
+            }
+          }catch{}
+        }
+      });
     }
-    teamsBox.innerHTML = rows.join("");
-    setWMsg(`Готово ✅ Поточне: W${currentW} • Перегляд: W${viewW}`, true);
+
+    return teams;
   }
 
-  wBtns.forEach(b=>{
-    b.el.onclick = async ()=>{
-      viewW = b.n;
-      updateWButtons();
-      await renderTeams();
-    };
-  });
-
-  document.addEventListener("input", (e)=>{
-    const inp = e.target.closest("[data-fish]");
-    if(!inp) return;
-    const row = inp.closest(".teamRow");
-    if(!row) return;
-    const v = readRowValues(row);
-    updateHint(row, v);
-  });
-
-  document.addEventListener("click", async (e)=>{
-    const addBtn = e.target.closest("[data-add]");
-    if(addBtn){
-      const row = addBtn.closest(".teamRow");
-      if(!row) return;
-      addBtn.insertAdjacentHTML("beforebegin", `
-        <div class="fishTile">
-          <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
-            data-fish value="" placeholder="напр. 4.560"/>
-          <button class="fishDel" type="button" data-del title="Видалити">×</button>
-        </div>
-      `);
-      const v = readRowValues(row);
-      updateHint(row, v);
-      return;
-    }
-
-    const delBtn = e.target.closest("[data-del]");
-    if(delBtn){
-      const row = delBtn.closest(".teamRow");
-      if(!row) return;
-      const tile = delBtn.closest(".fishTile");
-      if(tile) tile.remove();
-
-      // якщо не лишилось жодного поля — лишаємо одне
-      const box = row.querySelector("[data-fishbox]");
-      if(box && box.querySelectorAll("[data-fish]").length === 0){
-        const add = box.querySelector("[data-add]");
-        if(add){
-          add.insertAdjacentHTML("beforebegin", `
-            <div class="fishTile">
-              <input class="inp fishInp" inputmode="decimal" type="number" min="0" step="0.001"
-                data-fish value="" placeholder="напр. 4.560"/>
-              <button class="fishDel" type="button" data-del title="Видалити">×</button>
-            </div>
-          `);
-        }
-      }
-
-      const v = readRowValues(row);
-      updateHint(row, v);
-      return;
-    }
-
-    const saveBtn = e.target.closest("[data-save]");
-    if(saveBtn){
-      const row = saveBtn.closest(".teamRow");
-      if(!row) return;
-
-      if(viewW !== currentW){
-        return alert("Зберігати можна тільки у поточне зважування.");
-      }
-
-      const teamId = row.getAttribute("data-team");
-      const teams = await loadTeamsForZone();
-      const team = teams.find(x=>String(x.teamId)===String(teamId));
-      if(!team) return alert("Не знайшов команду.");
-
-      const v = readRowValues(row);
-      updateHint(row, v);
-
-      const ok = confirm(
-        `Підтвердити збереження?\n\n`+
-        `${zone}${team.sector||""} • ${team.teamName}\n`+
-        `W${currentW}\n`+
-        `Риб: ${v.fishCount}\n`+
-        `Сума: ${v.totalWeightKg.toFixed(3)} кг\n`+
-        `Big: ${v.bigFishKg.toFixed(3)} кг`
-      );
-      if(!ok) return;
-
-      try{
-        setWMsg("Зберігаю…", true);
-        await saveWeighing(team, currentW, v);
-        setWMsg("Збережено ✅", true);
-
-        const advanced = await maybeAdvanceAuto(teams);
-        if(advanced){
-          const { data } = await getOrCreateWeighingSettings();
-          maxW = Number(data.maxW || DEFAULT_MAX_W);
-          currentW = getCurrentWForZone(data);
-          viewW = currentW;
-          updateWButtons();
-          setWMsg(`✅ Усі команди здані. Авто-перехід на W${currentW}.`, true);
-        }
-
-        await renderTeams();
-      }catch(err){
-        console.error(err);
-        setWMsg("Помилка збереження ❌", false);
-      }
-      return;
-    }
-
-    const ack = e.target.closest("[data-ack]");
-    if(ack){
-      const id = ack.getAttribute("data-ack");
-      if(!id) return;
-      try{
-        await db.collection("calls").doc(id).set({
-          status: "accepted",
-          judgeUid: me.uid,
-          acceptedAt: window.firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge:true });
-      }catch(err){
-        console.error(err);
-        alert("Не вдалося прийняти виклик");
-      }
-      return;
-    }
-
-    const warn = e.target.closest("[data-warn]");
-    if(warn){
-      const id = warn.getAttribute("data-warn");
-      const kind = warn.getAttribute("data-kind");
-      if(!id || !kind) return;
-      if(!confirm(`Записати "${kind}" і закрити виклик?`)) return;
-
-      try{
-        const snap = await db.collection("calls").doc(id).get();
-        const d = snap.exists ? (snap.data()||{}) : {};
-        await createPenaltyFromCall(id, d, kind);
-      }catch(err){
-        console.error(err);
-        alert("Помилка запису попередження/картки");
-      }
-      return;
-    }
-  });
+  function applyBind(bind){
+    zone = String(bind.zone||"").toUpperCase();
+    compId = String(bind.compId||"");
+    stageId = String(bind.stageId||"");
+    token = String(bind.token||"");
+    activeKey = makeActiveKey(compId, stageId);
+  }
 
   async function boot(){
     try{
       await waitFirebase();
       auth = window.scAuth;
-      db = window.scDb;
-    }catch(e){
-      statusEl.textContent = "Firebase не запустився ❌";
-      setMsg(e.message || "Firebase init error", false);
-      return;
-    }
+      db   = window.scDb;
 
-    const p = currentParams();
-    if (p.zone && p.compId && p.token){
-      const ok = writeBind({
-        zone: p.zone,
-        compId: p.compId,
-        stageId: p.stageId || "",
-        token: p.token,
-        savedAt: Date.now()
-      });
-      if (ok){
-        setMsg("✅ Зона збережена. Тепер можна просто відкривати цю сторінку — вона пам’ятає.", true);
-        history.replaceState({}, "", location.pathname);
-      }else{
-        setMsg("⚠️ Не вдалося зберегти (браузер блокує сховище).", false);
-      }
-    }
-
-    renderBindState();
-
-    btnOpen.onclick = ()=>{
-      const bind = readBind();
-      if (!bind) return setMsg("Нема прив’язки. Спочатку відкрий QR/лінк від адміна.", false);
-      const url = buildUrlFromBind(bind);
-      setMsg("✅ Відкриваю твою зону…", true);
-      location.href = url;
-    };
-    btnReset.onclick = ()=>{
-      if (!confirm("Скинути прив’язку зони на цьому телефоні?")) return;
-      clearBind();
       renderBindState();
-      setMsg("✅ Прив’язку скинуто. Тепер треба знов 1 раз зайти по QR/лінку.", true);
-    };
-    btnSaveHint.onclick = ()=>{
-      setMsg("📌 Chrome: ⋮ → “Додати на головний екран”. Тоді зона відкривається одним тапом.", true);
-    };
 
-    auth.onAuthStateChanged(async (user)=>{
-      if(!user){
-        authPill.textContent = "auth: ❌ (не увійшов)";
-        statusEl.textContent = "Потрібен вхід судді/адміна (auth.html)";
-        setMsg("Увійди під суддею або адміном.", false);
-        weighCard.style.display = "none";
-        return;
-      }
+      auth.onAuthStateChanged(async (user)=>{
+        me = user || null;
+        authPill.textContent = me ? `auth: ${me.email || me.uid}` : "auth: (нема входу)";
 
-      authPill.textContent = "auth: ✅ " + (user.email || user.uid);
-
-      try{
-        const ok = await requireJudgeOrAdmin(user);
-        if(!ok){
-          statusEl.textContent = "Нема доступу ❌";
-          setMsg("Цей акаунт не суддя і не адмін.", false);
-          weighCard.style.display = "none";
+        if(!me){
+          setMsg("❗ Увійди в акаунт судді/адміна (cabinet.html) і повернись сюди.", false);
           return;
         }
 
-        me = user;
+        const ok = await requireJudgeOrAdmin(me);
+        if(!ok){
+          setMsg("❗ Нема прав судді. Потрібно role=judge або адмін.", false);
+          return;
+        }
+
+        setMsg("✅ Доступ судді підтверджено.", true);
+
+        // якщо прийшли з QR — збережемо прив’язку
+        const p = currentParams();
+        if(p.zone && p.compId && p.token){
+          const bind = { zone:p.zone, compId:p.compId, stageId:p.stageId || "", token:p.token };
+          writeBind(bind);
+        }
 
         const bind = readBind();
         if(!bind){
-          statusEl.textContent = "Нема прив’язки ❗";
-          setMsg("Відкрий QR/лінк від адміна (1 раз).", false);
-          weighCard.style.display = "none";
+          renderBindState();
           return;
         }
 
-        zone = String(bind.zone||"").toUpperCase();
-        compId = String(bind.compId||"");
-        stageId = String(bind.stageId||""); // може бути пустий
-        token = String(bind.token||"");
-
-        if(!zone || !compId){
-          statusEl.textContent = "Неповна прив’язка ❗";
-          setMsg("Перевір QR: zone + compId обов’язкові.", false);
-          weighCard.style.display = "none";
-          return;
-        }
-
-        activeKey = makeActiveKey(compId, stageId);
-
-        zoneTitle.textContent = `Зона ${zone}`;
-        statusEl.textContent = "✅ Суддя в зоні активний.";
-        setMsg("", true);
+        applyBind(bind);
+        renderBindState();
 
         const { data } = await getOrCreateWeighingSettings();
         maxW = Number(data.maxW || DEFAULT_MAX_W);
@@ -1029,24 +743,50 @@
         viewW = currentW;
 
         weighCard.style.display = "block";
+        netBadge.style.display = "inline-flex";
+
         updateWButtons();
 
-        setupCallsRealtime();
-        await loadCallsOnceFallback();
-        await renderTeams();
+        const teams = await renderTeams();
 
-      }catch(err){
-        console.error(err);
-        statusEl.textContent = "Помилка перевірки доступу ❌";
-        setMsg("Перевір users.role / rules Firestore.", false);
+        // кнопки перемикання W (дивитись можна тільки <= currentW)
+        wBtns.forEach(b=>{
+          b.el.addEventListener("click", async ()=>{
+            viewW = b.n;
+            updateWButtons();
+            await renderTeams();
+          });
+        });
+
+        setWMsg("Готово. Внось рибу по кожній команді й тисни “Здати”.", true);
+      });
+
+      // UI-кнопки
+      btnReset.addEventListener("click", ()=>{
+        clearBind();
+        setMsg("✅ Прив’язку скинуто. Відкрий QR/лінк заново.", true);
         weighCard.style.display = "none";
-      }
-    });
+        renderBindState();
+      });
+
+      btnSaveHint.addEventListener("click", ()=>{
+        alert("Порада: відкрий сторінку в Chrome → меню ⋮ → “Додати на головний екран”. Тоді працює як додаток.");
+      });
+
+      btnOpen.addEventListener("click", ()=>{
+        const bind = readBind();
+        if(!bind){ alert("Нема прив’язки. Відкрий QR/лінк від адміна."); return; }
+        alert("Зона вже прив’язана. Можеш працювати.");
+      });
+
+    }catch(e){
+      console.error(e);
+      setMsg("Помилка ініціалізації: " + (e?.message || e), false);
+    }
   }
 
   boot();
 })();
 </script>
-
 </body>
 </html>

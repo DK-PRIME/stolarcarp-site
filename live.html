@@ -35,7 +35,7 @@
     height:8px;
     border-radius:25%;
     background:#ef4444;
-    box-shadow:0 0 10px rgba(239,68,68,.9);
+    box-shadow:0 0 10px rgba(239,68,68,.99);
   }
   .title-gradient{
     background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 35%,#7a0f2b 100%);
@@ -204,16 +204,28 @@
   .live-left > .card:nth-child(2){ border-radius:5px !important; }
 
   /* ===================================================
-     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — СВАЙП/СКРОЛ (MOBILE)
+     ✅ ПОРТРЕТ ТЕЛЕФОНА: СТОРІНКА НІКОЛИ НЕ РОЗШИРЮЄТЬСЯ
+     (ЦЕ ТВОЯ ГОЛОВНА ПРОБЛЕМА "ВИЛАЗИТЬ ВПРАВО")
      =================================================== */
 
-  /* 1) Сторінка ніколи не ширша екрану */
-  html, body{ max-width:100%; overflow-x:hidden; }
+  @media (orientation: portrait) {
+    html, body { max-width:100% !important; overflow-x:hidden !important; }
 
-  /* 2) Важливо: інколи main.css ставить overflow:hidden на card — знімаємо саме тут */
-  .weigh-card{ overflow:visible !important; }
+    /* ключ: grid-елементи мають право стискатися */
+    .live-layout > * { min-width:0 !important; }
+    .live-left, .card, .live-zones-grid, .live-zone.card, .weigh-card { min-width:0 !important; }
 
-  /* 3) Скрол/свайп тільки в цьому контейнері */
+    /* щоб жодна карточка не стала ширшою за екран */
+    .weigh-card{ width:100% !important; max-width:100% !important; overflow:hidden !important; }
+  }
+
+  /* ===================================================
+     ✅ ТАБЛИЦЯ ЗВАЖУВАНЬ (W1–W4) — СВАЙП/СКРОЛ
+     - видно ~10–12 риб
+     - решта свайпом/drag
+     - sticky зона+команда
+     =================================================== */
+
   .table-wrap.weigh-scroll{
     width:100% !important;
     max-width:100% !important;
@@ -222,20 +234,17 @@
     overflow-y:hidden !important;
     -webkit-overflow-scrolling:touch;
     touch-action: pan-x;
-    overscroll-behavior-x: contain;
     padding-bottom:10px;
+    overscroll-behavior-x: contain;
   }
 
-  /* 4) Таблиця може бути дуже широка — але тільки всередині контейнера */
   #totalTable{
     border-collapse:separate;
     border-spacing:0;
     width:max-content !important;
-    min-width:max-content !important;
-    table-layout:auto !important;
+    table-layout:fixed !important; /* стабільніше для sticky */
   }
 
-  /* 5) Клітинки */
   #totalTable th,
   #totalTable td{
     font-size:7px !important;
@@ -248,7 +257,7 @@
     background:rgba(2,6,23,.35);
   }
 
-  /* 6) Sticky: Зона */
+  /* sticky: Зона */
   #totalTable th:nth-child(1),
   #totalTable td:nth-child(1){
     position:sticky !important;
@@ -259,7 +268,7 @@
     background:#0d0d14 !important;
   }
 
-  /* 7) Sticky: Команда */
+  /* sticky: Команда */
   #totalTable th:nth-child(2),
   #totalTable td:nth-child(2){
     position:sticky !important;
@@ -274,15 +283,26 @@
     text-overflow:ellipsis !important;
   }
 
-  /* 8) Риби: ширина так, щоб на вертикальному телефоні влазило ~10–12 */
-  #totalTable th:nth-child(n+3),
-  #totalTable td:nth-child(n+3){
-    width:22px !important;
-    min-width:22px !important;
-    max-width:22px !important;
+  /* Риби: під портрет ~10–12 видимих */
+  @media (orientation: portrait){
+    #totalTable th:nth-child(n+3),
+    #totalTable td:nth-child(n+3){
+      width:22px !important;
+      min-width:22px !important;
+      max-width:22px !important;
+    }
   }
 
-  /* 9) Видимий “бігунок” */
+  /* Лендскейп: можна трохи ширше, щоб більше влазило */
+  @media (orientation: landscape){
+    #totalTable th:nth-child(n+3),
+    #totalTable td:nth-child(n+3){
+      width:26px !important;
+      min-width:26px !important;
+      max-width:26px !important;
+    }
+  }
+
   .table-wrap.weigh-scroll::-webkit-scrollbar{ height:10px; }
   .table-wrap.weigh-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
   .table-wrap.weigh-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,.06); border-radius:999px; }
@@ -382,7 +402,6 @@
             <span id="weighInfo" class="form__hint" style="margin-left:auto;">перегляд зважування</span>
           </div>
 
-          <!-- ✅ ВАЖЛИВО: id для свайпу -->
           <div class="table-wrap weigh-scroll" id="weighScroll">
             <table class="table table-sm" id="totalTable">
               <thead>
@@ -436,52 +455,45 @@
   })();
 
   /* ===================================================
-     ✅ РЕАЛЬНИЙ СВАЙП (DRAG) ДЛЯ ТАБЛИЦІ ЗВАЖУВАНЬ
-     - тягнеш пальцем вліво/вправо -> scrollLeft
-     - працює на вертикальному телефоні
+     ✅ DRAG/SWIPE SCROLL для таблиці зважувань
+     (щоб “свайп був” завжди, навіть коли Android глючить)
      =================================================== */
   (function(){
-    const wrap = document.getElementById("weighScroll");
-    if (!wrap) return;
+    const el = document.getElementById("weighScroll");
+    if(!el) return;
 
-    let isDown = false;
+    let down = false;
     let startX = 0;
-    let startScrollLeft = 0;
-
-    const getX = (e) => (e.touches ? e.touches[0].clientX : e.clientX);
+    let startScroll = 0;
 
     const onDown = (e) => {
-      isDown = true;
-      startX = getX(e);
-      startScrollLeft = wrap.scrollLeft;
-      // щоб не було "виділення" тексту під пальцем
-      wrap.classList.add("dragging");
+      down = true;
+      el.classList.add("is-drag");
+      startX = (e.touches ? e.touches[0].pageX : e.pageX);
+      startScroll = el.scrollLeft;
     };
 
     const onMove = (e) => {
-      if (!isDown) return;
-      const x = getX(e);
-      const dx = x - startX;
-      wrap.scrollLeft = startScrollLeft - dx;
-      // коли тягнемо горизонтально — глушимо вертикальне прокручування
-      if (e.cancelable) e.preventDefault();
+      if(!down) return;
+      const x = (e.touches ? e.touches[0].pageX : e.pageX);
+      const walk = (startX - x);
+      el.scrollLeft = startScroll + walk;
+      e.preventDefault();
     };
 
     const onUp = () => {
-      isDown = false;
-      wrap.classList.remove("dragging");
+      down = false;
+      el.classList.remove("is-drag");
     };
 
-    // touch
-    wrap.addEventListener("touchstart", onDown, {passive:true});
-    wrap.addEventListener("touchmove", onMove, {passive:false});
-    wrap.addEventListener("touchend", onUp, {passive:true});
-
-    // mouse (на ПК)
-    wrap.addEventListener("mousedown", onDown);
+    el.addEventListener("mousedown", onDown);
     window.addEventListener("mousemove", onMove, {passive:false});
     window.addEventListener("mouseup", onUp);
 
+    el.addEventListener("touchstart", onDown, {passive:true});
+    el.addEventListener("touchmove", onMove, {passive:false});
+    el.addEventListener("touchend", onUp);
+    el.addEventListener("touchcancel", onUp);
   })();
 </script>
 

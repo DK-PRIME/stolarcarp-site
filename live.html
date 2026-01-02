@@ -400,6 +400,27 @@
 #totalTable td{
   padding: 4px 8px !important; /* було 4px 6px */
 }
+    /* =====================================
+   FIX ЗОН A / B / C — W1–W4
+   ===================================== */
+
+/* всі колонки з результатами */
+.live-zone th:nth-child(3),
+.live-zone td:nth-child(3),
+.live-zone th:nth-child(4),
+.live-zone td:nth-child(4),
+.live-zone th:nth-child(5),
+.live-zone td:nth-child(5),
+.live-zone th:nth-child(6),
+.live-zone td:nth-child(6){
+  width: 72px !important;      /* ✔ достатньо для 20/108.9 */
+  min-width: 72px !important;
+  text-align: center !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums;
+}
     
   </style>
 </head>

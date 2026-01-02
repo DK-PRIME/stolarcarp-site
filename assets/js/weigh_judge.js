@@ -1,5 +1,5 @@
 // assets/js/weigh_judge.js
-// STOLAR CARP • Суддя • Зважування (таблиця як у Google Sheet + кілька риб)
+// STOLAR CARP • Суддя • Зважування (таблиця як Google Sheet + кілька риб)
 // - bind тільки zone (A/B/C) через ?zone=A + localStorage
 // - активний етап беремо з settings/app
 // - команди беремо з registrations (confirmed) + drawZone/drawSector
@@ -58,10 +58,12 @@
 
   // ---------- helpers ----------
   function setMsg(t, ok=true){
+    if(!msgEl) return;
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   }
   function setWMsg(t, ok=true){
+    if(!wMsgEl) return;
     wMsgEl.textContent = t || "";
     wMsgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
   }
@@ -111,7 +113,7 @@
   let unsubApp = null;
   function watchApp(){
     if(unsubApp) unsubApp();
-    unsubApp = db.collection("settings").doc("app").onSnapshot((snap)=>{
+    unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
       const app = snap.exists ? (snap.data()||{}) : {};
 
       compId  = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
@@ -120,14 +122,17 @@
 
       renderBindInfo();
 
-      if(weighCard.style.display !== "none" && zone){
-        openZone().catch(e=>{
+      // якщо вже відкрито — оновимо
+      if(weighCard && weighCard.style.display !== "none" && zone){
+        try{
+          await openZone(false); // без зайвих msg
+        }catch(e){
           setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
-        });
+        }
       }
     }, (err)=>{
       console.error(err);
-      statusEl.textContent = "❌ Не читається settings/app.";
+      if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
     });
   }
 
@@ -136,8 +141,8 @@
     const c = compId || "—";
     const s = stageId || "—";
     const ak = activeKey || "—";
-    zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
-    bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
+    if(zoneTitle) zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
+    if(bindInfo) bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
   }
 
   // ---------- weighing settings per activeKey ----------
@@ -187,9 +192,11 @@
   }
 
   function updateWButtons(){
-    curWEl.textContent = `W${currentW}`;
+    if(curWEl) curWEl.textContent = `W${currentW}`;
     wBtns.forEach(b=>{
+      if(!b.el) return;
       b.el.classList.toggle("isActive", b.n === viewW);
+      // ✅ дозволяємо перемикати тільки до поточного W
       b.el.disabled = (b.n > currentW);
     });
   }
@@ -239,8 +246,9 @@
     return rows;
   }
 
-  // ---------- weighings (LIVE compatible: weights[]) ----------
+  // ---------- weighings ----------
   function weighingDocId(teamId, wNo){
+    // якщо LIVE очікує саме так — лишаємо
     return `${compId}||${stageId}||W${Number(wNo)}||${teamId}`;
   }
 
@@ -279,7 +287,6 @@
     const weights = cleanWeights(weightsRaw);
     const calc = calcFromWeights(weights);
 
-    // ✅ set(..., merge:true) = якщо нема документа → створить, якщо є → оновить
     await db.collection("weighings").doc(id).set({
       // LIVE fields
       compId,
@@ -288,7 +295,7 @@
       teamId: team.teamId,
       weights,
 
-      // helpful extra
+      // extra
       zone,
       sector: Number(team.sector||0),
       teamName: team.teamName || "",
@@ -347,46 +354,73 @@
     }
   }
 
-  // ---------- render table with + fish ----------
-  function weightsSummaryCell(doc){
+  // ---------- TABLE (Google Sheet style) ----------
+  function cellSummary(doc){
     const weights = Array.isArray(doc?.weights) ? doc.weights : [];
     if(!weights.length) return `<span class="muted">—</span>`;
-    const c = weights.length;
     const total = round2(weights.reduce((a,b)=>a+b,0)).toFixed(2);
-    return `<b>${esc(total)}</b><div class="muted" style="font-size:.75rem;">🐟 ${c}</div>`;
+    const c = weights.length;
+    return `<b>${esc(total)}</b><div class="muted" style="font-size:.75rem;margin-top:2px;">🐟 ${c}</div>`;
   }
 
-  function renderActiveCell(team, existingDoc){
-    const weights = Array.isArray(existingDoc?.weights) ? existingDoc.weights : [];
+  function activeCellEditor(team, doc){
+    const weights = Array.isArray(doc?.weights) ? doc.weights : [];
     const safe = (weights.length ? weights : [""]); // мін 1 поле
 
     return `
-      <div class="wj-wrap" data-team="${esc(team.teamId)}">
-        <div class="wj-list">
-          ${safe.map((v,i)=>`
-            <div class="wj-row" data-row="${i}">
+      <div class="wj-editor" data-team="${esc(team.teamId)}">
+        <div class="wj-fish">
+          ${safe.map((v)=>`
+            <div class="wj-fishrow">
               <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="${esc(v === "" ? "" : Number(v).toFixed(2))}">
               <button class="wbtn wj-del" type="button" title="Видалити" ${safe.length<=1 ? "disabled":""}>×</button>
             </div>
           `).join("")}
         </div>
 
-        <div class="wj-actions">
-          <button class="wbtn wj-add" type="button" title="Додати рибу">+</button>
+        <div class="wj-controls">
+          <button class="wbtn wj-add" type="button">+</button>
           <button class="btn btn--primary wj-save" type="button">OK</button>
         </div>
 
-        <div class="muted wj-hint" style="margin-top:6px; font-size:.85rem;"></div>
+        <div class="muted wj-hint" style="margin-top:6px;font-size:.85rem;"></div>
       </div>
     `;
   }
 
-  function renderTable(teams){
-    if(!teamsBox) return;
+  function injectTableStyles(){
+    if(document.getElementById("wjTableStyles")) return;
 
-    const style = `
-      <style>
-        .wj-actions{ display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap; }
+    const css = `
+      <style id="wjTableStyles">
+        .wj-tableWrap{ overflow:auto; border:1px solid rgba(148,163,184,.18); border-radius:14px; }
+        table.wj-table{ width:100%; border-collapse:separate; border-spacing:0; min-width:760px; }
+        .wj-table th, .wj-table td{
+          padding:10px 12px;
+          border-bottom:1px solid rgba(148,163,184,.12);
+          vertical-align:top;
+        }
+        .wj-table thead th{
+          position:sticky; top:0;
+          background:rgba(2,6,23,.92);
+          backdrop-filter: blur(8px);
+          z-index:2;
+          border-bottom:1px solid rgba(148,163,184,.22);
+          font-weight:900;
+        }
+        .wj-table th:first-child, .wj-table td:first-child{ position:sticky; left:0; z-index:1; background:rgba(2,6,23,.92); }
+        .wj-table th:nth-child(2), .wj-table td:nth-child(2){ position:sticky; left:110px; z-index:1; background:rgba(2,6,23,.92); }
+        .wj-table th:first-child{ left:0; }
+        .wj-table th:nth-child(2){ left:110px; }
+
+        .wj-sector{ width:110px; white-space:nowrap; }
+        .wj-team{ width:260px; }
+        .wj-wcol{ width:170px; text-align:center; }
+
+        .wj-pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px;
+          border:1px solid rgba(148,163,184,.25); background:rgba(2,6,23,.35); color:#e5e7eb; font-weight:900; }
+        .wj-teamName{ font-weight:900; }
+
         .wbtn{
           border:1px solid rgba(148,163,184,.25);
           background:rgba(2,6,23,.25);
@@ -398,121 +432,120 @@
           user-select:none;
         }
         .wbtn:disabled{ opacity:.45; cursor:not-allowed; }
-        .wj-row{ display:flex; gap:8px; align-items:center; margin-bottom:8px; justify-content:center; }
-        .wj-inp{ min-width:96px; max-width:140px; text-align:center; }
-        .wj-wrap{ min-width:220px; }
+
+        .wj-editor{ min-width:160px; }
+        .wj-fishrow{ display:flex; gap:8px; align-items:center; justify-content:center; margin-bottom:8px; }
+        .wj-inp{ max-width:140px; text-align:center; }
+        .wj-controls{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
         @media (max-width:720px){
-          .wj-wrap{ min-width:180px; }
+          table.wj-table{ min-width:720px; }
+          .wj-team{ width:220px; }
+          .wj-wcol{ width:160px; }
         }
       </style>
     `;
+    document.head.insertAdjacentHTML("beforeend", css);
+  }
 
-    const head = `
-      ${style}
-      <div style="overflow:auto;">
-        <table style="width:100%; border-collapse:collapse;">
+  function renderTable(teams){
+    if(!teamsBox) return;
+    injectTableStyles();
+
+    if(!teams.length){
+      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір confirmed + drawZone/drawSector).</div>`;
+      return;
+    }
+
+    const table = `
+      <div class="wj-tableWrap">
+        <table class="wj-table">
           <thead>
             <tr>
-              <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(148,163,184,.22);">Сектор</th>
-              <th style="text-align:left; padding:10px; border-bottom:1px solid rgba(148,163,184,.22);">Команда</th>
-              ${[1,2,3,4].map(n=>`
-                <th style="text-align:center; padding:10px; border-bottom:1px solid rgba(148,163,184,.22);">W${n}</th>
-              `).join("")}
+              <th class="wj-sector">Сектор</th>
+              <th class="wj-team">Команда</th>
+              ${[1,2,3,4].map(n=>`<th class="wj-wcol">W${n}</th>`).join("")}
             </tr>
           </thead>
-          <tbody id="tblBody"></tbody>
+          <tbody>
+            ${teams.map(t=>{
+              const tRow = [1,2,3,4].map(n=>{
+                const doc = weighCache?.[t.teamId]?.[n] || null;
+                if(n === viewW){
+                  return `<td class="wj-wcol">${activeCellEditor(t, doc)}</td>`;
+                }
+                return `<td class="wj-wcol">${cellSummary(doc)}</td>`;
+              }).join("");
+
+              return `
+                <tr>
+                  <td class="wj-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
+                  <td class="wj-team"><div class="wj-teamName">${esc(t.teamName)}</div></td>
+                  ${tRow}
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
         </table>
       </div>
     `;
 
-    teamsBox.innerHTML = head;
+    teamsBox.innerHTML = table;
 
-    const body = teamsBox.querySelector("#tblBody");
-    body.innerHTML = teams.map(t=>{
-      const cells = [1,2,3,4].map(n=>{
-        const doc = (weighCache[t.teamId] && weighCache[t.teamId][n]) ? weighCache[t.teamId][n] : null;
+    // events in active editors
+    teamsBox.querySelectorAll(".wj-editor").forEach(editor=>{
+      const teamId = editor.getAttribute("data-team");
+      const hint = editor.querySelector(".wj-hint");
+      const fishWrap = editor.querySelector(".wj-fish");
 
-        if(n === viewW){
-          return `
-            <td style="padding:8px; border-bottom:1px solid rgba(148,163,184,.12); vertical-align:top;">
-              ${renderActiveCell(t, doc)}
-            </td>
-          `;
-        }
-
-        return `
-          <td style="padding:8px; text-align:center; border-bottom:1px solid rgba(148,163,184,.12); vertical-align:top;">
-            ${weightsSummaryCell(doc)}
-          </td>
-        `;
-      }).join("");
-
-      return `
-        <tr>
-          <td style="padding:10px; border-bottom:1px solid rgba(148,163,184,.12);">
-            <span class="pill">${esc(zone)}${esc(t.sector)}</span>
-          </td>
-          <td style="padding:10px; border-bottom:1px solid rgba(148,163,184,.12); font-weight:900;">
-            ${esc(t.teamName)}
-          </td>
-          ${cells}
-        </tr>
-      `;
-    }).join("");
-
-    // events for active cells
-    body.querySelectorAll(".wj-wrap").forEach(wrap=>{
-      const teamId = wrap.getAttribute("data-team");
-      const hint = wrap.querySelector(".wj-hint");
-      const list = wrap.querySelector(".wj-list");
-
-      function refreshDelDisabled(){
-        const dels = wrap.querySelectorAll(".wj-del");
+      function refreshDel(){
+        const dels = editor.querySelectorAll(".wj-del");
         if(dels.length === 1) dels[0].disabled = true;
         else dels.forEach(b=> b.disabled = false);
       }
 
-      wrap.querySelector(".wj-add")?.addEventListener("click", ()=>{
+      editor.querySelector(".wj-add")?.addEventListener("click", ()=>{
         const row = document.createElement("div");
-        row.className = "wj-row";
+        row.className = "wj-fishrow";
         row.innerHTML = `
           <input class="inp wj-inp" inputmode="decimal" placeholder="Вага (кг)" value="">
           <button class="wbtn wj-del" type="button" title="Видалити">×</button>
         `;
-        list.appendChild(row);
-        refreshDelDisabled();
-        hint.textContent = "";
+        fishWrap.appendChild(row);
+        refreshDel();
+        if(hint) hint.textContent = "";
       });
 
-      wrap.addEventListener("click", (e)=>{
+      editor.addEventListener("click", (e)=>{
         const btn = e.target;
         if(btn && btn.classList && btn.classList.contains("wj-del")){
-          const row = btn.closest(".wj-row");
+          const row = btn.closest(".wj-fishrow");
           if(row){
             row.remove();
-            refreshDelDisabled();
-            hint.textContent = "";
+            refreshDel();
+            if(hint) hint.textContent = "";
           }
         }
       });
 
-      wrap.querySelector(".wj-save")?.addEventListener("click", async ()=>{
+      editor.querySelector(".wj-save")?.addEventListener("click", async ()=>{
         try{
-          hint.textContent = "Збереження…";
-          hint.className = "muted wj-hint";
+          if(hint){
+            hint.textContent = "Збереження…";
+            hint.className = "muted wj-hint";
+          }
 
-          const inputs = Array.from(wrap.querySelectorAll(".wj-inp"));
-          const raw = inputs.map(i => i.value);
-
-          const teamsMap = window.__scTeamsMap || {};
-          const team = teamsMap[teamId];
+          const team = (window.__scTeamsMap || {})[teamId];
           if(!team) throw new Error("Команда не знайдена у списку.");
+
+          const raw = Array.from(editor.querySelectorAll(".wj-inp")).map(i => i.value);
 
           await saveWeighingWeights(team, viewW, raw);
 
-          const d = weighCache[teamId][viewW] || {};
-          hint.textContent = `✅ OK: 🐟 ${d.fishCount||0} • кг ${(d.totalWeightKg||0).toFixed(2)} • Big ${(d.bigFishKg||0).toFixed(2)}`;
-          hint.className = "muted wj-hint ok";
+          const d = weighCache?.[teamId]?.[viewW] || {};
+          if(hint){
+            hint.textContent = `✅ OK: 🐟 ${d.fishCount||0} • кг ${(d.totalWeightKg||0).toFixed(2)} • Big ${(d.bigFishKg||0).toFixed(2)}`;
+            hint.className = "muted wj-hint ok";
+          }
 
           const teamsAll = window.__scTeamsArr || [];
           const advanced = await maybeAdvanceAuto(teamsAll);
@@ -525,49 +558,53 @@
             setWMsg(`Авто: всі здані → переключив на W${currentW}`, true);
           }
 
-          // оновимо таблицю (щоб в інших W були суми/🐟)
           await preloadWeighings(window.__scTeamsArr || []);
           renderTable(window.__scTeamsArr || []);
-
           setWMsg("✅ Збережено у Firestore.", true);
 
         }catch(e){
           console.error(e);
-          hint.textContent = "❌ " + (e?.message || e);
-          hint.className = "muted wj-hint err";
+          if(hint){
+            hint.textContent = "❌ " + (e?.message || e);
+            hint.className = "muted wj-hint err";
+          }
           setWMsg("❌ Помилка збереження.", false);
         }
       });
 
-      refreshDelDisabled();
+      refreshDel();
     });
   }
 
   // ---------- open zone ----------
-  async function openZone(){
+  async function openZone(withMsgs=true){
     if(!zone){
-      setMsg("Нема зони. Відкрий посилання типу ?zone=A", false);
+      if(withMsgs) setMsg("Нема зони. Відкрий посилання типу ?zone=A", false);
       return;
     }
     if(!compId || !stageId || !activeKey){
-      setMsg("Нема активного етапу (settings/app).", false);
+      if(withMsgs) setMsg("Нема активного етапу (settings/app).", false);
       return;
     }
 
     const s = await getOrCreateWeighingSettings();
     maxW = Number(s.data.maxW || DEFAULT_MAX_W);
     currentW = getCurrentWForZone(s.data);
+
+    // ✅ старт завжди W1, але перемикати можна до currentW
+    if(!viewW) viewW = 1;
     if(viewW > currentW) viewW = currentW;
+
     updateWButtons();
 
     const teams = await loadTeamsForZone();
     window.__scTeamsArr = teams;
     window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
 
-    teamsCountEl.textContent = `Команд: ${teams.length}`;
-    statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
+    if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
+    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
 
-    weighCard.style.display = "block";
+    if(weighCard) weighCard.style.display = "block";
     if(netBadge) netBadge.style.display = "inline-flex";
 
     await preloadWeighings(teams);
@@ -594,58 +631,64 @@
 
       auth.onAuthStateChanged(async (user)=>{
         if(!user){
-          authPill.textContent = "auth: ❌ увійди (суддя)";
-          statusEl.textContent = "Потрібен вхід судді/адміна.";
-          weighCard.style.display = "none";
+          if(authPill) authPill.textContent = "auth: ❌ увійди (суддя)";
+          if(statusEl) statusEl.textContent = "Потрібен вхід судді/адміна.";
+          if(weighCard) weighCard.style.display = "none";
           return;
         }
 
         me = user;
-        authPill.textContent = "auth: ✅ " + (user.email || user.uid);
+        if(authPill) authPill.textContent = "auth: ✅ " + (user.email || user.uid);
 
         const ok = await requireJudgeOrAdmin(user);
         if(!ok){
-          statusEl.textContent = "⛔ Нема доступу (потрібна роль judge/admin).";
-          weighCard.style.display = "none";
+          if(statusEl) statusEl.textContent = "⛔ Нема доступу (потрібна роль judge/admin).";
+          if(weighCard) weighCard.style.display = "none";
           return;
         }
 
-        statusEl.textContent = "✅ Доступ судді підтверджено.";
+        if(statusEl) statusEl.textContent = "✅ Доступ судді підтверджено.";
         setMsg("Готово. Натисни «Відкрити мою зону».", true);
 
         watchApp();
       });
 
-      btnOpen.addEventListener("click", async ()=>{
-        try{
-          if(!zone){
-            const z = zoneFromUrl();
-            if(z) { zone = z; writeBindZone(z); }
+      if(btnOpen){
+        btnOpen.addEventListener("click", async ()=>{
+          try{
+            if(!zone){
+              const z = zoneFromUrl();
+              if(z) { zone = z; writeBindZone(z); }
+            }
+            if(!zone){
+              setMsg("Нема зони (?zone=A).", false);
+              return;
+            }
+            setMsg("Відкриваю…", true);
+            await openZone(true);
+            renderBindInfo();
+            setMsg("Зона відкрита.", true);
+          }catch(e){
+            setMsg("Помилка: " + (e?.message || e), false);
           }
-          if(!zone){
-            setMsg("Нема зони (?zone=A).", false);
-            return;
-          }
-          setMsg("Відкриваю…", true);
-          await openZone();
+        });
+      }
+
+      if(btnReset){
+        btnReset.addEventListener("click", ()=>{
+          clearBindZone();
+          zone = "";
           renderBindInfo();
-          setMsg("Зона відкрита.", true);
-        }catch(e){
-          setMsg("Помилка: " + (e?.message || e), false);
-        }
-      });
+          if(weighCard) weighCard.style.display = "none";
+          setMsg("Прив’язку скинуто.", true);
+        });
+      }
 
-      btnReset.addEventListener("click", ()=>{
-        clearBindZone();
-        zone = "";
-        renderBindInfo();
-        weighCard.style.display = "none";
-        setMsg("Прив’язку скинуто.", true);
-      });
-
-      btnSaveHint.addEventListener("click", ()=>{
-        alert("Android/Chrome: ⋮ → «Додати на головний екран». iPhone/Safari: Share → Add to Home Screen.");
-      });
+      if(btnSaveHint){
+        btnSaveHint.addEventListener("click", ()=>{
+          alert("Android/Chrome: ⋮ → «Додати на головний екран». iPhone/Safari: Share → Add to Home Screen.");
+        });
+      }
 
       // W buttons
       wBtns.forEach(b=>{
@@ -667,7 +710,7 @@
 
     }catch(e){
       console.error(e);
-      statusEl.textContent = "❌ init: " + (e?.message || e);
+      if(statusEl) statusEl.textContent = "❌ init: " + (e?.message || e);
     }
   })();
 

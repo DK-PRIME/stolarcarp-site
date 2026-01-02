@@ -387,6 +387,19 @@
   text-overflow: clip !important;
   font-variant-numeric: tabular-nums;
 }
+    /* FIX: ідеальне центрування W + значень */
+#totalTable th:nth-child(n+3),
+#totalTable td:nth-child(n+3){
+  text-align:center !important;
+  vertical-align:middle !important;
+  font-variant-numeric: tabular-nums; /* цифри однакової ширини */
+}
+
+/* FIX: трохи більше “повітря”, щоб 9 не липла до лінії */
+#totalTable th,
+#totalTable td{
+  padding: 4px 8px !important; /* було 4px 6px */
+}
     
   </style>
 </head>

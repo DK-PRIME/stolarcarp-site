@@ -306,6 +306,33 @@
   .table-wrap.weigh-scroll::-webkit-scrollbar{ height:10px; }
   .table-wrap.weigh-scroll::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.25); border-radius:999px; }
   .table-wrap.weigh-scroll::-webkit-scrollbar-track{ background:rgba(255,255,255,.06); border-radius:999px; }
+  
+  /* =========================
+   BigFish Total
+   ========================= */
+
+/* Header BigFish */
+.bf-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* Коректне приховування блоку */
+#bigFishWrap{
+  display:none;
+}
+
+#bigFishWrap.is-open{
+  display:block;
+}
+
+/* Підтримка hidden (надійно для всіх браузерів) */
+[hidden]{
+  display:none !important;
+}
   </style>
 </head>
 

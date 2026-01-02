@@ -289,6 +289,33 @@
     width:20px !important;
     min-width:20px !important;
   }
+    /* =====================================
+   WEIGHINGS TABLE — ONLY SCROLL
+   ===================================== */
+
+/* контейнер з бігунком */
+#totalTable{
+  width: max-content;      /* ключове */
+  min-width: 100%;
+  table-layout: auto;      /* ❌ прибираємо fixed */
+}
+
+/* бігунок */
+.table-wrap{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* клітинки — стабільні */
+#totalTable th,
+#totalTable td{
+  white-space: nowrap;
+  text-align: center;
+  font-size: 7px;
+  padding: 4px;
+}
 </style>
 </head>
 

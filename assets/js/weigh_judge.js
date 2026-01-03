@@ -436,6 +436,17 @@
           border-radius:6px;
         }
 
+        /* ✅ швидке поле біля + */
+        .wj-quick{
+          width:54px;
+          height:20px;
+          padding:0 2px;
+          font-size:8px;
+          line-height:20px;
+          text-align:center;
+          border-radius:6px;
+        }
+
         .wj-miniBtn{
           width:20px;
           height:20px;
@@ -500,6 +511,7 @@
         </div>
 
         <div class="wj-actions">
+          <input class="inp wj-quick" inputmode="decimal" placeholder="+ вага" value="">
           <button class="wj-miniBtn wj-add" type="button" title="Додати рибу">+</button>
           <button class="btn btn--primary wj-save" type="button">OK</button>
         </div>
@@ -572,16 +584,52 @@
         else dels.forEach(b=> b.disabled = false);
       }
 
+      // Enter у швидкому полі = додати
+      ed.querySelector(".wj-quick")?.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+          e.preventDefault();
+          ed.querySelector(".wj-add")?.click();
+        }
+      });
+
+      // + додає в кінець, підставляє quick або копіює останню вагу, авто-скрол/фокус
       ed.querySelector(".wj-add")?.addEventListener("click", ()=>{
+        const quick = ed.querySelector(".wj-quick");
+        const scroller = ed.querySelector(".wj-fishesScroll");
+
+        // 1) беремо значення зі швидкого поля
+        let v = (quick ? String(quick.value || "").trim() : "");
+
+        // 2) якщо швидке поле пусте — копіюємо останню введену вагу
+        if(!v){
+          const lastInp = fishes ? fishes.querySelector(".wj-fish:last-child .wj-inp") : null;
+          v = lastInp ? String(lastInp.value || "").trim() : "";
+        }
+
+        // створюємо новий інпут в КІНЕЦЬ
         const wrap = document.createElement("div");
         wrap.className = "wj-fish";
         wrap.innerHTML = `
-          <input class="inp wj-inp" inputmode="decimal" placeholder="вага" value="">
+          <input class="inp wj-inp" inputmode="decimal" placeholder="вага" value="${esc(v)}">
           <button class="wj-miniBtn wj-del" type="button" title="Видалити">×</button>
         `;
-        fishes.appendChild(wrap);
+        if(fishes) fishes.appendChild(wrap);
+
+        // чистимо швидке поле
+        if(quick) quick.value = "";
+
         if(hint) hint.textContent = "";
         refreshDel();
+
+        // авто-скрол у кінець + фокус
+        const newInp = wrap.querySelector(".wj-inp");
+        setTimeout(()=>{
+          if(scroller) scroller.scrollLeft = scroller.scrollWidth;
+          if(newInp){
+            newInp.focus();
+            newInp.select();
+          }
+        }, 0);
       });
 
       ed.addEventListener("click", (e)=>{
@@ -727,7 +775,6 @@
 
       btnSaveHint?.addEventListener("click", async ()=>{
         try{
-          // “Add to Home screen” підказка: просто показати інструкцію
           setMsg("Підказка: меню браузера (⋮) → «Додати на головний екран».", true);
         }catch(e){
           setMsg("Не вдалося показати підказку.", false);
@@ -772,11 +819,9 @@
           me = user;
           if(authPill) authPill.textContent = `auth: ✅ ${user.email || user.uid}`;
 
-          // start watching active stage
           watchApp();
 
           if(zone){
-            // авто-відкриття, якщо зона вже привʼязана
             try{ await openZone(false); } catch(e){ console.error(e); }
           }else{
             if(statusEl) statusEl.textContent = "Зона не привʼязана. Відкрий посилання ?zone=A або натисни «Скинути» і зайди з QR.";

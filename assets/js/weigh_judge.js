@@ -449,6 +449,9 @@ table.wj td{ overflow:hidden; }
 }
 
 .wj-fish{ flex:0 0 auto; }         /* ✅ щоб не стискались */
+
+table.wj td, table.wj th{ overflow:visible; }
+.wj-col-team{ min-width:0; }
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);

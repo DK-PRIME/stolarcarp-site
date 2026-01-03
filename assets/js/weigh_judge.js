@@ -371,47 +371,45 @@ table.wj th, table.wj td{
   font-size:13px;
 }
 
-.wj-editor{
-  margin-top:6px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  align-items:flex-start;
-}
-
 .wj-fishes{
   display:flex;
-  gap:6px;
-  flex-wrap:nowrap;
-  overflow-x:auto;
+  flex-direction:row;   /* 🔴 жорстко ряд */
+  flex-wrap:nowrap;     /* 🔴 заборона стовпця */
+  gap:4px;
+  overflow-x:auto;      /* якщо не влазить */
   -webkit-overflow-scrolling:touch;
-  padding-bottom:2px;
 }
 
 .wj-inp{
-  width:70px;
-  height:30px;
+  width:40px;          /* компактно */
+  height:20px;         /* 🔴 клітинка 20 */
+  padding:0;
+  font-size:8px;       /* 🔴 шрифт 8 */
+  line-height:20px;
   text-align:center;
-  padding:4px 6px;
-  border-radius:10px;
-  font-size:13px;
+  border-radius:6px;
 }
 
 .wj-miniBtn{
-  width:32px;
-  height:30px;
-  border-radius:10px;
-  font-size:16px;
+  width:20px;
+  height:20px;
+  font-size:10px;
+  border-radius:6px;
+  padding:0;
+}
+
+.wj-editor{
+  margin-top:4px;
+  gap:4px;
 }
 
 .wj-actions{
-  display:flex;
-  gap:8px;
-  align-items:center;
+  gap:6px;
 }
+
 .wj-actions .btn{
-  padding:8px 10px;
-  border-radius:12px;
+  padding:4px 8px;
+  font-size:11px;
 }
 .wj-hint{ font-size:.8rem; }
       </style>

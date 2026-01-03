@@ -406,8 +406,9 @@ table.wj th, table.wj td{
 }
 
 .wj-editor{
-  margin-top:4px;
-  gap:4px;
+  width:100%;
+  max-width:100%;
+  overflow:hidden;   /* ✅ обрізає те, що вилазить */
 }
 
 .wj-actions{
@@ -419,6 +420,15 @@ table.wj th, table.wj td{
   font-size:11px;
 }
 .wj-hint{ font-size:.8rem; }
+
+.wj-col-team{
+  min-width:0;   /* ✅ дозволяє внутрішній скрол */
+}
+.wj-col-w{
+  min-width:0;   /* ✅ також */
+}
+
+table.wj td{ overflow:hidden; }
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);

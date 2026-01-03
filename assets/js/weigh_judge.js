@@ -373,12 +373,19 @@ table.wj th, table.wj td{
 
 .wj-fishes{
   display:flex;
-  flex-direction:row;   /* 🔴 жорстко ряд */
-  flex-wrap:nowrap;     /* 🔴 заборона стовпця */
+  flex-direction:row;
+  flex-wrap:nowrap;
   gap:4px;
-  overflow-x:auto;      /* якщо не влазить */
+
+  max-width:100%;        /* ✅ не вилазить */
+  overflow-x:auto;       /* ✅ свайп */
+  overflow-y:hidden;
   -webkit-overflow-scrolling:touch;
+
+  padding:2px 0 6px;
+  scroll-snap-type:x mandatory;  /* приємний свайп */
 }
+.wj-fish{ scroll-snap-align:start; }
 
 .wj-inp{
   width:40px;          /* компактно */

@@ -447,25 +447,20 @@ table.wj td{ overflow:hidden; }
     const safe = (weights.length ? weights : [""]); // мінімум 1 інпут
 
     return `
-      <div class="wj-editor" data-team="${esc(team.teamId)}">
-        <div class="wj-fishes">
-          ${safe.map((v,idx)=>`
-            <div class="wj-fish">
-              <input class="inp wj-inp" inputmode="decimal" placeholder="вага"
-                value="${esc(v === "" ? "" : Number(v).toFixed(2))}" data-i="${idx}">
-              <button class="wj-miniBtn wj-del" type="button" title="Видалити" ${safe.length<=1 ? "disabled":""}>×</button>
-            </div>
-          `).join("")}
-        </div>
-
-        <div class="wj-actions">
-          <button class="wj-miniBtn wj-add" type="button" title="Додати рибу">+</button>
-          <button class="btn btn--primary wj-save" type="button">OK</button>
-        </div>
-
-        <div class="muted wj-hint"></div>
+  <div class="wj-editor" data-team="${esc(team.teamId)}">
+    <div class="wj-fishesScroll">
+      <div class="wj-fishes">
+        ${safe.map((v,idx)=>` ... `).join("")}
       </div>
-    `;
+    </div>
+
+    <div class="wj-actions">
+      ...
+    </div>
+
+    <div class="muted wj-hint"></div>
+  </div>
+`;
   }
 
   function renderTable(teams){

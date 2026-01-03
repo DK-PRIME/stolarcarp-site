@@ -429,6 +429,26 @@ table.wj th, table.wj td{
 }
 
 table.wj td{ overflow:hidden; }
+
+.wj-editor{ width:100%; max-width:100%; }
+
+.wj-fishesScroll{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;                 /* ✅ ОЦЕ СКРОЛ */
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:4px;
+}
+
+.wj-fishes{
+  display:flex;
+  flex-wrap:nowrap;
+  gap:4px;
+  width:max-content;               /* ✅ розширюється по дітях */
+}
+
+.wj-fish{ flex:0 0 auto; }         /* ✅ щоб не стискались */
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);

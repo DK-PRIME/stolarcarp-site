@@ -132,16 +132,41 @@
       if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
     });
   }
+  function paintZoneTitle(){
+  if(!zoneTitle) return;
 
-  function renderBindInfo(){
-    const z = zone || "—";
-    const c = compId || "—";
-    const s = stageId || "—";
-    const ak = activeKey || "—";
-    if(zoneTitle) zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
-    if(bindInfo) bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
+  const z = String(zone || "").toUpperCase();
+
+  // прибираємо всі кольорові класи
+  zoneTitle.classList.remove("zone-a", "zone-b", "zone-c");
+
+  // якщо зони нема
+  if(!z){
+    zoneTitle.textContent = "Зона —";
+    return;
   }
 
+  zoneTitle.textContent = `Зона ${z}`;
+
+  if(z === "A") zoneTitle.classList.add("zone-a");
+  else if(z === "B") zoneTitle.classList.add("zone-b");
+  else if(z === "C") zoneTitle.classList.add("zone-c");
+}
+
+function renderBindInfo(){
+  const z  = zone || "—";
+  const c  = compId || "—";
+  const s  = stageId || "—";
+  const ak = activeKey || "—";
+
+  paintZoneTitle();
+
+  if(bindInfo){
+    bindInfo.textContent =
+      `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
+  }
+}
+  
   // ---------- weighing settings per activeKey ----------
   function settingsDocId(){
     return `weighing_${activeKey}`;
@@ -765,19 +790,6 @@
         }catch(e){
           console.error(e);
           setMsg("❌ " + (e?.message || e), false);
-        }
-      });
-
-      btnReset?.addEventListener("click", ()=>{
-        clearBindZone();
-        location.href = location.pathname; // без параметрів
-      });
-
-      btnSaveHint?.addEventListener("click", async ()=>{
-        try{
-          setMsg("Підказка: меню браузера (⋮) → «Додати на головний екран».", true);
-        }catch(e){
-          setMsg("Не вдалося показати підказку.", false);
         }
       });
 

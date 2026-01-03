@@ -829,8 +829,7 @@ function renderBindInfo(){
           }
 
           me = user;
-          if(authPill) authPill.textContent = `auth: ✅ ${user.email || user.uid}`;
-
+          if(authPill) authPill.textContent = "🟢 Суддя онлайн";
           watchApp();
 
           if(zone){

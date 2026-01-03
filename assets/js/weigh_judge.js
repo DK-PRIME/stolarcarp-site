@@ -513,20 +513,24 @@
             <tbody>
               ${teams.map(t=>{
                 const cells = [1,2,3,4].map(n=>{
-                  const doc = weighCache?.[t.teamId]?.[n] || null;
-                  if(n === viewW){
-                    return `<td class="wj-col-w">${editorCell(t, doc)}</td>`;
-                  }
-                  return `<td class="wj-col-w">${cellSummary(doc)}</td>`;
-                }).join("");
+  const doc = weighCache?.[t.teamId]?.[n] || null;
+  return `<td class="wj-col-w">${cellSummary(doc)}</td>`;
+}).join("");
 
-                return `
-                  <tr>
-                    <td class="wj-col-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
-                    <td class="wj-col-team"><div class="wj-teamName">${esc(t.teamName)}</div></td>
-                    ${cells}
-                  </tr>
-                `;
+const activeDoc = weighCache?.[t.teamId]?.[viewW] || null;
+
+return `
+  <tr>
+    <td class="wj-col-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
+
+    <td class="wj-col-team">
+      <div class="wj-teamName">${esc(t.teamName)}</div>
+      ${editorCell(t, activeDoc)}
+    </td>
+
+    ${cells}
+  </tr>
+`;
               }).join("")}
             </tbody>
           </table>

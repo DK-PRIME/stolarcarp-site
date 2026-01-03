@@ -355,101 +355,65 @@
 
     const css = `
       <style id="wjLiveTableStyles">
-        .wj-wrapTable{
-          border:1px solid rgba(148,163,184,.18);
-          border-radius:16px;
-          overflow:hidden;
-          background:rgba(2,6,23,.25);
-        }
-
-        .wj-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-
         table.wj{
-          width:100%;
-          border-collapse:collapse;
-          min-width:620px; /* щоб W1..W4 вмістилися */
-        }
+  min-width:560px;
+  font-size:14px;
+}
+table.wj th, table.wj td{
+  padding:8px 10px;
+}
+.wj-col-team{ width:260px; }
+.wj-col-w{ width:110px; }
 
-        table.wj th, table.wj td{
-          padding:10px 12px;
-          border-bottom:1px solid rgba(148,163,184,.12);
-          vertical-align:top;
-        }
+.wj-pill{
+  width:44px;
+  height:44px;
+  font-size:13px;
+}
 
-        table.wj thead th{
-          background:rgba(2,6,23,.92);
-          font-weight:900;
-          text-transform:none;
-        }
+.wj-editor{
+  margin-top:6px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:flex-start;
+}
 
-        .wj-col-sector{ width:92px; white-space:nowrap; }
-        .wj-col-team{ width:220px; }
-        .wj-col-w{ width:130px; text-align:center; }
+.wj-fishes{
+  display:flex;
+  gap:6px;
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:2px;
+}
 
-        .wj-pill{
-          display:inline-flex;
-          align-items:center;
-          justify-content:center;
-          width:54px;
-          height:54px;
-          border-radius:999px;
-          border:1px solid rgba(148,163,184,.25);
-          background:rgba(2,6,23,.35);
-          font-weight:900;
-        }
+.wj-inp{
+  width:70px;
+  height:30px;
+  text-align:center;
+  padding:4px 6px;
+  border-radius:10px;
+  font-size:13px;
+}
 
-        .wj-teamName{ font-weight:900; }
+.wj-miniBtn{
+  width:32px;
+  height:30px;
+  border-radius:10px;
+  font-size:16px;
+}
 
-        /* editor inside cell */
-        .wj-editor{
-          display:flex;
-          flex-direction:column;
-          gap:8px;
-          align-items:center;
-        }
-
-        .wj-fishes{
-          display:flex;
-          gap:8px;
-          flex-wrap:wrap; /* ✅ на телефоні переноситься вниз */
-          justify-content:center;
-        }
-
-        .wj-fish{
-          display:flex;
-          gap:6px;
-          align-items:center;
-        }
-
-        .wj-inp{
-          width:90px;
-          text-align:center;
-          padding:10px 10px;
-          border-radius:12px;
-        }
-
-        .wj-miniBtn{
-          width:44px;
-          height:44px;
-          border-radius:14px;
-          border:1px solid rgba(148,163,184,.25);
-          background:rgba(2,6,23,.25);
-          color:#e5e7eb;
-          font-weight:900;
-        }
-
-        .wj-miniBtn:disabled{ opacity:.45; }
-
-        .wj-actions{
-          display:flex;
-          gap:10px;
-          justify-content:center;
-          align-items:center;
-        }
-
-        .wj-hint{ font-size:.85rem; }
-        .wj-sum{ font-weight:900; }
-        .wj-sub{ font-size:.75rem; margin-top:2px; opacity:.75; }
+.wj-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.wj-actions .btn{
+  padding:8px 10px;
+  border-radius:12px;
+}
+.wj-hint{ font-size:.8rem; }
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);

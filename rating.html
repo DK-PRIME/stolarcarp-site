@@ -282,6 +282,20 @@
       .stage-cell{font-size:.64rem;}
       .stage-points{font-size:.6rem;}
     }
+    /* ===== Тимчасово ховаємо колонки Е1..Е5, якщо етапів ще нема ===== */
+/* Працює для твоєї поточної таблиці з 5 етапами у верстці */
+body[data-stages="0"] .table--season thead th:nth-child(4),
+body[data-stages="0"] .table--season thead th:nth-child(5),
+body[data-stages="0"] .table--season thead th:nth-child(6),
+body[data-stages="0"] .table--season thead th:nth-child(7),
+body[data-stages="0"] .table--season thead th:nth-child(8),
+body[data-stages="0"] .table--season tbody td:nth-child(4),
+body[data-stages="0"] .table--season tbody td:nth-child(5),
+body[data-stages="0"] .table--season tbody td:nth-child(6),
+body[data-stages="0"] .table--season tbody td:nth-child(7),
+body[data-stages="0"] .table--season tbody td:nth-child(8){
+  display:none;
+}
   </style>
 </head>
 <body>

@@ -1,11 +1,12 @@
 // assets/js/weigh_judge.js
-// STOLAR CARP • Суддя • Зважування (таблиця як на LIVE + додавання кількох риб)
-// - bind тільки zone (A/B/C) через ?zone=A + localStorage
-// - активний етап беремо з settings/app (activeCompetitionId/activeStageId/activeKey)
-// - команди беремо з registrations (confirmed) + drawZone/drawSector
-// - ваги пишемо в weighings (LIVE-сумісно): compId, stageId, weighNo, teamId, weights:[...]
-// - + додає поле риби, × видаляє
-// - OK створює/оновлює документ (merge)
+// STOLAR CARP • Суддя • Зважування (LIVE-сумісно)
+// ✅ bind zone через ?zone=A + localStorage
+// ✅ activeKey беремо з settings/app (як у draw_admin.js)
+// ✅ команди беремо з stageResults/{activeKey}.teams (regId + drawZone/drawSector)
+// ✅ weighings: compId, stageId("main"/"stage-x"), weighNo, teamId=regId, weights:[...]
+// ✅ + додає поле риби, × видаляє, OK зберігає (merge)
+// ✅ currentW per zone у settings/weighing_{activeKey}.current[zone], maxW
+// ✅ авто-прогрес на наступне W якщо всі команди зони здали поточне
 
 (function(){
   "use strict";
@@ -45,13 +46,13 @@
 
   // ===== Active stage =====
   let compId = "";
-  let stageId = "";
-  let activeKey = "";
+  let stageId = "main";  // "main" або "stage-x"
+  let activeKey = "";    // "${compId}||${stageId}"
   let zone = "";
 
   let maxW = DEFAULT_MAX_W;
-  let currentW = 1; // поточне з settings/weighing_{activeKey}.current[zone]
-  let viewW = 1;    // що редагуємо зараз (перемикач W1..W4)
+  let currentW = 1; // з settings/weighing_{activeKey}.current[zone]
+  let viewW = 1;    // що редагуємо зараз (W1..W4)
 
   // cache: weighings[teamId][wNo] = doc
   const weighCache = Object.create(null);
@@ -105,23 +106,32 @@
   }
 
   // ---------- active from settings/app ----------
-  function computeActiveKey(cId, sId){
-    if(!cId) return "";
-    return `${cId}||${sId || "stage-1"}`;
+  function normalizeStageKey(x){
+    const s = norm(x);
+    return s ? s : "main";
   }
 
   let unsubApp = null;
   function watchApp(){
     if(unsubApp) unsubApp();
+
     unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
       const app = snap.exists ? (snap.data()||{}) : {};
 
-      compId  = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
-      stageId = norm(app.activeStageId || app.stageId || "") || "stage-1";
-      activeKey = norm(app.activeKey || "") || computeActiveKey(compId, stageId);
+      const cId = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
+      const st  = normalizeStageKey(app.activeStageId || app.stageId || "");
+      const ak  = norm(app.activeKey || "");
+
+      compId = cId;
+      stageId = st;
+
+      // головний truth: activeKey з адмінки
+      // fallback: compId||stageId
+      activeKey = ak || (compId ? `${compId}||${stageId}` : "");
 
       renderBindInfo();
 
+      // якщо вже відкрито — онови дані
       if(weighCard && weighCard.style.display !== "none" && zone){
         try{ await openZone(false); } catch(e){
           setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
@@ -132,41 +142,16 @@
       if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
     });
   }
-  function paintZoneTitle(){
-  if(!zoneTitle) return;
 
-  const z = String(zone || "").toUpperCase();
-
-  // прибираємо всі кольорові класи
-  zoneTitle.classList.remove("zone-a", "zone-b", "zone-c");
-
-  // якщо зони нема
-  if(!z){
-    zoneTitle.textContent = "Зона —";
-    return;
+  function renderBindInfo(){
+    const z = zone || "—";
+    const c = compId || "—";
+    const s = stageId || "—";
+    const ak = activeKey || "—";
+    if(zoneTitle) zoneTitle.textContent = zone ? `Зона ${zone}` : "Зона —";
+    if(bindInfo) bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
   }
 
-  zoneTitle.textContent = `Зона ${z}`;
-
-  if(z === "A") zoneTitle.classList.add("zone-a");
-  else if(z === "B") zoneTitle.classList.add("zone-b");
-  else if(z === "C") zoneTitle.classList.add("zone-c");
-}
-
-function renderBindInfo(){
-  const z  = zone || "—";
-  const c  = compId || "—";
-  const s  = stageId || "—";
-  const ak = activeKey || "—";
-
-  paintZoneTitle();
-
-  if(bindInfo){
-    bindInfo.textContent =
-      `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
-  }
-}
-  
   // ---------- weighing settings per activeKey ----------
   function settingsDocId(){
     return `weighing_${activeKey}`;
@@ -218,72 +203,29 @@ function renderBindInfo(){
     wBtns.forEach(b=>{
       if(!b.el) return;
       b.el.classList.toggle("isActive", b.n === viewW);
-      b.el.disabled = (b.n > currentW);
+      b.el.disabled = (b.n > currentW); // тільки до поточного
     });
   }
 
-  // ---------- teams (registrations) ----------
-  function parseZoneFromReg(d){
-    const z1 = norm(d.drawZone || "").toUpperCase();
-    if(z1) return z1;
-    const k = norm(d.drawKey || "").toUpperCase();
-    if(k && /^[ABC]\d+/.test(k)) return k[0];
-    return "";
-  }
-  function parseSectorFromReg(d){
-    const s1 = Number(d.drawSector || 0);
-    if(s1) return s1;
-    const k = norm(d.drawKey || "").toUpperCase();
-    const n = parseInt(k.slice(1), 10);
-    return Number.isFinite(n) ? n : 0;
-  }
-
+  // ---------- teams (stageResults/{activeKey}.teams) ----------
   async function loadTeamsForZone(){
-  if(!compId || !stageId) throw new Error("Нема compId/stageId з settings/app.");
+    if(!activeKey) throw new Error("Нема activeKey з settings/app.");
 
-  // ✅ Жеребкування з LIVE-логіки: stageResults/{compId||stageId}
-  const docId = `${compId}||${stageId}`;
-  const snap = await db.collection("stageResults").doc(docId).get();
+    const snap = await db.collection("stageResults").doc(activeKey).get();
+    const data = snap.exists ? (snap.data()||{}) : {};
+    const teams = Array.isArray(data.teams) ? data.teams : [];
 
-  if(!snap.exists){
-    return []; // жереб ще не створений/не збережений
-  }
+    const rows = teams
+      .filter(t => norm(t.drawZone || "").toUpperCase() === zone)
+      .map(t => ({
+        teamId: norm(t.regId || ""),          // ✅ ключ команди = regId
+        teamName: norm(t.teamName || "—"),
+        sector: Number(t.drawSector || 0),
+      }))
+      .filter(r => !!r.teamId);
 
-  const data = snap.data() || {};
-  const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
-
-  const rows = [];
-  teamsRaw.forEach((t)=>{
-    const teamId = norm(t.teamId || "");
-    if(!teamId) return;
-
-    const teamName = norm(t.teamName || t.team || "—");
-
-    // зона: drawZone або drawKey (A1)
-    let z = norm(t.drawZone || t.zone || "").toUpperCase();
-    if(!z){
-      const k = norm(t.drawKey || "").toUpperCase();
-      if(k && /^[ABC]\d+/.test(k)) z = k[0];
-    }
-    if(z !== zone) return;
-
-    // сектор: drawSector або drawKey (A1 -> 1)
-    let sector = Number(t.drawSector || t.sector || 0);
-    if(!sector){
-      const k = norm(t.drawKey || "").toUpperCase();
-      const n = parseInt(k.slice(1), 10);
-      sector = Number.isFinite(n) ? n : 0;
-    }
-
-    rows.push({ teamId, teamName, sector });
-  });
-
-  rows.sort((a,b)=>
-    (a.sector||0)-(b.sector||0) ||
-    (a.teamName||"").localeCompare(b.teamName||"", "uk")
-  );
-
-  return rows;
+    rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+    return rows;
   }
 
   // ---------- weighings ----------
@@ -329,12 +271,13 @@ function renderBindInfo(){
     await db.collection("weighings").doc(id).set({
       // LIVE fields
       compId,
-      stageId,
+      stageId,               // ✅ "main"/"stage-x"
       weighNo: Number(wNo),
-      teamId: team.teamId,
+      teamId: team.teamId,   // ✅ regId
       weights,
 
-      // extra
+      // extra (щоб легко фільтрувати/дивитись)
+      activeKey,
       zone,
       sector: Number(team.sector||0),
       teamName: team.teamName || "",
@@ -360,6 +303,7 @@ function renderBindInfo(){
     if(currentW >= maxW) return false;
     if(!teams.length) return false;
 
+    // перевіряємо чи по зоні всі мають submitted на поточному W
     const wsnap = await db.collection("weighings")
       .where("compId","==",compId)
       .where("stageId","==",stageId)
@@ -392,7 +336,7 @@ function renderBindInfo(){
     }
   }
 
-  // ---------- STYLES ----------
+  // ---------- TABLE like LIVE (без вилазіння) ----------
   function injectStyles(){
     if(document.getElementById("wjLiveTableStyles")) return;
 
@@ -404,24 +348,19 @@ function renderBindInfo(){
           overflow:hidden;
           background:rgba(2,6,23,.25);
         }
-        .wj-scroll{
-          overflow-x:auto;
-          -webkit-overflow-scrolling:touch;
-        }
+        .wj-scroll{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
 
         table.wj{
           width:100%;
           border-collapse:collapse;
-          min-width:720px; /* ✅ свайп таблиці на вертикальному */
+          min-width:720px; /* щоб W1..W4 точно влазили по ширині таблиці */
           font-size:12px;
         }
-
         table.wj th, table.wj td{
           padding:8px 10px;
           border-bottom:1px solid rgba(148,163,184,.12);
           vertical-align:top;
         }
-
         table.wj thead th{
           background:rgba(2,6,23,.92);
           font-weight:900;
@@ -429,8 +368,8 @@ function renderBindInfo(){
         }
 
         .wj-col-sector{ width:92px; white-space:nowrap; }
-        .wj-col-team{ width:280px; min-width:0; }
-        .wj-col-w{ width:110px; text-align:center; min-width:0; }
+        .wj-col-team{ width:260px; }
+        .wj-col-w{ width:110px; text-align:center; }
 
         .wj-pill{
           display:inline-flex;
@@ -445,10 +384,13 @@ function renderBindInfo(){
         }
 
         .wj-teamName{ font-weight:900; margin-bottom:6px; }
+        .wj-sum{ font-weight:900; }
+        .wj-sub{ font-size:11px; margin-top:2px; opacity:.75; }
 
+        /* editor */
         .wj-editor{ width:100%; max-width:100%; }
 
-        /* ✅ свайп рядка ваг, не вилазить за екран */
+        /* ✅ ваги не вилазять: горизонтальний скрол тільки всередині */
         .wj-fishesScroll{
           width:100%;
           max-width:100%;
@@ -469,20 +411,8 @@ function renderBindInfo(){
           gap:4px;
           align-items:center;
         }
-
         .wj-inp{
           width:44px;
-          height:20px;
-          padding:0 2px;
-          font-size:8px;   /* ✅ шрифт 8 */
-          line-height:20px;
-          text-align:center;
-          border-radius:6px;
-        }
-
-        /* ✅ швидке поле біля + */
-        .wj-quick{
-          width:54px;
           height:20px;
           padding:0 2px;
           font-size:8px;
@@ -490,7 +420,6 @@ function renderBindInfo(){
           text-align:center;
           border-radius:6px;
         }
-
         .wj-miniBtn{
           width:20px;
           height:20px;
@@ -518,16 +447,13 @@ function renderBindInfo(){
         }
 
         .wj-hint{ font-size:11px; margin-top:4px; }
-        .wj-sum{ font-weight:900; }
-        .wj-sub{ font-size:11px; margin-top:2px; opacity:.75; }
-
-        table.wj td, table.wj th{ overflow:visible; }
+        .wj-hint.ok{ color:#8fe39a; }
+        .wj-hint.err{ color:#ff6c6c; }
       </style>
     `;
     document.head.insertAdjacentHTML("beforeend", css);
   }
 
-  // ---------- view helpers ----------
   function cellSummary(doc){
     const weights = Array.isArray(doc?.weights) ? doc.weights : [];
     if(!weights.length) return `<span class="muted">—</span>`;
@@ -555,7 +481,6 @@ function renderBindInfo(){
         </div>
 
         <div class="wj-actions">
-          <input class="inp wj-quick" inputmode="decimal" placeholder="+ вага" value="">
           <button class="wj-miniBtn wj-add" type="button" title="Додати рибу">+</button>
           <button class="btn btn--primary wj-save" type="button">OK</button>
         </div>
@@ -567,11 +492,10 @@ function renderBindInfo(){
 
   function renderTable(teams){
     injectStyles();
-
     if(!teamsBox) return;
 
     if(!teams.length){
-      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір confirmed + drawZone/drawSector).</div>`;
+      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір stageResults/${esc(activeKey)}.teams).</div>`;
       return;
     }
 
@@ -590,20 +514,16 @@ function renderBindInfo(){
               ${teams.map(t=>{
                 const cells = [1,2,3,4].map(n=>{
                   const doc = weighCache?.[t.teamId]?.[n] || null;
+                  if(n === viewW){
+                    return `<td class="wj-col-w">${editorCell(t, doc)}</td>`;
+                  }
                   return `<td class="wj-col-w">${cellSummary(doc)}</td>`;
                 }).join("");
-
-                const activeDoc = weighCache?.[t.teamId]?.[viewW] || null;
 
                 return `
                   <tr>
                     <td class="wj-col-sector"><span class="wj-pill">${esc(zone)}${esc(t.sector)}</span></td>
-
-                    <td class="wj-col-team">
-                      <div class="wj-teamName">${esc(t.teamName)}</div>
-                      ${editorCell(t, activeDoc)}
-                    </td>
-
+                    <td class="wj-col-team"><div class="wj-teamName">${esc(t.teamName)}</div></td>
                     ${cells}
                   </tr>
                 `;
@@ -628,52 +548,16 @@ function renderBindInfo(){
         else dels.forEach(b=> b.disabled = false);
       }
 
-      // Enter у швидкому полі = додати
-      ed.querySelector(".wj-quick")?.addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){
-          e.preventDefault();
-          ed.querySelector(".wj-add")?.click();
-        }
-      });
-
-      // + додає в кінець, підставляє quick або копіює останню вагу, авто-скрол/фокус
       ed.querySelector(".wj-add")?.addEventListener("click", ()=>{
-        const quick = ed.querySelector(".wj-quick");
-        const scroller = ed.querySelector(".wj-fishesScroll");
-
-        // 1) беремо значення зі швидкого поля
-        let v = (quick ? String(quick.value || "").trim() : "");
-
-        // 2) якщо швидке поле пусте — копіюємо останню введену вагу
-        if(!v){
-          const lastInp = fishes ? fishes.querySelector(".wj-fish:last-child .wj-inp") : null;
-          v = lastInp ? String(lastInp.value || "").trim() : "";
-        }
-
-        // створюємо новий інпут в КІНЕЦЬ
         const wrap = document.createElement("div");
         wrap.className = "wj-fish";
         wrap.innerHTML = `
-          <input class="inp wj-inp" inputmode="decimal" placeholder="вага" value="${esc(v)}">
+          <input class="inp wj-inp" inputmode="decimal" placeholder="вага" value="">
           <button class="wj-miniBtn wj-del" type="button" title="Видалити">×</button>
         `;
-        if(fishes) fishes.appendChild(wrap);
-
-        // чистимо швидке поле
-        if(quick) quick.value = "";
-
-        if(hint) hint.textContent = "";
+        fishes.appendChild(wrap);
+        if(hint){ hint.textContent = ""; hint.className = "muted wj-hint"; }
         refreshDel();
-
-        // авто-скрол у кінець + фокус
-        const newInp = wrap.querySelector(".wj-inp");
-        setTimeout(()=>{
-          if(scroller) scroller.scrollLeft = scroller.scrollWidth;
-          if(newInp){
-            newInp.focus();
-            newInp.select();
-          }
-        }, 0);
       });
 
       ed.addEventListener("click", (e)=>{
@@ -682,7 +566,7 @@ function renderBindInfo(){
           const row = btn.closest(".wj-fish");
           if(row){
             row.remove();
-            if(hint) hint.textContent = "";
+            if(hint){ hint.textContent = ""; hint.className = "muted wj-hint"; }
             refreshDel();
           }
         }
@@ -707,7 +591,7 @@ function renderBindInfo(){
             hint.className = "muted wj-hint ok";
           }
 
-          // авто-прогрес W, якщо всі здали
+          // авто-прогрес W якщо всі здали поточне
           const teamsAll = window.__scTeamsArr || [];
           const advanced = await maybeAdvanceAuto(teamsAll);
           if(advanced){
@@ -762,7 +646,7 @@ function renderBindInfo(){
     window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
 
     if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
-    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
+    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені.";
 
     if(weighCard) weighCard.style.display = "block";
     if(netBadge) netBadge.style.display = "inline-flex";
@@ -780,7 +664,7 @@ function renderBindInfo(){
       db = window.scDb;
       const auth = window.scAuth;
 
-      // online indicator
+      // online badge
       function updateOnline(){
         if(!netBadge) return;
         const on = navigator.onLine;
@@ -810,6 +694,15 @@ function renderBindInfo(){
           console.error(e);
           setMsg("❌ " + (e?.message || e), false);
         }
+      });
+
+      btnReset?.addEventListener("click", ()=>{
+        clearBindZone();
+        location.href = location.pathname; // без параметрів
+      });
+
+      btnSaveHint?.addEventListener("click", ()=>{
+        setMsg("Підказка: меню браузера (⋮) → «Додати на головний екран».", true);
       });
 
       // W buttons
@@ -848,10 +741,13 @@ function renderBindInfo(){
           }
 
           me = user;
-          if(authPill) authPill.textContent = "🟢 Суддя онлайн";
+          if(authPill) authPill.textContent = `auth: ✅ ${user.email || user.uid}`;
+
+          // start watching active stage
           watchApp();
 
           if(zone){
+            // авто-відкриття, якщо зона вже привʼязана
             try{ await openZone(false); } catch(e){ console.error(e); }
           }else{
             if(statusEl) statusEl.textContent = "Зона не привʼязана. Відкрий посилання ?zone=A або натисни «Скинути» і зайди з QR.";

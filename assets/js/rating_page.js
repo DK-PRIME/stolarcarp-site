@@ -1,38 +1,23 @@
 // assets/js/rating_page.js
-// STOLAR CARP • Rating page (dynamic stages columns)
-// ✅ НІЧОГО не ламає у стилі: працює тільки з thead + будує тіло-заготовки
-// ✅ Показує Е1..ЕN рівно стільки, скільки етапів у competitions/{seasonId}.events (без фіналу)
-// ✅ Якщо сезону/етапів нема — Е-колонок нема (N=0)
+// STOLAR CARP • Rating page (SAFE + collapsible description)
+// ✅ НЕ чіпає таблицю (не міняє thead/tbody)
+// ✅ Якщо етапів 0 — ховає Е1..Е5 через body[data-stages="0"]
+// ✅ Тягне рік сезону з competitions/{seasonId}.year (fallback: поточний рік)
+// ✅ Ховає опис і робить кнопку "Детальніше…"
 
 (function () {
   const db = window.scDb;
 
-  const mainTable = document.querySelector(".table--main");
-  const contTable = document.querySelector(".table--contenders");
-  const topTbody  = document.getElementById("season-top");
-  const contTbody = document.getElementById("season-contenders");
-
   const kickerEl = document.querySelector(".season-rating-head .kicker");
   const titleEl  = document.querySelector(".season-rating-head .page-title");
+  const descEl   = document.querySelector(".season-rating-head .rating-desc");
 
-  if (!db || !window.firebase) {
-    console.warn("rating_page: Firebase init не завантажився (scDb/firebase)");
-    return;
-  }
-  if (!mainTable || !contTable || !topTbody || !contTbody) {
-    console.warn("rating_page: missing table DOM");
+  if (!kickerEl || !titleEl) {
+    console.warn("rating_page: header DOM missing");
     return;
   }
 
-  function esc(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
-  // 1) пробуємо взяти активний seasonId з глобалів (якщо ти їх маєш у config.js)
+  // ---- helpers ----
   function pickSeasonIdFromGlobals() {
     return (
       window.SC_ACTIVE_SEASON_ID ||
@@ -43,172 +28,121 @@
     );
   }
 
-  // 2) якщо глобалів нема — пробуємо settings/active.seasonId
   async function getSeasonId() {
-  const fromGlobals = pickSeasonIdFromGlobals();
-  if (fromGlobals) return String(fromGlobals);
+    const fromGlobals = pickSeasonIdFromGlobals();
+    if (fromGlobals) return String(fromGlobals);
 
-  // 1) settings/active
-  try {
-    const s = await db.collection("settings").doc("active").get();
-    if (s.exists) {
-      const d = s.data() || {};
-      if (d.seasonId) return String(d.seasonId);
-      if (d.competitionId) return String(d.competitionId);
-      if (d.activeSeasonId) return String(d.activeSeasonId);
+    // settings/active
+    try {
+      const s = await db.collection("settings").doc("active").get();
+      if (s.exists) {
+        const d = s.data() || {};
+        if (d.seasonId) return String(d.seasonId);
+        if (d.competitionId) return String(d.competitionId);
+        if (d.activeSeasonId) return String(d.activeSeasonId);
+      }
+    } catch (e) {
+      console.warn("rating_page: settings/active read failed", e);
     }
-  } catch (e) {
-    console.warn("rating_page: settings/active read failed", e);
+
+    // fallback: будь-який competitions (без orderBy)
+    try {
+      const snap = await db.collection("competitions").limit(1).get();
+      if (!snap.empty) return snap.docs[0].id;
+    } catch (e) {
+      console.warn("rating_page: competitions fallback failed", e);
+    }
+
+    return null;
   }
 
-  // 2) fallback: будь-який competitions (без orderBy, щоб не падало)
-  try {
-    const snap = await db.collection("competitions").limit(1).get();
-    if (!snap.empty) return snap.docs[0].id;
-  } catch (e) {
-    console.warn("rating_page: competitions fallback failed", e);
-  }
-
-  return null;
-  }
-
-  function normalizeStagesFromEvents(events) {
+  function countStagesNoFinal(events) {
     const arr = Array.isArray(events) ? events : [];
-    const stages = [];
-
     let n = 0;
     for (let i = 0; i < arr.length; i++) {
       const ev = arr[i] || {};
-      const key = ev.key || ev.stageId || ev.id || `stage-${i + 1}`;
+      const key = ev.key || ev.stageId || ev.id || "";
       const isFinal = String(key).toLowerCase().includes("final") || !!ev.isFinal;
-      if (isFinal) continue;
-
-      n += 1;
-      stages.push({ index: n, key: String(key) });
+      if (!isFinal) n++;
     }
-    return stages; // тільки етапи, без фіналу
+    return n;
   }
 
-  function buildTheadRow(stagesCount) {
-    const left = `
-      <th class="col-place">Місце</th>
-      <th class="col-move">▲▼</th>
-      <th class="col-team">Команда</th>
-    `;
+  // ---- UI: collapsible description ----
+  function setupCollapsibleDesc() {
+    if (!descEl) return;
 
-    const stageCols = Array.from({ length: stagesCount })
-      .map((_, i) => `<th class="col-stage">Е${i + 1}<br>м / б</th>`)
-      .join("");
+    // якщо вже зроблено — не дублюємо
+    if (document.getElementById("descToggleBtn")) return;
 
-    const right = `
-      <th class="col-points">Бали</th>
-      <th class="col-final">Фінал</th>
-      <th class="col-weight">Вага</th>
-      <th class="col-big">Big Fish</th>
-    `;
+    // Ховаємо опис спочатку
+    descEl.style.display = "none";
 
-    return `<tr>${left}${stageCols}${right}</tr>`;
-  }
+    // Кнопка
+    const btn = document.createElement("button");
+    btn.id = "descToggleBtn";
+    btn.type = "button";
+    btn.textContent = "Детальніше…";
+    btn.className = "btn btn--ghost"; // якщо у тебе є такі, інакше — ок
 
-  function buildStageCell() {
-    return `
-      <td class="col-stage">
-        <div class="stage-cell">
-          <span class="stage-place">–</span>
-          <span class="stage-slash">/</span>
-          <span class="stage-points">–</span>
-        </div>
-      </td>
-    `;
-  }
+    // Трошки інлайн-стилю, щоб виглядало як на скріні
+    btn.style.marginTop = "12px";
+    btn.style.border = "1px solid rgba(251,191,36,.65)";
+    btn.style.color = "#fbbf24";
+    btn.style.background = "transparent";
+    btn.style.padding = "10px 14px";
+    btn.style.borderRadius = "999px";
 
-  function buildRow(place, stagesCount, qualified) {
-    const cls = qualified ? "row-qualified" : "";
-    const stageCells = Array.from({ length: stagesCount }).map(buildStageCell).join("");
+    let open = false;
 
-    return `
-      <tr class="${cls}">
-        <td class="col-place"><span class="place-num">${place}</span></td>
-        <td class="col-move"><span class="move move--same">–</span></td>
-        <td class="col-team">-</td>
-        ${stageCells}
-        <td class="col-points"><b>-</b></td>
-        <td class="col-final">–</td>
-        <td class="col-weight">-</td>
-        <td class="col-big">-</td>
-      </tr>
-    `;
-  }
+    btn.addEventListener("click", () => {
+      open = !open;
+      descEl.style.display = open ? "block" : "none";
+      btn.textContent = open ? "Згорнути" : "Детальніше…";
+    });
 
-  function renderSkeleton(stagesCount) {
-    // Шапки
-    const mainThead = mainTable.querySelector("thead");
-    const contThead = contTable.querySelector("thead");
-    if (mainThead) mainThead.innerHTML = buildTheadRow(stagesCount);
-    if (contThead) contThead.innerHTML = buildTheadRow(stagesCount);
-
-    // TOP-18 заготовки
-    let html = "";
-    for (let i = 1; i <= 18; i++) html += buildRow(i, stagesCount, true);
-    topTbody.innerHTML = html;
-
-    // Претенденти — пусто (поки даних нема)
-    contTbody.innerHTML = "";
-  }
-
-  function renderInfoRow(text, stagesCount) {
-    // кол-во колонок = 3 (ліві) + stagesCount + 4 (праві)
-    const colSpan = 3 + Number(stagesCount || 0) + 4;
-    topTbody.innerHTML = `
-      <tr>
-        <td colspan="${colSpan}" style="padding:14px 10px; text-align:center; color:#cbd5e1;">
-          ${esc(text)}
-        </td>
-      </tr>
-    `;
-    contTbody.innerHTML = "";
+    // Вставляємо кнопку одразу ПІСЛЯ заголовка
+    titleEl.insertAdjacentElement("afterend", btn);
   }
 
   async function boot() {
+    // Якщо Firebase не піднявся — ховаємо етапи і ставимо поточний рік
+    if (!db || !window.firebase) {
+      document.body.setAttribute("data-stages", "0");
+      kickerEl.textContent = `СЕЗОН ${(new Date()).getFullYear()}`;
+      titleEl.textContent = "Рейтинг сезону STOLAR CARP";
+      setupCollapsibleDesc();
+      return;
+    }
+
+    // За замовчуванням: етапів нема → ховаємо Е1..Е5
+    document.body.setAttribute("data-stages", "0");
+
+    let year = (new Date()).getFullYear();
+    let stagesCount = 0;
+
     const seasonId = await getSeasonId();
 
-    if (!seasonId) {
-      renderSkeleton(0);
-      renderInfoRow("Нема активного сезону або не створено competitions.", 0);
-      return;
-    }
-
-    let c = null;
-    try {
-      const snap = await db.collection("competitions").doc(seasonId).get();
-      if (!snap.exists) {
-        renderSkeleton(0);
-        renderInfoRow("Сезон не знайдено в competitions.", 0);
-        return;
+    if (seasonId) {
+      try {
+        const snap = await db.collection("competitions").doc(seasonId).get();
+        if (snap.exists) {
+          const c = snap.data() || {};
+          year = c.year || c.seasonYear || year;
+          stagesCount = countStagesNoFinal(c.events);
+        }
+      } catch (e) {
+        console.warn("rating_page: cannot load competition doc", e);
       }
-      c = snap.data() || {};
-    } catch (e) {
-      console.error("rating_page load season error:", e);
-      renderSkeleton(0);
-      renderInfoRow("Помилка завантаження сезону (rules/доступ).", 0);
-      return;
     }
 
-    const year = c.year || c.seasonYear || "";
-    const stages = normalizeStagesFromEvents(c.events);
-    const stagesCount = stages.length;
+    // ставимо атрибут: якщо stagesCount=0 → CSS сховає Е1..Е5
+    document.body.setAttribute("data-stages", String(stagesCount || 0));
 
-    // Перемальовуємо таблиці рівно під кількість етапів
-    renderSkeleton(stagesCount);
+    kickerEl.textContent = `СЕЗОН ${year}`;
+    titleEl.textContent = "Рейтинг сезону STOLAR CARP";
 
-    // Хедер (акуратно, без зміни стилю)
-    if (kickerEl) kickerEl.textContent = year ? `СЕЗОН ${year}` : "СЕЗОН";
-    if (titleEl) titleEl.textContent = "Рейтинг сезону STOLAR CARP";
-
-    // Якщо етапів нема — покажемо пояснення, і не буде колонок Е
-    if (stagesCount === 0) {
-      renderInfoRow("Сезон створений, але етапи ще не додані (або всі позначені як фінал).", 0);
-    }
+    setupCollapsibleDesc();
   }
 
   boot();

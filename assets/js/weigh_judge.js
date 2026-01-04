@@ -249,32 +249,38 @@ function renderBindInfo(){
   }
 
   async function loadTeamsForZone(){
-    if(!compId || !stageId) throw new Error("Нема compId/stageId з settings/app.");
+  if(!activeKey) throw new Error("Нема activeKey з settings/app.");
 
-    const snap = await db.collection("registrations")
-      .where("competitionId","==",compId)
-      .where("stageId","==",stageId)
-      .where("status","==","confirmed")
-      .get();
+  const snap = await db.collection("stageResults").doc(activeKey).get();
+  if(!snap.exists) return [];
 
-    const rows = [];
-    snap.forEach(doc=>{
-      const d = doc.data() || {};
-      const z = parseZoneFromReg(d);
-      if(z !== zone) return;
+  const data = snap.data() || {};
+  const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
 
-      const teamId = norm(d.teamId || "");
-      if(!teamId) return;
+  const rows = [];
+  teamsRaw.forEach(t=>{
+    const teamId = norm(t.teamId || "");
+    if(!teamId) return;
 
-      rows.push({
-        teamId,
-        teamName: norm(d.teamName || d.team || "—"),
-        sector: parseSectorFromReg(d),
-      });
+    // ✅ показуємо тільки тим, кому задано жереб (як в Live buildRegRowsFromStageTeams)
+    const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
+    if(!hasDraw) return;
+
+    const z = norm(t.drawZone || (t.drawKey ? String(t.drawKey)[0] : "") || "").toUpperCase();
+    if(z !== zone) return;
+
+    const sector =
+      Number(t.drawSector || (t.drawKey ? parseInt(String(t.drawKey).slice(1),10) : 0) || 0);
+
+    rows.push({
+      teamId,
+      teamName: norm(t.teamName || t.team || "—"),
+      sector
     });
+  });
 
-    rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
-    return rows;
+  rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+  return rows;
   }
 
   // ---------- weighings ----------

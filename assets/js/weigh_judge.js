@@ -1,11 +1,13 @@
 // assets/js/weigh_judge.js
-// STOLAR CARP • Суддя • Зважування (таблиця як на LIVE + додавання кількох риб)
-// - bind тільки zone (A/B/C) через ?zone=A + localStorage
-// - активний етап беремо з settings/app (activeCompetitionId/activeStageId/activeKey)
-// - команди беремо з registrations (confirmed) + drawZone/drawSector
-// - ваги пишемо в weighings (LIVE-сумісно): compId, stageId, weighNo, teamId, weights:[...]
-// - + додає поле риби, × видаляє
-// - OK створює/оновлює документ (merge)
+// STOLAR CARP • Суддя • Зважування (LIVE-сумісно + BigFish Total-ready)
+// ✅ bind zone через ?zone=A + localStorage
+// ✅ активний етап беремо як LIVE: settings/app.activeKey || compId||stageId (stageId fallback "stage-1")
+// ✅ команди беремо зі stageResults/{activeKey}.teams (тільки з жеребом) + фільтр по зоні
+// ✅ пишемо в weighings (LIVE-сумісно): docId = `${compId}||${stageId}||W{weighNo}||{teamId}`
+// ✅ поля: compId, stageId, weighNo, teamId, weights:[...], zone, sector, teamName, fishCount, totalWeightKg, bigFishKg, status, updatedAt, updatedBy
+// ✅ currentW per zone у settings/weighing_{activeKey}.current[zone], maxW
+// ✅ авто-прогрес на наступне W якщо всі команди зони здали поточне
+// ✅ НЕ світимо email/uid: auth: ✅ суддя/адміністратор
 
 (function(){
   "use strict";
@@ -46,15 +48,19 @@
   // ===== Active stage =====
   let compId = "";
   let stageId = "";
-  let activeKey = "";
+  let activeKey = ""; // stageResults docId (LIVE)
   let zone = "";
 
   let maxW = DEFAULT_MAX_W;
-  let currentW = 1; // поточне з settings/weighing_{activeKey}.current[zone]
-  let viewW = 1;    // що редагуємо зараз (перемикач W1..W4)
+  let currentW = 1; // settings/weighing_{activeKey}.current[zone]
+  let viewW = 1;    // перемикач W1..W4 (редагування)
 
   // cache: weighings[teamId][wNo] = doc
   const weighCache = Object.create(null);
+
+  // stage teams cache
+  let teamsArr = [];
+  let teamsMap = {};
 
   // ---------- helpers ----------
   function setMsg(t, ok=true){
@@ -79,11 +85,13 @@
   }
 
   async function requireJudgeOrAdmin(user){
-    if(!user) return false;
-    if(user.uid === ADMIN_UID) return true;
+    if(!user) return { ok:false, role:"" };
+    if(user.uid === ADMIN_UID) return { ok:true, role:"admin" };
+
     const snap = await db.collection("users").doc(user.uid).get();
     const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return role === "judge" || role === "admin";
+    const ok = (role === "judge" || role === "admin");
+    return { ok, role };
   }
 
   // ---------- bind zone ----------
@@ -104,79 +112,74 @@
     return norm((p.get("zone")||"").toUpperCase());
   }
 
-  // ---------- active from settings/app ----------
-  function computeActiveKey(cId, sId){
-    if(!cId) return "";
-    return `${cId}||${sId || "stage-1"}`;
+  // ---------- active from settings/app (LIVE logic) ----------
+  function readActiveIdsFromApp(app){
+    const comp =
+      app?.activeCompetitionId ||
+      app?.activeCompetition ||
+      app?.competitionId ||
+      "";
+
+    const st =
+      app?.activeStageId ||
+      app?.stageId ||
+      "stage-1";
+
+    compId  = norm(comp);
+    stageId = norm(st) || "stage-1";
   }
 
-  let unsubApp = null;
-function watchApp(){
-  if(unsubApp) unsubApp();
+  function stageDocIdFromApp(app){
+    const key = norm(app?.activeKey || "");
+    if (key) return key;
 
-  unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
-    const app = snap.exists ? (snap.data()||{}) : {};
+    const comp =
+      app?.activeCompetitionId ||
+      app?.activeCompetition ||
+      app?.competitionId ||
+      "";
 
-    // ✅ як Live: беремо як є
-    compId   = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
-    stageId  = norm(app.activeStageId || app.stageId || "");
-    activeKey = norm(app.activeKey || "");
+    const st =
+      app?.activeStageId ||
+      app?.stageId ||
+      "stage-1";
 
-    renderBindInfo();
+    const c = norm(comp);
+    const s = norm(st) || "stage-1";
+    return (c && s) ? `${c}||${s}` : "";
+  }
 
-    // ✅ якщо нема активного етапу — нічого не відкриваємо/не пишемо
-    if(!compId || !stageId || !activeKey){
-      if(statusEl) statusEl.textContent = "❌ Нема активного етапу (settings/app).";
-      if(weighCard) weighCard.style.display = "none";
+  // ---------- UI ----------
+  function paintZoneTitle(){
+    if(!zoneTitle) return;
+    const z = String(zone || "").toUpperCase();
+
+    zoneTitle.classList.remove("zone-a", "zone-b", "zone-c");
+
+    if(!z){
+      zoneTitle.textContent = "Зона —";
       return;
     }
 
-    // якщо вже відкрита зона — оновлюємо дані
-    if(weighCard && weighCard.style.display !== "none" && zone){
-      try{ await openZone(false); } catch(e){
-        setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
-      }
+    zoneTitle.textContent = `Зона ${z}`;
+    if(z === "A") zoneTitle.classList.add("zone-a");
+    else if(z === "B") zoneTitle.classList.add("zone-b");
+    else if(z === "C") zoneTitle.classList.add("zone-c");
+  }
+
+  function renderBindInfo(){
+    const z  = zone || "—";
+    const c  = compId || "—";
+    const s  = stageId || "—";
+    const ak = activeKey || "—";
+
+    paintZoneTitle();
+
+    if(bindInfo){
+      bindInfo.textContent = `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
     }
-  }, (err)=>{
-    console.error(err);
-    if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
-  });
-}
-  function paintZoneTitle(){
-  if(!zoneTitle) return;
-
-  const z = String(zone || "").toUpperCase();
-
-  // прибираємо всі кольорові класи
-  zoneTitle.classList.remove("zone-a", "zone-b", "zone-c");
-
-  // якщо зони нема
-  if(!z){
-    zoneTitle.textContent = "Зона —";
-    return;
   }
 
-  zoneTitle.textContent = `Зона ${z}`;
-
-  if(z === "A") zoneTitle.classList.add("zone-a");
-  else if(z === "B") zoneTitle.classList.add("zone-b");
-  else if(z === "C") zoneTitle.classList.add("zone-c");
-}
-
-function renderBindInfo(){
-  const z  = zone || "—";
-  const c  = compId || "—";
-  const s  = stageId || "—";
-  const ak = activeKey || "—";
-
-  paintZoneTitle();
-
-  if(bindInfo){
-    bindInfo.textContent =
-      `zone=${z} | compId=${c} | stageId=${s} | activeKey=${ak}`;
-  }
-}
-  
   // ---------- weighing settings per activeKey ----------
   function settingsDocId(){
     return `weighing_${activeKey}`;
@@ -228,59 +231,52 @@ function renderBindInfo(){
     wBtns.forEach(b=>{
       if(!b.el) return;
       b.el.classList.toggle("isActive", b.n === viewW);
+      // не дозволяємо редагувати майбутні W (як логіка currentW)
       b.el.disabled = (b.n > currentW);
     });
   }
 
-  // ---------- teams (registrations) ----------
-  function parseZoneFromReg(d){
-    const z1 = norm(d.drawZone || "").toUpperCase();
-    if(z1) return z1;
-    const k = norm(d.drawKey || "").toUpperCase();
-    if(k && /^[ABC]\d+/.test(k)) return k[0];
-    return "";
-  }
-  function parseSectorFromReg(d){
-    const s1 = Number(d.drawSector || 0);
-    if(s1) return s1;
-    const k = norm(d.drawKey || "").toUpperCase();
-    const n = parseInt(k.slice(1), 10);
-    return Number.isFinite(n) ? n : 0;
+  // ---------- teams from stageResults (LIVE) ----------
+  function parseZoneKey(drawKey, drawZone, drawSector){
+    const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
+    const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1),10) : 0) || 0);
+    const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
+    const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
+    const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
+    return { z, n, label, sortKey };
   }
 
   async function loadTeamsForZone(){
-  if(!activeKey) throw new Error("Нема activeKey з settings/app.");
+    if(!activeKey) throw new Error("Нема activeKey з settings/app.");
 
-  const snap = await db.collection("stageResults").doc(activeKey).get();
-  if(!snap.exists) return [];
+    const snap = await db.collection("stageResults").doc(activeKey).get();
+    if(!snap.exists) return [];
 
-  const data = snap.data() || {};
-  const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
+    const data = snap.data() || {};
+    const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
 
-  const rows = [];
-  teamsRaw.forEach(t=>{
-    const teamId = norm(t.teamId || "");
-    if(!teamId) return;
+    const rows = [];
+    teamsRaw.forEach(t=>{
+      const teamId = norm(t.teamId || "");
+      if(!teamId) return;
 
-    // ✅ показуємо тільки тим, кому задано жереб (як в Live buildRegRowsFromStageTeams)
-    const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
-    if(!hasDraw) return;
+      // ✅ тільки тим, кому задано жереб (як Live)
+      const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
+      if(!hasDraw) return;
 
-    const z = norm(t.drawZone || (t.drawKey ? String(t.drawKey)[0] : "") || "").toUpperCase();
-    if(z !== zone) return;
+      const zinfo = parseZoneKey(t.drawKey, t.drawZone, t.drawSector);
+      if(zinfo.z !== zone) return;
 
-    const sector =
-      Number(t.drawSector || (t.drawKey ? parseInt(String(t.drawKey).slice(1),10) : 0) || 0);
-
-    rows.push({
-      teamId,
-      teamName: norm(t.teamName || t.team || "—"),
-      sector
+      rows.push({
+        teamId,
+        teamName: norm(t.teamName || t.team || "—"),
+        sector: zinfo.n || 0,
+        drawKey: zinfo.label
+      });
     });
-  });
 
-  rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
-  return rows;
+    rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
+    return rows;
   }
 
   // ---------- weighings ----------
@@ -331,7 +327,7 @@ function renderBindInfo(){
       teamId: team.teamId,
       weights,
 
-      // extra
+      // extra (для Live зон/таблиць і BigFish Total)
       zone,
       sector: Number(team.sector||0),
       teamName: team.teamName || "",
@@ -340,7 +336,7 @@ function renderBindInfo(){
       bigFishKg: calc.bigFishKg,
       status: "submitted",
       updatedAt: ts,
-      updatedBy: me.uid
+      updatedBy: me?.uid || ""
     }, { merge:true });
 
     weighCache[team.teamId] = weighCache[team.teamId] || {};
@@ -357,6 +353,7 @@ function renderBindInfo(){
     if(currentW >= maxW) return false;
     if(!teams.length) return false;
 
+    // чи всі команди зони здали поточний W
     const wsnap = await db.collection("weighings")
       .where("compId","==",compId)
       .where("stageId","==",stageId)
@@ -409,7 +406,7 @@ function renderBindInfo(){
         table.wj{
           width:100%;
           border-collapse:collapse;
-          min-width:720px; /* ✅ свайп таблиці на вертикальному */
+          min-width:720px;
           font-size:12px;
         }
 
@@ -445,7 +442,6 @@ function renderBindInfo(){
 
         .wj-editor{ width:100%; max-width:100%; }
 
-        /* ✅ свайп рядка ваг, не вилазить за екран */
         .wj-fishesScroll{
           width:100%;
           max-width:100%;
@@ -471,13 +467,12 @@ function renderBindInfo(){
           width:44px;
           height:20px;
           padding:0 2px;
-          font-size:8px;   /* ✅ шрифт 8 */
+          font-size:8px;
           line-height:20px;
           text-align:center;
           border-radius:6px;
         }
 
-        /* ✅ швидке поле біля + */
         .wj-quick{
           width:54px;
           height:20px;
@@ -564,11 +559,10 @@ function renderBindInfo(){
 
   function renderTable(teams){
     injectStyles();
-
     if(!teamsBox) return;
 
     if(!teams.length){
-      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір confirmed + drawZone/drawSector).</div>`;
+      teamsBox.innerHTML = `<div class="muted">Нема команд у зоні ${esc(zone)} (перевір жереб у stageResults).</div>`;
       return;
     }
 
@@ -613,7 +607,6 @@ function renderBindInfo(){
 
     teamsBox.innerHTML = html;
 
-    // events in editors
     teamsBox.querySelectorAll(".wj-editor").forEach(ed=>{
       const teamId = ed.getAttribute("data-team");
       const hint = ed.querySelector(".wj-hint");
@@ -625,7 +618,7 @@ function renderBindInfo(){
         else dels.forEach(b=> b.disabled = false);
       }
 
-      // Enter у швидкому полі = додати
+      // Enter у quick = додати
       ed.querySelector(".wj-quick")?.addEventListener("keydown", (e)=>{
         if(e.key === "Enter"){
           e.preventDefault();
@@ -633,21 +626,17 @@ function renderBindInfo(){
         }
       });
 
-      // + додає в кінець, підставляє quick або копіює останню вагу, авто-скрол/фокус
+      // + додає
       ed.querySelector(".wj-add")?.addEventListener("click", ()=>{
         const quick = ed.querySelector(".wj-quick");
         const scroller = ed.querySelector(".wj-fishesScroll");
 
-        // 1) беремо значення зі швидкого поля
         let v = (quick ? String(quick.value || "").trim() : "");
-
-        // 2) якщо швидке поле пусте — копіюємо останню введену вагу
         if(!v){
           const lastInp = fishes ? fishes.querySelector(".wj-fish:last-child .wj-inp") : null;
           v = lastInp ? String(lastInp.value || "").trim() : "";
         }
 
-        // створюємо новий інпут в КІНЕЦЬ
         const wrap = document.createElement("div");
         wrap.className = "wj-fish";
         wrap.innerHTML = `
@@ -656,13 +645,10 @@ function renderBindInfo(){
         `;
         if(fishes) fishes.appendChild(wrap);
 
-        // чистимо швидке поле
         if(quick) quick.value = "";
-
         if(hint) hint.textContent = "";
         refreshDel();
 
-        // авто-скрол у кінець + фокус
         const newInp = wrap.querySelector(".wj-inp");
         setTimeout(()=>{
           if(scroller) scroller.scrollLeft = scroller.scrollWidth;
@@ -673,6 +659,7 @@ function renderBindInfo(){
         }, 0);
       });
 
+      // delete
       ed.addEventListener("click", (e)=>{
         const btn = e.target;
         if(btn && btn.classList && btn.classList.contains("wj-del")){
@@ -685,6 +672,7 @@ function renderBindInfo(){
         }
       });
 
+      // save
       ed.querySelector(".wj-save")?.addEventListener("click", async ()=>{
         try{
           if(hint){
@@ -692,7 +680,7 @@ function renderBindInfo(){
             hint.className = "muted wj-hint";
           }
 
-          const team = (window.__scTeamsMap || {})[teamId];
+          const team = (teamsMap || {})[teamId];
           if(!team) throw new Error("Команда не знайдена у списку.");
 
           const raw = Array.from(ed.querySelectorAll(".wj-inp")).map(i => i.value);
@@ -704,9 +692,8 @@ function renderBindInfo(){
             hint.className = "muted wj-hint ok";
           }
 
-          // авто-прогрес W, якщо всі здали
-          const teamsAll = window.__scTeamsArr || [];
-          const advanced = await maybeAdvanceAuto(teamsAll);
+          // авто-прогрес W
+          const advanced = await maybeAdvanceAuto(teamsArr || []);
           if(advanced){
             const s = await getOrCreateWeighingSettings();
             maxW = Number(s.data.maxW || DEFAULT_MAX_W);
@@ -716,8 +703,9 @@ function renderBindInfo(){
             setWMsg(`Авто: всі здані → переключив на W${currentW}`, true);
           }
 
-          await preloadWeighings(window.__scTeamsArr || []);
-          renderTable(window.__scTeamsArr || []);
+          // перерендер з новими сумами
+          await preloadWeighings(teamsArr || []);
+          renderTable(teamsArr || []);
           setWMsg("✅ Збережено у Firestore.", true);
 
         }catch(err){
@@ -751,15 +739,14 @@ function renderBindInfo(){
 
     if(!viewW) viewW = 1;
     if(viewW > currentW) viewW = currentW;
-
     updateWButtons();
 
     const teams = await loadTeamsForZone();
-    window.__scTeamsArr = teams;
-    window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
+    teamsArr = teams;
+    teamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
 
     if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
-    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (confirmed + drawZone/drawSector).";
+    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені (перевір жереб у stageResults).";
 
     if(weighCard) weighCard.style.display = "block";
     if(netBadge) netBadge.style.display = "inline-flex";
@@ -770,6 +757,37 @@ function renderBindInfo(){
     setWMsg(`Активна колонка: W${viewW}. Поточне: W${currentW}.`, true);
   }
 
+  // ---------- settings/app watcher (LIVE) ----------
+  let unsubApp = null;
+  function watchApp(){
+    if(unsubApp) unsubApp();
+
+    unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
+      const app = snap.exists ? (snap.data()||{}) : {};
+
+      // ✅ як Live
+      readActiveIdsFromApp(app);
+      activeKey = stageDocIdFromApp(app);
+
+      renderBindInfo();
+
+      if(!compId || !stageId || !activeKey){
+        if(statusEl) statusEl.textContent = "❌ Нема активного етапу.";
+        if(weighCard) weighCard.style.display = "none";
+        return;
+      }
+
+      // якщо вже відкрита зона — оновлюємо
+      if(weighCard && weighCard.style.display !== "none" && zone){
+        try{ await openZone(false); }catch(e){
+          setWMsg("Помилка оновлення етапу: " + (e?.message || e), false);
+        }
+      }
+    }, ()=>{
+      if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
+    });
+  }
+
   // ---------- init ----------
   (async function init(){
     try{
@@ -777,7 +795,7 @@ function renderBindInfo(){
       db = window.scDb;
       const auth = window.scAuth;
 
-      // online indicator
+      // online badge
       function updateOnline(){
         if(!netBadge) return;
         const on = navigator.onLine;
@@ -795,10 +813,9 @@ function renderBindInfo(){
 
       const bind = readBindZone();
       zone = bind?.zone ? String(bind.zone).toUpperCase() : "";
-
       renderBindInfo();
 
-      // buttons
+      // open button
       btnOpen?.addEventListener("click", async ()=>{
         try{
           setMsg("");
@@ -809,6 +826,17 @@ function renderBindInfo(){
         }
       });
 
+      // reset (скинути привʼязку зони)
+      btnReset?.addEventListener("click", ()=>{
+        clearBindZone();
+        zone = "";
+        teamsArr = [];
+        teamsMap = {};
+        if(weighCard) weighCard.style.display = "none";
+        renderBindInfo();
+        setMsg("✅ Привʼязку зони скинуто. Відкрий QR з ?zone=A/B/C.", true);
+      });
+
       // W buttons
       wBtns.forEach(b=>{
         b.el?.addEventListener("click", async ()=>{
@@ -816,7 +844,7 @@ function renderBindInfo(){
             if(b.n > currentW) return;
             viewW = b.n;
             updateWButtons();
-            renderTable(window.__scTeamsArr || []);
+            renderTable(teamsArr || []);
             setWMsg(`Активна колонка: W${viewW}. Поточне: W${currentW}.`, true);
           }catch(e){
             console.error(e);
@@ -835,24 +863,26 @@ function renderBindInfo(){
             return;
           }
 
-          const okRole = await requireJudgeOrAdmin(user);
-          if(!okRole){
+          const r = await requireJudgeOrAdmin(user);
+          if(!r.ok){
             me = null;
-            if(authPill) authPill.textContent = `auth: ❌ немає доступу`;
+            if(authPill) authPill.textContent = "auth: ❌ немає доступу";
             if(statusEl) statusEl.textContent = "Нема доступу (потрібен judge/admin).";
             if(weighCard) weighCard.style.display = "none";
             return;
           }
 
           me = user;
-          if(authPill) authPill.textContent = `auth: ✅ ${user.email || user.uid}`;
+
+          const label = (user.uid === ADMIN_UID || r.role === "admin") ? "адміністратор" : "суддя";
+          if(authPill) authPill.textContent = `auth: ✅ ${label}`;
 
           watchApp();
 
           if(zone){
-            try{ await openZone(false); } catch(e){ console.error(e); }
+            try{ await openZone(false); }catch(e){ console.error(e); }
           }else{
-            if(statusEl) statusEl.textContent = "Зона не привʼязана. Відкрий посилання ?zone=A або натисни «Скинути» і зайди з QR.";
+            if(statusEl) statusEl.textContent = "Зона не привʼязана. Відкрий посилання ?zone=A або скинь і зайди з QR.";
           }
 
         }catch(e){

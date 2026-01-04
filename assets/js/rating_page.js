@@ -45,30 +45,31 @@
 
   // 2) якщо глобалів нема — пробуємо settings/active.seasonId
   async function getSeasonId() {
-    const fromGlobals = pickSeasonIdFromGlobals();
-    if (fromGlobals) return String(fromGlobals);
+  const fromGlobals = pickSeasonIdFromGlobals();
+  if (fromGlobals) return String(fromGlobals);
 
-    try {
-      const s = await db.collection("settings").doc("active").get();
-      if (s.exists) {
-        const d = s.data() || {};
-        if (d.seasonId) return String(d.seasonId);
-        if (d.competitionId) return String(d.competitionId);
-        if (d.activeSeasonId) return String(d.activeSeasonId);
-      }
-    } catch {}
+  // 1) settings/active
+  try {
+    const s = await db.collection("settings").doc("active").get();
+    if (s.exists) {
+      const d = s.data() || {};
+      if (d.seasonId) return String(d.seasonId);
+      if (d.competitionId) return String(d.competitionId);
+      if (d.activeSeasonId) return String(d.activeSeasonId);
+    }
+  } catch (e) {
+    console.warn("rating_page: settings/active read failed", e);
+  }
 
-    // 3) якщо взагалі нема — беремо будь-який “найсвіжіший” competitions (як fallback)
-    // щоб сторінка не була порожня
-    try {
-      const snap = await db.collection("competitions")
-        .orderBy("createdAt", "desc")
-        .limit(1)
-        .get();
-      if (!snap.empty) return snap.docs[0].id;
-    } catch {}
+  // 2) fallback: будь-який competitions (без orderBy, щоб не падало)
+  try {
+    const snap = await db.collection("competitions").limit(1).get();
+    if (!snap.empty) return snap.docs[0].id;
+  } catch (e) {
+    console.warn("rating_page: competitions fallback failed", e);
+  }
 
-    return null;
+  return null;
   }
 
   function normalizeStagesFromEvents(events) {

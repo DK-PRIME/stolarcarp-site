@@ -57,6 +57,10 @@
   // cache: weighings[teamId][wNo] = doc
   const weighCache = Object.create(null);
 
+  // ✅ anti-double-open
+  let opening = false;
+  let lastOpenKey = "";
+
   // ---------- helpers ----------
   function setMsg(t, ok=true){
     if(!msgEl) return;
@@ -131,7 +135,7 @@
 
       renderBindInfo();
 
-      // якщо вже відкрито — онови дані
+      // якщо вже відкрито — онови дані (але без дубля)
       if(weighCard && weighCard.style.display !== "none" && zone){
         try{ await openZone(false); } catch(e){
           setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
@@ -326,14 +330,22 @@
     return true;
   }
 
-  // ---------- preload ----------
+  // ---------- preload (✅ FAST: parallel) ----------
   async function preloadWeighings(teams){
+    const tasks = [];
     for(const t of teams){
       weighCache[t.teamId] = weighCache[t.teamId] || {};
       for(let w=1; w<=DEFAULT_MAX_W; w++){
-        weighCache[t.teamId][w] = await loadWeighing(t.teamId, w);
+        const teamId = t.teamId;
+        const wNo = w;
+        tasks.push(
+          loadWeighing(teamId, wNo).then(doc=>{
+            weighCache[teamId][wNo] = doc;
+          })
+        );
       }
     }
+    await Promise.all(tasks);
   }
 
   // ---------- TABLE like LIVE (без вилазіння) ----------
@@ -603,6 +615,7 @@
             setWMsg(`Авто: всі здані → переключив на W${currentW}`, true);
           }
 
+          // ✅ швидко: паралельний preload
           await preloadWeighings(window.__scTeamsArr || []);
           renderTable(window.__scTeamsArr || []);
           setWMsg("✅ Збережено у Firestore.", true);
@@ -623,6 +636,11 @@
 
   // ---------- open zone ----------
   async function openZone(withMsgs=true){
+    if(opening) return;
+
+    const openKey = `${activeKey}||${zone}`;
+    if(openKey === lastOpenKey && !withMsgs) return;
+
     if(!zone){
       if(withMsgs) setMsg("Нема зони. Відкрий посилання типу ?zone=A", false);
       return;
@@ -632,29 +650,41 @@
       return;
     }
 
-    const s = await getOrCreateWeighingSettings();
-    maxW = Number(s.data.maxW || DEFAULT_MAX_W);
-    currentW = getCurrentWForZone(s.data);
+    opening = true;
+    lastOpenKey = openKey;
 
-    if(!viewW) viewW = 1;
-    if(viewW > currentW) viewW = currentW;
+    try{
+      const s = await getOrCreateWeighingSettings();
+      maxW = Number(s.data.maxW || DEFAULT_MAX_W);
+      currentW = getCurrentWForZone(s.data);
 
-    updateWButtons();
+      if(!viewW) viewW = 1;
+      if(viewW > currentW) viewW = currentW;
 
-    const teams = await loadTeamsForZone();
-    window.__scTeamsArr = teams;
-    window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
+      updateWButtons();
 
-    if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
-    if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені.";
+      const teams = await loadTeamsForZone();
+      window.__scTeamsArr = teams;
+      window.__scTeamsMap = teams.reduce((m,x)=> (m[x.teamId]=x, m), {});
 
-    if(weighCard) weighCard.style.display = "block";
-    if(netBadge) netBadge.style.display = "inline-flex";
+      if(teamsCountEl) teamsCountEl.textContent = `Команд: ${teams.length}`;
+      if(statusEl) statusEl.textContent = teams.length ? "✅ Зона відкрита." : "⚠️ Команди не знайдені.";
 
-    await preloadWeighings(teams);
-    renderTable(teams);
+      if(weighCard) weighCard.style.display = "block";
+      if(netBadge) netBadge.style.display = "inline-flex";
 
-    setWMsg(`Активна колонка: W${viewW}. Поточне: W${currentW}.`, true);
+      // ✅ швидкий рендер одразу
+      renderTable(teams);
+      setWMsg("Завантажую ваги…", true);
+
+      // ✅ паралельно тягнемо ваги
+      await preloadWeighings(teams);
+      renderTable(teams);
+
+      setWMsg(`Активна колонка: W${viewW}. Поточне: W${currentW}.`, true);
+    } finally {
+      opening = false;
+    }
   }
 
   // ---------- init ----------

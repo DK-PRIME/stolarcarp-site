@@ -1,5 +1,10 @@
 // assets/js/live_firebase.js
-// STOLAR CARP • Live (public)
+// STOLAR CARP • Live (public) — optimized + canonical
+// ✅ no resubscribe if stage not changed
+// ✅ zones from stageResults.zones (FAST)
+// ✅ auto-zones from weighings ONLY if stageResults.zones is empty (fallback)
+// ✅ weighings filtered by status=="submitted"
+// ✅ debounce renders to avoid UI lag
 
 (function () {
   "use strict";
@@ -39,7 +44,6 @@
     }
   };
 
-  // 5.950 -> 5.95 ; 5.00 -> 5 ; 5.10 -> 5.1
   function fmtNum(x) {
     const n = Number(x);
     if (!isFinite(n)) return null;
@@ -61,8 +65,15 @@
     if (contentEl) contentEl.style.display = "grid";
   }
 
-  // ======== AUTO ZONES (from weighings) ========
+  function debounce(fn, ms=80){
+    let t = null;
+    return (...args)=>{
+      if(t) clearTimeout(t);
+      t = setTimeout(()=>fn(...args), ms);
+    };
+  }
 
+  // ======== AUTO ZONES (fallback from weighings) ========
   function kgShort(x) {
     const n = Number(x || 0);
     if (!isFinite(n)) return "0";
@@ -71,11 +82,9 @@
 
   function wCell(hasDoc, weightsArr) {
     if (!hasDoc) return "-";
-
     const arr = Array.isArray(weightsArr) ? weightsArr : [];
     const cnt = arr.length;
     const sum = arr.reduce((a, b) => a + Number(b || 0), 0);
-
     if (cnt === 0) return "0 / 0";
     return `${cnt} / ${kgShort(sum)}`;
   }
@@ -210,6 +219,7 @@
       (useZones.B && useZones.B.length) ||
       (useZones.C && useZones.C.length);
 
+    // fallback view: just list teams if no zones and no weighings yet
     if (!hasZoneData && Array.isArray(teamsRaw) && teamsRaw.length) {
       const fb = { A: [], B: [], C: [] };
       teamsRaw.forEach((t) => {
@@ -265,7 +275,6 @@
         </tr>
       `).join("");
 
-      // table-wrap дає горизонтальний скрол ТІЛЬКИ таблиці (не ламає бургер і сторінку)
       return `
         <div class="live-zone card">
           <div class="live-zone-title">
@@ -296,9 +305,10 @@
     }).join("");
   }
 
-  // ======== LIVE WEIGH TABLE (W1–W4) ========
+  // ======== LIVE WEIGH TABLE (fish list for W1–W4) ========
   let activeCompId  = "";
   let activeStageId = "";
+  let activeDocId   = "";   // stageResults doc id (activeKey)
 
   let currentWeighNo  = 1;
   let currentWeighKey = "W1";
@@ -307,13 +317,19 @@
   let weighByTeam = new Map(); // teamId -> weights[]
 
   let unsubWeigh = null;
+  let unsubAllWeigh = null;
+  let unsubStage = null;
+  let unsubSettings = null;
 
-  let allWeighDocs = [];     // ВСІ документи weighings W1..W4
-  let unsubAllWeigh = null;  // підписка на weighings (всі W)
+  let allWeighDocs = []; // only when fallback needed
+  let needAutoZones = false;
 
   function stopWeighSubs(){
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
     if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
+  }
+  function stopStageSub(){
+    if (unsubStage) { unsubStage(); unsubStage = null; }
   }
 
   function parseZoneKey(drawKey, drawZone, drawSector){
@@ -331,7 +347,7 @@
       const teamId = String(t.teamId || "").trim();
       if (!teamId) return;
 
-      // показуємо тільки ті, кому адмін задав жереб
+      // show only drawn teams
       const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
       if (!hasDraw) return;
 
@@ -366,11 +382,9 @@
     startWeighingsFor(currentWeighNo);
   }
 
-  // >>> головний рендер таблиці риб (ОКРЕМІ КЛІТИНКИ)
   function renderWeighTable() {
     if (!weighTableEl) return;
 
-    // ще не підтягнуло порядок секторів
     if (!regRows.length) {
       weighTableEl.innerHTML = `
         <div class="table-wrap weigh-wrap" style="overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch;">
@@ -398,7 +412,6 @@
     });
 
     const maxFish = Math.max(1, ...rows.map((r) => r.nums.length));
-
     const fishHeaders = Array.from({ length: maxFish }, (_, i) =>
       `<th class="fish-th">🐟${i + 1}</th>`
     ).join("");
@@ -435,12 +448,13 @@
     `;
   }
 
+  const renderZonesDebounced = debounce(renderZones, 70);
+  const renderWeighDebounced = debounce(renderWeighTable, 40);
+
   function startWeighingsFor(weighNo) {
-    const db = window.scDb;
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
-    // weighings: конкретний W
     if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
     weighByTeam = new Map();
 
@@ -449,6 +463,7 @@
       .where("compId", "==", activeCompId)
       .where("stageId", "==", activeStageId)
       .where("weighNo", "==", Number(weighNo))
+      .where("status","==","submitted")
       .onSnapshot((qs) => {
         const map = new Map();
         qs.forEach((doc) => {
@@ -458,8 +473,7 @@
           if (teamId) map.set(teamId, weights);
         });
         weighByTeam = map;
-
-        renderWeighTable();
+        renderWeighDebounced();
       }, (err) => {
         console.error("weighings snapshot err:", err);
       });
@@ -467,36 +481,104 @@
     if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
   }
 
-  function startAllWeighingsSub() {
-    if (!window.scDb) return;
+  // fallback subscription (ONLY if stageResults.zones empty)
+  function startAllWeighingsSubIfNeeded(){
+    if (!needAutoZones) {
+      if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
+      allWeighDocs = [];
+      return;
+    }
+
+    if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
-    if (unsubAllWeigh) unsubAllWeigh();
+    if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
 
-    unsubAllWeigh = window.scDb
+    unsubAllWeigh = db
       .collection("weighings")
       .where("compId", "==", activeCompId)
       .where("stageId", "==", activeStageId)
+      .where("status","==","submitted")
       .onSnapshot((qs) => {
         const arr = [];
         qs.forEach((doc) => arr.push(doc.data() || {}));
         allWeighDocs = arr;
 
-        renderZones(buildZonesAuto(regRows, allWeighDocs), []);
+        if (regRows.length) {
+          renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), []);
+        }
+      }, (err)=>{
+        console.error("all weighings snapshot err:", err);
       });
   }
 
-  // ======== STAGE RESULTS SUB (як було) ========
-  let unsubSettings = null;
-  let unsubStage    = null;
+  // ======== STAGE RESULTS SUB ========
+  function startStageSub(docId) {
+    stopStageSub();
 
-  function stopStageSub() {
-    if (unsubStage) {
-      unsubStage();
-      unsubStage = null;
+    if (!docId) {
+      showError("Нема активного етапу (settings/app).");
+      return;
     }
+
+    unsubStage = db.collection("stageResults").doc(docId).onSnapshot(
+      (snap) => {
+        try {
+          if (!snap.exists) {
+            if (stageEl) stageEl.textContent = docId;
+            if (updatedEl) updatedEl.textContent = "";
+            showContent();
+            return;
+          }
+
+          const data = snap.data() || {};
+
+          const stageName = data.stageName || data.stage || data.title || docId;
+          if (stageEl) stageEl.textContent = stageName;
+
+          const updatedAt = data.updatedAt || data.updated || data.ts || null;
+          if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
+
+          const zonesData = data.zones || { A: [], B: [], C: [] };
+          const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
+
+          // order always from teams
+          regRows = buildRegRowsFromStageTeams(teamsRaw);
+          renderWeighDebounced();
+
+          const hasStageZones =
+            (zonesData.A && zonesData.A.length) ||
+            (zonesData.B && zonesData.B.length) ||
+            (zonesData.C && zonesData.C.length);
+
+          // if zones exist -> FAST
+          needAutoZones = !hasStageZones;
+
+          if (hasStageZones) {
+            renderZonesDebounced(zonesData, teamsRaw);
+          } else {
+            // show placeholder until weighings arrive
+            if (allWeighDocs.length) renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
+            else renderZonesDebounced({ A: [], B: [], C: [] }, teamsRaw);
+          }
+
+          // sync fallback sub
+          startAllWeighingsSubIfNeeded();
+
+          showContent();
+        } catch (e) {
+          console.error("Render error in stageResults snapshot:", e);
+          showError("Помилка відображення даних Live.");
+        }
+      },
+      (err) => {
+        console.error(err);
+        showError("Помилка читання Live (stageResults).");
+      }
+    );
   }
 
+  // ======== settings/app ========
   function stageDocIdFromApp(app) {
     const key = app?.activeKey;
     if (key) return String(key);
@@ -528,67 +610,8 @@
       app?.stageId ||
       "stage-1";
 
-    activeCompId = String(compId || "");
+    activeCompId  = String(compId || "");
     activeStageId = String(stageId || "");
-  }
-
-  function startStageSub(docId) {
-    stopStageSub();
-
-    if (!docId) {
-      showError("Нема активного етапу (settings/app).");
-      return;
-    }
-
-    const ref = db.collection("stageResults").doc(docId);
-
-    unsubStage = ref.onSnapshot(
-      (snap) => {
-        try {
-          if (!snap.exists) {
-            if (stageEl) stageEl.textContent = docId;
-            if (updatedEl) updatedEl.textContent = "";
-            showContent();
-            return;
-          }
-
-          const data = snap.data() || {};
-
-          const stageName = data.stageName || data.stage || data.title || docId;
-          if (stageEl) stageEl.textContent = stageName;
-
-          const updatedAt = data.updatedAt || data.updated || data.ts || null;
-          if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
-
-          const zonesData = data.zones || { A: [], B: [], C: [] };
-          const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
-
-          // ✅ головне: порядок секторів беремо ТІЛЬКИ зі stageResults.teams
-          regRows = buildRegRowsFromStageTeams(teamsRaw);
-          renderWeighTable();
-
-          const hasStageZones =
-            (zonesData.A && zonesData.A.length) ||
-            (zonesData.B && zonesData.B.length) ||
-            (zonesData.C && zonesData.C.length);
-
-          if (hasStageZones) {
-            renderZones(zonesData, teamsRaw);
-          } else {
-            renderZones(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
-          }
-
-          showContent();
-        } catch (e) {
-          console.error("Render error in stageResults snapshot:", e);
-          showError("Помилка відображення даних Live.");
-        }
-      },
-      (err) => {
-        console.error(err);
-        showError("Помилка читання Live (stageResults).");
-      }
-    );
   }
 
   // ======== INIT ========
@@ -597,46 +620,52 @@
     return;
   }
 
-  unsubSettings = db
-    .collection("settings")
-    .doc("app")
-    .onSnapshot(
-      (snap) => {
-        try {
-          const app = snap.exists ? (snap.data() || {}) : {};
+  let prevStageKey = ""; // compId||stageId
 
-          // активні comp/stage
-          readActiveIdsFromApp(app);
+  unsubSettings = db.collection("settings").doc("app").onSnapshot(
+    (snap) => {
+      try {
+        const app = snap.exists ? (snap.data() || {}) : {};
 
-          // stageResults (верх)
-          const docId = stageDocIdFromApp(app);
-          startStageSub(docId);
+        readActiveIdsFromApp(app);
+        activeDocId = stageDocIdFromApp(app);
 
-          // нижня таблиця зважувань
+        const stageKey = `${activeCompId}||${activeStageId}`;
+
+        if (stageKey !== prevStageKey) {
+          prevStageKey = stageKey;
+
+          // reset fallback cache
+          allWeighDocs = [];
+          needAutoZones = false;
+
+          // stageResults top
+          startStageSub(activeDocId);
+
+          // bottom fish table
           stopWeighSubs();
           setActiveWeigh(currentWeighNo);
 
-          // верхня таблиця зон авто з weighings
-          startAllWeighingsSub();
-
-        } catch (e) {
-          console.error("settings/app error:", e);
-          showError("Помилка читання settings/app.");
+          // fallback sub стартує тільки якщо stageResults скаже "нема zones"
         }
-      },
-      (err) => {
-        console.error(err);
+      } catch (e) {
+        console.error("settings/app error:", e);
         showError("Помилка читання settings/app.");
       }
-    );
+    },
+    (err) => {
+      console.error(err);
+      showError("Помилка читання settings/app.");
+    }
+  );
 
-  // кнопки W1–W4
+  // W buttons
   if (wBtn1) wBtn1.addEventListener("click", () => setActiveWeigh(1));
   if (wBtn2) wBtn2.addEventListener("click", () => setActiveWeigh(2));
   if (wBtn3) wBtn3.addEventListener("click", () => setActiveWeigh(3));
   if (wBtn4) wBtn4.addEventListener("click", () => setActiveWeigh(4));
 
-  // дефолт
+  // default
   setActiveWeigh(1);
 
 })();

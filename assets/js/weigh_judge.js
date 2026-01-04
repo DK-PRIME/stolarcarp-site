@@ -239,32 +239,51 @@ function renderBindInfo(){
   }
 
   async function loadTeamsForZone(){
-    if(!compId || !stageId) throw new Error("Нема compId/stageId з settings/app.");
+  if(!compId || !stageId) throw new Error("Нема compId/stageId з settings/app.");
 
-    const snap = await db.collection("registrations")
-      .where("competitionId","==",compId)
-      .where("stageId","==",stageId)
-      .where("status","==","confirmed")
-      .get();
+  // ✅ Жеребкування з LIVE-логіки: stageResults/{compId||stageId}
+  const docId = `${compId}||${stageId}`;
+  const snap = await db.collection("stageResults").doc(docId).get();
 
-    const rows = [];
-    snap.forEach(doc=>{
-      const d = doc.data() || {};
-      const z = parseZoneFromReg(d);
-      if(z !== zone) return;
+  if(!snap.exists){
+    return []; // жереб ще не створений/не збережений
+  }
 
-      const teamId = norm(d.teamId || "");
-      if(!teamId) return;
+  const data = snap.data() || {};
+  const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
 
-      rows.push({
-        teamId,
-        teamName: norm(d.teamName || d.team || "—"),
-        sector: parseSectorFromReg(d),
-      });
-    });
+  const rows = [];
+  teamsRaw.forEach((t)=>{
+    const teamId = norm(t.teamId || "");
+    if(!teamId) return;
 
-    rows.sort((a,b)=> (a.sector||0)-(b.sector||0) || (a.teamName||"").localeCompare(b.teamName||"", "uk"));
-    return rows;
+    const teamName = norm(t.teamName || t.team || "—");
+
+    // зона: drawZone або drawKey (A1)
+    let z = norm(t.drawZone || t.zone || "").toUpperCase();
+    if(!z){
+      const k = norm(t.drawKey || "").toUpperCase();
+      if(k && /^[ABC]\d+/.test(k)) z = k[0];
+    }
+    if(z !== zone) return;
+
+    // сектор: drawSector або drawKey (A1 -> 1)
+    let sector = Number(t.drawSector || t.sector || 0);
+    if(!sector){
+      const k = norm(t.drawKey || "").toUpperCase();
+      const n = parseInt(k.slice(1), 10);
+      sector = Number.isFinite(n) ? n : 0;
+    }
+
+    rows.push({ teamId, teamName, sector });
+  });
+
+  rows.sort((a,b)=>
+    (a.sector||0)-(b.sector||0) ||
+    (a.teamName||"").localeCompare(b.teamName||"", "uk")
+  );
+
+  return rows;
   }
 
   // ---------- weighings ----------

@@ -111,27 +111,37 @@
   }
 
   let unsubApp = null;
-  function watchApp(){
-    if(unsubApp) unsubApp();
-    unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
-      const app = snap.exists ? (snap.data()||{}) : {};
+function watchApp(){
+  if(unsubApp) unsubApp();
 
-      compId  = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
-      stageId = norm(app.activeStageId || app.stageId || "") || "stage-1";
-      activeKey = norm(app.activeKey || "") || computeActiveKey(compId, stageId);
+  unsubApp = db.collection("settings").doc("app").onSnapshot(async (snap)=>{
+    const app = snap.exists ? (snap.data()||{}) : {};
 
-      renderBindInfo();
+    // ✅ як Live: беремо як є
+    compId   = norm(app.activeCompetitionId || app.activeCompetition || app.competitionId || "");
+    stageId  = norm(app.activeStageId || app.stageId || "");
+    activeKey = norm(app.activeKey || "");
 
-      if(weighCard && weighCard.style.display !== "none" && zone){
-        try{ await openZone(false); } catch(e){
-          setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
-        }
+    renderBindInfo();
+
+    // ✅ якщо нема активного етапу — нічого не відкриваємо/не пишемо
+    if(!compId || !stageId || !activeKey){
+      if(statusEl) statusEl.textContent = "❌ Нема активного етапу (settings/app).";
+      if(weighCard) weighCard.style.display = "none";
+      return;
+    }
+
+    // якщо вже відкрита зона — оновлюємо дані
+    if(weighCard && weighCard.style.display !== "none" && zone){
+      try{ await openZone(false); } catch(e){
+        setWMsg("Помилка оновлення активного етапу: " + (e?.message || e), false);
       }
-    }, (err)=>{
-      console.error(err);
-      if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
-    });
-  }
+    }
+  }, (err)=>{
+    console.error(err);
+    if(statusEl) statusEl.textContent = "❌ Не читається settings/app.";
+  });
+}
   function paintZoneTitle(){
   if(!zoneTitle) return;
 

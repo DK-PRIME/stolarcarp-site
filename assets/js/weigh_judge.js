@@ -7,6 +7,7 @@
 // ✅ + додає поле риби, × видаляє, OK зберігає (merge)
 // ✅ currentW per zone у settings/weighing_{activeKey}.current[zone], maxW
 // ✅ авто-прогрес на наступне W якщо всі команди зони здали поточне
+// ✅ LIVE legacy поля (count/total/big + w) для сумісності
 
 (function(){
   "use strict";
@@ -272,8 +273,13 @@
     const weights = cleanWeights(weightsRaw);
     const calc = calcFromWeights(weights);
 
+    // ✅ LIVE legacy (щоб лайв бачив як раніше)
+    const legacyCount = calc.fishCount;
+    const legacyTotal = calc.totalWeightKg;
+    const legacyBig   = calc.bigFishKg;
+
     await db.collection("weighings").doc(id).set({
-      // LIVE fields
+      // LIVE fields (нові)
       compId,
       stageId,               // ✅ "main"/"stage-x"
       weighNo: Number(wNo),
@@ -288,6 +294,13 @@
       fishCount: calc.fishCount,
       totalWeightKg: calc.totalWeightKg,
       bigFishKg: calc.bigFishKg,
+
+      // ✅ legacy поля (старий LIVE)
+      count: legacyCount,
+      total: legacyTotal,
+      big: legacyBig,
+      w: legacyCount ? `${legacyCount}/${legacyTotal}` : "0/0",
+
       status: "submitted",
       updatedAt: ts,
       updatedBy: me.uid
@@ -299,6 +312,9 @@
       fishCount: calc.fishCount,
       totalWeightKg: calc.totalWeightKg,
       bigFishKg: calc.bigFishKg,
+      count: legacyCount,
+      total: legacyTotal,
+      big: legacyBig,
       status:"submitted"
     };
   }
@@ -365,7 +381,7 @@
         table.wj{
           width:100%;
           border-collapse:collapse;
-          min-width:720px; /* щоб W1..W4 точно влазили по ширині таблиці */
+          min-width:720px;
           font-size:12px;
         }
         table.wj th, table.wj td{
@@ -399,10 +415,8 @@
         .wj-sum{ font-weight:900; }
         .wj-sub{ font-size:11px; margin-top:2px; opacity:.75; }
 
-        /* editor */
         .wj-editor{ width:100%; max-width:100%; }
 
-        /* ✅ ваги не вилазять: горизонтальний скрол тільки всередині */
         .wj-fishesScroll{
           width:100%;
           max-width:100%;
@@ -476,7 +490,7 @@
 
   function editorCell(team, doc){
     const weights = Array.isArray(doc?.weights) ? doc.weights : [];
-    const safe = (weights.length ? weights : [""]); // мінімум 1 інпут
+    const safe = (weights.length ? weights : [""]);
 
     return `
       <div class="wj-editor" data-team="${esc(team.teamId)}">
@@ -548,7 +562,6 @@
 
     teamsBox.innerHTML = html;
 
-    // events in editors
     teamsBox.querySelectorAll(".wj-editor").forEach(ed=>{
       const teamId = ed.getAttribute("data-team");
       const hint = ed.querySelector(".wj-hint");
@@ -603,7 +616,6 @@
             hint.className = "muted wj-hint ok";
           }
 
-          // авто-прогрес W якщо всі здали поточне
           const teamsAll = window.__scTeamsArr || [];
           const advanced = await maybeAdvanceAuto(teamsAll);
           if(advanced){
@@ -615,7 +627,6 @@
             setWMsg(`Авто: всі здані → переключив на W${currentW}`, true);
           }
 
-          // ✅ швидко: паралельний preload
           await preloadWeighings(window.__scTeamsArr || []);
           renderTable(window.__scTeamsArr || []);
           setWMsg("✅ Збережено у Firestore.", true);
@@ -673,11 +684,9 @@
       if(weighCard) weighCard.style.display = "block";
       if(netBadge) netBadge.style.display = "inline-flex";
 
-      // ✅ швидкий рендер одразу
       renderTable(teams);
       setWMsg("Завантажую ваги…", true);
 
-      // ✅ паралельно тягнемо ваги
       await preloadWeighings(teams);
       renderTable(teams);
 
@@ -694,7 +703,6 @@
       db = window.scDb;
       const auth = window.scAuth;
 
-      // online badge
       function updateOnline(){
         if(!netBadge) return;
         const on = navigator.onLine;
@@ -706,7 +714,6 @@
       window.addEventListener("offline", updateOnline);
       updateOnline();
 
-      // bind from url
       const zUrl = zoneFromUrl();
       if(zUrl) writeBindZone(zUrl);
 
@@ -715,7 +722,6 @@
 
       renderBindInfo();
 
-      // buttons
       btnOpen?.addEventListener("click", async ()=>{
         try{
           setMsg("");
@@ -728,14 +734,13 @@
 
       btnReset?.addEventListener("click", ()=>{
         clearBindZone();
-        location.href = location.pathname; // без параметрів
+        location.href = location.pathname;
       });
 
       btnSaveHint?.addEventListener("click", ()=>{
         setMsg("Підказка: меню браузера (⋮) → «Додати на головний екран».", true);
       });
 
-      // W buttons
       wBtns.forEach(b=>{
         b.el?.addEventListener("click", async ()=>{
           try{
@@ -750,7 +755,6 @@
         });
       });
 
-      // auth
       auth.onAuthStateChanged(async (user)=>{
         try{
           if(!user){
@@ -773,11 +777,9 @@
           me = user;
           if(authPill) authPill.textContent = `auth: ✅ ${user.email || user.uid}`;
 
-          // start watching active stage
           watchApp();
 
           if(zone){
-            // авто-відкриття, якщо зона вже привʼязана
             try{ await openZone(false); } catch(e){ console.error(e); }
           }else{
             if(statusEl) statusEl.textContent = "Зона не привʼязана. Відкрий посилання ?zone=A або натисни «Скинути» і зайди з QR.";

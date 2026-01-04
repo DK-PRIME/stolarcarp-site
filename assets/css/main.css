@@ -646,3 +646,128 @@ body.live-page .table-wrap{
 #zoneTitle.zone-a{ color:#22c55e; box-shadow:0 0 18px rgba(34,197,94,.18); }
 #zoneTitle.zone-b{ color:#3b82f6; box-shadow:0 0 18px rgba(59,130,246,.18); }
 #zoneTitle.zone-c{ color:#f59e0b; box-shadow:0 0 18px rgba(245,158,11,.18); }
+/* === STOLAR CARP • Premium Rules === */
+body.rules-page{
+  background: radial-gradient(circle at top, #111827 0%, #05060a 55%);
+}
+
+.rules-page .section{
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.rules-page h3{
+  margin: 26px 0 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  position: relative;
+  padding-left: 14px;
+}
+
+.rules-page h3:before{
+  content:"";
+  position:absolute;
+  left:0; top:.15em;
+  width:6px; height:1.1em;
+  border-radius:999px;
+  background: linear-gradient(180deg, #facc15 0%, #b91c1c 100%);
+  box-shadow: 0 8px 22px rgba(250,204,21,.18);
+}
+
+/* Cards: ul/p blocks become premium blocks */
+.rules-page .section > ul,
+.rules-page .section > p{
+  background: rgba(15,23,42,.78);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 16px;
+  padding: 14px 14px;
+  margin: 10px 0 0;
+  box-shadow: 0 14px 40px rgba(0,0,0,.35);
+}
+
+/* Nice reading rhythm */
+.rules-page .section > p{
+  color:#cbd5e1;
+  line-height: 1.55;
+}
+
+.rules-page ul{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rules-page ul > li{
+  position: relative;
+  padding-left: 22px;
+  margin: 10px 0;
+  color: #e5e7eb;
+  line-height: 1.55;
+}
+
+.rules-page ul > li:before{
+  content:"";
+  position:absolute;
+  left: 4px;
+  top: .62em;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(250,204,21,.95);
+  box-shadow: 0 0 0 4px rgba(250,204,21,.12);
+}
+
+/* Nested lists = subtle, premium */
+.rules-page ul ul{
+  margin-top: 10px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(148,163,184,.18);
+}
+
+.rules-page ul ul > li{
+  padding-left: 20px;
+  color: #d1d5db;
+  margin: 8px 0;
+}
+
+.rules-page ul ul > li:before{
+  width: 6px;
+  height: 6px;
+  top: .68em;
+  background: rgba(148,163,184,.9);
+  box-shadow: none;
+}
+
+/* Strong text looks premium (not too bright) */
+.rules-page strong{
+  color:#f8fafc;
+  font-weight: 800;
+}
+
+/* Tables also premium */
+.rules-page .table{
+  background: rgba(15,23,42,.78);
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 14px 40px rgba(0,0,0,.35);
+}
+
+.rules-page .table th{
+  background: rgba(2,6,23,.55);
+  color:#f8fafc;
+  font-weight: 800;
+}
+
+.rules-page .table td{
+  color:#e5e7eb;
+}
+
+/* Hint block (if exists) */
+.rules-page .form__hint{
+  border-radius: 16px;
+  border: 1px solid rgba(250,204,21,.18);
+  background: linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
+}

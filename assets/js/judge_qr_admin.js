@@ -1,9 +1,10 @@
 // assets/js/judge_qr_admin.js
 // STOLAR CARP • Admin • Judge Weighings Control (A/B/C)
-// ✅ single source: settings/app -> activeCompId/activeStageId/activeKey
-// ✅ teams order from stageResults/{activeKey}.teams
+// ✅ source: settings/app -> activeCompetitionId/activeStageId/(activeKey optional)
+// ✅ teams order: stageResults/{activeKey || compId||stageId}.teams
 // ✅ shows 3 tables (A,B,C) with W1..W4
 // ✅ edit weights as "5.15, 5.20" -> recalculates fishCount/totalWeightKg/bigFishKg
+// ✅ "0 = нема улову" -> 0 НЕ записуємо у weights (порожній масив = нема риби)
 // ✅ writes LIVE-compatible weighings fields (merge)
 
 (function () {
@@ -14,10 +15,18 @@
 
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
+  // ---------- helpers ----------
   function esc(s){
     return String(s ?? "").replace(/[&<>"']/g, m => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[m]));
+  }
+
+  // Escape string for attribute selector: [data-wtxt="..."]
+  function selAttrVal(v){
+    return String(v ?? "")
+      .replace(/\\/g, "\\\\")
+      .replace(/"/g, '\\"');
   }
 
   async function waitFirebase(maxMs = 12000) {
@@ -27,6 +36,28 @@
       await new Promise((r) => setTimeout(r, 120));
     }
     throw new Error("Firebase not ready (scDb/firebase)");
+  }
+
+  async function ensureAuth() {
+    try {
+      if (window.scAuth && !window.scAuth.currentUser) {
+        await window.scAuth.signInAnonymously();
+      }
+    } catch {}
+  }
+
+  async function requireAdmin(){
+    const user = window.scAuth?.currentUser;
+    if (!user) return false;
+    if (user.uid === ADMIN_UID) return true;
+
+    try{
+      const snap = await window.scDb.collection("users").doc(user.uid).get();
+      const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+      return role === "admin";
+    }catch{
+      return false;
+    }
   }
 
   function fmtTs(ts){
@@ -43,6 +74,7 @@
     return n.toFixed(2).replace(/\.?0+$/,"");
   }
 
+  // "0 = нема улову" -> 0 НЕ включаємо в масив
   function parseWeightsText(txt){
     const raw = String(txt || "")
       .replace(/;/g, ",")
@@ -53,7 +85,9 @@
     const arr = [];
     raw.forEach(v=>{
       const n = Number(v);
-      if (isFinite(n) && n >= 0) arr.push(Math.round(n*1000)/1000);
+      if (!isFinite(n)) return;
+      if (n <= 0) return; // ключове: 0 та мінус ігноруємо
+      arr.push(Math.round(n*1000)/1000);
     });
     return arr;
   }
@@ -74,13 +108,16 @@
     const d = snap.data() || {};
     const compId  = String(d.activeCompetitionId || "");
     const stageId = String(d.activeStageId || "");
-    const activeKey = String(d.activeKey || (compId && stageId ? `${compId}||${stageId}` : ""));
+    const activeKey = String(d.activeKey || ""); // може бути порожній
 
     if (!compId || !stageId) return null;
-    return { compId, stageId, activeKey };
+
+    // fallback key:
+    const stageKey = `${compId}||${stageId}`;
+    return { compId, stageId, activeKey: activeKey || stageKey, stageKey };
   }
 
-  // ===== team order from stageResults/{activeKey}.teams =====
+  // ===== team order from stageResults/{key}.teams =====
   function normalizeTeam(t){
     const teamId = String(t.teamId || t.regId || t.id || "").trim();
     const teamName = String(t.teamName || t.team || "—");
@@ -115,8 +152,10 @@
       </div>
 
       <div id="admTables" style="display:grid; gap:12px;"></div>
-      <div style="opacity:.65;font-size:.85rem;margin-top:10px;">
-        Формат редагування ваг: <b>5.15, 5.20</b> (кома або крапка). Нуль — означає “нема улову”.
+
+      <div style="opacity:.65;font-size:.85rem;margin-top:10px; line-height:1.35;">
+        Формат редагування ваг: <b>5.15, 5.20</b> (кома або крапка).<br>
+        <b>0 = нема улову</b> → 0 не записується в ваги (порожній список = нема риби).
       </div>
     `;
   }
@@ -150,18 +189,13 @@
     `;
   }
 
-  function cellHtml(ctx, t, wNo, doc){
-    const has = !!doc;
+  function cellHtml(t, wNo, doc){
     const weights = Array.isArray(doc?.weights) ? doc.weights : [];
     const { fishCount, totalWeightKg, bigFishKg } = calcFromWeights(weights);
 
-    const summary = has
-      ? `${fishCount} / ${kgShort(totalWeightKg)} / ${bigFishKg ? kgShort(bigFishKg) : "—"}`
-      : `- / - / -`;
-
+    const summary = `${fishCount} / ${kgShort(totalWeightKg)} / ${fishCount ? kgShort(bigFishKg) : "—"}`;
     const txt = weights.length ? weights.map(x=>kgShort(x)).join(", ") : "";
 
-    const docId = doc?._id || ""; // internal (we keep separately in map)
     const key = `${t.teamId}||${wNo}`;
 
     return `
@@ -184,7 +218,6 @@
             data-sector="${esc(String(t.drawSector||""))}"
             data-teamname="${esc(t.teamName)}"
             data-wno="${esc(String(wNo))}"
-            data-doc="${esc(docId)}"
           >Зберегти</button>
 
           <button class="btn btn--ghost" type="button"
@@ -194,7 +227,6 @@
             data-sector="${esc(String(t.drawSector||""))}"
             data-teamname="${esc(t.teamName)}"
             data-wno="${esc(String(wNo))}"
-            data-doc="${esc(docId)}"
           >Очистити</button>
         </div>
 
@@ -223,10 +255,10 @@
           <tr>
             <td>${esc(String(t.drawSector || ""))}</td>
             <td class="team-col">${esc(t.teamName)}</td>
-            <td>${cellHtml(ctx, t, 1, w1)}</td>
-            <td>${cellHtml(ctx, t, 2, w2)}</td>
-            <td>${cellHtml(ctx, t, 3, w3)}</td>
-            <td>${cellHtml(ctx, t, 4, w4)}</td>
+            <td>${cellHtml(t, 1, w1)}</td>
+            <td>${cellHtml(t, 2, w2)}</td>
+            <td>${cellHtml(t, 3, w3)}</td>
+            <td>${cellHtml(t, 4, w4)}</td>
           </tr>
         `;
       }).join("");
@@ -244,7 +276,7 @@
     el.style.color = ok ? "#8fe39a" : "#ff6c6c";
   }
 
-  // ===== data subscriptions =====
+  // ===== subscriptions =====
   let unsubTeams = null;
   let unsubWeigh = null;
 
@@ -254,12 +286,9 @@
   }
 
   async function writeWeighing(ctx, payload){
-    // payload: {teamId, zone, sector, teamName, weighNo, weights[]}
-
     const weights = Array.isArray(payload.weights) ? payload.weights : [];
     const { fishCount, totalWeightKg, bigFishKg } = calcFromWeights(weights);
 
-    // docId за LIVE-каноном: `${compId}||${stageId}||W{weighNo}||${teamId}`
     const docId = `${ctx.compId}||${ctx.stageId}||W${Number(payload.weighNo)}||${payload.teamId}`;
 
     await window.scDb.collection("weighings").doc(docId).set({
@@ -287,6 +316,7 @@
 
   async function clearWeighing(ctx, payload){
     const docId = `${ctx.compId}||${ctx.stageId}||W${Number(payload.weighNo)}||${payload.teamId}`;
+
     await window.scDb.collection("weighings").doc(docId).set({
       compId: ctx.compId,
       stageId: ctx.stageId,
@@ -315,10 +345,21 @@
     try{
       out.innerHTML = `<div class="card">Завантаження…</div>`;
       await waitFirebase();
+      await ensureAuth();
+
+      const isAdmin = await requireAdmin();
+      if(!isAdmin){
+        out.innerHTML =
+          `<div class="card"><b style="color:#ff6c6c;">Нема доступу</b>` +
+          `<div style="opacity:.85;margin-top:6px;">Увійди адміном (auth.html) або перевір роль у users.</div></div>`;
+        return;
+      }
 
       const ctx = await getActiveCtx();
       if(!ctx){
-        out.innerHTML = `<div class="card"><b style="color:#ff6c6c;">Нема активного етапу</b><div style="opacity:.8;margin-top:6px;">Перевір settings/app: activeCompetitionId + activeStageId</div></div>`;
+        out.innerHTML =
+          `<div class="card"><b style="color:#ff6c6c;">Нема активного етапу</b>` +
+          `<div style="opacity:.8;margin-top:6px;">Перевір settings/app: activeCompetitionId + activeStageId</div></div>`;
         return;
       }
 
@@ -327,7 +368,7 @@
       const teamsByZone = { A:[], B:[], C:[] };
       const weighMap = new Map(); // key teamId||weighNo -> docData
 
-      // 1) subscribe stageResults teams (order)
+      // 1) subscribe teams
       unsubTeams = window.scDb.collection("stageResults").doc(ctx.activeKey).onSnapshot((snap)=>{
         const data = snap.exists ? (snap.data()||{}) : {};
         const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
@@ -361,9 +402,6 @@
             const weighNo = Number(d.weighNo);
             if(!teamId) return;
             if(!(weighNo>=1 && weighNo<=4)) return;
-
-            // keep docId internally
-            d._id = doc.id;
             weighMap.set(`${teamId}||${weighNo}`, d);
           });
 
@@ -381,10 +419,10 @@
 
         e.preventDefault();
 
-        const ctx2 = await getActiveCtx(); // safety: always current ctx
+        const ctx2 = await getActiveCtx();
         if(!ctx2) return;
 
-        const getPayloadFromBtn = (btn)=>({
+        const payloadFromBtn = (btn)=>({
           teamId: btn.getAttribute("data-team") || "",
           zone: btn.getAttribute("data-zone") || "",
           sector: btn.getAttribute("data-sector") || "",
@@ -394,19 +432,21 @@
 
         try{
           if(btnSave){
-            const key = btnSave.getAttribute("data-savew");
-            const inp = document.querySelector(`[data-wtxt="${CSS.escape(key)}"]`);
+            const key = btnSave.getAttribute("data-savew") || "";
+            const inp = document.querySelector(`[data-wtxt="${selAttrVal(key)}"]`);
             const weights = parseWeightsText(inp?.value || "");
+
             setAdmStatus("Зберігаю…", true);
-            await writeWeighing(ctx2, { ...getPayloadFromBtn(btnSave), weights });
+            await writeWeighing(ctx2, { ...payloadFromBtn(btnSave), weights });
             setAdmStatus("Збережено ✅", true);
           }
 
           if(btnClear){
             const ok = confirm("Очистити ваги для цього W?");
             if(!ok) return;
+
             setAdmStatus("Очищаю…", true);
-            await clearWeighing(ctx2, getPayloadFromBtn(btnClear));
+            await clearWeighing(ctx2, payloadFromBtn(btnClear));
             setAdmStatus("Очищено ✅", true);
           }
         }catch(err){
@@ -417,7 +457,9 @@
 
     }catch(e){
       console.error(e);
-      out.innerHTML = `<div class="card"><b style="color:#ff6c6c;">Помилка</b><div style="opacity:.85;margin-top:6px;">${esc(e.message || e)}</div></div>`;
+      out.innerHTML =
+        `<div class="card"><b style="color:#ff6c6c;">Помилка</b>` +
+        `<div style="opacity:.85;margin-top:6px;">${esc(e.message || e)}</div></div>`;
       stopSubs();
     }
   })();

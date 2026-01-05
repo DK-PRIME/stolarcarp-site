@@ -32,10 +32,10 @@
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
-      if (window.scDb && window.firebase) return;
+      if (window.scDb && window.firebase && window.scAuth) return;
       await new Promise((r) => setTimeout(r, 120));
     }
-    throw new Error("Firebase not ready (scDb/firebase)");
+    throw new Error("Firebase not ready (scDb/firebase/scAuth)");
   }
 
   async function ensureAuth() {
@@ -112,7 +112,6 @@
 
     if (!compId || !stageId) return null;
 
-    // fallback key:
     const stageKey = `${compId}||${stageId}`;
     return { compId, stageId, activeKey: activeKey || stageKey, stageKey };
   }
@@ -368,7 +367,7 @@
       const teamsByZone = { A:[], B:[], C:[] };
       const weighMap = new Map(); // key teamId||weighNo -> docData
 
-      // 1) subscribe teams
+      // 1) subscribe teams (stageResults)
       unsubTeams = window.scDb.collection("stageResults").doc(ctx.activeKey).onSnapshot((snap)=>{
         const data = snap.exists ? (snap.data()||{}) : {};
         const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
@@ -391,17 +390,35 @@
       });
 
       // 2) subscribe weighings for active stage
+      // ВАЖЛИВО: teamId може бути пустий/кривий -> fallback з doc.id
       unsubWeigh = window.scDb.collection("weighings")
         .where("compId","==", ctx.compId)
         .where("stageId","==", ctx.stageId)
         .onSnapshot((qs)=>{
           weighMap.clear();
+
           qs.forEach(doc=>{
             const d = doc.data() || {};
-            const teamId = String(d.teamId || "");
-            const weighNo = Number(d.weighNo);
+
+            // teamId: поле або fallback з doc.id (comp||stage||Wn||TEAMID)
+            let teamId = String(d.teamId || "").trim();
+            if(!teamId){
+              const parts = String(doc.id || "").split("||");
+              teamId = parts.length >= 4 ? parts.slice(3).join("||") : "";
+            }
+
+            // weighNo: поле або fallback з doc.id
+            let weighNo = Number(d.weighNo);
+            if(!(weighNo>=1 && weighNo<=4)){
+              const m = String(doc.id||"").match(/\|\|W(\d+)\|\|/);
+              weighNo = m ? Number(m[1]) : NaN;
+            }
+
             if(!teamId) return;
             if(!(weighNo>=1 && weighNo<=4)) return;
+
+            // тримаємо id, щоб показувати updatedAt і т.д.
+            d._id = doc.id;
             weighMap.set(`${teamId}||${weighNo}`, d);
           });
 

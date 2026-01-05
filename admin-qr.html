@@ -51,7 +51,7 @@
       color:#e5e7eb; font-size:.82rem; white-space:nowrap;
     }
 
-    /* ===== Таблиця-сітка з автошириною під контент ===== */
+    /* ===== Таблиця (desktop) ===== */
     .tableWrap{
       overflow:auto;
       border-radius:12px;
@@ -60,21 +60,21 @@
     }
 
     table{
-      width:max-content;           /* авто-розширення */
-      min-width:100%;              /* але не менше контейнера */
-      border-collapse:collapse;    /* без зазорів між клітинками */
+      width:max-content;
+      min-width:100%;
+      border-collapse:collapse;
     }
 
     th, td{
-      border:1px solid rgba(148,163,184,.22); /* перегородки */
-      padding:6px 8px;                        /* мінімальні відступи */
+      border:1px solid rgba(148,163,184,.22);
+      padding:6px 8px;
       vertical-align:middle;
       text-align:left;
       color:#e5e7eb;
       font-size:.92rem;
 
-      white-space:nowrap;          /* весь текст в рядок */
-      overflow:visible;            /* нічого не ховаємо */
+      white-space:nowrap;
+      overflow:visible;
     }
 
     th{
@@ -89,14 +89,12 @@
       color:#cbd5e1;
     }
 
-    tbody tr:hover td{
-      background:rgba(148,163,184,.06);
-    }
+    tbody tr:hover td{ background:rgba(148,163,184,.06); }
 
     .mini{
       width:100%;
       margin:0;
-      padding:0;                 /* нема зазорів між клітинкою і текстом */
+      padding:0;
       border:0;
       outline:none;
       background:transparent;
@@ -104,21 +102,15 @@
       font-size:inherit;
       line-height:1.2;
     }
-
     input.mini{ min-width:0; }
-
     .mini:focus{
       background:rgba(246,195,76,.10);
       box-shadow: inset 0 0 0 2px rgba(246,195,76,.45);
     }
 
     /* ===== Активні (є участь) ===== */
-    tr.isActive td{
-      background: rgba(34,197,94,.08);
-    }
-    tr.isActive:hover td{
-      background: rgba(34,197,94,.12);
-    }
+    tr.isActive td{ background: rgba(34,197,94,.08); }
+    tr.isActive:hover td{ background: rgba(34,197,94,.12); }
     .activeDot{
       display:inline-block;
       width:8px;height:8px;
@@ -127,6 +119,81 @@
       box-shadow:0 0 0 3px rgba(34,197,94,.12);
       margin-right:8px;
       vertical-align:middle;
+    }
+
+    /* ===== Mobile: таблиця -> вертикальні картки (без скролу вбік) ===== */
+    @media (max-width: 860px){
+
+      .tableWrap{
+        overflow: visible;
+        border: none;
+        background: transparent;
+      }
+
+      table{
+        width: 100%;
+        min-width: 0;
+        border-collapse: separate;
+        border-spacing: 0 10px; /* відступ між картками */
+      }
+
+      thead{ display:none; }
+      tbody, tr, td{ display:block; }
+
+      tr{
+        border: 1px solid rgba(148,163,184,.30);
+        border-radius: 14px;
+        background: rgba(2,6,23,.22);
+        overflow: hidden;
+      }
+
+      tr.isActive{
+        border-color: rgba(34,197,94,.35);
+        background: rgba(34,197,94,.06);
+      }
+
+      td{
+        border: 0 !important;
+        padding: 10px 12px;
+        white-space: normal;
+      }
+
+      td::before{
+        display:block;
+        font-size: .72rem;
+        letter-spacing: .10em;
+        text-transform: uppercase;
+        color: rgba(203,213,225,.75);
+        margin-bottom: 6px;
+      }
+
+      tr td:nth-child(1)::before{ content:"UID"; }
+      tr td:nth-child(2)::before{ content:"Імʼя"; }
+      tr td:nth-child(3)::before{ content:"Email"; }
+      tr td:nth-child(4)::before{ content:"Телефон"; }
+      tr td:nth-child(5)::before{ content:"Місто"; }
+      tr td:nth-child(6)::before{ content:"Роль"; }
+      tr td:nth-child(7)::before{ content:"TeamId"; }
+      tr td:nth-child(8)::before{ content:"Дії"; }
+
+      tr td:nth-child(1){
+        font-weight: 900;
+        background: rgba(2,6,23,.35);
+      }
+
+      tr td:nth-child(8) .btnRow{ gap: 10px; margin:0; }
+      tr td:nth-child(8) .btn{ flex: 1; justify-content:center; }
+
+      tr input.mini, tr select.mini{
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(148,163,184,.28);
+        background: rgba(2,6,23,.55);
+        color: #e5e7eb;
+      }
+
+      .activeDot{ margin-right: 10px; }
     }
   </style>
 </head>
@@ -167,11 +234,11 @@
           </div>
 
           <div class="btnRow">
-            <button class="btn btn--primary" id="btnLoad">Оновити список</button>
-            <button class="btn btn--ghost" id="btnClear">Очистити пошук</button>
+            <button class="btn btn--primary" id="btnLoad" type="button">Оновити список</button>
+            <button class="btn btn--ghost" id="btnClear" type="button">Очистити пошук</button>
           </div>
 
-          <div class="muted" style="margin-top:10px;">
+          <div class="muted" style="margin-top:10px; line-height:1.35;">
             Тут ти редагуєш і видаляєш <b>Firestore users</b>.<br>
             <b>Auth-акаунт</b> (email/пароль) з браузера видалити не можна — для цього потрібна Cloud Function.
           </div>
@@ -248,7 +315,6 @@
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const $ = (id)=>document.getElementById(id);
 
-  // ВАЖЛИВО: не беремо window.scAuth/scDb ДО того як Firebase піднявся
   let auth = null;
   let db   = null;
 
@@ -289,8 +355,6 @@
   }
 
   async function getTotalCountFallback(colName){
-    // Надійно, але може бути повільно на великій базі.
-    // Для твоїх масштабів ок.
     let n = 0;
     const snap = await db.collection(colName).get();
     snap.forEach(()=>n++);
@@ -344,8 +408,8 @@
         <td><input class="mini" data-k="teamId" value="${teamId}" placeholder="teamId" /></td>
         <td>
           <div class="btnRow" style="margin:0;">
-            <button class="btn btn--accent" data-save>Зберегти</button>
-            <button class="btn btn--danger" data-del>Видалити</button>
+            <button class="btn btn--accent" data-save type="button">Зберегти</button>
+            <button class="btn btn--danger" data-del type="button">Видалити</button>
           </div>
         </td>
       </tr>
@@ -356,7 +420,6 @@
     const uid = tr.getAttribute("data-uid");
     const get = (k)=> tr.querySelector(`[data-k="${k}"]`)?.value ?? "";
     return {
-      uid,
       fullName: norm(get("fullName")),
       email: norm(get("email")),
       phone: norm(get("phone")),
@@ -375,16 +438,13 @@
     tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
     setMsg("Завантажую users…", true);
 
-    // 1) хто активний (має хоч одну registration)
     activeUids = await loadActiveUidsFromRegistrations(5000);
 
-    // 2) totals
     let totalUsers = null;
     let totalRegs  = null;
     try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
     try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
 
-    // 3) витягуємо users
     let snap;
     try{
       snap = await db.collection("users").orderBy("createdAt","desc").limit(limit).get();

@@ -1,8 +1,9 @@
 // assets/js/judge_page.js
 // STOLAR CARP • Judge page (token) — LIVE compatible + minimal sources
-// ✅ only reads: settings/app + stageResults/{activeKey}.teams
+// ✅ reads: settings/app (activeKey optional) + stageResults/{activeKey OR compId||stageId}.teams
 // ✅ writes: weighings docId `${compId}||${stageId}||W{weighNo}||${teamId}` (LIVE-compatible)
 // ✅ computes fishCount/totalWeightKg/bigFishKg, sets status="submitted"
+// ✅ "0 = нема улову": 0 НЕ додаємо як вагу; немає риби => weights=[]
 
 (function () {
   "use strict";
@@ -25,7 +26,7 @@
 
   let activeW = "W1";
   let session = null; // { compId, stageId, zone, token }
-  let teams = [];     // [{teamId, teamName, sector, zone}]
+  let teams = [];     // [{teamId, teamName, sector, zone, zoneLabel}]
 
   function showErr(msg) {
     if (!errEl) return;
@@ -41,10 +42,12 @@
     if (statusEl) statusEl.textContent = t || "—";
   }
 
+  // 0 = нема улову -> не приймаємо як вагу риби
   function parseKg(v) {
-    const s = String(v || "").trim().replace(",", ".");
+    const s = String(v ?? "").trim().replace(",", ".");
     const n = Number(s);
-    if (!isFinite(n) || n <= 0) return null;
+    if (!isFinite(n)) return null;
+    if (n <= 0) return null; // <=0 не додаємо як вагу
     return Math.round(n * 1000) / 1000;
   }
 
@@ -99,8 +102,16 @@
     const d = snap.data() || {};
     const compId  = String(d.activeCompetitionId || "");
     const stageId = String(d.activeStageId || "");
+    const activeKey = String(d.activeKey || ""); // може бути порожній
     if (!compId || !stageId) return null;
-    return { compId, stageId, stageKey: `${compId}||${stageId}` };
+    return { compId, stageId, stageKey: `${compId}||${stageId}`, activeKey };
+  }
+
+  function stageDocIdFromCtxOrSession(ctx, s){
+    // пріоритет: activeKey (якщо є), інакше canonical compId||stageId
+    if (ctx && ctx.activeKey) return String(ctx.activeKey);
+    if (ctx && ctx.stageKey) return String(ctx.stageKey);
+    return `${s.compId}||${s.stageId}`;
   }
 
   // =========================
@@ -130,17 +141,12 @@
         throw new Error("Токен без compId/stageId/zone");
       }
 
-      // mark used now
-      tx.set(
-        ref,
-        {
-          used: true,
-          usedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-          isActive: false,
-          usedBy: window.scAuth?.currentUser?.uid || null,
-        },
-        { merge: true }
-      );
+      tx.set(ref, {
+        used: true,
+        usedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+        isActive: false,
+        usedBy: window.scAuth?.currentUser?.uid || null,
+      }, { merge: true });
 
       session = { compId, stageId, zone, token };
     });
@@ -149,7 +155,7 @@
   }
 
   // =========================
-  // TEAMS (ONLY stageResults/{activeKey}.teams)
+  // TEAMS (stageResults doc)
   // =========================
   function normalizeTeam(t){
     const teamId = String(t.teamId || t.regId || "").trim();
@@ -160,9 +166,8 @@
     return { teamId, teamName, zone: drawZone, sector: drawSector || "", zoneLabel };
   }
 
-  async function loadTeamsFromStageResults(compId, stageId, zone){
-    const docId = `${compId}||${stageId}`; // canonical stageResults key
-    const snap = await window.scDb.collection("stageResults").doc(docId).get();
+  async function loadTeamsFromStageResults(stageDocId, zone){
+    const snap = await window.scDb.collection("stageResults").doc(String(stageDocId)).get();
     const data = snap.exists ? (snap.data()||{}) : {};
     const raw = Array.isArray(data.teams) ? data.teams : [];
 
@@ -178,13 +183,12 @@
       if (!teams.length) {
         teamsTBody.innerHTML = `<tr><td colspan="2">Немає команд у цій зоні.</td></tr>`;
       } else {
-        teamsTBody.innerHTML = teams
-          .map(t => `
-            <tr>
-              <td>${t.zoneLabel || "—"}</td>
-              <td>${t.teamName}</td>
-            </tr>
-          `).join("");
+        teamsTBody.innerHTML = teams.map(t => `
+          <tr>
+            <td>${t.zoneLabel || "—"}</td>
+            <td>${t.teamName}</td>
+          </tr>
+        `).join("");
       }
     }
 
@@ -229,20 +233,16 @@
   async function loadFishList() {
     if (!session || !teamSelect?.value || !fishBody) return;
 
-    const compId = session.compId;
-    const stageId = session.stageId;
-    const zone = session.zone;
-
     const teamId = teamSelect.value;
     const weighNo = wToNo(activeW);
 
-    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
+    const ref = window.scDb.collection("weighings").doc(weighDocId(session.compId, session.stageId, teamId, weighNo));
     const doc = await ref.get();
     const data = doc.exists ? (doc.data() || {}) : {};
     const arr = Array.isArray(data.weights) ? data.weights : [];
 
     if (!arr.length) {
-      fishBody.innerHTML = `<tr><td colspan="3">Поки що немає записів.</td></tr>`;
+      fishBody.innerHTML = `<tr><td colspan="3">Нема улову (0).</td></tr>`;
       return;
     }
 
@@ -258,27 +258,28 @@
   }
 
   async function saveWeights(teamId, weighNo, weights){
-    const compId = session.compId;
-    const stageId = session.stageId;
-    const zone = session.zone;
-
     const team = teams.find(t=>t.teamId===teamId) || {};
     const { fishCount, totalWeightKg, bigFishKg } = calcStats(weights);
 
-    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
+    const ref = window.scDb.collection("weighings").doc(
+      weighDocId(session.compId, session.stageId, teamId, weighNo)
+    );
 
     await ref.set({
-      compId,
-      stageId,
+      compId: session.compId,
+      stageId: session.stageId,
       weighNo: Number(weighNo),
+
       teamId: String(teamId),
-      zone: String(zone || ""),
+      zone: String(session.zone || ""),
       sector: Number(team.sector || 0) || null,
       teamName: String(team.teamName || "—"),
-      weights: weights,
+
+      weights: Array.isArray(weights) ? weights : [],
       fishCount,
       totalWeightKg,
       bigFishKg,
+
       status: "submitted",
       updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
       updatedBy: window.scAuth?.currentUser?.uid || null
@@ -287,8 +288,14 @@
 
   async function addFish() {
     hideErr();
-    const kg = parseKg(fishInp?.value);
-    if (!kg) return showErr("Введи вагу, напр. 5.120");
+
+    const raw = String(fishInp?.value ?? "").trim();
+    if (!raw) return showErr("Введи вагу, напр. 5.120");
+
+    // 0 = нема улову -> не додаємо
+    const kg = parseKg(raw);
+    if (kg === null) return showErr("0 = нема улову. Не додаємо 0 як вагу — просто залиш порожньо або натисни «Очистити».");
+
     if (!session || !teamSelect?.value) return showErr("Немає сесії або команди");
 
     const teamId = teamSelect.value;
@@ -339,7 +346,7 @@
     await saveWeights(teamId, weighNo, []);
 
     await loadFishList();
-    setStatus("Очищено ✅");
+    setStatus("Нема улову (0) ✅");
   }
 
   function logout() {
@@ -364,17 +371,16 @@
         saveSession(session);
       }
 
-      // safety: якщо active в settings/app вже інший — можна лишити як є (токен все одно фіксує stage)
-      // але хоча б покажемо
       const ctx = await getActiveCtx().catch(()=>null);
+      const stageDocId = stageDocIdFromCtxOrSession(ctx, session);
 
       if (metaEl) {
         metaEl.textContent =
           `compId: ${session.compId} · stageId: ${session.stageId} · Зона: ${session.zone}` +
-          (ctx ? ` · active: ${ctx.compId}/${ctx.stageId}` : "");
+          (ctx ? ` · activeKey: ${ctx.activeKey || "—"}` : "");
       }
 
-      teams = await loadTeamsFromStageResults(session.compId, session.stageId, session.zone);
+      teams = await loadTeamsFromStageResults(stageDocId, session.zone);
       renderTeams();
 
       if (contentEl) contentEl.style.display = "";

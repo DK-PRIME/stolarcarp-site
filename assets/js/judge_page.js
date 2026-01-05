@@ -1,4 +1,9 @@
 // assets/js/judge_page.js
+// STOLAR CARP • Judge page (token) — LIVE compatible + minimal sources
+// ✅ only reads: settings/app + stageResults/{activeKey}.teams
+// ✅ writes: weighings docId `${compId}||${stageId}||W{weighNo}||${teamId}` (LIVE-compatible)
+// ✅ computes fishCount/totalWeightKg/bigFishKg, sets status="submitted"
+
 (function () {
   "use strict";
 
@@ -20,7 +25,7 @@
 
   let activeW = "W1";
   let session = null; // { compId, stageId, zone, token }
-  let teams = [];     // [{teamId, teamName, sector}]
+  let teams = [];     // [{teamId, teamName, sector, zone}]
 
   function showErr(msg) {
     if (!errEl) return;
@@ -43,13 +48,14 @@
     return Math.round(n * 1000) / 1000;
   }
 
+  function wToNo(w) {
+    const n = Number(String(w || "").replace("W", ""));
+    return n >= 1 && n <= 4 ? n : 1;
+  }
+
   function getTokenFromUrl() {
     const u = new URL(window.location.href);
-    // ✅ новий стандарт
-    const a = u.searchParams.get("token");
-    // ✅ підтримка старого (щоб старі QR не вмерли)
-    const b = u.searchParams.get("t");
-    return a || b;
+    return u.searchParams.get("token") || u.searchParams.get("t");
   }
 
   async function waitFirebase(maxMs = 12000) {
@@ -62,14 +68,11 @@
   }
 
   async function ensureAuth() {
-    // якщо rules вимагають request.auth (часто так) — краще анонімний вхід
     try {
       if (window.scAuth && !window.scAuth.currentUser) {
         await window.scAuth.signInAnonymously();
       }
-    } catch {
-      // якщо auth не підключений/заблокований — просто ігноруємо
-    }
+    } catch {}
   }
 
   function saveSession(s) {
@@ -87,15 +90,22 @@
     localStorage.removeItem("sc_judge_session");
   }
 
-  function wToNo(w) {
-    const n = Number(String(w || "").replace("W", ""));
-    return n >= 1 && n <= 4 ? n : 1;
+  // =========================
+  // ACTIVE CONTEXT (settings/app)
+  // =========================
+  async function getActiveCtx() {
+    const snap = await window.scDb.collection("settings").doc("app").get();
+    if (!snap.exists) return null;
+    const d = snap.data() || {};
+    const compId  = String(d.activeCompetitionId || "");
+    const stageId = String(d.activeStageId || "");
+    if (!compId || !stageId) return null;
+    return { compId, stageId, stageKey: `${compId}||${stageId}` };
   }
 
   // =========================
   // TOKEN (judgeTokens)
   // =========================
-
   async function activateToken(token) {
     const ref = window.scDb.collection("judgeTokens").doc(token);
 
@@ -104,8 +114,6 @@
       if (!doc.exists) throw new Error("Токен не знайдено");
 
       const d = doc.data() || {};
-
-      // ✅ під твою структуру
       const isUsed = !!d.used || !!d.usedAt;
       if (isUsed) throw new Error("Цей QR вже використаний");
 
@@ -114,16 +122,15 @@
         throw new Error("Токен протермінований");
       }
 
-      // ✅ stageId + compId ОБОВ'ЯЗКОВІ
       const compId  = String(d.compId || "");
       const stageId = String(d.stageId || "");
-      const zone    = String(d.zone || "");
+      const zone    = String(d.zone || "").toUpperCase();
 
       if (!compId || !stageId || !zone) {
         throw new Error("Токен без compId/stageId/zone");
       }
 
-      // mark used NOW
+      // mark used now
       tx.set(
         ref,
         {
@@ -142,94 +149,51 @@
   }
 
   // =========================
-  // TEAMS LOADING (draw -> fallback registrations)
+  // TEAMS (ONLY stageResults/{activeKey}.teams)
   // =========================
-
-  function zoneFromReg(d) {
-    const drawKey = String(d.drawKey || "").toUpperCase();
-    const z = String(d.drawZone || d.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
-    const sector = Number(d.drawSector || d.sector || (drawKey ? parseInt(drawKey.slice(1), 10) : 0) || 0);
-    const label = drawKey ? drawKey : (z && sector ? `${z}${sector}` : z);
-    return { z, sector: sector || "", label };
+  function normalizeTeam(t){
+    const teamId = String(t.teamId || t.regId || "").trim();
+    const teamName = String(t.teamName || t.team || "—");
+    const drawZone = String(t.drawZone || t.zone || (t.drawKey ? String(t.drawKey)[0] : "") || "").toUpperCase();
+    const drawSector = Number(t.drawSector || t.sector || (t.drawKey ? parseInt(String(t.drawKey).slice(1),10) : 0) || 0);
+    const zoneLabel = t.drawKey ? String(t.drawKey).toUpperCase() : (drawZone && drawSector ? `${drawZone}${drawSector}` : drawZone);
+    return { teamId, teamName, zone: drawZone, sector: drawSector || "", zoneLabel };
   }
 
-  async function loadZoneTeams(compId, stageId, zone) {
-    // 1) пробуємо "draw"
-    try {
-      const snap = await window.scDb
-        .collection("draw")
-        .where("stageId", "==", stageId)
-        .where("zone", "==", zone)
-        .get();
+  async function loadTeamsFromStageResults(compId, stageId, zone){
+    const docId = `${compId}||${stageId}`; // canonical stageResults key
+    const snap = await window.scDb.collection("stageResults").doc(docId).get();
+    const data = snap.exists ? (snap.data()||{}) : {};
+    const raw = Array.isArray(data.teams) ? data.teams : [];
 
-      const list = [];
-      snap.forEach((d) => {
-        const x = d.data() || {};
-        list.push({
-          teamId: x.teamId || d.id,
-          teamName: x.teamName || x.team || "—",
-          sector: x.sector || x.drawSector || ""
-        });
-      });
+    const list = raw.map(normalizeTeam)
+      .filter(x => x.teamId && x.zone === String(zone).toUpperCase());
 
-      if (list.length) return list;
-    } catch (e) {
-      // якщо draw не існує/індекс — ідемо на fallback
-      console.warn("draw load failed, fallback to registrations", e);
-    }
-
-    // 2) fallback: registrations confirmed (як у live)
-    const snap2 = await window.scDb
-      .collection("registrations")
-      .where("competitionId", "==", compId)
-      .where("stageId", "==", stageId)
-      .where("status", "==", "confirmed")
-      .get();
-
-    const list2 = [];
-    snap2.forEach((doc) => {
-      const d = doc.data() || {};
-      const z = zoneFromReg(d);
-      if (z.z !== String(zone).toUpperCase()) return;
-
-      list2.push({
-        teamId: d.teamId || doc.id,
-        teamName: d.teamName || d.team || "—",
-        sector: z.sector || ""
-      });
-    });
-
-    // сорт по сектору
-    list2.sort((a, b) => Number(a.sector || 0) - Number(b.sector || 0));
-    return list2;
+    list.sort((a,b)=>Number(a.sector||0) - Number(b.sector||0));
+    return list;
   }
 
   function renderTeams() {
-    // table
     if (teamsTBody) {
       if (!teams.length) {
         teamsTBody.innerHTML = `<tr><td colspan="2">Немає команд у цій зоні.</td></tr>`;
       } else {
         teamsTBody.innerHTML = teams
-          .map(
-            (t) => `
-          <tr>
-            <td>${t.sector || "—"}</td>
-            <td>${t.teamName}</td>
-          </tr>
-        `
-          )
-          .join("");
+          .map(t => `
+            <tr>
+              <td>${t.zoneLabel || "—"}</td>
+              <td>${t.teamName}</td>
+            </tr>
+          `).join("");
       }
     }
 
-    // select
     if (teamSelect) {
       teamSelect.innerHTML = "";
       teams.forEach((t) => {
         const opt = document.createElement("option");
         opt.value = t.teamId;
-        opt.textContent = `${t.sector ? t.sector + " · " : ""}${t.teamName}`;
+        opt.textContent = `${t.zoneLabel ? t.zoneLabel + " · " : ""}${t.teamName}`;
         teamSelect.appendChild(opt);
       });
     }
@@ -248,11 +212,18 @@
   }
 
   // =========================
-  // WEIGHINGS IO (correct for LIVE)
+  // WEIGHINGS (LIVE compatible)
   // =========================
-
   function weighDocId(compId, stageId, teamId, weighNo) {
-    return `${compId}__${stageId}__${teamId}__W${Number(weighNo)}`;
+    return `${compId}||${stageId}||W${Number(weighNo)}||${teamId}`;
+  }
+
+  function calcStats(weights){
+    const arr = Array.isArray(weights) ? weights : [];
+    const fishCount = arr.length;
+    const totalWeightKg = Math.round(arr.reduce((s,x)=>s+Number(x||0),0)*1000)/1000;
+    const bigFishKg = fishCount ? Math.max(...arr.map(x=>Number(x||0))) : 0;
+    return { fishCount, totalWeightKg, bigFishKg };
   }
 
   async function loadFishList() {
@@ -267,7 +238,7 @@
 
     const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
     const doc = await ref.get();
-    const data = doc.exists ? doc.data() || {} : {};
+    const data = doc.exists ? (doc.data() || {}) : {};
     const arr = Array.isArray(data.weights) ? data.weights : [];
 
     if (!arr.length) {
@@ -275,9 +246,7 @@
       return;
     }
 
-    fishBody.innerHTML = arr
-      .map(
-        (kg, i) => `
+    fishBody.innerHTML = arr.map((kg, i) => `
       <tr>
         <td>${i + 1}</td>
         <td>${Number(kg).toFixed(3)}</td>
@@ -285,9 +254,35 @@
           <button class="btn btn--ghost" data-del="${i}" type="button">✕</button>
         </td>
       </tr>
-    `
-      )
-      .join("");
+    `).join("");
+  }
+
+  async function saveWeights(teamId, weighNo, weights){
+    const compId = session.compId;
+    const stageId = session.stageId;
+    const zone = session.zone;
+
+    const team = teams.find(t=>t.teamId===teamId) || {};
+    const { fishCount, totalWeightKg, bigFishKg } = calcStats(weights);
+
+    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
+
+    await ref.set({
+      compId,
+      stageId,
+      weighNo: Number(weighNo),
+      teamId: String(teamId),
+      zone: String(zone || ""),
+      sector: Number(team.sector || 0) || null,
+      teamName: String(team.teamName || "—"),
+      weights: weights,
+      fishCount,
+      totalWeightKg,
+      bigFishKg,
+      status: "submitted",
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+      updatedBy: window.scAuth?.currentUser?.uid || null
+    }, { merge:true });
   }
 
   async function addFish() {
@@ -296,37 +291,18 @@
     if (!kg) return showErr("Введи вагу, напр. 5.120");
     if (!session || !teamSelect?.value) return showErr("Немає сесії або команди");
 
-    const compId  = session.compId;
-    const stageId = session.stageId;
-    const zone    = session.zone;
-
     const teamId = teamSelect.value;
     const weighNo = wToNo(activeW);
 
-    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
-
     setStatus("Записую…");
 
-    await window.scDb.runTransaction(async (tx) => {
-      const doc = await tx.get(ref);
-      const data = doc.exists ? doc.data() || {} : {};
-      const arr = Array.isArray(data.weights) ? data.weights.slice() : [];
-      arr.push(kg);
+    const ref = window.scDb.collection("weighings").doc(weighDocId(session.compId, session.stageId, teamId, weighNo));
+    const doc = await ref.get();
+    const data = doc.exists ? (doc.data()||{}) : {};
+    const arr = Array.isArray(data.weights) ? data.weights.slice() : [];
 
-      tx.set(
-        ref,
-        {
-          compId,
-          stageId,
-          weighNo: Number(weighNo),
-          teamId: String(teamId),
-          zone: String(zone || ""),
-          weights: arr,
-          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    });
+    arr.push(kg);
+    await saveWeights(teamId, weighNo, arr);
 
     fishInp.value = "";
     await loadFishList();
@@ -336,36 +312,18 @@
   async function deleteFish(idx) {
     if (!session || !teamSelect?.value) return;
 
-    const compId  = session.compId;
-    const stageId = session.stageId;
-    const zone    = session.zone;
-
     const teamId = teamSelect.value;
     const weighNo = wToNo(activeW);
 
-    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
     setStatus("Видаляю…");
 
-    await window.scDb.runTransaction(async (tx) => {
-      const doc = await tx.get(ref);
-      const data = doc.exists ? doc.data() || {} : {};
-      const arr = Array.isArray(data.weights) ? data.weights.slice() : [];
-      arr.splice(idx, 1);
+    const ref = window.scDb.collection("weighings").doc(weighDocId(session.compId, session.stageId, teamId, weighNo));
+    const doc = await ref.get();
+    const data = doc.exists ? (doc.data()||{}) : {};
+    const arr = Array.isArray(data.weights) ? data.weights.slice() : [];
 
-      tx.set(
-        ref,
-        {
-          compId,
-          stageId,
-          weighNo: Number(weighNo),
-          teamId: String(teamId),
-          zone: String(zone || ""),
-          weights: arr,
-          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-    });
+    arr.splice(idx, 1);
+    await saveWeights(teamId, weighNo, arr);
 
     await loadFishList();
     setStatus("Готово ✅");
@@ -374,28 +332,11 @@
   async function clearW() {
     if (!session || !teamSelect?.value) return;
 
-    const compId  = session.compId;
-    const stageId = session.stageId;
-    const zone    = session.zone;
-
     const teamId = teamSelect.value;
     const weighNo = wToNo(activeW);
 
-    const ref = window.scDb.collection("weighings").doc(weighDocId(compId, stageId, teamId, weighNo));
     setStatus("Очищаю…");
-
-    await ref.set(
-      {
-        compId,
-        stageId,
-        weighNo: Number(weighNo),
-        teamId: String(teamId),
-        zone: String(zone || ""),
-        weights: [],
-        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
+    await saveWeights(teamId, weighNo, []);
 
     await loadFishList();
     setStatus("Очищено ✅");
@@ -415,7 +356,6 @@
       const cached = loadSession();
       const token = getTokenFromUrl();
 
-      // ✅ кеш валідний тільки якщо є compId/stageId/zone
       if (cached && cached.compId && cached.stageId && cached.zone) {
         session = cached;
       } else {
@@ -424,16 +364,23 @@
         saveSession(session);
       }
 
-      if (metaEl) metaEl.textContent = `compId: ${session.compId} · stageId: ${session.stageId} · Зона: ${session.zone}`;
+      // safety: якщо active в settings/app вже інший — можна лишити як є (токен все одно фіксує stage)
+      // але хоча б покажемо
+      const ctx = await getActiveCtx().catch(()=>null);
 
-      teams = await loadZoneTeams(session.compId, session.stageId, session.zone);
+      if (metaEl) {
+        metaEl.textContent =
+          `compId: ${session.compId} · stageId: ${session.stageId} · Зона: ${session.zone}` +
+          (ctx ? ` · active: ${ctx.compId}/${ctx.stageId}` : "");
+      }
+
+      teams = await loadTeamsFromStageResults(session.compId, session.stageId, session.zone);
       renderTeams();
 
       if (contentEl) contentEl.style.display = "";
       setActiveW("W1");
       await loadFishList();
 
-      // events
       document.querySelectorAll("[data-w]").forEach((b) => {
         b.addEventListener("click", () => setActiveW(b.getAttribute("data-w")));
       });

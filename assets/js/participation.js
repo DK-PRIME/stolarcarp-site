@@ -1,3 +1,4 @@
+// assets/js/participation.js
 (function(){
   "use strict";
 
@@ -5,17 +6,105 @@
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
   function norm(v){ return String(v ?? "").trim(); }
 
-  function isPaid(r){
-    const s = norm(r.status).toLowerCase();
+  function isPaidStatus(status){
+    const s = norm(status).toLowerCase();
     return s === "confirmed" || s === "paid";
   }
 
-  async function waitFirebase(){
-    for(let i=0;i<120;i++){
+  async function waitFirebase(maxMs = 12000){
+    const t0 = Date.now();
+    while(Date.now() - t0 < maxMs){
       if(window.scDb) return;
       await new Promise(r=>setTimeout(r,100));
     }
-    throw new Error("Firestore не готовий");
+    throw new Error("Firestore не готовий (нема scDb)");
+  }
+
+  async function getCompetitionMeta(compId, stageId){
+    const db = window.scDb;
+    let title = "Змагання";
+    let stageTitle = "";
+
+    try{
+      const cSnap = await db.collection("competitions").doc(compId).get();
+      if(cSnap.exists){
+        const c = cSnap.data() || {};
+        title = c.name || c.title || title;
+
+        const events = Array.isArray(c.events) ? c.events : [];
+        const st = stageId || "main";
+        const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
+        stageTitle = (ev && (ev.title || ev.name || ev.label)) || "";
+      }
+    }catch{}
+
+    return { title, stageTitle };
+  }
+
+  async function getMaxTeams(compId, stageId){
+    const db = window.scDb;
+    let maxTeams = 24;
+
+    try{
+      const cSnap = await db.collection("competitions").doc(compId).get();
+      if(!cSnap.exists) return maxTeams;
+
+      const c = cSnap.data() || {};
+      const events = Array.isArray(c.events) ? c.events : [];
+      const st = stageId || "main";
+
+      const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
+
+      const v = ev?.maxTeams ?? ev?.teamsLimit ?? c?.maxTeams ?? c?.teamsLimit ?? null;
+      const n = typeof v === "number" ? v : parseInt(String(v||""),10);
+      if(Number.isFinite(n) && n > 0) maxTeams = n;
+    }catch{}
+
+    return maxTeams;
+  }
+
+  function render(rows, maxTeams){
+    const list = $("teamsList");
+    const msg  = $("msg");
+    if(!list) return;
+
+    list.innerHTML = "";
+    if(msg) msg.textContent = "";
+
+    const main = rows.slice(0, maxTeams);
+    const reserve = rows.slice(maxTeams);
+
+    function rowHtml(idx, r){
+      const paid = isPaidStatus(r.status);
+      return `
+        <div class="partItem" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="display:flex;gap:10px;align-items:center;min-width:0;">
+            <span class="lamp ${paid ? "lamp--green":"lamp--red"}"></span>
+            <div style="min-width:0;">
+              <div class="partTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                ${idx}. ${esc(r.teamName || "—")}
+              </div>
+              <div class="partSub">${paid ? "Оплачено" : "Очікується"}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Основний список (1..maxTeams)
+    if(main.length){
+      list.innerHTML += `<div class="muted" style="margin-bottom:10px;">Учасники: ${main.length} / ${maxTeams}</div>`;
+      list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
+    } else {
+      list.innerHTML = `<div class="muted">Нема заявок на це змагання</div>`;
+      return;
+    }
+
+    // Резерв
+    if(reserve.length){
+      list.innerHTML += `<div class="muted" style="margin:14px 0 10px;">Резерв: ${reserve.length}</div>`;
+      list.innerHTML += reserve.map((r,i)=>rowHtml(maxTeams + i + 1, r)).join("");
+    }
   }
 
   (async function init(){
@@ -28,59 +117,48 @@
       const stageId = params.get("stage") || "main";
 
       if(!compId){
-        $("msg").textContent = "❌ Не передано competitionId";
+        if($("msg")) $("msg").textContent = "❌ Не передано competitionId";
         return;
       }
 
-      $("pageTitle").textContent = "Учасники змагання";
-      $("pageSub").textContent = `competitionId: ${compId} • stage: ${stageId}`;
+      const meta = await getCompetitionMeta(compId, stageId);
+      const maxTeams = await getMaxTeams(compId, stageId);
 
-      const snap = await db.collection("registrations")
+      if($("pageTitle")) $("pageTitle").textContent = meta.stageTitle ? `${meta.title} · ${meta.stageTitle}` : meta.title;
+      if($("pageSub")) $("pageSub").textContent = `Список заявок (тільки назви команд)`;
+
+      if($("msg")) $("msg").textContent = "Завантаження списку…";
+
+      // ✅ ЧИТАЄМО ТІЛЬКИ ПУБЛІЧНУ КОЛЕКЦІЮ (без телефонів/капітанів)
+      const snap = await db.collection("registrations_public")
         .where("competitionId","==",compId)
         .where("stageId","==",stageId)
+        .where("entryType","==","team")
         .get();
 
       const rows = [];
       snap.forEach(doc=>{
         const r = doc.data() || {};
         rows.push({
-          team: norm(r.teamName || "—"),
-          paid: isPaid(r),
-          captain: norm(r.captainName || r.captain || ""),
-          phone: norm(r.phone || r.captainPhone || "")
+          teamName: norm(r.teamName || "—"),
+          status: norm(r.status || "pending_payment")
         });
       });
 
-      if(!rows.length){
-        $("msg").textContent = "Нема заявок на це змагання";
-        return;
-      }
-
+      // сортування: оплачені вгорі + алфавіт
       rows.sort((a,b)=>{
-        if(a.paid !== b.paid) return a.paid ? -1 : 1;
-        return a.team.localeCompare(b.team,"uk");
+        const ap = isPaidStatus(a.status);
+        const bp = isPaidStatus(b.status);
+        if(ap !== bp) return ap ? -1 : 1;
+        return a.teamName.localeCompare(b.teamName,"uk");
       });
 
-      $("teamsList").innerHTML = rows.map(r=>`
-        <div class="partItem">
-          <div style="display:flex;gap:10px;align-items:flex-start">
-            <span class="lamp ${r.paid ? "lamp--green":"lamp--red"}"></span>
-            <div>
-              <div class="partTitle">${esc(r.team)}</div>
-              <div class="partSub">${r.paid ? "Оплачено" : "Очікує оплату"}</div>
-            </div>
-          </div>
-          <div class="partSub" style="text-align:right">
-            ${esc(r.captain)}
-            ${r.phone ? `<div>${esc(r.phone)}</div>` : ""}
-          </div>
-        </div>
-      `).join("");
+      if($("msg")) $("msg").textContent = "";
+      render(rows, maxTeams);
 
     }catch(e){
       console.error(e);
-      $("msg").textContent = "❌ " + (e.message || e);
+      if($("msg")) $("msg").textContent = "❌ " + (e?.message || e);
     }
   })();
-
 })();

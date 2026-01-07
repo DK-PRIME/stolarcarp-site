@@ -8,7 +8,7 @@
 
   function isPaidStatus(status){
     const s = norm(status).toLowerCase();
-    return s === "confirmed" || s === "paid";
+    return s === "confirmed" || s === "paid" || s === "payment_confirmed";
   }
 
   async function waitFirebase(maxMs = 12000){
@@ -29,16 +29,16 @@
       const cSnap = await db.collection("competitions").doc(compId).get();
       if(cSnap.exists){
         const c = cSnap.data() || {};
-        title = c.name || c.title || title;
+        title = (c.name || c.title || title);
 
         const events = Array.isArray(c.events) ? c.events : [];
         const st = stageId || "main";
         const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
-        stageTitle = (ev && (ev.title || ev.name || ev.label)) || "";
+        stageTitle = (ev && (ev.title || ev.name || ev.label)) ? String(ev.title || ev.name || ev.label) : "";
       }
     }catch{}
 
-    return { title, stageTitle };
+    return { title: String(title || "Змагання").trim(), stageTitle: String(stageTitle || "").trim() };
   }
 
   async function getMaxTeams(compId, stageId){
@@ -52,7 +52,6 @@
       const c = cSnap.data() || {};
       const events = Array.isArray(c.events) ? c.events : [];
       const st = stageId || "main";
-
       const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
 
       const v = ev?.maxTeams ?? ev?.teamsLimit ?? c?.maxTeams ?? c?.teamsLimit ?? null;
@@ -61,6 +60,18 @@
     }catch{}
 
     return maxTeams;
+  }
+
+  function rowHtml(idx, r){
+    const paid = isPaidStatus(r.status);
+    return `
+      <div class="row">
+        <span class="lamp ${paid ? "lamp--green":"lamp--red"}"></span>
+        <span class="idx">${idx}.</span>
+        <span class="name">${esc(r.teamName || "—")}</span>
+        <span class="status ${paid ? "status--paid":"status--unpaid"}">${paid ? "Оплачено" : "Не оплачено"}</span>
+      </div>
+    `;
   }
 
   function render(rows, maxTeams){
@@ -74,33 +85,20 @@
     const main = rows.slice(0, maxTeams);
     const reserve = rows.slice(maxTeams);
 
-    function rowHtml(idx, r){
-      const paid = isPaidStatus(r.status);
-      return `
-        <div class="partItem" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <div style="display:flex;gap:10px;align-items:center;min-width:0;">
-            <span class="lamp ${paid ? "lamp--green":"lamp--red"}"></span>
-            <div style="min-width:0;">
-              <div class="partTitle" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                ${idx}. ${esc(r.teamName || "—")}
-              </div>
-              <div class="partSub">${paid ? "Оплачено" : "Очікується"}</div>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    if(main.length){
-      list.innerHTML += `<div class="muted" style="margin-bottom:10px;">Учасники: ${main.length} / ${maxTeams}</div>`;
-      list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
-    } else {
-      list.innerHTML = `<div class="muted">Нема заявок на це змагання</div>`;
+    if(!rows.length){
+      list.innerHTML = `<div class="mutedCenter">Нема заявок на це змагання</div>`;
       return;
     }
 
+    // лічильник
+    list.innerHTML += `<div class="pageSub" style="margin:0 0 10px;">Учасники: ${main.length} / ${maxTeams}</div>`;
+
+    // основні
+    list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
+
+    // резерв (якщо треба)
     if(reserve.length){
-      list.innerHTML += `<div class="muted" style="margin:14px 0 10px;">Резерв: ${reserve.length}</div>`;
+      list.innerHTML += `<div class="dividerLabel">Резерв: ${reserve.length}</div>`;
       list.innerHTML += reserve.map((r,i)=>rowHtml(maxTeams + i + 1, r)).join("");
     }
   }
@@ -122,16 +120,15 @@
       const meta = await getCompetitionMeta(compId, stageId);
       const maxTeams = await getMaxTeams(compId, stageId);
 
+      // ✅ заголовок по центру (градієнт робить CSS)
       if($("pageTitle")) $("pageTitle").textContent = meta.stageTitle ? `${meta.title} · ${meta.stageTitle}` : meta.title;
-      if($("pageSub")) $("pageSub").textContent = `Список заявок (тільки назви команд)`;
+      if($("pageSub")) $("pageSub").textContent = ""; // прибираємо “Список заявок...”
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";
 
-      // ✅ ЧИТАЄМО public_participants (як в правилах)
-      // stageId може бути "main" або null (старі записи могли мати null)
+      // ✅ public_participants: stageId == stageId + (якщо main) stageId == null
       const rowsMap = new Map();
 
-      // 1) stageId == stageId
       const snap1 = await db.collection("public_participants")
         .where("competitionId","==",compId)
         .where("stageId","==",stageId)
@@ -147,7 +144,6 @@
         });
       });
 
-      // 2) якщо stageId == "main" — добираємо ще stageId == null
       if(String(stageId) === "main"){
         const snap2 = await db.collection("public_participants")
           .where("competitionId","==",compId)
@@ -168,6 +164,7 @@
 
       const rows = Array.from(rowsMap.values());
 
+      // ✅ сортування: оплачені зверху, далі по назві
       rows.sort((a,b)=>{
         const ap = isPaidStatus(a.status);
         const bp = isPaidStatus(b.status);

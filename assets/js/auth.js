@@ -9,8 +9,8 @@
     if (type) el.classList.add(type);
   }
 
-  function show(el){ if(el) el.style.display = ""; }
-  function hide(el){ if(el) el.style.display = "none"; }
+  function show(el) { if (el) el.style.display = ""; }
+  function hide(el) { if (el) el.style.display = "none"; }
 
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
@@ -100,13 +100,12 @@
   function goCabinet() { location.href = "cabinet.html"; }
 
   // ====== UI blocks (мають бути в auth.html) ======
-  // Якщо в тебе інші id — скажеш, я піджену, але бажано так:
-  const loggedBox = $("loggedBox");     // блок "Ви вже увійшли"
-  const authBox   = $("authBox");       // блоки реєстрації/входу (вся форма)
+  const loggedBox = $("loggedBox");
+  const authBox   = $("authBox");
 
-  const btnGoCab  = $("goCabinetBtn");  // кнопка "Перейти в кабінет"
-  const btnLogout = $("logoutBtn");     // кнопка "Вийти"
-  const loggedMsg = $("loggedMsg");     // текст в блоці "Ви вже увійшли" (без email!)
+  const btnGoCab  = $("goCabinetBtn");
+  const btnLogout = $("logoutBtn");
+  const loggedMsg = $("loggedMsg");
 
   const signupForm = $("signupForm");
   const loginForm  = $("loginForm");
@@ -147,52 +146,90 @@
       return;
     }
 
-    try {
-      $("signupBtn") && ($("signupBtn").disabled = true);
-      setMsg(signupMsg, "Створюю акаунт…", "");
+    // ✅ FIX #1: роль-специфічні поля перевіряємо ДО створення акаунта
+    if (role === "captain" && !teamName) {
+      setMsg(signupMsg, "Для капітана потрібна назва команди.", "err");
+      return;
+    }
+    if (role === "member" && !joinCode) {
+      setMsg(signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
+      return;
+    }
 
+    try {
+      const btn = $("signupBtn");
+      if (btn) btn.disabled = true;
+
+      setMsg(signupMsg, "Створюю акаунт…", "");
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
+      // ✅ FIX #2: відправляємо лист підтвердження email
+      try {
+        await user.sendEmailVerification();
+      } catch (e2) {
+        console.warn("sendEmailVerification error:", e2);
+      }
+
       await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
+      // ==== Captain flow ====
       if (role === "captain") {
-        if (!teamName) {
-          setMsg(signupMsg, "Для капітана потрібна назва команди.", "err");
-          return;
-        }
         setMsg(signupMsg, "Створюю команду…", "");
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
-        setMsg(signupMsg, `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}`, "ok");
-        setTimeout(goCabinet, 600);
+
+        // ✅ FIX #3: не перекидаємо в кабінет, а просимо підтвердити email
+        setMsg(
+          signupMsg,
+          `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}. ` +
+          `Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.`,
+          "ok"
+        );
+
+        await auth.signOut();
         return;
       }
 
+      // ==== Member flow ====
       if (role === "member") {
-        if (!joinCode) {
-          setMsg(signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
-          return;
-        }
         setMsg(signupMsg, "Шукаю команду по коду…", "");
         const team = await findTeamByJoinCode(db, joinCode);
         if (!team) {
           setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
+          // ✅ важливо: якщо акаунт вже створили — виходимо, щоб не лишати сесію
+          try { await auth.signOut(); } catch (e3) {}
           return;
         }
+
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
-        setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
-        setTimeout(goCabinet, 600);
+
+        // ✅ FIX #3: не перекидаємо в кабінет, а просимо підтвердити email
+        setMsg(
+          signupMsg,
+          `Готово ✅ Ти в команді: ${team.name}. ` +
+          `Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.`,
+          "ok"
+        );
+
+        await auth.signOut();
         return;
       }
 
-      setMsg(signupMsg, "Акаунт створено ✅", "ok");
-      setTimeout(goCabinet, 600);
+      // fallback
+      setMsg(
+        signupMsg,
+        "Акаунт створено ✅ Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.",
+        "ok"
+      );
+      await auth.signOut();
+
     } catch (err) {
       console.error(err);
       setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
     } finally {
-      $("signupBtn") && ($("signupBtn").disabled = false);
+      const btn = $("signupBtn");
+      if (btn) btn.disabled = false;
     }
   }
 
@@ -212,17 +249,36 @@
     }
 
     try {
-      $("loginBtn") && ($("loginBtn").disabled = true);
-      setMsg(loginMsg, "Вхід…", "");
+      const btn = $("loginBtn");
+      if (btn) btn.disabled = true;
 
+      setMsg(loginMsg, "Вхід…", "");
       await auth.signInWithEmailAndPassword(email, pass);
+
+      // ✅ FIX #4: блокуємо вхід без підтвердженого email
+      const u = auth.currentUser;
+      if (u && typeof u.reload === "function") {
+        await u.reload();
+      }
+
+      if (u && !u.emailVerified) {
+        // можна повторно надіслати лист
+        try { await u.sendEmailVerification(); } catch (e2) {}
+
+        await auth.signOut();
+        setMsg(loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження — перевір пошту (і «Спам»).", "err");
+        return;
+      }
+
       setMsg(loginMsg, "Готово ✅", "ok");
       setTimeout(goCabinet, 300);
+
     } catch (err) {
       console.error(err);
       setMsg(loginMsg, err?.message || "Помилка входу", "err");
     } finally {
-      $("loginBtn") && ($("loginBtn").disabled = false);
+      const btn = $("loginBtn");
+      if (btn) btn.disabled = false;
     }
   }
 

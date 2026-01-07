@@ -6,34 +6,146 @@
   <title>STOLAR CARP • Учасники змагання</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
+
+  <style>
+    /* база */
+    body{ background:#020617; }
+    .wrap{ max-width:980px; margin:0 auto; padding:18px 12px 80px; }
+
+    /* header */
+    .header{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter: blur(10px);
+      background: rgba(2,6,23,.65);
+      border-bottom: 1px solid rgba(148,163,184,.12);
+      padding:10px 12px;
+    }
+    .headerInner{ max-width:980px; margin:0 auto; display:flex; align-items:center; }
+
+    .btnBack{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:10px 12px;
+      border-radius:14px;
+      text-decoration:none;
+      color:#e5e7eb;
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(15,23,42,.55);
+    }
+
+    /* ✅ заголовок по центру + градієнт */
+    .pageTitle{
+      margin:18px 0 8px;
+      text-align:center;
+      font-weight:950;
+      letter-spacing:.6px;
+      line-height:1.15;
+      font-size:1.9rem;
+      background:linear-gradient(90deg,#facc15 0%, #7f1d1d 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+      -webkit-text-fill-color:transparent;
+    }
+    .pageSub{
+      text-align:center;
+      color:#94a3b8;
+      font-weight:800;
+      margin-bottom:14px;
+    }
+
+    /* ✅ без овалів/карт: просто контент */
+    .list{
+      margin-top:8px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    /* ✅ рядок (не “картка”) */
+    .row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 4px;
+      border-bottom:1px solid rgba(148,163,184,.16);
+    }
+
+    .lamp{
+      width:10px; height:10px; border-radius:999px;
+      flex:0 0 10px;
+      box-shadow: 0 0 0 3px rgba(255,255,255,.03);
+    }
+    .lamp--green{ background:#22c55e; }
+    .lamp--red{ background:#ef4444; }
+
+    .idx{
+      width:32px;
+      text-align:right;
+      color:#94a3b8;
+      font-weight:900;
+      flex:0 0 32px;
+    }
+
+    .name{
+      flex:1;
+      min-width:0;
+      color:#e5e7eb;
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .status{
+      flex:0 0 auto;
+      font-weight:900;
+      white-space:nowrap;
+      color:#94a3b8;
+    }
+    .status--paid{ color:#22c55e; }
+    .status--unpaid{ color:#ef4444; }
+
+    .mutedCenter{
+      text-align:center;
+      color:#94a3b8;
+      font-weight:800;
+      margin-top:14px;
+    }
+    .dividerLabel{
+      margin-top:14px;
+      color:#94a3b8;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      font-size:.85rem;
+    }
+  </style>
 </head>
+
 <body>
+  <header class="header">
+    <div class="headerInner">
+      <a href="cabinet.html" class="btnBack">← Назад</a>
+    </div>
+  </header>
 
-<header class="header">
-  <a href="cabinet.html" class="btn">← Назад</a>
-</header>
+  <main class="wrap">
+    <h1 id="pageTitle" class="pageTitle">Змагання</h1>
+    <div id="pageSub" class="pageSub"></div>
 
-<main class="wrap">
-  <div class="card">
-    <h2 id="pageTitle">Змагання</h2>
-    <div class="muted" id="pageSub"></div>
-  </div>
+    <div id="teamsList" class="list"></div>
+    <div id="msg" class="mutedCenter"></div>
+  </main>
 
-  <div class="card">
-    <div id="teamsList" class="stack"></div>
-    <div class="muted" id="msg"></div>
-  </div>
-</main>
+  <!-- Firebase compat CDN -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- Firebase compat CDN -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <!-- ЄДИНА ініціалізація -->
+  <script src="assets/js/firebase-init.js"></script>
 
-<!-- ЄДИНА ініціалізація -->
-<script src="assets/js/firebase-init.js"></script>
-
-<!-- Сторінка участі -->
-<script src="assets/js/participation.js"></script>
+  <!-- Сторінка участі -->
+  <script src="assets/js/participation.js"></script>
 </body>
 </html>

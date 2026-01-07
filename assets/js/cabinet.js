@@ -107,34 +107,76 @@
     });
   }
 
-  // ===== МОЯ УЧАСТЬ =====
+  // ===== МОЯ УЧАСТЬ (FIX: читаємо public_participants + беремо назви з competitions) =====
+  function norm(v){ return String(v ?? "").trim(); }
+
   function isPaidStatus(status){
-    const s = String(status || "").trim().toLowerCase();
+    const s = norm(status).toLowerCase();
     return s === "confirmed" || s === "paid" || s === "payment_confirmed";
   }
 
-  function renderMyParticipation(regs, teamId){
+  function toMillis(ts){
+    if(!ts) return 0;
+    if(ts.toMillis) return ts.toMillis();
+    try { return +new Date(ts); } catch { return 0; }
+  }
+
+  // кеш мети, щоб не дубасити Firestore
+  const compMetaCache = Object.create(null);
+
+  async function getCompetitionMeta(db, compId, stageId){
+    const st = norm(stageId) || "main";
+    const key = `${compId}||${st}`;
+    if(compMetaCache[key]) return compMetaCache[key];
+
+    let compTitle = "";
+    let stageTitle = "";
+
+    try{
+      const cSnap = await db.collection("competitions").doc(compId).get();
+      if(cSnap.exists){
+        const c = cSnap.data() || {};
+        compTitle = c.name || c.title || "";
+
+        const events = Array.isArray(c.events) ? c.events : [];
+        const ev = events.find(e => norm(e?.key || e?.stageId || e?.id) === st);
+
+        stageTitle =
+          (ev && (ev.title || ev.name || ev.label)) ||
+          (st !== "main" ? st : "");
+      }
+    }catch{}
+
+    const res = { compTitle, stageTitle };
+    compMetaCache[key] = res;
+    return res;
+  }
+
+  function niceTitle(it){
+    const comp = it.compTitle || it.competitionTitle || it.competitionName || it.competitionId || "Змагання";
+    const st   = it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "");
+    return st ? `${escapeHtml(comp)} · ${escapeHtml(st)}` : escapeHtml(comp);
+  }
+
+  function renderMyParticipation(items, teamId){
     if (!myPartListEl) return;
 
     myPartListEl.innerHTML = "";
 
-    if (!regs || regs.length === 0){
+    if (!items || items.length === 0){
       myPartListEl.innerHTML = `<div class="cabinet-small-muted">Команда ще не подавала заявки на змагання.</div>`;
       if (myPartMsgEl) myPartMsgEl.textContent = "";
       return;
     }
 
-    regs.forEach((r) => {
-      const compId  = r.competitionId || r.competition || r.activeCompetitionId || "";
-      const stageId = r.stageId || r.activeStageId || "main";
-
-      const title = r.competitionTitle || r.competitionName || r.eventTitle || compId || "Змагання";
-      const st = r.status || "—";
+    items.forEach((it) => {
+      const compId  = norm(it.competitionId);
+      const stageId = norm(it.stageId) || "main";
+      const st = it.status || "pending_payment";
       const paid = isPaidStatus(st);
 
-      // ✅ друга сторінка (як ти хотів)
-      // (потім зробимо participation.html)
-      const href = `participation.html?competitionId=${encodeURIComponent(compId)}&stageId=${encodeURIComponent(stageId)}&teamId=${encodeURIComponent(teamId||"")}`;
+      // ✅ відкриваємо participation.html (він читає public_participants)
+      const href = `participation.html?comp=${encodeURIComponent(compId)}&stage=${encodeURIComponent(stageId)}`;
 
       const row = document.createElement("a");
       row.href = href;
@@ -147,12 +189,19 @@
 
       row.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div style="min-width:180px">
-            <div style="font-weight:900">${escapeHtml(title)}</div>
-            <div class="cabinet-small-muted">stage: ${escapeHtml(stageId)}</div>
-            <div class="cabinet-small-muted" style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <div style="min-width:0;flex:1">
+            <div style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${niceTitle(it)}
+            </div>
+
+            <div class="cabinet-small-muted" style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
               <span style="display:inline-block;width:10px;height:10px;border-radius:999px;${paid ? "background:#22c55e" : "background:#ef4444"}"></span>
-              <span>${paid ? "Оплачено" : "Очікує оплату"} (${escapeHtml(st)})</span>
+              <span>${paid ? "Заявка підтверджена" : "Очікує підтвердження"} (${escapeHtml(st)})</span>
+            </div>
+
+            <div class="cabinet-small-muted" style="margin-top:6px;">
+              Команда: <strong style="color:#e5e7eb;">${escapeHtml(it.teamName || "—")}</strong>
+              ${it.updatedAt ? ` · Оновлено: ${new Date(toMillis(it.updatedAt)).toLocaleDateString("uk-UA")}` : ""}
             </div>
           </div>
 
@@ -172,62 +221,74 @@
     if (typeof unsubRegs === "function") { unsubRegs(); unsubRegs = null; }
 
     if (!myPartListEl) return;
-    if (!teamId && !uid){
+
+    if (!teamId){
       renderMyParticipation([], teamId);
       return;
     }
 
-    // щоб ти бачив, що воно реально грузиться
-    if (myPartListEl) myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження участі…</div>`;
+    myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження участі…</div>`;
     if (myPartMsgEl) myPartMsgEl.textContent = "";
 
-    // ✅ Показуємо всі заявки команди (або юзера як fallback)
-    let q = null;
-    if (teamId){
-      q = db.collection("registrations").where("teamId", "==", teamId);
-    } else {
-      q = db.collection("registrations").where("uid", "==", uid);
-    }
+    // ✅ ЧИТАЄМО public_participants (публічно, без permission-denied)
+    unsubRegs = db.collection("public_participants")
+      .where("teamId", "==", teamId)
+      .where("entryType", "==", "team")
+      .onSnapshot(async (qs) => {
+        const rows = [];
+        qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
 
-    unsubRegs = q.onSnapshot((qs) => {
-      const regs = [];
-      qs.forEach(d => regs.push({ id:d.id, ...(d.data() || {}) }));
-
-      // ✅ “скільки змагань — стільки рядків” (прибираємо дублікати)
-      const map = Object.create(null);
-      regs.forEach(r=>{
-        const c = r.competitionId || r.competition || r.activeCompetitionId || "";
-        const s = r.stageId || r.activeStageId || "main";
-        if (!c) return;
-        const k = `${c}||${s}`;
-
-        if (!map[k]) map[k] = r;
-        else {
-          const a = map[k];
-          const ap = isPaidStatus(a.status);
-          const bp = isPaidStatus(r.status);
-          if (!ap && bp) map[k] = r;
+        if (!rows.length){
+          renderMyParticipation([], teamId);
+          return;
         }
+
+        // ✅ унікальні по competitionId+stageId (confirmed перемагає)
+        const map = Object.create(null);
+        rows.forEach(r=>{
+          const c = norm(r.competitionId);
+          const s = norm(r.stageId) || "main";
+          if(!c) return;
+          const k = `${c}||${s}`;
+
+          if(!map[k]) map[k] = r;
+          else {
+            const a = map[k];
+            const ap = isPaidStatus(a.status);
+            const bp = isPaidStatus(r.status);
+            if(!ap && bp) map[k] = r;
+          }
+        });
+
+        const uniq = Object.values(map);
+
+        // ✅ підтягнути назви з competitions
+        for (const it of uniq){
+          const compId = norm(it.competitionId);
+          const stageId = norm(it.stageId) || "main";
+          const meta = await getCompetitionMeta(db, compId, stageId);
+
+          it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || compId;
+          it.stageTitle = meta.stageTitle || it.stageName || "";
+          it.teamName   = it.teamName || "";
+          it.stageId    = stageId;
+          it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
+        }
+
+        // ✅ сортування: підтверджені зверху, далі новіші
+        uniq.sort((a,b)=>{
+          const ap = isPaidStatus(a.status);
+          const bp = isPaidStatus(b.status);
+          if(ap !== bp) return ap ? -1 : 1;
+          return toMillis(b.updatedAt) - toMillis(a.updatedAt);
+        });
+
+        renderMyParticipation(uniq, teamId);
+      }, (err)=>{
+        console.warn(err);
+        myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Не вдалося завантажити участь.</div>`;
+        if (myPartMsgEl) myPartMsgEl.textContent = "";
       });
-
-      const uniq = Object.values(map);
-
-      // ✅ оплачені зверху
-      uniq.sort((a,b)=>{
-        const ap = isPaidStatus(a.status);
-        const bp = isPaidStatus(b.status);
-        if (ap !== bp) return ap ? -1 : 1;
-        const at = String(a.competitionTitle || a.competitionName || a.eventTitle || a.competitionId || "");
-        const bt = String(b.competitionTitle || b.competitionName || b.eventTitle || b.competitionId || "");
-        return at.localeCompare(bt, "uk");
-      });
-
-      renderMyParticipation(uniq, teamId);
-    }, (err)=>{
-      console.warn(err);
-      if (myPartListEl) myPartListEl.innerHTML = `<div class="cabinet-small-muted">Не вдалося завантажити участь. Перевір правила доступу Firestore.</div>`;
-      if (myPartMsgEl) myPartMsgEl.textContent = "";
-    });
   }
 
   function subscribeTeam(db, teamId){
@@ -286,7 +347,7 @@
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
 
-      // ✅ МОЯ УЧАСТЬ
+      // ✅ МОЯ УЧАСТЬ (тепер через public_participants)
       subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");

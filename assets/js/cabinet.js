@@ -36,8 +36,6 @@
   const membersEl      = document.getElementById("membersContainer");
 
   // ✅ МОЯ УЧАСТЬ:
-  // У тебе в HTML: <div id="myCompetitions">
-  // Старий/альтернативний варіант: myParticipationList / myParticipationMsg
   const myPartListEl = document.getElementById("myCompetitions") || document.getElementById("myParticipationList");
   const myPartMsgEl  = document.getElementById("myParticipationMsg");
 
@@ -107,13 +105,8 @@
     });
   }
 
-  // ===== МОЯ УЧАСТЬ (FIX: читаємо public_participants + беремо назви з competitions) =====
+  // ===== МОЯ УЧАСТЬ (ПРОСТО: тільки назва, клікабельна) =====
   function norm(v){ return String(v ?? "").trim(); }
-
-  function isPaidStatus(status){
-    const s = norm(status).toLowerCase();
-    return s === "confirmed" || s === "paid" || s === "payment_confirmed";
-  }
 
   function toMillis(ts){
     if(!ts) return 0;
@@ -136,14 +129,13 @@
       const cSnap = await db.collection("competitions").doc(compId).get();
       if(cSnap.exists){
         const c = cSnap.data() || {};
-        compTitle = c.name || c.title || "";
+        compTitle = (c.name || c.title || "").trim();
 
         const events = Array.isArray(c.events) ? c.events : [];
         const ev = events.find(e => norm(e?.key || e?.stageId || e?.id) === st);
 
-        stageTitle =
-          (ev && (ev.title || ev.name || ev.label)) ||
-          (st !== "main" ? st : "");
+        stageTitle = (ev && (ev.title || ev.name || ev.label)) ? String(ev.title || ev.name || ev.label).trim() : "";
+        if (!stageTitle && st !== "main") stageTitle = st;
       }
     }catch{}
 
@@ -152,13 +144,14 @@
     return res;
   }
 
-  function niceTitle(it){
-    const comp = it.compTitle || it.competitionTitle || it.competitionName || it.competitionId || "Змагання";
-    const st   = it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "");
+  function niceTitleOnly(it){
+    const comp = (it.compTitle || it.competitionTitle || it.competitionName || it.competitionId || "Змагання").trim();
+    const st   = (it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "") || "").trim();
+    // якщо хочеш тільки НАЗВУ змагання без етапу — прибери частину зі st:
     return st ? `${escapeHtml(comp)} · ${escapeHtml(st)}` : escapeHtml(comp);
   }
 
-  function renderMyParticipation(items, teamId){
+  function renderMyParticipation(items){
     if (!myPartListEl) return;
 
     myPartListEl.innerHTML = "";
@@ -172,42 +165,22 @@
     items.forEach((it) => {
       const compId  = norm(it.competitionId);
       const stageId = norm(it.stageId) || "main";
-      const st = it.status || "pending_payment";
-      const paid = isPaidStatus(st);
 
-      // ✅ відкриваємо participation.html (він читає public_participants)
       const href = `participation.html?comp=${encodeURIComponent(compId)}&stage=${encodeURIComponent(stageId)}`;
 
       const row = document.createElement("a");
       row.href = href;
       row.className = "card";
       row.style.display = "block";
-      row.style.padding = "12px";
+      row.style.padding = "14px 14px";
       row.style.marginTop = "10px";
       row.style.textDecoration = "none";
       row.style.color = "inherit";
 
+      // ✅ тільки назва (без обрізання)
       row.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-          <div style="min-width:0;flex:1">
-            <div style="font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              ${niceTitle(it)}
-            </div>
-
-            <div class="cabinet-small-muted" style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
-              <span style="display:inline-block;width:10px;height:10px;border-radius:999px;${paid ? "background:#22c55e" : "background:#ef4444"}"></span>
-              <span>${paid ? "Заявка підтверджена" : "Очікує підтвердження"} (${escapeHtml(st)})</span>
-            </div>
-
-            <div class="cabinet-small-muted" style="margin-top:6px;">
-              Команда: <strong style="color:#e5e7eb;">${escapeHtml(it.teamName || "—")}</strong>
-              ${it.updatedAt ? ` · Оновлено: ${new Date(toMillis(it.updatedAt)).toLocaleDateString("uk-UA")}` : ""}
-            </div>
-          </div>
-
-          <div class="cabinet-small-muted" style="font-weight:800;opacity:.85">
-            Натисни, щоб відкрити список команд →
-          </div>
+        <div style="font-weight:900;line-height:1.25;white-space:normal;overflow:visible;">
+          ${niceTitleOnly(it)}
         </div>
       `;
 
@@ -219,76 +192,70 @@
 
   function subscribeMyParticipation(db, teamId, uid){
     if (typeof unsubRegs === "function") { unsubRegs(); unsubRegs = null; }
-
     if (!myPartListEl) return;
 
-    if (!teamId){
-      renderMyParticipation([], teamId);
+    if (!teamId && !uid){
+      renderMyParticipation([]);
       return;
     }
 
-    myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження участі…</div>`;
+    myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
     if (myPartMsgEl) myPartMsgEl.textContent = "";
 
-    // ✅ ЧИТАЄМО public_participants (публічно, без permission-denied)
-    unsubRegs = db.collection("public_participants")
-      .where("teamId", "==", teamId)
-      .where("entryType", "==", "team")
-      .onSnapshot(async (qs) => {
-        const rows = [];
-        qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
+    // ✅ читаємо public_participants (публічно і стабільно)
+    // якщо раптом teamId нема — fallback по uid
+    let q = null;
+    if (teamId){
+      q = db.collection("public_participants")
+        .where("teamId", "==", teamId)
+        .where("entryType", "==", "team");
+    } else {
+      q = db.collection("public_participants")
+        .where("uid", "==", uid);
+    }
 
-        if (!rows.length){
-          renderMyParticipation([], teamId);
-          return;
-        }
+    unsubRegs = q.onSnapshot(async (qs) => {
+      const rows = [];
+      qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
 
-        // ✅ унікальні по competitionId+stageId (confirmed перемагає)
-        const map = Object.create(null);
-        rows.forEach(r=>{
-          const c = norm(r.competitionId);
-          const s = norm(r.stageId) || "main";
-          if(!c) return;
-          const k = `${c}||${s}`;
+      if (!rows.length){
+        renderMyParticipation([]);
+        return;
+      }
 
-          if(!map[k]) map[k] = r;
-          else {
-            const a = map[k];
-            const ap = isPaidStatus(a.status);
-            const bp = isPaidStatus(r.status);
-            if(!ap && bp) map[k] = r;
-          }
-        });
-
-        const uniq = Object.values(map);
-
-        // ✅ підтягнути назви з competitions
-        for (const it of uniq){
-          const compId = norm(it.competitionId);
-          const stageId = norm(it.stageId) || "main";
-          const meta = await getCompetitionMeta(db, compId, stageId);
-
-          it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || compId;
-          it.stageTitle = meta.stageTitle || it.stageName || "";
-          it.teamName   = it.teamName || "";
-          it.stageId    = stageId;
-          it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
-        }
-
-        // ✅ сортування: підтверджені зверху, далі новіші
-        uniq.sort((a,b)=>{
-          const ap = isPaidStatus(a.status);
-          const bp = isPaidStatus(b.status);
-          if(ap !== bp) return ap ? -1 : 1;
-          return toMillis(b.updatedAt) - toMillis(a.updatedAt);
-        });
-
-        renderMyParticipation(uniq, teamId);
-      }, (err)=>{
-        console.warn(err);
-        myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Не вдалося завантажити участь.</div>`;
-        if (myPartMsgEl) myPartMsgEl.textContent = "";
+      // ✅ унікальні по competitionId+stageId (по факту “одна участь = один рядок”)
+      const map = Object.create(null);
+      rows.forEach(r=>{
+        const c = norm(r.competitionId);
+        const s = norm(r.stageId) || "main";
+        if(!c) return;
+        const k = `${c}||${s}`;
+        if(!map[k]) map[k] = r;
       });
+
+      const uniq = Object.values(map);
+
+      // ✅ підтягнути назви з competitions
+      for (const it of uniq){
+        const compId = norm(it.competitionId);
+        const stageId = norm(it.stageId) || "main";
+        const meta = await getCompetitionMeta(db, compId, stageId);
+
+        it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || compId;
+        it.stageTitle = meta.stageTitle || it.stageName || "";
+        it.stageId    = stageId;
+        it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
+      }
+
+      // ✅ новіші зверху
+      uniq.sort((a,b)=> toMillis(b.updatedAt) - toMillis(a.updatedAt));
+
+      renderMyParticipation(uniq);
+    }, (err)=>{
+      console.warn(err);
+      myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Не вдалося завантажити участь.</div>`;
+      if (myPartMsgEl) myPartMsgEl.textContent = "";
+    });
   }
 
   function subscribeTeam(db, teamId){
@@ -312,7 +279,6 @@
       }
     });
 
-    // склад команди = users where teamId == teamId
     unsubMembers = db.collection("users")
       .where("teamId","==",teamId)
       .onSnapshot((qs) => {
@@ -347,7 +313,7 @@
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
 
-      // ✅ МОЯ УЧАСТЬ (тепер через public_participants)
+      // ✅ МОЯ УЧАСТЬ (тільки назва)
       subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");
@@ -379,7 +345,6 @@
           return;
         }
 
-        // ✅ Адмін не живе в кабінеті — тільки адмінка через © (або якщо відкрив cabinet випадково)
         if (user.uid === ADMIN_UID){
           setStatus("Адмін-акаунт → перехід в адмінку…");
           hideContent();

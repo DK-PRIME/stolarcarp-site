@@ -57,8 +57,11 @@
 
   function escapeHtml(str){
     return String(str || "")
-      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#039;");
   }
 
   function setAvatarUrl(url){
@@ -105,7 +108,7 @@
     });
   }
 
-  // ===== МОЯ УЧАСТЬ (ПРОСТО: тільки назва, клікабельна) =====
+  // ===== МОЯ УЧАСТЬ (ЦЕНТР + ГРАДІЄНТ, ТІЛЬКИ НАЗВА) =====
   function norm(v){ return String(v ?? "").trim(); }
 
   function toMillis(ts){
@@ -114,27 +117,29 @@
     try { return +new Date(ts); } catch { return 0; }
   }
 
-  // кеш мети, щоб не дубасити Firestore
   const compMetaCache = Object.create(null);
 
   async function getCompetitionMeta(db, compId, stageId){
     const st = norm(stageId) || "main";
     const key = `${compId}||${st}`;
-    if(compMetaCache[key]) return compMetaCache[key];
+    if (compMetaCache[key]) return compMetaCache[key];
 
     let compTitle = "";
     let stageTitle = "";
 
     try{
       const cSnap = await db.collection("competitions").doc(compId).get();
-      if(cSnap.exists){
+      if (cSnap.exists){
         const c = cSnap.data() || {};
         compTitle = (c.name || c.title || "").trim();
 
         const events = Array.isArray(c.events) ? c.events : [];
         const ev = events.find(e => norm(e?.key || e?.stageId || e?.id) === st);
 
-        stageTitle = (ev && (ev.title || ev.name || ev.label)) ? String(ev.title || ev.name || ev.label).trim() : "";
+        stageTitle = (ev && (ev.title || ev.name || ev.label))
+          ? String(ev.title || ev.name || ev.label).trim()
+          : "";
+
         if (!stageTitle && st !== "main") stageTitle = st;
       }
     }catch{}
@@ -147,7 +152,6 @@
   function niceTitleOnly(it){
     const comp = (it.compTitle || it.competitionTitle || it.competitionName || it.competitionId || "Змагання").trim();
     const st   = (it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "") || "").trim();
-    // якщо хочеш тільки НАЗВУ змагання без етапу — прибери частину зі st:
     return st ? `${escapeHtml(comp)} · ${escapeHtml(st)}` : escapeHtml(comp);
   }
 
@@ -157,7 +161,7 @@
     myPartListEl.innerHTML = "";
 
     if (!items || items.length === 0){
-      myPartListEl.innerHTML = `<div class="cabinet-small-muted">Команда ще не подавала заявки на змагання.</div>`;
+      myPartListEl.innerHTML = `<div class="cabinet-small-muted">Поки що немає участі.</div>`;
       if (myPartMsgEl) myPartMsgEl.textContent = "";
       return;
     }
@@ -165,7 +169,6 @@
     items.forEach((it) => {
       const compId  = norm(it.competitionId);
       const stageId = norm(it.stageId) || "main";
-
       const href = `participation.html?comp=${encodeURIComponent(compId)}&stage=${encodeURIComponent(stageId)}`;
 
       const row = document.createElement("a");
@@ -175,11 +178,23 @@
       row.style.padding = "14px 14px";
       row.style.marginTop = "10px";
       row.style.textDecoration = "none";
-      row.style.color = "inherit";
 
-      // ✅ тільки назва (без обрізання)
+      // ✅ ТІЛЬКИ НАЗВА: по центру + градієнт
       row.innerHTML = `
-        <div style="font-weight:900;line-height:1.25;white-space:normal;overflow:visible;">
+        <div style="
+          font-weight:950;
+          line-height:1.25;
+          text-align:center;
+          white-space:normal;
+          overflow:visible;
+          letter-spacing:.2px;
+
+          background:linear-gradient(90deg,#facc15 0%,#7f1d1d 100%);
+          -webkit-background-clip:text;
+          background-clip:text;
+          color:transparent;
+          -webkit-text-fill-color:transparent;
+        ">
           ${niceTitleOnly(it)}
         </div>
       `;
@@ -202,9 +217,7 @@
     myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
     if (myPartMsgEl) myPartMsgEl.textContent = "";
 
-    // ✅ читаємо public_participants (публічно і стабільно)
-    // якщо раптом teamId нема — fallback по uid
-    let q = null;
+    let q;
     if (teamId){
       q = db.collection("public_participants")
         .where("teamId", "==", teamId)
@@ -223,19 +236,19 @@
         return;
       }
 
-      // ✅ унікальні по competitionId+stageId (по факту “одна участь = один рядок”)
+      // унікальні по competitionId+stageId
       const map = Object.create(null);
-      rows.forEach(r=>{
+      rows.forEach(r => {
         const c = norm(r.competitionId);
         const s = norm(r.stageId) || "main";
-        if(!c) return;
+        if (!c) return;
         const k = `${c}||${s}`;
-        if(!map[k]) map[k] = r;
+        if (!map[k]) map[k] = r;
       });
 
       const uniq = Object.values(map);
 
-      // ✅ підтягнути назви з competitions
+      // підтягнути назви
       for (const it of uniq){
         const compId = norm(it.competitionId);
         const stageId = norm(it.stageId) || "main";
@@ -247,11 +260,9 @@
         it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
       }
 
-      // ✅ новіші зверху
       uniq.sort((a,b)=> toMillis(b.updatedAt) - toMillis(a.updatedAt));
-
       renderMyParticipation(uniq);
-    }, (err)=>{
+    }, (err) => {
       console.warn(err);
       myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Не вдалося завантажити участь.</div>`;
       if (myPartMsgEl) myPartMsgEl.textContent = "";
@@ -313,7 +324,7 @@
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
 
-      // ✅ МОЯ УЧАСТЬ (тільки назва)
+      // ✅ МОЯ УЧАСТЬ (центр + градієнт, тільки назва)
       subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");

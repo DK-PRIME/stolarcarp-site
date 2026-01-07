@@ -13,35 +13,33 @@
     .admin-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
 
     /* FIX: щоб "SC" не обрізало в хедері */
-.header .header__row{ align-items:center; }
+    .header .header__row{ align-items:center; }
 
-.header .logo{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-height:56px;          /* трошки більша висота хедера */
-  padding:8px 0;
-}
+    .header .logo{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      min-height:56px;
+      padding:8px 0;
+    }
 
-.header .logo__mark{
-  width:42px;
-  height:42px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  line-height:1;            /* ключове */
-  overflow:visible;         /* ключове */
-  padding:0;                /* щоб нічого не зсувало */
-}
+    .header .logo__mark{
+      width:42px;
+      height:42px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      line-height:1;
+      overflow:visible;
+      padding:0;
+    }
 
-.header .logo__text{
-  line-height:1.1;
-}
+    .header .logo__text{
+      line-height:1.1;
+    }
 
-/* якщо десь є обрізання контейнером */
-.header, .header .container{ overflow:visible; }
+    .header, .header .container{ overflow:visible; }
 
-    /* FIX: щоб лого не обрізало */
     .header{ overflow: visible; }
     .logo{ display:flex; align-items:center; gap:10px; }
     .logo__mark{
@@ -179,6 +177,9 @@
       line-height:1.35;
     }
     .note b{ color:#e5e7eb; }
+
+    .hintline{ font-size:.78rem; color:#9ca3af; margin-top:6px; line-height:1.35; }
+    .hintline b{ color:#e5e7eb; }
   </style>
 </head>
 
@@ -241,16 +242,15 @@
       <!-- MENU -->
       <div class="admin-card">
         <div class="stack">
-  <button class="btn btn--primary" id="btnOpenCreate">1) Створити змагання</button>
-  <button class="btn btn--accent"  id="btnOpenEdit">2) Редагувати змагання</button>
+          <button class="btn btn--primary" id="btnOpenCreate">1) Створити змагання</button>
+          <button class="btn btn--accent"  id="btnOpenEdit">2) Редагувати змагання</button>
 
-  <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
-  <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
+          <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
+          <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
 
-  <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування (адмін)</a>
+          <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування (адмін)</a>
 
-  <!-- 6) НОВЕ -->
-  <a class="btn btn--primary" href="admin-accounts.html">6) Акаунт STOLAR CARP</a>
+          <a class="btn btn--primary" href="admin-accounts.html">6) Акаунт STOLAR CARP</a>
         </div>
       </div>
 
@@ -259,8 +259,11 @@
         <div style="font-weight:900; margin-bottom:8px;">Створити змагання</div>
 
         <div class="note">
-          Ти задаєш <b>Старт</b> і <b>Фініш</b>. Реєстрація автоматично:
-          <b>відкриття = Start − 28 днів</b>, <b>закриття = Start − 14 днів</b> (все о <b>12:00 Київ</b>).
+          Старт/Фініш потрібні для таймінгу етапів.
+          Реєстрація за замовчуванням:
+          <b>відкриття = Start − 28 днів</b>, <b>закриття = Start − 14 днів</b> (12:00 Київ).
+          <br>
+          <b>Новинка:</b> для етапів <b>stage-1..stage-N</b> можна вручну задати дату відкриття реєстрації (коли завгодно).
         </div>
 
         <div class="mini-form">
@@ -316,7 +319,6 @@
             <button class="btn btn--primary" id="btnReloadList">Оновити список</button>
           </div>
 
-          <!-- NEW: delete -->
           <button class="btn btn--danger" id="btnDeleteCompetition" style="margin-top:10px;">
             Видалити змагання
           </button>
@@ -342,7 +344,7 @@
   "use strict";
 
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-  const DRAFT_KEY = "sc_admin_create_draft_v4";
+  const DRAFT_KEY = "sc_admin_create_draft_v5_prices_manualopen";
 
   const $ = (id)=>document.getElementById(id);
   const setStatus = (t)=>{ const e=$("adminStatus"); if(e) e.textContent=t; };
@@ -370,6 +372,10 @@
     return s;
   }
 
+  function isStageKey(key){
+    return /^stage-\d+$/i.test(String(key||""));
+  }
+
   // UTC 12:00 щоб не плавало по часових
   function addDays(dateStr, days){
     const [y,m,d] = dateStr.split("-").map(Number);
@@ -387,6 +393,23 @@
     const badge = isFinal
       ? `<span class="badge badge--final">ФІНАЛ</span>`
       : `<span class="badge">${esc(key)}</span>`;
+
+    const showManualOpen = isStageKey(key); // ✅ тільки stage-N, НЕ фінал
+    const manualOpenHtml = showManualOpen ? `
+      <div>
+        <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Відкриття реєстрації (вручну)</div>
+        <input type="date" data-reg-open-manual />
+        <div class="hintline">
+          Якщо порожньо — буде авто: <b>Start − 28 днів</b>.
+        </div>
+      </div>
+    ` : `
+      <div>
+        <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Відкриття реєстрації</div>
+        <input type="date" disabled style="opacity:.6" />
+        <div class="hintline">Для фіналу відкриття лишається авто (від старту).</div>
+      </div>
+    `;
 
     return `
       <div class="win-card" data-ev="${esc(key)}">
@@ -408,7 +431,34 @@
 
         <div class="hr"></div>
 
-        <div class="note" data-preview>Реєстрація: —</div>
+        <!-- ✅ PRICE + PAY -->
+        <div class="grid2">
+          <div>
+            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Внесок (грн)</div>
+            <input type="number" min="0" step="1" inputmode="numeric" data-price placeholder="Напр. 3500" />
+          </div>
+          <div>
+            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Оплата активна</div>
+            <select data-pay-enabled>
+              <option value="yes" selected>Так</option>
+              <option value="no">Ні</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- ✅ MANUAL OPEN (only stages) -->
+        <div class="grid2">
+          ${manualOpenHtml}
+          <div>
+            <div class="muted" style="font-size:.82rem; margin-bottom:6px;">Закриття реєстрації</div>
+            <input type="date" disabled style="opacity:.6" />
+            <div class="hintline">Поки що лишаємо авто: <b>Start − 14 днів</b>.</div>
+          </div>
+        </div>
+
+        <div class="note" data-preview style="margin-top:10px;">Реєстрація: —</div>
       </div>
     `;
   }
@@ -417,9 +467,26 @@
     const res = [];
     container.querySelectorAll("[data-ev]").forEach(card=>{
       const key = card.getAttribute("data-ev");
+
       const startDate  = normDate(card.querySelector("[data-start]")?.value || "");
       const finishDate = normDate(card.querySelector("[data-finish]")?.value || "");
-      res.push({ key, startDate, finishDate });
+
+      const priceRaw = (card.querySelector("[data-price]")?.value || "").trim();
+      const price = priceRaw === "" ? null : Number(priceRaw);
+
+      const payEnabled = (card.querySelector("[data-pay-enabled]")?.value || "yes") === "yes";
+
+      const regOpenManual = normDate(card.querySelector("[data-reg-open-manual]")?.value || "");
+
+      res.push({
+        key,
+        startDate,
+        finishDate,
+        price,
+        currency: "UAH",
+        payEnabled,
+        regOpenManual
+      });
     });
     return res;
   }
@@ -429,31 +496,55 @@
     container.querySelectorAll("[data-ev]").forEach(card=>{
       const key = card.getAttribute("data-ev");
       const e = map.get(key) || {};
+
       const iS = card.querySelector("[data-start]");
       const iF = card.querySelector("[data-finish]");
+      const iP = card.querySelector("[data-price]");
+      const iE = card.querySelector("[data-pay-enabled]");
+      const iM = card.querySelector("[data-reg-open-manual]");
+
       if(iS) iS.value = e.startDate || "";
       if(iF) iF.value = e.finishDate || "";
+
+      if(iP){
+        const p = (e.price === 0 || e.price) ? String(e.price) : "";
+        iP.value = p;
+      }
+      if(iE){
+        iE.value = (e.payEnabled === false) ? "no" : "yes";
+      }
+      if(iM){
+        iM.value = e.regOpenManual || "";
+      }
     });
     refreshPreviews(container);
   }
 
   function refreshPreviews(container){
     container.querySelectorAll("[data-ev]").forEach(card=>{
+      const key = card.getAttribute("data-ev");
       const start = normDate(card.querySelector("[data-start]")?.value || "");
+      const manualOpen = normDate(card.querySelector("[data-reg-open-manual]")?.value || "");
       const prev  = card.querySelector("[data-preview]");
       if(!prev) return;
+
       if(!start){
         prev.textContent = "Реєстрація: —";
         return;
       }
-      const o = regOpenFromStart(start);
-      const c = regCloseFromStart(start);
+
+      const oAuto = regOpenFromStart(start);
+      const cAuto = regCloseFromStart(start);
+
+      const o = (isStageKey(key) && manualOpen) ? manualOpen : oAuto;
+      const c = cAuto;
+
       prev.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b> (12:00 Київ)`;
     });
   }
 
   function hookPreviewAndDraft(container, onChange){
-    container.querySelectorAll("input[type=date]").forEach(inp=>{
+    container.querySelectorAll("input, select").forEach(inp=>{
       inp.addEventListener("change", ()=>{
         refreshPreviews(container);
         onChange && onChange();
@@ -479,7 +570,6 @@
     }
     container.innerHTML = blocks.join("");
 
-    // повертаємо введені дати назад
     if(prev.length) fillEventsInto(container, prev);
     refreshPreviews(container);
   }
@@ -531,7 +621,6 @@
   let auth=null, db=null;
 
   async function init(){
-    // Firebase init
     try{
       await waitForFirebase();
       auth = window.scAuth;
@@ -543,27 +632,16 @@
       return;
     }
 
-    // кнопки логіну
     $("btnAdminLogin").onclick = async ()=>{
       const email = ($("admEmail").value || "").trim();
       const pass  = ($("admPass").value || "").trim();
       const msg   = $("adminLoginMsg");
       if(!email || !pass){ msg.textContent="Введи email і пароль."; return; }
       msg.textContent="Вхід…";
-      try{
-        await auth.signInWithEmailAndPassword(email, pass);
-      }catch(e){
-        msg.textContent = e?.message || "Помилка входу";
-      }
+      try{ await auth.signInWithEmailAndPassword(email, pass); }
+      catch(e){ msg.textContent = e?.message || "Помилка входу"; }
     };
 
-    // !!! КНОПКИ "ВИЙТИ" НЕМА — тому не вішаємо onclick, щоб не було крашу
-    const btnLogout = $("btnAdminLogout");
-    if(btnLogout){
-      btnLogout.onclick = async ()=>{ try{ await auth.signOut(); }catch{} };
-    }
-
-    // create ui build
     const syncCreateUI = ()=>{
       const type = $("inpType").value;
       const seasonOnly = $("seasonOnly");
@@ -587,10 +665,8 @@
     $("inpStagesCount").onchange = syncCreateUI;
     $("inpHasFinal").onchange = syncCreateUI;
 
-    // перший рендер
     syncCreateUI();
 
-    // restore draft (антизліт)
     const draft = getDraft();
     if(draft){
       applyCreateState(draft);
@@ -610,7 +686,6 @@
       $("createMsg").innerHTML = `<span class="ok">✅ Чернетку скинуто</span>`;
     };
 
-    // modules
     $("btnOpenCreate").onclick = ()=> openModule("create");
     $("btnOpenEdit").onclick = async ()=>{
       openModule("edit");
@@ -642,21 +717,32 @@
         const hasFinal = (type==="season") ? ($("inpHasFinal").value === "yes") : false;
 
         const eventsRaw = readEventsFrom($("eventWindowsWrap"));
-        // валідація дат
         eventsRaw.forEach(ev=>{
           if(ev.startDate && !ev.finishDate) throw new Error(`Заповни фініш для ${ev.key}.`);
           if(!ev.startDate && ev.finishDate) throw new Error(`Заповни старт для ${ev.key}.`);
+          if(ev.price !== null && (!Number.isFinite(ev.price) || ev.price < 0)) throw new Error(`Некоректна ціна для ${ev.key}.`);
         });
 
         const events = eventsRaw.map(ev=>{
-          const regOpenDate  = ev.startDate ? regOpenFromStart(ev.startDate) : "";
-          const regCloseDate = ev.startDate ? regCloseFromStart(ev.startDate) : "";
+          const regOpenAuto  = ev.startDate ? regOpenFromStart(ev.startDate) : "";
+          const regCloseAuto = ev.startDate ? regCloseFromStart(ev.startDate) : "";
+
+          const regOpenDate = (isStageKey(ev.key) && ev.regOpenManual) ? ev.regOpenManual : regOpenAuto;
+
           return {
             key: ev.key,
             startDate: ev.startDate || "",
             finishDate: ev.finishDate || "",
             regOpenDate,
-            regCloseDate
+            regCloseDate: regCloseAuto,
+
+            // ✅ price/payment
+            price: (ev.price === null ? null : Number(ev.price)),
+            currency: "UAH",
+            payEnabled: !!ev.payEnabled,
+
+            // ✅ keep manual in doc (щоб редагування зберігалось)
+            regOpenManual: (isStageKey(ev.key) ? (ev.regOpenManual || "") : "")
           };
         });
 
@@ -669,7 +755,6 @@
           name,
           stagesCount,
           hasFinal,
-          // головне
           events,
           updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
           createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
@@ -677,7 +762,7 @@
 
         await db.collection("competitions").doc(compId).set(data, { merge:true });
 
-        setDraft(collectCreateState()); // щоб точно не злітало
+        setDraft(collectCreateState());
         msg.innerHTML = `<span class="ok">✅ Збережено:</span> ${esc(compId)}`;
       }catch(e){
         msg.innerHTML = `<span class="err">❌</span> ${esc(e.message || String(e))}`;
@@ -724,12 +809,28 @@
         eventsRaw.forEach(ev=>{
           if(ev.startDate && !ev.finishDate) throw new Error(`Заповни фініш для ${ev.key}.`);
           if(!ev.startDate && ev.finishDate) throw new Error(`Заповни старт для ${ev.key}.`);
+          if(ev.price !== null && (!Number.isFinite(ev.price) || ev.price < 0)) throw new Error(`Некоректна ціна для ${ev.key}.`);
         });
 
         const events = eventsRaw.map(ev=>{
-          const regOpenDate  = ev.startDate ? regOpenFromStart(ev.startDate) : "";
-          const regCloseDate = ev.startDate ? regCloseFromStart(ev.startDate) : "";
-          return { key: ev.key, startDate: ev.startDate||"", finishDate: ev.finishDate||"", regOpenDate, regCloseDate };
+          const regOpenAuto  = ev.startDate ? regOpenFromStart(ev.startDate) : "";
+          const regCloseAuto = ev.startDate ? regCloseFromStart(ev.startDate) : "";
+
+          const regOpenDate = (isStageKey(ev.key) && ev.regOpenManual) ? ev.regOpenManual : regOpenAuto;
+
+          return {
+            key: ev.key,
+            startDate: ev.startDate || "",
+            finishDate: ev.finishDate || "",
+            regOpenDate,
+            regCloseDate: regCloseAuto,
+
+            price: (ev.price === null ? null : Number(ev.price)),
+            currency: "UAH",
+            payEnabled: !!ev.payEnabled,
+
+            regOpenManual: (isStageKey(ev.key) ? (ev.regOpenManual || "") : "")
+          };
         });
 
         await db.collection("competitions").doc(compId).set({
@@ -771,7 +872,6 @@
 
         msg.textContent = "Видаляю…";
 
-        // якщо активне — прибираємо активність
         try{
           const s = await db.collection("settings").doc("app").get();
           const activeId = s.exists ? ((s.data()||{}).activeCompetitionId || "") : "";
@@ -783,11 +883,9 @@
           }
         }catch(_){}
 
-        // best-effort: чистимо registrations, якщо є такі поля
         try{ await deleteQueryInBatches(db.collection("registrations").where("competitionId","==",compId)); }catch(_){}
         try{ await deleteQueryInBatches(db.collection("registrations").where("seasonId","==",compId)); }catch(_){}
 
-        // видаляємо competition
         await db.collection("competitions").doc(compId).delete();
 
         msg.innerHTML = `<span class="ok">✅</span> Видалено: ${esc(compId)}`;
@@ -797,7 +895,6 @@
       }
     };
 
-    // загрузка списку і редактора
     async function loadCompetitionsToSelect(){
       const sel = $("selCompetition");
       const editor = $("editWindowsWrap");
@@ -853,7 +950,6 @@
       hookPreviewAndDraft(editor, null);
     }
 
-    // AUTH STATE
     auth.onAuthStateChanged((user)=>{
       if(!user){
         setStatus("Потрібен вхід");
@@ -879,7 +975,6 @@
     });
   }
 
-  // ловимо будь-який краш (щоб не було “вічний запуск”)
   window.addEventListener("error", (e)=>{
     setStatus("Помилка JS ❌");
     setDebug(e?.message || "Помилка");

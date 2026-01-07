@@ -91,7 +91,6 @@
       `;
     }
 
-    // Основний список (1..maxTeams)
     if(main.length){
       list.innerHTML += `<div class="muted" style="margin-bottom:10px;">Учасники: ${main.length} / ${maxTeams}</div>`;
       list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
@@ -100,7 +99,6 @@
       return;
     }
 
-    // Резерв
     if(reserve.length){
       list.innerHTML += `<div class="muted" style="margin:14px 0 10px;">Резерв: ${reserve.length}</div>`;
       list.innerHTML += reserve.map((r,i)=>rowHtml(maxTeams + i + 1, r)).join("");
@@ -129,23 +127,47 @@
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";
 
-      // ✅ ЧИТАЄМО ТІЛЬКИ ПУБЛІЧНУ КОЛЕКЦІЮ (без телефонів/капітанів)
-      const snap = await db.collection("registrations_public")
+      // ✅ ЧИТАЄМО public_participants (як в правилах)
+      // stageId може бути "main" або null (старі записи могли мати null)
+      const rowsMap = new Map();
+
+      // 1) stageId == stageId
+      const snap1 = await db.collection("public_participants")
         .where("competitionId","==",compId)
         .where("stageId","==",stageId)
         .where("entryType","==","team")
         .get();
 
-      const rows = [];
-      snap.forEach(doc=>{
+      snap1.forEach(doc=>{
         const r = doc.data() || {};
-        rows.push({
-          teamName: norm(r.teamName || "—"),
+        const teamName = norm(r.teamName || "—");
+        rowsMap.set(doc.id, {
+          teamName,
           status: norm(r.status || "pending_payment")
         });
       });
 
-      // сортування: оплачені вгорі + алфавіт
+      // 2) якщо stageId == "main" — добираємо ще stageId == null
+      if(String(stageId) === "main"){
+        const snap2 = await db.collection("public_participants")
+          .where("competitionId","==",compId)
+          .where("stageId","==",null)
+          .where("entryType","==","team")
+          .get();
+
+        snap2.forEach(doc=>{
+          if(rowsMap.has(doc.id)) return;
+          const r = doc.data() || {};
+          const teamName = norm(r.teamName || "—");
+          rowsMap.set(doc.id, {
+            teamName,
+            status: norm(r.status || "pending_payment")
+          });
+        });
+      }
+
+      const rows = Array.from(rowsMap.values());
+
       rows.sort((a,b)=>{
         const ap = isPaidStatus(a.status);
         const bp = isPaidStatus(b.status);

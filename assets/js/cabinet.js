@@ -35,9 +35,14 @@
 
   const membersEl      = document.getElementById("membersContainer");
 
+  // ✅ МОЯ УЧАСТЬ (якщо ці блоки існують у cabinet.html)
+  const myPartListEl   = document.getElementById("myParticipationList");
+  const myPartMsgEl    = document.getElementById("myParticipationMsg");
+
   let unsubUser = null;
   let unsubTeam = null;
   let unsubMembers = null;
+  let unsubRegs = null;
 
   function setStatus(t){ if (statusEl) statusEl.textContent = t || ""; }
   function showContent(){ if (contentEl) contentEl.style.display = "block"; }
@@ -72,7 +77,8 @@
     if (typeof unsubUser === "function") unsubUser();
     if (typeof unsubTeam === "function") unsubTeam();
     if (typeof unsubMembers === "function") unsubMembers();
-    unsubUser = unsubTeam = unsubMembers = null;
+    if (typeof unsubRegs === "function") unsubRegs();
+    unsubUser = unsubTeam = unsubMembers = unsubRegs = null;
   }
 
   function renderMembers(list){
@@ -96,6 +102,120 @@
         <div class="form__hint">${escapeHtml(role)}</div>
       `;
       membersEl.appendChild(row);
+    });
+  }
+
+  // ===== МОЯ УЧАСТЬ =====
+  function isPaidStatus(status){
+    const s = String(status || "").trim().toLowerCase();
+    return s === "confirmed" || s === "paid";
+  }
+
+  function renderMyParticipation(regs){
+    if (!myPartListEl) return; // ✅ якщо блоку нема — нічого не робимо
+
+    myPartListEl.innerHTML = "";
+
+    if (!regs || regs.length === 0){
+      myPartListEl.innerHTML = `<div class="form__hint">Команда ще не подавала заявки на змагання.</div>`;
+      if (myPartMsgEl) myPartMsgEl.textContent = "";
+      return;
+    }
+
+    regs.forEach((r) => {
+      const compId  = r.competitionId || r.competition || "";
+      const stageId = r.stageId || r.activeStageId || "main";
+
+      const title = r.competitionTitle || r.competitionName || r.eventTitle || "";
+      const teamName = r.teamName || "Команда";
+      const st = r.status || "—";
+      const paid = isPaidStatus(st);
+
+      const row = document.createElement("div");
+      row.className = "card";
+      row.style.padding = "12px";
+      row.style.marginTop = "10px";
+
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="min-width:180px">
+            <div style="font-weight:900">${escapeHtml(title || "Змагання")}</div>
+            <div class="form__hint">${escapeHtml(teamName)} · stage: ${escapeHtml(stageId)}</div>
+            <div class="form__hint" style="display:flex;align-items:center;gap:8px">
+              <span style="display:inline-block;width:10px;height:10px;border-radius:999px;${paid ? "background:#22c55e" : "background:#ef4444"}"></span>
+              <span>${paid ? "Оплачено" : "Очікує оплату"} (${escapeHtml(st)})</span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center">
+            <a class="btn btn--primary" href="participation.html?comp=${encodeURIComponent(compId)}&stage=${encodeURIComponent(stageId)}">
+              Команди
+            </a>
+          </div>
+        </div>
+      `;
+
+      myPartListEl.appendChild(row);
+    });
+
+    if (myPartMsgEl) myPartMsgEl.textContent = "";
+  }
+
+  function subscribeMyParticipation(db, teamId, uid){
+    if (typeof unsubRegs === "function") { unsubRegs(); unsubRegs = null; }
+
+    if (!myPartListEl) return; // ✅ якщо блоку нема — не підписуємось
+    if (!teamId && !uid){
+      renderMyParticipation([]);
+      return;
+    }
+
+    if (myPartMsgEl) myPartMsgEl.textContent = "Завантаження «Моя участь»…";
+
+    // ✅ Показуємо всі заявки команди (або юзера як fallback)
+    let q = null;
+    if (teamId){
+      q = db.collection("registrations").where("teamId", "==", teamId);
+    } else {
+      q = db.collection("registrations").where("uid", "==", uid);
+    }
+
+    unsubRegs = q.onSnapshot((qs) => {
+      const regs = [];
+      qs.forEach(d => regs.push({ id:d.id, ...(d.data() || {}) }));
+
+      // ✅ прибираємо дублікати по competitionId+stageId (щоб "скільки змагань — стільки рядків")
+      const map = Object.create(null);
+      regs.forEach(r=>{
+        const k = `${r.competitionId || r.competition || ""}||${r.stageId || "main"}`;
+        if (!k || k === "||main") return;
+        // якщо є кілька — залишимо той, що "кращий" (paid перемагає)
+        if (!map[k]) map[k] = r;
+        else {
+          const a = map[k];
+          const ap = isPaidStatus(a.status);
+          const bp = isPaidStatus(r.status);
+          if (!ap && bp) map[k] = r;
+        }
+      });
+
+      const uniq = Object.values(map);
+
+      // ✅ стабільне сортування: оплачені вгорі, далі за назвою
+      uniq.sort((a,b)=>{
+        const ap = isPaidStatus(a.status);
+        const bp = isPaidStatus(b.status);
+        if (ap !== bp) return ap ? -1 : 1;
+        const at = String(a.competitionTitle || a.competitionName || a.eventTitle || a.competitionId || "");
+        const bt = String(b.competitionTitle || b.competitionName || b.eventTitle || b.competitionId || "");
+        return at.localeCompare(bt, "uk");
+      });
+
+      renderMyParticipation(uniq);
+    }, (err)=>{
+      console.warn(err);
+      if (myPartMsgEl) myPartMsgEl.textContent = "Не вдалося завантажити «Моя участь».";
+      if (myPartListEl) myPartListEl.innerHTML = `<div class="form__hint">Не вдалося завантажити список змагань.</div>`;
     });
   }
 
@@ -154,6 +274,9 @@
       if (typeof unsubTeam === "function") { unsubTeam(); unsubTeam = null; }
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
+
+      // ✅ МОЯ УЧАСТЬ: підписка на registrations (не ламає, якщо блоків нема)
+      subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");
       showContent();

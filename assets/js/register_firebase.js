@@ -5,6 +5,7 @@
 // ✅ FAST: render competitions instantly from localStorage cache, then refresh in background
 // ✅ Parallel loads: profile + competitions
 // ✅ No undefined fields (uses null)
+// ✅ PUBLIC mirror: writes safe fields to public_participants (teamName + status + ids)
 
 (function () {
   const auth = window.scAuth;
@@ -32,7 +33,7 @@
 
   // ======= PERF CACHE =======
   const COMP_CACHE_KEY = "sc_competitions_cache_v1";
-  const COMP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 хв (достатньо, щоб відчувалось швидко)
+  const COMP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 хв
 
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
   const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 год
@@ -244,7 +245,6 @@
   }
 
   function hydrateItemFromCache(it) {
-    // Дати повертаємо як строки/Date-обʼєкти по потребі (openWindow працює зі строками ок)
     return {
       ...it,
       startAt: toDateMaybe(it.startAt),
@@ -259,8 +259,6 @@
       const obj = JSON.parse(raw);
       if (!obj || !Array.isArray(obj.items) || !obj.ts) return false;
 
-      // навіть якщо протермінований — все одно малюємо одразу (перцептивно швидко),
-      // а потім перезавантажимо з Firestore
       const items = obj.items.map(hydrateItemFromCache);
 
       lastItems = items;
@@ -268,7 +266,6 @@
       renderItems(items);
       refreshSubmitState();
 
-      // легка підказка (можеш прибрати)
       if (eventOptionsEl) {
         const hint = document.createElement("div");
         hint.className = "form__hint";
@@ -375,13 +372,11 @@
         return ad - bd;
       });
 
-      // оновлюємо UI
       lastItems = items;
       calcNearestUpcoming(items);
       renderItems(items);
       refreshSubmitState();
 
-      // кешуємо
       saveCompetitionsToCache(items);
     } catch (e) {
       console.error("loadCompetitionsFresh error:", e);
@@ -446,12 +441,11 @@
     if (e.target.name === "stagePick" || e.target.id === "rules") refreshSubmitState();
   });
 
-  // 1) ПЕРШЕ — показуємо кешований список одразу (миттєво)
+  // 1) ПЕРШЕ — кешований список одразу
   if (eventOptionsEl) eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
   tryRenderCompetitionsFromCache();
 
-  // 2) Далі — фоном тягнемо актуальний список (і перерендер)
-  // щоб не “красти” перший рендер — штовхаємо в micro-delay
+  // 2) Далі — актуальний список
   setTimeout(() => { loadCompetitionsFresh(); }, 50);
 
   auth.onAuthStateChanged(async (user) => {
@@ -469,7 +463,6 @@
     }
 
     try {
-      // профіль важливий тільки для відправки, тому вантажимо окремо
       await loadProfile(user);
       refreshSubmitState();
     } catch (e) {
@@ -485,9 +478,10 @@
     return `${competitionId}__${st}__team__${profile.teamId}`;
   }
 
-  // ✅ PUBLIC mirror docId та payload (тільки безпечні поля)
-  function buildPublicPayload({ competitionId, stageId, entryType, teamId, teamName, status }) {
+  // ✅ PUBLIC mirror payload (тільки безпечні поля)
+  function buildPublicPayload({ uid, competitionId, stageId, entryType, teamId, teamName, status }) {
     return {
+      uid: uid || null,
       competitionId,
       stageId: stageId || null,
       entryType: entryType || "team",
@@ -593,14 +587,15 @@
         setLoading(true);
         setMsg("");
 
-        // Anti-duplicate: 1-й раз create, 2-й раз => update (заборонено rules) => permission-denied
+        // Anti-duplicate
         await ref.set(payload, { merge: false });
 
-        // ✅ ДУБЛЬ у public-колекцію: тільки teamName + status (+ ids)
-        // (ніяких phone/captain тут немає)
+        // ✅ Публічне дзеркало (безпечні поля) -> public_participants
+        // docId беремо той самий, що й у registrations (узгоджено з твоїми rules)
         try {
-          const pubRef = db.collection("registrations_public").doc(docId);
+          const pubRef = db.collection("public_participants").doc(docId);
           const pubPayload = buildPublicPayload({
+            uid: profile.uid,
             competitionId,
             stageId,
             entryType,
@@ -610,8 +605,7 @@
           });
           await pubRef.set(pubPayload, { merge: false });
         } catch (e) {
-          // якщо public-дзеркало не записалось — основна заявка вже є, не ламаємо UX
-          console.warn("registrations_public write failed:", e);
+          console.warn("public_participants write failed:", e);
         }
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);

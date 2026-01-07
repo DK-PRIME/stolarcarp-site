@@ -139,26 +139,26 @@
       return;
     }
 
-    // 2) Підписка тільки на TEAM-заявки цієї команди (щоб НЕ ловити permission-denied)
+    // 2) Підписка на public_participants (public read) — без permission-denied
     if (typeof unsub === "function") { unsub(); unsub = null; }
 
     showMuted("Завантаження участі…");
 
-    unsub = db.collection("registrations")
+    unsub = db.collection("public_participants")
       .where("teamId", "==", teamId)
       .where("entryType", "==", "team")
       .onSnapshot(async (qs) => {
-        const regs = [];
-        qs.forEach(d => regs.push({ id: d.id, ...(d.data() || {}) }));
+        const rows = [];
+        qs.forEach(d => rows.push({ id: d.id, ...(d.data() || {}) }));
 
-        if (!regs.length) {
+        if (!rows.length) {
           showMuted("Команда ще не подавала заявки на змагання");
           return;
         }
 
         // 3) унікальні по competitionId+stageId (залишаємо "кращий": confirmed перемагає)
         const map = Object.create(null);
-        regs.forEach(r => {
+        rows.forEach(r => {
           const compId = norm(r.competitionId);
           const stageId = norm(r.stageId) || "main";
           if (!compId) return;
@@ -175,16 +175,17 @@
 
         const uniq = Object.values(map);
 
-        // 4) підтягнемо красиві назви з competitions (без compId на екрані)
+        // 4) підтягнемо красиві назви з competitions
         for (const it of uniq) {
           const compId = norm(it.competitionId);
           const stageId = norm(it.stageId) || "main";
           const meta = await getCompetitionMeta(compId, stageId);
-          it.compTitle = meta.compTitle || it.competitionTitle || it.competitionName || "Змагання";
+
+          it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || "Змагання";
           it.stageTitle = meta.stageTitle || it.stageName || "";
-          it.teamName = it.teamName || u.teamName || "";
-          it.updatedAt = it.updatedAt || it.confirmedAt || it.createdAt || null;
-          it.stageId = stageId;
+          it.teamName   = it.teamName || u.teamName || "";
+          it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
+          it.stageId    = stageId;
         }
 
         // 5) сортування: оплачені зверху, далі за датою (новіші зверху)

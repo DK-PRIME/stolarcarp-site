@@ -485,6 +485,19 @@
     return `${competitionId}__${st}__team__${profile.teamId}`;
   }
 
+  // ✅ PUBLIC mirror docId та payload (тільки безпечні поля)
+  function buildPublicPayload({ competitionId, stageId, entryType, teamId, teamName, status }) {
+    return {
+      competitionId,
+      stageId: stageId || null,
+      entryType: entryType || "team",
+      teamId: teamId || null,
+      teamName: teamName || null,
+      status: status || "pending_payment",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+  }
+
   if (form) {
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -582,6 +595,24 @@
 
         // Anti-duplicate: 1-й раз create, 2-й раз => update (заборонено rules) => permission-denied
         await ref.set(payload, { merge: false });
+
+        // ✅ ДУБЛЬ у public-колекцію: тільки teamName + status (+ ids)
+        // (ніяких phone/captain тут немає)
+        try {
+          const pubRef = db.collection("registrations_public").doc(docId);
+          const pubPayload = buildPublicPayload({
+            competitionId,
+            stageId,
+            entryType,
+            teamId: (entryType === "team") ? profile.teamId : null,
+            teamName: (entryType === "team") ? profile.teamName : null,
+            status: "pending_payment"
+          });
+          await pubRef.set(pubPayload, { merge: false });
+        } catch (e) {
+          // якщо public-дзеркало не записалось — основна заявка вже є, не ламаємо UX
+          console.warn("registrations_public write failed:", e);
+        }
 
         setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
         form.reset();

@@ -4,6 +4,7 @@
 // ✅ After CONFIRM: hide confirmed from list (doesn't delete)
 // ✅ After finishAt + 24h: hide ALL registrations for that stage/event
 // ✅ Archive uses fresh doc + removes undefined recursively to avoid Firestore errors
+// ✅ MIRROR: confirm/cancel/delete синхронить public_participants (щоб participation.html бачив оплату)
 
 (function () {
   const auth = window.scAuth;
@@ -86,6 +87,8 @@
     return new Date();
   }
 
+  function norm(v) { return String(v ?? "").trim(); }
+
   let currentUser = null;
   let isAdminByRules = false;
   let isAdminByRole = false;
@@ -119,8 +122,7 @@
           const key = `${compId}||${stageId}`;
           stageNameByKey.set(key, `${brand} · ${compTitle} — ${stageTitle}`);
 
-          const endRaw =
-            ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
+          const endRaw = ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
           stageEndAtByKey.set(key, toDateMaybe(endRaw));
         });
       } else {
@@ -128,8 +130,7 @@
         const key = `${compId}||`;
         stageNameByKey.set(key, `${brand} · ${compTitle}`);
 
-        const endRaw =
-          c.endAt || c.endDate || c.finishAt || c.finishDate || null;
+        const endRaw = c.endAt || c.endDate || c.finishAt || c.finishDate || null;
         stageEndAtByKey.set(key, toDateMaybe(endRaw));
       }
     });
@@ -147,7 +148,7 @@
   function isFinishedAndExpired(r) {
     const key = getStageKeyFromReg(r);
     const endAt = stageEndAtByKey.get(key) || null;
-    if (!endAt) return false; // якщо нема endAt — не ховаємо (щоб не зламати)
+    if (!endAt) return false; // якщо нема endAt — не ховаємо
     return now().getTime() > (endAt.getTime() + GRACE_MS);
   }
 
@@ -174,7 +175,7 @@
       s === "cancelled" ? "Скасовано" :
       s;
 
-    const style =
+    const style = 
       s === "confirmed" ? "background:rgba(124,255,178,.12);border-color:rgba(124,255,178,.35);" :
       s === "pending_payment" ? "background:rgba(255,204,0,.10);border-color:rgba(255,204,0,.35);" :
       "background:rgba(255,108,108,.10);border-color:rgba(255,108,108,.35);";
@@ -189,6 +190,11 @@
     }
     return true;
   }
+
+  // ✅ mirror helper: синхронізує public_participants
+  // ВАЖЛИВО: docId public_participants == docId registrations (r._id)
+  function pubRefFor(id){ return db.collection("public_participants").doc(String(id)); }
+  function regRefFor(id){ return db.collection("registrations").doc(String(id)); }
 
   function render(regs) {
     if (!listEl) return;
@@ -244,8 +250,8 @@
         </div>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-          <button class="btn btn--primary" data-act="confirm" ${r.status === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
-          <button class="btn btn--ghost" data-act="cancel" ${r.status === "cancelled" ? "disabled" : ""}>Скасувати</button>
+          <button class="btn btn--primary" data-act="confirm" ${String(r.status) === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
+          <button class="btn btn--ghost" data-act="cancel" ${String(r.status) === "cancelled" ? "disabled" : ""}>Скасувати</button>
           <button class="btn btn--danger" data-act="delete">Видалити заявку</button>
         </div>
       `;
@@ -254,42 +260,69 @@
       const btnCancel  = card.querySelector('[data-act="cancel"]');
       const btnDelete  = card.querySelector('[data-act="delete"]');
 
+      // ✅ CONFIRM + MIRROR public_participants
       btnConfirm?.addEventListener("click", async () => {
         if (!ensureAdmin()) return;
         if (!confirm(`Підтвердити оплату для "${titleMain}"?`)) return;
 
         try {
           setMsg("Підтверджую...", true);
-          await db.collection("registrations").doc(r._id).update({
+
+          const ts = firebase.firestore.FieldValue.serverTimestamp();
+          const batch = db.batch();
+
+          batch.set(regRefFor(r._id), {
             status: "confirmed",
-            confirmedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            confirmedAt: ts,
             confirmedBy: currentUser.uid
-          });
-          setMsg("Оплату підтверджено ✅ (заявка схована зі списку)", true);
-          // після оновлення snapshot перерендериться і підтверджена пропаде автоматом
+          }, { merge:true });
+
+          batch.set(pubRefFor(r._id), {
+            status: "confirmed",
+            confirmedAt: ts,
+            confirmedBy: currentUser.uid
+          }, { merge:true });
+
+          await batch.commit();
+
+          setMsg("Оплату підтверджено ✅ (і в public_participants теж)", true);
         } catch (e) {
           showError("Помилка підтвердження", e);
         }
       });
 
+      // ✅ CANCEL + MIRROR public_participants
       btnCancel?.addEventListener("click", async () => {
         if (!ensureAdmin()) return;
         if (!confirm(`Скасувати заявку "${titleMain}"?`)) return;
 
         try {
           setMsg("Скасовую...", true);
-          await db.collection("registrations").doc(r._id).update({
+
+          const ts = firebase.firestore.FieldValue.serverTimestamp();
+          const batch = db.batch();
+
+          batch.set(regRefFor(r._id), {
             status: "cancelled",
-            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+            cancelledAt: ts,
             cancelledBy: currentUser.uid
-          });
-          setMsg("Заявку скасовано ✅", true);
+          }, { merge:true });
+
+          batch.set(pubRefFor(r._id), {
+            status: "cancelled",
+            cancelledAt: ts,
+            cancelledBy: currentUser.uid
+          }, { merge:true });
+
+          await batch.commit();
+
+          setMsg("Заявку скасовано ✅ (і в public_participants теж)", true);
         } catch (e) {
           showError("Помилка скасування", e);
         }
       });
 
-      // ✅ DELETE (archive -> delete) через fresh read + stripUndefinedDeep
+      // ✅ DELETE (archive -> delete) + delete public_participants
       btnDelete?.addEventListener("click", async () => {
         if (!ensureAdmin()) return;
 
@@ -304,7 +337,8 @@
         try {
           setMsg("Видаляю...", true);
 
-          const regRef = db.collection("registrations").doc(r._id);
+          const regRef = regRefFor(r._id);
+          const pubRef = pubRefFor(r._id);
 
           const freshSnap = await regRef.get();
           if (!freshSnap.exists) {
@@ -327,9 +361,11 @@
           );
 
           batch.delete(regRef);
+          // ✅ прибираємо з public_participants, щоб не світилась участь
+          batch.delete(pubRef);
 
           await batch.commit();
-          setMsg("Заявку видалено ✅ (копія збережена)", true);
+          setMsg("Заявку видалено ✅ (і public_participants теж очищено)", true);
         } catch (e) {
           showError("Помилка видалення", e);
         }
@@ -343,19 +379,13 @@
   let allRegs = [];
 
   function applyFiltersAndRender() {
-    // статус-фільтр:
-    // - якщо "confirmed" => показуємо тільки confirmed
-    // - якщо "all" => показуємо ВСІ, але confirmed ХОВАЄМО (щоб не заважали)
-    // - інакше => показуємо тільки обраний статус
     const sfRaw = (statusFilter?.value || "all");
     const sf = String(sfRaw || "all").toLowerCase();
 
     const q = (qInput?.value || "").trim().toLowerCase();
 
     const filtered = allRegs
-      // 1) ховаємо завершені етапи (finish + 24h)
       .filter((r) => !isFinishedAndExpired(r))
-      // 2) статуси
       .filter((r) => {
         const st = String(r.status || "").toLowerCase();
 
@@ -366,10 +396,8 @@
           return st !== "confirmed";
         }
 
-        // pending_payment / cancelled / etc.
         return st === sf;
       })
-      // 3) пошук
       .filter((r) => matchQuery(r, q));
 
     render(filtered);

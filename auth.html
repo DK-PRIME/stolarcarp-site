@@ -72,6 +72,7 @@
       color:#e5e7eb; font-size:.95rem;
     }
     .hint{ font-size:.85rem; color:#9ca3af; }
+    .hint a{ color:#facc15; font-weight:800; text-decoration:none; }
 
     .hidden{ display:none; }
 
@@ -170,6 +171,12 @@
           <button class="btn btn--accent" id="loginBtn" type="submit">Увійти</button>
           <a class="btn btn--primary" href="index.html">На головну</a>
         </div>
+
+        <!-- ✅ NEW: forgot password -->
+        <div class="hint" style="margin-top:6px;">
+          <a href="#" id="btnForgotPass">Забули пароль?</a>
+        </div>
+        <div class="msg" id="forgotMsg"></div>
 
         <div class="msg" id="loginMsg"></div>
       </form>

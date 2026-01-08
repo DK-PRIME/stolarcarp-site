@@ -1,10 +1,11 @@
-// assets/js/auth.js (NO Firebase)
+// assets/js/auth.js
+// STOLAR CARP • Auth (Firebase compat 10.12.2)
+// ✅ Email/Password
+// ✅ Captain creates team / Member joins by joinCode
+// ✅ NO email verification flow (як було раніше)
+
 (function () {
   const $ = (id) => document.getElementById(id);
-
-  const LS_USERS = "sc_users_v1";      // база користувачів (локально)
-  const LS_TEAMS = "sc_teams_v1";      // база команд (локально)
-  const LS_SESSION = "sc_session_v1";  // сесія (пам'ятає вхід)
 
   function setMsg(el, text, type) {
     if (!el) return;
@@ -13,12 +14,13 @@
     if (type) el.classList.add(type);
   }
 
-  function loadJSON(key, fallback) {
-    try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; }
-    catch { return fallback; }
-  }
-  function saveJSON(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+  async function waitFirebase(maxMs = 12000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      if (window.scAuth && window.scDb && window.firebase) return;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір firebase-init.js і підключення SDK.");
   }
 
   function genJoinCode(len = 6) {
@@ -28,45 +30,100 @@
     return out;
   }
 
-  function hashPass(p) {
-    // простий хеш (НЕ для реальної безпеки, але щоб не зберігати пароль відкрито)
-    let h = 0;
-    for (let i = 0; i < p.length; i++) h = (h * 31 + p.charCodeAt(i)) >>> 0;
-    return String(h);
+  async function createTeam(db, name, ownerUid) {
+    for (let i = 0; i < 10; i++) {
+      const joinCode = genJoinCode(6);
+      const exists = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
+      if (!exists.empty) continue;
+
+      const ref = await db.collection("teams").add({
+        name: name || "Команда",
+        ownerUid,
+        joinCode,
+        createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      return { teamId: ref.id, joinCode };
+    }
+    throw new Error("Не вдалося згенерувати унікальний joinCode. Спробуй ще раз.");
+  }
+
+  async function findTeamByJoinCode(db, code) {
+    const c = String(code || "").trim().toUpperCase();
+    const snap = await db.collection("teams").where("joinCode", "==", c).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return { teamId: doc.id, ...doc.data() };
+  }
+
+  async function ensureUserDoc(db, uid, data) {
+    const ref = db.collection("users").doc(uid);
+    const snap = await ref.get();
+
+    const base = {
+      fullName: data.fullName || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      city: data.city || "",
+      role: data.role || "member",
+      teamId: data.teamId || null,
+      avatarUrl: "",
+      createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    if (!snap.exists) {
+      await ref.set(base, { merge: true });
+      return;
+    }
+
+    const cur = snap.data() || {};
+    const patch = {};
+    if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
+    if (!cur.email && base.email) patch.email = base.email;
+    if (!cur.phone && base.phone) patch.phone = base.phone;
+    if (!cur.city && base.city) patch.city = base.city;
+    if (cur.teamId == null && base.teamId) patch.teamId = base.teamId;
+    if (!cur.role && base.role) patch.role = base.role;
+
+    if (Object.keys(patch).length) {
+      patch.updatedAt = window.firebase.firestore.FieldValue.serverTimestamp();
+      await ref.set(patch, { merge: true });
+    }
+  }
+
+  async function setUserTeamAndRole(db, uid, teamId, role) {
+    await db.collection("users").doc(uid).set({
+      teamId: teamId || null,
+      role: role || "member",
+      updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
   }
 
   function goCabinet() { location.href = "cabinet.html"; }
 
-  function getUsers(){ return loadJSON(LS_USERS, {}); } // email -> user
-  function setUsers(v){ saveJSON(LS_USERS, v); }
-
-  function getTeams(){ return loadJSON(LS_TEAMS, {}); } // teamId -> team
-  function setTeams(v){ saveJSON(LS_TEAMS, v); }
-
-  function setSession(email){
-    saveJSON(LS_SESSION, { email, ts: Date.now() });
-  }
-  function getSession(){
-    return loadJSON(LS_SESSION, null);
-  }
-
-  // ====== SIGNUP ======
+  // ====== UI ======
   const signupForm = $("signupForm");
+  const loginForm  = $("loginForm");
   const signupMsg  = $("signupMsg");
+  const loginMsg   = $("loginMsg");
 
-  async function onSignup(e){
+  async function onSignup(e) {
     e.preventDefault();
     setMsg(signupMsg, "", "");
 
-    const email = ($("signupEmail")?.value || "").trim().toLowerCase();
-    const pass  = ($("signupPassword")?.value || "");
-    const fullName = ($("signupFullName")?.value || "").trim();
-    const phone = ($("signupPhone")?.value || "").trim();
-    const city  = ($("signupCity")?.value || "").trim();
+    await waitFirebase();
+    const auth = window.scAuth;
+    const db   = window.scDb;
 
-    const role = (document.querySelector('input[name="signupRole"]:checked')?.value || "captain").trim();
+    const email    = ($("signupEmail")?.value || "").trim();
+    const pass     = $("signupPassword")?.value || "";
+    const fullName = ($("signupFullName")?.value || "").trim();
+    const phone    = ($("signupPhone")?.value || "").trim();
+    const city     = ($("signupCity")?.value || "").trim();
+
+    const role     = (document.querySelector('input[name="signupRole"]:checked')?.value || "captain").trim();
     const teamName = ($("signupTeamName")?.value || "").trim();
-    const joinCode = ($("signupJoinCode")?.value || "").trim().toUpperCase();
+    const joinCode = ($("signupJoinCode")?.value || "").trim();
 
     if (!email || !pass || pass.length < 6 || !fullName || !phone || !city) {
       setMsg(signupMsg, "Заповни всі поля (email, пароль ≥ 6, ПІБ, телефон, місто).", "err");
@@ -81,125 +138,100 @@
       return;
     }
 
-    const users = getUsers();
-    if (users[email]) {
-      setMsg(signupMsg, "Такий email вже зареєстрований. Перейди у вкладку «Вхід».", "err");
-      return;
-    }
+    try {
+      const btn = $("signupBtn");
+      if (btn) btn.disabled = true;
 
-    const teams = getTeams();
+      setMsg(signupMsg, "Створюю акаунт…", "");
+      const cred = await auth.createUserWithEmailAndPassword(email, pass);
+      const user = cred.user;
 
-    let teamId = null;
-    let createdJoinCode = null;
+      // ✅ БЕЗ email verification — як було раніше
+      await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
-    if (role === "captain") {
-      // створюємо команду
-      // генеруємо унікальний joinCode
-      for (let i=0;i<20;i++){
-        const code = genJoinCode(6);
-        const exists = Object.values(teams).some(t => t.joinCode === code);
-        if (!exists){
-          teamId = "team_" + Date.now();
-          createdJoinCode = code;
-          teams[teamId] = {
-            teamId,
-            name: teamName,
-            ownerEmail: email,
-            joinCode: code,
-            createdAt: Date.now()
-          };
-          break;
+      if (role === "captain") {
+        setMsg(signupMsg, "Створюю команду…", "");
+        const team = await createTeam(db, teamName, user.uid);
+        await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
+        setMsg(signupMsg, `Готово ✅ Команда створена. joinCode: ${team.joinCode}`, "ok");
+        setTimeout(goCabinet, 250);
+        return;
+      }
+
+      if (role === "member") {
+        setMsg(signupMsg, "Шукаю команду по коду…", "");
+        const team = await findTeamByJoinCode(db, joinCode);
+        if (!team) {
+          setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
+          // важливо: не лишаємо сесію “порожню”
+          try { await auth.signOut(); } catch {}
+          return;
         }
-      }
-      if (!teamId){
-        setMsg(signupMsg, "Не вдалося створити команду. Спробуй ще раз.", "err");
+        await setUserTeamAndRole(db, user.uid, team.teamId, "member");
+        setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name || "Команда"}`, "ok");
+        setTimeout(goCabinet, 250);
         return;
       }
+
+      setMsg(signupMsg, "Акаунт створено ✅", "ok");
+      setTimeout(goCabinet, 250);
+
+    } catch (err) {
+      console.error(err);
+      setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
+    } finally {
+      const btn = $("signupBtn");
+      if (btn) btn.disabled = false;
     }
-
-    if (role === "member") {
-      // знаходимо команду по joinCode
-      const found = Object.values(teams).find(t => t.joinCode === joinCode);
-      if (!found){
-        setMsg(signupMsg, "Команду з таким joinCode не знайдено ❌", "err");
-        return;
-      }
-      teamId = found.teamId;
-    }
-
-    // створюємо користувача
-    users[email] = {
-      email,
-      passHash: hashPass(pass),
-      fullName, phone, city,
-      role,
-      teamId,
-      createdAt: Date.now()
-    };
-
-    setTeams(teams);
-    setUsers(users);
-
-    // логінимо одразу і пам'ятаємо
-    setSession(email);
-
-    if (role === "captain") {
-      setMsg(signupMsg, `Готово ✅ Команда створена. joinCode: ${createdJoinCode}`, "ok");
-    } else {
-      const t = teams[teamId];
-      setMsg(signupMsg, `Готово ✅ Ти в команді: ${t?.name || "Команда"}`, "ok");
-    }
-
-    setTimeout(goCabinet, 350);
   }
 
-  // ====== LOGIN ======
-  const loginForm = $("loginForm");
-  const loginMsg  = $("loginMsg");
-
-  async function onLogin(e){
+  async function onLogin(e) {
     e.preventDefault();
     setMsg(loginMsg, "", "");
 
-    const email = ($("loginEmail")?.value || "").trim().toLowerCase();
-    const pass  = ($("loginPassword")?.value || "");
+    await waitFirebase();
+    const auth = window.scAuth;
+
+    const email = ($("loginEmail")?.value || "").trim();
+    const pass  = $("loginPassword")?.value || "";
 
     if (!email || !pass) {
       setMsg(loginMsg, "Введи email і пароль.", "err");
       return;
     }
 
-    const users = getUsers();
-    const u = users[email];
-    if (!u) {
-      setMsg(loginMsg, "Акаунт не знайдено. пройдіть «Реєстрацію».", "err");
-      return;
-    }
+    try {
+      const btn = $("loginBtn");
+      if (btn) btn.disabled = true;
 
-    if (u.passHash !== hashPass(pass)) {
-      setMsg(loginMsg, "Невірний пароль.", "err");
-      return;
-    }
+      setMsg(loginMsg, "Вхід…", "");
+      await auth.signInWithEmailAndPassword(email, pass);
 
-    setSession(email);
-    setMsg(loginMsg, "Готово ✅", "ok");
-    setTimeout(goCabinet, 250);
+      setMsg(loginMsg, "Готово ✅", "ok");
+      setTimeout(goCabinet, 200);
+
+    } catch (err) {
+      console.error(err);
+      setMsg(loginMsg, err?.message || "Помилка входу", "err");
+    } finally {
+      const btn = $("loginBtn");
+      if (btn) btn.disabled = false;
+    }
   }
 
-  // ===== bind =====
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm)  loginForm.addEventListener("submit", onLogin);
 
-  // ===== auto-login (пам’ятає) =====
-  (function(){
-    const sess = getSession();
-    if (!sess || !sess.email) return;
-
-    const users = getUsers();
-    if (!users[sess.email]) return;
-
-    // якщо вже є сесія — одразу в кабінет
-    goCabinet();
+  // ✅ якщо вже залогінений — одразу в кабінет (щоб “пам’ятало”)
+  (async () => {
+    try {
+      await waitFirebase();
+      window.scAuth.onAuthStateChanged((u) => {
+        if (u) goCabinet();
+      });
+    } catch (e) {
+      console.warn(e);
+    }
   })();
 
 })();

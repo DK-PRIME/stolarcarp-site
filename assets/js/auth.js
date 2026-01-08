@@ -15,10 +15,33 @@
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
-      if (window.scAuth && window.scDb) return;
+      if (window.scAuth && window.scDb && window.firebase) return;
       await new Promise((r) => setTimeout(r, 100));
     }
     throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
+  }
+
+  function originUrl(path) {
+    return (location.origin || "").replace(/\/$/, "") + "/" + String(path || "").replace(/^\//, "");
+  }
+
+  // ✅ важливо: листи мають вести на твої сторінки
+  async function sendVerify(user) {
+    try {
+      await user.sendEmailVerification({
+        url: originUrl("email-verified.html"),
+        handleCodeInApp: true
+      });
+    } catch (e) {
+      console.warn("sendEmailVerification error:", e);
+    }
+  }
+
+  async function sendResetEmail(auth, email) {
+    await auth.sendPasswordResetEmail(email, {
+      url: originUrl("reset-password.html"),
+      handleCodeInApp: true
+    });
   }
 
   function genJoinCode(len = 6) {
@@ -112,6 +135,10 @@
   const signupMsg  = $("signupMsg");
   const loginMsg   = $("loginMsg");
 
+  // NEW (forgot)
+  const btnForgotPass = $("btnForgotPass");
+  const forgotMsg = $("forgotMsg");
+
   function showLoggedInUI() {
     if (loggedMsg) loggedMsg.textContent = "Ви вже увійшли у свій акаунт.";
     show(loggedBox);
@@ -126,6 +153,7 @@
   async function onSignup(e) {
     e.preventDefault();
     setMsg(signupMsg, "", "");
+    if (forgotMsg) setMsg(forgotMsg, "", "");
 
     await waitFirebase();
     const auth = window.scAuth;
@@ -146,7 +174,6 @@
       return;
     }
 
-    // ✅ FIX #1: роль-специфічні поля перевіряємо ДО створення акаунта
     if (role === "captain" && !teamName) {
       setMsg(signupMsg, "Для капітана потрібна назва команди.", "err");
       return;
@@ -164,26 +191,20 @@
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
-      // ✅ FIX #2: відправляємо лист підтвердження email
-      try {
-        await user.sendEmailVerification();
-      } catch (e2) {
-        console.warn("sendEmailVerification error:", e2);
-      }
+      // ✅ Лист підтвердження -> НА ТВОЮ сторінку email-verified.html
+      await sendVerify(user);
 
       await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
-      // ==== Captain flow ====
       if (role === "captain") {
         setMsg(signupMsg, "Створюю команду…", "");
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
 
-        // ✅ FIX #3: не перекидаємо в кабінет, а просимо підтвердити email
         setMsg(
           signupMsg,
           `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}. ` +
-          `Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.`,
+          `Підтверди email (лист прийде на пошту). Після підтвердження — увійди.`,
           "ok"
         );
 
@@ -191,24 +212,21 @@
         return;
       }
 
-      // ==== Member flow ====
       if (role === "member") {
         setMsg(signupMsg, "Шукаю команду по коду…", "");
         const team = await findTeamByJoinCode(db, joinCode);
         if (!team) {
           setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
-          // ✅ важливо: якщо акаунт вже створили — виходимо, щоб не лишати сесію
           try { await auth.signOut(); } catch (e3) {}
           return;
         }
 
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
 
-        // ✅ FIX #3: не перекидаємо в кабінет, а просимо підтвердити email
         setMsg(
           signupMsg,
           `Готово ✅ Ти в команді: ${team.name}. ` +
-          `Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.`,
+          `Підтверди email (лист прийде на пошту). Після підтвердження — увійди.`,
           "ok"
         );
 
@@ -216,10 +234,9 @@
         return;
       }
 
-      // fallback
       setMsg(
         signupMsg,
-        "Акаунт створено ✅ Ми надіслали лист підтвердження email — перевір пошту (і «Спам»). Після підтвердження увійди в акаунт.",
+        "Акаунт створено ✅ Підтверди email (лист прийде на пошту). Після підтвердження — увійди.",
         "ok"
       );
       await auth.signOut();
@@ -236,6 +253,7 @@
   async function onLogin(e) {
     e.preventDefault();
     setMsg(loginMsg, "", "");
+    if (forgotMsg) setMsg(forgotMsg, "", "");
 
     await waitFirebase();
     const auth = window.scAuth;
@@ -255,15 +273,12 @@
       setMsg(loginMsg, "Вхід…", "");
       await auth.signInWithEmailAndPassword(email, pass);
 
-      // ✅ FIX #4: блокуємо вхід без підтвердженого email
       const u = auth.currentUser;
-      if (u && typeof u.reload === "function") {
-        await u.reload();
-      }
+      if (u && typeof u.reload === "function") await u.reload();
 
       if (u && !u.emailVerified) {
-        // можна повторно надіслати лист
-        try { await u.sendEmailVerification(); } catch (e2) {}
+        // ✅ надсилаємо ще раз підтвердження на твою сторінку
+        await sendVerify(u);
 
         await auth.signOut();
         setMsg(loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження — перевір пошту (і «Спам»).", "err");
@@ -282,9 +297,36 @@
     }
   }
 
+  // ✅ NEW: Forgot password
+  async function onForgotPass(e) {
+    e.preventDefault();
+    if (forgotMsg) setMsg(forgotMsg, "", "");
+    setMsg(loginMsg, "", "");
+
+    await waitFirebase();
+    const auth = window.scAuth;
+
+    const email = ($("loginEmail")?.value || "").trim();
+    if (!email) {
+      if (forgotMsg) setMsg(forgotMsg, "Введи email у полі вище, і я надішлю лист для скидання пароля.", "err");
+      return;
+    }
+
+    try {
+      if (forgotMsg) setMsg(forgotMsg, "Надсилаю лист…", "");
+      await sendResetEmail(auth, email);
+      if (forgotMsg) setMsg(forgotMsg, "Готово ✅ Перевір пошту (і «Спам»).", "ok");
+    } catch (err) {
+      console.error(err);
+      if (forgotMsg) setMsg(forgotMsg, err?.message || "Не вдалося надіслати лист.", "err");
+    }
+  }
+
   // ====== Bind ======
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
+
+  if (btnForgotPass) btnForgotPass.addEventListener("click", onForgotPass);
 
   if (btnGoCab) btnGoCab.addEventListener("click", (e) => { e.preventDefault(); goCabinet(); });
 
@@ -298,17 +340,29 @@
     }
   });
 
-  // ✅ Головне: керуємо UI по сесії, БЕЗ авто-редиректу
+  // ✅ UI по сесії
   (async () => {
     try {
       await waitFirebase();
-      window.scAuth.onAuthStateChanged((u) => {
-        if (u) showLoggedInUI();
-        else showAuthUI();
+      window.scAuth.onAuthStateChanged(async (u) => {
+        if (!u) { showAuthUI(); return; }
+
+        // додатковий захист: якщо somehow зайшов без verified — виганяємо
+        try {
+          if (typeof u.reload === "function") await u.reload();
+          if (!u.emailVerified) {
+            await sendVerify(u);
+            await window.scAuth.signOut();
+            showAuthUI();
+            setMsg(loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження ще раз.", "err");
+            return;
+          }
+        } catch {}
+
+        showLoggedInUI();
       });
     } catch (e) {
       console.warn(e);
-      // якщо Firebase не готовий — просто показуємо форми
       showAuthUI();
     }
   })();

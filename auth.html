@@ -10,11 +10,10 @@
   <meta name="theme-color" content="#020617" />
 
   <link rel="stylesheet" href="assets/css/main.css" />
-  <script defer src="assets/js/config.js"></script>
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-    .auth-wrap{ max-width:1080px; margin:0 auto; padding:22px 0 70px; }
+    .auth-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
 
     .auth-top{
       padding:14px 16px; border-radius:18px;
@@ -41,7 +40,7 @@
       color:#e5e7eb;
       padding:8px 14px;
       cursor:pointer;
-      font-weight:800;
+      font-weight:700;
     }
     .tab-btn.active{
       border-color:#facc15;
@@ -66,79 +65,22 @@
     }
     .grid input::placeholder{ color:#6b7280; }
 
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
     .role-box{
       display:flex; gap:14px; flex-wrap:wrap; padding:8px 0;
       color:#e5e7eb; font-size:.95rem;
     }
     .hint{ font-size:.85rem; color:#9ca3af; }
 
-    .hidden{ display:none !important; }
+    .hidden{ display:none; }
 
-    .msg{ margin-top:10px; font-size:.92rem; line-height:1.35; }
+    .msg{ margin-top:10px; font-size:.9rem; }
     .msg.ok{ color:#22c55e; }
     .msg.err{ color:#ef4444; }
-    .msg.warn{ color:#fbbf24; }
 
     .actions{ margin-top:12px; display:flex; gap:10px; flex-wrap:wrap; }
     .actions .btn{ border-radius:14px; padding:12px 16px; }
 
     .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
-
-    .link{
-      color:#cbd5e1;
-      text-decoration:none;
-      border-bottom:1px dashed rgba(203,213,225,.45);
-      padding-bottom:2px;
-    }
-
-    /* Desktop: Login зліва, Реєстрація справа */
-    .desktop-split{ display:none; }
-    @media (min-width: 980px){
-      .tabs{ display:none; }
-      .mobile-panels{ display:none; }
-      .desktop-split{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:14px;
-        margin-top:14px;
-      }
-      .auth-card{ margin-top:0; }
-      .card-title{
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap:10px;
-      }
-      .pill-mini{
-        font-size:.75rem;
-        padding:6px 10px;
-        border-radius:999px;
-        border:1px solid rgba(148,163,184,.28);
-        background:rgba(2,6,23,.35);
-        color:#e5e7eb;
-        white-space:nowrap;
-      }
-    }
-
-    .google-btn{
-      display:inline-flex; align-items:center; justify-content:center;
-      gap:10px;
-      width:100%;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.28);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      font-weight:900;
-      cursor:pointer;
-    }
-    .google-btn:active{ transform: translateY(1px); }
-    .google-icon{
-      width:18px; height:18px; border-radius:4px;
-      display:inline-flex; align-items:center; justify-content:center;
-      background:rgba(255,255,255,.08);
-    }
   </style>
 </head>
 
@@ -166,240 +108,119 @@
   <section class="section container auth-wrap">
 
     <div class="auth-top">
-      <div class="title-gradient" style="font-size:1.2rem; font-weight:900;">Вхід / Реєстрація</div>
+      <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Вхід / Реєстрація</div>
 
-      <!-- Mobile tabs (Login default) -->
       <div class="tabs">
         <button class="tab-btn active" id="tabLogin" type="button">Вхід</button>
         <button class="tab-btn" id="tabSignup" type="button">Реєстрація</button>
       </div>
-
-      <div class="muted" id="topHint" style="margin-top:10px;">
-        Вхід запамʼятовується — якщо ти вже заходив, повторно вводити пароль не треба.
-      </div>
     </div>
 
-    <!-- ===== DESKTOP SPLIT ===== -->
-    <div class="desktop-split">
+    <!-- ===== LOGIN ===== -->
+    <div class="auth-card" id="panelLogin">
+      <h2 class="section-title" style="margin:0 0 6px;">Увійти</h2>
+      <div class="muted">Вхід (без Firebase). Дані зберігаються локально в браузері.</div>
 
-      <!-- LOGIN (left) -->
-      <div class="auth-card" id="deskLoginCard">
-        <div class="card-title">
-          <h2 class="section-title" style="margin:0;">Увійти</h2>
-          <span class="pill-mini">Основний</span>
+      <form id="loginForm" class="grid" autocomplete="on">
+        <input id="loginEmail" type="email" placeholder="Email" required />
+        <input id="loginPassword" type="password" placeholder="Пароль" required />
+
+        <div class="actions">
+          <button class="btn btn--accent" id="loginBtn" type="submit">Увійти</button>
+          <a class="btn btn--primary" href="index.html">На головну</a>
         </div>
-        <div class="muted">Вхід для учасників (email/пароль) або Google.</div>
+
+        <div class="msg" id="loginMsg"></div>
+      </form>
+    </div>
+
+    <!-- ===== SIGNUP ===== -->
+    <div class="auth-card hidden" id="panelSignup">
+      <h2 class="section-title" style="margin:0 0 6px;">Створити акаунт</h2>
+      <div class="muted">Реєстрація (без Firebase). Дані зберігаються локально в браузері.</div>
+
+      <form id="signupForm" class="grid" autocomplete="on">
+        <input id="signupEmail" type="email" placeholder="Email" required />
+        <input id="signupPassword" type="password" placeholder="Пароль (мін. 6 символів)" required />
+        <input id="signupFullName" type="text" placeholder="ПІБ" required />
+        <input id="signupPhone" type="text" placeholder="Телефон" required />
+        <input id="signupCity" type="text" placeholder="Місто" required />
 
         <div class="hr"></div>
 
-        <button class="google-btn" id="btnGoogleLoginDesk" type="button">
-          <span class="google-icon">G</span>
-          Увійти через Google
-        </button>
-
-        <form id="loginFormDesk" class="grid" autocomplete="on">
-          <input id="loginEmailDesk" type="email" placeholder="Email" required />
-          <input id="loginPasswordDesk" type="password" placeholder="Пароль" required />
-
-          <div class="row" style="margin-top:6px;">
-            <a class="link" href="#" id="linkForgotDesk">Забули пароль?</a>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn--accent" id="loginBtnDesk" type="submit">Увійти</button>
-            <a class="btn btn--primary" href="index.html">На головну</a>
-          </div>
-
-          <div class="msg" id="loginMsgDesk"></div>
-        </form>
-      </div>
-
-      <!-- SIGNUP (right) -->
-      <div class="auth-card" id="deskSignupCard">
-        <div class="card-title">
-          <h2 class="section-title" style="margin:0;">Створити акаунт</h2>
-          <span class="pill-mini">Якщо ще нема</span>
+        <div class="role-box">
+          <label><input type="radio" name="signupRole" value="captain" checked> Капітан</label>
+          <label><input type="radio" name="signupRole" value="member"> Учасник</label>
         </div>
-        <div class="muted">Капітан створює команду, учасник приєднується по коду.</div>
 
-        <form id="signupFormDesk" class="grid" autocomplete="on">
-          <input id="signupEmailDesk" type="email" placeholder="Email" required />
-          <input id="signupPasswordDesk" type="password" placeholder="Пароль (мін. 6 символів)" required />
-          <input id="signupFullNameDesk" type="text" placeholder="ПІБ" required />
-          <input id="signupPhoneDesk" type="text" placeholder="Телефон" required />
-          <input id="signupCityDesk" type="text" placeholder="Місто" required />
+        <div id="captainFields" class="grid">
+          <input id="signupTeamName" type="text" placeholder="Назва команди (для капітана)" />
+          <div class="hint">Після створення команди ти отримаєш <b>joinCode</b> для інших учасників (локально).</div>
+        </div>
 
-          <div class="hr"></div>
+        <div id="memberFields" class="grid hidden">
+          <input id="signupJoinCode" type="text" placeholder="Код команди (joinCode) (для учасника)" />
+          <div class="hint">Код дає капітан команди (6 символів).</div>
+        </div>
 
-          <div class="role-box">
-            <label><input type="radio" name="signupRoleDesk" value="captain" checked> Капітан</label>
-            <label><input type="radio" name="signupRoleDesk" value="member"> Учасник</label>
-          </div>
+        <div class="actions">
+          <button class="btn btn--accent" id="signupBtn" type="submit">Зареєструватись</button>
+          <a class="btn btn--primary" href="index.html">На головну</a>
+        </div>
 
-          <div id="captainFieldsDesk" class="grid">
-            <input id="signupTeamNameDesk" type="text" placeholder="Назва команди (для капітана)" />
-            <div class="hint">Після створення команди ти отримаєш <b>joinCode</b> для інших учасників.</div>
-          </div>
-
-          <div id="memberFieldsDesk" class="grid hidden">
-            <input id="signupJoinCodeDesk" type="text" placeholder="Код команди (joinCode) (для учасника)" />
-            <div class="hint">Код дає капітан команди (6 символів).</div>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn--accent" id="signupBtnDesk" type="submit">Зареєструватись</button>
-          </div>
-
-          <div class="msg" id="signupMsgDesk"></div>
-        </form>
-      </div>
-
-    </div>
-
-    <!-- ===== MOBILE PANELS ===== -->
-    <div class="mobile-panels">
-
-      <!-- LOGIN -->
-      <div class="auth-card" id="panelLogin">
-        <h2 class="section-title" style="margin:0 0 6px;">Увійти</h2>
-        <div class="muted">Вхід для учасників (email/пароль) або Google.</div>
-
-        <div class="hr"></div>
-
-        <button class="google-btn" id="btnGoogleLogin" type="button">
-          <span class="google-icon">G</span>
-          Увійти через Google
-        </button>
-
-        <form id="loginForm" class="grid" autocomplete="on">
-          <input id="loginEmail" type="email" placeholder="Email" required />
-          <input id="loginPassword" type="password" placeholder="Пароль" required />
-
-          <div class="row" style="margin-top:6px;">
-            <a class="link" href="#" id="linkForgot">Забули пароль?</a>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn--accent" id="loginBtn" type="submit">Увійти</button>
-            <a class="btn btn--primary" href="index.html">На головну</a>
-          </div>
-
-          <div class="msg" id="loginMsg"></div>
-        </form>
-      </div>
-
-      <!-- SIGNUP -->
-      <div class="auth-card hidden" id="panelSignup">
-        <h2 class="section-title" style="margin:0 0 6px;">Створити акаунт</h2>
-        <div class="muted">Капітан створює команду, учасник приєднується по коду.</div>
-
-        <form id="signupForm" class="grid" autocomplete="on">
-          <input id="signupEmail" type="email" placeholder="Email" required />
-          <input id="signupPassword" type="password" placeholder="Пароль (мін. 6 символів)" required />
-          <input id="signupFullName" type="text" placeholder="ПІБ" required />
-          <input id="signupPhone" type="text" placeholder="Телефон" required />
-          <input id="signupCity" type="text" placeholder="Місто" required />
-
-          <div class="hr"></div>
-
-          <div class="role-box">
-            <label><input type="radio" name="signupRole" value="captain" checked> Капітан</label>
-            <label><input type="radio" name="signupRole" value="member"> Учасник</label>
-          </div>
-
-          <div id="captainFields" class="grid">
-            <input id="signupTeamName" type="text" placeholder="Назва команди (для капітана)" />
-            <div class="hint">Після створення команди ти отримаєш <b>joinCode</b> для інших учасників.</div>
-          </div>
-
-          <div id="memberFields" class="grid hidden">
-            <input id="signupJoinCode" type="text" placeholder="Код команди (joinCode) (для учасника)" />
-            <div class="hint">Код дає капітан команди (6 символів).</div>
-          </div>
-
-          <div class="actions">
-            <button class="btn btn--accent" id="signupBtn" type="submit">Зареєструватись</button>
-          </div>
-
-          <div class="msg" id="signupMsg"></div>
-        </form>
-      </div>
-
+        <div class="msg" id="signupMsg"></div>
+      </form>
     </div>
 
   </section>
 </main>
 
-<!-- Firebase compat CDN -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
-
-<!-- Єдина ініціалізація -->
-<script src="assets/js/firebase-init.js"></script>
-
-<!-- Твій auth logic -->
+<!-- ЛОКАЛЬНА логіка (без Firebase) -->
 <script src="assets/js/auth.js"></script>
 
 <script>
-(function(){
-  // MOBILE tabs (login default)
-  const tabLogin  = document.getElementById("tabLogin");
-  const tabSignup = document.getElementById("tabSignup");
-  const panelLogin  = document.getElementById("panelLogin");
-  const panelSignup = document.getElementById("panelSignup");
+  (function(){
+    const tabSignup = document.getElementById("tabSignup");
+    const tabLogin  = document.getElementById("tabLogin");
+    const panelSignup = document.getElementById("panelSignup");
+    const panelLogin  = document.getElementById("panelLogin");
 
-  function open(which){
-    if(!panelLogin || !panelSignup || !tabLogin || !tabSignup) return;
-    if(which === "login"){
-      tabLogin.classList.add("active");
-      tabSignup.classList.remove("active");
-      panelLogin.classList.remove("hidden");
-      panelSignup.classList.add("hidden");
-    } else {
-      tabSignup.classList.add("active");
-      tabLogin.classList.remove("active");
-      panelSignup.classList.remove("hidden");
-      panelLogin.classList.add("hidden");
+    const captainFields = document.getElementById("captainFields");
+    const memberFields  = document.getElementById("memberFields");
+
+    function open(which){
+      if(which === "login"){
+        tabLogin.classList.add("active");
+        tabSignup.classList.remove("active");
+        panelLogin.classList.remove("hidden");
+        panelSignup.classList.add("hidden");
+      } else {
+        tabSignup.classList.add("active");
+        tabLogin.classList.remove("active");
+        panelSignup.classList.remove("hidden");
+        panelLogin.classList.add("hidden");
+      }
     }
-  }
-  tabLogin?.addEventListener("click", ()=>open("login"));
-  tabSignup?.addEventListener("click", ()=>open("signup"));
-  open("login"); // ✅ default
 
-  // role switch (mobile)
-  const captainFields = document.getElementById("captainFields");
-  const memberFields  = document.getElementById("memberFields");
-  document.querySelectorAll('input[name="signupRole"]').forEach(r=>{
-    r.addEventListener("change", ()=>{
-      const v = document.querySelector('input[name="signupRole"]:checked')?.value || "captain";
-      if(v === "captain"){
-        captainFields?.classList.remove("hidden");
-        memberFields?.classList.add("hidden");
-      } else {
-        memberFields?.classList.remove("hidden");
-        captainFields?.classList.add("hidden");
-      }
-    });
-  });
+    tabLogin?.addEventListener("click", ()=>open("login"));
+    tabSignup?.addEventListener("click", ()=>open("signup"));
 
-  // role switch (desktop)
-  const captainFieldsDesk = document.getElementById("captainFieldsDesk");
-  const memberFieldsDesk  = document.getElementById("memberFieldsDesk");
-  document.querySelectorAll('input[name="signupRoleDesk"]').forEach(r=>{
-    r.addEventListener("change", ()=>{
-      const v = document.querySelector('input[name="signupRoleDesk"]:checked')?.value || "captain";
-      if(v === "captain"){
-        captainFieldsDesk?.classList.remove("hidden");
-        memberFieldsDesk?.classList.add("hidden");
-      } else {
-        memberFieldsDesk?.classList.remove("hidden");
-        captainFieldsDesk?.classList.add("hidden");
-      }
+    document.querySelectorAll('input[name="signupRole"]').forEach(r=>{
+      r.addEventListener("change", ()=>{
+        const v = document.querySelector('input[name="signupRole"]:checked')?.value || "captain";
+        if(v === "captain"){
+          captainFields?.classList.remove("hidden");
+          memberFields?.classList.add("hidden");
+        } else {
+          memberFields?.classList.remove("hidden");
+          captainFields?.classList.add("hidden");
+        }
+      });
     });
-  });
-})();
+
+    // дефолт: ВХІД
+    open("login");
+  })();
 </script>
 
 </body>

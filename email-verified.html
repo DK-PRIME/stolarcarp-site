@@ -44,7 +44,6 @@
     code{ background:rgba(2,6,23,.55); padding:2px 6px; border-radius:10px; }
   </style>
 
-  <!-- твій конфіг, де вже інжектяться firebase/app + auth -->
   <script defer src="assets/js/config.js"></script>
 </head>
 <body>
@@ -53,78 +52,73 @@
       <div class="h1">STOLAR CARP • Підтвердження дії</div>
       <div class="muted">Ця сторінка завершує дію з листа Firebase (підтвердження email / скидання пароля / зміна email).</div>
 
-      <div id="box" class="status warn" style="margin-top:14px;">
-        Завантаження… Перевіряємо посилання.
-      </div>
+      <div id="box" class="status warn">Завантаження… Перевіряємо посилання.</div>
 
       <div class="row">
-        <a class="btn primary" href="register.html">Вхід / Реєстрація</a>
+        <a class="btn primary" href="auth.html">Вхід / Реєстрація</a>
         <a class="btn" href="index.html">На головну</a>
       </div>
 
       <div class="muted" style="margin-top:12px;">
-        Якщо посилання не працює — спробуй надіслати лист ще раз і відкрити останній.
+        Якщо посилання не працює — надішли лист ще раз і відкрий останній.
       </div>
     </div>
   </div>
 
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="assets/js/firebase-init.js"></script>
+
   <script>
   (function () {
     const box = document.getElementById('box');
-
     function setBox(type, title, text){
       box.className = 'status ' + type;
       box.innerHTML = `<b>${title}</b><br>${text}`;
     }
 
-    // читаємо параметри
     const params = new URLSearchParams(location.search);
     const mode = params.get('mode');
     const oobCode = params.get('oobCode');
 
     if (!mode || !oobCode){
-      setBox('bad', 'Некоректне посилання', 'У посиланні немає потрібних параметрів <code>mode</code> або <code>oobCode</code>. Спробуй відкрити посилання з листа ще раз.');
+      setBox('bad','Некоректне посилання','У посиланні немає <code>mode</code> або <code>oobCode</code>. Відкрий посилання з листа ще раз.');
       return;
     }
 
-    // чекаємо firebase з config.js
     const wait = setInterval(async () => {
       try {
-        if (!window.firebase || !window.scAuth) return;
+        if (!window.scAuth) return;
         clearInterval(wait);
 
         const auth = window.scAuth;
-        const actionCodeSettings = null;
 
-        // Firebase v10 compat: auth має методи applyActionCode / verifyPasswordResetCode / confirmPasswordReset
         if (mode === 'verifyEmail') {
           await auth.applyActionCode(oobCode);
-          setBox('ok', 'Email підтверджено ✅', 'Дякуємо! Тепер ти можеш увійти в акаунт STOLAR CARP.');
+          setBox('ok','Email підтверджено ✅','Тепер ти можеш увійти в акаунт STOLAR CARP.');
           return;
         }
 
         if (mode === 'resetPassword') {
-          // Тут ми не міняємо пароль на цій сторінці (бо треба 2 поля). Перекидаємо на окрему сторінку.
-          // Якщо в тебе ще немає reset-password.html — я дам готовий після цього.
-          setBox('warn', 'Скидання пароля', 'Посилання дійсне. Зараз відкриємо сторінку зміни пароля…');
+          setBox('warn','Скидання пароля','Посилання дійсне. Зараз відкриємо сторінку зміни пароля…');
           setTimeout(() => {
             location.href = 'reset-password.html' + location.search;
-          }, 900);
+          }, 700);
           return;
         }
 
         if (mode === 'verifyAndChangeEmail' || mode === 'recoverEmail') {
           await auth.applyActionCode(oobCode);
-          setBox('ok', 'Email оновлено ✅', 'Зміна електронної пошти підтверджена. Тепер можеш увійти з новою адресою.');
+          setBox('ok','Email оновлено ✅','Зміна електронної пошти підтверджена. Тепер можеш увійти з новою адресою.');
           return;
         }
 
-        // якщо якийсь інший mode
-        setBox('warn', 'Дія з листа', `Отримано <code>${mode}</code>. Якщо щось не спрацювало — напиши Сонічці, доробимо під твій кейс 🙂`);
+        setBox('warn','Дія з листа', `Отримано <code>${mode}</code>. Якщо щось не спрацювало — напиши Соні 🙂`);
 
       } catch (e) {
         console.error(e);
-        setBox('bad', 'Помилка виконання', 'Можливо, посилання прострочене або вже використане. Спробуй надіслати лист ще раз (Resend) і відкрий останній лист.');
+        setBox('bad','Помилка виконання','Посилання прострочене або вже використане. Надішли лист ще раз і відкрий останній.');
       }
     }, 200);
   })();

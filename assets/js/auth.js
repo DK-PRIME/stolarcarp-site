@@ -4,13 +4,10 @@
 
   function setMsg(el, text, type) {
     if (!el) return;
-    el.textContent = text || "";
-    el.classList.remove("ok", "err");
+    el.innerHTML = text || "";
+    el.classList.remove("ok", "err", "warn");
     if (type) el.classList.add(type);
   }
-
-  function show(el) { if (el) el.style.display = ""; }
-  function hide(el) { if (el) el.style.display = "none"; }
 
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
@@ -18,30 +15,22 @@
       if (window.scAuth && window.scDb && window.firebase) return;
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
+    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір SDK та assets/js/firebase-init.js");
   }
 
-  function originUrl(path) {
-    return (location.origin || "").replace(/\/$/, "") + "/" + String(path || "").replace(/^\//, "");
+  function esc(s){ return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+
+  function originUrl(path){
+    const o = window.location.origin;
+    return o + (path.startsWith("/") ? path : ("/" + path));
   }
 
-  // ✅ важливо: листи мають вести на твої сторінки
-  async function sendVerify(user) {
-    try {
-      await user.sendEmailVerification({
-        url: originUrl("email-verified.html"),
-        handleCodeInApp: true
-      });
-    } catch (e) {
-      console.warn("sendEmailVerification error:", e);
-    }
-  }
-
-  async function sendResetEmail(auth, email) {
-    await auth.sendPasswordResetEmail(email, {
-      url: originUrl("reset-password.html"),
+  function actionSettings(){
+    // Всі листи ведемо на email-verified.html, яка вже розрулює mode/oobCode
+    return {
+      url: originUrl("email-verified.html"),
       handleCodeInApp: true
-    });
+    };
   }
 
   function genJoinCode(len = 6) {
@@ -87,8 +76,8 @@
       phone: data.phone || "",
       city: data.city || "",
       role: data.role || "member",
-      teamId: data.teamId || null,
-      avatarUrl: "",
+      teamId: data.teamId ?? null,
+      avatarUrl: data.avatarUrl || "",
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -122,248 +111,339 @@
 
   function goCabinet() { location.href = "cabinet.html"; }
 
-  // ====== UI blocks (мають бути в auth.html) ======
-  const loggedBox = $("loggedBox");
-  const authBox   = $("authBox");
+  // --- Bind helpers for 2 UI versions (mobile + desktop) ---
+  function pickUI(prefix){
+    // prefix "" for mobile, "Desk" for desktop
+    const suf = prefix || "";
+    return {
+      // forms
+      signupForm: $("signupForm"+suf),
+      loginForm:  $("loginForm"+suf),
 
-  const btnGoCab  = $("goCabinetBtn");
-  const btnLogout = $("logoutBtn");
-  const loggedMsg = $("loggedMsg");
+      // msgs
+      signupMsg: $("signupMsg"+suf),
+      loginMsg:  $("loginMsg"+suf),
 
-  const signupForm = $("signupForm");
-  const loginForm  = $("loginForm");
-  const signupMsg  = $("signupMsg");
-  const loginMsg   = $("loginMsg");
+      // buttons
+      signupBtn: $("signupBtn"+suf),
+      loginBtn:  $("loginBtn"+suf),
 
-  // NEW (forgot)
-  const btnForgotPass = $("btnForgotPass");
-  const forgotMsg = $("forgotMsg");
+      // login fields
+      loginEmail: $("loginEmail"+suf),
+      loginPassword: $("loginPassword"+suf),
 
-  function showLoggedInUI() {
-    if (loggedMsg) loggedMsg.textContent = "Ви вже увійшли у свій акаунт.";
-    show(loggedBox);
-    hide(authBox);
+      // signup fields
+      signupEmail: $("signupEmail"+suf),
+      signupPassword: $("signupPassword"+suf),
+      signupFullName: $("signupFullName"+suf),
+      signupPhone: $("signupPhone"+suf),
+      signupCity: $("signupCity"+suf),
+      signupTeamName: $("signupTeamName"+suf),
+      signupJoinCode: $("signupJoinCode"+suf),
+
+      // role name attr differs
+      roleName: prefix ? "signupRoleDesk" : "signupRole",
+
+      // forgot link
+      forgotLink: prefix ? $("linkForgotDesk") : $("linkForgot"),
+
+      // google btn
+      googleBtn: prefix ? $("btnGoogleLoginDesk") : $("btnGoogleLogin"),
+    };
   }
 
-  function showAuthUI() {
-    hide(loggedBox);
-    show(authBox);
+  async function sendVerify(user){
+    try{
+      await user.sendEmailVerification(actionSettings());
+    }catch(e){
+      console.warn("sendEmailVerification:", e);
+    }
   }
 
-  async function onSignup(e) {
+  async function onSignup(ui, e) {
     e.preventDefault();
-    setMsg(signupMsg, "", "");
-    if (forgotMsg) setMsg(forgotMsg, "", "");
+    setMsg(ui.signupMsg, "", "");
 
     await waitFirebase();
     const auth = window.scAuth;
     const db = window.scDb;
 
-    const email = ($("signupEmail")?.value || "").trim();
-    const pass = $("signupPassword")?.value || "";
-    const fullName = ($("signupFullName")?.value || "").trim();
-    const phone = ($("signupPhone")?.value || "").trim();
-    const city = ($("signupCity")?.value || "").trim();
+    const email = (ui.signupEmail?.value || "").trim();
+    const pass = ui.signupPassword?.value || "";
+    const fullName = (ui.signupFullName?.value || "").trim();
+    const phone = (ui.signupPhone?.value || "").trim();
+    const city = (ui.signupCity?.value || "").trim();
 
-    const role = (document.querySelector('input[name="signupRole"]:checked')?.value || "captain").trim();
-    const teamName = ($("signupTeamName")?.value || "").trim();
-    const joinCode = ($("signupJoinCode")?.value || "").trim();
+    const role = (document.querySelector(`input[name="${ui.roleName}"]:checked`)?.value || "captain").trim();
+    const teamName = (ui.signupTeamName?.value || "").trim();
+    const joinCode = (ui.signupJoinCode?.value || "").trim();
 
     if (!email || !pass || pass.length < 6 || !fullName || !phone || !city) {
-      setMsg(signupMsg, "Заповни всі поля (email, пароль ≥ 6, ПІБ, телефон, місто).", "err");
+      setMsg(ui.signupMsg, "Заповни всі поля (email, пароль ≥ 6, ПІБ, телефон, місто).", "err");
       return;
     }
-
     if (role === "captain" && !teamName) {
-      setMsg(signupMsg, "Для капітана потрібна назва команди.", "err");
+      setMsg(ui.signupMsg, "Для капітана потрібна назва команди.", "err");
       return;
     }
     if (role === "member" && !joinCode) {
-      setMsg(signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
+      setMsg(ui.signupMsg, "Для учасника потрібен код приєднання (joinCode).", "err");
       return;
     }
 
     try {
-      const btn = $("signupBtn");
-      if (btn) btn.disabled = true;
+      if (ui.signupBtn) ui.signupBtn.disabled = true;
 
-      setMsg(signupMsg, "Створюю акаунт…", "");
+      setMsg(ui.signupMsg, "Створюю акаунт…", "warn");
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
 
-      // ✅ Лист підтвердження -> НА ТВОЮ сторінку email-verified.html
-      await sendVerify(user);
-
+      // ВАЖЛИВО: Спочатку створюємо/оновлюємо Firestore (щоб не зламати те, що працювало)
       await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
 
       if (role === "captain") {
-        setMsg(signupMsg, "Створюю команду…", "");
+        setMsg(ui.signupMsg, "Створюю команду…", "warn");
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
 
+        // шлемо verify
+        await sendVerify(user);
+
         setMsg(
-          signupMsg,
-          `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}. ` +
-          `Підтверди email (лист прийде на пошту). Після підтвердження — увійди.`,
+          ui.signupMsg,
+          `Готово ✅ Команда створена. Код приєднання: <b>${esc(team.joinCode)}</b>.<br>
+           Ми надіслали лист підтвердження email. Відкрий його та підтвердь.<br>
+           Після підтвердження — просто увійди (або натисни “Вхід через Google”, якщо акаунт Google).`,
           "ok"
         );
-
-        await auth.signOut();
         return;
       }
 
       if (role === "member") {
-        setMsg(signupMsg, "Шукаю команду по коду…", "");
+        setMsg(ui.signupMsg, "Шукаю команду по коду…", "warn");
         const team = await findTeamByJoinCode(db, joinCode);
         if (!team) {
-          setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
-          try { await auth.signOut(); } catch (e3) {}
+          setMsg(ui.signupMsg, "Команду з таким кодом не знайдено ❌", "err");
           return;
         }
 
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
 
+        await sendVerify(user);
+
         setMsg(
-          signupMsg,
-          `Готово ✅ Ти в команді: ${team.name}. ` +
-          `Підтверди email (лист прийде на пошту). Після підтвердження — увійди.`,
+          ui.signupMsg,
+          `Готово ✅ Ти в команді: <b>${esc(team.name || "")}</b>.<br>
+           Ми надіслали лист підтвердження email. Відкрий його та підтвердь.<br>
+           Після підтвердження — увійди на цій сторінці.`,
           "ok"
         );
-
-        await auth.signOut();
         return;
       }
 
+      await sendVerify(user);
+
       setMsg(
-        signupMsg,
-        "Акаунт створено ✅ Підтверди email (лист прийде на пошту). Після підтвердження — увійди.",
+        ui.signupMsg,
+        `Акаунт створено ✅ Ми надіслали лист підтвердження email. Відкрий його та підтвердь, після цього увійди.`,
         "ok"
       );
-      await auth.signOut();
 
     } catch (err) {
       console.error(err);
-      setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
+      setMsg(ui.signupMsg, esc(err?.message || "Помилка реєстрації"), "err");
     } finally {
-      const btn = $("signupBtn");
-      if (btn) btn.disabled = false;
+      if (ui.signupBtn) ui.signupBtn.disabled = false;
     }
   }
 
-  async function onLogin(e) {
+  async function onLogin(ui, e) {
     e.preventDefault();
-    setMsg(loginMsg, "", "");
-    if (forgotMsg) setMsg(forgotMsg, "", "");
+    setMsg(ui.loginMsg, "", "");
 
     await waitFirebase();
     const auth = window.scAuth;
 
-    const email = ($("loginEmail")?.value || "").trim();
-    const pass = $("loginPassword")?.value || "";
+    const email = (ui.loginEmail?.value || "").trim();
+    const pass = ui.loginPassword?.value || "";
 
     if (!email || !pass) {
-      setMsg(loginMsg, "Введи email і пароль.", "err");
+      setMsg(ui.loginMsg, "Введи email і пароль.", "err");
       return;
     }
 
     try {
-      const btn = $("loginBtn");
-      if (btn) btn.disabled = true;
+      if (ui.loginBtn) ui.loginBtn.disabled = true;
 
-      setMsg(loginMsg, "Вхід…", "");
+      setMsg(ui.loginMsg, "Вхід…", "warn");
       await auth.signInWithEmailAndPassword(email, pass);
 
       const u = auth.currentUser;
       if (u && typeof u.reload === "function") await u.reload();
 
       if (u && !u.emailVerified) {
-        // ✅ надсилаємо ще раз підтвердження на твою сторінку
         await sendVerify(u);
-
-        await auth.signOut();
-        setMsg(loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження — перевір пошту (і «Спам»).", "err");
+        // НЕ викидаємо з акаунта (щоб не ламати UX), але блокнемо перехід
+        setMsg(
+          ui.loginMsg,
+          `Пошта не підтверджена ❌<br>
+           Ми щойно надіслали лист підтвердження ще раз. Перевір пошту і підтвердь, тоді увійдеш.`,
+          "err"
+        );
+        try { await auth.signOut(); } catch(_){}
         return;
       }
 
-      setMsg(loginMsg, "Готово ✅", "ok");
-      setTimeout(goCabinet, 300);
+      setMsg(ui.loginMsg, "Готово ✅", "ok");
+      setTimeout(goCabinet, 250);
 
     } catch (err) {
       console.error(err);
-      setMsg(loginMsg, err?.message || "Помилка входу", "err");
+      setMsg(ui.loginMsg, esc(err?.message || "Помилка входу"), "err");
     } finally {
-      const btn = $("loginBtn");
-      if (btn) btn.disabled = false;
+      if (ui.loginBtn) ui.loginBtn.disabled = false;
     }
   }
 
-  // ✅ NEW: Forgot password
-  async function onForgotPass(e) {
+  async function onForgot(ui, e){
     e.preventDefault();
-    if (forgotMsg) setMsg(forgotMsg, "", "");
-    setMsg(loginMsg, "", "");
+    setMsg(ui.loginMsg, "", "");
 
     await waitFirebase();
     const auth = window.scAuth;
 
-    const email = ($("loginEmail")?.value || "").trim();
-    if (!email) {
-      if (forgotMsg) setMsg(forgotMsg, "Введи email у полі вище, і я надішлю лист для скидання пароля.", "err");
+    const email = (ui.loginEmail?.value || "").trim();
+    if(!email){
+      setMsg(ui.loginMsg, "Введи email, а потім натисни “Забули пароль?”.", "err");
       return;
     }
 
-    try {
-      if (forgotMsg) setMsg(forgotMsg, "Надсилаю лист…", "");
-      await sendResetEmail(auth, email);
-      if (forgotMsg) setMsg(forgotMsg, "Готово ✅ Перевір пошту (і «Спам»).", "ok");
-    } catch (err) {
+    try{
+      setMsg(ui.loginMsg, "Надсилаю лист для скидання пароля…", "warn");
+      await auth.sendPasswordResetEmail(email, actionSettings());
+      setMsg(ui.loginMsg, "Лист надіслано ✅ Відкрий пошту і натисни посилання для скидання пароля.", "ok");
+    }catch(err){
       console.error(err);
-      if (forgotMsg) setMsg(forgotMsg, err?.message || "Не вдалося надіслати лист.", "err");
+      setMsg(ui.loginMsg, esc(err?.message || "Помилка надсилання листа"), "err");
     }
   }
 
-  // ====== Bind ======
-  if (signupForm) signupForm.addEventListener("submit", onSignup);
-  if (loginForm) loginForm.addEventListener("submit", onLogin);
+  async function googleLogin(ui){
+    setMsg(ui.loginMsg, "", "");
 
-  if (btnForgotPass) btnForgotPass.addEventListener("click", onForgotPass);
+    await waitFirebase();
+    const auth = window.scAuth;
+    const db = window.scDb;
 
-  if (btnGoCab) btnGoCab.addEventListener("click", (e) => { e.preventDefault(); goCabinet(); });
+    try{
+      setMsg(ui.loginMsg, "Вхід через Google…", "warn");
 
-  if (btnLogout) btnLogout.addEventListener("click", async (e) => {
-    e.preventDefault();
-    try {
-      await waitFirebase();
-      await window.scAuth.signOut();
-    } catch (err) {
-      console.warn(err);
-    }
-  });
+      const provider = new window.firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: "select_account" });
 
-  // ✅ UI по сесії
-  (async () => {
-    try {
-      await waitFirebase();
-      window.scAuth.onAuthStateChanged(async (u) => {
-        if (!u) { showAuthUI(); return; }
+      const isMobile = window.matchMedia && window.matchMedia("(max-width: 980px)").matches;
 
-        // додатковий захист: якщо somehow зайшов без verified — виганяємо
-        try {
-          if (typeof u.reload === "function") await u.reload();
-          if (!u.emailVerified) {
-            await sendVerify(u);
-            await window.scAuth.signOut();
-            showAuthUI();
-            setMsg(loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження ще раз.", "err");
-            return;
-          }
-        } catch {}
+      if(isMobile){
+        await auth.signInWithRedirect(provider);
+        return;
+      }else{
+        await auth.signInWithPopup(provider);
+      }
 
-        showLoggedInUI();
+      const u = auth.currentUser;
+      if (!u) throw new Error("Не вдалося отримати користувача після Google-входу.");
+
+      // Google зазвичай verified, але перестрахуємось
+      if (typeof u.reload === "function") await u.reload();
+      if (!u.emailVerified){
+        await sendVerify(u);
+        try{ await auth.signOut(); }catch(_){}
+        setMsg(ui.loginMsg, "Пошта не підтверджена. Ми надіслали лист підтвердження.", "err");
+        return;
+      }
+
+      // створюємо users/{uid}, якщо нема
+      await ensureUserDoc(db, u.uid, {
+        fullName: u.displayName || "",
+        email: u.email || "",
+        phone: "",
+        city: "",
+        role: "member",
+        teamId: null,
+        avatarUrl: u.photoURL || ""
       });
-    } catch (e) {
-      console.warn(e);
-      showAuthUI();
+
+      setMsg(ui.loginMsg, "Готово ✅", "ok");
+      setTimeout(goCabinet, 250);
+
+    }catch(err){
+      console.error(err);
+      setMsg(ui.loginMsg, esc(err?.message || "Помилка Google-входу"), "err");
+    }
+  }
+
+  // Handle redirect result (mobile google)
+  (async ()=>{
+    try{
+      await waitFirebase();
+      const auth = window.scAuth;
+      const db = window.scDb;
+
+      const res = await auth.getRedirectResult();
+      if(res && res.user){
+        const u = res.user;
+        if (typeof u.reload === "function") await u.reload();
+
+        if (!u.emailVerified){
+          await sendVerify(u);
+          try{ await auth.signOut(); }catch(_){}
+          return;
+        }
+
+        await ensureUserDoc(db, u.uid, {
+          fullName: u.displayName || "",
+          email: u.email || "",
+          phone: "",
+          city: "",
+          role: "member",
+          teamId: null,
+          avatarUrl: u.photoURL || ""
+        });
+
+        // автоматом в кабінет
+        setTimeout(goCabinet, 150);
+      }
+    }catch(e){
+      console.warn("redirectResult:", e);
     }
   })();
+
+  // ===== Bind both UIs =====
+  function bind(prefix){
+    const ui = pickUI(prefix);
+
+    if(ui.signupForm) ui.signupForm.addEventListener("submit", onSignup.bind(null, ui));
+    if(ui.loginForm)  ui.loginForm.addEventListener("submit", onLogin.bind(null, ui));
+
+    if(ui.forgotLink) ui.forgotLink.addEventListener("click", onForgot.bind(null, ui));
+    if(ui.googleBtn)  ui.googleBtn.addEventListener("click", ()=>googleLogin(ui));
+  }
+
+  bind("");      // mobile
+  bind("Desk");  // desktop
+
+  // якщо користувач уже залогінений — одразу в кабінет
+  (async ()=>{
+    try{
+      await waitFirebase();
+      window.scAuth.onAuthStateChanged(async (u)=>{
+        if(!u) return;
+        if (typeof u.reload === "function") await u.reload();
+        if(u.emailVerified) goCabinet();
+      });
+    }catch(e){
+      console.warn(e);
+    }
+  })();
+
 })();

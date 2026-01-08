@@ -172,7 +172,7 @@
     const users = getUsers();
     const u = users[email];
     if (!u) {
-      setMsg(loginMsg, "Акаунт не знайдено. Перейди у «Реєстрація».", "err");
+      setMsg(loginMsg, "Акаунт не знайдено. пройдіть «Реєстрацію».", "err");
       return;
     }
 

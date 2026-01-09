@@ -1,9 +1,10 @@
 // assets/js/register_firebase.js
-// STOLAR CARP • Registration (FAST + PAYMENT + MOBILE FIX v4)
-// ✅ can click CLOSED stage to view payment
+// STOLAR CARP • Registration (FAST + PAYMENT + MOBILE FIX v5)
+// ✅ click CLOSED stage to view payment
 // ✅ submit only if OPEN
-// ✅ payment: amount/currency/details shown separately (no "all in one line")
-// ✅ mobile-safe: no overflow + click always selects item
+// ✅ payment sum updates even WITHOUT paySum/payCur ids (auto-detect in payment card)
+// ✅ payment details shown separately (pre-wrap + no overflow on mobile)
+// ✅ mobile-safe: click card always selects + updates payment
 
 (function () {
   const auth = window.scAuth;
@@ -22,7 +23,7 @@
   const cardNumEl      = document.getElementById("cardNum");
   const rulesChk       = document.getElementById("rules");
 
-  // optional but recommended in HTML
+  // optional ids (if you add later)
   const paySumEl       = document.getElementById("paySum");
   const payCurEl       = document.getElementById("payCur");
 
@@ -33,7 +34,7 @@
     return;
   }
 
-  const COMP_CACHE_KEY    = "sc_competitions_cache_v4";
+  const COMP_CACHE_KEY    = "sc_competitions_cache_v5";
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
   const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -43,7 +44,7 @@
   let lastItems = [];
   let nearestUpcomingValue = null;
 
-  // copy only details
+  // copies ONLY реквізити (payDetails)
   let activePayCardText = "";
 
   function escapeHtml(s) {
@@ -91,11 +92,6 @@
     if (v === null || v === undefined) return null;
     const n = Number(String(v).replace(",", ".").trim());
     return Number.isFinite(n) ? n : null;
-  }
-
-  function normalizeDateForCache(x) {
-    const d = toDateMaybe(x);
-    return d ? d.toISOString() : (typeof x === "string" ? x : null);
   }
 
   function getRegDatesFromEvent(ev) {
@@ -166,8 +162,39 @@
     submitBtn.disabled = !ok;
   }
 
-  // ========= PAYMENT UI =========
-  function hardenMobileWrap(el){
+  // ========= PAYMENT UI (NO HTML CHANGES REQUIRED) =========
+  function getPaymentCardRoot(){
+    if (cardNumEl) {
+      const root = cardNumEl.closest(".card--payment") || cardNumEl.closest(".register-card") || cardNumEl.parentElement;
+      if (root) return root;
+    }
+    return document.querySelector(".card--payment") || document.querySelector(".register-card.card--payment") || null;
+  }
+
+  function getSumBoldEl(){
+    // 1) preferred ids
+    if (paySumEl) return paySumEl;
+
+    // 2) auto-detect: in payment card find <p> that includes "Сума внеску" then its <b>
+    const root = getPaymentCardRoot();
+    if (!root) return null;
+
+    const ps = Array.from(root.querySelectorAll("p"));
+    const targetP = ps.find(p => /Сума\s+внеску/i.test(p.textContent || ""));
+    if (!targetP) {
+      // fallback: first <b> inside payment card
+      return root.querySelector("p b") || root.querySelector("b");
+    }
+    return targetP.querySelector("b") || null;
+  }
+
+  function getCurrencySpanEl(){
+    if (payCurEl) return payCurEl;
+    // if ids not exist — we just render currency inside the <b>
+    return null;
+  }
+
+  function hardenWrap(el){
     if (!el) return;
     el.style.whiteSpace = "pre-wrap";
     el.style.overflowWrap = "anywhere";
@@ -175,13 +202,28 @@
     el.style.maxWidth = "100%";
   }
 
+  function setPaymentSum(price, currency){
+    const sumB = getSumBoldEl();
+    const curSpan = getCurrencySpanEl();
+
+    if (curSpan) curSpan.textContent = currency || "UAH";
+
+    if (sumB) {
+      if (price === null || price === undefined) {
+        // if no ids — show like: "— UAH"
+        sumB.textContent = curSpan ? "—" : `— ${currency || "UAH"}`;
+      } else {
+        sumB.textContent = curSpan ? String(price) : `${price} ${currency || "UAH"}`;
+      }
+    }
+  }
+
   function clearPayUI(){
-    if (paySumEl) paySumEl.textContent = "—";
-    if (payCurEl) payCurEl.textContent = "UAH";
+    setPaymentSum(null, "UAH");
     activePayCardText = "";
     if (cardNumEl) {
       cardNumEl.textContent = "—";
-      hardenMobileWrap(cardNumEl);
+      hardenWrap(cardNumEl);
     }
   }
 
@@ -193,15 +235,13 @@
     const currency   = String(item.currency || "UAH").toUpperCase();
     const details    = String(item.payDetails || "").trim();
 
-    // amount / currency
-    if (paySumEl) paySumEl.textContent = (price === null ? "—" : String(price));
-    if (payCurEl) payCurEl.textContent = currency;
+    setPaymentSum(price, currency);
 
     if (!payEnabled) {
       activePayCardText = "";
       if (cardNumEl) {
         cardNumEl.textContent = "Оплата не потрібна ✅";
-        hardenMobileWrap(cardNumEl);
+        hardenWrap(cardNumEl);
       }
       return;
     }
@@ -209,7 +249,7 @@
     activePayCardText = details || "";
     if (cardNumEl) {
       cardNumEl.textContent = details || "—";
-      hardenMobileWrap(cardNumEl);
+      hardenWrap(cardNumEl);
     }
   }
 
@@ -306,6 +346,11 @@
   }
 
   // ========= COMP CACHE =========
+  function normalizeDateForCache(x) {
+    const d = toDateMaybe(x);
+    return d ? d.toISOString() : (typeof x === "string" ? x : null);
+  }
+
   function hydrateItemFromCache(it) {
     return {
       ...it,
@@ -448,7 +493,7 @@
     }
   }
 
-  // ✅ головний фікс: клік по картці завжди вибирає і оновлює оплату
+  // ✅ mobile-safe: click card always selects and updates payment
   function renderItems(items) {
     if (!eventOptionsEl) return;
     eventOptionsEl.innerHTML = "";
@@ -476,14 +521,9 @@
       const label = document.createElement("label");
       label.className = "stage-card event-item" + (open ? "" : " is-closed");
       label.setAttribute("role", "button");
-      label.style.maxWidth = "100%";
-      label.style.boxSizing = "border-box";
-      label.style.overflow = "hidden";
-
-      const inputId = "pick_" + btoa(unescape(encodeURIComponent(value))).replace(/=+/g,"").slice(0,16);
 
       label.innerHTML = `
-        <input id="${inputId}" type="radio" name="stagePick" value="${escapeHtml(value)}"
+        <input type="radio" name="stagePick" value="${escapeHtml(value)}"
                style="position:absolute;opacity:0;pointer-events:none;">
         <div class="stage-head" style="display:flex;gap:10px;align-items:flex-start;min-width:0;max-width:100%;">
           <span class="lamp ${lamp}" style="flex:0 0 auto;"></span>
@@ -501,11 +541,10 @@
         </div>
       `;
 
-      // ✅ forced select on click (mobile-safe)
       label.addEventListener("click", () => {
         const inp = label.querySelector('input[name="stagePick"]');
         if (inp) inp.checked = true;
-        setPayUIFromSelected(it);
+        setPayUIFromSelected(it);      // ✅ updates sum + details
         refreshSubmitState();
       });
 

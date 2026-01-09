@@ -1,33 +1,45 @@
 // assets/js/judge_qr_admin.js
-// STOLAR CARP • Admin • Judge QR (A/B/C) • 72h tokens
-// ✅ creates/updates judgeTokens/{token} with expiresAt (+72h)
-// ✅ builds links to weigh_judge.html?zone=A&token=SC-XXXX&compId=...&stageId=...&w=W1
-// ✅ mobile friendly output: wrapped boxes + copy buttons
-// ✅ reads settings/app to show current activeKey + status ("weighing" enables judges; "finished" stops)
+// STOLAR CARP • Admin • Judge QR A/B/C (72h)
+// ✅ Draws QR images for each zone (A/B/C) + copy/open buttons
+// ✅ Saves token to Firestore judgeTokens/{token} with expiresAt (+72h)
+// ✅ Uses settings/app as source of active comp/stage/key
+// ✅ Mobile portrait friendly layout (no overflow)
 
 (function () {
   "use strict";
 
-  // ---------- CONFIG ----------
-  const TOKEN_COL = "judgeTokens";       // judgeTokens/{token}
-  const APP_DOC = "settings/app";        // settings/app
-  const DEFAULT_W = "W1";
+  const TOKEN_COL = "judgeTokens"; // judgeTokens/{token}
   const TOKEN_HOURS = 72;
+  const DEFAULT_W = "W1";
 
-  // ---------- UI (expected ids on the page) ----------
-  // input for token:
-  const tokenInput = document.getElementById("tokenInput") || document.getElementById("token") || document.querySelector("[data-judge-token]");
-  // buttons:
-  const btnRandom = document.getElementById("btnRandomToken") || document.getElementById("btnRandom") || document.querySelector("[data-judge-random]");
-  const btnGenerate = document.getElementById("btnGenerateLinks") || document.getElementById("btnGenerate") || document.querySelector("[data-judge-generate]");
-  // output:
-  const out = document.getElementById("qrOut") || document.getElementById("out") || document.querySelector("[data-judge-out]");
-  const msgEl = document.getElementById("msg") || document.querySelector("[data-judge-msg]");
+  // --- expected DOM ---
+  const tokenInput =
+    document.getElementById("tokenInput") ||
+    document.getElementById("token") ||
+    document.querySelector("[data-judge-token]");
 
-  // If page doesn't have required nodes, do nothing.
+  const btnRandom =
+    document.getElementById("btnRandomToken") ||
+    document.getElementById("btnRandom") ||
+    document.querySelector("[data-judge-random]");
+
+  const btnGenerate =
+    document.getElementById("btnGenerateLinks") ||
+    document.getElementById("btnGenerate") ||
+    document.querySelector("[data-judge-generate]");
+
+  const out =
+    document.getElementById("qrOut") ||
+    document.getElementById("out") ||
+    document.querySelector("[data-judge-out]");
+
+  const msgEl =
+    document.getElementById("msg") ||
+    document.querySelector("[data-judge-msg]");
+
   if (!out) return;
 
-  // ---------- helpers ----------
+  // --- helpers ---
   const esc = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (m) => ({
       "&": "&amp;",
@@ -45,67 +57,60 @@
 
   function norm(v) { return String(v ?? "").trim(); }
 
-  function nowMs() { return Date.now(); }
-
-  function pad2(n) { return String(n).padStart(2, "0"); }
-
-  function fmtLocal(dt) {
-    try {
-      const d = dt instanceof Date ? dt : new Date(dt);
-      return `${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}.${d.getFullYear()} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-    } catch { return "—"; }
-  }
-
   function randomToken() {
-    // SC- + 10-12 chars
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let s = "SC-";
     for (let i = 0; i < 11; i++) s += chars[Math.floor(Math.random() * chars.length)];
     return s;
   }
 
-  function buildUrl(base, params) {
-    const u = new URL(base, location.origin);
+  function nowMs(){ return Date.now(); }
+
+  function pad2(n){ return String(n).padStart(2, "0"); }
+
+  function fmtLocal(d){
+    try{
+      const dt = d instanceof Date ? d : new Date(d);
+      return `${pad2(dt.getDate())}.${pad2(dt.getMonth()+1)}.${dt.getFullYear()} ${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+    }catch{ return "—"; }
+  }
+
+  function buildUrl(path, params) {
+    const u = new URL(path, location.origin);
     Object.keys(params).forEach((k) => {
-      if (params[k] === undefined || params[k] === null || params[k] === "") return;
-      u.searchParams.set(k, String(params[k]));
+      const v = params[k];
+      if (v === undefined || v === null || v === "") return;
+      u.searchParams.set(k, String(v));
     });
     return u.toString();
   }
 
-  function copyText(txt) {
+  async function copyText(txt) {
     const s = String(txt || "");
-    if (!s) return Promise.resolve(false);
+    if (!s) return false;
 
-    // modern
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      return navigator.clipboard.writeText(s).then(() => true).catch(() => fallbackCopy(s));
+    if (navigator.clipboard?.writeText) {
+      try { await navigator.clipboard.writeText(s); return true; } catch {}
     }
-    return fallbackCopy(s);
 
-    function fallbackCopy(text) {
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = text;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        ta.style.top = "0";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        ta.remove();
-        return Promise.resolve(!!ok);
-      } catch {
-        return Promise.resolve(false);
-      }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = s;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      return !!ok;
+    } catch {
+      return false;
     }
   }
 
-  function injectMobileCss() {
+  function injectCss(){
     if (document.getElementById("scJudgeQrCss")) return;
-
-    const css = `
+    document.head.insertAdjacentHTML("beforeend", `
       <style id="scJudgeQrCss">
         .jq-card{
           background: rgba(15,23,42,.92);
@@ -114,39 +119,58 @@
           padding: 14px;
           box-shadow: 0 18px 40px rgba(0,0,0,.45);
         }
-        .jq-row{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-        .jq-title{ font-weight: 900; font-size: 1.02rem; }
-        .jq-sub{ opacity:.78; font-size:.88rem; line-height:1.35; }
+        .jq-top{ display:flex; gap:10px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+        .jq-title{ font-weight:900; font-size:1.05rem; }
+        .jq-sub{ opacity:.78; font-size:.88rem; line-height:1.35; margin-top:6px; }
         .jq-badge{
           display:inline-flex; align-items:center; gap:8px;
           padding: 6px 10px;
           border-radius: 999px;
           border: 1px solid rgba(148,163,184,.25);
           background: rgba(2,6,23,.35);
-          font-weight: 800;
+          font-weight: 900;
           font-size: .86rem;
+          white-space: nowrap;
         }
         .jq-badge.ok{ border-color: rgba(143,227,154,.35); }
         .jq-badge.err{ border-color: rgba(255,108,108,.35); }
-        .jq-box{
-          margin-top: 12px;
-          border: 1px solid rgba(148,163,184,.20);
-          background: rgba(2,6,23,.25);
-          border-radius: 14px;
-          padding: 10px;
+
+        .jq-grid{
+          display:grid;
+          grid-template-columns: 1fr;
+          gap:12px;
+          margin-top:12px;
         }
-        .jq-line{ display:flex; gap:10px; align-items:flex-start; justify-content:space-between; }
-        .jq-zone{ font-weight: 900; width: 26px; flex: 0 0 auto; opacity:.9; }
+        .jq-zoneCard{
+          border: 1px solid rgba(148,163,184,.18);
+          background: rgba(2,6,23,.25);
+          border-radius: 16px;
+          padding: 12px;
+        }
+        .jq-zoneHead{
+          display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+        }
+        .jq-zoneName{ font-weight: 900; font-size: 1rem; }
+        .jq-qr{
+          display:flex; align-items:center; justify-content:center;
+          width: 210px; max-width: 100%;
+          margin-top:10px;
+          padding: 10px;
+          border-radius: 14px;
+          border: 1px solid rgba(148,163,184,.18);
+          background: rgba(2,6,23,.28);
+        }
         .jq-url{
-          flex: 1 1 auto;
-          min-width: 0;
+          margin-top:10px;
+          font-size:.86rem;
+          opacity:.9;
           word-break: break-word;
           overflow-wrap: anywhere;
-          font-size: .88rem;
-          line-height: 1.25;
-          opacity: .92;
+          line-height:1.25;
         }
-        .jq-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+        .jq-actions{
+          display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
+        }
         .jq-btn{
           appearance:none;
           border: 1px solid rgba(148,163,184,.25);
@@ -161,17 +185,14 @@
           background: linear-gradient(135deg, #fbbf24, #fb7185);
           color: #111827;
         }
-        .jq-btn:active{ transform: translateY(1px); }
-        .jq-small{ font-size:.84rem; opacity:.8; }
         @media (max-width: 420px){
           .jq-btn{ width:100%; }
+          .jq-qr{ width: 100%; }
         }
       </style>
-    `;
-    document.head.insertAdjacentHTML("beforeend", css);
+    `);
   }
 
-  // ---------- Firebase wait ----------
   async function waitFirebase(maxMs = 14000) {
     const t0 = nowMs();
     while (nowMs() - t0 < maxMs) {
@@ -181,201 +202,185 @@
     throw new Error("Firebase init не піднявся (scDb/firebase/scAuth).");
   }
 
-  // ---------- read active ctx ----------
-  async function getAppCtx(db) {
+  async function getAppCtx(db){
     const snap = await db.collection("settings").doc("app").get();
-    const d = snap.exists ? (snap.data() || {}) : {};
+    const d = snap.exists ? (snap.data()||{}) : {};
 
-    const compId =
-      norm(d.activeCompetitionId || d.activeCompetition || d.competitionId || "");
-
-    const stageId =
-      norm(d.activeStageId || d.stageId || "stage-1") || "stage-1";
-
-    // activeKey: якщо нема — збираємо як compId||stageId
+    const compId = norm(d.activeCompetitionId || d.activeCompetition || d.competitionId || "");
+    const stageId = norm(d.activeStageId || d.stageId || "stage-1") || "stage-1";
     const activeKey = norm(d.activeKey || "") || (compId && stageId ? `${compId}||${stageId}` : "");
-
-    const status = norm(d.status || "weighing"); // default for safety
+    const status = norm(d.status || "weighing"); // weighing / finished / paused ...
 
     return { compId, stageId, activeKey, status };
   }
 
-  // ---------- token write ----------
-  async function upsertToken(db, token, ctx, zone) {
-    const cleanToken = norm(token);
-    if (!cleanToken) throw new Error("Порожній token.");
+  async function upsertToken(db, token, ctx){
+    const clean = norm(token);
+    if(!clean) throw new Error("Порожній token.");
 
     const expiresAt = new Date(nowMs() + TOKEN_HOURS * 60 * 60 * 1000);
 
-    await db.collection(TOKEN_COL).doc(cleanToken).set({
-      token: cleanToken,
+    await db.collection(TOKEN_COL).doc(clean).set({
+      token: clean,
       compId: ctx.compId,
       stageId: ctx.stageId,
       activeKey: ctx.activeKey,
-      zone: zone, // "A"/"B"/"C" або null для універсального
       expiresAt: window.firebase.firestore.Timestamp.fromDate(expiresAt),
       createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
       createdBy: window.scAuth?.currentUser?.uid || null
-    }, { merge: true });
+    }, { merge:true });
 
     return expiresAt;
   }
 
-  // ---------- render ----------
-  function renderLinks(ctx, token, urls, expiresAt) {
-    injectMobileCss();
+  function render(ctx, token, expiresAt, urls){
+    injectCss();
 
     const okWeighing = String(ctx.status || "").toLowerCase() === "weighing";
 
     out.innerHTML = `
       <div class="jq-card">
-        <div class="jq-row">
+        <div class="jq-top">
           <div>
-            <div class="jq-title">QR / посилання для суддів (A/B/C)</div>
-            <div class="jq-sub" style="margin-top:6px;">
+            <div class="jq-title">QR доступ для суддів (A/B/C)</div>
+            <div class="jq-sub">
               activeKey: <code>${esc(ctx.activeKey || "—")}</code><br>
               compId: <code>${esc(ctx.compId || "—")}</code> · stageId: <code>${esc(ctx.stageId || "—")}</code><br>
-              Token діє до: <b>${esc(fmtLocal(expiresAt))}</b> (72 години)
+              token: <b>${esc(token)}</b><br>
+              діє до: <b>${esc(fmtLocal(expiresAt))}</b> (72 год)
             </div>
           </div>
 
-          <div class="jq-badge ${okWeighing ? "ok" : "err"}">
-            ${okWeighing ? "✅ Зважування активне" : "⛔ Зважування не активне"}
+          <div class="jq-badge ${okWeighing ? "ok":"err"}">
+            ${okWeighing ? "✅ зважування активне" : "⛔ зважування не активне"}
           </div>
         </div>
 
-        ${okWeighing ? "" : `
-          <div class="jq-box" style="margin-top:12px;">
-            <div class="jq-sub">
-              Увага: <b>status ≠ weighing</b>. Суддя побачить посилання, але запис даних має бути заблокований (це робиться у weigh_judge.js + Rules).
-            </div>
-          </div>
-        `}
+        <div class="jq-grid">
+          ${["A","B","C"].map(z=>`
+            <div class="jq-zoneCard" data-zonecard="${z}">
+              <div class="jq-zoneHead">
+                <div class="jq-zoneName">Зона ${z}</div>
+                <div style="opacity:.75;font-size:.86rem;">QR + посилання</div>
+              </div>
 
-        ${["A","B","C"].map(z => `
-          <div class="jq-box">
-            <div class="jq-line">
-              <div class="jq-zone">${z}:</div>
+              <div class="jq-qr" id="qr_${z}"></div>
+
               <div class="jq-url" id="url_${z}">${esc(urls[z] || "")}</div>
-            </div>
-            <div class="jq-actions">
-              <button class="jq-btn primary" type="button" data-copy="${z}">Скопіювати посилання ${z}</button>
-              <button class="jq-btn" type="button" data-open="${z}">Відкрити ${z}</button>
-            </div>
-          </div>
-        `).join("")}
 
-        <div class="jq-box">
-          <div class="jq-sub">
-            Порада: зроби QR-код з посиланням потрібної зони (A/B/C). Суддя сканує → одразу попадає у свою зону.
-          </div>
+              <div class="jq-actions">
+                <button class="jq-btn primary" type="button" data-copy="${z}">Скопіювати посилання</button>
+                <button class="jq-btn" type="button" data-open="${z}">Відкрити</button>
+              </div>
+            </div>
+          `).join("")}
         </div>
       </div>
     `;
 
-    // events
-    out.querySelectorAll("[data-copy]").forEach(btn => {
-      btn.addEventListener("click", async () => {
+    // draw QR
+    ["A","B","C"].forEach(z=>{
+      const box = document.getElementById(`qr_${z}`);
+      const url = urls[z] || "";
+      if(!box) return;
+
+      box.innerHTML = "";
+      if (window.QRCode) {
+        // QRCode.js draws into element
+        new window.QRCode(box, {
+          text: url,
+          width: 180,
+          height: 180,
+          correctLevel: window.QRCode.CorrectLevel.M
+        });
+      } else {
+        box.innerHTML = `<div style="opacity:.8;font-size:.9rem;">❌ Нема QRCode бібліотеки</div>`;
+      }
+    });
+
+    // actions
+    out.querySelectorAll("[data-copy]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
         const z = btn.getAttribute("data-copy");
-        const u = urls[z] || "";
-        const ok = await copyText(u);
-        if (ok) setMsg(`✅ Скопійовано посилання ${z}`, true);
-        else setMsg(`❌ Не вдалося скопіювати ${z}`, false);
-        setTimeout(() => setMsg("", true), 1200);
+        const ok = await copyText(urls[z] || "");
+        setMsg(ok ? `✅ Скопійовано (зона ${z})` : `❌ Не вдалося скопіювати (зона ${z})`, ok);
+        setTimeout(()=>setMsg("", true), 1200);
       });
     });
 
-    out.querySelectorAll("[data-open]").forEach(btn => {
-      btn.addEventListener("click", () => {
+    out.querySelectorAll("[data-open]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
         const z = btn.getAttribute("data-open");
         const u = urls[z] || "";
-        if (u) window.open(u, "_blank", "noopener");
+        if(u) window.open(u, "_blank", "noopener");
       });
     });
   }
 
-  // ---------- main ----------
-  (async function boot() {
-    try {
+  (async function boot(){
+    try{
       await waitFirebase();
       const db = window.scDb;
 
-      // ВАЖЛИВО: тут адмін сторінка, тому юзер вже має бути залогінений як адмін у вашій адмінці
-      // Якщо не залогінений — просто не дасть створити токен.
-      const user = window.scAuth?.currentUser || null;
-      if (!user) {
-        setMsg("❌ Увійди в адмінці (auth), щоб генерувати токени.", false);
-      }
-
-      // restore / set default token
+      // default token
       if (tokenInput && !norm(tokenInput.value)) tokenInput.value = randomToken();
 
-      // random token
-      btnRandom?.addEventListener("click", () => {
-        if (tokenInput) tokenInput.value = randomToken();
+      btnRandom?.addEventListener("click", ()=>{
+        if(tokenInput) tokenInput.value = randomToken();
         setMsg("✅ Token згенеровано", true);
-        setTimeout(() => setMsg("", true), 900);
+        setTimeout(()=>setMsg("", true), 900);
       });
 
-      // generate links
-      btnGenerate?.addEventListener("click", async () => {
-        try {
-          setMsg("Зберігаю token…", true);
-
+      btnGenerate?.addEventListener("click", async ()=>{
+        try{
           const token = norm(tokenInput?.value || "");
-          if (!token || !token.startsWith("SC-")) {
+          if(!token || !token.startsWith("SC-")){
             setMsg("❌ Token має бути у форматі SC-XXXX", false);
             return;
           }
 
           const ctx = await getAppCtx(db);
-          if (!ctx.compId || !ctx.stageId || !ctx.activeKey) {
+          if(!ctx.compId || !ctx.stageId || !ctx.activeKey){
             setMsg("❌ Нема активного етапу. Перевір settings/app (activeCompetitionId + activeStageId/activeKey).", false);
             return;
           }
 
-          // створюємо універсальний токен (без прив’язки до зони) — бо URL вже має zone=A/B/C
-          const expiresAt = await upsertToken(db, token, ctx, null);
+          setMsg("Зберігаю token…", true);
+          const expiresAt = await upsertToken(db, token, ctx);
 
-          // build URLs
-          const baseJudge = "/weigh_judge.html"; // ✅ твоя сторінка судді
+          // ВАЖЛИВО: шлях до сторінки судді
+          // Якщо у тебе вона в /admin-weigh/weigh_judge.html — зміни тут:
+          const judgePath = "/weigh_judge.html";
+
           const urls = {
-            A: buildUrl(baseJudge, { zone: "A", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
-            B: buildUrl(baseJudge, { zone: "B", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
-            C: buildUrl(baseJudge, { zone: "C", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
+            A: buildUrl(judgePath, { zone:"A", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
+            B: buildUrl(judgePath, { zone:"B", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
+            C: buildUrl(judgePath, { zone:"C", token, compId: ctx.compId, stageId: ctx.stageId, w: DEFAULT_W }),
           };
 
-          renderLinks(ctx, token, urls, expiresAt);
+          render(ctx, token, expiresAt, urls);
+          setMsg("✅ QR та посилання згенеровано (A/B/C).", true);
+          setTimeout(()=>setMsg("", true), 1400);
 
-          setMsg("✅ Готово. Згенерував посилання A/B/C.", true);
-          setTimeout(() => setMsg("", true), 1400);
-
-        } catch (e) {
+        }catch(e){
           console.error(e);
           setMsg("❌ " + (e?.message || e), false);
         }
       });
 
-      // initial info card (optional)
-      try {
-        const ctx = await getAppCtx(db);
-        out.innerHTML = `
-          <div class="jq-card">
-            <div class="jq-title">QR для суддів (A/B/C)</div>
-            <div class="jq-sub" style="margin-top:8px;">
-              Активний етап береться з <code>settings/app</code>.<br>
-              Зараз: <code>${esc(ctx.activeKey || "—")}</code><br>
-              status: <b>${esc(ctx.status || "—")}</b>
-            </div>
-            <div class="jq-sub" style="margin-top:10px;">Введи/згенеруй token і натисни “Згенерувати посилання A/B/C”.</div>
-          </div>
-        `;
-        injectMobileCss();
-      } catch {}
+      // стартовий екран
+      injectCss();
+      out.innerHTML = `
+        <div class="jq-card">
+          <div class="jq-title">QR для суддів (A/B/C)</div>
+          <div class="jq-sub">Згенеруй token → натисни “Згенерувати посилання/QR”.</div>
+        </div>
+      `;
 
-    } catch (e) {
+    }catch(e){
       console.error(e);
       setMsg("❌ " + (e?.message || e), false);
     }
   })();
+
 })();

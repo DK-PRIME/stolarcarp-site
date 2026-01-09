@@ -349,13 +349,23 @@
         </form>
       </div>
 
-      <div class="card register-card card--payment">
-        <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
-        <p>Сума внеску: <b>3500 ₴</b> на банківську картку:</p>
-        <p>Номер картки:</p>
-        <p><span id="cardNum" class="card-number">4874 0700 5068 8793</span></p>
-        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">Скопіювати номер картки</button>
-        <p class="card-note">У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.</p>
+      <div class="card register-card card--payment" id="payCard">
+  <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
+
+  <p id="payLine">
+    Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
+  </p>
+
+  <p id="payLabel">Реквізити:</p>
+  <p><span id="cardNum" class="card-number">—</span></p>
+
+  <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
+    Скопіювати реквізити
+  </button>
+
+  <p class="card-note" id="payNote">
+    У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
+  </p>
       </div>
 
     </div>

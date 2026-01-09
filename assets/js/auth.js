@@ -99,14 +99,12 @@
 
   function goCabinet() { location.href = "cabinet.html"; }
 
-  // ====== UI blocks (мають бути в auth.html) ======
-  // Якщо в тебе інші id — скажеш, я піджену, але бажано так:
-  const loggedBox = $("loggedBox");     // блок "Ви вже увійшли"
-  const authBox   = $("authBox");       // блоки реєстрації/входу (вся форма)
+  const loggedBox = $("loggedBox");
+  const authBox   = $("authBox");
 
-  const btnGoCab  = $("goCabinetBtn");  // кнопка "Перейти в кабінет"
-  const btnLogout = $("logoutBtn");     // кнопка "Вийти"
-  const loggedMsg = $("loggedMsg");     // текст в блоці "Ви вже увійшли" (без email!)
+  const btnGoCab  = $("goCabinetBtn");
+  const btnLogout = $("logoutBtn");
+  const loggedMsg = $("loggedMsg");
 
   const signupForm = $("signupForm");
   const loginForm  = $("loginForm");
@@ -226,7 +224,6 @@
     }
   }
 
-  // ====== Bind ======
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
@@ -242,7 +239,6 @@
     }
   });
 
-  // ✅ Головне: керуємо UI по сесії, БЕЗ авто-редиректу
   (async () => {
     try {
       await waitFirebase();
@@ -252,7 +248,6 @@
       });
     } catch (e) {
       console.warn(e);
-      // якщо Firebase не готовий — просто показуємо форми
       showAuthUI();
     }
   })();

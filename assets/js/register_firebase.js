@@ -1,12 +1,14 @@
 // assets/js/register_firebase.js
-// STOLAR CARP • Registration (FAST)
+// STOLAR CARP • Registration (FAST + PAYMENT)
 // ✅ Team vs Solo
-// ✅ Anti-duplicate via deterministic docId (duplicate becomes UPDATE -> denied by rules)
+// ✅ Anti-duplicate via deterministic docId
 // ✅ FAST: render competitions instantly from localStorage cache, then refresh in background
 // ✅ Parallel loads: profile + competitions
 // ✅ No undefined fields (uses null)
-// ✅ PUBLIC mirror: writes safe fields to public_participants (teamName + status + ids)
-// ✅ PAYMENT: reads payEnabled/price/currency/payDetails from competitions.events and snapshots into registrations
+// ✅ PUBLIC mirror: writes safe fields to public_participants
+// ✅ PAYMENT: reads payEnabled/price/currency/payDetails from competitions.events
+// ✅ PAYMENT UI: shows after selecting stage; copies ONLY payDetails
+// ✅ SAFE: tolerant read of typo fields (payDeta..., payDetail, iban, card etc)
 
 (function () {
   const auth = window.scAuth;
@@ -18,12 +20,23 @@
   const submitBtn      = document.getElementById("submitBtn");
   const spinnerEl      = document.getElementById("spinner");
   const hpInput        = document.getElementById("hp");
+
   const foodQtyField   = document.getElementById("foodQtyField");
   const foodQtyInput   = document.getElementById("food_qty");
+
   const profileSummary = document.getElementById("profileSummary");
+  const rulesChk       = document.getElementById("rules");
+
+  // PAYMENT UI
+  const payCardEl      = document.getElementById("payCard");
+  const payAmountEl    = document.getElementById("payAmount");
+  const payCurrencyEl  = document.getElementById("payCurrency");
+  const payLineEl      = document.getElementById("payLine");
+  const payLabelEl     = document.getElementById("payLabel");
+  const payNoteEl      = document.getElementById("payNote");
+
   const copyCardBtn    = document.getElementById("copyCard");
   const cardNumEl      = document.getElementById("cardNum");
-  const rulesChk       = document.getElementById("rules");
 
   if (!auth || !db || !window.firebase) {
     if (eventOptionsEl) eventOptionsEl.innerHTML =
@@ -32,8 +45,8 @@
     return;
   }
 
-  // ======= PERF CACHE =======
-  const COMP_CACHE_KEY = "sc_competitions_cache_v1";
+  // ======= CACHE =======
+  const COMP_CACHE_KEY = "sc_competitions_cache_v2"; // ⬅️ bump version щоб не тягнув старий кеш без payment
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
   const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 год
 
@@ -91,6 +104,31 @@
     return Number.isFinite(n) ? n : null;
   }
 
+  function safeUpper(s, fallback) {
+    const v = String(s || "").trim();
+    return (v ? v.toUpperCase() : (fallback || ""));
+  }
+
+  // ======= robust payDetails (tolerant to typos/alt keys) =======
+  function pickPayDetails(obj) {
+    if (!obj) return "";
+    const candidates = [
+      obj.payDetails,
+      obj.payDetail,
+      obj.payDeta,      // якщо хтось так назвав
+      obj.payDatails,   // популярна помилка
+      obj.payRequisites,
+      obj.requisites,
+      obj.card,
+      obj.iban,
+      obj.bankCard,
+      obj.cardNumber,
+      obj.payInfo
+    ];
+    const first = candidates.find(v => String(v || "").trim().length);
+    return String(first || "").trim();
+  }
+
   function getRegDatesFromEvent(ev) {
     const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen  || null;
     const regClose = ev.regCloseAt || ev.regCloseDate || ev.regClose || null;
@@ -108,49 +146,56 @@
     return (t === "solo") ? "solo" : "team";
   }
 
-  // ======= PAYMENT UI (uses existing #cardNum + #copyCard) =======
-  let activePayText = "";
+  // ======= PAYMENT UI =======
+  let activePayDetails = ""; // копіюємо ТІЛЬКИ це
+  function resetPayUI() {
+    activePayDetails = "";
+    if (payAmountEl) payAmountEl.textContent = "—";
+    if (payCurrencyEl) payCurrencyEl.textContent = "UAH";
+    if (cardNumEl) cardNumEl.textContent = "—";
+    if (payCardEl) payCardEl.style.display = ""; // показуємо, але порожній
+  }
 
-  function setPayUIFromSelected(item){
-    // якщо в тебе нема payDetails UI на сторінці — просто тихо виходимо
-    if (!cardNumEl) return;
+  function setPayUIFromSelected(item) {
+    if (!payCardEl || !cardNumEl) return;
 
-    if (!item){
-      activePayText = "";
-      cardNumEl.textContent = "";
-      return;
-    }
+    if (!item) { resetPayUI(); return; }
 
     const payEnabled = !!item.payEnabled;
     const price = normalizeMoney(item.price);
-    const currency = String(item.currency || "UAH").toUpperCase();
+    const currency = safeUpper(item.currency, "UAH") || "UAH";
     const details = String(item.payDetails || "").trim();
 
-    if (!payEnabled){
-      activePayText = "Оплата не потрібна для цього етапу ✅";
-      cardNumEl.textContent = activePayText;
+    activePayDetails = details;
+
+    if (!payEnabled) {
+      // якщо оплата не потрібна — просто покажемо повідомлення
+      if (payAmountEl) payAmountEl.textContent = "0";
+      if (payCurrencyEl) payCurrencyEl.textContent = currency;
+      cardNumEl.textContent = "Оплата не потрібна ✅";
+      activePayDetails = "";
       return;
     }
 
-    const priceLine = (price === null) ? `Внесок: — ${currency}` : `Внесок: ${price} ${currency}`;
-    const detailsLine = details || "Реквізити не задані адміністратором.";
-    activePayText = `${priceLine}\n${detailsLine}`.trim();
+    if (payAmountEl) payAmountEl.textContent = (price === null ? "—" : String(price));
+    if (payCurrencyEl) payCurrencyEl.textContent = currency;
 
-    cardNumEl.textContent = activePayText;
+    cardNumEl.textContent = details ? details : "Реквізити не задані адміністратором.";
   }
 
-  // copy реквізити (завжди копіюємо те, що показано)
+  // copy реквізити (тільки payDetails)
   if (copyCardBtn) {
     copyCardBtn.addEventListener("click", async () => {
-      const txt = (activePayText || (cardNumEl ? cardNumEl.textContent : "") || "").trim();
+      const txt = String(activePayDetails || "").trim();
       if (!txt) {
         alert("Нема що копіювати.");
         return;
       }
       try {
         await navigator.clipboard.writeText(txt);
+        const old = copyCardBtn.textContent;
         copyCardBtn.textContent = "Скопійовано ✔";
-        setTimeout(() => (copyCardBtn.textContent = "Скопіювати реквізити"), 1200);
+        setTimeout(() => (copyCardBtn.textContent = old || "Скопіювати реквізити"), 1200);
       } catch {
         alert("Не вдалося скопіювати. Скопіюйте вручну.");
       }
@@ -318,7 +363,6 @@
         hint.textContent = "Оновлюю список…";
         eventOptionsEl.appendChild(hint);
       }
-
       return true;
     } catch {
       return false;
@@ -334,11 +378,11 @@
         regOpenAt: normalizeDateForCache(it.regOpenAt),
         regCloseAt: normalizeDateForCache(it.regCloseAt),
 
-        // ✅ payment cache
+        // payment
         payEnabled: !!it.payEnabled,
         price: (it.price === 0 || it.price) ? it.price : null,
         currency: (it.currency || "UAH").toUpperCase(),
-        payDetails: (it.payDetails || "").trim(),
+        payDetails: String(it.payDetails || "").trim(),
       }));
       localStorage.setItem(COMP_CACHE_KEY, JSON.stringify({ ts: Date.now(), items: packed }));
     } catch {}
@@ -375,6 +419,12 @@
 
             const entryType = entryTypeFromEvent(ev, c);
 
+            // payment tolerant read
+            const payEnabled = !!(ev.payEnabled ?? c.payEnabled);
+            const price = (ev.price === 0 || ev.price) ? normalizeMoney(ev.price) : ((c.price === 0 || c.price) ? normalizeMoney(c.price) : null);
+            const currency = safeUpper(ev.currency || c.currency, "UAH") || "UAH";
+            const payDetails = pickPayDetails(ev) || pickPayDetails(c);
+
             items.push({
               compId,
               brand,
@@ -392,16 +442,20 @@
               regOpenAt,
               regCloseAt,
 
-              // ✅ payment from admin
-              payEnabled: !!ev.payEnabled,
-              price: (ev.price === 0 || ev.price) ? normalizeMoney(ev.price) : null,
-              currency: (ev.currency || "UAH").toUpperCase(),
-              payDetails: (ev.payDetails || "").trim(),
+              payEnabled,
+              price,
+              currency,
+              payDetails: String(payDetails || "").trim(),
             });
           });
         } else {
           const startAt = toDateMaybe(c.startAt || c.startDate);
           const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
+
+          const payEnabled = !!c.payEnabled;
+          const price = (c.price === 0 || c.price) ? normalizeMoney(c.price) : null;
+          const currency = safeUpper(c.currency, "UAH") || "UAH";
+          const payDetails = pickPayDetails(c);
 
           items.push({
             compId,
@@ -420,11 +474,10 @@
             regOpenAt: c.regOpenAt || c.regOpenDate || null,
             regCloseAt: c.regCloseAt || c.regCloseDate || null,
 
-            // ✅ payment (fallback)
-            payEnabled: !!c.payEnabled,
-            price: (c.price === 0 || c.price) ? normalizeMoney(c.price) : null,
-            currency: (c.currency || "UAH").toUpperCase(),
-            payDetails: (c.payDetails || "").trim(),
+            payEnabled,
+            price,
+            currency,
+            payDetails: String(payDetails || "").trim(),
           });
         }
       });
@@ -451,12 +504,12 @@
     }
   }
 
+  // ======= RENDER =======
   function renderItems(items) {
     if (!eventOptionsEl) return;
     eventOptionsEl.innerHTML = "";
 
-    // ✅ clear pay UI until pick
-    setPayUIFromSelected(null);
+    resetPayUI(); // до вибору — пусто
 
     if (!items.length) {
       eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань. Додай їх в адмінці.</p>`;
@@ -470,7 +523,6 @@
       const lamp = lampClassFor(it, value);
 
       const typeBadge = it.entryType === "solo" ? "SOLO" : "TEAM";
-
       const titleText =
         `${it.brand ? it.brand + " · " : ""}${it.compTitle}` +
         (it.stageTitle ? ` — ${it.stageTitle}` : "") +
@@ -488,7 +540,8 @@
       }
 
       label.innerHTML = `
-        <input type="radio" name="stagePick" value="${escapeHtml(value)}" ${open ? "" : "disabled"} style="position:absolute;left:-9999px;opacity:0;">
+        <input type="radio" name="stagePick" value="${escapeHtml(value)}" ${open ? "" : "disabled"}
+               style="position:absolute;left:-9999px;opacity:0;">
         <div class="stage-head">
           <span class="lamp ${lamp}"></span>
           <div class="stage-info">
@@ -622,7 +675,7 @@
 
       const entryType = selectedItem.entryType || "team";
 
-      // TEAM вимога під rules
+      // TEAM вимога
       if (entryType === "team") {
         if (!profile.teamId) {
           setMsg("Це командний етап. Спочатку приєднайтесь до команди (в «Мій кабінет»).", false);
@@ -640,7 +693,7 @@
       const payment = {
         payEnabled: !!selectedItem.payEnabled,
         price: (selectedItem.price === 0 || selectedItem.price) ? normalizeMoney(selectedItem.price) : null,
-        currency: (selectedItem.currency || "UAH").toUpperCase(),
+        currency: safeUpper(selectedItem.currency, "UAH") || "UAH",
         payDetails: String(selectedItem.payDetails || "").trim()
       };
 
@@ -683,7 +736,7 @@
         // Anti-duplicate
         await ref.set(payload, { merge: false });
 
-        // ✅ Публічне дзеркало (безпечні поля) -> public_participants
+        // ✅ public mirror
         try {
           const pubRef = db.collection("public_participants").doc(docId);
           const pubPayload = buildPublicPayload({
@@ -709,7 +762,7 @@
 
         form.reset();
         initFoodLogic();
-        setPayUIFromSelected(null);
+        resetPayUI();
       } catch (err) {
         console.error("submit error:", err);
 

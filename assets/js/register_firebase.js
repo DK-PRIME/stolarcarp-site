@@ -1,13 +1,9 @@
 // assets/js/register_firebase.js
-// STOLAR CARP • Registration (FAST + PAYMENT + MOBILE FIX)
-// ✅ Team vs Solo
-// ✅ Anti-duplicate via deterministic docId
-// ✅ FAST cache competitions + refresh in background
-// ✅ No undefined fields (uses null)
-// ✅ PUBLIC mirror -> public_participants
-// ✅ PAYMENT: reads payEnabled/price/currency/payDetails (events or comp fallback)
-// ✅ UX: can click CLOSED stage to view payment (submit only if OPEN)
-// ✅ MOBILE: no overflow on phones (wrap + min-width:0)
+// STOLAR CARP • Registration (FAST + PAYMENT + MOBILE FIX v4)
+// ✅ can click CLOSED stage to view payment
+// ✅ submit only if OPEN
+// ✅ payment: amount/currency/details shown separately (no "all in one line")
+// ✅ mobile-safe: no overflow + click always selects item
 
 (function () {
   const auth = window.scAuth;
@@ -26,9 +22,9 @@
   const cardNumEl      = document.getElementById("cardNum");
   const rulesChk       = document.getElementById("rules");
 
-  // ✅ optional, but рекомендую додати в HTML (як було окремо)
-  const paySumEl       = document.getElementById("paySum"); // <b id="paySum">—</b>
-  const payCurEl       = document.getElementById("payCur"); // <span id="payCur">UAH</span>
+  // optional but recommended in HTML
+  const paySumEl       = document.getElementById("paySum");
+  const payCurEl       = document.getElementById("payCur");
 
   if (!auth || !db || !window.firebase) {
     if (eventOptionsEl) eventOptionsEl.innerHTML =
@@ -37,10 +33,9 @@
     return;
   }
 
-  // ======= PERF CACHE =======
-  const COMP_CACHE_KEY    = "sc_competitions_cache_v3";
+  const COMP_CACHE_KEY    = "sc_competitions_cache_v4";
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
-  const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 год
+  const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
   let currentUser = null;
   let profile = null;
@@ -48,13 +43,9 @@
   let lastItems = [];
   let nearestUpcomingValue = null;
 
-  // ✅ копіюємо тільки реквізити (номер картки)
+  // copy only details
   let activePayCardText = "";
-  let activePayEnabled = false;
-  let activePayPrice = null;
-  let activePayCurrency = "UAH";
 
-  // ======= helpers =======
   function escapeHtml(s) {
     return String(s || "")
       .replace(/&/g, "&amp;")
@@ -124,7 +115,7 @@
     return (t === "solo") ? "solo" : "team";
   }
 
-  // ======= OPEN WINDOW =======
+  // ========= OPEN WINDOW =========
   function isOpenWindow(item) {
     const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
@@ -175,7 +166,7 @@
     submitBtn.disabled = !ok;
   }
 
-  // ======= PAYMENT UI (ОКРЕМО: сума / валюта / реквізити) =======
+  // ========= PAYMENT UI =========
   function hardenMobileWrap(el){
     if (!el) return;
     el.style.whiteSpace = "pre-wrap";
@@ -185,13 +176,9 @@
   }
 
   function clearPayUI(){
-    activePayEnabled = false;
-    activePayPrice = null;
-    activePayCurrency = "UAH";
-    activePayCardText = "";
-
     if (paySumEl) paySumEl.textContent = "—";
     if (payCurEl) payCurEl.textContent = "UAH";
+    activePayCardText = "";
     if (cardNumEl) {
       cardNumEl.textContent = "—";
       hardenMobileWrap(cardNumEl);
@@ -199,8 +186,6 @@
   }
 
   function setPayUIFromSelected(item){
-    if (!cardNumEl && !paySumEl) return; // нема куди показувати
-
     if (!item) { clearPayUI(); return; }
 
     const payEnabled = !!item.payEnabled;
@@ -208,15 +193,10 @@
     const currency   = String(item.currency || "UAH").toUpperCase();
     const details    = String(item.payDetails || "").trim();
 
-    activePayEnabled = payEnabled;
-    activePayPrice = price;
-    activePayCurrency = currency;
-
-    // ✅ сума/валюта окремо
+    // amount / currency
     if (paySumEl) paySumEl.textContent = (price === null ? "—" : String(price));
     if (payCurEl) payCurEl.textContent = currency;
 
-    // ✅ реквізити/номер картки — тільки тут
     if (!payEnabled) {
       activePayCardText = "";
       if (cardNumEl) {
@@ -233,7 +213,6 @@
     }
   }
 
-  // copy: копіюємо ТІЛЬКИ реквізити/номер картки (як було)
   if (copyCardBtn) {
     copyCardBtn.addEventListener("click", async () => {
       const txt = String(activePayCardText || "").trim();
@@ -251,7 +230,7 @@
     });
   }
 
-  // ======= FOOD =======
+  // ========= FOOD =========
   function initFoodLogic() {
     const radios = document.querySelectorAll('input[name="food"]');
     if (!radios.length || !foodQtyField || !foodQtyInput) return;
@@ -268,7 +247,7 @@
     update();
   }
 
-  // ======= TEAM NAME CACHE =======
+  // ========= TEAM CACHE =========
   function getTeamCacheKey(teamId) { return TEAM_CACHE_PREFIX + String(teamId || ""); }
 
   function readTeamNameCache(teamId) {
@@ -326,7 +305,7 @@
     }
   }
 
-  // ======= COMPETITIONS CACHE =======
+  // ========= COMP CACHE =========
   function hydrateItemFromCache(it) {
     return {
       ...it,
@@ -348,14 +327,6 @@
       calcNearestUpcoming(items);
       renderItems(items);
       refreshSubmitState();
-
-      if (eventOptionsEl) {
-        const hint = document.createElement("div");
-        hint.className = "form__hint";
-        hint.style.marginTop = "8px";
-        hint.textContent = "Оновлюю список…";
-        eventOptionsEl.appendChild(hint);
-      }
 
       return true;
     } catch {
@@ -401,16 +372,11 @@
         if (eventsArr && eventsArr.length) {
           eventsArr.forEach((ev, idx) => {
             const key = ev.key || ev.stageId || ev.id || `stage-${idx+1}`;
-            const isFinal = String(key).toLowerCase().includes("final") || !!ev.isFinal;
-
             const { startAt, endAt } = getRunDatesFromEvent(ev);
             const { regOpenAt, regCloseAt } = getRegDatesFromEvent(ev);
 
-            const stageTitle =
-              ev.title || ev.name || ev.label ||
-              (isFinal ? "Фінал" : `Етап ${idx + 1}`);
-
-            const entryType = entryTypeFromEvent(ev, c);
+            const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
+            const entryType  = entryTypeFromEvent(ev, c);
 
             items.push({
               compId,
@@ -420,7 +386,6 @@
               stageKey: String(key),
               stageTitle,
               entryType,
-
               startAt: toDateMaybe(startAt),
               endAt: toDateMaybe(endAt),
 
@@ -436,9 +401,6 @@
             });
           });
         } else {
-          const startAt = toDateMaybe(c.startAt || c.startDate);
-          const endAt   = toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate);
-
           items.push({
             compId,
             brand,
@@ -448,8 +410,8 @@
             stageTitle: null,
             entryType: String(c.entryType || "team").toLowerCase() === "solo" ? "solo" : "team",
 
-            startAt,
-            endAt,
+            startAt: toDateMaybe(c.startAt || c.startDate),
+            endAt: toDateMaybe(c.endAt || c.endDate || c.finishAt || c.finishDate),
 
             regMode: c.regMode || "auto",
             manualOpen: !!c.manualOpen,
@@ -486,10 +448,10 @@
     }
   }
 
+  // ✅ головний фікс: клік по картці завжди вибирає і оновлює оплату
   function renderItems(items) {
     if (!eventOptionsEl) return;
     eventOptionsEl.innerHTML = "";
-
     clearPayUI();
 
     if (!items.length) {
@@ -499,10 +461,9 @@
     }
 
     items.forEach(it => {
-      const open = isOpenWindow(it);
+      const open  = isOpenWindow(it);
       const value = `${it.compId}||${it.stageKey || ""}`;
-      const lamp = lampClassFor(it, value);
-
+      const lamp  = lampClassFor(it, value);
       const typeBadge = it.entryType === "solo" ? "SOLO" : "TEAM";
 
       const titleText =
@@ -512,7 +473,6 @@
 
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
 
-      // ✅ МОЖНА клікати навіть закритий (для перегляду оплати)
       const label = document.createElement("label");
       label.className = "stage-card event-item" + (open ? "" : " is-closed");
       label.setAttribute("role", "button");
@@ -520,9 +480,11 @@
       label.style.boxSizing = "border-box";
       label.style.overflow = "hidden";
 
+      const inputId = "pick_" + btoa(unescape(encodeURIComponent(value))).replace(/=+/g,"").slice(0,16);
+
       label.innerHTML = `
-        <input type="radio" name="stagePick" value="${escapeHtml(value)}"
-               style="position:absolute;left:-9999px;opacity:0;">
+        <input id="${inputId}" type="radio" name="stagePick" value="${escapeHtml(value)}"
+               style="position:absolute;opacity:0;pointer-events:none;">
         <div class="stage-head" style="display:flex;gap:10px;align-items:flex-start;min-width:0;max-width:100%;">
           <span class="lamp ${lamp}" style="flex:0 0 auto;"></span>
           <div class="stage-info" style="min-width:0;flex:1;max-width:100%;">
@@ -534,12 +496,19 @@
                  style="min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;opacity:.9;">
               ${escapeHtml(dateLine)}
             </div>
-            <div class="form__hint"> 
-              ${open ? "Реєстрація відкрита ✅" : "Реєстрація закрита (можна переглянути оплату) ℹ️"}
-            </div>
+            <div class="form__hint">${open ? "Реєстрація відкрита ✅" : "Реєстрація закрита (можна переглянути оплату) ℹ️"}</div>
           </div>
         </div>
       `;
+
+      // ✅ forced select on click (mobile-safe)
+      label.addEventListener("click", () => {
+        const inp = label.querySelector('input[name="stagePick"]');
+        if (inp) inp.checked = true;
+        setPayUIFromSelected(it);
+        refreshSubmitState();
+      });
+
       eventOptionsEl.appendChild(label);
     });
   }
@@ -555,18 +524,15 @@
         : null;
 
       setPayUIFromSelected(selectedItem || null);
-    }
-
-    if (e.target.name === "stagePick" || e.target.id === "rules") {
       refreshSubmitState();
     }
+
+    if (e.target.id === "rules") refreshSubmitState();
   });
 
-  // 1) cache instantly
+  // boot
   if (eventOptionsEl) eventOptionsEl.innerHTML = `<p class="form__hint">Завантаження списку...</p>`;
   tryRenderCompetitionsFromCache();
-
-  // 2) fresh
   setTimeout(() => { loadCompetitionsFresh(); }, 50);
 
   auth.onAuthStateChanged(async (user) => {
@@ -640,7 +606,6 @@
         return;
       }
 
-      // ✅ Реєстрація тільки на відкритий
       if (!isOpenWindow(selectedItem)) {
         setMsg("Цей етап не відкритий. Подати заявку можна тільки на зелений.", false);
         return;
@@ -711,7 +676,6 @@
         food,
         foodQty: foodQty === null ? null : Number(foodQty),
 
-        // ✅ payment snapshot
         payEnabled,
         price,
         currency,
@@ -753,7 +717,6 @@
         form.reset();
         initFoodLogic();
         refreshSubmitState();
-
       } catch (err) {
         console.error("submit error:", err);
         const code = String(err?.code || "").toLowerCase();
@@ -768,6 +731,5 @@
     });
   }
 
-  // init pay UI
   clearPayUI();
 })();

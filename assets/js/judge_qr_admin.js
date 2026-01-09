@@ -1,15 +1,15 @@
 // assets/js/judge_qr_admin.js
 // STOLAR CARP • Admin • QR для суддів (A/B/C)
-// ✅ створює токен в Firestore judgeTokens/{token} (72h за замовчуванням)
-// ✅ генерує 3 QR (A/B/C): weigh_judge.html?zone=A&token=...&key=...&w=W1
-// ✅ адаптив під вертикальний телефон
-// ✅ QR НЕ залежить від подальших змін settings/app (бо key вшитий у QR)
+// ✅ Firestore judgeTokens/{token} (72h default)
+// ✅ 3 QR (A/B/C) на /weigh_judge.html?zone=...&token=...&key=...&w=W1
+// ✅ правильний абсолютний URL від кореня (без "admin-weighweigh")
+// ✅ кнопки: копіювати лінк / відкрити / зберегти QR PNG
+// ✅ токен прив’язаний до activeKey — після зміни activeKey доступ зникає
 
 (function(){
   "use strict";
 
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-  const DEFAULT_HOURS = 72;
 
   const tokenInput = document.getElementById("tokenInput");
   const hoursInput = document.getElementById("hoursInput");
@@ -17,6 +17,8 @@
   const btnGen  = document.getElementById("btnGen");
   const out     = document.getElementById("qrOut");
   const msgEl   = document.getElementById("msg");
+
+  const ZONES = ["A","B","C"];
 
   function setMsg(t, ok=true){
     if(!msgEl) return;
@@ -28,69 +30,15 @@
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
 
   async function waitFirebase(){
-    for(let i=0;i<140;i++){
+    for(let i=0;i<160;i++){
       if(window.scDb && window.scAuth && window.firebase) return;
       await new Promise(r=>setTimeout(r,100));
     }
     throw new Error("Firebase init не підняв scAuth/scDb.");
   }
 
-  function injectCSS(){
-    if(document.getElementById("scJudgeQrCss")) return;
-    const css = `
-      <style id="scJudgeQrCss">
-        .qrGrid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-        @media (max-width: 980px){ .qrGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-        @media (max-width: 640px){ .qrGrid{ grid-template-columns:1fr; } }
-
-        .qrCard{
-          background:rgba(15,23,42,.9);
-          border:1px solid rgba(148,163,184,.25);
-          border-radius:16px;
-          padding:12px;
-          box-shadow:0 18px 40px rgba(0,0,0,.45);
-        }
-        .qrTitle{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-        .badge{
-          display:inline-flex; align-items:center; gap:8px;
-          font-weight:900; border-radius:999px; padding:6px 10px;
-          border:1px solid rgba(148,163,184,.25);
-          background:rgba(2,6,23,.25);
-          white-space:nowrap;
-        }
-        .dot{ width:10px; height:10px; border-radius:999px; opacity:.95; }
-        .zA .dot{ background:#22c55e; }
-        .zB .dot{ background:#3b82f6; }
-        .zC .dot{ background:#f59e0b; }
-
-        .qrBox{
-          display:flex; align-items:center; justify-content:center;
-          background:rgba(2,6,23,.25);
-          border:1px solid rgba(148,163,184,.18);
-          border-radius:14px;
-          padding:10px;
-        }
-        .qrBox canvas, .qrBox img{ max-width:100%; height:auto; }
-
-        .qrLinks{ margin-top:10px; display:grid; gap:8px; }
-        .linkLine{
-          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-          font-size:.85rem;
-          padding:10px 10px;
-          border-radius:12px;
-          border:1px solid rgba(148,163,184,.18);
-          background:rgba(2,6,23,.25);
-          color:#e5e7eb;
-          overflow-wrap:anywhere;
-          word-break:break-word;
-          user-select:text;
-        }
-        .miniBtns{ display:flex; gap:10px; flex-wrap:wrap; }
-        .miniBtns .btn{ width:100%; max-width:240px; }
-        @media (max-width: 420px){ .miniBtns .btn{ max-width:none; } }
-      </style>
-    `;
-    document.head.insertAdjacentHTML("beforeend", css);
+  function ensureQrLib(){
+    if(!window.QRCode) throw new Error("Не підключена бібліотека QRCode. Додай qrcode.min.js у admin-qr.html.");
   }
 
   async function requireAdmin(){
@@ -115,8 +63,7 @@
     return s;
   }
 
-  // беремо key з settings/app (activeKey або compId||stageId)
-  async function getStageKey(){
+  async function getActiveCtx(){
     const db = window.scDb;
     const snap = await db.collection("settings").doc("app").get();
     if(!snap.exists) return null;
@@ -129,13 +76,12 @@
     const key = activeKey || (compId && stageId ? `${compId}||${stageId}` : "");
     if(!key) return null;
 
-    return { key, compId, stageId };
+    return { activeKey: key, compId, stageId };
   }
 
-  function baseUrl(){ return location.origin; }
-
   function makeJudgeUrl(zone, token, key){
-    const u = new URL(baseUrl() + "/weigh_judge.html");
+    // КРИТИЧНО: абсолютний шлях від кореня, щоб не злипалося "admin-weighweigh"
+    const u = new URL("/weigh_judge.html", location.origin);
     u.searchParams.set("zone", zone);
     u.searchParams.set("token", token);
     u.searchParams.set("key", key);
@@ -143,17 +89,16 @@
     return u.toString();
   }
 
-  // ✅ важливо: пишемо ПОЛЕ key (не activeKey), щоб суддівський скрипт просто звіряв key
   async function writeTokenDoc(token, hours, ctx){
     const db = window.scDb;
     const user = window.scAuth.currentUser;
 
-    const hrs = Math.max(1, Number(hours || DEFAULT_HOURS));
-    const exp = new Date(Date.now() + hrs * 60 * 60 * 1000);
+    const h = Math.max(1, Number(hours || 72) || 72);
+    const exp = new Date(Date.now() + h * 60 * 60 * 1000);
 
     const payload = {
       token,
-      key: ctx.key,
+      activeKey: ctx.activeKey,
       compId: ctx.compId || null,
       stageId: ctx.stageId || null,
       allowedZones: ["A","B","C"],
@@ -167,52 +112,71 @@
     return payload;
   }
 
+  function zoneLabel(z){
+    // якщо хочеш — тут можна зробити A зелений, B синій, C помаранчевий (пізніше)
+    return `Зона ${z}`;
+  }
+
+  function getQrDataUrlFromBox(qrBoxEl){
+    // qrcodejs може створити <img> або <canvas>
+    const img = qrBoxEl.querySelector("img");
+    if(img && img.src) return img.src;
+
+    const canvas = qrBoxEl.querySelector("canvas");
+    if(canvas){
+      try{ return canvas.toDataURL("image/png"); }catch{}
+    }
+    return null;
+  }
+
+  async function copyText(txt){
+    try{
+      await navigator.clipboard.writeText(txt);
+      return true;
+    }catch{
+      return false;
+    }
+  }
+
   function renderQrCards(token, ctx, hours){
     if(!out) return;
+    ensureQrLib();
 
-    injectCSS();
+    out.innerHTML = ZONES.map(z=>{
+      const url = makeJudgeUrl(z, token, ctx.activeKey);
 
-    if(!window.QRCode){
-      out.innerHTML = `<div class="muted">❌ Нема QRCode бібліотеки (qrcode.min.js). Додай її в admin-qr.html</div>`;
-      return;
-    }
+      return `
+        <div class="qrCard">
+          <div class="qrTitle" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div class="badge">${esc(zoneLabel(z))}</div>
+            <div class="muted" style="font-size:.85rem;">${esc(hours)} год</div>
+          </div>
 
-    const zones = ["A","B","C"];
-    out.innerHTML = `
-      <div class="qrGrid">
-        ${zones.map(z=>{
-          const url = makeJudgeUrl(z, token, ctx.key);
-          const cls = z==="A" ? "zA" : z==="B" ? "zB" : "zC";
-          return `
-            <div class="qrCard ${cls}">
-              <div class="qrTitle">
-                <div class="badge"><span class="dot"></span> Зона ${esc(z)}</div>
-                <div class="muted" style="font-size:.85rem;">${esc(hours)} год</div>
-              </div>
+          <div class="qrBox" style="display:flex;justify-content:center;padding:10px 0 attaching;">
+            <div id="qr_${esc(z)}"></div>
+          </div>
 
-              <div class="qrBox"><div id="qr_${esc(z)}"></div></div>
+          <div class="qrLinks">
+            <div class="muted" style="font-size:.85rem;">Посилання (як запасний варіант):</div>
+            <div class="linkLine" id="ln_${esc(z)}" style="word-break:break-all;">${esc(url)}</div>
 
-              <div class="qrLinks">
-                <div class="muted" style="font-size:.85rem;">Посилання (як запасний варіант):</div>
-                <div class="linkLine" id="ln_${esc(z)}">${esc(url)}</div>
-
-                <div class="miniBtns">
-                  <button class="btn btn--ghost" type="button" data-copy="${esc(z)}">Скопіювати</button>
-                  <button class="btn btn--ghost" type="button" data-open="${esc(z)}">Відкрити</button>
-                </div>
-              </div>
+            <div class="miniBtns" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn--ghost" type="button" data-copy="${esc(z)}">Скопіювати лінк</button>
+              <button class="btn btn--ghost" type="button" data-open="${esc(z)}">Відкрити</button>
+              <button class="btn btn--primary" type="button" data-savepng="${esc(z)}">Зберегти QR PNG</button>
             </div>
-          `;
-        }).join("")}
-      </div>
-    `;
+          </div>
+        </div>
+      `;
+    }).join("");
 
-    zones.forEach(z=>{
-      const url = makeJudgeUrl(z, token, ctx.key);
-      const el = document.getElementById("qr_" + z);
-      if(el){
-        el.innerHTML = "";
-        new window.QRCode(el, {
+    // draw QR
+    ZONES.forEach(z=>{
+      const url = makeJudgeUrl(z, token, ctx.activeKey);
+      const holder = document.getElementById("qr_" + z);
+      if(holder){
+        holder.innerHTML = "";
+        new window.QRCode(holder, {
           text: url,
           width: 240,
           height: 240,
@@ -221,17 +185,18 @@
       }
     });
 
+    // buttons
     out.querySelectorAll("[data-copy]").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
         const z = btn.getAttribute("data-copy");
         const line = document.getElementById("ln_" + z);
         const txt = line ? line.textContent : "";
-        try{
-          await navigator.clipboard.writeText(txt);
-          setMsg(`✅ Скопійовано для зони ${z}`, true);
-          setTimeout(()=>setMsg("",true), 1100);
-        }catch{
-          setMsg("❌ Не можу скопіювати. Скопіюй вручну з поля.", false);
+        const ok = await copyText(txt);
+        if(ok){
+          setMsg(`✅ Лінк скопійовано для зони ${z}`, true);
+          setTimeout(()=>setMsg("",true), 1200);
+        }else{
+          setMsg("❌ Не можу скопіювати (браузер). Виділи і скопіюй вручну.", false);
         }
       });
     });
@@ -244,6 +209,32 @@
         if(txt) window.open(txt, "_blank");
       });
     });
+
+    out.querySelectorAll("[data-savepng]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const z = btn.getAttribute("data-savepng");
+        const box = document.getElementById("qr_" + z);
+        if(!box){
+          setMsg("❌ Не знайшов QR контейнер.", false);
+          return;
+        }
+        const dataUrl = getQrDataUrlFromBox(box);
+        if(!dataUrl){
+          setMsg("❌ QR не згенерувався. Перевір qrcode.min.js.", false);
+          return;
+        }
+
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `SC_JUDGE_${z}_${token}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setMsg(`✅ PNG збережено: зона ${z}`, true);
+        setTimeout(()=>setMsg("",true), 1200);
+      });
+    });
   }
 
   async function generateAll(){
@@ -251,6 +242,7 @@
       setMsg("Завантаження…", true);
 
       await waitFirebase();
+      ensureQrLib();
 
       const isAdm = await requireAdmin();
       if(!isAdm){
@@ -259,23 +251,23 @@
       }
 
       const token = norm(tokenInput?.value || "");
-      const hours = Number(norm(hoursInput?.value || String(DEFAULT_HOURS))) || DEFAULT_HOURS;
+      const hours = Number(norm(hoursInput?.value || "72")) || 72;
 
       if(!token || !token.startsWith("SC-") || token.length < 8){
-        setMsg("❌ Вкажи token типу SC-XXXXXXXX.", false);
+        setMsg("❌ Вкажи нормальний token (наприклад SC-XXXXXXXX).", false);
         return;
       }
 
-      const ctx = await getStageKey();
+      const ctx = await getActiveCtx();
       if(!ctx){
-        setMsg("❌ Нема активного key. Перевір settings/app (activeKey або activeCompetitionId+activeStageId).", false);
+        setMsg("❌ Нема активного етапу. Перевір settings/app (activeKey або activeCompetitionId+activeStageId).", false);
         return;
       }
 
       await writeTokenDoc(token, hours, ctx);
-      renderQrCards(token, ctx, hours);
 
-      setMsg("✅ QR готові. Дай судді відсканувати QR його зони.", true);
+      renderQrCards(token, ctx, hours);
+      setMsg("✅ QR створено. Натисни “Зберегти QR PNG” і надішли суддям їхню зону.", true);
 
     }catch(e){
       console.error(e);
@@ -283,6 +275,7 @@
     }
   }
 
+  // events
   btnRand?.addEventListener("click", ()=>{
     const t = randToken();
     if(tokenInput) tokenInput.value = t;
@@ -292,7 +285,7 @@
 
   btnGen?.addEventListener("click", generateAll);
 
+  // auto token
   if(tokenInput && !tokenInput.value) tokenInput.value = randToken();
-  if(hoursInput && !hoursInput.value) hoursInput.value = String(DEFAULT_HOURS);
 
 })();

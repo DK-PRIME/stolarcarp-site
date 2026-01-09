@@ -10,6 +10,7 @@
   <meta name="theme-color" content="#020617" />
 
   <link rel="stylesheet" href="assets/css/main.css" />
+  <script defer src="assets/js/config.js"></script>
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
@@ -65,6 +66,7 @@
     }
     .grid input::placeholder{ color:#6b7280; }
 
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     .role-box{
       display:flex; gap:14px; flex-wrap:wrap; padding:8px 0;
       color:#e5e7eb; font-size:.95rem;
@@ -73,6 +75,7 @@
 
     .hidden{ display:none; }
 
+    /* повідомлення як у auth.js (ok/err) */
     .msg{ margin-top:10px; font-size:.9rem; }
     .msg.ok{ color:#22c55e; }
     .msg.err{ color:#ef4444; }
@@ -111,33 +114,15 @@
       <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Вхід / Реєстрація</div>
 
       <div class="tabs">
-        <button class="tab-btn active" id="tabLogin" type="button">Вхід</button>
-        <button class="tab-btn" id="tabSignup" type="button">Реєстрація</button>
+        <button class="tab-btn active" id="tabSignup" type="button">Реєстрація</button>
+        <button class="tab-btn" id="tabLogin" type="button">Вхід</button>
       </div>
     </div>
 
-    <!-- ===== LOGIN ===== -->
-    <div class="auth-card" id="panelLogin">
-      <h2 class="section-title" style="margin:0 0 6px;">Увійти</h2>
-      <div class="muted">Введіть email та пароль.</div>
-
-      <form id="loginForm" class="grid" autocomplete="on">
-        <input id="loginEmail" type="email" placeholder="Email" required />
-        <input id="loginPassword" type="password" placeholder="Пароль" required />
-
-        <div class="actions">
-          <button class="btn btn--accent" id="loginBtn" type="submit">Увійти</button>
-          <a class="btn btn--primary" href="index.html">На головну</a>
-        </div>
-
-        <div class="msg" id="loginMsg"></div>
-      </form>
-    </div>
-
     <!-- ===== SIGNUP ===== -->
-    <div class="auth-card hidden" id="panelSignup">
+    <div class="auth-card" id="panelSignup">
       <h2 class="section-title" style="margin:0 0 6px;">Створити акаунт</h2>
-      <div class="muted">Заповніть дані для проходження реєстрації.</div>
+      <div class="muted">Заповни дані. Капітан створює команду, учасник приєднується по коду.</div>
 
       <form id="signupForm" class="grid" autocomplete="on">
         <input id="signupEmail" type="email" placeholder="Email" required />
@@ -160,7 +145,7 @@
 
         <div id="memberFields" class="grid hidden">
           <input id="signupJoinCode" type="text" placeholder="Код команди (joinCode) (для учасника)" />
-          <div class="hint">Код дає капітан команди .</div>
+          <div class="hint">Код дає капітан команди (6 символів).</div>
         </div>
 
         <div class="actions">
@@ -172,13 +157,41 @@
       </form>
     </div>
 
+    <!-- ===== LOGIN ===== -->
+    <div class="auth-card hidden" id="panelLogin">
+      <h2 class="section-title" style="margin:0 0 6px;">Увійти</h2>
+      <div class="muted">Вхід для учасників (email/пароль).</div>
+
+      <form id="loginForm" class="grid" autocomplete="on">
+        <input id="loginEmail" type="email" placeholder="Email" required />
+        <input id="loginPassword" type="password" placeholder="Пароль" required />
+
+        <div class="actions">
+          <button class="btn btn--accent" id="loginBtn" type="submit">Увійти</button>
+          <a class="btn btn--primary" href="index.html">На головну</a>
+        </div>
+
+        <div class="msg" id="loginMsg"></div>
+      </form>
+    </div>
+
   </section>
 </main>
 
-<!-- ЛОКАЛЬНА логіка (без Firebase) -->
+<!-- Firebase compat CDN -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<!-- Єдина ініціалізація -->
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- Твій auth logic -->
 <script src="assets/js/auth.js"></script>
 
 <script>
+  // перемикач табів + показ полів captain/member
   (function(){
     const tabSignup = document.getElementById("tabSignup");
     const tabLogin  = document.getElementById("tabLogin");
@@ -189,21 +202,21 @@
     const memberFields  = document.getElementById("memberFields");
 
     function open(which){
-      if(which === "login"){
-        tabLogin.classList.add("active");
-        tabSignup.classList.remove("active");
-        panelLogin.classList.remove("hidden");
-        panelSignup.classList.add("hidden");
-      } else {
+      if(which === "signup"){
         tabSignup.classList.add("active");
         tabLogin.classList.remove("active");
         panelSignup.classList.remove("hidden");
         panelLogin.classList.add("hidden");
+      } else {
+        tabLogin.classList.add("active");
+        tabSignup.classList.remove("active");
+        panelLogin.classList.remove("hidden");
+        panelSignup.classList.add("hidden");
       }
     }
 
-    tabLogin?.addEventListener("click", ()=>open("login"));
     tabSignup?.addEventListener("click", ()=>open("signup"));
+    tabLogin?.addEventListener("click", ()=>open("login"));
 
     document.querySelectorAll('input[name="signupRole"]').forEach(r=>{
       r.addEventListener("change", ()=>{
@@ -217,9 +230,6 @@
         }
       });
     });
-
-    // дефолт: ВХІД
-    open("login");
   })();
 </script>
 

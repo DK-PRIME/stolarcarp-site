@@ -5,16 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Вхід / Реєстрація · STOLAR CARP</title>
 
-  <link rel="icon" type="image/png" href="assets/favicon.png" />
-  <link rel="apple-touch-icon" href="assets/favicon.png" />
-  <meta name="theme-color" content="#020617" />
-
   <link rel="stylesheet" href="assets/css/main.css" />
   <script defer src="assets/js/config.js"></script>
 
   <style>
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-    .auth-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
+    .auth-wrap{ max-width:1100px; margin:0 auto; padding:22px 0 70px; }
 
     .auth-top{
       padding:14px 16px; border-radius:18px;
@@ -23,6 +19,17 @@
       box-shadow:0 18px 40px rgba(0,0,0,.6);
     }
     .muted{ color:#9ca3af; }
+
+    .auth-2col{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .auth-2col{ grid-template-columns: 1fr; }
+    }
 
     .auth-card{
       padding:16px;
@@ -66,26 +73,14 @@
 
     .hr{ height:1px; background:rgba(148,163,184,.18); margin:12px 0; border-radius:99px; }
 
-    /* ===== AUTH 2 columns (Login left / Signup right) ===== */
-    .auth-2col{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:14px;
-      align-items:start;
-    }
-    @media (max-width: 860px){
-      .auth-2col{ grid-template-columns: 1fr; }
-    }
-
-    .auth-col-title{
+    .col-head{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:12px;
       margin:0 0 6px;
     }
-    .auth-col-title .badge{
+    .badge{
       font-size:.75rem;
       font-weight:900;
       letter-spacing:.08em;
@@ -94,8 +89,9 @@
       border:1px solid rgba(148,163,184,.35);
       background:rgba(2,6,23,.55);
       color:#e5e7eb;
+      user-select:none;
     }
-    .auth-col-title .badge.primary{
+    .badge.primary{
       border-color:#facc15;
       background:linear-gradient(135deg,#facc15,#f97316);
       color:#111;
@@ -112,6 +108,7 @@
       <span class="logo__text">STOLAR CARP</span>
     </a>
 
+    <!-- ✅ Повне меню як ти дав -->
     <nav class="nav" id="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -124,7 +121,7 @@
       <a href="cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger" type="button" aria-label="Меню" aria-expanded="false">
+    <button class="burger" id="burger" type="button" aria-label="Меню">
       <span></span><span></span><span></span>
     </button>
   </div>
@@ -135,14 +132,14 @@
 
     <div class="auth-top">
       <div class="title-gradient" style="font-size:1.2rem; font-weight:800;">Вхід / Реєстрація</div>
-      <div class="muted" style="margin-top:6px;">Логін зліва (основний), реєстрація справа.</div>
+      <div class="muted" style="margin-top:6px;">Вхід зліва, реєстрація справа. Бургер працює з <b>config.js</b>.</div>
     </div>
 
     <div class="auth-2col">
 
       <!-- ===== LEFT: LOGIN (основний) ===== -->
-      <div class="auth-card" id="panelLogin">
-        <div class="auth-col-title">
+      <div class="auth-card">
+        <div class="col-head">
           <h2 class="section-title" style="margin:0;">Увійти</h2>
           <span class="badge primary">ОСНОВНИЙ</span>
         </div>
@@ -162,8 +159,8 @@
       </div>
 
       <!-- ===== RIGHT: SIGNUP ===== -->
-      <div class="auth-card" id="panelSignup">
-        <div class="auth-col-title">
+      <div class="auth-card">
+        <div class="col-head">
           <h2 class="section-title" style="margin:0;">Створити акаунт</h2>
           <span class="badge">РЕЄСТРАЦІЯ</span>
         </div>
@@ -213,14 +210,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<!-- Єдина ініціалізація -->
+<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- Твій auth logic -->
+<!-- auth logic (твій) -->
 <script src="assets/js/auth.js"></script>
 
 <script>
-  // captain/member fields toggle
+  // ✅ Показ полів captain/member (бо табів вже нема)
   (function(){
     const captainFields = document.getElementById("captainFields");
     const memberFields  = document.getElementById("memberFields");
@@ -242,7 +239,7 @@
 
     updateRoleFields();
 
-    // focus login email (бо вхід основний)
+    // фокус на логін (бо він основний)
     const loginEmail = document.getElementById("loginEmail");
     if (loginEmail) setTimeout(()=>loginEmail.focus(), 250);
   })();

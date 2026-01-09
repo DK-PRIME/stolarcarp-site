@@ -1,8 +1,10 @@
 // assets/js/auth.js
 (function () {
-  "use strict";
-
   const $ = (id) => document.getElementById(id);
+
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+  const qs = new URLSearchParams(location.search);
+  const ADMIN_MODE = qs.get("admin") === "1"; // ✅ тільки якщо auth.html?admin=1
 
   function setMsg(el, text, type) {
     if (!el) return;
@@ -11,10 +13,13 @@
     if (type) el.classList.add(type);
   }
 
+  function show(el){ if(el) el.style.display = ""; }
+  function hide(el){ if(el) el.style.display = "none"; }
+
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
-      if (window.scAuth && window.scDb && window.firebase) return;
+      if (window.scAuth && window.scDb) return;
       await new Promise((r) => setTimeout(r, 100));
     }
     throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
@@ -96,64 +101,42 @@
     }, { merge: true });
   }
 
-  function goCabinet() { location.href = "cabinet.html"; }
-
-  // ===== TABS (вхід/реєстрація) + role fields =====
-  function initTabsUI() {
-    const tabLogin = $("tabLogin");
-    const tabSignup = $("tabSignup");
-    const panelLogin = $("panelLogin");
-    const panelSignup = $("panelSignup");
-
-    const captainFields = $("captainFields");
-    const memberFields = $("memberFields");
-
-    function open(which) {
-      if (!tabLogin || !tabSignup || !panelLogin || !panelSignup) return;
-
-      if (which === "login") {
-        tabLogin.classList.add("active");
-        tabSignup.classList.remove("active");
-        panelLogin.classList.remove("hidden");
-        panelSignup.classList.add("hidden");
-      } else {
-        tabSignup.classList.add("active");
-        tabLogin.classList.remove("active");
-        panelSignup.classList.remove("hidden");
-        panelLogin.classList.add("hidden");
-      }
+  // ✅ єдиний редірект: адмін -> admin.html ТІЛЬКИ в admin-mode
+  function goAfterAuth(user){
+    if (ADMIN_MODE && user && user.uid === ADMIN_UID) {
+      location.href = "admin.html";
+      return;
     }
-
-    function updateRoleFields() {
-      const v = document.querySelector('input[name="signupRole"]:checked')?.value || "captain";
-      if (v === "captain") {
-        captainFields && captainFields.classList.remove("hidden");
-        memberFields && memberFields.classList.add("hidden");
-      } else {
-        memberFields && memberFields.classList.remove("hidden");
-        captainFields && captainFields.classList.add("hidden");
-      }
-    }
-
-    if (tabLogin) tabLogin.addEventListener("click", (e) => { e.preventDefault(); open("login"); });
-    if (tabSignup) tabSignup.addEventListener("click", (e) => { e.preventDefault(); open("signup"); });
-
-    document.querySelectorAll('input[name="signupRole"]').forEach(r => {
-      r.addEventListener("change", updateRoleFields);
-    });
-
-    updateRoleFields();
-    open("login"); // дефолт: ВХІД
-    return { open, updateRoleFields };
+    location.href = "cabinet.html";
   }
 
-  const ui = initTabsUI();
+  // ====== UI blocks (якщо їх нема у твоєму auth.html — не заважає) ======
+  const loggedBox = $("loggedBox");
+  const authBox   = $("authBox");
+  const btnGoCab  = $("goCabinetBtn");
+  const btnLogout = $("logoutBtn");
+  const loggedMsg = $("loggedMsg");
 
-  // ===== FORMS =====
   const signupForm = $("signupForm");
   const loginForm  = $("loginForm");
   const signupMsg  = $("signupMsg");
   const loginMsg   = $("loginMsg");
+
+  function showLoggedInUI(user) {
+    if (loggedMsg) {
+      // ✅ не світимо email
+      loggedMsg.textContent = (ADMIN_MODE && user?.uid === ADMIN_UID)
+        ? "Ви увійшли як адміністратор (admin-mode)."
+        : "Ви вже увійшли у свій акаунт.";
+    }
+    if (loggedBox) show(loggedBox);
+    if (authBox) hide(authBox);
+  }
+
+  function showAuthUI() {
+    if (loggedBox) hide(loggedBox);
+    if (authBox) show(authBox);
+  }
 
   async function onSignup(e) {
     e.preventDefault();
@@ -178,10 +161,8 @@
       return;
     }
 
-    const signupBtn = $("signupBtn");
-
     try {
-      if (signupBtn) signupBtn.disabled = true;
+      $("signupBtn") && ($("signupBtn").disabled = true);
       setMsg(signupMsg, "Створюю акаунт…", "");
 
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
@@ -198,7 +179,7 @@
         const team = await createTeam(db, teamName, user.uid);
         await setUserTeamAndRole(db, user.uid, team.teamId, "captain");
         setMsg(signupMsg, `Готово ✅ Команда створена. Код приєднання: ${team.joinCode}`, "ok");
-        setTimeout(goCabinet, 600);
+        setTimeout(() => goAfterAuth(user), 450);
         return;
       }
 
@@ -215,17 +196,18 @@
         }
         await setUserTeamAndRole(db, user.uid, team.teamId, "member");
         setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
-        setTimeout(goCabinet, 600);
+        setTimeout(() => goAfterAuth(user), 450);
         return;
       }
 
       setMsg(signupMsg, "Акаунт створено ✅", "ok");
-      setTimeout(goCabinet, 600);
+      setTimeout(() => goAfterAuth(user), 450);
+
     } catch (err) {
       console.error(err);
       setMsg(signupMsg, err?.message || "Помилка реєстрації", "err");
     } finally {
-      if (signupBtn) signupBtn.disabled = false;
+      $("signupBtn") && ($("signupBtn").disabled = false);
     }
   }
 
@@ -244,41 +226,55 @@
       return;
     }
 
-    const loginBtn = $("loginBtn");
-
     try {
-      if (loginBtn) loginBtn.disabled = true;
+      $("loginBtn") && ($("loginBtn").disabled = true);
       setMsg(loginMsg, "Вхід…", "");
 
       await auth.signInWithEmailAndPassword(email, pass);
+
+      const user = auth.currentUser;
       setMsg(loginMsg, "Готово ✅", "ok");
-      setTimeout(goCabinet, 250);
+      setTimeout(() => goAfterAuth(user), 250);
+
     } catch (err) {
       console.error(err);
       setMsg(loginMsg, err?.message || "Помилка входу", "err");
     } finally {
-      if (loginBtn) loginBtn.disabled = false;
+      $("loginBtn") && ($("loginBtn").disabled = false);
     }
   }
 
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
 
-  // ✅ Сесія: якщо вже залогінений — в кабінет
+  if (btnGoCab) btnGoCab.addEventListener("click", (e) => {
+    e.preventDefault();
+    const u = window.scAuth?.currentUser || null;
+    goAfterAuth(u);
+  });
+
+  if (btnLogout) btnLogout.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      await waitFirebase();
+      await window.scAuth.signOut();
+    } catch (err) {
+      console.warn(err);
+    }
+  });
+
+  // ✅ Головне: НЕ робимо авто-редірект адміна ніколи.
+  // Показуємо "ви вже увійшли" і даємо кнопку "перейти".
   (async () => {
     try {
       await waitFirebase();
       window.scAuth.onAuthStateChanged((u) => {
-        if (u) {
-          // якщо хочеш НЕ редіректити — скажи, зроблю показ "Ви вже увійшли"
-          goCabinet();
-        } else {
-          // гарантуємо дефолт-вхід
-          if (ui && ui.open) ui.open("login");
-        }
+        if (u) showLoggedInUI(u);
+        else showAuthUI();
       });
     } catch (e) {
       console.warn(e);
+      showAuthUI();
     }
   })();
 })();

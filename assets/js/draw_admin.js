@@ -1,13 +1,12 @@
 // assets/js/draw_admin.js
-// STOLAR CARP • Admin draw (table-like rows)
-// ✅ loads competitions -> stageSelect
+// STOLAR CARP • Admin draw (mobile-first cards)
+// ✅ competitions -> stageSelect
 // ✅ loads ALL confirmed registrations once, filters locally
 // ✅ unique sectors A1..C8
 // ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
 // ✅ keeps selected stage (localStorage restore)
-// ✅ after save -> сортую по зонах/секторах
-// ✅ після кожного збереження оновлює stageResults/{activeKey} (teams + bigFishTotal)
-// ✅ і виставляє settings/app.activeKey, щоб Live знав, який етап активний
+// ✅ after save -> sorts A..C + sector
+// ✅ after each save -> updates stageResults/{activeKey} + settings/app.activeKey (LIVE)
 
 (function () {
   "use strict";
@@ -22,12 +21,14 @@
   const drawRows    = document.getElementById("drawRows");
   const countInfo   = document.getElementById("countInfo");
 
-  const LS_KEY_STAGE = "sc_draw_selected_stage_v1";
+  const LS_KEY_STAGE = "sc_draw_selected_stage_v2";
 
   if (!auth || !db || !window.firebase) {
     if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
     return;
   }
+
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   const SECTORS = (() => {
     const arr = [];
@@ -35,7 +36,7 @@
     return arr;
   })();
 
-  const escapeHtml = (s) =>
+  const esc = (s) =>
     String(s ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -49,20 +50,22 @@
     msgEl.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
   };
 
-  function normStr(v){ return String(v ?? "").trim(); }
+  function norm(v){ return String(v ?? "").trim(); }
 
   function parseStageValue(v){
     const [compId, stageKeyRaw] = String(v||"").split("||");
-    const comp = normStr(compId);
-    const stage = normStr(stageKeyRaw);
+    const comp = norm(compId);
+    const stage = norm(stageKeyRaw);
     return { compId: comp, stageKey: stage ? stage : null };
   }
 
-  function currentStageKey() {
+  function currentStageValue(){
     return stageSelect?.value || "";
   }
 
   async function requireAdmin(user){
+    if (!user) return false;
+    if (user.uid === ADMIN_UID) return true;
     const snap = await db.collection("users").doc(user.uid).get();
     const role = (snap.exists ? (snap.data()||{}).role : "") || "";
     return role === "admin";
@@ -74,70 +77,33 @@
   }
   function getStageIdFromReg(x){
     const v = x.stageId || x.stageKey || x.stage || x.eventId || x.eventKey || x.roundId || "";
-    return normStr(v) || null;
+    return norm(v) || null;
   }
 
-  // --- sort helpers (A1..C8) ---
-  function parseSectorKey(drawKey){
-    const s = normStr(drawKey).toUpperCase();
+  function parseSector(drawKey){
+    const s = norm(drawKey).toUpperCase();
     if (!s) return null;
-    const zone = s[0];
+    const z = s[0];
     const n = parseInt(s.slice(1), 10);
-    if (!["A","B","C"].includes(zone) || !Number.isFinite(n)) return null;
-    return { zone, n };
+    if (!["A","B","C"].includes(z) || !Number.isFinite(n)) return null;
+    return { z, n };
   }
-  function zoneRank(z){
-    if (z === "A") return 1;
-    if (z === "B") return 2;
-    if (z === "C") return 3;
-    return 9;
-  }
-  function sortLikeWeighings(a, b){
-    const sa = parseSectorKey(a.drawKey);
-    const sb = parseSectorKey(b.drawKey);
+  function zoneRank(z){ return z==="A"?1 : z==="B"?2 : z==="C"?3 : 9; }
+  function sortByDraw(a,b){
+    const sa = parseSector(a.drawKey);
+    const sb = parseSector(b.drawKey);
 
     if (!!sa && !sb) return -1;
     if (!sa && !!sb) return 1;
 
     if (!sa && !sb) return (a.teamName||"").localeCompare(b.teamName||"", "uk");
 
-    const zr = zoneRank(sa.zone) - zoneRank(sb.zone);
+    const zr = zoneRank(sa.z) - zoneRank(sb.z);
     if (zr) return zr;
     const nr = sa.n - sb.n;
     if (nr) return nr;
     return (a.teamName||"").localeCompare(b.teamName||"", "uk");
   }
-
-  function fmtTimeNow(){
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2,"0");
-    const mm = String(d.getMinutes()).padStart(2,"0");
-    const ss = String(d.getSeconds()).padStart(2,"0");
-    return `${hh}:${mm}:${ss}`;
-  }
-
-  // inject tiny CSS (feedback + button size)
-  (function injectCSS(){
-    const css = `
-      .draw-row.is-saving { opacity:.85; }
-      .draw-row.is-ok {
-        border-color: rgba(143,227,154,.55) !important;
-        box-shadow: 0 0 0 1px rgba(143,227,154,.25) inset;
-      }
-      .draw-row.is-err {
-        border-color: rgba(255,108,108,.55) !important;
-        box-shadow: 0 0 0 1px rgba(255,108,108,.20) inset;
-      }
-      .rowMsg.ok { color:#8fe39a !important; }
-      .rowMsg.err{ color:#ff6c6c !important; }
-
-      .sectorPick { max-width: 110px !important; padding: 8px 10px !important; }
-      .btn-icon { width: 44px; height: 44px; display:flex; align-items:center; justify-content:center; padding:0 !important; border-radius:12px; }
-    `;
-    const st = document.createElement("style");
-    st.textContent = css;
-    document.head.appendChild(st);
-  })();
 
   function saveStageToLS(v){
     try { localStorage.setItem(LS_KEY_STAGE, String(v||"")); } catch {}
@@ -145,17 +111,96 @@
   function loadStageFromLS(){
     try { return localStorage.getItem(LS_KEY_STAGE) || ""; } catch { return ""; }
   }
-  function restoreStageIfPossible(){
-    if (!stageSelect) return false;
-    const saved = loadStageFromLS();
-    if (!saved) return false;
 
-    const opt = stageSelect.querySelector(`option[value="${CSS.escape(saved)}"]`);
-    if (!opt) return false;
+  // ===== MOBILE-FIRST CSS =====
+  (function injectCSS(){
+    if (document.getElementById("scDrawAdminCssV2")) return;
 
-    stageSelect.value = saved;
-    return true;
-  }
+    const css = `
+      <style id="scDrawAdminCssV2">
+        .draw-wrap { display:flex; flex-direction:column; gap:10px; }
+
+        .draw-row{
+          background: rgba(15,23,42,.88);
+          border:1px solid rgba(148,163,184,.22);
+          border-radius:16px;
+          padding:12px;
+          box-shadow:0 14px 30px rgba(0,0,0,.40);
+        }
+
+        .draw-row.is-saving { opacity:.85; }
+        .draw-row.is-ok {
+          border-color: rgba(143,227,154,.55) !important;
+          box-shadow: 0 0 0 1px rgba(143,227,154,.25) inset;
+        }
+        .draw-row.is-err {
+          border-color: rgba(255,108,108,.55) !important;
+          box-shadow: 0 0 0 1px rgba(255,108,108,.20) inset;
+        }
+
+        .draw-top{
+          display:flex;
+          gap:10px;
+          align-items:flex-start;
+          justify-content:space-between;
+          flex-wrap:wrap;
+        }
+
+        .draw-team{ font-weight:900; font-size:1.0rem; line-height:1.2; }
+        .draw-sub{ color:#9ca3af; font-size:.86rem; margin-top:4px; }
+
+        .draw-controls{
+          margin-top:10px;
+          display:grid;
+          grid-template-columns: 1fr;
+          gap:10px;
+        }
+
+        .sectorPick{
+          width:100%;
+          max-width:100%;
+          padding:10px 12px !important;
+          border-radius:14px !important;
+        }
+
+        .draw-actions{
+          display:flex;
+          gap:10px;
+          align-items:center;
+          justify-content:space-between;
+          flex-wrap:wrap;
+        }
+
+        .draw-actions .btn-icon{
+          width:48px; height:48px;
+          display:flex; align-items:center; justify-content:center;
+          padding:0 !important; border-radius:14px;
+        }
+
+        .rowMsg{ font-size:.86rem; }
+        .rowMsg.ok{ color:#8fe39a !important; }
+        .rowMsg.err{ color:#ff6c6c !important; }
+
+        .draw-meta{
+          display:flex;
+          gap:10px;
+          align-items:center;
+          justify-content:space-between;
+          flex-wrap:wrap;
+          margin-top:6px;
+        }
+
+        /* desktop enhancement */
+        @media (min-width: 860px){
+          .draw-controls{
+            grid-template-columns: 220px 160px 1fr;
+            align-items:center;
+          }
+        }
+      </style>
+    `;
+    document.head.insertAdjacentHTML("beforeend", css);
+  })();
 
   // stage label map
   let stageNameByKey = new Map();
@@ -207,12 +252,13 @@
 
     stageSelect.innerHTML =
       `<option value="">— Оберіть —</option>` +
-      items.map(x => `<option value="${escapeHtml(x.value)}">${escapeHtml(x.label)}</option>`).join("");
+      items.map(x => `<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
 
-    // restore previous selection if exists
     if (keep) {
-      const opt = stageSelect.querySelector(`option[value="${CSS.escape(keep)}"]`);
-      if (opt) stageSelect.value = keep;
+      // без CSS.escape для старих браузерів
+      const opts = Array.from(stageSelect.options || []);
+      const ok = opts.find(o => String(o.value) === String(keep));
+      if (ok) stageSelect.value = keep;
     }
   }
 
@@ -229,18 +275,15 @@
       regsAllConfirmed.push({
         _id: d.id,
 
-        // ✅ TEAMID (беремо з registration)
-        teamId: normStr(x.teamId || ""),
-
+        teamId: norm(x.teamId || ""),
         teamName: x.teamName || x.team || x.name || "",
         captain: x.captain || x.captainName || "",
         phone: x.phone || x.captainPhone || "",
-        createdAt: x.createdAt || null,
 
-        compId: normStr(getCompIdFromReg(x)),
+        compId: norm(getCompIdFromReg(x)),
         stageId: getStageIdFromReg(x),
 
-        drawKey: normStr(x.drawKey || ""),
+        drawKey: norm(x.drawKey || ""),
         bigFishTotal: !!x.bigFishTotal
       });
     });
@@ -250,11 +293,11 @@
 
   function rebuildUsedSectors(){
     usedSectorSet = new Set();
-    regsFiltered.forEach(r => { if (normStr(r.drawKey)) usedSectorSet.add(normStr(r.drawKey)); });
+    regsFiltered.forEach(r => { if (norm(r.drawKey)) usedSectorSet.add(norm(r.drawKey)); });
   }
 
   function applyStageFilter(){
-    const selVal = stageSelect?.value || "";
+    const selVal = currentStageValue();
     const { compId, stageKey } = parseStageValue(selVal);
 
     if (!compId) {
@@ -266,13 +309,13 @@
     }
 
     regsFiltered = regsAllConfirmed.filter(r => {
-      if (normStr(r.compId) !== normStr(compId)) return false;
-      if (stageKey && normStr(r.stageId) !== normStr(stageKey)) return false;
+      if (norm(r.compId) !== norm(compId)) return false;
+      if (stageKey && norm(r.stageId) !== norm(stageKey)) return false;
       if (!stageKey && r.stageId) return false;
       return true;
     });
 
-    const q = normStr(qInput?.value || "").toLowerCase();
+    const q = norm(qInput?.value || "").toLowerCase();
     if (q) {
       regsFiltered = regsFiltered.filter(r => {
         const t = `${r.teamName} ${r.phone} ${r.captain}`.toLowerCase();
@@ -280,7 +323,7 @@
       });
     }
 
-    regsFiltered.sort(sortLikeWeighings);
+    regsFiltered.sort(sortByDraw);
 
     rebuildUsedSectors();
     render();
@@ -293,10 +336,10 @@
   }
 
   function sectorOptionsHTML(cur, docId){
-    const current = normStr(cur);
+    const current = norm(cur);
     return `
-      <select class="select sectorPick" data-docid="${escapeHtml(docId)}">
-        <option value="">—</option>
+      <select class="select sectorPick" data-docid="${esc(docId)}">
+        <option value="">— Оберіть сектор —</option>
         ${SECTORS.map(s=>{
           const taken = usedSectorSet.has(s) && s !== current;
           return `<option value="${s}" ${s===current?"selected":""} ${taken?"disabled":""}>
@@ -308,29 +351,34 @@
   }
 
   function rowHTML(r){
-    const phone  = normStr(r.phone);
+    const phone = norm(r.phone) || "—";
+    const cap = norm(r.captain);
+    const teamIdBadge = r.teamId ? `ID: ${r.teamId}` : "ID: —";
+
     return `
-      <div class="draw-row" data-docid="${escapeHtml(r._id)}">
-        <div>
-          <div class="draw-team">${escapeHtml(r.teamName || "—")}</div>
-          <div class="draw-sub">${escapeHtml(r.captain ? `Капітан: ${r.captain}` : "")}</div>
+      <div class="draw-row" data-docid="${esc(r._id)}">
+        <div class="draw-top">
+          <div>
+            <div class="draw-team">${esc(r.teamName || "—")}</div>
+            <div class="draw-sub">${esc(cap ? `Капітан: ${cap}` : "")}</div>
+            <div class="draw-sub">${esc(`Тел: ${phone}`)}</div>
+            <div class="draw-sub">${esc(teamIdBadge)}</div>
+          </div>
+          <div class="rowMsg"></div>
         </div>
 
-        <div class="hide-sm">
-          <div class="draw-sub">${escapeHtml(phone || "—")}</div>
-        </div>
+        <div class="draw-controls">
+          <div>${sectorOptionsHTML(r.drawKey, r._id)}</div>
 
-        <div>
-          ${sectorOptionsHTML(r.drawKey, r._id)}
-        </div>
+          <label style="display:flex; gap:10px; align-items:center; justify-content:flex-start;">
+            <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
+            <span style="font-weight:800;">BigFish Total</span>
+          </label>
 
-        <div style="display:flex;align-items:center;justify-content:center;">
-          <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
-        </div>
-
-        <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;">
-          <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
-          <div class="draw-sub rowMsg"></div>
+          <div class="draw-actions">
+            <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
+            <div class="draw-sub" style="opacity:.8;">Після збереження → оновлюю Live</div>
+          </div>
         </div>
       </div>
     `;
@@ -344,7 +392,7 @@
       return;
     }
 
-    drawRows.innerHTML = regsFiltered.map(rowHTML).join("");
+    drawRows.innerHTML = `<div class="draw-wrap">${regsFiltered.map(rowHTML).join("")}</div>`;
   }
 
   function showRowMsg(wrap, text, ok=true){
@@ -363,35 +411,42 @@
   function setBtnIcon(wrap, icon){
     const btn = wrap.querySelector(".saveBtn");
     if (!btn) return;
-    if (icon === "saving") btn.textContent = "⏳";
-    else if (icon === "ok") btn.textContent = "✅";
-    else if (icon === "err") btn.textContent = "⚠️";
-    else btn.textContent = "💾";
+    btn.textContent =
+      icon === "saving" ? "⏳" :
+      icon === "ok"     ? "✅" :
+      icon === "err"    ? "⚠️" :
+      "💾";
   }
 
-  // === ПУБЛІКАЦІЯ В stageResults (LIVE) + settings/app ===
-  async function publishStageResultsTeams() {
+  function fmtTimeNow(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    const ss = String(d.getSeconds()).padStart(2,"0");
+    return `${hh}:${mm}:${ss}`;
+  }
+
+  // === publish LIVE stageResults + settings/app ===
+  async function publishStageResultsTeams(){
     if (!isAdmin) return;
 
-    const selVal = currentStageKey();
+    const selVal = currentStageValue();
     if (!selVal) return;
 
     const { compId, stageKey } = parseStageValue(selVal);
     if (!compId) return;
 
     const docId = stageKey ? `${compId}||${stageKey}` : `${compId}||main`;
+    const stageName = stageNameByKey.get(selVal) || "";
 
     const teams = regsFiltered.map(r => {
-      const drawKey = normStr(r.drawKey);
+      const drawKey = norm(r.drawKey);
       const zone    = drawKey ? drawKey[0] : null;
       const n       = drawKey ? parseInt(drawKey.slice(1), 10) : null;
 
       return {
         regId: r._id,
-
-        // ✅ TEAMID (ключ для weighings)
-        teamId: normStr(r.teamId || ""),
-
+        teamId: norm(r.teamId || ""),
         teamName: r.teamName || "",
         drawKey: drawKey || null,
         drawZone: zone || null,
@@ -404,10 +459,7 @@
       .filter(t => t.bigFishTotal)
       .map(t => ({
         regId: t.regId,
-
-        // ✅ TEAMID (зручно для BigFish логіки/прив’язки)
         teamId: t.teamId || null,
-
         team: t.teamName,
         big1Day: null,
         big2Day: null,
@@ -415,11 +467,8 @@
         isMax: false
       }));
 
-    const stageName = stageNameByKey.get(selVal) || "";
-
     const ts = window.firebase.firestore.FieldValue.serverTimestamp();
 
-    // 1) stageResults для live + BigFish
     await db.collection("stageResults").doc(docId).set({
       compId,
       stageKey: stageKey || null,
@@ -429,22 +478,18 @@
       bigFishTotal,
       zones: { A: [], B: [], C: [] },
       total: []
-    }, { merge: true });
+    }, { merge:true });
 
-    // 2) activeKey для live_firebase/bigfish_total_live
     await db.collection("settings").doc("app").set({
       activeKey: docId,
       activeCompetitionId: compId,
       activeStageId: stageKey || null,
       updatedAt: ts
-    }, { merge: true });
-
-    setMsg("✅ Live оновлено", true);
-    setTimeout(() => setMsg("", true), 1200);
+    }, { merge:true });
   }
 
   // save per-row
-  document.addEventListener("click", async (e) => {
+  document.addEventListener("click", async (e)=>{
     const btn = e.target.closest(".saveBtn");
     if (!btn) return;
 
@@ -454,32 +499,32 @@
     if (!isAdmin) {
       setRowState(wrap, "is-err");
       setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Нема адмін-доступу.", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1600);
+      showRowMsg(wrap, "Нема адмін-доступу", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1400);
       return;
     }
 
     saveStageToLS(stageSelect?.value || "");
 
     const docId = wrap.getAttribute("data-docid");
-    const sectorVal = normStr(wrap.querySelector(".sectorPick")?.value || "");
+    const sectorVal = norm(wrap.querySelector(".sectorPick")?.value || "");
     const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
 
     if (!sectorVal) {
       setRowState(wrap, "is-err");
       setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Оберіть сектор.", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1600);
+      showRowMsg(wrap, "Оберіть сектор", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1400);
       return;
     }
 
     if (usedSectorSet.has(sectorVal)) {
-      const other = regsFiltered.find(r => normStr(r.drawKey) === sectorVal && r._id !== docId);
+      const other = regsFiltered.find(r => norm(r.drawKey) === sectorVal && r._id !== docId);
       if (other) {
         setRowState(wrap, "is-err");
         setBtnIcon(wrap, "err");
         showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
-        setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1800);
+        setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1700);
         return;
       }
     }
@@ -487,7 +532,7 @@
     const zone = sectorVal[0];
     const sectorNum = parseInt(sectorVal.slice(1), 10);
 
-    try {
+    try{
       setRowState(wrap, "is-saving");
       setBtnIcon(wrap, "saving");
       showRowMsg(wrap, "Збереження…", true);
@@ -500,7 +545,7 @@
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
 
-      const a = regsAllConfirmed.find(x=>x._id===docId);
+      const a = regsAllConfirmed.find(x => x._id === docId);
       if (a) {
         a.drawKey = sectorVal;
         a.bigFishTotal = bigFish;
@@ -510,23 +555,23 @@
       setBtnIcon(wrap, "ok");
       showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
 
-      // оновлюємо локальний список + Live
       applyStageFilter();
       await publishStageResultsTeams();
 
-      setMsg("✅ Збережено", true);
+      setMsg("✅ Live оновлено", true);
       setTimeout(()=> setMsg("", true), 900);
-    } catch (err) {
+
+    }catch(err){
       console.error(err);
       setRowState(wrap, "is-err");
       setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Помилка (Rules/доступ).", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1800);
+      showRowMsg(wrap, "Помилка (Rules/доступ)", false);
+      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1700);
     }
   });
 
   async function boot(){
-    auth.onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged(async (user)=>{
       if (!user) {
         setMsg("Увійдіть як адмін.", false);
         if (stageSelect) stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
@@ -536,10 +581,10 @@
         return;
       }
 
-      try {
+      try{
         isAdmin = await requireAdmin(user);
         if (!isAdmin) {
-          setMsg("Доступ заборонено. Цей акаунт не є адміном.", false);
+          setMsg("Доступ заборонено. Цей акаунт не адмін.", false);
           regsAllConfirmed = [];
           regsFiltered = [];
           render();
@@ -549,26 +594,30 @@
         await loadStagesToSelect();
         await loadAllConfirmed();
 
-        const restored = restoreStageIfPossible();
-        if (restored) {
-          setMsg("✅ Етап відновлено", true);
+        const saved = loadStageFromLS();
+        if (saved) {
+          const opts = Array.from(stageSelect.options || []);
+          const ok = opts.find(o => String(o.value) === String(saved));
+          if (ok) stageSelect.value = saved;
+        }
+
+        if (stageSelect?.value) {
           applyStageFilter();
-          setTimeout(()=> setMsg("", true), 700);
+          setMsg("", true);
         } else {
           setMsg("Оберіть змагання/етап.", true);
         }
-      } catch (e) {
+      }catch(e){
         console.error(e);
         setMsg("Помилка завантаження/перевірки адміна.", false);
       }
     });
 
-    stageSelect?.addEventListener("change", () => {
+    stageSelect?.addEventListener("change", ()=>{
       saveStageToLS(stageSelect.value || "");
       applyStageFilter();
     });
-
-    qInput?.addEventListener("input", () => applyStageFilter());
+    qInput?.addEventListener("input", ()=> applyStageFilter());
   }
 
   boot();

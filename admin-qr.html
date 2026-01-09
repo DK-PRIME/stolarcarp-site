@@ -1,359 +1,87 @@
-<!doctype html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>STOLAR CARP • Адмін • Акаунти</title>
-
-  <link rel="stylesheet" href="assets/css/main.css" />
-
-  <style>
-    body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
-    .wrap{ max-width:1080px; margin:0 auto; padding:20px 0 80px; }
-    .card{
-      background:rgba(15,23,42,.92);
-      border:1px solid rgba(148,163,184,.28);
-      border-radius:18px;
-      padding:16px;
-      margin-bottom:12px;
-      box-shadow:0 18px 40px rgba(0,0,0,.55);
-    }
-    .titleRow{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-    .h2{ font-weight:900; font-size:1.15rem; letter-spacing:.02em; }
-    .muted{ color:#9ca3af; }
-    .ok{ color:#8fe39a; }
-    .err{ color:#ff6c6c; }
-
-    .grid2{ display:grid; grid-template-columns:1fr; gap:10px; }
-    @media(min-width:860px){ .grid2{ grid-template-columns:1.3fr 1fr; } }
-
-    .field{ display:grid; gap:6px; margin-top:10px; }
-    input, select{
-      width:100%;
-      padding:10px 12px;
-      border-radius:12px;
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.28);
-      outline:none;
-    }
-    input:focus, select:focus{
-      border-color:var(--accent);
-      box-shadow:0 0 10px rgba(246,195,76,.25);
-    }
-
-    .btnRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:6px 10px; border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.35);
-      color:#e5e7eb; font-size:.82rem; white-space:nowrap;
-    }
-
-    /* ===== Таблиця (desktop) ===== */
-    .tableWrap{
-      overflow:auto;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.30);
-      background:rgba(2,6,23,.18);
-    }
-
-    table{
-      width:max-content;
-      min-width:100%;
-      border-collapse:collapse;
-    }
-
-    th, td{
-      border:1px solid rgba(148,163,184,.22);
-      padding:6px 8px;
-      vertical-align:middle;
-      text-align:left;
-      color:#e5e7eb;
-      font-size:.92rem;
-
-      white-space:nowrap;
-      overflow:visible;
-    }
-
-    th{
-      position:sticky;
-      top:0;
-      z-index:2;
-      background:rgba(2,6,23,.88);
-      backdrop-filter: blur(8px);
-      font-size:.78rem;
-      text-transform:uppercase;
-      letter-spacing:.10em;
-      color:#cbd5e1;
-    }
-
-    tbody tr:hover td{ background:rgba(148,163,184,.06); }
-
-    .mini{
-      width:100%;
-      margin:0;
-      padding:0;
-      border:0;
-      outline:none;
-      background:transparent;
-      color:#e5e7eb;
-      font-size:inherit;
-      line-height:1.2;
-    }
-    input.mini{ min-width:0; }
-    .mini:focus{
-      background:rgba(246,195,76,.10);
-      box-shadow: inset 0 0 0 2px rgba(246,195,76,.45);
-    }
-
-    /* ===== Активні (є участь) ===== */
-    tr.isActive td{ background: rgba(34,197,94,.08); }
-    tr.isActive:hover td{ background: rgba(34,197,94,.12); }
-    .activeDot{
-      display:inline-block;
-      width:8px;height:8px;
-      border-radius:999px;
-      background: rgba(34,197,94,.95);
-      box-shadow:0 0 0 3px rgba(34,197,94,.12);
-      margin-right:8px;
-      vertical-align:middle;
-    }
-
-    /* ===== Mobile: таблиця -> вертикальні картки (без скролу вбік) ===== */
-    @media (max-width: 860px){
-
-      .tableWrap{
-        overflow: visible;
-        border: none;
-        background: transparent;
-      }
-
-      table{
-        width: 100%;
-        min-width: 0;
-        border-collapse: separate;
-        border-spacing: 0 10px; /* відступ між картками */
-      }
-
-      thead{ display:none; }
-      tbody, tr, td{ display:block; }
-
-      tr{
-        border: 1px solid rgba(148,163,184,.30);
-        border-radius: 14px;
-        background: rgba(2,6,23,.22);
-        overflow: hidden;
-      }
-
-      tr.isActive{
-        border-color: rgba(34,197,94,.35);
-        background: rgba(34,197,94,.06);
-      }
-
-      td{
-        border: 0 !important;
-        padding: 10px 12px;
-        white-space: normal;
-      }
-
-      td::before{
-        display:block;
-        font-size: .72rem;
-        letter-spacing: .10em;
-        text-transform: uppercase;
-        color: rgba(203,213,225,.75);
-        margin-bottom: 6px;
-      }
-
-      tr td:nth-child(1)::before{ content:"UID"; }
-      tr td:nth-child(2)::before{ content:"Імʼя"; }
-      tr td:nth-child(3)::before{ content:"Email"; }
-      tr td:nth-child(4)::before{ content:"Телефон"; }
-      tr td:nth-child(5)::before{ content:"Місто"; }
-      tr td:nth-child(6)::before{ content:"Роль"; }
-      tr td:nth-child(7)::before{ content:"TeamId"; }
-      tr td:nth-child(8)::before{ content:"Дії"; }
-
-      tr td:nth-child(1){
-        font-weight: 900;
-        background: rgba(2,6,23,.35);
-      }
-
-      tr td:nth-child(8) .btnRow{ gap: 10px; margin:0; }
-      tr td:nth-child(8) .btn{ flex: 1; justify-content:center; }
-
-      tr input.mini, tr select.mini{
-        width: 100%;
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid rgba(148,163,184,.28);
-        background: rgba(2,6,23,.55);
-        color: #e5e7eb;
-      }
-
-      .activeDot{ margin-right: 10px; }
-    }
-  </style>
-</head>
-
-<body>
-
-<header class="header">
-  <div class="container header__row">
-    <a class="logo" href="admin.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
-    </a>
-    <nav class="nav">
-      <a href="/admin.html" class="nav__link">Адмінка</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/auth.html" class="nav__link">Акаунт</a>
-    </nav>
-  </div>
-</header>
-
-<main class="main">
-  <section class="section container wrap">
-
-    <div class="card">
-      <div class="titleRow">
-        <div>
-          <div class="h2">Акаунти STOLAR CARP</div>
-          <div class="muted" id="subTitle">Завантаження…</div>
-        </div>
-        <div class="pill" id="authPill">auth: …</div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px;">
-        <div>
-          <div class="field">
-            <div class="muted">Пошук (ім’я / email / телефон / місто)</div>
-            <input id="q" placeholder="Напр.: Роман або @gmail або 067..." />
-          </div>
-
-          <div class="btnRow">
-            <button class="btn btn--primary" id="btnLoad" type="button">Оновити список</button>
-            <button class="btn btn--ghost" id="btnClear" type="button">Очистити пошук</button>
-          </div>
-
-          <div class="muted" style="margin-top:10px; line-height:1.35;">
-            Тут ти редагуєш і видаляєш <b>Firestore users</b>.<br>
-            <b>Auth-акаунт</b> (email/пароль) з браузера видалити не можна — для цього потрібна Cloud Function.
-          </div>
-        </div>
-
-        <div>
-          <div class="field">
-            <div class="muted">Фільтр ролі</div>
-            <select id="roleFilter">
-              <option value="">Усі</option>
-              <option value="admin">admin</option>
-              <option value="judge">judge</option>
-              <option value="user">user</option>
-            </select>
-          </div>
-          <div class="field">
-            <div class="muted">Ліміт</div>
-            <select id="limitSel">
-              <option value="50">50</option>
-              <option value="100" selected>100</option>
-              <option value="200">200</option>
-              <option value="500">500</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="muted" id="msg" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="card">
-      <div class="titleRow">
-        <div class="h2">Список користувачів</div>
-        <div style="text-align:right">
-          <div class="muted" id="count">—</div>
-          <div class="muted" id="totals" style="font-size:.85rem; margin-top:4px;">—</div>
-        </div>
-      </div>
-
-      <div class="tableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>UID</th>
-              <th>Імʼя</th>
-              <th>Email</th>
-              <th>Телефон</th>
-              <th>Місто</th>
-              <th>Роль</th>
-              <th>TeamId</th>
-              <th>Дії</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr><td colspan="8" class="muted">Завантаження…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </section>
-</main>
-
-<!-- Firebase compat -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="assets/js/firebase-init.js"></script>
-
 <script>
 (function(){
   "use strict";
 
+  // ====== CONFIG ======
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+  const MAX_WAIT_MS = 15000;
+
   const $ = (id)=>document.getElementById(id);
 
+  // UI
+  const msgEl     = $("msg");
+  const authPill  = $("authPill");
+  const subTitle  = $("subTitle");
+  const tbody     = $("tbody");
+  const countEl   = $("count");
+  const totalsEl  = $("totals");
+
+  const qInp       = $("q");
+  const roleFilter = $("roleFilter");
+  const limitSel   = $("limitSel");
+
+  const btnLoad  = $("btnLoad");
+  const btnClear = $("btnClear");
+
+  // Firebase
   let auth = null;
   let db   = null;
 
-  const msgEl = $("msg");
-  const authPill = $("authPill");
-  const subTitle = $("subTitle");
-  const tbody = $("tbody");
-  const countEl = $("count");
-  const totalsEl = $("totals");
-
-  const qInp = $("q");
-  const roleFilter = $("roleFilter");
-  const limitSel = $("limitSel");
-
+  // State
   let activeUids = new Set();
+  let usersCache = [];           // loaded users (limit)
+  let isLoading  = false;        // lock load
+  const rowLocks = new Set();    // lock per UID on save/delete
 
-  const setMsg = (t, ok=true)=>{
+  // ====== helpers ======
+  function setMsg(t, ok=true){
+    if(!msgEl) return;
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok":"err") : "");
-  };
+  }
+
+  function esc(s){
+    return String(s ?? "").replace(/[&<>"']/g, m=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[m]));
+  }
+
+  function norm(v){ return String(v ?? "").trim(); }
+
+  function nowHHMM(){
+    const d=new Date();
+    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+
+  function safeNumber(v, def){
+    const n = Number(v);
+    return Number.isFinite(n) ? n : def;
+  }
 
   async function waitFirebase(){
-    for(let i=0;i<140;i++){
+    const t0 = Date.now();
+    while(Date.now()-t0 < MAX_WAIT_MS){
       if(window.scAuth && window.scDb && window.firebase) return;
-      await new Promise(r=>setTimeout(r,100));
+      await new Promise(r=>setTimeout(r,120));
     }
-    throw new Error("Firebase init не підняв scAuth/scDb.");
+    throw new Error("Firebase init не підняв scAuth/scDb (перевір assets/js/firebase-init.js).");
   }
-
-  function esc(s){ return String(s??"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
-  function norm(v){ return String(v??"").trim(); }
 
   async function requireAdmin(user){
+    if(!user) return false;
     if(user.uid === ADMIN_UID) return true;
-    const snap = await db.collection("users").doc(user.uid).get();
-    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return role === "admin";
+
+    try{
+      const snap = await db.collection("users").doc(user.uid).get();
+      const role = (snap.exists ? (snap.data()||{}).role : "") || "";
+      return role === "admin";
+    }catch(e){
+      console.warn("requireAdmin error:", e);
+      return false;
+    }
   }
 
+  // Обережний підрахунок (може бути важко, але ти просив totals)
   async function getTotalCountFallback(colName){
     let n = 0;
     const snap = await db.collection(colName).get();
@@ -380,14 +108,15 @@
     return set;
   }
 
+  // ====== render ======
   function rowHtml(u){
-    const uid = esc(u.uid);
+    const uid      = esc(u.uid);
     const fullName = esc(u.fullName || "");
-    const email = esc(u.email || "");
-    const phone = esc(u.phone || "");
-    const city = esc(u.city || "");
-    const role = esc(u.role || "user");
-    const teamId = esc(u.teamId || "");
+    const email    = esc(u.email || "");
+    const phone    = esc(u.phone || "");
+    const city     = esc(u.city || "");
+    const role     = esc(u.role || "user");
+    const teamId   = esc(u.teamId || "");
 
     const isActive = activeUids.has(u.uid);
 
@@ -400,7 +129,7 @@
         <td><input class="mini" data-k="city" value="${city}" placeholder="Місто" /></td>
         <td>
           <select class="mini" data-k="role">
-            <option value="user" ${role==="user"?"selected":""}>user</option>
+            <option value="user"  ${role==="user" ?"selected":""}>user</option>
             <option value="judge" ${role==="judge"?"selected":""}>judge</option>
             <option value="admin" ${role==="admin"?"selected":""}>admin</option>
           </select>
@@ -417,79 +146,101 @@
   }
 
   function collectRow(tr){
-    const uid = tr.getAttribute("data-uid");
     const get = (k)=> tr.querySelector(`[data-k="${k}"]`)?.value ?? "";
+    const role = norm(get("role")) || "user";
     return {
       fullName: norm(get("fullName")),
-      email: norm(get("email")),
-      phone: norm(get("phone")),
-      city: norm(get("city")),
-      role: norm(get("role")) || "user",
-      teamId: norm(get("teamId")),
+      email:    norm(get("email")),
+      phone:    norm(get("phone")),
+      city:     norm(get("city")),
+      role,
+      teamId:   norm(get("teamId")),
       updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
     };
   }
 
-  async function loadUsers(){
-    const limit = Number(limitSel.value || 100);
-    const q = norm(qInp.value).toLowerCase();
-    const rf = norm(roleFilter.value);
+  function applyFiltersAndRender(){
+    const q  = norm(qInp?.value || "").toLowerCase();
+    const rf = norm(roleFilter?.value || "");
 
-    tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
-    setMsg("Завантажую users…", true);
-
-    activeUids = await loadActiveUidsFromRegistrations(5000);
-
-    let totalUsers = null;
-    let totalRegs  = null;
-    try{ totalUsers = await getTotalCountFallback("users"); }catch(e){}
-    try{ totalRegs  = await getTotalCountFallback("registrations"); }catch(e){}
-
-    let snap;
-    try{
-      snap = await db.collection("users").orderBy("createdAt","desc").limit(limit).get();
-    }catch{
-      snap = await db.collection("users").limit(limit).get();
-    }
-
-    const items = [];
-    snap.forEach(doc=>{
-      const d = doc.data()||{};
-      items.push({
-        uid: doc.id,
-        fullName: d.fullName || "",
-        email: d.email || "",
-        phone: d.phone || "",
-        city: d.city || "",
-        role: d.role || "user",
-        teamId: d.teamId || ""
-      });
-    });
-
-    const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
-
-    totalsEl.textContent =
-      `Всього зареєстровано (users): ${totalUsers ?? "—"} • ` +
-      `Активних (є участь): ${activeLoaded} • ` +
-      `Всього участей (registrations): ${totalRegs ?? "—"}`;
-
-    const filtered = items.filter(u=>{
+    const filtered = usersCache.filter(u=>{
       if(rf && (u.role||"user") !== rf) return false;
       if(!q) return true;
       const hay = `${u.uid} ${u.fullName} ${u.email} ${u.phone} ${u.city} ${u.role} ${u.teamId}`.toLowerCase();
       return hay.includes(q);
     });
 
-    countEl.textContent = `Показано: ${filtered.length} (завантажено: ${items.length})`;
+    countEl.textContent = `Показано: ${filtered.length} (завантажено: ${usersCache.length})`;
 
     if(!filtered.length){
       tbody.innerHTML = `<tr><td colspan="8" class="muted">Нічого не знайдено.</td></tr>`;
-      setMsg("Готово ✅", true);
       return;
     }
 
     tbody.innerHTML = filtered.map(rowHtml).join("");
-    setMsg("Готово ✅", true);
+  }
+
+  // ====== data ops ======
+  async function loadUsers(){
+    if(isLoading) return;
+    isLoading = true;
+
+    const limit = safeNumber(limitSel?.value || 100, 100);
+
+    tbody.innerHTML = `<tr><td colspan="8" class="muted">Завантаження…</td></tr>`;
+    setMsg("Завантажую users…", true);
+
+    try{
+      // 1) активні uid (є участь)
+      activeUids = await loadActiveUidsFromRegistrations(5000);
+
+      // 2) totals (не валимо сторінку якщо важко)
+      let totalUsers = "—";
+      let totalRegs  = "—";
+      try { totalUsers = await getTotalCountFallback("users"); } catch(e){ console.warn("count users fail", e); }
+      try { totalRegs  = await getTotalCountFallback("registrations"); } catch(e){ console.warn("count regs fail", e); }
+
+      // 3) users list
+      let snap;
+      try{
+        snap = await db.collection("users").orderBy("createdAt","desc").limit(limit).get();
+      }catch{
+        snap = await db.collection("users").limit(limit).get();
+      }
+
+      const items = [];
+      snap.forEach(doc=>{
+        const d = doc.data()||{};
+        items.push({
+          uid: doc.id,
+          fullName: d.fullName || "",
+          email:    d.email || "",
+          phone:    d.phone || "",
+          city:     d.city || "",
+          role:     d.role || "user",
+          teamId:   d.teamId || ""
+        });
+      });
+
+      usersCache = items;
+
+      const activeLoaded = items.filter(x => activeUids.has(x.uid)).length;
+
+      totalsEl.textContent =
+        `Всього зареєстровано (users): ${totalUsers} • ` +
+        `Активних (є участь): ${activeLoaded} • ` +
+        `Всього участей (registrations): ${totalRegs}`;
+
+      applyFiltersAndRender();
+      setMsg(`Готово ✅ (${nowHHMM()})`, true);
+
+    }catch(err){
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">Помилка завантаження.</td></tr>`;
+      setMsg("❌ " + (err?.message || err), false);
+    }finally{
+      isLoading = false;
+    }
   }
 
   async function saveUser(uid, data){
@@ -500,45 +251,89 @@
     await db.collection("users").doc(uid).delete();
   }
 
-  $("btnLoad").onclick = loadUsers;
-  $("btnClear").onclick = ()=>{ qInp.value=""; roleFilter.value=""; loadUsers(); };
-  roleFilter.onchange = loadUsers;
+  function setRowButtonsDisabled(tr, disabled){
+    tr.querySelectorAll("button").forEach(b=> b.disabled = !!disabled);
+    tr.style.opacity = disabled ? ".75" : "";
+    tr.style.pointerEvents = disabled ? "none" : "";
+  }
 
-  document.addEventListener("click", async (e)=>{
-    const tr = e.target.closest("tr[data-uid]");
-    if(!tr) return;
+  // ====== events ======
+  function bindUI(){
+    btnLoad.onclick = loadUsers;
 
-    const uid = tr.getAttribute("data-uid");
-    const btnSave = e.target.closest("[data-save]");
-    const btnDel  = e.target.closest("[data-del]");
-    if(!btnSave && !btnDel) return;
+    btnClear.onclick = ()=>{
+      qInp.value = "";
+      roleFilter.value = "";
+      applyFiltersAndRender(); // не треба знову тягнути з Firestore
+      setMsg("Очищено ✅", true);
+      setTimeout(()=>setMsg("", true), 700);
+    };
 
-    if(btnSave){
+    roleFilter.onchange = applyFiltersAndRender;
+    qInp.addEventListener("input", ()=>{
+      // швидкий фільтр без Firestore
+      applyFiltersAndRender();
+    });
+    limitSel.onchange = loadUsers;
+
+    // Save/Delete delegated
+    document.addEventListener("click", async (e)=>{
+      const tr = e.target.closest("tr[data-uid]");
+      if(!tr) return;
+
+      const uid = tr.getAttribute("data-uid");
+      const btnSave = e.target.closest("[data-save]");
+      const btnDel  = e.target.closest("[data-del]");
+      if(!btnSave && !btnDel) return;
+
+      // анти-спам на рядок
+      if(rowLocks.has(uid)) return;
+      rowLocks.add(uid);
+      setRowButtonsDisabled(tr, true);
+
       try{
-        const data = collectRow(tr);
-        await saveUser(uid, data);
-        setMsg("Збережено ✅", true);
+        if(btnSave){
+          const data = collectRow(tr);
+          await saveUser(uid, data);
+
+          // оновити кеш локально (щоб не робити reload)
+          const i = usersCache.findIndex(x=>x.uid===uid);
+          if(i>=0){
+            usersCache[i] = { ...usersCache[i], ...data, updatedAt: undefined };
+          }
+
+          setMsg("Збережено ✅", true);
+          setTimeout(()=>setMsg("", true), 900);
+        }
+
+        if(btnDel){
+          const ok = confirm(
+            `Видалити користувача з Firestore?\n\nUID: ${uid}\n\n` +
+            `(Auth email/пароль з браузера НЕ видаляється)`
+          );
+          if(ok){
+            await deleteUser(uid);
+
+            // прибрати з кешу + з UI
+            usersCache = usersCache.filter(x=>x.uid!==uid);
+            tr.remove();
+            applyFiltersAndRender();
+
+            setMsg("Видалено ✅", true);
+            setTimeout(()=>setMsg("", true), 900);
+          }
+        }
       }catch(err){
         console.error(err);
-        setMsg("Помилка збереження ❌", false);
+        setMsg("❌ Помилка (Rules/доступ/мережа).", false);
+      }finally{
+        rowLocks.delete(uid);
+        setRowButtonsDisabled(tr, false);
       }
-    }
+    });
+  }
 
-    if(btnDel){
-      const ok = confirm(`Видалити користувача з Firestore?\n\nUID: ${uid}\n\n(Auth буде додано окремо через Function)`);
-      if(!ok) return;
-
-      try{
-        await deleteUser(uid);
-        tr.remove();
-        setMsg("Видалено ✅", true);
-      }catch(err){
-        console.error(err);
-        setMsg("Помилка видалення ❌", false);
-      }
-    }
-  });
-
+  // ====== boot ======
   async function boot(){
     try{
       await waitFirebase();
@@ -550,6 +345,8 @@
       return;
     }
 
+    bindUI();
+
     auth.onAuthStateChanged(async (user)=>{
       if(!user){
         authPill.textContent = "auth: ❌ (не увійшов)";
@@ -560,20 +357,16 @@
 
       authPill.textContent = "auth: ✅ " + (user.email || user.uid);
 
-      try{
-        const ok = await requireAdmin(user);
-        if(!ok){
-          subTitle.textContent = "Нема доступу ❌";
-          setMsg("Цей акаунт не адмін.", false);
-          return;
-        }
-
-        subTitle.textContent = "Тут можна редагувати/видаляти users у Firestore.";
-        await loadUsers();
-      }catch(err){
-        console.error(err);
-        setMsg("Помилка перевірки доступу.", false);
+      const ok = await requireAdmin(user);
+      if(!ok){
+        subTitle.textContent = "Нема доступу ❌";
+        setMsg("Цей акаунт не адмін.", false);
+        return;
       }
+
+      subTitle.textContent = "Тут можна редагувати/видаляти users у Firestore.";
+      setMsg("", true);
+      await loadUsers();
     });
   }
 
@@ -581,6 +374,3 @@
 
 })();
 </script>
-
-</body>
-</html>

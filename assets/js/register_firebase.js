@@ -6,6 +6,7 @@
 // ✅ Parallel loads: profile + competitions
 // ✅ No undefined fields (uses null)
 // ✅ PUBLIC mirror: writes safe fields to public_participants (teamName + status + ids)
+// ✅ PAYMENT: reads payEnabled/price/currency/payDetails from competitions.events and snapshots into registrations
 
 (function () {
   const auth = window.scAuth;
@@ -33,8 +34,6 @@
 
   // ======= PERF CACHE =======
   const COMP_CACHE_KEY = "sc_competitions_cache_v1";
-  const COMP_CACHE_TTL_MS = 10 * 60 * 1000; // 10 хв
-
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
   const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 год
 
@@ -44,6 +43,7 @@
   let lastItems = [];
   let nearestUpcomingValue = null;
 
+  // ======= helpers =======
   function escapeHtml(s) {
     return String(s || "")
       .replace(/&/g, "&amp;")
@@ -84,6 +84,13 @@
 
   function nowKyiv() { return new Date(); }
 
+  function normalizeMoney(v){
+    if (v === 0) return 0;
+    if (v === null || v === undefined) return null;
+    const n = Number(String(v).replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+
   function getRegDatesFromEvent(ev) {
     const regOpen  = ev.regOpenAt  || ev.regOpenDate  || ev.regOpen  || null;
     const regClose = ev.regCloseAt || ev.regCloseDate || ev.regClose || null;
@@ -101,6 +108,56 @@
     return (t === "solo") ? "solo" : "team";
   }
 
+  // ======= PAYMENT UI (uses existing #cardNum + #copyCard) =======
+  let activePayText = "";
+
+  function setPayUIFromSelected(item){
+    // якщо в тебе нема payDetails UI на сторінці — просто тихо виходимо
+    if (!cardNumEl) return;
+
+    if (!item){
+      activePayText = "";
+      cardNumEl.textContent = "";
+      return;
+    }
+
+    const payEnabled = !!item.payEnabled;
+    const price = normalizeMoney(item.price);
+    const currency = String(item.currency || "UAH").toUpperCase();
+    const details = String(item.payDetails || "").trim();
+
+    if (!payEnabled){
+      activePayText = "Оплата не потрібна для цього етапу ✅";
+      cardNumEl.textContent = activePayText;
+      return;
+    }
+
+    const priceLine = (price === null) ? `Внесок: — ${currency}` : `Внесок: ${price} ${currency}`;
+    const detailsLine = details || "Реквізити не задані адміністратором.";
+    activePayText = `${priceLine}\n${detailsLine}`.trim();
+
+    cardNumEl.textContent = activePayText;
+  }
+
+  // copy реквізити (завжди копіюємо те, що показано)
+  if (copyCardBtn) {
+    copyCardBtn.addEventListener("click", async () => {
+      const txt = (activePayText || (cardNumEl ? cardNumEl.textContent : "") || "").trim();
+      if (!txt) {
+        alert("Нема що копіювати.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(txt);
+        copyCardBtn.textContent = "Скопійовано ✔";
+        setTimeout(() => (copyCardBtn.textContent = "Скопіювати реквізити"), 1200);
+      } catch {
+        alert("Не вдалося скопіювати. Скопіюйте вручну.");
+      }
+    });
+  }
+
+  // ======= OPEN WINDOW =======
   function isOpenWindow(item) {
     const mode = String(item.regMode || "auto").toLowerCase();
     if (mode === "manual") return !!item.manualOpen;
@@ -151,19 +208,7 @@
     submitBtn.disabled = !ok;
   }
 
-  // copy card
-  if (copyCardBtn && cardNumEl) {
-    copyCardBtn.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard.writeText(cardNumEl.textContent.trim());
-        copyCardBtn.textContent = "Скопійовано ✔";
-        setTimeout(() => (copyCardBtn.textContent = "Скопіювати номер картки"), 1200);
-      } catch {
-        alert("Не вдалося скопіювати номер. Скопіюйте вручну.");
-      }
-    });
-  }
-
+  // ======= FOOD =======
   function initFoodLogic() {
     const radios = document.querySelectorAll('input[name="food"]');
     if (!radios.length || !foodQtyField || !foodQtyInput) return;
@@ -288,6 +333,12 @@
         endAt: it.endAt ? it.endAt.toISOString() : null,
         regOpenAt: normalizeDateForCache(it.regOpenAt),
         regCloseAt: normalizeDateForCache(it.regCloseAt),
+
+        // ✅ payment cache
+        payEnabled: !!it.payEnabled,
+        price: (it.price === 0 || it.price) ? it.price : null,
+        currency: (it.currency || "UAH").toUpperCase(),
+        payDetails: (it.payDetails || "").trim(),
       }));
       localStorage.setItem(COMP_CACHE_KEY, JSON.stringify({ ts: Date.now(), items: packed }));
     } catch {}
@@ -339,7 +390,13 @@
               regMode: ev.regMode || c.regMode || "auto",
               manualOpen: !!(ev.manualOpen ?? c.manualOpen),
               regOpenAt,
-              regCloseAt
+              regCloseAt,
+
+              // ✅ payment from admin
+              payEnabled: !!ev.payEnabled,
+              price: (ev.price === 0 || ev.price) ? normalizeMoney(ev.price) : null,
+              currency: (ev.currency || "UAH").toUpperCase(),
+              payDetails: (ev.payDetails || "").trim(),
             });
           });
         } else {
@@ -361,7 +418,13 @@
             regMode: c.regMode || "auto",
             manualOpen: !!c.manualOpen,
             regOpenAt: c.regOpenAt || c.regOpenDate || null,
-            regCloseAt: c.regCloseAt || c.regCloseDate || null
+            regCloseAt: c.regCloseAt || c.regCloseDate || null,
+
+            // ✅ payment (fallback)
+            payEnabled: !!c.payEnabled,
+            price: (c.price === 0 || c.price) ? normalizeMoney(c.price) : null,
+            currency: (c.currency || "UAH").toUpperCase(),
+            payDetails: (c.payDetails || "").trim(),
           });
         }
       });
@@ -391,6 +454,9 @@
   function renderItems(items) {
     if (!eventOptionsEl) return;
     eventOptionsEl.innerHTML = "";
+
+    // ✅ clear pay UI until pick
+    setPayUIFromSelected(null);
 
     if (!items.length) {
       eventOptionsEl.innerHTML = `<p class="form__hint">Нема створених змагань. Додай їх в адмінці.</p>`;
@@ -438,6 +504,17 @@
 
   document.addEventListener("change", (e) => {
     if (!e.target) return;
+
+    if (e.target.name === "stagePick") {
+      const picked = document.querySelector('input[name="stagePick"]:checked');
+      const selectedValue = picked ? String(picked.value) : "";
+      const selectedItem = selectedValue
+        ? lastItems.find(x => `${x.compId}||${x.stageKey || ""}` === selectedValue)
+        : null;
+
+      setPayUIFromSelected(selectedItem || null);
+    }
+
     if (e.target.name === "stagePick" || e.target.id === "rules") refreshSubmitState();
   });
 
@@ -559,6 +636,16 @@
 
       const participantName = (profile.fullName || profile.captain || profile.email || "").trim();
 
+      // ✅ payment snapshot from selectedItem
+      const payment = {
+        payEnabled: !!selectedItem.payEnabled,
+        price: (selectedItem.price === 0 || selectedItem.price) ? normalizeMoney(selectedItem.price) : null,
+        currency: (selectedItem.currency || "UAH").toUpperCase(),
+        payDetails: String(selectedItem.payDetails || "").trim()
+      };
+
+      const status = payment.payEnabled ? "pending_payment" : "pending";
+
       const docId = buildRegDocId({ competitionId, stageId, entryType });
       const ref = db.collection("registrations").doc(docId);
 
@@ -579,7 +666,13 @@
         food,
         foodQty: foodQty === null ? null : Number(foodQty),
 
-        status: "pending_payment",
+        // ✅ payment snapshot fields
+        payEnabled: payment.payEnabled,
+        price: payment.price,
+        currency: payment.currency,
+        payDetails: payment.payDetails || "",
+
+        status,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       };
 
@@ -591,7 +684,6 @@
         await ref.set(payload, { merge: false });
 
         // ✅ Публічне дзеркало (безпечні поля) -> public_participants
-        // docId беремо той самий, що й у registrations (узгоджено з твоїми rules)
         try {
           const pubRef = db.collection("public_participants").doc(docId);
           const pubPayload = buildPublicPayload({
@@ -601,16 +693,23 @@
             entryType,
             teamId: (entryType === "team") ? profile.teamId : null,
             teamName: (entryType === "team") ? profile.teamName : null,
-            status: "pending_payment"
+            status
           });
           await pubRef.set(pubPayload, { merge: false });
         } catch (e) {
           console.warn("public_participants write failed:", e);
         }
 
-        setMsg("Заявка подана ✔ Підтвердження після оплати.", true);
+        setMsg(
+          payment.payEnabled
+            ? "Заявка подана ✔ Підтвердження після оплати."
+            : "Заявка подана ✔ Оплата не потрібна.",
+          true
+        );
+
         form.reset();
         initFoodLogic();
+        setPayUIFromSelected(null);
       } catch (err) {
         console.error("submit error:", err);
 

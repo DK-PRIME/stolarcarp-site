@@ -4,12 +4,15 @@
 // ✅ stage-N: manual regOpen/regClose toggle + dates (anytime)
 // ✅ currency + price + payment requisites per event
 // ✅ keeps Final автоматичним (28/14) або без мануалу (за замовчуванням)
+//
+// FIXES:
+// ✅ Admin access by users/{uid}.role === "admin" (not hardcoded UID)
+// ✅ createdAt не перезаписується при кожному save
 
 (function(){
   "use strict";
 
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-  const DRAFT_KEY = "sc_admin_create_draft_v5"; // bump version
+  const DRAFT_KEY = "sc_admin_create_draft_v5";
   const DEFAULT_TZ_NOTE = "12:00 Київ";
 
   const $ = (id)=>document.getElementById(id);
@@ -53,7 +56,7 @@
     throw new Error("Firebase init не підняв scAuth/scDb. Перевір assets/js/firebase-init.js.");
   }
 
-  let auth=null, db=null;
+  let auth=null, db=null, fb=null;
 
   // ---- UI refs ----
   const adminLogin = $("adminLogin");
@@ -67,13 +70,24 @@
     if(name==="edit") show(modEdit);
   }
 
+  async function requireAdmin(user){
+    if(!user) return false;
+    try{
+      const snap = await db.collection("users").doc(user.uid).get();
+      const role = snap.exists ? ((snap.data()||{}).role || "") : "";
+      return String(role).toLowerCase() === "admin";
+    }catch(_){
+      return false;
+    }
+  }
+
   // ---- Event card rendering ----
   function renderEventBlock(key, title, isFinal=false){
     const badge = isFinal
       ? `<span class="badge badge--final">ФІНАЛ</span>`
       : `<span class="badge">${esc(key)}</span>`;
 
-    // manual only for stage-N (not final, not oneoff default) — але ти просив саме "ЕтапиN без фіналу"
+    // manual only for stage-N
     const allowManualReg = (!isFinal && /^stage-\d+$/i.test(String(key)));
 
     return `
@@ -221,7 +235,6 @@
       if(ro) ro.value = e.manualRegOpenDate || "";
       if(rc) rc.value = e.manualRegCloseDate || "";
 
-      // enable/disable regopen/regclose based on manual checkbox + allowManualReg
       applyManualToggle(card);
     });
 
@@ -251,8 +264,6 @@
     ro.disabled = !on;
     rc.disabled = !on;
 
-    // якщо щойно увімкнули manual і поля пусті — лишаємо пустими (бо "коли завгодно")
-    // якщо вимкнули manual — чистимо manual дати, щоб не плутало
     if(!on){
       ro.value = "";
       rc.value = "";
@@ -279,7 +290,6 @@
         return;
       }
 
-      // default авто по старту
       if(!start){
         prev.textContent = "Реєстрація: —";
         return;
@@ -291,9 +301,7 @@
   }
 
   function hookPreviewAndDraft(container, onChange){
-    // dates + inputs
     const handler = ()=>{
-      // manual toggles
       container.querySelectorAll("[data-ev]").forEach(card=>applyManualToggle(card));
       refreshPreviews(container);
       onChange && onChange();
@@ -304,7 +312,6 @@
       inp.addEventListener("input", handler);
     });
 
-    // initial apply
     handler();
   }
 
@@ -323,7 +330,6 @@
 
     container.innerHTML = blocks.join("");
 
-    // повертаємо введені значення назад
     if(prev.length) fillEventsInto(container, prev);
     refreshPreviews(container);
   }
@@ -365,12 +371,10 @@
   }
 
   function validateEvents(eventsRaw){
-    // валідація дат старт/фініш
     eventsRaw.forEach(ev=>{
       if(ev.startDate && !ev.finishDate) throw new Error(`Заповни фініш для ${ev.key}.`);
       if(!ev.startDate && ev.finishDate) throw new Error(`Заповни старт для ${ev.key}.`);
 
-      // якщо manualRegEnabled → можна будь-які дати, але якщо одну ввели — краще щоб була друга
       if(ev.manualRegEnabled){
         if(ev.manualRegOpenDate && !ev.manualRegCloseDate) throw new Error(`Manual: заповни закриття реєстрації для ${ev.key}.`);
         if(!ev.manualRegOpenDate && ev.manualRegCloseDate) throw new Error(`Manual: заповни відкриття реєстрації для ${ev.key}.`);
@@ -379,7 +383,6 @@
   }
 
   function computeRegWindow(ev){
-    // stage-N manual, else auto-by-start
     const allowManual = (!ev.isFinal && /^stage-\d+$/i.test(String(ev.key)));
     if(allowManual && ev.manualRegEnabled){
       return {
@@ -401,6 +404,7 @@
       await waitForFirebase();
       auth = window.scAuth;
       db   = window.scDb;
+      fb   = window.firebase;
     }catch(e){
       setStatus("Firebase не запустився ❌");
       setDebug(e.message || String(e));
@@ -408,7 +412,6 @@
       return;
     }
 
-    // login button
     $("btnAdminLogin").onclick = async ()=>{
       const email = ($("admEmail").value || "").trim();
       const pass  = ($("admPass").value || "").trim();
@@ -422,7 +425,6 @@
       }
     };
 
-    // create ui build
     const syncCreateUI = ()=>{
       const type = $("inpType").value;
       const seasonOnly = $("seasonOnly");
@@ -447,10 +449,8 @@
     $("inpStagesCount").onchange = syncCreateUI;
     $("inpHasFinal").onchange = syncCreateUI;
 
-    // first render
     syncCreateUI();
 
-    // restore draft
     const draft = getDraft();
     if(draft){
       applyCreateState(draft);
@@ -470,7 +470,6 @@
       $("createMsg").innerHTML = `<span class="ok">✅ Чернетку скинуто</span>`;
     };
 
-    // modules
     $("btnOpenCreate").onclick = ()=> openModule("create");
     $("btnOpenEdit").onclick = async ()=>{
       openModule("edit");
@@ -483,14 +482,13 @@
     };
     $("selCompetition").onchange = async ()=>{ await loadSelectedCompetitionIntoEditor(); };
 
-    // SAVE competition
     $("btnSaveCompetition").onclick = async ()=>{
       const msg = $("createMsg");
       msg.className="muted";
       msg.textContent="Збереження…";
 
       try{
-        const type = $("inpType").value; // season|oneoff
+        const type = $("inpType").value;
         const year = ($("inpYear").value || "").trim();
         const name = ($("inpName").value || "").trim();
         if(!/^\d{4}$/.test(year)) throw new Error("Вкажи рік (4 цифри), наприклад 2026.");
@@ -508,13 +506,9 @@
             key: ev.key,
             startDate: ev.startDate || "",
             finishDate: ev.finishDate || "",
-
-            // registration window:
-            regMode: reg.regMode,               // "auto" | "manual"
+            regMode: reg.regMode,
             regOpenDate: reg.regOpenDate || "",
             regCloseDate: reg.regCloseDate || "",
-
-            // payments:
             payEnabled: !!ev.payEnabled,
             price: (ev.price === 0 || ev.price) ? ev.price : null,
             currency: (ev.currency || "UAH").toUpperCase(),
@@ -523,6 +517,9 @@
         });
 
         const compId = compIdFrom(type, year, name);
+        const ref = db.collection("competitions").doc(compId);
+        const snap = await ref.get();
+
         const data = {
           compId,
           type,
@@ -532,11 +529,14 @@
           stagesCount,
           hasFinal,
           events,
-          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-          createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: fb.firestore.FieldValue.serverTimestamp()
         };
 
-        await db.collection("competitions").doc(compId).set(data, { merge:true });
+        if(!snap.exists){
+          data.createdAt = fb.firestore.FieldValue.serverTimestamp();
+        }
+
+        await ref.set(data, { merge:true });
 
         setDraft(collectCreateState());
         msg.innerHTML = `<span class="ok">✅ Збережено:</span> ${esc(compId)}`;
@@ -545,7 +545,6 @@
       }
     };
 
-    // MAKE ACTIVE
     $("btnMakeActive").onclick = async ()=>{
       const msg = $("createMsg");
       msg.className="muted";
@@ -562,7 +561,7 @@
 
         await db.collection("settings").doc("app").set({
           activeCompetitionId: compId,
-          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: fb.firestore.FieldValue.serverTimestamp()
         }, { merge:true });
 
         msg.innerHTML = `<span class="ok">✅ Активне:</span> ${esc(compId)}`;
@@ -571,7 +570,6 @@
       }
     };
 
-    // EDIT save
     $("btnSaveEdit").onclick = async ()=>{
       const msg = $("editMsg");
       msg.className="muted";
@@ -602,7 +600,7 @@
 
         await db.collection("competitions").doc(compId).set({
           events,
-          updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          updatedAt: fb.firestore.FieldValue.serverTimestamp()
         }, { merge:true });
 
         msg.innerHTML = `<span class="ok">✅ Збережено</span>`;
@@ -611,7 +609,6 @@
       }
     };
 
-    // --- DELETE competition (clean Firebase) ---
     async function deleteQueryInBatches(q){
       while(true){
         const snap = await q.limit(500).get();
@@ -638,19 +635,17 @@
 
         msg.textContent = "Видаляю…";
 
-        // якщо активне — прибираємо активність
         try{
           const s = await db.collection("settings").doc("app").get();
           const activeId = s.exists ? ((s.data()||{}).activeCompetitionId || "") : "";
           if(activeId === compId){
             await db.collection("settings").doc("app").set({
               activeCompetitionId: "",
-              updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+              updatedAt: fb.firestore.FieldValue.serverTimestamp()
             }, { merge:true });
           }
         }catch(_){}
 
-        // чистимо registrations (best-effort)
         try{ await deleteQueryInBatches(db.collection("registrations").where("competitionId","==",compId)); }catch(_){}
         try{ await deleteQueryInBatches(db.collection("registrations").where("seasonId","==",compId)); }catch(_){}
 
@@ -663,7 +658,6 @@
       }
     };
 
-    // load select/editor
     async function loadCompetitionsToSelect(){
       const sel = $("selCompetition");
       const editor = $("editWindowsWrap");
@@ -719,8 +713,8 @@
       hookPreviewAndDraft(editor, null);
     }
 
-    // AUTH STATE
-    auth.onAuthStateChanged((user)=>{
+    // AUTH STATE (by role)
+    auth.onAuthStateChanged(async (user)=>{
       if(!user){
         setStatus("Потрібен вхід");
         setDebug("");
@@ -729,9 +723,11 @@
         openModule("create");
         return;
       }
-      if(user.uid !== ADMIN_UID){
+
+      const ok = await requireAdmin(user);
+      if(!ok){
         setStatus("Доступ заборонено ❌");
-        setDebug("Цей акаунт не є адміном.");
+        setDebug("Цей акаунт не має ролі admin (users/{uid}.role).");
         show(adminLogin);
         hide(adminApp);
         return;
@@ -745,7 +741,6 @@
     });
   }
 
-  // crash catcher
   window.addEventListener("error", (e)=>{
     setStatus("Помилка JS ❌");
     setDebug(e?.message || "Помилка");

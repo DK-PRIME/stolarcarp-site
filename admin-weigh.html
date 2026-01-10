@@ -60,7 +60,6 @@
       background:#0b1224;color:#e5e7eb;border:1px solid #334155;border-radius:14px;
       padding:12px 12px;outline:none;min-width:240px
     }
-    .topHelp{line-height:1.5}
   </style>
 </head>
 
@@ -74,9 +73,18 @@
 
 <main class="container">
 
+  <!-- ✅ ПОВЕРНУЛИ card і прибрали кривий зайвий </div> -->
+  <div class="card">
+    <h2 style="margin:0 0 8px 0;">⚖️ Зважування (адмін)</h2>
+    <div class="muted" style="line-height:1.5">
+      1) Обери етап → 2) Обери номер зважування (W1–W4) → 3) По командах тисни <b>+</b>, вводь вагу риби → <b>Зберегти</b>.<br>
+      Дані зберігаються в <b>stageResults</b>, тому LIVE має їх бачити.
+    </div>
+
     <div class="hr"></div>
 
     <div class="row">
+      <div>
         <div class="muted" style="margin-bottom:6px;">Змагання / етап</div>
         <select id="stageSelect">
           <option value="">— Завантаження… —</option>
@@ -203,6 +211,8 @@
       const r = d.data()||{};
       const zone = String(r.drawZone || r.zone || "").toUpperCase();
       const sector = r.drawSector ?? r.sector ?? r.place ?? "";
+
+      // ⚠️ лишаємо як у тебе, але краще щоб завжди був r.teamId з teams
       const teamId = r.teamId || r.uid || d.id;
       const teamName = r.teamName || r.team || r.name || "Команда";
 

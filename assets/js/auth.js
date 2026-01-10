@@ -25,6 +25,43 @@
     throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір підключення SDK та firebase-init.js");
   }
 
+  // ====== ДРУЖНІ ПОВІДОМЛЕННЯ ПОМИЛОК (UA) ======
+  function friendlyError(err, fallback = "Сталася помилка. Спробуй ще раз.") {
+    const code = String(err?.code || "").trim();
+
+    // Firebase Auth codes: https://firebase.google.com/docs/reference/js/auth
+    const map = {
+      "auth/email-already-in-use": "Цей email вже використовується. Спробуй увійти або відновити пароль.",
+      "auth/invalid-email": "Невірний формат email.",
+      "auth/weak-password": "Пароль занадто слабкий. Мінімум 6 символів.",
+      "auth/wrong-password": "Невірний пароль.",
+      "auth/user-not-found": "Користувача з таким email не знайдено.",
+      "auth/too-many-requests": "Забагато спроб. Спробуй трохи пізніше.",
+      "auth/network-request-failed": "Проблема з інтернетом. Перевір з’єднання та спробуй знову.",
+      "auth/user-disabled": "Цей акаунт вимкнено. Звернись до адміністратора.",
+      "auth/operation-not-allowed": "Вхід цим способом зараз недоступний.",
+      "auth/requires-recent-login": "Для цієї дії потрібно повторно увійти в акаунт. Перезайди і спробуй ще раз.",
+
+      // Firestore
+      "permission-denied": "Немає доступу. Увійди в акаунт або звернись до адміністратора.",
+      "failed-precondition": "Операцію зараз неможливо виконати. Спробуй пізніше.",
+      "unavailable": "Сервіс тимчасово недоступний. Спробуй трохи пізніше.",
+      "deadline-exceeded": "Операція перевищила час очікування. Спробуй ще раз.",
+      "not-found": "Дані не знайдено.",
+      "already-exists": "Такий запис вже існує.",
+      "resource-exhausted": "Ліміт перевищено. Спробуй пізніше."
+    };
+
+    if (map[code]) return map[code];
+
+    // наші/кастомні
+    const msg = String(err?.message || "").trim();
+    if (msg === "permission_denied_precheck") return "Немає доступу для перевірки. Продовжую реєстрацію…";
+    if (msg) return msg;
+
+    return fallback;
+  }
+
   function genJoinCode(len = 6) {
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
     let out = "";
@@ -37,7 +74,6 @@
     return String(name || "").trim().replace(/\s+/g, " ");
   }
   function teamNameKey(name) {
-    // ключ для пошуку дублів (нечутливий до регістру/пробілів)
     return normalizeTeamName(name).toLowerCase();
   }
 
@@ -47,26 +83,30 @@
 
     const key = teamNameKey(norm);
 
-    // 1) Новий підхід: nameKey (якщо вже почали його писати)
-    // 2) Сумісність зі старими доками: точний збіг name
     const q1 = db.collection("teams").where("nameKey", "==", key).limit(1).get();
     const q2 = db.collection("teams").where("name", "==", norm).limit(1).get();
 
     const [s1, s2] = await Promise.allSettled([q1, q2]);
 
-    // якщо правила не дозволяють читання ДО auth — нехай кине помилку вище (ми відловимо)
     const snap1 = (s1.status === "fulfilled") ? s1.value : null;
     const snap2 = (s2.status === "fulfilled") ? s2.value : null;
 
     if (snap1 && !snap1.empty) return true;
     if (snap2 && !snap2.empty) return true;
 
-    // якщо обидва запроси впали через permission — підкинемо помилку, щоб робити перевірку після signup
     const permDenied =
       (s1.status === "rejected" && String(s1.reason?.message || "").toLowerCase().includes("permission")) ||
-      (s2.status === "rejected" && String(s2.reason?.message || "").toLowerCase().includes("permission"));
+      (s2.status === "rejected" && String(s2.reason?.message || "").toLowerCase().includes("permission")) ||
+      (s1.status === "rejected" && String(s1.reason?.code || "") === "permission-denied") ||
+      (s2.status === "rejected" && String(s2.reason?.code || "") === "permission-denied");
 
     if (permDenied) throw new Error("permission_denied_precheck");
+
+    // інші помилки precheck не ховаємо
+    const otherErr =
+      (s1.status === "rejected" && !permDenied) ? s1.reason :
+      (s2.status === "rejected" && !permDenied) ? s2.reason : null;
+    if (otherErr) throw otherErr;
 
     return false;
   }
@@ -75,7 +115,6 @@
     const normName = normalizeTeamName(name) || "Команда";
     const nameKey = teamNameKey(normName);
 
-    // ✅ Жорстка перевірка унікальності назви (і тут теж, навіть якщо була precheck)
     const taken = await isTeamNameTaken(db, normName);
     if (taken) {
       throw new Error("Назва команди вже використовується. Додай 1 цифру або літеру, щоб відрізнялась.");
@@ -86,13 +125,15 @@
       const exists = await db.collection("teams").where("joinCode", "==", joinCode).limit(1).get();
       if (!exists.empty) continue;
 
+      const now = window.firebase.firestore.FieldValue.serverTimestamp();
+
       const ref = await db.collection("teams").add({
         name: normName,
-        nameKey, // ✅ для швидкого пошуку дублів
+        nameKey,
         ownerUid,
         joinCode,
-        createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-        updatedAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: now,
+        updatedAt: now
       });
 
       return { teamId: ref.id, joinCode, name: normName };
@@ -126,7 +167,6 @@
     };
 
     if (!snap.exists) {
-      // ✅ Новий документ: createdAt ставимо 1 раз + updatedAt
       await ref.set({
         ...base,
         createdAt: now,
@@ -135,7 +175,6 @@
       return;
     }
 
-    // ✅ Існуючий документ: НЕ чіпаємо createdAt, лише доповнюємо й updatedAt
     const cur = snap.data() || {};
     const patch = {};
     if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
@@ -182,7 +221,6 @@
 
   function showLoggedInUI(user) {
     if (loggedMsg) {
-      // ✅ не світимо email
       loggedMsg.textContent = (ADMIN_MODE && user?.uid === ADMIN_UID)
         ? "Ви увійшли як адміністратор (admin-mode)."
         : "Ви вже увійшли у свій акаунт.";
@@ -219,7 +257,6 @@
       return;
     }
 
-    // ✅ ФЛОУ ДОВОДИМО ДО КІНЦЯ: role-валідація ДО створення Auth (де можливо)
     const teamName = normalizeTeamName(teamNameRaw);
     const joinCode = String(joinCodeRaw || "").trim();
 
@@ -233,9 +270,8 @@
     }
 
     let preTeam = null;
-    let precheckedName = false;
 
-    // precheck (може впасти через rules без auth — це нормально, тоді перевіримо вже після signup)
+    // precheck (може впасти через rules без auth — тоді перевіримо вже після signup)
     try {
       if (role === "member") {
         preTeam = await findTeamByJoinCode(db, joinCode);
@@ -246,16 +282,15 @@
       }
       if (role === "captain") {
         const taken = await isTeamNameTaken(db, teamName);
-        precheckedName = true;
         if (taken) {
           setMsg(signupMsg, "Назва команди вже використовується. Додай 1 цифру або літеру.", "err");
           return;
         }
       }
     } catch (preErr) {
-      // якщо rules забороняють читати ДО auth — просто йдемо далі (перевіримо після створення акаунта)
       const msg = String(preErr?.message || "");
-      if (!msg.includes("permission_denied_precheck")) {
+      // permission для precheck — ок, просто продовжуємо
+      if (msg !== "permission_denied_precheck") {
         console.warn(preErr);
       }
     }
@@ -267,22 +302,18 @@
       $("signupBtn") && ($("signupBtn").disabled = true);
       setMsg(signupMsg, "Готую реєстрацію…", "");
 
-      // ✅ Тепер створюємо Auth
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
       createdUser = user;
 
-      // ✅ Після signup у нас вже є auth -> можемо гарантувати перевірки/створення до кінця
       if (role === "member") {
         setMsg(signupMsg, "Підключаю до команди…", "");
 
-        // якщо не було preTeam (через rules) — знайдемо зараз
         const team = preTeam || await findTeamByJoinCode(db, joinCode);
         if (!team) {
-          // rollback: не залишаємо “мертвий” акаунт
           setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
-          try { await user.delete(); } catch(_) {}
-          try { await auth.signOut(); } catch(_) {}
+          try { await user.delete(); } catch (delErr) { console.warn(delErr); }
+          try { await auth.signOut(); } catch (_) {}
           return;
         }
 
@@ -297,7 +328,6 @@
       if (role === "captain") {
         setMsg(signupMsg, "Створюю команду…", "");
 
-        // якщо precheck не вдалось/не робився — createTeam сам перевірить унікальність і кине помилку
         const team = await createTeam(db, teamName, user.uid);
         createdTeamId = team.teamId;
 
@@ -309,7 +339,6 @@
         return;
       }
 
-      // якщо роль якась інша (на всяк)
       await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role, teamId: null });
       setMsg(signupMsg, "Акаунт створено ✅", "ok");
       setTimeout(() => goAfterAuth(user), 450);
@@ -317,18 +346,15 @@
     } catch (err) {
       console.error(err);
 
-      // ✅ rollback якщо щось впало після створення акаунта
-      // (наприклад, назва зайнята, правила, мережа, тощо)
-      const msg = err?.message || "Помилка реєстрації";
+      const msg = friendlyError(err, "Помилка реєстрації");
 
       if (createdUser) {
         try {
-          // якщо ми створили команду і далі впало — прибираємо команду, щоб не залишати сміття
           if (createdTeamId) {
-            try { await db.collection("teams").doc(createdTeamId).delete(); } catch(_) {}
+            try { await db.collection("teams").doc(createdTeamId).delete(); } catch (tErr) { console.warn(tErr); }
           }
-          try { await createdUser.delete(); } catch(_) {}
-          try { await auth.signOut(); } catch(_) {}
+          try { await createdUser.delete(); } catch (delErr) { console.warn(delErr); }
+          try { await auth.signOut(); } catch (_) {}
         } catch (_) {}
       }
 
@@ -365,7 +391,7 @@
 
     } catch (err) {
       console.error(err);
-      setMsg(loginMsg, err?.message || "Помилка входу", "err");
+      setMsg(loginMsg, friendlyError(err, "Помилка входу"), "err");
     } finally {
       $("loginBtn") && ($("loginBtn").disabled = false);
     }
@@ -390,8 +416,6 @@
     }
   });
 
-  // ✅ Головне: НЕ робимо авто-редірект адміна ніколи.
-  // Показуємо "ви вже увійшли" і даємо кнопку "перейти".
   (async () => {
     try {
       await waitFirebase();

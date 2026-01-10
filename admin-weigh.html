@@ -101,8 +101,8 @@
         </select>
       </div>
 
-      <button id="btnReloadStages" class="btn btn--primary">Оновити список</button>
-      <button id="btnLoadTables" class="btn btn--accent">Завантажити таблиці</button>
+      <button id="btnReloadStages" class="btn btn--primary" type="button">Оновити список</button>
+      <button id="btnLoadTables" class="btn btn--accent" type="button">Завантажити таблиці</button>
     </div>
 
     <div id="msg" class="muted" style="margin-top:10px;"></div>
@@ -110,19 +110,6 @@
   </div>
 
   <div id="zonesWrap"></div>
-
-  <div class="card">
-    <h3 style="margin:0 0 10px 0;">QR для суддів (A/B/C)</h3>
-    <div class="muted" style="margin-bottom:10px;">
-      Генерує посилання на <b>weigh_judge.html</b> з параметрами zone/compId/stageId/token/w.
-    </div>
-    <div class="row">
-      <input id="tokenInput" type="text" placeholder="Token доступу (напр. SC-XXXXXX)" />
-      <button id="btnRndToken" class="btn btn--primary">Випадковий token</button>
-      <button id="btnGenQR" class="btn btn--accent">Згенерувати посилання A/B/C</button>
-    </div>
-    <div id="qrOut" class="muted" style="margin-top:10px;white-space:pre-wrap;"></div>
-  </div>
 
 </main>
 
@@ -148,9 +135,6 @@
   const dbgEl       = $("debug");
   const zonesWrap   = $("zonesWrap");
 
-  const tokenInput  = $("tokenInput");
-  const qrOut       = $("qrOut");
-
   function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
   function norm(s){ return String(s ?? "").trim(); }
 
@@ -174,19 +158,12 @@
     return { compId: norm(compId), stageKey: norm(stageKey) };
   }
 
-  // stageResults doc id: compId__stageKey (як у тебе на скріні)
+  // stageResults doc id: compId__stageKey
   function stageResultsId(compId, stageKey){
     return `${compId}__${stageKey}`;
   }
 
-  function rndToken(){
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let out = "SC-";
-    for(let i=0;i<12;i++) out += chars[Math.floor(Math.random()*chars.length)];
-    return out;
-  }
-
-  // ====== 1) Завантаження етапів зі competitions (щоб не було “яке змагання?”) ======
+  // ====== 1) Завантаження етапів зі competitions ======
   async function loadStages(){
     stageSelect.innerHTML = `<option value="">— Завантаження… —</option>`;
     const items = [];
@@ -223,7 +200,6 @@
 
   // ====== 2) Тягнемо команди з registrations (confirmed + drawZone/drawSector) ======
   async function loadTeamsFromRegistrations(compId, stageKey){
-    // ВАЖЛИВО: у тебе на скрінах є status:"confirmed"
     const q = await db.collection("registrations")
       .where("competitionId","==",compId)
       .where("stageId","==",stageKey)
@@ -238,7 +214,7 @@
       const teamId = r.teamId || r.uid || d.id;
       const teamName = r.teamName || r.team || r.name || "Команда";
 
-      if(!zone) return; // якщо нема drawZone — команда не попаде в таблицю
+      if(!zone) return;
       teams.push({
         regId: d.id,
         teamId: String(teamId),
@@ -248,7 +224,6 @@
       });
     });
 
-    // Сортуємо: A/B/C → сектор по числу якщо можна
     const zoneOrder = {A:1,B:2,C:3};
     teams.sort((a,b)=>{
       const za = zoneOrder[a.zone] || 9;
@@ -267,7 +242,7 @@
 
   // ====== 3) Читаємо вже збережені зважування з stageResults/{doc}/teams/{teamId} ======
   async function loadSavedTeamWeighings(stageDocId){
-    const map = new Map(); // teamId -> teamDocData
+    const map = new Map();
     const snap = await db.collection("stageResults").doc(stageDocId).collection("teams").get();
     snap.forEach(d=>{
       map.set(d.id, d.data()||{});
@@ -369,23 +344,21 @@
     return arr;
   }
 
-  // ====== 5) Запис без “nested arrays” + оновлення stageResults для LIVE ======
+  // ====== 5) Запис + оновлення stageResults для LIVE ======
   async function saveTeam(stageDocId, compId, stageKey, wKey, team, fish){
     const teamRef = db.collection("stageResults").doc(stageDocId).collection("teams").doc(team.teamId);
 
-    // читаємо старі дані команди
     const oldSnap = await teamRef.get();
     const old = oldSnap.exists ? (oldSnap.data()||{}) : {};
 
     const weighings = old.weighings || {};
     weighings[wKey] = {
-      fish: fish,                // ✅ це масив чисел (ok)
+      fish: fish,
       total: fish.reduce((s,v)=>s+(Number(v)||0),0),
       count: fish.length,
       big: fish.reduce((m,v)=>Math.max(m,Number(v)||0),0)
     };
 
-    // агрегати по всіх W
     const W = ["W1","W2","W3","W4"];
     let totalWeight = 0;
     let bigFish = 0;
@@ -398,7 +371,6 @@
       bigFish = Math.max(bigFish, Number(slot.big||0)||0);
     });
 
-    // 1) зберігаємо деталізацію в підколекції teams/{teamId}
     await teamRef.set({
       compId,
       stageId: stageKey,
@@ -407,13 +379,12 @@
       zone: team.zone,
       sector: team.sector,
       weighings,
-      sums,               // {W1:..,W2:..,W3:..,W4:..}
+      sums,
       totalWeight,
       bigFish,
       updatedAt: fb.firestore.FieldValue.serverTimestamp()
     }, { merge:true });
 
-    // 2) оновлюємо stageResults/{stageDocId} — тільки ПІДСУМКИ (для LIVE)
     const stageRef = db.collection("stageResults").doc(stageDocId);
     const stageSnap = await stageRef.get();
     const stageData = stageSnap.exists ? (stageSnap.data()||{}) : {};
@@ -436,7 +407,6 @@
 
     if(idx >= 0) teamsArr[idx] = rowObj; else teamsArr.push(rowObj);
 
-    // відсортуємо як у live
     const zoneOrder = {A:1,B:2,C:3};
     teamsArr.sort((a,b)=>{
       const za = zoneOrder[a.zone] || 9;
@@ -459,7 +429,7 @@
     return { sums, totalWeight, bigFish };
   }
 
-  // ====== 6) Головне завантаження таблиць ======
+  // ====== 6) Завантаження таблиць ======
   async function loadTables(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const wKey = wSelect.value;
@@ -496,11 +466,9 @@
     try{
       savedMap = await loadSavedTeamWeighings(stageDocId);
     }catch(e){
-      // якщо stageResults/teams ще нема — це не критично
       savedMap = new Map();
     }
 
-    // групуємо по зонах
     const zones = {A:[],B:[],C:[]};
     teams.forEach(t=>{
       if(zones[t.zone]) zones[t.zone].push(t);
@@ -511,7 +479,6 @@
       zoneBlock("B", buildTable("B", zones.B, wKey, savedMap), zones.B.length) +
       zoneBlock("C", buildTable("C", zones.C, wKey, savedMap), zones.C.length);
 
-    // Делегація подій ( + , зміна інпутів , зберегти )
     zonesWrap.querySelectorAll("tr[data-team]").forEach(tr=>{
       tr.addEventListener("input", (ev)=>{
         if(ev.target && ev.target.matches("input[data-fish]")){
@@ -537,7 +504,6 @@
         inp.setAttribute("inputmode","decimal");
         inp.setAttribute("placeholder","0.000");
         inp.setAttribute("data-fish","");
-        // вставляємо перед кнопкою +
         wrap.insertBefore(inp, wrap.querySelector("[data-plus]"));
         inp.focus();
         return;
@@ -548,8 +514,6 @@
         statusEl.textContent = "Зберігаю…";
 
         const teamId = tr.getAttribute("data-team");
-        const zone = tr.getAttribute("data-zone");
-        // знайдемо team об'єкт по teamId
         const teamObj = teams.find(x => x.teamId === teamId);
         if(!teamObj){
           statusEl.textContent = "❌ Нема teamObj";
@@ -574,39 +538,6 @@
 
     setMsg(`✅ Таблиці готові. Етап: ${stageDocId} · режим: ${wKey}`, true);
     setDbg(`stageResults doc: stageResults/${stageDocId}\nджерело команд: registrations (confirmed + drawZone/drawSector)`);
-  }
-
-  // ====== 7) QR посилання для суддів ======
-  function genJudgeLinks(){
-    const { compId, stageKey } = parseStageValue(stageSelect.value);
-    const wKey = wSelect.value;
-    const token = norm(tokenInput.value);
-
-    if(!compId || !stageKey){
-      setMsg("Обери етап перед генерацією QR.", false);
-      return;
-    }
-    if(!token){
-      setMsg("Введи token доступу.", false);
-      return;
-    }
-
-    const mk = (zone)=>{
-      const p = new URLSearchParams({
-        zone,
-        compId,
-        stageId: stageKey,
-        token,
-        w: wKey
-      });
-      return `${location.origin}${location.pathname.replace(/admin-weigh\.html.*$/,"")}weigh_judge.html?${p.toString()}`;
-    };
-
-    qrOut.textContent =
-      "A: " + mk("A") + "\n" +
-      "B: " + mk("B") + "\n" +
-      "C: " + mk("C") + "\n";
-    setMsg("✅ Посилання згенеровані.", true);
   }
 
   // ====== INIT ======
@@ -637,13 +568,6 @@
       };
 
       $("btnLoadTables").onclick = loadTables;
-
-      $("btnRndToken").onclick = ()=>{
-        tokenInput.value = rndToken();
-        setMsg("✅ Згенеровано token.", true);
-      };
-
-      $("btnGenQR").onclick = genJudgeLinks;
     });
   }
 

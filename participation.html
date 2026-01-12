@@ -2,7 +2,17 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <!-- 🔥 КРИТИЧНО ДЛЯ ANDROID STATUS BAR -->
+  <meta name="viewport"
+        content="width=device-width,
+                 initial-scale=1,
+                 viewport-fit=cover">
+
+  <meta name="theme-color" content="#020617">
+  <meta name="msapplication-navbutton-color" content="#020617">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
   <title>STOLAR CARP • Учасники змагання</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
@@ -32,7 +42,7 @@
       background:rgba(15,23,42,.55);
     }
 
-    /* ✅ заголовок по центру + градієнт */
+    /* заголовок */
     .pageTitle{
       margin:18px 0 8px;
       text-align:center;
@@ -53,7 +63,7 @@
       margin-bottom:14px;
     }
 
-    /* ✅ без овалів/карт: просто контент */
+    /* список */
     .list{
       margin-top:8px;
       display:flex;
@@ -61,7 +71,6 @@
       gap:10px;
     }
 
-    /* ✅ рядок (не “картка”) */
     .row{
       display:flex;
       align-items:center;
@@ -123,7 +132,6 @@
 </head>
 
 <body>
-  <div class="statusbar-fix"></div>
   <header class="header">
     <div class="headerInner">
       <a href="cabinet.html" class="btnBack">← Назад</a>

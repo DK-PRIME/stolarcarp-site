@@ -42,17 +42,17 @@
       outline:none;
     }
 
-    /* ================= TABLE ================= */
+    /* ================= DRAW TABLE ================= */
 
     .draw-head,
     .draw-row{
       display:grid;
       grid-template-columns:
-        minmax(180px,2fr)
-        84px
-        64px
+        minmax(220px, 2fr)
+        110px
+        70px
         52px;
-      gap:8px;
+      gap:10px;
       align-items:center;
     }
 
@@ -72,35 +72,34 @@
       margin-top:8px;
       padding:10px 12px;
       border-radius:12px;
-      background:rgba(2,6,23,.2);
+      background:rgba(2,6,23,.22);
       border:1px solid rgba(148,163,184,.18);
     }
 
     .draw-team{
       font-weight:900;
       font-size:.95rem;
-      line-height:1.15;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
 
     .sectorPick{
-      width:72px;
-      padding:6px 6px;
+      width:100%;
+      padding:6px 8px;
       font-size:.85rem;
       border-radius:10px;
     }
 
     .bf-wrap{
       display:flex;
-      align-items:center;
       justify-content:center;
+      align-items:center;
     }
 
     .chk{
-      width:16px;
-      height:16px;
+      width:18px;
+      height:18px;
       accent-color: var(--accent);
     }
 
@@ -119,20 +118,24 @@
     @media (max-width:740px){
       .draw-head,
       .draw-row{
-        grid-template-columns: 1.8fr 64px 48px 42px;
+        grid-template-columns:
+          1.6fr
+          92px
+          56px
+          42px;
       }
 
       .draw-team{ font-size:13px; }
 
       .sectorPick{
-        width:58px;
         font-size:12px;
+        padding:5px 6px;
       }
 
       .btn-icon{
         width:36px;
         height:36px;
-        font-size:15px;
+        font-size:14px;
       }
     }
   </style>

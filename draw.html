@@ -19,7 +19,7 @@
 
     /* ===== CARD ===== */
     .card{
-      background:rgba(15,23,42,.85);
+      background:rgba(15,23,42,.88);
       border:1px solid rgba(148,163,184,.25);
       border-radius:16px;
       padding:14px;
@@ -32,7 +32,7 @@
       margin-bottom:6px;
     }
 
-    /* ===== TABLE (mobile-first) ===== */
+    /* ===== TABLE ===== */
     .table{
       display:flex;
       flex-direction:column;
@@ -41,47 +41,54 @@
 
     .row{
       display:grid;
-      grid-template-columns: 1fr 88px 52px 52px;
-      gap:10px;
+      grid-template-columns: 1fr 86px 46px 46px;
+      gap:8px;
       align-items:center;
       padding:12px;
       border-radius:14px;
-      border:1px solid rgba(148,163,184,.2);
-      background:rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.22);
+      background:rgba(2,6,23,.45);
     }
 
     .row.header{
-      font-size:.75rem;
+      font-size:.72rem;
       text-transform:uppercase;
-      letter-spacing:.05em;
+      letter-spacing:.06em;
       color:#9ca3af;
-      background:rgba(2,6,23,.6);
+      background:rgba(2,6,23,.75);
     }
 
     .team{
       display:flex;
       flex-direction:column;
       gap:2px;
+      min-width:0;
     }
 
     .team .name{
       font-weight:800;
       font-size:.95rem;
-      line-height:1.2;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
     .team .meta{
-      font-size:.78rem;
+      font-size:.75rem;
       color:#9ca3af;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
 
     select.sectorPick{
       width:100%;
-      padding:6px 8px;
+      padding:6px 6px;
       border-radius:10px;
       background:#020617;
       color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.3);
+      border:1px solid rgba(148,163,184,.35);
+      font-size:.9rem;
     }
 
     .chk{
@@ -92,11 +99,11 @@
     }
 
     .saveBtn{
-      width:42px;
-      height:42px;
-      border-radius:12px;
-      background:rgba(148,163,184,.15);
-      border:1px solid rgba(148,163,184,.25);
+      width:40px;
+      height:40px;
+      border-radius:10px;
+      background:rgba(148,163,184,.18);
+      border:1px solid rgba(148,163,184,.28);
       color:#e5e7eb;
       font-size:18px;
       display:flex;
@@ -108,10 +115,10 @@
       transform:scale(.95);
     }
 
-    /* ===== DESKTOP ENHANCE ===== */
+    /* ===== DESKTOP ===== */
     @media (min-width: 900px){
       .row{
-        grid-template-columns: 2fr 140px 80px 80px;
+        grid-template-columns: 2fr 140px 70px 70px;
       }
     }
   </style>

@@ -262,17 +262,25 @@
 
   function rowHTML(r){
   return `
-    <div class="row" data-docid="${r._id}">
-      
-      <div class="team">
-        <div class="name">${esc(r.teamName || "—")}</div>
+    <div class="draw-row" data-docid="${r._id}">
+
+      <div class="draw-team">
+        ${esc(r.teamName || "—")}
       </div>
 
-      <div class="actions">
-        ${sectorOptionsHTML(r.drawKey, r._id)}
-        <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked" : ""}>
-        <button class="saveBtn saveBtnRow" type="button">💾</button>
-      </div>
+      ${sectorOptionsHTML(r.drawKey, r._id)}
+
+      <input
+        type="checkbox"
+        class="chk bigFishChk"
+        ${r.bigFishTotal ? "checked" : ""}
+      >
+
+      <button
+        class="btn-icon saveBtnRow"
+        type="button"
+        title="Зберегти"
+      >💾</button>
 
     </div>
   `;

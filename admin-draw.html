@@ -8,94 +8,140 @@
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    body { background:#020617; }
-    .wrap { max-width:900px; margin:0 auto; padding:20px 0 80px; }
+    body{ background:#020617; }
+
+    .wrap{
+      max-width:920px;
+      margin:0 auto;
+      padding:20px 0 80px;
+    }
+
     .card{
       background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.3);
+      border:1px solid rgba(148,163,184,.28);
       border-radius:16px;
       padding:16px;
-      margin-bottom:12px;
+      margin-bottom:14px;
     }
+
     .muted{ color:#9ca3af; font-size:.85rem; }
-    .field{ display:grid; gap:6px; margin-top:10px; }
+
+    .field{
+      display:grid;
+      gap:6px;
+      margin-top:12px;
+    }
+
     .input, select{
       width:100%;
       padding:10px 12px;
       border-radius:12px;
       background:#020617;
       color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.3);
+      border:1px solid rgba(148,163,184,.32);
       outline:none;
     }
 
-    /* ===== Табличний список команд ===== */
-    .draw-head, .draw-row{
+    /* ================= TABLE ================= */
+
+    .draw-head,
+    .draw-row{
       display:grid;
-      grid-template-columns: 1.6fr 1fr 140px 90px 92px;
-      gap:10px;
+      grid-template-columns:
+        minmax(160px,2fr)
+        minmax(90px,1fr)
+        84px
+        64px
+        52px;
+      gap:8px;
       align-items:center;
     }
+
     .draw-head{
-      margin-top:12px;
+      margin-top:14px;
       padding:10px 12px;
       border-radius:12px;
       background:rgba(2,6,23,.35);
-      border:1px solid rgba(148,163,184,.25);
-      font-size:.85rem;
+      border:1px solid rgba(148,163,184,.22);
+      font-size:.78rem;
       color:#9ca3af;
+      text-transform:uppercase;
+      letter-spacing:.04em;
     }
+
     .draw-row{
+      margin-top:8px;
       padding:10px 12px;
       border-radius:12px;
+      background:rgba(2,6,23,.2);
       border:1px solid rgba(148,163,184,.18);
-      background:rgba(2,6,23,.18);
-      margin-top:10px;
     }
+
     .draw-team{
       font-weight:900;
+      font-size:.95rem;
+      line-height:1.15;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
     }
+
     .draw-sub{
-      font-size:.82rem;
+      font-size:.72rem;
       color:#9ca3af;
       margin-top:2px;
     }
+
+    .draw-phone{
+      font-size:.8rem;
+      opacity:.85;
+      white-space:nowrap;
+    }
+
+    .sectorPick{
+      width:72px;
+      padding:6px 6px;
+      font-size:.85rem;
+      border-radius:10px;
+    }
+
+    .bf-wrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      font-size:.72rem;
+      font-weight:900;
+      color:#facc15;
+    }
+
     .chk{
-      width:18px;
-      height:18px;
+      width:16px;
+      height:16px;
       accent-color: var(--accent);
     }
 
-    /* Кнопка-іконка */
     .btn-icon{
-      padding:10px 12px;
+      width:42px;
+      height:42px;
       border-radius:12px;
-      display:inline-flex;
+      display:flex;
       align-items:center;
       justify-content:center;
-      gap:8px;
-      min-width:44px;
-      line-height:1;
       font-size:16px;
+      line-height:1;
     }
 
-    /* Селект сектору компактний */
-    .sectorPick{
-      max-width:140px;
-    }
+    /* ============ MOBILE ============ */
 
-    /* Мобілка: один рядок 100% */
     @media (max-width:740px){
       .draw-head{
-        font-size:12px;
-        grid-template-columns: 1.7fr 92px 54px 54px;
+        grid-template-columns: 1.9fr 74px 52px 48px;
       }
+
       .draw-row{
-        grid-template-columns: 1.7fr 92px 54px 54px;
-        font-size:13px;
+        grid-template-columns: 1.9fr 74px 52px 48px;
+        font-size:12px;
       }
 
       .hide-sm{ display:none; }
@@ -104,19 +150,15 @@
       .draw-sub{ font-size:11px; }
 
       .sectorPick{
-        max-width:92px !important;
-        padding:6px 6px;
-        font-size:13px;
-        border-radius:10px;
+        width:60px;
+        padding:5px 6px;
+        font-size:12px;
       }
 
-      .chk{ width:16px; height:16px; }
-
       .btn-icon{
-        padding:6px 8px;
-        border-radius:10px;
+        width:38px;
+        height:38px;
         font-size:15px;
-        min-width:38px;
       }
     }
   </style>
@@ -138,9 +180,9 @@
 
     <h2>🎣 Жеребкування</h2>
 
-    <!-- Панель керування -->
+    <!-- CONTROL PANEL -->
     <div class="card">
-      <div id="msg" class="muted" style="margin-bottom:10px;"></div>
+      <div id="msg" class="muted" style="margin-bottom:8px;"></div>
 
       <div class="field">
         <div class="muted">Змагання / етап</div>
@@ -148,12 +190,12 @@
       </div>
 
       <div class="field">
-        <div class="muted">Пошук (команда/телефон/капітан)</div>
-        <input id="q" class="input" placeholder="Напр.: DK Два Кума / 063..." />
+        <div class="muted">Пошук (команда / телефон / капітан)</div>
+        <input id="q" class="input" placeholder="Напр.: DK Два Кума / 063…" />
       </div>
     </div>
 
-    <!-- Табличний список -->
+    <!-- DRAW TABLE -->
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
         <div style="font-weight:900;">Список команд</div>
@@ -164,7 +206,7 @@
         <div>Команда</div>
         <div class="hide-sm">Телефон</div>
         <div>Сектор</div>
-        <div>BigFish</div>
+        <div>BF</div>
         <div></div>
       </div>
 
@@ -182,7 +224,7 @@
 <!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- ✅ ЄДИНИЙ draw-скрипт -->
+<!-- draw logic -->
 <script src="assets/js/draw_admin.js"></script>
 
 </body>

@@ -392,7 +392,7 @@
 
   // save per-row
   document.addEventListener("click", async (e)=>{
-    const btn = e.target.closest(".saveBtn");
+    const btn = e.target.closest(".saveBtnRow");
     if (!btn) return;
 
     const wrap = e.target.closest(".draw-row");

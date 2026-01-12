@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>STOLAR CARP • QR для суддів</title>
+
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <style>
+    .card{background:#0f172a;border:1px solid #334155;border-radius:16px;padding:14px;margin:14px 0}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .row > *{flex:1}
+    .muted{color:#94a3b8;font-size:13px}
+    .qrBox{
+      display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:12px
+    }
+    .qr{
+      background:#fff;padding:10px;border-radius:12px
+    }
+    .code{
+      font-family:monospace;
+      background:#020617;
+      border:1px solid #334155;
+      border-radius:12px;
+      padding:10px;
+      font-size:12px;
+      word-break:break-all;
+      color:#e5e7eb;
+    }
+    select,input{
+      background:#0b1224;color:#e5e7eb;
+      border:1px solid #334155;
+      border-radius:14px;
+      padding:12px;
+      outline:none;
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="container header__row">
+    <div class="logo">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </div>
+    <div class="pill" id="authPill">auth: …</div>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="card">
+    <h2 style="margin:0 0 6px 0;">📱 QR доступ для суддів</h2>
+    <div class="muted">
+      Генерує тимчасовий доступ до <b>weigh_judge.html</b><br>
+      Без акаунту · по зоні · з обмеженим часом
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+
+      <div>
+        <div class="muted">Змагання / етап</div>
+        <select id="stageSelect">
+          <option value="">— завантаження… —</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="muted">Зона</div>
+        <select id="zoneSelect">
+          <option value="A">Зона A</option>
+          <option value="B">Зона B</option>
+          <option value="C">Зона C</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="muted">Термін дії</div>
+        <select id="ttlSelect">
+          <option value="6">6 годин</option>
+          <option value="12">12 годин</option>
+          <option value="24" selected>24 години</option>
+          <option value="72">72 години</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button id="btnGenerate" class="btn btn--primary" style="margin-top:14px">
+      🔐 Згенерувати QR
+    </button>
+
+    <div id="msg" class="muted" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <h3 style="margin-top:0">✅ QR готовий</h3>
+
+    <div class="qrBox">
+      <div class="qr" id="qr"></div>
+
+      <div style="flex:1">
+        <div class="muted">Посилання для судді:</div>
+        <div class="code" id="qrUrl"></div>
+
+        <div class="muted" style="margin-top:8px">
+          Суддя відкриває це посилання → одразу попадає у зважування
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<!-- QR lib -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+<!-- Init -->
+<script src="assets/js/firebase-init.js"></script>
+
+<!-- Logic -->
+<script src="assets/js/judge_qr_admin.js"></script>
+
+</body>
+</html>

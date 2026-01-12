@@ -544,6 +544,14 @@
         bigFishTotal: bigFish,
         drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
       });
+      // ✅ MIRROR → public_participants (для participation / cabinet)
+await db.collection("public_participants").doc(docId).set({
+  drawKey: sectorVal,
+  drawZone: zone,
+  drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
+  bigFishTotal: bigFish,
+  drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
+}, { merge: true });
 
       const a = regsAllConfirmed.find(x => x._id === docId);
       if (a) {

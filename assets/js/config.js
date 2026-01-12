@@ -31,7 +31,6 @@
     const openMenu = () => {
       nav.classList.add(OPEN_CLASS);
       burger.setAttribute("aria-expanded", "true");
-      // lock body scroll on mobile
       document.documentElement.classList.add("nav-open");
       document.body.classList.add("nav-open");
     };
@@ -45,7 +44,6 @@
 
     const toggleMenu = () => (isOpen() ? closeMenu() : openMenu());
 
-    // a11y attrs
     burger.setAttribute("aria-controls", "nav");
     burger.setAttribute("aria-expanded", "false");
 
@@ -54,26 +52,20 @@
       toggleMenu();
     });
 
-    // close when clicking any nav link (mobile UX)
     nav.addEventListener("click", (e) => {
       const a = e.target.closest("a");
       if (a && isOpen()) closeMenu();
     });
 
-    // close on click outside (overlay behaviour)
     document.addEventListener("click", (e) => {
       if (!isOpen()) return;
-      const insideNav = nav.contains(e.target);
-      const insideBurger = burger.contains(e.target);
-      if (!insideNav && !insideBurger) closeMenu();
+      if (!nav.contains(e.target) && !burger.contains(e.target)) closeMenu();
     });
 
-    // close on ESC
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && isOpen()) closeMenu();
     });
 
-    // close on resize to desktop
     const mq = window.matchMedia("(max-width: 860px)");
     const onMQ = () => {
       if (!mq.matches) closeMenu();
@@ -81,7 +73,6 @@
     if (mq.addEventListener) mq.addEventListener("change", onMQ);
     else mq.addListener(onMQ);
 
-    // expose for debug if needed
     window.__scCloseMenu = closeMenu;
   })();
 
@@ -115,7 +106,10 @@
     // IMPORTANT: resolve from baseURI
     addLink("icon", "assets/favicon.png", "image/png");
     addLink("apple-touch-icon", "assets/favicon.png");
-    addMeta("theme-color", "#1a1a1a");
+
+    // ✅ DARK STATUS BAR
+    addMeta("theme-color", "#0b0f1a");
+    addMeta("apple-mobile-web-app-status-bar-style", "black-translucent");
   })();
 
   /* =========================

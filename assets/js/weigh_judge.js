@@ -581,9 +581,9 @@
       renderBindInfo();
 
       // anon auth
-      if(authPill) authPill.textContent = "auth: ⏳";
-      me = await ensureAnonAuth();
-      if(authPill) authPill.textContent = "auth: ✅ суддя (QR)";
+if(authPill) authPill.textContent = "auth: ⏳";
+me = await ensureAnonAuth();
+if(authPill) authPill.textContent = "auth: ✅ суддя (QR)";
 
       // verify access
 if (me.isAnonymous) {

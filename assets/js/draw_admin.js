@@ -263,15 +263,17 @@
   function rowHTML(r){
   return `
     <div class="row" data-docid="${r._id}">
+      
       <div class="team">
         <div class="name">${esc(r.teamName || "—")}</div>
       </div>
 
-      <div class="row-actions">
+      <div class="actions">
         ${sectorOptionsHTML(r.drawKey, r._id)}
         <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked" : ""}>
-        <button class="saveBtn" type="button">💾</button>
+        <button class="saveBtn saveBtnRow" type="button">💾</button>
       </div>
+
     </div>
   `;
   }

@@ -4,7 +4,23 @@
 
 (function () {
   "use strict";
+// =========================
+// BURGER MENU (CABINET)
+// =========================
+const burger = document.getElementById("burger");
+const nav = document.querySelector(".nav");
 
+if (burger && nav) {
+  burger.addEventListener("click", () => {
+    nav.classList.toggle("open");
+  });
+
+  nav.addEventListener("click", (e) => {
+    if (e.target.classList.contains("nav__link")) {
+      nav.classList.remove("open");
+    }
+  });
+}
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   async function waitFirebase(maxMs = 12000) {

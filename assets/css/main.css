@@ -771,3 +771,39 @@ body.rules-page{
   border: 1px solid rgba(250,204,21,.18);
   background: linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
 }
+/* ===== ANDROID STATUS BAR FIX ===== */
+html, body {
+  background: #0b0f1a; /* той самий темний фон */
+  overscroll-behavior: none;
+}
+
+body {
+  min-height: 100vh;
+}
+
+/* перекриття системної status bar */
+.statusbar-fix {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;          /* Android status bar */
+  background: #0b0f1a;   /* той самий фон */
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* щоб контент не залазив під неї */
+body {
+  padding-top: 32px;
+}
+
+/* desktop — вимикаємо */
+@media (min-width: 1024px) {
+  .statusbar-fix {
+    display: none;
+  }
+  body {
+    padding-top: 0;
+  }
+}

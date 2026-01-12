@@ -263,7 +263,7 @@
   function rowHTML(r){
   return `
     <div class="row" data-docid="${r._id}">
-      
+
       <div class="team">
         <div class="name">${r.teamName || "—"}</div>
         <div class="meta">Капітан: ${r.captain || "—"}</div>
@@ -271,18 +271,18 @@
         <div class="meta">ID: ${r.teamId || "—"}</div>
       </div>
 
-      <select class="sectorPick">
-        <option value="">—</option>
-        ${SECTORS.map(s => `
-          <option value="${s}" ${r.drawKey===s ? "selected":""}>
-            ${s}
-          </option>
-        `).join("")}
-      </select>
+      <div class="row-actions">
+        <select class="sectorPick">
+          <option value="">—</option>
+          ${SECTORS.map(s => `
+            <option value="${s}" ${r.drawKey===s ? "selected":""}>${s}</option>
+          `).join("")}
+        </select>
 
-      <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
+        <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
 
-      <button class="saveBtn">💾</button>
+        <button class="saveBtn">💾</button>
+      </div>
 
     </div>
   `;

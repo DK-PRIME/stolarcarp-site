@@ -116,24 +116,35 @@
 
     /* ============ MOBILE ============ */
     @media (max-width:740px){
+
   .draw-head,
   .draw-row{
+    display:grid;
     grid-template-columns:
-      minmax(140px,1fr)
-      70px
-      44px
-      40px;
+      1.6fr   /* Команда */
+      72px    /* Сектор */
+      40px    /* BF */
+      40px;   /* Зберегти */
     gap:6px;
+    align-items:center;
   }
 
   .draw-team{
     font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   .sectorPick{
-    width:70px;
+    width:72px;
     font-size:12px;
     padding:4px 6px;
+  }
+
+  .bf-wrap{
+    display:flex;
+    justify-content:center;
   }
 
   .chk{

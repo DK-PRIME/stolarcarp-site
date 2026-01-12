@@ -300,10 +300,6 @@ img{ max-width:100%; height:auto; display:block; }
   background:#0d0d14;
   color:#fff;
 }
-.row{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-@media (max-width:760px){ .row{ grid-template-columns:1fr; } }
-.form{ display:grid; gap:14px; }
-.form__hint{ color:var(--muted); font-size:12px; }
 
 /* === FOOTER === */
 .footer{ border-top:1px solid #222; background:#0c0c12; }

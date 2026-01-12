@@ -263,27 +263,15 @@
   function rowHTML(r){
   return `
     <div class="row" data-docid="${r._id}">
-
       <div class="team">
-        <div class="name">${r.teamName || "—"}</div>
-        <div class="meta">Капітан: ${r.captain || "—"}</div>
-        <div class="meta">Тел: ${r.phone || "—"}</div>
-        <div class="meta">ID: ${r.teamId || "—"}</div>
+        <div class="name">${esc(r.teamName || "—")}</div>
       </div>
 
       <div class="row-actions">
-        <select class="sectorPick">
-          <option value="">—</option>
-          ${SECTORS.map(s => `
-            <option value="${s}" ${r.drawKey===s ? "selected":""}>${s}</option>
-          `).join("")}
-        </select>
-
-        <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
-
-        <button class="saveBtn">💾</button>
+        ${sectorOptionsHTML(r.drawKey, r._id)}
+        <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked" : ""}>
+        <button class="saveBtn" type="button">💾</button>
       </div>
-
     </div>
   `;
   }

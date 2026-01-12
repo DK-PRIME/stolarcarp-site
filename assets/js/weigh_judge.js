@@ -580,20 +580,22 @@
       readParams();
       renderBindInfo();
 
-      // anon auth
-if(authPill) authPill.textContent = "auth: ⏳";
-me = await ensureAnonAuth();
-if(authPill) authPill.textContent = "auth: ✅ суддя (QR)";
+      // auth: admin OR judge
+if (auth.currentUser) {
+  // 👑 АДМІН
+  me = auth.currentUser;
+  if (authPill) authPill.textContent = "auth: ✅ адмін";
+  setMsg("✅ Адмін-доступ. Завантажую зону…", true);
 
-      // verify access
-if (me.isAnonymous) {
-  // суддя по QR
+} else {
+  // 👨‍⚖️ СУДДЯ ПО QR
+  if (authPill) authPill.textContent = "auth: ⏳";
+  me = await ensureAnonAuth();
+  if (authPill) authPill.textContent = "auth: ✅ суддя (QR)";
+
   setMsg("Перевіряю QR-доступ…", true);
   await verifyToken();
   setMsg("✅ QR доступ підтверджено. Завантажую зону…", true);
-} else {
-  // адмін
-  setMsg("✅ Адмін-доступ. Завантажую зону…", true);
 }
 
 await openZone();

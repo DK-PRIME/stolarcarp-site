@@ -585,13 +585,19 @@
       me = await ensureAnonAuth();
       if(authPill) authPill.textContent = "auth: ✅ суддя (QR)";
 
-      // verify token
-      setMsg("Перевіряю доступ…", true);
-      await verifyToken();
+      // verify access
+if (me.isAnonymous) {
+  // суддя по QR
+  setMsg("Перевіряю QR-доступ…", true);
+  await verifyToken();
+  setMsg("✅ QR доступ підтверджено. Завантажую зону…", true);
+} else {
+  // адмін
+  setMsg("✅ Адмін-доступ. Завантажую зону…", true);
+}
 
-      setMsg("✅ Доступ підтверджено. Завантажую зону…", true);
-      await openZone();
-      setMsg("", true);
+await openZone();
+setMsg("", true);
 
       // W buttons
       wBtns.forEach(b=>{

@@ -355,3 +355,28 @@
     });
   })();
 })();
+// ===============================
+// GO TO CABINET (burger + desktop)
+// ===============================
+document.addEventListener("DOMContentLoaded", () => {
+  const goCabinet = document.getElementById("goCabinet");
+  if (!goCabinet) return;
+
+  goCabinet.addEventListener("click", (e) => {
+    e.preventDefault();
+
+    // Firebase ще не ініціалізований
+    if (!window.firebase || !firebase.auth) {
+      window.location.href = "/auth.html";
+      return;
+    }
+
+    const user = firebase.auth().currentUser;
+
+    if (user) {
+      window.location.href = "/cabinet.html";
+    } else {
+      window.location.href = "/auth.html";
+    }
+  });
+});

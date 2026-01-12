@@ -311,7 +311,7 @@
   }
 
   function setBtnIcon(wrap, icon){
-    const btn = wrap.querySelector(".saveBtn");
+    const btn = wrap.querySelector(".saveBtnRow");
     if (!btn) return;
     btn.textContent =
       icon === "saving" ? "⏳" :

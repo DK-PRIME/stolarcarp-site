@@ -1,185 +1,25 @@
-<!doctype html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <title>STOLAR CARP • Жеребкування</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="stylesheet" href="assets/css/main.css">
-
-  <style>
-    body{
-      background:#020617;
-      color:#e5e7eb;
-    }
-
-    h1,h2{
-      margin:16px 0 10px;
-    }
-
-    /* ===== CARD ===== */
-    .card{
-      background:rgba(15,23,42,.88);
-      border:1px solid rgba(148,163,184,.25);
-      border-radius:16px;
-      padding:14px;
-      margin-bottom:16px;
-    }
-
-    .form__hint{
-      font-size:.85rem;
-      color:#9ca3af;
-      margin-bottom:6px;
-    }
-
-    /* ===== TABLE ===== */
-    .table{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .row{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:14px;
-  border-radius:16px;
-  border:1px solid rgba(148,163,184,.22);
-  background:rgba(2,6,23,.45);
-}
-
-.row-actions{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-    .row.header{
-      font-size:.72rem;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      color:#9ca3af;
-      background:rgba(2,6,23,.75);
-    }
-
-    .team{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      min-width:0;
-    }
-
-    .team .name{
-      font-weight:800;
-      font-size:.95rem;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    .team .meta{
-      font-size:.75rem;
-      color:#9ca3af;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
-    select.sectorPick{
-      width:100%;
-      padding:6px 6px;
-      border-radius:10px;
-      background:#020617;
-      color:#e5e7eb;
-      border:1px solid rgba(148,163,184,.35);
-      font-size:.9rem;
-    }
-
-    .chk{
-      width:18px;
-      height:18px;
-      accent-color:#facc15;
-      margin:auto;
-    }
-
-    .saveBtn{
-      width:40px;
-      height:40px;
-      border-radius:10px;
-      background:rgba(148,163,184,.18);
-      border:1px solid rgba(148,163,184,.28);
-      color:#e5e7eb;
-      font-size:18px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .saveBtn:active{
-      transform:scale(.95);
-    }
-
-    /* ===== DESKTOP ===== */
-    @media (min-width: 900px){
-      .row{
-        grid-template-columns: 2fr 140px 70px 70px;
-      }
-    }
-  </style>
-</head>
-
-<body>
-
 <main class="main">
   <div class="container">
+    <h1>Жеребкування</h1>
 
-    <h1>🎣 Жеребкування</h1>
-
-    <!-- CONTROL -->
     <div class="card">
-      <div class="form__hint">Змагання / етап</div>
+      <div class="form__hint">Оберіть змагання/етап</div>
       <select id="stageSelect" class="select"></select>
       <div id="msg" class="form__hint" style="margin-top:10px;"></div>
     </div>
 
-    <!-- PAID -->
-    <h2>Оплачені команди</h2>
-    <div id="paidList" class="table">
+    <div class="section"></div>
 
-      <div class="row header">
-        <div>Команда</div>
-        <div>Сектор</div>
-        <div>BF</div>
-        <div></div>
-      </div>
+    <h2>Оплачені команди (потрібно призначити сектор)</h2>
+    <div id="paidList" class="section"></div>
 
-      <!-- rows from JS -->
-    </div>
-
-    <!-- PICKED -->
     <h2>Призначені сектори</h2>
-    <div id="pickedList" class="table">
-
-      <div class="row header">
-        <div>Команда</div>
-        <div>Сектор</div>
-        <div>BF</div>
-        <div></div>
-      </div>
-
-      <!-- rows from JS -->
-    </div>
-
+    <div id="pickedList" class="section"></div>
   </div>
 </main>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script src="assets/js/firebase-init.js"></script>
 <script src="assets/js/draw_admin.js"></script>
-
-</body>
-</html>

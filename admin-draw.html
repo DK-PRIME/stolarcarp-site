@@ -116,27 +116,36 @@
 
     /* ============ MOBILE ============ */
     @media (max-width:740px){
-      .draw-head,
-      .draw-row{
-        grid-template-columns:
-          1.6fr
-          92px
-          56px
-          42px;
-      }
+  .draw-head,
+  .draw-row{
+    grid-template-columns:
+      minmax(140px,1fr)
+      70px
+      44px
+      40px;
+    gap:6px;
+  }
 
-      .draw-team{ font-size:13px; }
+  .draw-team{
+    font-size:13px;
+  }
 
-      .sectorPick{
-        font-size:12px;
-        padding:5px 6px;
-      }
+  .sectorPick{
+    width:70px;
+    font-size:12px;
+    padding:4px 6px;
+  }
 
-      .btn-icon{
-        width:36px;
-        height:36px;
-        font-size:14px;
-      }
+  .chk{
+    width:18px;
+    height:18px;
+  }
+
+  .btn-icon{
+    width:36px;
+    height:36px;
+    font-size:14px;
+  }
     }
   </style>
 </head>

@@ -17,6 +17,7 @@
   const msgEl     = document.getElementById("msg");
   const authPill  = document.getElementById("authPill");
   const bindInfo  = document.getElementById("bindInfo");
+  const btnOpen = document.getElementById("btnOpen");
 
   const weighCard = document.getElementById("weighCard");
   const wMsgEl = document.getElementById("wMsg");

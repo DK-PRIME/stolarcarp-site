@@ -580,7 +580,7 @@
       readParams();
       renderBindInfo();
 
-      // auth: admin OR judge
+      // ===== auth: admin OR judge =====
 me = await new Promise((resolve) => {
   const unsub = auth.onAuthStateChanged(u => {
     unsub();
@@ -588,10 +588,13 @@ me = await new Promise((resolve) => {
   });
 });
 
-if (me) {
+if (me && !me.isAnonymous) {
   // 👑 АДМІН
   if (authPill) authPill.textContent = "auth: ✅ адмін";
-  setMsg("✅ Адмін-доступ. Завантажую зону…", true);
+  setMsg("👑 Адмін. Натисни «Увійти» для відкриття зважування.", true);
+
+  // кнопка ВИДИМА
+  if (btnOpen) btnOpen.style.display = "inline-flex";
 
 } else {
   // 👨‍⚖️ СУДДЯ ПО QR
@@ -599,13 +602,15 @@ if (me) {
   me = await ensureAnonAuth();
   if (authPill) authPill.textContent = "auth: ✅ суддя (QR)";
 
+  if (btnOpen) btnOpen.style.display = "none";
+
   setMsg("Перевіряю QR-доступ…", true);
   await verifyToken();
   setMsg("✅ QR доступ підтверджено. Завантажую зону…", true);
-}
 
-await openZone();
-setMsg("", true);
+  await openZone();
+  setMsg("", true);
+}
 
       // W buttons
       wBtns.forEach(b=>{

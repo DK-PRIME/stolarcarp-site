@@ -261,37 +261,31 @@
   }
 
   function rowHTML(r){
-    const phone = norm(r.phone) || "—";
-    const cap = norm(r.captain);
-    const teamIdBadge = r.teamId ? `ID: ${r.teamId}` : "ID: —";
-
-    return `
-      <div class="draw-row" data-docid="${esc(r._id)}">
-        <div class="draw-top">
-          <div>
-            <div class="draw-team">${esc(r.teamName || "—")}</div>
-            <div class="draw-sub">${esc(cap ? `Капітан: ${cap}` : "")}</div>
-            <div class="draw-sub">${esc(`Тел: ${phone}`)}</div>
-            <div class="draw-sub">${esc(teamIdBadge)}</div>
-          </div>
-          <div class="rowMsg"></div>
-        </div>
-
-        <div class="draw-controls">
-          <div>${sectorOptionsHTML(r.drawKey, r._id)}</div>
-
-          <label style="display:flex; gap:10px; align-items:center; justify-content:flex-start;">
-            <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
-            <span style="font-weight:800;">BigFish Total</span>
-          </label>
-
-          <div class="draw-actions">
-            <button class="btn btn--ghost btn-icon saveBtn" type="button" title="Зберегти" aria-label="Зберегти">💾</button>
-            <div class="draw-sub" style="opacity:.8;">Після збереження → оновлюю Live</div>
-          </div>
-        </div>
+  return `
+    <div class="row" data-docid="${r._id}">
+      
+      <div class="team">
+        <div class="name">${r.teamName || "—"}</div>
+        <div class="meta">Капітан: ${r.captain || "—"}</div>
+        <div class="meta">Тел: ${r.phone || "—"}</div>
+        <div class="meta">ID: ${r.teamId || "—"}</div>
       </div>
-    `;
+
+      <select class="sectorPick">
+        <option value="">—</option>
+        ${SECTORS.map(s => `
+          <option value="${s}" ${r.drawKey===s ? "selected":""}>
+            ${s}
+          </option>
+        `).join("")}
+      </select>
+
+      <input type="checkbox" class="chk bigFishChk" ${r.bigFishTotal ? "checked":""} />
+
+      <button class="saveBtn">💾</button>
+
+    </div>
+  `;
   }
 
   function render(){

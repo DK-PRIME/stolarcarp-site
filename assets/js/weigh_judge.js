@@ -581,9 +581,15 @@
       renderBindInfo();
 
       // auth: admin OR judge
-if (auth.currentUser) {
+me = await new Promise((resolve) => {
+  const unsub = auth.onAuthStateChanged(u => {
+    unsub();
+    resolve(u);
+  });
+});
+
+if (me) {
   // 👑 АДМІН
-  me = auth.currentUser;
   if (authPill) authPill.textContent = "auth: ✅ адмін";
   setMsg("✅ Адмін-доступ. Завантажую зону…", true);
 

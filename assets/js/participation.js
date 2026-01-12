@@ -33,12 +33,17 @@
 
         const events = Array.isArray(c.events) ? c.events : [];
         const st = stageId || "main";
-        const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
+        const ev = events.find(e =>
+          String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim()
+        );
         stageTitle = (ev && (ev.title || ev.name || ev.label)) ? String(ev.title || ev.name || ev.label) : "";
       }
     }catch{}
 
-    return { title: String(title || "Змагання").trim(), stageTitle: String(stageTitle || "").trim() };
+    return {
+      title: String(title || "Змагання").trim(),
+      stageTitle: String(stageTitle || "").trim()
+    };
   }
 
   async function getMaxTeams(compId, stageId){
@@ -52,7 +57,9 @@
       const c = cSnap.data() || {};
       const events = Array.isArray(c.events) ? c.events : [];
       const st = stageId || "main";
-      const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
+      const ev = events.find(e =>
+        String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim()
+      );
 
       const v = ev?.maxTeams ?? ev?.teamsLimit ?? c?.maxTeams ?? c?.teamsLimit ?? null;
       const n = typeof v === "number" ? v : parseInt(String(v||""),10);
@@ -66,10 +73,12 @@
     const paid = isPaidStatus(r.status);
     return `
       <div class="row">
-        <span class="lamp ${paid ? "lamp--green":"lamp--red"}"></span>
+        <span class="lamp ${paid ? "lamp--green" : "lamp--red"}"></span>
         <span class="idx">${idx}.</span>
         <span class="name">${esc(r.teamName || "—")}</span>
-        <span class="status ${paid ? "status--paid":"status--unpaid"}">${paid ? "Оплачено" : "Не оплачено"}</span>
+        <span class="status ${paid ? "status--paid" : "status--unpaid"}">
+          ${paid ? "Оплачено" : "Очікується"}
+        </span>
       </div>
     `;
   }
@@ -90,13 +99,14 @@
       return;
     }
 
-    // лічильник
-    list.innerHTML += `<div class="pageSub" style="margin:0 0 10px;">Учасники: ${main.length} / ${maxTeams}</div>`;
+    list.innerHTML += `
+      <div class="pageSub" style="margin:0 0 10px;">
+        Учасники: ${main.length} / ${maxTeams}
+      </div>
+    `;
 
-    // основні
     list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
 
-    // резерв (якщо треба)
     if(reserve.length){
       list.innerHTML += `<div class="dividerLabel">Резерв: ${reserve.length}</div>`;
       list.innerHTML += reserve.map((r,i)=>rowHtml(maxTeams + i + 1, r)).join("");
@@ -120,13 +130,15 @@
       const meta = await getCompetitionMeta(compId, stageId);
       const maxTeams = await getMaxTeams(compId, stageId);
 
-      // ✅ заголовок по центру (градієнт робить CSS)
-      if($("pageTitle")) $("pageTitle").textContent = meta.stageTitle ? `${meta.title} · ${meta.stageTitle}` : meta.title;
-      if($("pageSub")) $("pageSub").textContent = ""; // прибираємо “Список заявок...”
+      if($("pageTitle")){
+        $("pageTitle").textContent = meta.stageTitle
+          ? `${meta.title} · ${meta.stageTitle}`
+          : meta.title;
+      }
+      if($("pageSub")) $("pageSub").textContent = "";
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";
 
-      // ✅ public_participants: stageId == stageId + (якщо main) stageId == null
       const rowsMap = new Map();
 
       const snap1 = await db.collection("public_participants")
@@ -137,10 +149,10 @@
 
       snap1.forEach(doc=>{
         const r = doc.data() || {};
-        const teamName = norm(r.teamName || "—");
         rowsMap.set(doc.id, {
-          teamName,
-          status: norm(r.status || "pending_payment")
+          teamName: norm(r.teamName || "—"),
+          status: norm(r.status || "pending_payment"),
+          order: Number.isFinite(r.order) ? r.order : null
         });
       });
 
@@ -154,21 +166,21 @@
         snap2.forEach(doc=>{
           if(rowsMap.has(doc.id)) return;
           const r = doc.data() || {};
-          const teamName = norm(r.teamName || "—");
           rowsMap.set(doc.id, {
-            teamName,
-            status: norm(r.status || "pending_payment")
+            teamName: norm(r.teamName || "—"),
+            status: norm(r.status || "pending_payment"),
+            order: Number.isFinite(r.order) ? r.order : null
           });
         });
       }
 
       const rows = Array.from(rowsMap.values());
 
-      // ✅ сортування: оплачені зверху, далі по назві
+      // 🔥 КАНОНІЧНЕ СОРТУВАННЯ ПО order
       rows.sort((a,b)=>{
-        const ap = isPaidStatus(a.status);
-        const bp = isPaidStatus(b.status);
-        if(ap !== bp) return ap ? -1 : 1;
+        const ao = Number.isFinite(a.order) ? a.order : 9999;
+        const bo = Number.isFinite(b.order) ? b.order : 9999;
+        if(ao !== bo) return ao - bo;
         return a.teamName.localeCompare(b.teamName,"uk");
       });
 

@@ -597,6 +597,25 @@ if (me && !me.isAnonymous) {
   // кнопка ВИДИМА
   if (btnOpen) btnOpen.style.display = "inline-flex";
 
+  if (me && !me.isAnonymous) {
+  if (authPill) authPill.textContent = "auth: ✅ адмін";
+  setMsg("👑 Адмін. Натисни «Увійти» для відкриття зважування.", true);
+
+  if (btnOpen) btnOpen.style.display = "inline-flex";
+
+  // 👇 ОСЬ ЦЕГО НЕ ВИСТАЧАЄ
+  btnOpen?.addEventListener("click", async () => {
+    try {
+      setMsg("Завантажую зону…", true);
+      await openZone();
+      setMsg("", true);
+    } catch (err) {
+      console.error(err);
+      setMsg("❌ " + (err?.message || err), false);
+    }
+  });
+  }
+
 } else {
   // 👨‍⚖️ СУДДЯ ПО QR
   if (authPill) authPill.textContent = "auth: ⏳";

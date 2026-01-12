@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  // ✅ один глобальний "ready", щоб auth/admin/cabinet/register чекали однаково
+  // ✅ ЄДИНИЙ глобальний ready (auth / admin / cabinet / register)
   if (window.scReady) return;
 
   window.scReady = (async () => {
@@ -16,24 +16,27 @@
       measurementId: "G-VWC07QNS7P"
     };
 
-    // Firebase SDK (compat) має бути підключений на сторінці ДО цього файла
+    // ❗ Firebase compat SDK має бути підключений ДО цього файла
     if (!window.firebase) {
-      console.warn("Firebase compat SDK не підключений на сторінці.");
-      throw new Error("no-firebase-sdk");
+      console.error("❌ Firebase compat SDK не підключений на сторінці");
+      throw new Error("firebase-sdk-missing");
     }
 
-    // ✅ ініціалізація тільки один раз
+    // ✅ Ініціалізація ТІЛЬКИ один раз
     if (!window.firebase.apps || !window.firebase.apps.length) {
       window.firebase.initializeApp(firebaseConfig);
     } else {
-      // якщо вже ініціалізовано іншим ключем — буде auth/api-key-not-valid
+      // ⚠️ якщо інший apiKey — це ламає auth
       const opt = window.firebase.apps[0]?.options || {};
       if (opt.apiKey && opt.apiKey !== firebaseConfig.apiKey) {
-        console.warn("Firebase вже інітнутий іншим apiKey! Це ламає auth.", opt.apiKey);
+        console.warn(
+          "⚠️ Firebase вже ініціалізований іншим apiKey!",
+          opt.apiKey
+        );
       }
     }
 
-    // ✅ експортуємо у твою “єдину схему”
+    // ✅ Єдина схема STOLAR CARP
     window.scApp  = window.firebase.apps[0];
     window.scAuth = window.firebase.auth();
     window.scDb   = window.firebase.firestore();
@@ -44,10 +47,27 @@
       window.scStorage = null;
     }
 
-    // ✅ щоб сесія не злітала
+    // ✅ Firestore — стабільна поведінка + без сюрпризів кешу
     try {
-      await window.scAuth.setPersistence(window.firebase.auth.Auth.Persistence.LOCAL);
-    } catch {}
+      window.scDb.settings({
+        cacheSizeBytes: window.firebase.firestore.CACHE_SIZE_UNLIMITED
+      });
+    } catch (e) {
+      // settings можна викликати лише ДО першого запиту
+      // якщо вже був доступ — просто ігноруємо
+    }
+
+    // ✅ AUTH: сесія не злітає при reload
+    try {
+      await window.scAuth.setPersistence(
+        window.firebase.auth.Auth.Persistence.LOCAL
+      );
+    } catch (e) {
+      console.warn("Auth persistence не встановлено", e);
+    }
+
+    // ✅ Anti-cache мітка (для Android reload)
+    window.__scInitAt = Date.now();
 
     return true;
   })();

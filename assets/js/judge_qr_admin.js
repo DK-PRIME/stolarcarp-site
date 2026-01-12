@@ -4,12 +4,12 @@
 // ✔ Firestore judgeTokens
 // ✔ zone restricted
 // ✔ TTL based
-// ✔ QR + link rendering
+// ✔ QR + live timer + auto-expire
 
 (function () {
   "use strict";
 
-  // ===== helpers =====
+  /* ================= helpers ================= */
   const $ = (id) => document.getElementById(id);
   const norm = (v) => String(v ?? "").trim();
   const esc = (s) =>
@@ -17,7 +17,7 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])
     );
 
-  // ===== UI =====
+  /* ================= UI ================= */
   const stageSelect = $("stageSelect");
   const zoneSelect  = $("zoneSelect");
   const ttlSelect   = $("ttlSelect");
@@ -28,13 +28,17 @@
   const resultCard = $("resultCard");
   const qrBox      = $("qr");
   const qrUrlEl    = $("qrUrl");
+  const qrTimerEl  = $("qrTimer");
+
+  let qrTimerInt = null;
 
   function setMsg(text, ok = true) {
+    if (!msgEl) return;
     msgEl.textContent = text || "";
     msgEl.className = "muted " + (text ? (ok ? "ok" : "err") : "");
   }
 
-  // ===== Firebase =====
+  /* ================= Firebase ================= */
   async function waitFirebase() {
     for (let i = 0; i < 150; i++) {
       if (window.scAuth && window.scDb && window.firebase) return;
@@ -49,14 +53,13 @@
     if (!user) return false;
     try {
       const snap = await db.collection("users").doc(user.uid).get();
-      const role = snap.exists ? (snap.data()?.role || "") : "";
-      return role === "admin";
+      return snap.exists && snap.data()?.role === "admin";
     } catch {
       return false;
     }
   }
 
-  // ===== data =====
+  /* ================= data ================= */
   async function loadStages() {
     stageSelect.innerHTML = `<option value="">— завантаження… —</option>`;
 
@@ -73,11 +76,7 @@
       (c.events || []).forEach((ev, i) => {
         const key = String(ev.key || `stage-${i + 1}`);
         const label = `${brand} · ${title} — ${ev.name || `Етап ${i + 1}`}`;
-
-        items.push({
-          value: `${compId}||${key}`,
-          label,
-        });
+        items.push({ value: `${compId}||${key}`, label });
       });
     });
 
@@ -100,7 +99,47 @@
     return fb.firestore.Timestamp.fromDate(d);
   }
 
-  // ===== generate QR =====
+  /* ================= QR timer ================= */
+  function startQrTimer(expiresAtTs) {
+    if (!qrTimerEl) return;
+
+    if (qrTimerInt) {
+      clearInterval(qrTimerInt);
+      qrTimerInt = null;
+    }
+
+    function tick() {
+      const now = Date.now();
+      const end = expiresAtTs.toMillis();
+      const diff = end - now;
+
+      if (diff <= 0) {
+        clearInterval(qrTimerInt);
+        qrTimerInt = null;
+
+        qrTimerEl.textContent = "⛔ Термін дії QR завершився";
+        qrTimerEl.className = "muted err";
+
+        qrBox.innerHTML = "";
+        qrUrlEl.textContent = "";
+        return;
+      }
+
+      const s = Math.floor(diff / 1000);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const sec = s % 60;
+
+      qrTimerEl.textContent =
+        `⏳ Залишилось: ${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+      qrTimerEl.className = "muted";
+    }
+
+    tick();
+    qrTimerInt = setInterval(tick, 1000);
+  }
+
+  /* ================= generate QR ================= */
   async function generateQR() {
     const stageVal = norm(stageSelect.value);
     const zone     = norm(zoneSelect.value).toUpperCase();
@@ -117,6 +156,7 @@
 
     const [compId, stageId] = stageVal.split("||");
     const token = randomToken();
+    const expiresAt = expiresAfterHours(ttlHrs);
 
     setMsg("Генерую QR…", true);
 
@@ -127,7 +167,7 @@
       stageId,
       key: stageVal,
       allowedZones: [zone],
-      expiresAt: expiresAfterHours(ttlHrs),
+      expiresAt,
       createdAt: fb.firestore.FieldValue.serverTimestamp(),
       createdBy: auth.currentUser.uid,
     });
@@ -138,7 +178,6 @@
       `&token=${encodeURIComponent(token)}` +
       `&key=${encodeURIComponent(stageVal)}`;
 
-    // render QR
     qrBox.innerHTML = "";
     new QRCode(qrBox, {
       text: url,
@@ -148,12 +187,13 @@
     });
 
     qrUrlEl.textContent = url;
-
     resultCard.style.display = "block";
+
+    startQrTimer(expiresAt);
     setMsg(`✅ QR створено (${zone}, ${ttlHrs} год)`, true);
   }
 
-  // ===== boot =====
+  /* ================= boot ================= */
   async function boot() {
     try {
       await waitFirebase();

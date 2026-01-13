@@ -197,10 +197,15 @@
   }
 
   async function verifyToken(){
+    // 👑 АДМІН — перевірку QR ПРОПУСКАЄМО
+    if(me && !me.isAnonymous){
+      return true;
+    }
+
+    // 👨‍⚖️ СУДДЯ — СТАРА ЛОГІКА 1 В 1
     if(!token) throw new Error("Нема token у QR.");
     if(!key) throw new Error("Нема key у QR (етап).");
     if(!zone || !["A","B","C"].includes(zone)) throw new Error("Неправильна зона у QR.");
-
     const snap = await db.collection("judgeTokens").doc(token).get();
     if(!snap.exists) throw new Error("Токен не знайдено або видалено.");
 

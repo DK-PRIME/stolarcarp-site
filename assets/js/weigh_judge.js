@@ -529,13 +529,18 @@
   }
 
   async function openZone(){
-    renderBindInfo();
+  renderBindInfo();
 
+  const isAdmin = me && !me.isAnonymous;
+
+  // ❗ QR вимагаємо ТІЛЬКИ від судді
+  if(!isAdmin){
     if(!zone || !token || !key){
       setMsg("❌ Нема параметрів QR (zone/token/key). Скануй QR ще раз.", false);
       if(weighCard) weighCard.style.display = "none";
       return;
     }
+  }
 
     // teams
     const teams = await loadTeamsForZone();

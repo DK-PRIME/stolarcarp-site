@@ -528,28 +528,24 @@
     });
   }
 
-  async function openZone(){
+  async function openZone() {
   renderBindInfo();
 
   const isAdmin = me && !me.isAnonymous;
 
-  // 👑 АДМІН БЕЗ key — ЗУПИНЯЄМО
-  if(isAdmin && !key){
-    setMsg(
-      "❌ Адмін: не вибрано етап (key порожній). Відкрий зважування з етапу.",
-      false
-    );
-    if(weighCard) weighCard.style.display = "none";
-    return;
-  }
-
-  // 👨‍⚖️ QR вимагаємо ТІЛЬКИ від судді
-  if(!isAdmin){
-    if(!zone || !token || !key){
-      setMsg("❌ Нема параметрів QR (zone/token/key).", false);
-      if(weighCard) weighCard.style.display = "none";
-      return;
+  // 1. Перевірка для АДМІНА
+  if (isAdmin) {
+    if (!key) {
+      throw new Error("Адмін: не вибрано етап (key порожній). Відкрий зважування з етапу.");
     }
+    // Адмін ігнорує перевірку токена
+  } 
+  // 2. Перевірка для СУДДІ (Anonymous)
+  else {
+    if (!zone || !token || !key) {
+      throw new Error("Нема параметрів QR (zone/token/key).");
+    }
+    await verifyToken(); // Перевірка валідності токена в БД
   }
 
     // teams
@@ -596,7 +592,7 @@
       readParams();
       renderBindInfo();
 
-      // ===== auth: admin OR judge =====
+      // ===== auth logic =====
 me = await new Promise((resolve) => {
   const unsub = auth.onAuthStateChanged(u => {
     unsub();
@@ -605,47 +601,46 @@ me = await new Promise((resolve) => {
 });
 
 if (me && !me.isAnonymous) {
-  // 👑 АДМІН
+  // 👑 ТУТ ЛОГІКА ДЛЯ АДМІНА
   if (authPill) authPill.textContent = "auth: ✅ адмін";
-  setMsg("👑 Адмін. Натисни «Увійти» для відкриття зважування.", true);
-
-  // кнопка ВИДИМА
-  if (btnOpen) btnOpen.style.display = "inline-flex";
-
-  if (me && !me.isAnonymous) {
-  if (authPill) authPill.textContent = "auth: ✅ адмін";
-  setMsg("👑 Адмін. Натисни «Увійти» для відкриття зважування.", true);
-
-  if (btnOpen) btnOpen.style.display = "inline-flex";
-
-  // 👇 ОСЬ ЦЕГО НЕ ВИСТАЧАЄ
-  btnOpen?.addEventListener("click", async () => {
-    try {
-      setMsg("Завантажую зону…", true);
-      await openZone();
-      setMsg("", true);
-    } catch (err) {
-      console.error(err);
-      setMsg("❌ " + (err?.message || err), false);
-    }
-  });
+  setMsg("👑 Вітаємо, Адмін. Натисніть «Увійти» для керування зоною.", true);
+  
+  if (btnOpen) {
+    btnOpen.style.display = "inline-flex";
+    // Очищуємо старі слухачі (якщо були) та додаємо новий
+    btnOpen.onclick = async () => {
+      try {
+        btnOpen.disabled = true;
+        setMsg("Завантаження даних...", true);
+        await openZone();
+        setMsg("Доступ надано (Admin Mode)", true);
+      } catch (err) {
+        setMsg("❌ " + err.message, false);
+      } finally {
+        btnOpen.disabled = false;
+      }
+    };
   }
-
 } else {
-  // 👨‍⚖️ СУДДЯ ПО QR
-  if (authPill) authPill.textContent = "auth: ⏳";
-  me = await ensureAnonAuth();
-  if (authPill) authPill.textContent = "auth: ✅ суддя (QR)";
-
+  // 👨‍⚖️ ТУТ ЛОГІКА ДЛЯ СУДДІ (QR)
   if (btnOpen) btnOpen.style.display = "none";
-
-  setMsg("Перевіряю QR-доступ…", true);
-  await verifyToken();
-  setMsg("✅ QR доступ підтверджено. Завантажую зону…", true);
-
-  await openZone();
-  setMsg("", true);
+  
+  try {
+    setMsg("Авторизація судді...", true);
+    me = await ensureAnonAuth();
+    if (authPill) authPill.textContent = "auth: ✅ суддя (QR)";
+    
+    setMsg("Перевірка QR-токена...", true);
+    await verifyToken(); // Важливо: verifyToken заповнює compId/stageId з бази
+    
+    await openZone();
+    setMsg("Зона завантажена", true);
+  } catch (err) {
+    setMsg("❌ Доступ заборонено: " + err.message, false);
+    if (authPill) authPill.textContent = "auth: ❌";
+  }
 }
+      
 
       // W buttons
       wBtns.forEach(b=>{

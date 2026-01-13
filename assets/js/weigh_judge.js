@@ -533,10 +533,20 @@
 
   const isAdmin = me && !me.isAnonymous;
 
-  // ❗ QR вимагаємо ТІЛЬКИ від судді
+  // 👑 АДМІН БЕЗ key — ЗУПИНЯЄМО
+  if(isAdmin && !key){
+    setMsg(
+      "❌ Адмін: не вибрано етап (key порожній). Відкрий зважування з етапу.",
+      false
+    );
+    if(weighCard) weighCard.style.display = "none";
+    return;
+  }
+
+  // 👨‍⚖️ QR вимагаємо ТІЛЬКИ від судді
   if(!isAdmin){
     if(!zone || !token || !key){
-      setMsg("❌ Нема параметрів QR (zone/token/key). Скануй QR ще раз.", false);
+      setMsg("❌ Нема параметрів QR (zone/token/key).", false);
       if(weighCard) weighCard.style.display = "none";
       return;
     }

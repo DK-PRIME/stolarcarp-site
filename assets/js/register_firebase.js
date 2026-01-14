@@ -551,7 +551,7 @@
                 ${escapeHtml(dateLine)}
               </div>
               <div style="margin-top:6px;color:var(--muted);font-size:12px;white-space:normal;">
-                ${open ? "Реєстрація відкрита ✅" : "Реєстрація закрита (можна переглянути оплату) ℹ️"}
+                ${open ? "Реєстрація відкрита ✅" : "Реєстрація закрита "}
               </div>
             </div>
             <div class="event-badges" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto;">

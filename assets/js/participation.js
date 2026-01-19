@@ -48,7 +48,7 @@
 
   async function getMaxTeams(compId, stageId){
     const db = window.scDb;
-    let maxTeams = 24;
+    let maxTeams = 21;
 
     try{
       const cSnap = await db.collection("competitions").doc(compId).get();

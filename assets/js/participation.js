@@ -130,12 +130,13 @@
       const meta = await getCompetitionMeta(compId, stageId);
       const maxTeams = await getMaxTeams(compId, stageId);
 
-      if($("pageTitle")){
-        $("pageTitle").textContent = meta.stageTitle
-          ? `${meta.title} · ${meta.stageTitle}`
-          : meta.title;
-      }
-      if($("pageSub")) $("pageSub").textContent = "";
+      if ($("pageTitle")) {
+  $("pageTitle").textContent = meta.title; // Назва змагання: "Турнір"
+}
+
+if ($("pageSub")) {
+  $("pageSub").textContent = meta.stageTitle || ""; // "Етап 1", "Етап 2", "Фінал"
+}
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";
 

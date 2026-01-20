@@ -271,16 +271,6 @@
 
     let preTeam = null;
 
-    // precheck (може впасти через rules — тоді повторимо після signup)
-try {
-
-  if (role === "member") {
-    // Перевірка joinCode
-    preTeam = await findTeamByJoinCode(db, joinCode);
-    if (!preTeam) {
-      setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
-let preTeam = null;
-
 // precheck (може впасти через rules — тоді повторимо після signup)
 try {
 

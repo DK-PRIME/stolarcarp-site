@@ -135,7 +135,15 @@
 }
 
 if ($("pageSub")) {
-  $("pageSub").textContent = meta.stageTitle || ""; // "Етап 1", "Етап 2", "Фінал"
+  let txt = meta.stageTitle;
+
+  // Якщо назва етапу не знайдена в competitions – формуємо самі
+  if (!txt && stageId && stageId !== "main") {
+    const num = stageId.match(/\d+/);
+    if (num) txt = `Етап ${num[0]}`;
+  }
+
+  $("pageSub").textContent = txt || "";
 }
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";

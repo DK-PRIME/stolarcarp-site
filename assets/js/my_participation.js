@@ -82,17 +82,21 @@
   function niceTitle(it) {
   const comp = it.compTitle || "Змагання";
 
-  // якщо є нормальна назва етапу з competitions
   let stage = it.stageTitle;
 
-  // якщо ні — формуємо з stageId
+  // Якщо stageTitle виглядає як "stage-1" → ігноруємо
+  if (stage && /^stage[-_ ]?\d+$/i.test(stage)) {
+    stage = "";
+  }
+
+  // Якщо все ще нема нормальної назви → формуємо "Етап X"
   if (!stage && it.stageId && it.stageId !== "main") {
     const num = String(it.stageId).match(/\d+/);
     if (num) stage = `Етап ${num[0]}`;
   }
 
   return stage ? `${esc(comp)} · ${esc(stage)}` : esc(comp);
-}
+  }
 
   function renderItems(items) {
     let html = "";

@@ -100,10 +100,10 @@
     }
 
     list.innerHTML += `
-      <div class="pageSub" style="margin:0 0 10px;">
-        Учасники: ${main.length} / ${maxTeams}
-      </div>
-    `;
+  <div class="participantsSub" style="margin:0 0 10px;">
+    Учасники: ${main.length} / ${maxTeams}
+  </div>
+`;
 
     list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
 

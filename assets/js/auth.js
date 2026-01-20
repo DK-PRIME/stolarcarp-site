@@ -279,8 +279,107 @@ try {
     preTeam = await findTeamByJoinCode(db, joinCode);
     if (!preTeam) {
       setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
+let preTeam = null;
+
+// precheck (може впасти через rules — тоді повторимо після signup)
+try {
+
+  if (role === "member") {
+    // Перевірка joinCode
+    preTeam = await findTeamByJoinCode(db, joinCode);
+    if (!preTeam) {
+      setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
       return;
     }
+  }
+
+  if (role === "captain") {
+    // Перевірка дубля назви команди
+    const taken = await isTeamNameTaken(db, teamName);
+    if (taken) {
+      setMsg(
+        signupMsg,
+        "Назва команди вже використовується. Додай 1 цифру або літеру.",
+        "err"
+      );
+      return;
+    }
+  }
+
+} catch (preErr) {
+
+  const code = String(preErr?.code || "").toLowerCase();
+
+  // ❗ Немає прав читати teams ДО створення акаунта — це нормально
+  if (code === "permission-denied") {
+    console.warn(
+      "Precheck пропущено через правила Firestore. Перевірку перенесемо після signup."
+    );
+  }
+
+  // ⏱️ Тимчасові проблеми Firestore — дозволено один retry
+  else if (code === "unavailable" || code === "deadline-exceeded") {
+    console.warn("Тимчасова проблема Firestore. Виконую один retry precheck…");
+    try {
+      const retryTaken = await isTeamNameTaken(db, teamName);
+      if (retryTaken) {
+        setMsg(
+          signupMsg,
+          "Назва команди вже використовується. Додай 1 цифру або літеру.",
+          "err"
+        );
+        return;
+      }
+    } catch (retryErr) {
+      console.warn("Retry не вдався. Перевірку перенесемо після signup:", retryErr);
+      // fallback → продовжуємо signup
+    }
+  }
+
+  // ❌ Будь-яка інша помилка — критична
+  else {
+    setMsg(signupMsg, friendlyError(preErr), "err");
+    $("signupBtn") && ($("signupBtn").disabled = false);
+    return;
+  }
+}
+
+let createdUser = null;
+let createdTeamId = null;
+
+try {
+  $("signupBtn") && ($("signupBtn").disabled = true);
+  setMsg(signupMsg, "Готую реєстрацію…", "");
+
+  const cred = await auth.createUserWithEmailAndPassword(email, pass);
+  const user = cred.user;
+  createdUser = user;
+
+  if (role === "member") {
+    setMsg(signupMsg, "Підключаю до команди…", "");
+
+    const team = preTeam || await findTeamByJoinCode(db, joinCode);
+    if (!team) {
+      setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
+      try { await user.delete(); } catch (delErr) { console.warn(delErr); }
+      try { await auth.signOut(); } catch (_) {}
+      return;
+    }
+
+    await ensureUserDoc(db, user.uid, {
+      fullName,
+      email,
+      phone,
+      city,
+      role: "member",
+      teamId: team.teamId
+    });
+
+    await setUserTeamAndRole(db, user.uid, team.teamId, "member");
+
+    setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
+    setTimeout(() => goAfterAuth(user), 450);
+    return;
   }
 
   if (role === "captain") {
@@ -304,70 +403,7 @@ try {
   if (code === "permission-denied") {
     console.warn("Precheck пропущено через rules Firestore — виконаємо після signup.");
     // Продовжуємо signup без return
-  }
 
-  // ⏱️ Тимчасова проблема Firestore — один retry
-  else if (code === "unavailable" || code === "deadline-exceeded") {
-    console.warn("Тимчасова Firestore помилка. Виконую один retry precheck...");
-    try {
-      const retryTaken = await isTeamNameTaken(db, teamName);
-      if (retryTaken) {
-        setMsg(
-          signupMsg,
-          "Назва команди вже використовується. Додай 1 цифру або літеру.",
-          "err"
-        );
-        return;
-      }
-    } catch (retryErr) {
-      console.warn("Retry теж не вдався. Перевіримо після signup:", retryErr);
-    }
-  }
-
-  // ❌ Будь-яка інша помилка — критична (STOP)
-  else {
-    setMsg(signupMsg, friendlyError(preErr), "err");
-    $("signupBtn") && ($("signupBtn").disabled = false);
-    return;
-  }
-}
-    } catch (preErr) {
-      const msg = String(preErr?.message || "");
-      // permission для precheck — ок, просто продовжуємо
-      if (msg !== "permission_denied_precheck") {
-        console.warn(preErr);
-      }
-    }
-
-    let createdUser = null;
-    let createdTeamId = null;
-
-    try {
-      $("signupBtn") && ($("signupBtn").disabled = true);
-      setMsg(signupMsg, "Готую реєстрацію…", "");
-
-      const cred = await auth.createUserWithEmailAndPassword(email, pass);
-      const user = cred.user;
-      createdUser = user;
-
-      if (role === "member") {
-        setMsg(signupMsg, "Підключаю до команди…", "");
-
-        const team = preTeam || await findTeamByJoinCode(db, joinCode);
-        if (!team) {
-          setMsg(signupMsg, "Команду з таким кодом не знайдено ❌", "err");
-          try { await user.delete(); } catch (delErr) { console.warn(delErr); }
-          try { await auth.signOut(); } catch (_) {}
-          return;
-        }
-
-        await ensureUserDoc(db, user.uid, { fullName, email, phone, city, role: "member", teamId: team.teamId });
-        await setUserTeamAndRole(db, user.uid, team.teamId, "member");
-
-        setMsg(signupMsg, `Готово ✅ Ти в команді: ${team.name}`, "ok");
-        setTimeout(() => goAfterAuth(user), 450);
-        return;
-      }
 
       if (role === "captain") {
         setMsg(signupMsg, "Створюю команду…", "");

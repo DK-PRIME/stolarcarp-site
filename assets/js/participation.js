@@ -185,13 +185,31 @@ if ($("pageSub")) {
 
       const rows = Array.from(rowsMap.values());
 
-      // 🔥 КАНОНІЧНЕ СОРТУВАННЯ ПО order
-      rows.sort((a,b)=>{
-        const ao = Number.isFinite(a.order) ? a.order : 9999;
-        const bo = Number.isFinite(b.order) ? b.order : 9999;
-        if(ao !== bo) return ao - bo;
-        return a.teamName.localeCompare(b.teamName,"uk");
-      });
+      // 🔥 Сортування як в адмінці:
+// 1) confirmed -> по confirmedAt (старші зверху)
+// 2) pending_payment -> по teamName
+// 3) cancelled -> внизу
+rows.sort((a, b) => {
+  const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
+  const A = order[a.status] || 99;
+  const B = order[b.status] || 99;
+
+  if (A !== B) return A - B;
+
+  // confirmed → по confirmedAt
+  if (A === 1) {
+    const tA = a.confirmedAt?.toMillis?.() || 0;
+    const tB = b.confirmedAt?.toMillis?.() || 0;
+    return tA - tB;
+  }
+
+  // pending → за назвою команди
+  if (A === 2) {
+    return a.teamName.localeCompare(b.teamName, "uk");
+  }
+
+  return 0;
+});
 
       if($("msg")) $("msg").textContent = "";
       render(rows, maxTeams);

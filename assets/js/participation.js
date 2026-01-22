@@ -187,6 +187,9 @@ if(String(stageId) === "main"){
   });
 }
 
+const rows = Array.from(rowsMap.values());
+
+// 🔥 Нове правильне сортування:
 rows.sort((a, b) => {
   const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
   const A = order[a.status] || 99;
@@ -194,7 +197,7 @@ rows.sort((a, b) => {
 
   if (A !== B) return A - B;
 
-  // confirmed — порядок підтвердження (СТАБІЛЬНО)
+  // confirmed — по orderPaid (порядок підтвердження)
   if (A === 1) {
     const oa = Number.isFinite(a.orderPaid) ? a.orderPaid : 9999;
     const ob = Number.isFinite(b.orderPaid) ? b.orderPaid : 9999;

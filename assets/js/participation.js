@@ -187,12 +187,6 @@ if(String(stageId) === "main"){
   });
 }
 
-const rows = Array.from(rowsMap.values());
-
-// 🔥 Нове правильне сортування:
-// 1) confirmed -> по orderPaid (порядок підтвердження)
-// 2) pending -> по createdAt (перші, хто подав)
-// 3) cancelled -> вниз
 rows.sort((a, b) => {
   const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
   const A = order[a.status] || 99;
@@ -200,21 +194,23 @@ rows.sort((a, b) => {
 
   if (A !== B) return A - B;
 
-  // confirmed — по orderPaid
+  // confirmed — порядок підтвердження (СТАБІЛЬНО)
   if (A === 1) {
     const oa = Number.isFinite(a.orderPaid) ? a.orderPaid : 9999;
     const ob = Number.isFinite(b.orderPaid) ? b.orderPaid : 9999;
     return oa - ob;
   }
 
-  // pending — по createdAt
-  if (A === 2) {
-    const tA = a.createdAt?.toMillis?.() || 0;
-    const tB = b.createdAt?.toMillis?.() || 0;
-    return tA - tB;
-  }
+  // pending/cancelled — по createdAt
+  const tA =
+    a.createdAt?.toMillis?.() ||
+    (a.createdAt?._seconds ? a.createdAt._seconds * 1000 : 0);
 
-  return 0;
+  const tB =
+    b.createdAt?.toMillis?.() ||
+    (b.createdAt?._seconds ? b.createdAt._seconds * 1000 : 0);
+
+  return tA - tB;
 });
 
 if($("msg")) $("msg").textContent = "";

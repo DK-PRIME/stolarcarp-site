@@ -194,7 +194,7 @@ const rows = Array.from(rowsMap.values());
 // 2) pending -> по createdAt (перші, хто подав)
 // 3) cancelled -> вниз
 rows.sort((a, b) => {
-  const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
+  const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
   const A = order[a.status] || 99;
   const B = order[b.status] || 99;
 

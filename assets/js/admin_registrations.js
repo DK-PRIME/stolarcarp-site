@@ -411,6 +411,33 @@
       .onSnapshot((snap) => {
         allRegs = [];
         snap.forEach((d) => allRegs.push({ _id: d.id, ...(d.data() || {}) }));
+        // 🔥 Правильне сортування напряму в allRegs
+// 1) confirmed → по confirmedAt (старші зверху)
+// 2) pending → по createdAt
+// 3) cancelled → внизу
+allRegs.sort((a, b) => {
+  const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
+  const A = order[a.status] || 99;
+  const B = order[b.status] || 99;
+
+  if (A !== B) return A - B;
+
+  // confirmed — сортуємо по confirmedAt ↑
+  if (A === 1) {
+    const tA = a.confirmedAt?.toMillis?.() || 0;
+    const tB = b.confirmedAt?.toMillis?.() || 0;
+    return tA - tB;
+  }
+
+  // pending — по createdAt ↑
+  if (A === 2) {
+    const tA = a.createdAt?.toMillis?.() || 0;
+    const tB = b.createdAt?.toMillis?.() || 0;
+    return tA - tB;
+  }
+
+  return 0;
+});
         applyFiltersAndRender();
       }, (err) => {
         console.error(err);

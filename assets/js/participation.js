@@ -150,45 +150,49 @@ if ($("pageSub")) {
 
       const rowsMap = new Map();
 
-      const snap1 = await db.collection("public_participants")
-        .where("competitionId","==",compId)
-        .where("stageId","==",stageId)
-        .where("entryType","==","team")
-        .get();
+const snap1 = await db.collection("public_participants")
+  .where("competitionId","==",compId)
+  .where("stageId","==",stageId)
+  .where("entryType","==","team")
+  .get();
 
-      snap1.forEach(doc=>{
-        const r = doc.data() || {};
-        rowsMap.set(doc.id, {
-          teamName: norm(r.teamName || "—"),
-          status: norm(r.status || "pending_payment"),
-          order: Number.isFinite(r.order) ? r.order : null
-        });
-      });
+snap1.forEach(doc=>{
+  const r = doc.data() || {};
+  rowsMap.set(doc.id, {
+    teamName: norm(r.teamName || "—"),
+    status: norm(r.status || "pending_payment"),
+    createdAt: r.createdAt || null,
+    confirmedAt: r.confirmedAt || null,
+    orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
+  });
+});
 
-      if(String(stageId) === "main"){
-        const snap2 = await db.collection("public_participants")
-          .where("competitionId","==",compId)
-          .where("stageId","==",null)
-          .where("entryType","==","team")
-          .get();
+if(String(stageId) === "main"){
+  const snap2 = await db.collection("public_participants")
+    .where("competitionId","==",compId)
+    .where("stageId","==",null)
+    .where("entryType","==","team")
+    .get();
 
-        snap2.forEach(doc=>{
-          if(rowsMap.has(doc.id)) return;
-          const r = doc.data() || {};
-          rowsMap.set(doc.id, {
-            teamName: norm(r.teamName || "—"),
-            status: norm(r.status || "pending_payment"),
-            order: Number.isFinite(r.order) ? r.order : null
-          });
-        });
-      }
+  snap2.forEach(doc=>{
+    if(rowsMap.has(doc.id)) return;
+    const r = doc.data() || {};
+    rowsMap.set(doc.id, {
+      teamName: norm(r.teamName || "—"),
+      status: norm(r.status || "pending_payment"),
+      createdAt: r.createdAt || null,
+      confirmedAt: r.confirmedAt || null,
+      orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
+    });
+  });
+}
 
-      const rows = Array.from(rowsMap.values());
+const rows = Array.from(rowsMap.values());
 
-      // 🔥 Сортування як в адмінці:
-// 1) confirmed -> по confirmedAt (старші зверху)
-// 2) pending_payment -> по teamName
-// 3) cancelled -> внизу
+// 🔥 Нове правильне сортування:
+// 1) confirmed -> по orderPaid (порядок підтвердження)
+// 2) pending -> по createdAt (перші, хто подав)
+// 3) cancelled -> вниз
 rows.sort((a, b) => {
   const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
   const A = order[a.status] || 99;
@@ -196,23 +200,25 @@ rows.sort((a, b) => {
 
   if (A !== B) return A - B;
 
-  // confirmed → по confirmedAt
+  // confirmed — по orderPaid
   if (A === 1) {
-    const tA = a.confirmedAt?.toMillis?.() || 0;
-    const tB = b.confirmedAt?.toMillis?.() || 0;
-    return tA - tB;
+    const oa = Number.isFinite(a.orderPaid) ? a.orderPaid : 9999;
+    const ob = Number.isFinite(b.orderPaid) ? b.orderPaid : 9999;
+    return oa - ob;
   }
 
-  // pending → за назвою команди
+  // pending — по createdAt
   if (A === 2) {
-    return a.teamName.localeCompare(b.teamName, "uk");
+    const tA = a.createdAt?.toMillis?.() || 0;
+    const tB = b.createdAt?.toMillis?.() || 0;
+    return tA - tB;
   }
 
   return 0;
 });
 
-      if($("msg")) $("msg").textContent = "";
-      render(rows, maxTeams);
+if($("msg")) $("msg").textContent = "";
+render(rows, maxTeams);
 
     }catch(e){
       console.error(e);

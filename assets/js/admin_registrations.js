@@ -197,25 +197,42 @@
   function regRefFor(id){ return db.collection("registrations").doc(String(id)); }
 
   function render(regs) {
-    if (!listEl) return;
-    listEl.innerHTML = "";
+  if (!listEl) return;
+  listEl.innerHTML = "";
 
-    if (!regs.length) {
-      listEl.innerHTML = `<div class="form__hint">Нема заявок по цьому фільтру.</div>`;
-      return;
-    }
+  if (!regs.length) {
+    listEl.innerHTML = `<div class="form__hint">Нема заявок по цьому фільтру.</div>`;
+    return;
+  }
 
-    regs.forEach((r) => {
+  // 🟡 ГРУПУВАННЯ ПО ЕТАПАХ
+  const groups = {};
+
+  regs.forEach(r => {
+    const key = `${r.competitionId || ""}||${r.stageId || ""}`;
+    const label = stageNameByKey.get(key) || `Етап: ${r.stageId || "main"}`;
+
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(r);
+  });
+
+  // 🔥 ВИВОДИМО ГРУПАМИ
+  Object.keys(groups).forEach(label => {
+    const group = groups[label];
+
+    // Заголовок групи
+    const h = document.createElement("div");
+    h.style.cssText = "padding:12px 4px;font-size:18px;font-weight:700;color:#ffc300;";
+    h.textContent = `${label} (${group.length})`;
+    listEl.appendChild(h);
+
+    // Виведення кожної заявки
+    group.forEach(r => {
       const { label: statusLabel, style: badgeStyle } = badgeForStatus(r.status);
 
       const titleMain =
         r.teamName ? r.teamName :
         (r.participantName ? r.participantName : "Без назви");
-
-      const subLine =
-        r.entryType === "solo"
-          ? `SOLO · ${escapeHtml(getStageLabel(r))}`
-          : escapeHtml(getStageLabel(r));
 
       const card = document.createElement("div");
       card.className = "card";
@@ -228,7 +245,7 @@
               ${escapeHtml(titleMain)}
             </div>
             <div class="form__hint" style="margin-top:4px;">
-              ${subLine}
+              ${escapeHtml(label)}
             </div>
           </div>
 
@@ -238,10 +255,7 @@
         </div>
 
         <div class="form__hint" style="margin-top:10px;">
-          ${r.entryType === "solo"
-            ? `Учасник: <b>${escapeHtml(r.participantName || r.captain || "—")}</b><br>`
-            : `Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>`
-          }
+          Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>
           Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
           Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
           ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
@@ -256,124 +270,10 @@
         </div>
       `;
 
-      const btnConfirm = card.querySelector('[data-act="confirm"]');
-      const btnCancel  = card.querySelector('[data-act="cancel"]');
-      const btnDelete  = card.querySelector('[data-act="delete"]');
-
-      // ✅ CONFIRM + MIRROR public_participants
-      btnConfirm?.addEventListener("click", async () => {
-        if (!ensureAdmin()) return;
-        if (!confirm(`Підтвердити оплату для "${titleMain}"?`)) return;
-
-        try {
-          setMsg("Підтверджую...", true);
-
-          const ts = firebase.firestore.FieldValue.serverTimestamp();
-          const batch = db.batch();
-
-          batch.set(regRefFor(r._id), {
-            status: "confirmed",
-            confirmedAt: ts,
-            confirmedBy: currentUser.uid
-          }, { merge:true });
-
-          batch.set(pubRefFor(r._id), {
-            status: "confirmed",
-            confirmedAt: ts,
-            confirmedBy: currentUser.uid
-          }, { merge:true });
-
-          await batch.commit();
-
-          setMsg("Оплату підтверджено ✅ (і в public_participants теж)", true);
-        } catch (e) {
-          showError("Помилка підтвердження", e);
-        }
-      });
-
-      // ✅ CANCEL + MIRROR public_participants
-      btnCancel?.addEventListener("click", async () => {
-        if (!ensureAdmin()) return;
-        if (!confirm(`Скасувати заявку "${titleMain}"?`)) return;
-
-        try {
-          setMsg("Скасовую...", true);
-
-          const ts = firebase.firestore.FieldValue.serverTimestamp();
-          const batch = db.batch();
-
-          batch.set(regRefFor(r._id), {
-            status: "cancelled",
-            cancelledAt: ts,
-            cancelledBy: currentUser.uid
-          }, { merge:true });
-
-          batch.set(pubRefFor(r._id), {
-            status: "cancelled",
-            cancelledAt: ts,
-            cancelledBy: currentUser.uid
-          }, { merge:true });
-
-          await batch.commit();
-
-          setMsg("Заявку скасовано ✅ (і в public_participants теж)", true);
-        } catch (e) {
-          showError("Помилка скасування", e);
-        }
-      });
-
-      // ✅ DELETE (archive -> delete) + delete public_participants
-      btnDelete?.addEventListener("click", async () => {
-        if (!ensureAdmin()) return;
-
-        const warn =
-          `ТОЧНО видалити заявку?\n\n` +
-          `Запис: ${titleMain}\n` +
-          `Етап: ${getStageLabel(r)}\n\n` +
-          `Я збережу копію в registrations_deleted і тоді видалю.`;
-
-        if (!confirm(warn)) return;
-
-        try {
-          setMsg("Видаляю...", true);
-
-          const regRef = regRefFor(r._id);
-          const pubRef = pubRefFor(r._id);
-
-          const freshSnap = await regRef.get();
-          if (!freshSnap.exists) {
-            setMsg("Заявка вже видалена/не існує.", false);
-            return;
-          }
-
-          const freshData = stripUndefinedDeep(freshSnap.data() || {});
-          const batch = db.batch();
-
-          batch.set(
-            db.collection("registrations_deleted").doc(r._id),
-            stripUndefinedDeep({
-              ...freshData,
-              originalRegId: r._id,
-              deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-              deletedBy: currentUser.uid
-            }),
-            { merge: true }
-          );
-
-          batch.delete(regRef);
-          // ✅ прибираємо з public_participants, щоб не світилась участь
-          batch.delete(pubRef);
-
-          await batch.commit();
-          setMsg("Заявку видалено ✅ (і public_participants теж очищено)", true);
-        } catch (e) {
-          showError("Помилка видалення", e);
-        }
-      });
-
       listEl.appendChild(card);
     });
-  }
+  });
+}
 
   let unsub = null;
   let allRegs = [];

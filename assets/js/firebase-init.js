@@ -41,10 +41,17 @@
     window.scAuth = window.firebase.auth();
     window.scDb   = window.firebase.firestore();
 
+    // ✅ Storage — тільки якщо SDK підключено
     try {
-      window.scStorage = window.firebase.storage();
-    } catch {
+      if (window.firebase.storage) {
+        window.scStorage = window.firebase.storage();
+      } else {
+        window.scStorage = null;
+        console.log("ℹ️ Firebase Storage SDK не підключено, scStorage = null");
+      }
+    } catch (e) {
       window.scStorage = null;
+      console.log("ℹ️ Firebase Storage недоступний:", e.message);
     }
 
     // ✅ Firestore — стабільна поведінка + без сюрпризів кешу

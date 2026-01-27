@@ -1,25 +1,19 @@
 // assets/js/cabinet.js
 // STOLAR CARP — Кабінет учасника (Firebase compat 10.12.2)
-// Працює з firebase-init.js (window.scAuth, window.scDb)
 
 (function () {
   "use strict";
 
   // =========================
-  // BURGER MENU (CABINET)
+  // BURGER MENU
   // =========================
   const burger = document.getElementById("burger");
   const nav = document.querySelector(".nav");
 
   if (burger && nav) {
-    burger.addEventListener("click", () => {
-      nav.classList.toggle("open");
-    });
-
+    burger.addEventListener("click", () => nav.classList.toggle("open"));
     nav.addEventListener("click", (e) => {
-      if (e.target.classList.contains("nav__link")) {
-        nav.classList.remove("open");
-      }
+      if (e.target.classList.contains("nav__link")) nav.classList.remove("open");
     });
   }
 
@@ -31,9 +25,12 @@
       if (window.scAuth && window.scDb) return;
       await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase не готовий (нема scAuth/scDb). Перевір firebase-init.js і підключення SDK на сторінці.");
+    throw new Error("Firebase не готовий");
   }
 
+  // =========================
+  // DOM ELEMENTS
+  // =========================
   const statusEl  = document.getElementById("cabinetStatus");
   const contentEl = document.getElementById("cabinetContent");
 
@@ -45,21 +42,22 @@
   const joinCodePillEl = document.getElementById("joinCodePill");
   const joinCodeTextEl = document.getElementById("joinCodeText");
 
+  const avatarWrapper  = document.getElementById("avatarWrapper");
   const avatarImgEl    = document.getElementById("cabinetAvatarImg");
   const avatarPhEl     = document.getElementById("cabinetAvatarPlaceholder");
   const avatarMsgEl    = document.getElementById("avatarMsg");
 
   const membersEl      = document.getElementById("membersContainer");
-
-  // ✅ МОЯ УЧАСТЬ:
-  const myPartListEl = document.getElementById("myCompetitions") || document.getElementById("myParticipationList");
-  const myPartMsgEl  = document.getElementById("myParticipationMsg");
+  const myPartListEl   = document.getElementById("myCompetitions");
 
   let unsubUser = null;
   let unsubTeam = null;
   let unsubMembers = null;
   let unsubRegs = null;
 
+  // =========================
+  // HELPERS
+  // =========================
   function setStatus(t){ if (statusEl) statusEl.textContent = t || ""; }
   function showContent(){ if (contentEl) contentEl.style.display = "block"; }
   function hideContent(){ if (contentEl) contentEl.style.display = "none"; }
@@ -86,9 +84,11 @@
       avatarImgEl.src = url;
       avatarImgEl.style.display = "block";
       avatarPhEl.style.display = "none";
+      if (avatarWrapper) avatarWrapper.style.cursor = "pointer";
     } else {
       avatarImgEl.style.display = "none";
       avatarPhEl.style.display = "block";
+      if (avatarWrapper) avatarWrapper.style.cursor = "default";
     }
   }
 
@@ -100,7 +100,38 @@
     unsubUser = unsubTeam = unsubMembers = unsubRegs = null;
   }
 
-  // ===== РЕНДЕР УЧАСНИКІВ З АВАТАРКАМИ =====
+  // =========================
+  // AVATAR POPUP
+  // =========================
+  function enableAvatarPopup() {
+    const popup = document.getElementById("avatarPopup");
+    const popupImg = document.getElementById("avatarPopupImg");
+
+    if (!avatarWrapper || !popup || !popupImg) return;
+
+    avatarWrapper.addEventListener("click", () => {
+      if (!avatarImgEl.src || avatarImgEl.style.display === "none") return;
+      popupImg.src = avatarImgEl.src;
+      popup.style.display = "flex";
+      document.body.style.overflow = "hidden";
+    });
+
+    popup.addEventListener("click", () => {
+      popup.style.display = "none";
+      document.body.style.overflow = "";
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && popup.style.display === "flex") {
+        popup.style.display = "none";
+        document.body.style.overflow = "";
+      }
+    });
+  }
+
+  // =========================
+  // RENDER MEMBERS (з аватарками)
+  // =========================
   function renderMembers(list){
     if (!membersEl) return;
     membersEl.innerHTML = "";
@@ -120,7 +151,7 @@
       row.style.cssText = "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
       
       const avatarHtml = avatarUrl 
-        ? `<img src="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #facc15;">`
+        ? `<img src="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #facc15;cursor:pointer;" onclick="window.open('${escapeHtml(avatarUrl)}','_blank')">`
         : `<div style="width:50px;height:50px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`;
       
       row.innerHTML = `
@@ -135,9 +166,10 @@
     });
   }
 
-  // ===== МОЯ УЧАСТЬ =====
+  // =========================
+  // MY PARTICIPATION
+  // =========================
   function norm(v){ return String(v ?? "").trim(); }
-
   function toMillis(ts){
     if(!ts) return 0;
     if(ts.toMillis) return ts.toMillis();
@@ -151,22 +183,15 @@
     const key = `${compId}||${st}`;
     if (compMetaCache[key]) return compMetaCache[key];
 
-    let compTitle = "";
-    let stageTitle = "";
-
+    let compTitle = "", stageTitle = "";
     try{
       const cSnap = await db.collection("competitions").doc(compId).get();
       if (cSnap.exists){
         const c = cSnap.data() || {};
         compTitle = (c.name || c.title || "").trim();
-
         const events = Array.isArray(c.events) ? c.events : [];
         const ev = events.find(e => norm(e?.key || e?.stageId || e?.id) === st);
-
-        stageTitle = (ev && (ev.title || ev.name || ev.label))
-          ? String(ev.title || ev.name || ev.label).trim()
-          : "";
-
+        stageTitle = (ev && (ev.title || ev.name || ev.label)) ? String(ev.title || ev.name || ev.label).trim() : "";
         if (!stageTitle && st !== "main") stageTitle = st;
       }
     }catch{}
@@ -178,56 +203,36 @@
 
   function niceTitleOnly(it){
     const comp = (it.compTitle || it.competitionTitle || it.competitionName || it.competitionId || "Змагання").trim();
-    const st   = (it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "") || "").trim();
+    const st = (it.stageTitle || (it.stageId && it.stageId !== "main" ? it.stageId : "") || "").trim();
     return st ? `${escapeHtml(comp)} · ${escapeHtml(st)}` : escapeHtml(comp);
   }
 
   function renderMyParticipation(items){
     if (!myPartListEl) return;
-
     myPartListEl.innerHTML = "";
 
     if (!items || items.length === 0){
       myPartListEl.innerHTML = `<div class="cabinet-small-muted">Поки що немає участі.</div>`;
-      if (myPartMsgEl) myPartMsgEl.textContent = "";
       return;
     }
 
     items.forEach((it) => {
-      const compId  = norm(it.competitionId);
+      const compId = norm(it.competitionId);
       const stageId = norm(it.stageId) || "main";
       const href = `participation.html?comp=${encodeURIComponent(compId)}&stage=${encodeURIComponent(stageId)}`;
 
       const row = document.createElement("a");
       row.href = href;
       row.className = "card";
-      row.style.display = "block";
-      row.style.padding = "14px 14px";
-      row.style.marginTop = "10px";
-      row.style.textDecoration = "none";
+      row.style.cssText = "display:block;padding:14px;margin-top:10px;text-decoration:none;";
 
       row.innerHTML = `
-        <div style="
-          font-weight:950;
-          line-height:1.25;
-          text-align:center;
-          white-space:normal;
-          overflow:visible;
-          letter-spacing:.2px;
-          background:linear-gradient(90deg,#facc15 0%,#7f1d1d 100%);
-          -webkit-background-clip:text;
-          background-clip:text;
-          color:transparent;
-          -webkit-text-fill-color:transparent;
-        ">
+        <div style="font-weight:950;line-height:1.25;text-align:center;background:linear-gradient(90deg,#facc15 0%,#7f1d1d 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;">
           ${niceTitleOnly(it)}
         </div>
       `;
-
       myPartListEl.appendChild(row);
     });
-
-    if (myPartMsgEl) myPartMsgEl.textContent = "";
   }
 
   function subscribeMyParticipation(db, teamId, uid){
@@ -240,26 +245,16 @@
     }
 
     myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
-    if (myPartMsgEl) myPartMsgEl.textContent = "";
 
-    let q;
-    if (teamId){
-      q = db.collection("public_participants")
-        .where("teamId", "==", teamId)
-        .where("entryType", "==", "team");
-    } else {
-      q = db.collection("public_participants")
-        .where("uid", "==", uid);
-    }
+    const q = teamId 
+      ? db.collection("public_participants").where("teamId", "==", teamId).where("entryType", "==", "team")
+      : db.collection("public_participants").where("uid", "==", uid);
 
     unsubRegs = q.onSnapshot(async (qs) => {
       const rows = [];
       qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
 
-      if (!rows.length){
-        renderMyParticipation([]);
-        return;
-      }
+      if (!rows.length){ renderMyParticipation([]); return; }
 
       const map = Object.create(null);
       rows.forEach(r => {
@@ -271,27 +266,24 @@
       });
 
       const uniq = Object.values(map);
-
       for (const it of uniq){
-        const compId = norm(it.competitionId);
-        const stageId = norm(it.stageId) || "main";
-        const meta = await getCompetitionMeta(db, compId, stageId);
-
-        it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || compId;
+        const meta = await getCompetitionMeta(db, norm(it.competitionId), norm(it.stageId) || "main");
+        it.compTitle = meta.compTitle || it.competitionTitle || it.competitionName || norm(it.competitionId);
         it.stageTitle = meta.stageTitle || it.stageName || "";
-        it.stageId    = stageId;
-        it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
+        it.updatedAt = it.updatedAt || it.confirmedAt || it.createdAt || null;
       }
 
-      uniq.sort((a,b)=> toMillis(b.updatedAt) - toMillis(a.updatedAt));
+      uniq.sort((a,b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
       renderMyParticipation(uniq);
     }, (err) => {
       console.warn(err);
       myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Не вдалося завантажити участь.</div>`;
-      if (myPartMsgEl) myPartMsgEl.textContent = "";
     });
   }
 
+  // =========================
+  // TEAM & USER SUBSCRIPTIONS
+  // =========================
   function subscribeTeam(db, teamId){
     if (!teamId){
       if (teamNameEl) teamNameEl.textContent = "Без команди";
@@ -304,7 +296,6 @@
       if (!snap.exists) return;
       const t = snap.data() || {};
       if (teamNameEl) teamNameEl.textContent = t.name || "Команда";
-
       if (t.joinCode && joinCodePillEl && joinCodeTextEl){
         joinCodePillEl.style.display = "inline-flex";
         joinCodeTextEl.textContent = t.joinCode;
@@ -313,22 +304,20 @@
       }
     });
 
-    unsubMembers = db.collection("users")
-      .where("teamId","==",teamId)
-      .onSnapshot((qs) => {
-        const list = [];
-        qs.forEach(d => list.push({ id:d.id, ...(d.data()||{}) }));
-        renderMembers(list);
-      }, (err) => {
-        console.warn(err);
-        if (membersEl) membersEl.innerHTML = `<div class="form__hint">Не вдалося завантажити склад команди.</div>`;
-      });
+    unsubMembers = db.collection("users").where("teamId","==",teamId).onSnapshot((qs) => {
+      const list = [];
+      qs.forEach(d => list.push({ id:d.id, ...(d.data()||{}) }));
+      renderMembers(list);
+    }, (err) => {
+      console.warn(err);
+      if (membersEl) membersEl.innerHTML = `<div class="form__hint">Не вдалося завантажити склад команди.</div>`;
+    });
   }
 
   function subscribeUser(auth, db, uid){
     unsubUser = db.collection("users").doc(uid).onSnapshot((snap) => {
       if (!snap.exists){
-        setStatus("Анкета користувача не знайдена. Перейди в «Увійти» і зареєструй акаунт заново.");
+        setStatus("Анкета користувача не знайдена.");
         showContent();
         return;
       }
@@ -346,28 +335,24 @@
       if (typeof unsubTeam === "function") { unsubTeam(); unsubTeam = null; }
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
-
       subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");
       showContent();
-      setTimeout(() => {
-        if (statusEl && statusEl.textContent === "Кабінет завантажено.") statusEl.textContent = "";
-      }, 1200);
+      setTimeout(() => { if (statusEl?.textContent === "Кабінет завантажено.") statusEl.textContent = ""; }, 1200);
     }, (err) => {
       console.error(err);
-      setStatus("Помилка читання профілю. Перевір правила доступу Firestore.");
+      setStatus("Помилка читання профілю.");
       showContent();
     });
   }
 
   // =========================
-  // CLOUDINARY WIDGET SETUP
+  // CLOUDINARY WIDGET
   // =========================
   function setupCloudinaryWidget(auth, db) {
     const CLOUDINARY_CLOUD = 'dxlr12gzc';
     const CLOUDINARY_PRESET = 'avatar_upload';
-    
     const openWidgetBtn = document.getElementById("openCloudinaryWidget");
     const msgEl = document.getElementById("avatarMsg");
 
@@ -384,11 +369,7 @@
 
     openWidgetBtn.addEventListener("click", () => {
       const user = auth.currentUser;
-      
-      if (!user) {
-        setMsg("Увійдіть у акаунт", "err");
-        return;
-      }
+      if (!user) { setMsg("Увійдіть у акаунт", "err"); return; }
 
       const widget = cloudinary.createUploadWidget(
         {
@@ -404,52 +385,29 @@
           language: 'uk',
           styles: {
             palette: {
-              window: "#0f172a",
-              sourceBg: "#1e293b",
-              windowBorder: "#facc15",
-              tabIcon: "#facc15",
-              inactiveTabIcon: "#94a3b8",
-              menuIcons: "#facc15",
-              link: "#facc15",
-              action: "#facc15",
-              inProgress: "#f97316",
-              complete: "#22c55e",
-              error: "#ef4444",
-              textDark: "#020617",
-              textLight: "#e2e8f0"
+              window: "#0f172a", sourceBg: "#1e293b", windowBorder: "#facc15",
+              tabIcon: "#facc15", inactiveTabIcon: "#94a3b8", menuIcons: "#facc15",
+              link: "#facc15", action: "#facc15", inProgress: "#f97316",
+              complete: "#22c55e", error: "#ef4444", textDark: "#020617", textLight: "#e2e8f0"
             }
           }
         },
         async (error, result) => {
-          if (error) {
-            console.error(error);
-            setMsg("Помилка завантаження", "err");
-            return;
-          }
+          if (error) { console.error(error); setMsg("Помилка завантаження", "err"); return; }
+          if (result.event !== "success") return;
 
-          if (result.event === "success") {
-            const url = result.info.secure_url;
-
-            try {
-              setMsg("Зберігаю…");
-
-              await db.collection("users")
-                .doc(user.uid)
-                .set({ avatarUrl: url }, { merge: true });
-
-              setAvatarUrl(url);
-              setMsg("Аватар оновлено!", "ok");
-
-              setTimeout(() => setMsg("", ""), 3000);
-
-            } catch (err) {
-              console.error(err);
-              setMsg("Помилка збереження", "err");
-            }
+          try {
+            setMsg("Зберігаю…");
+            await db.collection("users").doc(user.uid).set({ avatarUrl: result.info.secure_url }, { merge: true });
+            setAvatarUrl(result.info.secure_url);
+            setMsg("Аватар оновлено!", "ok");
+            setTimeout(() => setMsg("", ""), 3000);
+          } catch (err) {
+            console.error(err);
+            setMsg("Помилка збереження", "err");
           }
         }
       );
-
       widget.open();
     });
   }
@@ -461,36 +419,33 @@
     try {
       await waitFirebase();
       const auth = window.scAuth;
-      const db   = window.scDb;
+      const db = window.scDb;
 
       auth.onAuthStateChanged((user) => {
         cleanup();
-
         if (!user){
-          setStatus("Ви не увійшли. Переходимо на сторінку входу…");
+          setStatus("Ви не увійшли. Переходимо…");
           hideContent();
           setTimeout(() => window.location.href = "auth.html", 400);
           return;
         }
-
         if (user.uid === ADMIN_UID){
-          setStatus("Адмін-акаунт → перехід в адмінку…");
+          setStatus("Адмін-акаунт → перехід…");
           hideContent();
           setTimeout(() => window.location.href = "admin.html", 200);
           return;
         }
-
-        setStatus("Перевірка доступу до кабінету…");
+        setStatus("Перевірка доступу…");
         showContent();
         subscribeUser(auth, db, user.uid);
       });
 
-      // Налаштовуємо Cloudinary Widget
       setupCloudinaryWidget(auth, db);
+      enableAvatarPopup();
 
     } catch (err) {
       console.error(err);
-      setStatus("Помилка ініціалізації кабінету: " + (err?.message || err));
+      setStatus("Помилка: " + (err?.message || err));
       showContent();
     }
   })();

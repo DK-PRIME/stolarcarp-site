@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Міграція teamId · STOLAR CARP</title>
+  
+  <style>
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      background: linear-gradient(90deg, #facc15 0%, #f97316 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    button {
+      background: linear-gradient(135deg, #facc15, #f97316);
+      color: #111827;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button:hover {
+      filter: brightness(1.1);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #log {
+      margin-top: 20px;
+      padding: 15px;
+      background: #0f172a;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+    .success { color: #22c55e; }
+    .warning { color: #f97316; }
+    .error { color: #ef4444; }
+    .info { color: #94a3b8; }
+    .stats {
+      margin-top: 20px;
+      padding: 15px;
+      background: #1f2937;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🔧 Міграція teamId для користувачів</h1>
+  <p>Цей скрипт оновить поле <code>teamId</code> для всіх капітанів команд.</p>
+  
+  <button id="startBtn" onclick="startMigration()">Запустити міграцію</button>
+  
+  <div id="log"></div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  
+  <!-- Твоя ініціалізація -->
+  <script src="assets/js/firebase-init.js"></script>
+
+  <script>
+    async function startMigration() {
+      const btn = document.getElementById('startBtn');
+      const log = document.getElementById('log');
+      
+      btn.disabled = true;
+      log.innerHTML = '<p class="info">Починаємо міграцію...</p>';
+      
+      try {
+        const db = window.scDb;
+        
+        if (!db) {
+          throw new Error('Firebase не ініціалізовано. Перевір firebase-init.js');
+        }
+        
+        // 1. Отримуємо всі команди
+        log.innerHTML += '<p class="info">Завантажуємо список команд...</p>';
+        
+        const teamsSnap = await db.collection("teams").get();
+        const teamsMap = new Map(); // ownerUid -> teamId
+        
+        teamsSnap.forEach(doc => {
+          const data = doc.data();
+          if (data.ownerUid) {
+            teamsMap.set(data.ownerUid, {
+              teamId: doc.id,
+              teamName: data.name || 'Без назви',
+              joinCode: data.joinCode
+            });
+          }
+        });
+        
+        log.innerHTML += `<p class="success">✓ Знайдено команд: ${teamsMap.size}</p>`;
+        
+        if (teamsMap.size === 0) {
+          log.innerHTML += '<p class="warning">⚠ Коман не знайдено. Перевір колекцію teams.</p>';
+          return;
+        }
+        
+        // 2. Оновлюємо користувачів
+        let updated = 0;
+        let skipped = 0;
+        let errors = 0;
+        
+        for (const [ownerUid, teamInfo] of teamsMap) {
+          try {
+            const userRef = db.collection("users").doc(ownerUid);
+            const userSnap = await userRef.get();
+            
+            if (!userSnap.exists) {
+              log.innerHTML += `<p class="warning">⚠ Користувач ${ownerUid.substring(0, 8)}... не знайдений (команда: ${teamInfo.teamName})</p>`;
+              skipped++;
+              continue;
+            }
+            
+            const userData = userSnap.data();
+            
+            // Якщо teamId вже правильний — пропускаємо
+            if (userData.teamId === teamInfo.teamId) {
+              log.innerHTML += `<p class="info">✓ ${userData.fullName || ownerUid.substring(0, 8)}... вже має правильний teamId</p>`;
+              skipped++;
+              continue;
+            }
+            
+            // Оновлюємо teamId
+            await userRef.update({
+              teamId: teamInfo.teamId,
+              role: 'captain', // Додатково впевнимось що роль правильна
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            log.innerHTML += `<p class="success">✓ Оновлено: ${userData.fullName || ownerUid.substring(0, 8)}... → ${teamInfo.teamId.substring(0, 8)}... (${teamInfo.teamName})</p>`;
+            updated++;
+            
+          } catch (err) {
+            log.innerHTML += `<p class="error">✗ Помилка для ${ownerUid.substring(0, 8)}...: ${err.message}</p>`;
+            errors++;
+          }
+        }
+        
+        // Статистика
+        log.innerHTML += `
+          <div class="stats">
+            <h3>📊 Результат міграції</h3>
+            <p class="success">Оновлено: ${updated}</p>
+            <p class="info">Пропущено (вже ок): ${skipped}</p>
+            <p class="error">Помилок: ${errors}</p>
+          </div>
+          <p class="success"><strong>✅ Міграцію завершено!</strong></p>
+          <p class="info">Тепер popup складу команди має працювати коректно.</p>
+        `;
+        
+      } catch (err) {
+        log.innerHTML += `<p class="error">Критична помилка: ${err.message}</p>`;
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>

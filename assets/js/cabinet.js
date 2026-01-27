@@ -101,36 +101,47 @@
   }
 
   // =========================
-  // AVATAR POPUP
+  // POPUP SYSTEM (універсальний)
   // =========================
-  function enableAvatarPopup() {
+  function openImagePopup(imageUrl) {
     const popup = document.getElementById("avatarPopup");
     const popupImg = document.getElementById("avatarPopupImg");
+    if (!popup || !popupImg) return;
+    
+    popupImg.src = imageUrl;
+    popup.style.display = "flex";
+    document.body.style.overflow = "hidden";
+  }
 
-    if (!avatarWrapper || !popup || !popupImg) return;
+  function closeImagePopup() {
+    const popup = document.getElementById("avatarPopup");
+    if (!popup) return;
+    popup.style.display = "none";
+    document.body.style.overflow = "";
+  }
 
-    avatarWrapper.addEventListener("click", () => {
-      if (!avatarImgEl.src || avatarImgEl.style.display === "none") return;
-      popupImg.src = avatarImgEl.src;
-      popup.style.display = "flex";
-      document.body.style.overflow = "hidden";
-    });
+  function enableAvatarPopup() {
+    const popup = document.getElementById("avatarPopup");
+    if (!popup) return;
 
-    popup.addEventListener("click", () => {
-      popup.style.display = "none";
-      document.body.style.overflow = "";
-    });
+    // Клік на профіль користувача
+    if (avatarWrapper && avatarImgEl) {
+      avatarWrapper.addEventListener("click", () => {
+        if (avatarImgEl.style.display !== "none" && avatarImgEl.src) {
+          openImagePopup(avatarImgEl.src);
+        }
+      });
+    }
 
+    // Закриття попапу
+    popup.addEventListener("click", closeImagePopup);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && popup.style.display === "flex") {
-        popup.style.display = "none";
-        document.body.style.overflow = "";
-      }
+      if (e.key === "Escape") closeImagePopup();
     });
   }
 
   // =========================
-  // RENDER MEMBERS (з аватарками)
+  // RENDER MEMBERS (з аватарками + попап)
   // =========================
   function renderMembers(list){
     if (!membersEl) return;
@@ -145,14 +156,18 @@
       const name = m.fullName || m.email || "Учасник";
       const role = roleText(m.role);
       const avatarUrl = m.avatarUrl || '';
+      const hasAvatar = !!avatarUrl;
       
       const row = document.createElement("div");
       row.className = "card";
       row.style.cssText = "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
       
-      const avatarHtml = avatarUrl 
-        ? `<img src="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #facc15;cursor:pointer;" onclick="window.open('${escapeHtml(avatarUrl)}','_blank')">`
-        : `<div style="width:50px;height:50px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`;
+      // Аватар з кліком (якщо є)
+      const avatarHtml = hasAvatar 
+        ? `<div class="member-avatar-wrap" data-avatar="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;overflow:hidden;border:2px solid #facc15;cursor:pointer;transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 0 10px rgba(250,204,21,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+             <img src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover;">
+           </div>`
+        : `<div style="width:50px;height:50px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:default;">👤</div>`;
       
       row.innerHTML = `
         ${avatarHtml}
@@ -161,6 +176,16 @@
           <div class="form__hint">${escapeHtml(role)}</div>
         </div>
       `;
+      
+      // Додаємо обробник кліку на аватар учасника
+      if (hasAvatar) {
+        const avatarWrap = row.querySelector('.member-avatar-wrap');
+        if (avatarWrap) {
+          avatarWrap.addEventListener('click', () => {
+            openImagePopup(avatarUrl);
+          });
+        }
+      }
       
       membersEl.appendChild(row);
     });

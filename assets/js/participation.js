@@ -70,7 +70,7 @@
   }
 
   // === POPUP СКЛАДУ КОМАНДИ ===
-  async function openTeamPopup(teamName, teamId) {
+  async function openTeamPopup(teamName, teamDocId) {
     const popup = $("teamPopup");
     const title = $("teamPopupTitle");
     const body = $("teamPopupBody");
@@ -83,28 +83,62 @@
 
     try {
       const db = window.scDb;
-      const snap = await db.collection("users")
-        .where("teamId", "==", teamId)
-        .get();
 
-      const members = [];
-      snap.forEach(doc => members.push({ id: doc.id, ...(doc.data() || {}) }));
+      // 1. Отримуємо дані команди
+      const teamDoc = await db.collection("teams").doc(teamDocId).get();
+      if (!teamDoc.exists) {
+        body.innerHTML = '<div class="team-loading">Команду не знайдено</div>';
+        return;
+      }
+
+      const teamData = teamDoc.data();
+      const ownerUid = teamData.ownerUid;
+
+      // 2. Знаходимо користувачів з цієї команди
+      let members = [];
+      
+      try {
+        const usersSnap = await db.collection("users")
+          .where("teamId", "==", teamDocId)
+          .get();
+        
+        usersSnap.forEach(doc => {
+          members.push({ id: doc.id, ...(doc.data() || {}) });
+        });
+      } catch (err) {
+        console.log("Пошук по teamId не вдався:", err);
+      }
+
+      // Якщо не знайшли — додаємо капітана
+      if (members.length === 0 && ownerUid) {
+        const captainSnap = await db.collection("users").doc(ownerUid).get();
+        if (captainSnap.exists) {
+          members.push({ 
+            id: captainSnap.id, 
+            ...(captainSnap.data() || {}),
+            role: "captain" 
+          });
+        }
+      }
 
       if (members.length === 0) {
         body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';
         return;
       }
 
-      // Сортуємо: капітан перший, потім за іменем
+      // Сортуємо: капітан перший
       members.sort((a, b) => {
-        if (a.role === "captain" && b.role !== "captain") return -1;
-        if (b.role === "captain" && a.role !== "captain") return 1;
+        const aIsCaptain = a.role === "captain" || a.id === ownerUid;
+        const bIsCaptain = b.role === "captain" || b.id === ownerUid;
+        if (aIsCaptain && !bIsCaptain) return -1;
+        if (bIsCaptain && !aIsCaptain) return 1;
         return (a.fullName || "").localeCompare(b.fullName || "");
       });
 
       body.innerHTML = members.map(m => {
         const name = m.fullName || m.email || "Учасник";
-        const role = m.role === "captain" ? "Капітан" : "Учасник";
+        const isCaptain = m.role === "captain" || m.id === ownerUid;
+        const role = isCaptain ? "Капітан" : "Учасник";
         const avatarUrl = m.avatarUrl || '';
 
         const avatarHtml = avatarUrl
@@ -211,15 +245,22 @@
 
       const params = new URLSearchParams(location.search);
       const compId  = params.get("comp");
-      const stageId = params.get("stage") || "main";
+      const stageParam = params.get("stage") || "main";
 
       if(!compId){
         if($("msg")) $("msg").textContent = "❌ Не передано competitionId";
         return;
       }
 
-      const meta = await getCompetitionMeta(compId, stageId);
-      const maxTeams = await getMaxTeams(compId, stageId);
+      // ✅ НОРМАЛІЗАЦІЯ stageId (приймає "1" і "stage-1")
+      const stageIdVariants = [
+        stageParam,
+        "stage-" + stageParam,
+        stageParam.replace(/^stage-/, "")
+      ].filter(Boolean);
+
+      const meta = await getCompetitionMeta(compId, stageParam);
+      const maxTeams = await getMaxTeams(compId, stageParam);
 
       if ($("pageTitle")) {
         $("pageTitle").textContent = meta.title;
@@ -227,8 +268,8 @@
 
       if ($("pageSub")) {
         let txt = meta.stageTitle;
-        if (!txt && stageId && stageId !== "main") {
-          const num = stageId.match(/\d+/);
+        if (!txt && stageParam && stageParam !== "main") {
+          const num = stageParam.match(/\d+/);
           if (num) txt = `Етап ${num[0]}`;
         }
         $("pageSub").textContent = txt || "";
@@ -238,51 +279,41 @@
 
       const rowsMap = new Map();
 
+      // Отримуємо всі заявки цього змагання
       const snap1 = await db.collection("public_participants")
         .where("competitionId","==",compId)
-        .where("stageId","==",stageId)
         .where("entryType","==","team")
         .get();
 
       snap1.forEach(doc=>{
         const r = doc.data() || {};
-        // ✅ ПРАВИЛЬНО: тільки r.teamId, НЕ doc.id
+        
+        // ✅ ФІЛЬТР: приймаємо "1" і "stage-1"
+        const docStageId = r.stageId || "main";
+        const stageMatches = stageIdVariants.includes(docStageId) || 
+                            (stageParam === "main" && (!r.stageId || r.stageId === "main"));
+        
+        if (!stageMatches) return;
+        
+        // ✅ ФІЛЬТР: показуємо confirmed і pending_payment
+        const status = norm(r.status || "pending_payment");
+        if (!["confirmed", "pending_payment", "paid"].includes(status)) return;
+
         rowsMap.set(doc.id, {
           teamId: r.teamId,
           teamName: norm(r.teamName || "—"),
-          status: norm(r.status || "pending_payment"),
+          status: status,
           createdAt: r.createdAt || null,
           confirmedAt: r.confirmedAt || null,
           orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
         });
       });
 
-      if(String(stageId) === "main"){
-        const snap2 = await db.collection("public_participants")
-          .where("competitionId","==",compId)
-          .where("stageId","==",null)
-          .where("entryType","==","team")
-          .get();
-
-        snap2.forEach(doc=>{
-          if(rowsMap.has(doc.id)) return;
-          const r = doc.data() || {};
-          // ✅ ПРАВИЛЬНО: тільки r.teamId, НЕ doc.id
-          rowsMap.set(doc.id, {
-            teamId: r.teamId,
-            teamName: norm(r.teamName || "—"),
-            status: norm(r.status || "pending_payment"),
-            createdAt: r.createdAt || null,
-            confirmedAt: r.confirmedAt || null,
-            orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
-          });
-        });
-      }
-
       const rows = Array.from(rowsMap.values());
 
+      // Сортування
       rows.sort((a, b) => {
-        const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
+        const order = { confirmed: 1, paid: 1, pending_payment: 2 };
         const A = order[a.status] || 99;
         const B = order[b.status] || 99;
 

@@ -67,11 +67,13 @@
   
   <div id="log"></div>
 
-  <!-- Firebase -->
+  <!-- ✅ ВСІ 4 Firebase SDK (обов'язково в цьому порядку) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  
-  <!-- Твоя ініціалізація -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <!-- ✅ Ініціалізація ЗАВЖДИ останньою -->
   <script src="assets/js/firebase-init.js"></script>
 
   <script>
@@ -83,17 +85,19 @@
       log.innerHTML = '<p class="info">Починаємо міграцію...</p>';
       
       try {
+        // Чекаємо ініціалізації
+        await window.scReady;
         const db = window.scDb;
         
         if (!db) {
-          throw new Error('Firebase не ініціалізовано. Перевір firebase-init.js');
+          throw new Error('Firebase Firestore не ініціалізовано');
         }
         
         // 1. Отримуємо всі команди
         log.innerHTML += '<p class="info">Завантажуємо список команд...</p>';
         
         const teamsSnap = await db.collection("teams").get();
-        const teamsMap = new Map(); // ownerUid -> teamId
+        const teamsMap = new Map(); // ownerUid -> teamInfo
         
         teamsSnap.forEach(doc => {
           const data = doc.data();
@@ -109,7 +113,7 @@
         log.innerHTML += `<p class="success">✓ Знайдено команд: ${teamsMap.size}</p>`;
         
         if (teamsMap.size === 0) {
-          log.innerHTML += '<p class="warning">⚠ Коман не знайдено. Перевір колекцію teams.</p>';
+          log.innerHTML += '<p class="warning">⚠ Команд не знайдено. Перевір колекцію teams.</p>';
           return;
         }
         
@@ -141,7 +145,7 @@
             // Оновлюємо teamId
             await userRef.update({
               teamId: teamInfo.teamId,
-              role: 'captain', // Додатково впевнимось що роль правильна
+              role: 'captain',
               updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             

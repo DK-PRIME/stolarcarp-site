@@ -165,7 +165,7 @@
     `;
   }
 
-  function render(rows, maxTeams, rowsWithIds){
+  function render(rows, maxTeams){
     const list = $("teamsList");
     const msg  = $("msg");
     if(!list) return;
@@ -187,7 +187,6 @@
       </div>
     `;
 
-    // Рендеримо з teamId для кліку
     list.innerHTML += main.map((r, i) => rowHtml(i + 1, r, r.teamId)).join("");
 
     if(reserve.length){
@@ -247,8 +246,9 @@
 
       snap1.forEach(doc=>{
         const r = doc.data() || {};
+        // ✅ ПРАВИЛЬНО: тільки r.teamId, НЕ doc.id
         rowsMap.set(doc.id, {
-          teamId: r.teamId || doc.id,
+          teamId: r.teamId,
           teamName: norm(r.teamName || "—"),
           status: norm(r.status || "pending_payment"),
           createdAt: r.createdAt || null,
@@ -267,8 +267,9 @@
         snap2.forEach(doc=>{
           if(rowsMap.has(doc.id)) return;
           const r = doc.data() || {};
+          // ✅ ПРАВИЛЬНО: тільки r.teamId, НЕ doc.id
           rowsMap.set(doc.id, {
-            teamId: r.teamId || doc.id,
+            teamId: r.teamId,
             teamName: norm(r.teamName || "—"),
             status: norm(r.status || "pending_payment"),
             createdAt: r.createdAt || null,

@@ -1,26 +1,28 @@
 // assets/js/cabinet.js
 // STOLAR CARP — Кабінет учасника (Firebase compat 10.12.2)
-// Працює з firebase-init.js (window.scAuth, window.scDb, window.scStorage)
+// Працює з firebase-init.js (window.scAuth, window.scDb)
 
 (function () {
   "use strict";
-// =========================
-// BURGER MENU (CABINET)
-// =========================
-const burger = document.getElementById("burger");
-const nav = document.querySelector(".nav");
 
-if (burger && nav) {
-  burger.addEventListener("click", () => {
-    nav.classList.toggle("open");
-  });
+  // =========================
+  // BURGER MENU (CABINET)
+  // =========================
+  const burger = document.getElementById("burger");
+  const nav = document.querySelector(".nav");
 
-  nav.addEventListener("click", (e) => {
-    if (e.target.classList.contains("nav__link")) {
-      nav.classList.remove("open");
-    }
-  });
-}
+  if (burger && nav) {
+    burger.addEventListener("click", () => {
+      nav.classList.toggle("open");
+    });
+
+    nav.addEventListener("click", (e) => {
+      if (e.target.classList.contains("nav__link")) {
+        nav.classList.remove("open");
+      }
+    });
+  }
+
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   async function waitFirebase(maxMs = 12000) {
@@ -45,8 +47,6 @@ if (burger && nav) {
 
   const avatarImgEl    = document.getElementById("cabinetAvatarImg");
   const avatarPhEl     = document.getElementById("cabinetAvatarPlaceholder");
-  const avatarInputEl  = document.getElementById("avatarFile");
-  const avatarBtnEl    = document.getElementById("avatarUploadBtn");
   const avatarMsgEl    = document.getElementById("avatarMsg");
 
   const membersEl      = document.getElementById("membersContainer");
@@ -100,6 +100,7 @@ if (burger && nav) {
     unsubUser = unsubTeam = unsubMembers = unsubRegs = null;
   }
 
+  // ===== РЕНДЕР УЧАСНИКІВ З АВАТАРКАМИ =====
   function renderMembers(list){
     if (!membersEl) return;
     membersEl.innerHTML = "";
@@ -112,19 +113,29 @@ if (burger && nav) {
     list.forEach((m) => {
       const name = m.fullName || m.email || "Учасник";
       const role = roleText(m.role);
+      const avatarUrl = m.avatarUrl || '';
+      
       const row = document.createElement("div");
       row.className = "card";
-      row.style.padding = "12px";
-      row.style.marginTop = "10px";
+      row.style.cssText = "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
+      
+      const avatarHtml = avatarUrl 
+        ? `<img src="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;object-fit:cover;border:2px solid #facc15;">`
+        : `<div style="width:50px;height:50px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:24px;">👤</div>`;
+      
       row.innerHTML = `
-        <div style="font-weight:800">${escapeHtml(name)}</div>
-        <div class="form__hint">${escapeHtml(role)}</div>
+        ${avatarHtml}
+        <div>
+          <div style="font-weight:800">${escapeHtml(name)}</div>
+          <div class="form__hint">${escapeHtml(role)}</div>
+        </div>
       `;
+      
       membersEl.appendChild(row);
     });
   }
 
-  // ===== МОЯ УЧАСТЬ (ЦЕНТР + ГРАДІЄНТ, ТІЛЬКИ НАЗВА) =====
+  // ===== МОЯ УЧАСТЬ =====
   function norm(v){ return String(v ?? "").trim(); }
 
   function toMillis(ts){
@@ -195,7 +206,6 @@ if (burger && nav) {
       row.style.marginTop = "10px";
       row.style.textDecoration = "none";
 
-      // ✅ ТІЛЬКИ НАЗВА: по центру + градієнт
       row.innerHTML = `
         <div style="
           font-weight:950;
@@ -204,7 +214,6 @@ if (burger && nav) {
           white-space:normal;
           overflow:visible;
           letter-spacing:.2px;
-
           background:linear-gradient(90deg,#facc15 0%,#7f1d1d 100%);
           -webkit-background-clip:text;
           background-clip:text;
@@ -252,7 +261,6 @@ if (burger && nav) {
         return;
       }
 
-      // унікальні по competitionId+stageId
       const map = Object.create(null);
       rows.forEach(r => {
         const c = norm(r.competitionId);
@@ -264,7 +272,6 @@ if (burger && nav) {
 
       const uniq = Object.values(map);
 
-      // підтягнути назви
       for (const it of uniq){
         const compId = norm(it.competitionId);
         const stageId = norm(it.stageId) || "main";
@@ -340,7 +347,6 @@ if (burger && nav) {
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
       subscribeTeam(db, u.teamId || null);
 
-      // ✅ МОЯ УЧАСТЬ (центр + градієнт, тільки назва)
       subscribeMyParticipation(db, u.teamId || null, uid);
 
       setStatus("Кабінет завантажено.");
@@ -355,12 +361,107 @@ if (burger && nav) {
     });
   }
 
+  // =========================
+  // CLOUDINARY WIDGET SETUP
+  // =========================
+  function setupCloudinaryWidget(auth, db) {
+    const CLOUDINARY_CLOUD = 'dxlr12gzc';
+    const CLOUDINARY_PRESET = 'avatar_upload';
+    
+    const openWidgetBtn = document.getElementById("openCloudinaryWidget");
+    const msgEl = document.getElementById("avatarMsg");
+
+    if (!openWidgetBtn || !window.cloudinary) {
+      console.warn("Cloudinary Widget не доступний");
+      return;
+    }
+
+    function setMsg(txt, type){
+      if (!msgEl) return;
+      msgEl.textContent = txt;
+      msgEl.style.color = type === "ok" ? "#22c55e" : type === "err" ? "#ef4444" : "";
+    }
+
+    openWidgetBtn.addEventListener("click", () => {
+      const user = auth.currentUser;
+      
+      if (!user) {
+        setMsg("Увійдіть у акаунт", "err");
+        return;
+      }
+
+      const widget = cloudinary.createUploadWidget(
+        {
+          cloudName: CLOUDINARY_CLOUD,
+          uploadPreset: CLOUDINARY_PRESET,
+          folder: `avatars/${user.uid}`,
+          sources: ['local', 'camera'],
+          multiple: false,
+          maxFileSize: 5000000,
+          cropping: true,
+          croppingAspectRatio: 1,
+          showSkipCropButton: false,
+          language: 'uk',
+          styles: {
+            palette: {
+              window: "#0f172a",
+              sourceBg: "#1e293b",
+              windowBorder: "#facc15",
+              tabIcon: "#facc15",
+              inactiveTabIcon: "#94a3b8",
+              menuIcons: "#facc15",
+              link: "#facc15",
+              action: "#facc15",
+              inProgress: "#f97316",
+              complete: "#22c55e",
+              error: "#ef4444",
+              textDark: "#020617",
+              textLight: "#e2e8f0"
+            }
+          }
+        },
+        async (error, result) => {
+          if (error) {
+            console.error(error);
+            setMsg("Помилка завантаження", "err");
+            return;
+          }
+
+          if (result.event === "success") {
+            const url = result.info.secure_url;
+
+            try {
+              setMsg("Зберігаю…");
+
+              await db.collection("users")
+                .doc(user.uid)
+                .set({ avatarUrl: url }, { merge: true });
+
+              setAvatarUrl(url);
+              setMsg("Аватар оновлено!", "ok");
+
+              setTimeout(() => setMsg("", ""), 3000);
+
+            } catch (err) {
+              console.error(err);
+              setMsg("Помилка збереження", "err");
+            }
+          }
+        }
+      );
+
+      widget.open();
+    });
+  }
+
+  // =========================
+  // INIT
+  // =========================
   (async () => {
     try {
       await waitFirebase();
-      const auth    = window.scAuth;
-      const db      = window.scDb;
-      const storage = window.scStorage;
+      const auth = window.scAuth;
+      const db   = window.scDb;
 
       auth.onAuthStateChanged((user) => {
         cleanup();
@@ -384,39 +485,8 @@ if (burger && nav) {
         subscribeUser(auth, db, user.uid);
       });
 
-      // ===== avatar upload =====
-      if (avatarBtnEl && avatarInputEl && storage){
-        avatarBtnEl.addEventListener("click", async (e) => {
-          e.preventDefault();
-
-          const user = auth.currentUser;
-          if (!user) return alert("Спочатку увійдіть у акаунт.");
-
-          const file = avatarInputEl.files && avatarInputEl.files[0];
-          if (!file) return alert("Оберіть файл.");
-          if (!file.type.startsWith("image/")) return alert("Потрібен файл-зображення.");
-          if (file.size > 5 * 1024 * 1024) return alert("Максимальний розмір 5 МБ.");
-
-          try {
-            if (avatarMsgEl) avatarMsgEl.textContent = "Завантаження…";
-
-            const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
-            const path = `avatars/${user.uid}/avatar.${ext}`;
-
-            const ref = storage.ref().child(path);
-            const snap = await ref.put(file);
-            const url = await snap.ref.getDownloadURL();
-
-            await db.collection("users").doc(user.uid).set({ avatarUrl:url }, { merge:true });
-
-            if (avatarMsgEl) avatarMsgEl.textContent = "Аватар оновлено!";
-            setTimeout(() => { if (avatarMsgEl) avatarMsgEl.textContent = ""; }, 2000);
-          } catch (err){
-            console.error(err);
-            if (avatarMsgEl) avatarMsgEl.textContent = "Помилка завантаження аватара.";
-          }
-        });
-      }
+      // Налаштовуємо Cloudinary Widget
+      setupCloudinaryWidget(auth, db);
 
     } catch (err) {
       console.error(err);

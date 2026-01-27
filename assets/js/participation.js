@@ -69,10 +69,92 @@
     return maxTeams;
   }
 
-  function rowHtml(idx, r){
+  // === POPUP СКЛАДУ КОМАНДИ ===
+  async function openTeamPopup(teamName, teamId) {
+    const popup = $("teamPopup");
+    const title = $("teamPopupTitle");
+    const body = $("teamPopupBody");
+
+    if (!popup || !title || !body) return;
+
+    title.textContent = teamName || "Команда";
+    body.innerHTML = '<div class="team-loading">Завантаження складу…</div>';
+    popup.style.display = "flex";
+
+    try {
+      const db = window.scDb;
+      const snap = await db.collection("users")
+        .where("teamId", "==", teamId)
+        .get();
+
+      const members = [];
+      snap.forEach(doc => members.push({ id: doc.id, ...(doc.data() || {}) }));
+
+      if (members.length === 0) {
+        body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';
+        return;
+      }
+
+      // Сортуємо: капітан перший, потім за іменем
+      members.sort((a, b) => {
+        if (a.role === "captain" && b.role !== "captain") return -1;
+        if (b.role === "captain" && a.role !== "captain") return 1;
+        return (a.fullName || "").localeCompare(b.fullName || "");
+      });
+
+      body.innerHTML = members.map(m => {
+        const name = m.fullName || m.email || "Учасник";
+        const role = m.role === "captain" ? "Капітан" : "Учасник";
+        const avatarUrl = m.avatarUrl || '';
+
+        const avatarHtml = avatarUrl
+          ? `<div class="member-avatar"><img src="${esc(avatarUrl)}" alt=""></div>`
+          : `<div class="member-avatar"><div class="member-avatar-placeholder">👤</div></div>`;
+
+        return `
+          <div class="team-member">
+            ${avatarHtml}
+            <div class="member-info">
+              <div class="member-name">${esc(name)}</div>
+              <div class="member-role">${esc(role)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error(err);
+      body.innerHTML = '<div class="team-loading">Помилка завантаження</div>';
+    }
+  }
+
+  function closeTeamPopup() {
+    const popup = $("teamPopup");
+    if (popup) popup.style.display = "none";
+  }
+
+  // Закриття по кліку поза контентом
+  document.addEventListener('click', (e) => {
+    const popup = $("teamPopup");
+    const content = $("teamPopupContent");
+    if (popup && content && popup.style.display === "flex" && !content.contains(e.target)) {
+      closeTeamPopup();
+    }
+  });
+
+  // Закриття по кнопці
+  const closeBtn = $("teamPopupClose");
+  if (closeBtn) closeBtn.addEventListener("click", closeTeamPopup);
+
+  // Закриття по Escape
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeTeamPopup();
+  });
+
+  function rowHtml(idx, r, teamId){
     const paid = isPaidStatus(r.status);
     return `
-      <div class="row">
+      <div class="row" data-team-id="${esc(teamId)}" data-team-name="${esc(r.teamName || 'Команда')}">
         <span class="lamp ${paid ? "lamp--green" : "lamp--red"}"></span>
         <span class="idx">${idx}.</span>
         <span class="name">${esc(r.teamName || "—")}</span>
@@ -83,7 +165,7 @@
     `;
   }
 
-  function render(rows, maxTeams){
+  function render(rows, maxTeams, rowsWithIds){
     const list = $("teamsList");
     const msg  = $("msg");
     if(!list) return;
@@ -100,17 +182,27 @@
     }
 
     list.innerHTML += `
-  <div class="participantsSub" style="margin:0 0 10px;">
-    Учасники: ${main.length} / ${maxTeams}
-  </div>
-`;
+      <div class="participantsSub" style="margin:0 0 10px; color:#94a3b8; font-size:.9rem;">
+        Учасники: ${main.length} / ${maxTeams} (натисніть на команду для перегляду складу)
+      </div>
+    `;
 
-    list.innerHTML += main.map((r,i)=>rowHtml(i+1,r)).join("");
+    // Рендеримо з teamId для кліку
+    list.innerHTML += main.map((r, i) => rowHtml(i + 1, r, r.teamId)).join("");
 
     if(reserve.length){
       list.innerHTML += `<div class="dividerLabel">Резерв: ${reserve.length}</div>`;
-      list.innerHTML += reserve.map((r,i)=>rowHtml(maxTeams + i + 1, r)).join("");
+      list.innerHTML += reserve.map((r, i) => rowHtml(maxTeams + i + 1, r, r.teamId)).join("");
     }
+
+    // Додаємо обробники кліку
+    list.querySelectorAll('.row').forEach(row => {
+      row.addEventListener('click', () => {
+        const teamId = row.dataset.teamId;
+        const teamName = row.dataset.teamName;
+        if (teamId) openTeamPopup(teamName, teamId);
+      });
+    });
   }
 
   (async function init(){
@@ -131,93 +223,84 @@
       const maxTeams = await getMaxTeams(compId, stageId);
 
       if ($("pageTitle")) {
-  $("pageTitle").textContent = meta.title; // Назва змагання: "Турнір"
-}
+        $("pageTitle").textContent = meta.title;
+      }
 
-if ($("pageSub")) {
-  let txt = meta.stageTitle;
-
-  // Якщо назва етапу не знайдена в competitions – формуємо самі
-  if (!txt && stageId && stageId !== "main") {
-    const num = stageId.match(/\d+/);
-    if (num) txt = `Етап ${num[0]}`;
-  }
-
-  $("pageSub").textContent = txt || "";
-}
+      if ($("pageSub")) {
+        let txt = meta.stageTitle;
+        if (!txt && stageId && stageId !== "main") {
+          const num = stageId.match(/\d+/);
+          if (num) txt = `Етап ${num[0]}`;
+        }
+        $("pageSub").textContent = txt || "";
+      }
 
       if($("msg")) $("msg").textContent = "Завантаження списку…";
 
       const rowsMap = new Map();
 
-const snap1 = await db.collection("public_participants")
-  .where("competitionId","==",compId)
-  .where("stageId","==",stageId)
-  .where("entryType","==","team")
-  .get();
+      const snap1 = await db.collection("public_participants")
+        .where("competitionId","==",compId)
+        .where("stageId","==",stageId)
+        .where("entryType","==","team")
+        .get();
 
-snap1.forEach(doc=>{
-  const r = doc.data() || {};
-  rowsMap.set(doc.id, {
-    teamName: norm(r.teamName || "—"),
-    status: norm(r.status || "pending_payment"),
-    createdAt: r.createdAt || null,
-    confirmedAt: r.confirmedAt || null,
-    orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
-  });
-});
+      snap1.forEach(doc=>{
+        const r = doc.data() || {};
+        rowsMap.set(doc.id, {
+          teamId: r.teamId || doc.id,
+          teamName: norm(r.teamName || "—"),
+          status: norm(r.status || "pending_payment"),
+          createdAt: r.createdAt || null,
+          confirmedAt: r.confirmedAt || null,
+          orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
+        });
+      });
 
-if(String(stageId) === "main"){
-  const snap2 = await db.collection("public_participants")
-    .where("competitionId","==",compId)
-    .where("stageId","==",null)
-    .where("entryType","==","team")
-    .get();
+      if(String(stageId) === "main"){
+        const snap2 = await db.collection("public_participants")
+          .where("competitionId","==",compId)
+          .where("stageId","==",null)
+          .where("entryType","==","team")
+          .get();
 
-  snap2.forEach(doc=>{
-    if(rowsMap.has(doc.id)) return;
-    const r = doc.data() || {};
-    rowsMap.set(doc.id, {
-      teamName: norm(r.teamName || "—"),
-      status: norm(r.status || "pending_payment"),
-      createdAt: r.createdAt || null,
-      confirmedAt: r.confirmedAt || null,
-      orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
-    });
-  });
-}
+        snap2.forEach(doc=>{
+          if(rowsMap.has(doc.id)) return;
+          const r = doc.data() || {};
+          rowsMap.set(doc.id, {
+            teamId: r.teamId || doc.id,
+            teamName: norm(r.teamName || "—"),
+            status: norm(r.status || "pending_payment"),
+            createdAt: r.createdAt || null,
+            confirmedAt: r.confirmedAt || null,
+            orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
+          });
+        });
+      }
 
-const rows = Array.from(rowsMap.values());
+      const rows = Array.from(rowsMap.values());
 
-// 🔥 Нове правильне сортування:
-rows.sort((a, b) => {
-  const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
-  const A = order[a.status] || 99;
-  const B = order[b.status] || 99;
+      rows.sort((a, b) => {
+        const order = { confirmed: 1, pending_payment: 2, cancelled: 2 };
+        const A = order[a.status] || 99;
+        const B = order[b.status] || 99;
 
-  if (A !== B) return A - B;
+        if (A !== B) return A - B;
 
-  // confirmed — по orderPaid (порядок підтвердження)
-  if (A === 1) {
-    const oa = Number.isFinite(a.orderPaid) ? a.orderPaid : 9999;
-    const ob = Number.isFinite(b.orderPaid) ? b.orderPaid : 9999;
-    return oa - ob;
-  }
+        if (A === 1) {
+          const oa = Number.isFinite(a.orderPaid) ? a.orderPaid : 9999;
+          const ob = Number.isFinite(b.orderPaid) ? b.orderPaid : 9999;
+          return oa - ob;
+        }
 
-  // pending/cancelled — по createdAt
-  const tA =
-    a.createdAt?.toMillis?.() ||
-    (a.createdAt?._seconds ? a.createdAt._seconds * 1000 : 0);
+        const tA = a.createdAt?.toMillis?.() || (a.createdAt?._seconds ? a.createdAt._seconds * 1000 : 0);
+        const tB = b.createdAt?.toMillis?.() || (b.createdAt?._seconds ? b.createdAt._seconds * 1000 : 0);
 
-  const tB =
-    b.createdAt?.toMillis?.() ||
-    (b.createdAt?._seconds ? b.createdAt._seconds * 1000 : 0);
+        return tA - tB;
+      });
 
-  return tA - tB;
-});
-
-if($("msg")) $("msg").textContent = "";
-render(rows, maxTeams);
+      if($("msg")) $("msg").textContent = "";
+      render(rows, maxTeams);
 
     }catch(e){
       console.error(e);

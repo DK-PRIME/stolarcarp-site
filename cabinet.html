@@ -27,9 +27,39 @@
     .card-subtitle{margin:0 0 10px;font-size:.86rem;color:#9ca3af;}
     .cabinet-small-muted{font-size:.8rem;color:#6b7280;margin-top:4px;}
     .team-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;}
-    .team-avatar-wrap{width:82px;height:82px;border-radius:18px;overflow:hidden;background:radial-gradient(circle at top,#facc15,#f97316,#111827);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
-    .team-avatar{width:100%;height:100%;object-fit:cover;display:none;}
-    .team-avatar-placeholder{font-weight:800;font-size:1.4rem;color:#111827;}
+    
+    /* === КРУГЛИЙ АВАТАР === */
+    .team-avatar-wrap{
+      width:82px;
+      height:82px;
+      border-radius:50%;
+      overflow:hidden;
+      background:#0f172a;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:2px solid #facc15;
+      flex-shrink:0;
+      cursor:pointer;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .team-avatar-wrap:hover{
+      transform:scale(1.05);
+      box-shadow:0 0 15px rgba(250,204,21,.4);
+    }
+    .team-avatar{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:none;
+    }
+    .team-avatar-placeholder{
+      font-weight:800;
+      font-size:1.4rem;
+      color:#facc15;
+    }
+    /* === КІНЕЦЬ === */
+    
     .team-main{flex:1;}
     .team-name{font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .team-tagline{font-size:.85rem;color:#9ca3af;margin-bottom:8px;}
@@ -57,6 +87,30 @@
     #cabinetMsg{margin-top:8px;font-size:.82rem;}
     #cabinetMsg.ok{color:#22c55e;}
     #cabinetMsg.err{color:#ef4444;}
+
+    /* === AVATAR POPUP === */
+    #avatarPopup{
+      display:none;
+      position:fixed;
+      left:0;
+      top:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.85);
+      backdrop-filter:blur(4px);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+      cursor:zoom-out;
+    }
+    #avatarPopupImg{
+      max-width:90%;
+      max-height:90%;
+      border-radius:18px;
+      box-shadow:0 0 40px rgba(0,0,0,.9);
+      object-fit:contain;
+    }
+    /* === КІНЕЦЬ POPUP === */
   </style>
 </head>
 
@@ -96,7 +150,8 @@
 <p class="card-subtitle">Ваш акаунт, команда та базові дані.</p>
 
 <div class="team-header">
-  <div class="team-avatar-wrap">
+  <!-- Клікабельний аватар з попапом -->
+  <div class="team-avatar-wrap" id="avatarWrapper" title="Натисніть для збільшення">
     <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар">
     <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
   </div>
@@ -113,7 +168,7 @@
       </div>
     </div>
 
-    <!-- === CLOUDINARY WIDGET БЛОК АВАТАРКИ === -->
+    <!-- Cloudinary Widget -->
     <div class="avatar-section">
       <div class="avatar-label">Аватар учасника</div>
       <button type="button" class="avatar-small-btn" id="openCloudinaryWidget">
@@ -121,7 +176,6 @@
       </button>
       <div id="avatarMsg" class="cabinet-small-muted"></div>
     </div>
-    <!-- === КІНЕЦЬ БЛОКУ === -->
 
     <div id="cabinetMsg"></div>
   </div>
@@ -164,6 +218,11 @@
   <div>© 2025 STOLAR CARP · Львів</div>
 </div>
 </footer>
+
+<!-- AVATAR POPUP -->
+<div id="avatarPopup">
+  <img id="avatarPopupImg" src="" alt="Аватар повний розмір">
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>

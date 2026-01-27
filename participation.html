@@ -2,13 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-
-  <!-- 🔥 КРИТИЧНО ДЛЯ ANDROID STATUS BAR -->
-  <meta name="viewport"
-        content="width=device-width,
-                 initial-scale=1,
-                 viewport-fit=cover">
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#020617">
   <meta name="msapplication-navbutton-color" content="#020617">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -77,6 +71,12 @@
       gap:10px;
       padding:10px 4px;
       border-bottom:1px solid rgba(148,163,184,.16);
+      cursor:pointer;
+      transition:background .2s;
+      border-radius:8px;
+    }
+    .row:hover{
+      background:rgba(250,204,21,.05);
     }
 
     .lamp{
@@ -128,6 +128,116 @@
       letter-spacing:.08em;
       font-size:.85rem;
     }
+
+    /* === POPUP СКЛАДУ КОМАНДИ === */
+    #teamPopup{
+      display:none;
+      position:fixed;
+      left:0;
+      top:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.9);
+      backdrop-filter:blur(6px);
+      z-index:9999;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    #teamPopupContent{
+      background:#0f172a;
+      border-radius:18px;
+      border:1px solid #1f2937;
+      max-width:500px;
+      width:100%;
+      max-height:80vh;
+      overflow-y:auto;
+      box-shadow:0 25px 50px rgba(0,0,0,.8);
+    }
+    #teamPopupHeader{
+      padding:16px;
+      border-bottom:1px solid #1f2937;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+    }
+    #teamPopupTitle{
+      font-size:1.1rem;
+      font-weight:800;
+      color:#facc15;
+    }
+    #teamPopupClose{
+      background:none;
+      border:none;
+      color:#94a3b8;
+      font-size:1.5rem;
+      cursor:pointer;
+      padding:0;
+      width:32px;
+      height:32px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:8px;
+      transition:all .2s;
+    }
+    #teamPopupClose:hover{
+      background:#1f2937;
+      color:#e5e7eb;
+    }
+    #teamPopupBody{
+      padding:16px;
+    }
+    .team-member{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px 0;
+      border-bottom:1px solid #1f2937;
+    }
+    .team-member:last-child{
+      border-bottom:none;
+    }
+    .member-avatar{
+      width:50px;
+      height:50px;
+      border-radius:50%;
+      overflow:hidden;
+      border:2px solid #facc15;
+      flex-shrink:0;
+    }
+    .member-avatar img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
+    .member-avatar-placeholder{
+      width:100%;
+      height:100%;
+      background:#1f2937;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:20px;
+    }
+    .member-info{
+      flex:1;
+    }
+    .member-name{
+      font-weight:800;
+      color:#e5e7eb;
+      margin-bottom:2px;
+    }
+    .member-role{
+      font-size:.8rem;
+      color:#94a3b8;
+    }
+    .team-loading{
+      text-align:center;
+      color:#94a3b8;
+      padding:20px;
+    }
+    /* === КІНЕЦЬ POPUP === */
   </style>
 </head>
 
@@ -146,15 +256,25 @@
     <div id="msg" class="mutedCenter"></div>
   </main>
 
+  <!-- POPUP СКЛАДУ КОМАНДИ -->
+  <div id="teamPopup">
+    <div id="teamPopupContent">
+      <div id="teamPopupHeader">
+        <div id="teamPopupTitle">Склад команди</div>
+        <button id="teamPopupClose">×</button>
+      </div>
+      <div id="teamPopupBody">
+        <div class="team-loading">Завантаження…</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase compat CDN -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <!-- ЄДИНА ініціалізація -->
   <script src="assets/js/firebase-init.js"></script>
-
-  <!-- Сторінка участі -->
   <script src="assets/js/participation.js"></script>
 </body>
 </html>

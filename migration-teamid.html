@@ -1,343 +1,828 @@
-async function fixAllTeamIds() {
-  const db = firebase.firestore();
-
-  console.log("🚀 Починаю повну міграцію teamId…");
-
-  // ========== 1. ЗБИРАЄМО ВСІ КОМАНДИ ==========
-  const teamsSnap = await db.collection("teams").get();
-  const teamsByOwner = new Map();   // ownerUid -> {teamId, name, joinCode}
-  const teamsByName = new Map();    // normalized name -> teamId
-  const teamsById = new Map();      // teamId -> team data
-  const teamsByNameStrict = new Map(); // оригінальна назва -> teamId (для перевірки)
-
-  teamsSnap.forEach(doc => {
-    const data = doc.data();
-    const teamId = doc.id;
-
-    teamsById.set(teamId, { ...data, teamId });
-
-    if (data.ownerUid) {
-      teamsByOwner.set(data.ownerUid, { teamId, name: data.name, joinCode: data.joinCode });
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <title>TeamId Migration · Enterprise</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #020617;
+      color: #e5e7eb;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h2 { color: #facc15; margin-bottom: 10px; }
+    h3 { color: #94a3b8; margin-top: 30px; }
+    
+    .controls {
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
     }
     
-    if (data.name) {
-      const originalName = data.name.trim();
-      const normalizedName = originalName.toLowerCase();
-      const noSpaces = normalizedName.replace(/\s+/g, '');
-      const noDashes = normalizedName.replace(/-/g, ' ');
-      
-      teamsByNameStrict.set(originalName.toLowerCase(), teamId);
-      teamsByName.set(normalizedName, teamId);
-      teamsByName.set(noSpaces, teamId);
-      teamsByName.set(noDashes, teamId);
+    .option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 10px;
+      background: rgba(250, 204, 21, 0.05);
+      border-radius: 8px;
     }
     
-    if (data.joinCode) {
-      teamsByName.set(data.joinCode.toLowerCase(), teamId);
+    .option input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #facc15;
     }
-  });
+    
+    .option label {
+      cursor: pointer;
+      flex: 1;
+    }
+    
+    .option .desc {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    
+    button {
+      background: #facc15;
+      color: #000;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 12px;
+      transition: all 0.2s;
+    }
+    
+    button:hover:not(:disabled) {
+      background: #eab308;
+      transform: translateY(-1px);
+    }
+    
+    button.secondary {
+      background: #334155;
+      color: #e5e7eb;
+    }
+    
+    button.secondary:hover:not(:disabled) {
+      background: #475569;
+    }
+    
+    button:disabled {
+      background: #475569;
+      color: #94a3b8;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    
+    .progress-container {
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      display: none;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 24px;
+      background: #1e293b;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #facc15 0%, #eab308 100%);
+      width: 0%;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 12px;
+      color: #000;
+    }
+    
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    
+    .stat-box {
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #facc15;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    
+    .log-container {
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 20px 0;
+      max-height: 500px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 13px;
+      display: none;
+    }
+    
+    .log-line {
+      margin: 3px 0;
+      padding: 4px 8px;
+      border-radius: 4px;
+      animation: fadeIn 0.2s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .log-error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    .log-success { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+    .log-warning { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+    .log-info { color: #60a5fa; }
+    .log-dryrun { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    
+    .badge-dryrun { background: #a855f7; color: #fff; }
+    .badge-live { background: #22c55e; color: #fff; }
+    
+    .summary {
+      background: #0f172a;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+      display: none;
+    }
+    
+    .error-list, .warning-list {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    
+    .error-list li { color: #ef4444; }
+    .warning-list li { color: #f97316; }
+    
+    code {
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
+</head>
 
-  console.log(`📌 Знайдено команд: ${teamsByOwner.size}`);
-  console.log(`📌 Унікальних назв (нормалізованих): ${teamsByName.size}`);
-
-  let updateCount = 0;
-  let consistencyWarnings = 0;
-  const errors = [];
-  const warnings = [];
-
-  // ========== 2. ВИПРАВЛЯЄМО USERS ==========
-  console.log("\n👥 Обробляю users…");
-  const usersSnap = await db.collection("users").get();
+<body>
+  <h2>🔧 STOLAR CARP · TeamId Migration <span class="badge badge-dryrun" id="modeBadge">DRY RUN</span></h2>
   
-  for (const userDoc of usersSnap.docs) {
-    try {
-      const userId = userDoc.id;
-      const data = userDoc.data();
-      let correctedTeamId = null;
-      let correctionReason = "";
-      let consistencyCheck = null;
+  <div class="controls">
+    <h3>⚙️ Налаштування</h3>
+    
+    <div class="option">
+      <input type="checkbox" id="dryRun" checked onchange="updateMode()">
+      <label>
+        <strong>🔍 Dry Run режим</strong>
+        <div class="desc">Тільки аналізує дані без змін. Покаже, що буде оновлено, але не змінить нічого у Firestore.</div>
+      </label>
+    </div>
+    
+    <div class="option">
+      <input type="checkbox" id="createBackup" checked>
+      <label>
+        <strong>💾 Створити backup</strong>
+        <div class="desc">Збереже JSON з усіма старими даними у Firebase Storage перед міграцією (тільки в Live режимі).</div>
+      </label>
+    </div>
+    
+    <div class="option">
+      <input type="checkbox" id="throttle" checked>
+      <label>
+        <strong>⏱️ Захист від лімітів</strong>
+        <div class="desc">Batch-операції + паузи між запитами (рекомендовано для 100+ записів).</div>
+      </label>
+    </div>
+    
+    <div style="margin-top: 20px;">
+      <button id="startBtn" onclick="runMigration()">▶ Запустити аналіз</button>
+      <button class="secondary" onclick="clearLog()">🗑 Очистити лог</button>
+      <button class="secondary" onclick="downloadLog()">💾 Завантажити лог</button>
+    </div>
+  </div>
 
-      // Стратегія 1: Капітан → по ownerUid
-      if (data.role === "captain") {
-        if (teamsByOwner.has(userId)) {
-          correctedTeamId = teamsByOwner.get(userId).teamId;
-          correctionReason = "ownerUid match";
-          
-          // 🔥 ПЕРЕВІРКА: чи співпадає teamName користувача з назвою команди
-          const teamInfo = teamsByOwner.get(userId);
-          if (data.teamName && data.teamName.trim().toLowerCase() !== teamInfo.name.toLowerCase()) {
-            consistencyCheck = {
-              type: "teamName_mismatch",
-              userTeamName: data.teamName,
-              actualTeamName: teamInfo.name,
-              suggestion: `Оновити teamName на "${teamInfo.name}"`
-            };
-            warnings.push({
-              user: userId,
-              name: data.fullName,
-              issue: `teamName "${data.teamName}" ≠ команді "${teamInfo.name}"`
-            });
-          }
+  <div class="progress-container" id="progressContainer">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill">0%</div>
+    </div>
+    <div class="progress-text" id="progressText">Підготовка...</div>
+  </div>
+
+  <div class="stats" id="statsContainer" style="display:none;">
+    <div class="stat-box">
+      <div class="stat-value" id="statTeams">0</div>
+      <div class="stat-label">Команд знайдено</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statUpdates">0</div>
+      <div class="stat-label">Буде оновлено</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statWarnings">0</div>
+      <div class="stat-label">Попереджень</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="statErrors">0</div>
+      <div class="stat-label">Помилок</div>
+    </div>
+  </div>
+
+  <div class="log-container" id="logContainer">
+    <div style="color:#64748b; margin-bottom:10px; border-bottom:1px solid #1f2937; padding-bottom:10px;">
+      📋 Лог виконання
+    </div>
+    <div id="log"></div>
+  </div>
+
+  <div class="summary" id="summary">
+    <h3>📊 Підсумок</h3>
+    <div id="summaryContent"></div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+  <script src="assets/js/firebase-init.js"></script>
+
+  <script>
+    // ==================== УТИЛІТИ ====================
+    const $ = id => document.getElementById(id);
+    let logEntries = [];
+    
+    function log(msg, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const entry = { time, msg, type };
+      logEntries.push(entry);
+      
+      const line = document.createElement('div');
+      line.className = `log-line log-${type}`;
+      line.textContent = `[${time}] ${msg}`;
+      $('log').appendChild(line);
+      $('logContainer').style.display = 'block';
+      $('logContainer').scrollTop = $('logContainer').scrollHeight;
+      
+      const colors = {
+        error: '#ef4444',
+        success: '#22c55e',
+        warning: '#f97316',
+        info: '#60a5fa',
+        dryrun: '#a855f7'
+      };
+      console.log(`%c[${type.toUpperCase()}] ${msg}`, `color: ${colors[type] || '#fff'}`);
+    }
+    
+    function updateProgress(current, total, text) {
+      const percent = Math.round((current / total) * 100);
+      $('progressFill').style.width = percent + '%';
+      $('progressFill').textContent = percent + '%';
+      $('progressText').textContent = text || `${current} / ${total}`;
+    }
+    
+    function updateMode() {
+      const isDry = $('dryRun').checked;
+      $('modeBadge').textContent = isDry ? 'DRY RUN' : 'LIVE';
+      $('modeBadge').className = 'badge ' + (isDry ? 'badge-dryrun' : 'badge-live');
+      $('startBtn').textContent = isDry ? '▶ Запустити аналіз' : '▶ Запустити міграцію';
+    }
+    
+    function clearLog() {
+      $('log').innerHTML = '';
+      logEntries = [];
+      $('summary').style.display = 'none';
+      $('statsContainer').style.display = 'none';
+    }
+    
+    function downloadLog() {
+      const blob = new Blob([JSON.stringify(logEntries, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `migration-log-${new Date().toISOString().slice(0,19)}.json`;
+      a.click();
+    }
+    
+    async function waitFirebase(maxMs = 15000) {
+      const t0 = Date.now();
+      while (Date.now() - t0 < maxMs) {
+        if (window.scDb && window.scStorage) return;
+        await new Promise(r => setTimeout(r, 100));
+      }
+      throw new Error('Firebase не ініціалізовано');
+    }
+    
+    // ==================== BATCH & THROTTLE ====================
+    class BatchProcessor {
+      constructor(db, batchSize = 450, delayMs = 1000) {
+        this.db = db;
+        this.batchSize = batchSize;
+        this.delayMs = delayMs;
+        this.currentBatch = db.batch();
+        this.count = 0;
+        this.totalOps = 0;
+      }
+      
+      async add(ref, data) {
+        this.currentBatch.update(ref, data);
+        this.count++;
+        this.totalOps++;
+        
+        if (this.count >= this.batchSize) {
+          await this.commit();
         }
       }
       
-      // Стратегія 2: Учасник → по teamName
-      if (!correctedTeamId && data.teamName) {
-        const key = data.teamName.trim().toLowerCase();
-        const keyNoSpaces = key.replace(/\s+/g, '');
-        const keyNoDashes = key.replace(/-/g, ' ');
+      async commit() {
+        if (this.count === 0) return;
         
-        correctedTeamId = teamsByName.get(key) || 
-                         teamsByName.get(keyNoSpaces) || 
-                         teamsByName.get(keyNoDashes);
+        log(`💾 Commit batch: ${this.count} операцій...`, 'info');
+        await this.currentBatch.commit();
         
-        if (correctedTeamId) correctionReason = "teamName match";
+        // Пауза перед наступним batch
+        if (this.delayMs > 0) {
+          await new Promise(r => setTimeout(r, this.delayMs));
+        }
+        
+        this.currentBatch = this.db.batch();
+        this.count = 0;
       }
-
-      // Стратегія 3: Перевірка чи поточний teamId валідний
-      if (!correctedTeamId && data.teamId) {
-        if (teamsById.has(data.teamId)) {
-          correctedTeamId = data.teamId;
-          correctionReason = "existing valid teamId";
+      
+      async finish() {
+        await this.commit();
+        return this.totalOps;
+      }
+    }
+    
+    // ==================== BACKUP ====================
+    async function createBackup(db, storage) {
+      log('💾 Створюю backup...', 'info');
+      
+      const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        collections: {}
+      };
+      
+      // Backup users
+      const usersSnap = await db.collection('users').get();
+      backupData.collections.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Backup public_participants
+      const ppSnap = await db.collection('public_participants').get();
+      backupData.collections.public_participants = ppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Backup registrations
+      const regSnap = await db.collection('registrations').get();
+      backupData.collections.registrations = regSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Upload to Storage
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const ref = storage.ref().child(`backups/teamid-migration-${timestamp}.json`);
+      await ref.put(blob);
+      
+      const downloadUrl = await ref.getDownloadURL();
+      log(`✅ Backup збережено: ${downloadData.collections.users.length} users, ${backupData.collections.public_participants.length} pp, ${backupData.collections.registrations.length} reg`, 'success');
+      log(`🔗 URL: ${downloadUrl}`, 'info');
+      
+      return downloadUrl;
+    }
+    
+    // ==================== МІГРАЦІЯ ====================
+    async function fixAllTeamIds(isDryRun, useThrottle) {
+      const db = window.scDb;
+      const stats = { teams: 0, updates: 0, warnings: 0, errors: 0, skipped: 0 };
+      const warnings = [];
+      const errors = [];
+      
+      // Batch processor для live режиму
+      const batch = useThrottle && !isDryRun ? new BatchProcessor(db) : null;
+      
+      log(`${isDryRun ? '🔍 DRY RUN:' : '🚀 LIVE:'} Починаю міграцію...`, isDryRun ? 'dryrun' : 'info');
+      $('progressContainer').style.display = 'block';
+      
+      // 1. ЗБИРАЄМО КОМАНДИ
+      updateProgress(0, 100, 'Збір команд...');
+      const teamsSnap = await db.collection('teams').get();
+      const teamsByOwner = new Map();
+      const teamsByName = new Map();
+      const teamsById = new Map();
+      
+      teamsSnap.forEach(doc => {
+        const data = doc.data();
+        const teamId = doc.id;
+        
+        teamsById.set(teamId, { ...data, teamId });
+        
+        if (data.ownerUid) {
+          teamsByOwner.set(data.ownerUid, { teamId, name: data.name, joinCode: data.joinCode });
+        }
+        
+        if (data.name) {
+          const normalized = data.name.trim().toLowerCase();
+          teamsByName.set(normalized, teamId);
+          teamsByName.set(normalized.replace(/\s+/g, ''), teamId);
+          teamsByName.set(normalized.replace(/-/g, ''), teamId); // Виправлено: просто видаляємо дефіси
+          teamsByName.set(normalized.replace(/[^a-zа-я0-9]/g, ''), teamId);
+        }
+        
+        if (data.joinCode) {
+          teamsByName.set(data.joinCode.toLowerCase(), teamId);
+        }
+      });
+      
+      stats.teams = teamsByOwner.size;
+      log(`Знайдено команд: ${stats.teams}`, 'success');
+      
+      // Загальна кількість для прогресу
+      const usersSnap = await db.collection('users').get();
+      const ppSnap = await db.collection('public_participants').get();
+      const regSnap = await db.collection('registrations').get();
+      const totalDocs = usersSnap.size + ppSnap.size + regSnap.size;
+      let processed = 0;
+      
+      // 2. USERS
+      log('Обробляю users...', 'info');
+      
+      for (const userDoc of usersSnap.docs) {
+        processed++;
+        updateProgress(processed, totalDocs, `Users: ${userDoc.id.slice(0,8)}...`);
+        
+        try {
+          const userId = userDoc.id;
+          const data = userDoc.data();
+          let correctedTeamId = null;
+          let correctionReason = '';
+          let needsTeamNameUpdate = false;
+          let correctTeamName = null;
           
-          // 🔥 ПЕРЕВІРКА: чи teamName відповідає цій команді
-          if (data.teamName) {
-            const actualTeam = teamsById.get(data.teamId);
-            const userTeamKey = data.teamName.trim().toLowerCase();
-            const actualTeamKey = actualTeam.name.trim().toLowerCase();
+          // Стратегія 1: Капітан
+          if (data.role === 'captain' && teamsByOwner.has(userId)) {
+            const teamInfo = teamsByOwner.get(userId);
+            correctedTeamId = teamInfo.teamId;
+            correctionReason = 'ownerUid';
+            correctTeamName = teamInfo.name;
             
-            if (userTeamKey !== actualTeamKey && 
-                userTeamKey.replace(/\s+/g, '') !== actualTeamKey.replace(/\s+/g, '')) {
-              consistencyCheck = {
-                type: "teamName_teamId_mismatch",
-                userTeamName: data.teamName,
-                actualTeamName: actualTeam.name,
-                teamId: data.teamId
-              };
-              warnings.push({
-                user: userId,
-                name: data.fullName,
-                issue: `teamName "${data.teamName}" не відповідає команді ${data.teamId} ("${actualTeam.name}")`
-              });
+            if (data.teamName && data.teamName.trim().toLowerCase() !== teamInfo.name.toLowerCase()) {
+              needsTeamNameUpdate = true;
+              warnings.push(`${data.fullName || userId}: teamName "${data.teamName}" ≠ "${teamInfo.name}"`);
+              stats.warnings++;
             }
           }
-        }
-        else if (teamsByOwner.has(data.teamId)) {
-          correctedTeamId = teamsByOwner.get(data.teamId).teamId;
-          correctionReason = "teamId was ownerUid";
-        }
-      }
-
-      // Стратегія 4: Email prefix (крайній випадок)
-      if (!correctedTeamId && data.email) {
-        const emailPrefix = data.email.split('@')[0].toLowerCase();
-        if (teamsByName.has(emailPrefix)) {
-          correctedTeamId = teamsByName.get(emailPrefix);
-          correctionReason = "email prefix match";
-        }
-      }
-
-      // Логуємо невідповідності
-      if (consistencyCheck) {
-        console.warn(`⚠️ Невідповідність для ${data.fullName || userId}:`, consistencyCheck);
-        consistencyWarnings++;
-      }
-
-      // Якщо не знайшли — логуємо і пропускаємо
-      if (!correctedTeamId) {
-        console.warn(`⚠️ Не знайдено команду для user ${userId}:`, {
-          name: data.fullName,
-          role: data.role,
-          teamName: data.teamName,
-          currentTeamId: data.teamId
-        });
-        continue;
-      }
-
-      // Оновлюємо якщо потрібно
-      if (data.teamId !== correctedTeamId) {
-        console.log(`🔧 user ${data.fullName || userId}: ${data.teamId} → ${correctedTeamId} (${correctionReason})`);
-        
-        const updateData = {
-          teamId: correctedTeamId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        // 🔥 Якщо знайшли по teamName — також оновимо teamName до правильного (з teams)
-        if (correctionReason === "teamName match" && data.teamName) {
-          const matchedTeam = teamsById.get(correctedTeamId);
-          if (matchedTeam && matchedTeam.name !== data.teamName) {
-            updateData.teamName = matchedTeam.name;
-            console.log(`  📝 Оновлюю teamName: "${data.teamName}" → "${matchedTeam.name}"`);
+          
+          // Стратегія 2: Учасник по teamName
+          if (!correctedTeamId && data.teamName) {
+            const key = data.teamName.trim().toLowerCase();
+            const variations = [
+              key,
+              key.replace(/\s+/g, ''),
+              key.replace(/-/g, ''), // Виправлено
+              key.replace(/[^a-zа-я0-9]/g, '')
+            ];
+            
+            for (const variant of variations) {
+              if (teamsByName.has(variant)) {
+                correctedTeamId = teamsByName.get(variant);
+                correctionReason = 'teamName';
+                correctTeamName = teamsById.get(correctedTeamId)?.name;
+                break;
+              }
+            }
           }
+          
+          // Стратегія 3: Перевірка валідності
+          if (!correctedTeamId && data.teamId) {
+            if (teamsById.has(data.teamId)) {
+              correctedTeamId = data.teamId;
+              correctionReason = 'valid existing';
+            } else if (teamsByOwner.has(data.teamId)) {
+              correctedTeamId = teamsByOwner.get(data.teamId).teamId;
+              correctionReason = 'ownerUid lookup';
+            }
+          }
+          
+          if (!correctedTeamId) {
+            log(`⚠️ Не знайдено команду: ${data.fullName || userId}`, 'warning');
+            stats.skipped++;
+            continue;
+          }
+          
+          if (data.teamId !== correctedTeamId) {
+            log(`${isDryRun ? '[DRY] ' : ''}${data.fullName || userId}: ${data.teamId} → ${correctedTeamId} (${correctionReason})`, isDryRun ? 'dryrun' : 'success');
+            
+            if (!isDryRun) {
+              const updateData = {
+                teamId: correctedTeamId,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              };
+              
+              if (needsTeamNameUpdate && correctTeamName) {
+                updateData.teamName = correctTeamName;
+                log(`  └─ teamName: "${data.teamName}" → "${correctTeamName}"`, 'info');
+              }
+              
+              if (batch) {
+                await batch.add(db.collection('users').doc(userId), updateData);
+              } else {
+                await db.collection('users').doc(userId).update(updateData);
+              }
+            }
+            stats.updates++;
+          }
+          
+        } catch (err) {
+          errors.push({ col: 'users', id: userDoc.id, err: err.message });
+          log(`❌ Помилка users/${userDoc.id}: ${err.message}`, 'error');
+          stats.errors++;
         }
-        
-        await db.collection("users").doc(userId).update(updateData);
-        updateCount++;
       }
-
-    } catch (err) {
-      errors.push({ collection: "users", id: userDoc.id, error: err.message });
-    }
-  }
-
-  // ========== 3. ВИПРАВЛЯЄМО PUBLIC_PARTICIPANTS ==========
-  console.log("\n📋 Обробляю public_participants…");
-  const ppSnap = await db.collection("public_participants").get();
-  
-  for (const doc of ppSnap.docs) {
-    try {
-      const data = doc.data();
       
-      if (data.teamId && teamsById.has(data.teamId)) continue;
-
-      let correctedTeamId = null;
-      const teamName = (data.teamName || "").trim();
-
-      if (teamName) {
-        const key = teamName.toLowerCase();
-        const keyNoSpaces = key.replace(/\s+/g, '');
-        const keyNoDashes = key.replace(/-/g, ' ');
-        
-        correctedTeamId = teamsByName.get(key) || 
-                         teamsByName.get(keyNoSpaces) || 
-                         teamsByName.get(keyNoDashes);
-      }
-
-      // Перевірка по userId
-      if (!correctedTeamId && data.userId) {
-        const userSnap = await db.collection("users").doc(data.userId).get();
-        if (userSnap.exists) {
-          const userTeamId = userSnap.data().teamId;
-          if (userTeamId && teamsById.has(userTeamId)) {
-            correctedTeamId = userTeamId;
-          }
-        }
-      }
-
-      if (correctedTeamId && data.teamId !== correctedTeamId) {
-        const matchedTeam = teamsById.get(correctedTeamId);
-        console.log(`🛠️ public_participants ${doc.id}: ${data.teamId} → ${correctedTeamId}`);
-        
-        const updateData = {
-          teamId: correctedTeamId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        // 🔥 Синхронізуємо teamName з teams
-        if (matchedTeam && matchedTeam.name !== data.teamName) {
-          updateData.teamName = matchedTeam.name;
-        }
-        
-        await db.collection("public_participants").doc(doc.id).update(updateData);
-        updateCount++;
-      } else if (!correctedTeamId && teamName) {
-        console.warn(`⚠️ Не знайдено команду для public_participants ${doc.id}:`, teamName);
-      }
-
-    } catch (err) {
-      errors.push({ collection: "public_participants", id: doc.id, error: err.message });
-    }
-  }
-
-  // ========== 4. ВИПРАВЛЯЄМО REGISTRATIONS ==========
-  console.log("\n📝 Обробляю registrations…");
-  const regSnap = await db.collection("registrations").get();
-  
-  for (const doc of regSnap.docs) {
-    try {
-      const data = doc.data();
+      // Commit users batch
+      if (batch) await batch.commit();
       
-      if (data.teamId && teamsById.has(data.teamId)) continue;
-
-      let correctedTeamId = null;
-      const teamName = (data.teamName || "").trim();
-
-      if (teamName) {
-        const key = teamName.toLowerCase();
-        const keyNoSpaces = key.replace(/\s+/g, '');
-        const keyNoDashes = key.replace(/-/g, ' ');
+      // 3. PUBLIC_PARTICIPANTS
+      log('Обробляю public_participants...', 'info');
+      
+      for (const doc of ppSnap.docs) {
+        processed++;
+        updateProgress(processed, totalDocs, `PP: ${doc.id.slice(0,8)}...`);
         
-        correctedTeamId = teamsByName.get(key) || 
-                         teamsByName.get(keyNoSpaces) || 
-                         teamsByName.get(keyNoDashes);
-      }
-
-      // Перевірка по userId
-      if (!correctedTeamId && data.userId) {
-        const userSnap = await db.collection("users").doc(data.userId).get();
-        if (userSnap.exists) {
-          const userTeamId = userSnap.data().teamId;
-          if (userTeamId && teamsById.has(userTeamId)) {
-            correctedTeamId = userTeamId;
+        try {
+          const data = doc.data();
+          if (data.teamId && teamsById.has(data.teamId)) continue;
+          
+          let correctedTeamId = null;
+          const teamName = (data.teamName || '').trim();
+          
+          if (teamName) {
+            const key = teamName.toLowerCase();
+            const variations = [
+              key,
+              key.replace(/\s+/g, ''),
+              key.replace(/-/g, ''),
+              key.replace(/[^a-zа-я0-9]/g, '')
+            ];
+            
+            for (const variant of variations) {
+              if (teamsByName.has(variant)) {
+                correctedTeamId = teamsByName.get(variant);
+                break;
+              }
+            }
           }
+          
+          if (!correctedTeamId && data.userId) {
+            const userSnap = await db.collection('users').doc(data.userId).get();
+            if (userSnap.exists) {
+              const userTeamId = userSnap.data().teamId;
+              if (userTeamId && teamsById.has(userTeamId)) {
+                correctedTeamId = userTeamId;
+              }
+            }
+          }
+          
+          if (correctedTeamId && data.teamId !== correctedTeamId) {
+            const matchedTeam = teamsById.get(correctedTeamId);
+            log(`${isDryRun ? '[DRY] ' : ''}pp/${doc.id}: ${data.teamId} → ${correctedTeamId}`, isDryRun ? 'dryrun' : 'success');
+            
+            if (!isDryRun) {
+              const updateData = {
+                teamId: correctedTeamId,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              };
+              if (matchedTeam && matchedTeam.name !== data.teamName) {
+                updateData.teamName = matchedTeam.name;
+              }
+              
+              if (batch) {
+                await batch.add(db.collection('public_participants').doc(doc.id), updateData);
+              } else {
+                await db.collection('public_participants').doc(doc.id).update(updateData);
+              }
+            }
+            stats.updates++;
+          }
+          
+        } catch (err) {
+          errors.push({ col: 'public_participants', id: doc.id, err: err.message });
+          log(`❌ Помилка pp/${doc.id}: ${err.message}`, 'error');
+          stats.errors++;
         }
       }
-
-      // Перевірка по captainUid
-      if (!correctedTeamId && data.captainUid && teamsByOwner.has(data.captainUid)) {
-        correctedTeamId = teamsByOwner.get(data.captainUid).teamId;
-      }
-
-      if (correctedTeamId && data.teamId !== correctedTeamId) {
-        const matchedTeam = teamsById.get(correctedTeamId);
-        console.log(`🛠️ registrations ${doc.id}: ${data.teamId} → ${correctedTeamId}`);
+      
+      if (batch) await batch.commit();
+      
+      // 4. REGISTRATIONS
+      log('Обробляю registrations...', 'info');
+      
+      for (const doc of regSnap.docs) {
+        processed++;
+        updateProgress(processed, totalDocs, `Reg: ${doc.id.slice(0,8)}...`);
         
-        const updateData = {
-          teamId: correctedTeamId,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        
-        // 🔥 Синхронізуємо teamName з teams
-        if (matchedTeam && matchedTeam.name !== data.teamName) {
-          updateData.teamName = matchedTeam.name;
+        try {
+          const data = doc.data();
+          if (data.teamId && teamsById.has(data.teamId)) continue;
+          
+          let correctedTeamId = null;
+          const teamName = (data.teamName || '').trim();
+          
+          if (teamName) {
+            const key = teamName.toLowerCase();
+            const variations = [
+              key,
+              key.replace(/\s+/g, ''),
+              key.replace(/-/g, ''),
+              key.replace(/[^a-zа-я0-9]/g, '')
+            ];
+            
+            for (const variant of variations) {
+              if (teamsByName.has(variant)) {
+                correctedTeamId = teamsByName.get(variant);
+                break;
+              }
+            }
+          }
+          
+          if (!correctedTeamId && data.userId) {
+            const userSnap = await db.collection('users').doc(data.userId).get();
+            if (userSnap.exists) {
+              const userTeamId = userSnap.data().teamId;
+              if (userTeamId && teamsById.has(userTeamId)) {
+                correctedTeamId = userTeamId;
+              }
+            }
+          }
+          
+          if (!correctedTeamId && data.captainUid && teamsByOwner.has(data.captainUid)) {
+            correctedTeamId = teamsByOwner.get(data.captainUid).teamId;
+          }
+          
+          if (correctedTeamId && data.teamId !== correctedTeamId) {
+            const matchedTeam = teamsById.get(correctedTeamId);
+            log(`${isDryRun ? '[DRY] ' : ''}reg/${doc.id}: ${data.teamId} → ${correctedTeamId}`, isDryRun ? 'dryrun' : 'success');
+            
+            if (!isDryRun) {
+              const updateData = {
+                teamId: correctedTeamId,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+              };
+              if (matchedTeam && matchedTeam.name !== data.teamName) {
+                updateData.teamName = matchedTeam.name;
+              }
+              
+              if (batch) {
+                await batch.add(db.collection('registrations').doc(doc.id), updateData);
+              } else {
+                await db.collection('registrations').doc(doc.id).update(updateData);
+              }
+            }
+            stats.updates++;
+          }
+          
+        } catch (err) {
+          errors.push({ col: 'registrations', id: doc.id, err: err.message });
+          log(`❌ Помилка reg/${doc.id}: ${err.message}`, 'error');
+          stats.errors++;
         }
-        
-        await db.collection("registrations").doc(doc.id).update(updateData);
-        updateCount++;
-      } else if (!correctedTeamId && teamName) {
-        console.warn(`⚠️ Не знайдено команду для registrations ${doc.id}:`, teamName);
       }
-
-    } catch (err) {
-      errors.push({ collection: "registrations", id: doc.id, error: err.message });
+      
+      // Final commit
+      if (batch) {
+        const totalOps = await batch.finish();
+        log(`Всього batch-операцій: ${totalOps}`, 'info');
+      }
+      
+      updateProgress(100, 100, 'Завершено!');
+      return { stats, warnings, errors };
     }
-  }
-
-  // ========== 5. ПІДСУМОК ==========
-  console.log("\n" + "=".repeat(60));
-  console.log("✅ МІГРАЦІЯ ЗАВЕРШЕНА!");
-  console.log(`📊 Всього оновлено записів: ${updateCount}`);
-  console.log(`⚠️ Невідповідностей teamName: ${consistencyWarnings}`);
-  
-  if (warnings.length > 0) {
-    console.log("\n📋 Список невідповідностей (потребують ручної перевірки):");
-    warnings.forEach((w, i) => console.log(`  ${i + 1}. ${w.name} (${w.user}): ${w.issue}`));
-  }
-  
-  if (errors.length > 0) {
-    console.error(`\n❌ Помилок: ${errors.length}`);
-    errors.forEach(e => console.error(`  - ${e.collection}/${e.id}: ${e.error}`));
-  } else {
-    console.log("🎉 Без критичних помилок!");
-  }
-  
-  console.log("=".repeat(60));
-
-  return {
-    teamsFound: teamsByOwner.size,
-    updatesMade: updateCount,
-    consistencyWarnings: consistencyWarnings,
-    warnings: warnings,
-    errors: errors
-  };
-}
-
-// Запуск з підтвердженням
-if (confirm("🚨 Запустити міграцію teamId?\n\nЦе змінить дані у Firestore і синхронізує:\n• users\n• public_participants  \n• registrations\n\nПродовжити?")) {
-  fixAllTeamIds().then(result => {
-    console.log("📈 Результат міграції:", result);
-  }).catch(err => {
-    console.error("💥 Критична помилка:", err);
-  });
-}
+    
+    // ==================== ЗАПУСК ====================
+    async function runMigration() {
+      const isDryRun = $('dryRun').checked;
+      const createBackup = $('createBackup').checked && !isDryRun;
+      const useThrottle = $('throttle').checked && !isDryRun;
+      
+      $('startBtn').disabled = true;
+      $('progressContainer').style.display = 'block';
+      $('statsContainer').style.display = 'grid';
+      $('summary').style.display = 'none';
+      
+      try {
+        await waitFirebase();
+        log('Firebase готовий', 'success');
+        
+        // Backup перед live міграцією
+        if (createBackup) {
+          await createBackup(window.scDb, window.scStorage);
+        }
+        
+        // Міграція
+        const result = await fixAllTeamIds(isDryRun, useThrottle);
+        
+        // Оновлення статистики
+        $('statTeams').textContent = result.stats.teams;
+        $('statUpdates').textContent = result.stats.updates;
+        $('statWarnings').textContent = result.stats.warnings;
+        $('statErrors').textContent = result.stats.errors;
+        
+        // Summary
+        $('summary').style.display = 'block';
+        let summaryHtml = `
+          <p><strong>Режим:</strong> ${isDryRun ? 'Dry Run (без змін)' : 'LIVE (дані змінено)'}</p>
+          <p><strong>Всього оновлено:</strong> ${result.stats.updates}</p>
+          <p><strong>Пропущено:</strong> ${result.stats.skipped}</p>
+        `;
+        
+        if (result.warnings.length) {
+          summaryHtml += `<h4>⚠️ Попередження (${result.warnings.length}):</h4><ul class="warning-list">`;
+          result.warnings.forEach(w => summaryHtml += `<li>${w}</li>`);
+          summaryHtml += '</ul>';
+        }
+        
+        if (result.errors.length) {
+          summaryHtml += `<h4>❌ Помилки (${result.errors.length}):</h4><ul class="error-list">`;
+          result.errors.forEach(e => summaryHtml += `<li>${e.col}/${e.id}: ${e.err}</li>`);
+          summaryHtml += '</ul>';
+        }
+        
+        if (!isDryRun && result.stats.updates > 0) {
+          summaryHtml += `<p style="color:#22c55e; font-weight:800; margin-top:20px;">✅ Міграція успішна! Popup складу команди тепер працює.</p>`;
+        }
+        
+        $('summaryContent').innerHTML = summaryHtml;
+        
+        if (isDryRun && result.stats.updates > 0) {
+          log(`\n🔍 Dry Run завершено. Знайдено ${result.stats.updates} записів для оновлення.`, 'dryrun');
+          log('Зніми галочку "Dry Run" і запусти знову для реальної міграції.', 'info');
+        }
+        
+      } catch (err) {
+        log(`Критична помилка: ${err.message}`, 'error');
+        console.error(err);
+      } finally {
+        $('startBtn').disabled = false;
+      }
+    }
+    
+    // Ініціалізація
+    updateMode();
+  </script>
+</body>
+</html>

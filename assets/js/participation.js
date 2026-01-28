@@ -174,6 +174,33 @@ function closeTeamPopup() {
 window.openTeamPopup = openTeamPopup;
 window.closeTeamPopup = closeTeamPopup;
 
+  // === Закриття по кліку на × ===
+document.addEventListener("click", (e) => {
+  if (e.target.id === "teamPopupClose") {
+    e.stopPropagation();
+    closeTeamPopup();
+  }
+});
+
+// === Закриття по кліку поза popup ===
+document.addEventListener("click", (e) => {
+  const popup = document.getElementById("teamPopup");
+  const content = document.getElementById("teamPopupContent");
+
+  if (
+    popup.style.display === "flex" &&
+    e.target === popup &&        // клік саме по фону
+    !content.contains(e.target)  // а не по контенту
+  ) {
+    closeTeamPopup();
+  }
+});
+
+// === Закриття по кнопці "Назад" на телефоні ===
+window.addEventListener("popstate", () => {
+  closeTeamPopup();
+});
+
 
   function rowHtml(idx, r, teamId){
     const paid = isPaidStatus(r.status);

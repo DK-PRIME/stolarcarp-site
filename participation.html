@@ -256,106 +256,18 @@
     <div id="msg" class="mutedCenter"></div>
   </main>
 
-  // === POPUP СКЛАДУ КОМАНДИ ===
-async function openTeamPopup(teamName, teamId) {
-  const popup = $("teamPopup");
-  const title = $("teamPopupTitle");
-  const body = $("teamPopupBody");
-
-  if (!popup || !title || !body) return;
-
-  title.textContent = teamName || "Команда";
-  body.innerHTML = '<div class="team-loading">Завантаження складу…</div>';
-  popup.style.display = "flex";
-
-  try {
-    const db = window.scDb;
-
-    // 1. Дані команди
-    const teamSnap = await db.collection("teams").doc(teamId).get();
-    if (!teamSnap.exists) {
-      body.innerHTML = '<div class="team-loading">Команду не знайдено</div>';
-      return;
-    }
-
-    const team = teamSnap.data();
-    const ownerUid = team.ownerUid || null;
-
-    let members = [];
-    const used = new Set();
-
-    // 2. Основний пошук — всі user з цією командою
-    try {
-      const usersSnap = await db.collection("users")
-        .where("teamId", "==", teamId)
-        .get();
-
-      usersSnap.forEach(doc => {
-        const d = doc.data();
-        members.push({
-          id: doc.id,
-          fullName: d.fullName || d.displayName || d.email || "Учасник",
-          role: d.role || "member",
-          avatarUrl: d.avatarUrl || d.photoURL || null
-        });
-        used.add(doc.id);
-      });
-    } catch (err) {
-      console.error("Помилка пошуку users.teamId:", err);
-    }
-
-    // 3. Якщо капітана не знайдено серед members → додаємо окремо
-    if (ownerUid && !used.has(ownerUid)) {
-      const cSnap = await db.collection("users").doc(ownerUid).get();
-      if (cSnap.exists) {
-        const c = cSnap.data();
-        members.push({
-          id: ownerUid,
-          fullName: c.fullName || c.displayName || c.email || "Капітан",
-          role: "captain",
-          avatarUrl: c.avatarUrl || c.photoURL || null
-        });
-        used.add(ownerUid);
-      }
-    }
-
-    // 4. Якщо взагалі нікого немає → fallback
-    if (members.length === 0) {
-      body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';
-      return;
-    }
-
-    // 5. Сортування: капітан зверху
-    members.sort((a, b) => {
-      const aCap = a.role === "captain" || a.id === ownerUid;
-      const bCap = b.role === "captain" || b.id === ownerUid;
-      if (aCap && !bCap) return -1;
-      if (bCap && !aCap) return 1;
-      return (a.fullName || "").localeCompare(b.fullName || "");
-    });
-
-    // 6. Відображення
-    body.innerHTML = members.map(m => {
-      const avatarHtml = m.avatarUrl
-        ? `<div class="member-avatar"><img src="${esc(m.avatarUrl)}" alt=""></div>`
-        : `<div class="member-avatar"><div class="member-avatar-placeholder">👤</div></div>`;
-
-      return `
-        <div class="team-member">
-          ${avatarHtml}
-          <div class="member-info">
-            <div class="member-name">${esc(m.fullName)}</div>
-            <div class="member-role">${m.role === "captain" ? "⭐ Капітан" : "Учасник"}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-  } catch (err) {
-    console.error("💥 Помилка в openTeamPopup:", err);
-    body.innerHTML = `<div class="team-loading">Помилка: ${esc(err.message)}</div>`;
-  }
-}
+  <!-- POPUP СКЛАДУ КОМАНДИ -->
+  <div id="teamPopup">
+    <div id="teamPopupContent">
+      <div id="teamPopupHeader">
+        <div id="teamPopupTitle">Склад команди</div>
+        <button id="teamPopupClose">×</button>
+      </div>
+      <div id="teamPopupBody">
+        <div class="team-loading">Завантаження…</div>
+      </div>
+    </div>
+  </div>
 
   <!-- Firebase compat CDN -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

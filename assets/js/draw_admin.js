@@ -11,524 +11,611 @@
 (function () {
   "use strict";
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
-
-  const stageSelect = document.getElementById("stageSelect");
-  const qInput      = document.getElementById("q");
-  const msgEl       = document.getElementById("msg");
-
-  const drawRows    = document.getElementById("drawRows");
-  const countInfo   = document.getElementById("countInfo");
-
-  const LS_KEY_STAGE = "sc_draw_selected_stage_v2";
-
-  if (!auth || !db || !window.firebase) {
-    if (msgEl) msgEl.textContent = "Firebase init не завантажився.";
-    return;
-  }
-
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
+  // ─────────────────────────────────────────────────────────────
+  // CONFIG
+  // ─────────────────────────────────────────────────────────────
+  const CONFIG = {
+    ADMIN_UID: "5Dt6fN64c3aWACYV1WacxV2BHDl2",
+    LS_KEY_STAGE: "sc_draw_selected_stage_v2",
+    COLLECTIONS: {
+      REGISTRATIONS: "registrations",
+      COMPETITIONS: "competitions",
+      USERS: "users",
+      STAGE_RESULTS: "stageResults",
+      SETTINGS: "settings",
+      PUBLIC_PARTICIPANTS: "public_participants"
+    }
+  };
 
   const SECTORS = (() => {
     const arr = [];
-    ["A","B","C"].forEach(z => { for (let i=1;i<=8;i++) arr.push(`${z}${i}`); });
+    ["A", "B", "C"].forEach(z => {
+      for (let i = 1; i <= 8; i++) arr.push(`${z}${i}`);
+    });
     return arr;
   })();
 
-  const esc = (s) =>
-    String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-
-  const setMsg = (text, ok=true) => {
-    if (!msgEl) return;
-    msgEl.textContent = text || "";
-    msgEl.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
+  // ─────────────────────────────────────────────────────────────
+  // STATE
+  // ─────────────────────────────────────────────────────────────
+  const state = {
+    isAdmin: false,
+    stageNameByKey: new Map(),
+    regsAllConfirmed: [],
+    regsFiltered: [],
+    usedSectorSet: new Set()
   };
 
-  function norm(v){ return String(v ?? "").trim(); }
+  // ─────────────────────────────────────────────────────────────
+  // DOM ELEMENTS
+  // ─────────────────────────────────────────────────────────────
+  const els = {
+    stageSelect: document.getElementById("stageSelect"),
+    qInput: document.getElementById("q"),
+    msg: document.getElementById("msg"),
+    drawRows: document.getElementById("drawRows"),
+    countInfo: document.getElementById("countInfo")
+  };
 
-  function parseStageValue(v){
-    const [compId, stageKeyRaw] = String(v||"").split("||");
-    const comp = norm(compId);
-    const stage = norm(stageKeyRaw);
-    return { compId: comp, stageKey: stage ? stage : null };
+  // ─────────────────────────────────────────────────────────────
+  // INIT CHECK
+  // ─────────────────────────────────────────────────────────────
+  const auth = window.scAuth;
+  const db = window.scDb;
+
+  if (!auth || !db || !window.firebase) {
+    if (els.msg) els.msg.textContent = "Firebase init не завантажився.";
+    return;
   }
 
-  function currentStageValue(){
-    return stageSelect?.value || "";
-  }
+  // ─────────────────────────────────────────────────────────────
+  // UTILS
+  // ─────────────────────────────────────────────────────────────
+  const utils = {
+    esc: (s) =>
+      String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;"),
 
-  async function requireAdmin(user){
-    if (!user) return false;
-    if (user.uid === ADMIN_UID) return true;
-    const snap = await db.collection("users").doc(user.uid).get();
-    const role = (snap.exists ? (snap.data()||{}).role : "") || "";
-    return role === "admin";
-  }
+    setMsg: (text, ok = true) => {
+      if (!els.msg) return;
+      els.msg.textContent = text || "";
+      els.msg.style.color = text ? (ok ? "#8fe39a" : "#ff6c6c") : "";
+    },
 
-  // robust getters
-  function getCompIdFromReg(x){
-    return x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "";
-  }
-  function getStageIdFromReg(x){
-    const v = x.stageId || x.stageKey || x.stage || x.eventId || x.eventKey || x.roundId || "";
-    return norm(v) || null;
-  }
+    norm: (v) => String(v ?? "").trim(),
 
-  function parseSector(drawKey){
-    const s = norm(drawKey).toUpperCase();
-    if (!s) return null;
-    const z = s[0];
-    const n = parseInt(s.slice(1), 10);
-    if (!["A","B","C"].includes(z) || !Number.isFinite(n)) return null;
-    return { z, n };
-  }
-  function zoneRank(z){ return z==="A"?1 : z==="B"?2 : z==="C"?3 : 9; }
-  function sortByDraw(a,b){
-    const sa = parseSector(a.drawKey);
-    const sb = parseSector(b.drawKey);
+    parseStageValue: (v) => {
+      const [compId, stageKeyRaw] = String(v || "").split("||");
+      const comp = utils.norm(compId);
+      const stage = utils.norm(stageKeyRaw);
+      return { compId: comp, stageKey: stage ? stage : null };
+    },
 
-    if (!!sa && !sb) return -1;
-    if (!sa && !!sb) return 1;
+    currentStageValue: () => els.stageSelect?.value || "",
 
-    if (!sa && !sb) return (a.teamName||"").localeCompare(b.teamName||"", "uk");
+    getCompIdFromReg: (x) =>
+      x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "",
 
-    const zr = zoneRank(sa.z) - zoneRank(sb.z);
-    if (zr) return zr;
-    const nr = sa.n - sb.n;
-    if (nr) return nr;
-    return (a.teamName||"").localeCompare(b.teamName||"", "uk");
-  }
+    getStageIdFromReg: (x) => {
+      const v = x.stageId || x.stageKey || x.stage || x.eventId || x.eventKey || x.roundId || "";
+      return utils.norm(v) || null;
+    },
 
-  function saveStageToLS(v){
-    try { localStorage.setItem(LS_KEY_STAGE, String(v||"")); } catch {}
-  }
-  function loadStageFromLS(){
-    try { return localStorage.getItem(LS_KEY_STAGE) || ""; } catch { return ""; }
-  }
+    parseSector: (drawKey) => {
+      const s = utils.norm(drawKey).toUpperCase();
+      if (!s) return null;
+      const z = s[0];
+      const n = parseInt(s.slice(1), 10);
+      if (!["A", "B", "C"].includes(z) || !Number.isFinite(n)) return null;
+      return { z, n };
+    },
 
-  // stage label map
-  let stageNameByKey = new Map();
+    zoneRank: (z) => (z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9),
 
-  let isAdmin = false;
+    sortByDraw: (a, b) => {
+      const sa = utils.parseSector(a.drawKey);
+      const sb = utils.parseSector(b.drawKey);
 
-  let regsAllConfirmed = [];
-  let regsFiltered = [];
-  let usedSectorSet = new Set();
+      if (!!sa && !sb) return -1;
+      if (!sa && !!sb) return 1;
+      if (!sa && !sb) return (a.teamName || "").localeCompare(b.teamName || "", "uk");
 
-  async function loadStagesToSelect(){
-    if (!stageSelect) return;
+      const zr = utils.zoneRank(sa.z) - utils.zoneRank(sb.z);
+      if (zr) return zr;
+      const nr = sa.n - sb.n;
+      if (nr) return nr;
+      return (a.teamName || "").localeCompare(b.teamName || "", "uk");
+    },
 
-    const keep = stageSelect.value || loadStageFromLS();
+    saveStageToLS: (v) => {
+      try {
+        localStorage.setItem(CONFIG.LS_KEY_STAGE, String(v || ""));
+      } catch {}
+    },
 
-    stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
-    stageNameByKey = new Map();
-    const items = [];
+    loadStageFromLS: () => {
+      try {
+        return localStorage.getItem(CONFIG.LS_KEY_STAGE) || "";
+      } catch {
+        return "";
+      }
+    },
 
-    const snap = await db.collection("competitions").get();
-    snap.forEach(docSnap => {
-      const c = docSnap.data() || {};
-      const compId = docSnap.id;
+    fmtTimeNow: () => {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      return `${hh}:${mm}:${ss}`;
+    }
+  };
 
-      const brand = c.brand || "STOLAR CARP";
-      const year  = c.year || c.seasonYear || "";
-      const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+  // ─────────────────────────────────────────────────────────────
+  // AUTH
+  // ─────────────────────────────────────────────────────────────
+  const authModule = {
+    requireAdmin: async (user) => {
+      if (!user) return false;
+      if (user.uid === CONFIG.ADMIN_UID) return true;
+      const snap = await db.collection(CONFIG.COLLECTIONS.USERS).doc(user.uid).get();
+      const role = (snap.exists ? (snap.data() || {}).role : "") || "";
+      return role === "admin";
+    }
+  };
 
-      const eventsArr = Array.isArray(c.events) ? c.events : null;
+  // ─────────────────────────────────────────────────────────────
+  // FIRESTORE
+  // ─────────────────────────────────────────────────────────────
+  const firestore = {
+    loadStagesToSelect: async () => {
+      if (!els.stageSelect) return;
 
-      if (eventsArr && eventsArr.length) {
-        eventsArr.forEach((ev, idx) => {
-          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
-          const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx+1}`;
-          const label = `${brand} · ${compTitle} — ${stageTitle}`;
-          const value = `${compId}||${key}`;
+      const keep = els.stageSelect.value || utils.loadStageFromLS();
+
+      els.stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
+      state.stageNameByKey = new Map();
+      const items = [];
+
+      const snap = await db.collection(CONFIG.COLLECTIONS.COMPETITIONS).get();
+      snap.forEach((docSnap) => {
+        const c = docSnap.data() || {};
+        const compId = docSnap.id;
+
+        const brand = c.brand || "STOLAR CARP";
+        const year = c.year || c.seasonYear || "";
+        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
+
+        const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+        if (eventsArr && eventsArr.length) {
+          eventsArr.forEach((ev, idx) => {
+            const key = String(ev.key || ev.stageId || ev.id || `stage-${idx + 1}`);
+            const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
+            const label = `${brand} · ${compTitle} — ${stageTitle}`;
+            const value = `${compId}||${key}`;
+            items.push({ value, label });
+            state.stageNameByKey.set(value, label);
+          });
+        } else {
+          const label = `${brand} · ${compTitle}`;
+          const value = `${compId}||main`;
           items.push({ value, label });
-          stageNameByKey.set(value, label);
+          state.stageNameByKey.set(value, label);
+        }
+      });
+
+      items.sort((a, b) => a.label.localeCompare(b.label, "uk"));
+
+      els.stageSelect.innerHTML =
+        `<option value="">— Оберіть —</option>` +
+        items.map((x) => `<option value="${utils.esc(x.value)}">${utils.esc(x.label)}</option>`).join("");
+
+      if (keep) {
+        const opts = Array.from(els.stageSelect.options || []);
+        const ok = opts.find((o) => String(o.value) === String(keep));
+        if (ok) els.stageSelect.value = keep;
+      }
+    },
+
+    loadAllConfirmed: async () => {
+      utils.setMsg("Завантаження підтверджених заявок…", true);
+
+      const snap = await db
+        .collection(CONFIG.COLLECTIONS.REGISTRATIONS)
+        .where("status", "==", "confirmed")
+        .get();
+
+      state.regsAllConfirmed = [];
+      snap.forEach((d) => {
+        const x = d.data() || {};
+        state.regsAllConfirmed.push({
+          _id: d.id,
+          teamId: utils.norm(x.teamId || ""),
+          teamName: x.teamName || x.team || x.name || "",
+          captain: x.captain || x.captainName || "",
+          phone: x.phone || x.captainPhone || "",
+          compId: utils.norm(utils.getCompIdFromReg(x)),
+          stageId: utils.getStageIdFromReg(x),
+          drawKey: utils.norm(x.drawKey || ""),
+          bigFishTotal: !!x.bigFishTotal
         });
-      } else {
-        const label = `${brand} · ${compTitle}`;
-        const value = `${compId}||main`;
-        items.push({ value, label });
-        stageNameByKey.set(value, label);
+      });
+
+      utils.setMsg("", true);
+    },
+
+    publishStageResultsTeams: async () => {
+      if (!state.isAdmin) return;
+
+      const selVal = utils.currentStageValue();
+      if (!selVal) return;
+
+      const { compId, stageKey } = utils.parseStageValue(selVal);
+      if (!compId) return;
+
+      const docId = stageKey ? `${compId}||${stageKey}` : `${compId}||main`;
+      const stageName = state.stageNameByKey.get(selVal) || "";
+
+      const teams = state.regsFiltered.map((r) => {
+        const drawKey = utils.norm(r.drawKey);
+        const zone = drawKey ? drawKey[0] : null;
+        const n = drawKey ? parseInt(drawKey.slice(1), 10) : null;
+
+        return {
+          regId: r._id,
+          teamId: utils.norm(r.teamId || ""),
+          teamName: r.teamName || "",
+          drawKey: drawKey || null,
+          drawZone: zone || null,
+          drawSector: Number.isFinite(n) ? n : null,
+          bigFishTotal: !!r.bigFishTotal
+        };
+      });
+
+      const bigFishTotal = teams
+        .filter((t) => t.bigFishTotal)
+        .map((t) => ({
+          regId: t.regId,
+          teamId: t.teamId || null,
+          team: t.teamName,
+          big1Day: null,
+          big2Day: null,
+          maxBig: null,
+          isMax: false
+        }));
+
+      const ts = window.firebase.firestore.FieldValue.serverTimestamp();
+
+      await db.collection(CONFIG.COLLECTIONS.STAGE_RESULTS).doc(docId).set(
+        {
+          compId,
+          stageKey: stageKey || null,
+          stageName,
+          updatedAt: ts,
+          teams,
+          bigFishTotal,
+          zones: { A: [], B: [], C: [] },
+          total: []
+        },
+        { merge: true }
+      );
+
+      await db.collection(CONFIG.COLLECTIONS.SETTINGS).doc("app").set(
+        {
+          activeKey: docId,
+          activeCompetitionId: compId,
+          activeStageId: stageKey || null,
+          updatedAt: ts
+        },
+        { merge: true }
+      );
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // FILTERS
+  // ─────────────────────────────────────────────────────────────
+  const filters = {
+    rebuildUsedSectors: () => {
+      state.usedSectorSet = new Set();
+      state.regsFiltered.forEach((r) => {
+        if (utils.norm(r.drawKey)) state.usedSectorSet.add(utils.norm(r.drawKey));
+      });
+    },
+
+    apply: () => {
+      const selVal = utils.currentStageValue();
+      const { compId, stageKey } = utils.parseStageValue(selVal);
+
+      if (!compId) {
+        state.regsFiltered = [];
+        state.usedSectorSet = new Set();
+        render.list();
+        if (els.countInfo) els.countInfo.textContent = "";
+        return;
       }
-    });
 
-    items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
-
-    stageSelect.innerHTML =
-      `<option value="">— Оберіть —</option>` +
-      items.map(x => `<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
-
-    if (keep) {
-      // без CSS.escape для старих браузерів
-      const opts = Array.from(stageSelect.options || []);
-      const ok = opts.find(o => String(o.value) === String(keep));
-      if (ok) stageSelect.value = keep;
-    }
-  }
-
-  async function loadAllConfirmed(){
-    setMsg("Завантаження підтверджених заявок…", true);
-
-    const snap = await db.collection("registrations")
-      .where("status","==","confirmed")
-      .get();
-
-    regsAllConfirmed = [];
-    snap.forEach(d => {
-      const x = d.data() || {};
-      regsAllConfirmed.push({
-        _id: d.id,
-
-        teamId: norm(x.teamId || ""),
-        teamName: x.teamName || x.team || x.name || "",
-        captain: x.captain || x.captainName || "",
-        phone: x.phone || x.captainPhone || "",
-
-        compId: norm(getCompIdFromReg(x)),
-        stageId: getStageIdFromReg(x),
-
-        drawKey: norm(x.drawKey || ""),
-        bigFishTotal: !!x.bigFishTotal
+      state.regsFiltered = state.regsAllConfirmed.filter((r) => {
+        if (utils.norm(r.compId) !== utils.norm(compId)) return false;
+        if (stageKey && utils.norm(r.stageId) !== utils.norm(stageKey)) return false;
+        if (!stageKey && r.stageId) return false;
+        return true;
       });
-    });
 
-    setMsg("", true);
-  }
+      const q = utils.norm(els.qInput?.value || "").toLowerCase();
+      if (q) {
+        state.regsFiltered = state.regsFiltered.filter((r) => {
+          const t = `${r.teamName} ${r.phone} ${r.captain}`.toLowerCase();
+          return t.includes(q);
+        });
+      }
 
-  function rebuildUsedSectors(){
-    usedSectorSet = new Set();
-    regsFiltered.forEach(r => { if (norm(r.drawKey)) usedSectorSet.add(norm(r.drawKey)); });
-  }
+      state.regsFiltered.sort(utils.sortByDraw);
 
-  function applyStageFilter(){
-    const selVal = currentStageValue();
-    const { compId, stageKey } = parseStageValue(selVal);
+      filters.rebuildUsedSectors();
+      render.list();
 
-    if (!compId) {
-      regsFiltered = [];
-      usedSectorSet = new Set();
-      render();
-      if (countInfo) countInfo.textContent = "";
-      return;
+      if (els.countInfo) {
+        const totalAll = state.regsAllConfirmed.length;
+        const totalSel = state.regsFiltered.length;
+        els.countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
+      }
     }
+  };
 
-    regsFiltered = regsAllConfirmed.filter(r => {
-      if (norm(r.compId) !== norm(compId)) return false;
-      if (stageKey && norm(r.stageId) !== norm(stageKey)) return false;
-      if (!stageKey && r.stageId) return false;
-      return true;
-    });
+  // ─────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────
+  const render = {
+    sectorOptionsHTML: (cur, docId) => {
+      const current = utils.norm(cur);
+      return `
+        <select class="select sectorPick" data-docid="${utils.esc(docId)}">
+          <option value="">— Оберіть сектор —</option>
+          ${SECTORS.map((s) => {
+            const taken = state.usedSectorSet.has(s) && s !== current;
+            return `<option value="${s}" ${s === current ? "selected" : ""} ${taken ? "disabled" : ""}>
+              ${s}${taken ? " (зайнято)" : ""}
+            </option>`;
+          }).join("")}
+        </select>
+      `;
+    },
 
-    const q = norm(qInput?.value || "").toLowerCase();
-    if (q) {
-      regsFiltered = regsFiltered.filter(r => {
-        const t = `${r.teamName} ${r.phone} ${r.captain}`.toLowerCase();
-        return t.includes(q);
-      });
-    }
-
-    regsFiltered.sort(sortByDraw);
-
-    rebuildUsedSectors();
-    render();
-
-    if (countInfo) {
-      const totalAll = regsAllConfirmed.length;
-      const totalSel = regsFiltered.length;
-      countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
-    }
-  }
-
-  function sectorOptionsHTML(cur, docId){
-    const current = norm(cur);
-    return `
-      <select class="select sectorPick" data-docid="${esc(docId)}">
-        <option value="">— Оберіть сектор —</option>
-        ${SECTORS.map(s=>{
-          const taken = usedSectorSet.has(s) && s !== current;
-          return `<option value="${s}" ${s===current?"selected":""} ${taken?"disabled":""}>
-            ${s}${taken?" (зайнято)":""}
-          </option>`;
-        }).join("")}
-      </select>
-    `;
-  }
-
-  function rowHTML(r){
-  return `
-    <div class="draw-row" data-docid="${r._id}">
-
-      <div class="draw-team">
-        ${esc(r.teamName || "—")}
+    rowHTML: (r) => `
+      <div class="draw-row" data-docid="${r._id}">
+        <div class="draw-team">
+          ${utils.esc(r.teamName || "—")}
+        </div>
+        ${render.sectorOptionsHTML(r.drawKey, r._id)}
+        <input
+          type="checkbox"
+          class="chk bigFishChk"
+          ${r.bigFishTotal ? "checked" : ""}
+        >
+        <button
+          class="btn-icon saveBtnRow"
+          type="button"
+          title="Зберегти"
+        >💾</button>
       </div>
+    `,
 
-      ${sectorOptionsHTML(r.drawKey, r._id)}
+    list: () => {
+      if (!els.drawRows) return;
 
-      <input
-        type="checkbox"
-        class="chk bigFishChk"
-        ${r.bigFishTotal ? "checked" : ""}
-      >
+      if (!state.regsFiltered.length) {
+        els.drawRows.innerHTML = `<div class="muted" style="padding:12px 2px;">Нема команд для жеребкування.</div>`;
+        return;
+      }
 
-      <button
-        class="btn-icon saveBtnRow"
-        type="button"
-        title="Зберегти"
-      >💾</button>
+      els.drawRows.innerHTML = `<div class="draw-wrap">${state.regsFiltered.map(render.rowHTML).join("")}</div>`;
+    },
 
-    </div>
-  `;
-  }
+    // Row feedback helpers
+    showRowMsg: (wrap, text, ok = true) => {
+      const el = wrap.querySelector(".rowMsg");
+      if (!el) return;
+      el.textContent = text || "";
+      el.classList.toggle("ok", !!ok);
+      el.classList.toggle("err", !ok);
+    },
 
-  function render(){
-    if (!drawRows) return;
+    setRowState: (wrap, stateName) => {
+      wrap.classList.remove("is-saving", "is-ok", "is-err");
+      if (stateName) wrap.classList.add(stateName);
+    },
 
-    if (!regsFiltered.length) {
-      drawRows.innerHTML = `<div class="muted" style="padding:12px 2px;">Нема команд для жеребкування.</div>`;
-      return;
+    setBtnIcon: (wrap, icon) => {
+      const btn = wrap.querySelector(".saveBtnRow");
+      if (!btn) return;
+      btn.textContent =
+        icon === "saving" ? "⏳" : icon === "ok" ? "✅" : icon === "err" ? "⚠️" : "💾";
     }
+  };
 
-    drawRows.innerHTML = `<div class="draw-wrap">${regsFiltered.map(rowHTML).join("")}</div>`;
-  }
+  // ─────────────────────────────────────────────────────────────
+  // HANDLERS
+  // ─────────────────────────────────────────────────────────────
+  const handlers = {
+    saveRow: async (e) => {
+      const btn = e.target.closest(".saveBtnRow");
+      if (!btn) return;
 
-  function showRowMsg(wrap, text, ok=true){
-    const el = wrap.querySelector(".rowMsg");
-    if (!el) return;
-    el.textContent = text || "";
-    el.classList.toggle("ok", !!ok);
-    el.classList.toggle("err", !ok);
-  }
+      const wrap = e.target.closest(".draw-row");
+      if (!wrap) return;
 
-  function setRowState(wrap, state){
-    wrap.classList.remove("is-saving","is-ok","is-err");
-    if (state) wrap.classList.add(state);
-  }
+      if (!state.isAdmin) {
+        render.setRowState(wrap, "is-err");
+        render.setBtnIcon(wrap, "err");
+        render.showRowMsg(wrap, "Нема адмін-доступу", false);
+        setTimeout(() => {
+          render.setRowState(wrap, null);
+          render.setBtnIcon(wrap, "save");
+        }, 1400);
+        return;
+      }
 
-  function setBtnIcon(wrap, icon){
-    const btn = wrap.querySelector(".saveBtnRow");
-    if (!btn) return;
-    btn.textContent =
-      icon === "saving" ? "⏳" :
-      icon === "ok"     ? "✅" :
-      icon === "err"    ? "⚠️" :
-      "💾";
-  }
+      utils.saveStageToLS(els.stageSelect?.value || "");
 
-  function fmtTimeNow(){
-    const d = new Date();
-    const hh = String(d.getHours()).padStart(2,"0");
-    const mm = String(d.getMinutes()).padStart(2,"0");
-    const ss = String(d.getSeconds()).padStart(2,"0");
-    return `${hh}:${mm}:${ss}`;
-  }
+      const docId = wrap.getAttribute("data-docid");
+      const sectorVal = utils.norm(wrap.querySelector(".sectorPick")?.value || "");
+      const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
 
-  // === publish LIVE stageResults + settings/app ===
-  async function publishStageResultsTeams(){
-    if (!isAdmin) return;
+      if (!sectorVal) {
+        render.setRowState(wrap, "is-err");
+        render.setBtnIcon(wrap, "err");
+        render.showRowMsg(wrap, "Оберіть сектор", false);
+        setTimeout(() => {
+          render.setRowState(wrap, null);
+          render.setBtnIcon(wrap, "save");
+        }, 1400);
+        return;
+      }
 
-    const selVal = currentStageValue();
-    if (!selVal) return;
+      if (state.usedSectorSet.has(sectorVal)) {
+        const other = state.regsFiltered.find(
+          (r) => utils.norm(r.drawKey) === sectorVal && r._id !== docId
+        );
+        if (other) {
+          render.setRowState(wrap, "is-err");
+          render.setBtnIcon(wrap, "err");
+          render.showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
+          setTimeout(() => {
+            render.setRowState(wrap, null);
+            render.setBtnIcon(wrap, "save");
+          }, 1700);
+          return;
+        }
+      }
 
-    const { compId, stageKey } = parseStageValue(selVal);
-    if (!compId) return;
+      const zone = sectorVal[0];
+      const sectorNum = parseInt(sectorVal.slice(1), 10);
 
-    const docId = stageKey ? `${compId}||${stageKey}` : `${compId}||main`;
-    const stageName = stageNameByKey.get(selVal) || "";
+      try {
+        render.setRowState(wrap, "is-saving");
+        render.setBtnIcon(wrap, "saving");
+        render.showRowMsg(wrap, "Збереження…", true);
 
-    const teams = regsFiltered.map(r => {
-      const drawKey = norm(r.drawKey);
-      const zone    = drawKey ? drawKey[0] : null;
-      const n       = drawKey ? parseInt(drawKey.slice(1), 10) : null;
+        await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).update({
+          drawKey: sectorVal,
+          drawZone: zone,
+          drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
+          bigFishTotal: bigFish,
+          drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
+        });
 
-      return {
-        regId: r._id,
-        teamId: norm(r.teamId || ""),
-        teamName: r.teamName || "",
-        drawKey: drawKey || null,
-        drawZone: zone || null,
-        drawSector: Number.isFinite(n) ? n : null,
-        bigFishTotal: !!r.bigFishTotal
-      };
+        // MIRROR → public_participants
+        await db
+          .collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
+          .doc(docId)
+          .set(
+            {
+              drawKey: sectorVal,
+              drawZone: zone,
+              drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
+              bigFishTotal: bigFish,
+              drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
+            },
+            { merge: true }
+          );
+
+        const a = state.regsAllConfirmed.find((x) => x._id === docId);
+        if (a) {
+          a.drawKey = sectorVal;
+          a.bigFishTotal = bigFish;
+        }
+
+        render.setRowState(wrap, "is-ok");
+        render.setBtnIcon(wrap, "ok");
+        render.showRowMsg(wrap, `Збережено ${utils.fmtTimeNow()}`, true);
+
+        filters.apply();
+        await firestore.publishStageResultsTeams();
+
+        utils.setMsg("✅ Live оновлено", true);
+        setTimeout(() => utils.setMsg("", true), 900);
+      } catch (err) {
+        console.error(err);
+        render.setRowState(wrap, "is-err");
+        render.setBtnIcon(wrap, "err");
+        render.showRowMsg(wrap, "Помилка (Rules/доступ)", false);
+        setTimeout(() => {
+          render.setRowState(wrap, null);
+          render.setBtnIcon(wrap, "save");
+        }, 1700);
+      }
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // EVENT LISTENERS
+  // ─────────────────────────────────────────────────────────────
+  const bindEvents = () => {
+    document.addEventListener("click", handlers.saveRow);
+
+    els.stageSelect?.addEventListener("change", () => {
+      utils.saveStageToLS(els.stageSelect.value || "");
+      filters.apply();
     });
 
-    const bigFishTotal = teams
-      .filter(t => t.bigFishTotal)
-      .map(t => ({
-        regId: t.regId,
-        teamId: t.teamId || null,
-        team: t.teamName,
-        big1Day: null,
-        big2Day: null,
-        maxBig: null,
-        isMax: false
-      }));
+    els.qInput?.addEventListener("input", () => filters.apply());
+  };
 
-    const ts = window.firebase.firestore.FieldValue.serverTimestamp();
-
-    await db.collection("stageResults").doc(docId).set({
-      compId,
-      stageKey: stageKey || null,
-      stageName,
-      updatedAt: ts,
-      teams,
-      bigFishTotal,
-      zones: { A: [], B: [], C: [] },
-      total: []
-    }, { merge:true });
-
-    await db.collection("settings").doc("app").set({
-      activeKey: docId,
-      activeCompetitionId: compId,
-      activeStageId: stageKey || null,
-      updatedAt: ts
-    }, { merge:true });
-  }
-
-  // save per-row
-  document.addEventListener("click", async (e)=>{
-    const btn = e.target.closest(".saveBtnRow");
-    if (!btn) return;
-
-    const wrap = e.target.closest(".draw-row");
-    if (!wrap) return;
-
-    if (!isAdmin) {
-      setRowState(wrap, "is-err");
-      setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Нема адмін-доступу", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1400);
-      return;
-    }
-
-    saveStageToLS(stageSelect?.value || "");
-
-    const docId = wrap.getAttribute("data-docid");
-    const sectorVal = norm(wrap.querySelector(".sectorPick")?.value || "");
-    const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
-
-    if (!sectorVal) {
-      setRowState(wrap, "is-err");
-      setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Оберіть сектор", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1400);
-      return;
-    }
-
-    if (usedSectorSet.has(sectorVal)) {
-      const other = regsFiltered.find(r => norm(r.drawKey) === sectorVal && r._id !== docId);
-      if (other) {
-        setRowState(wrap, "is-err");
-        setBtnIcon(wrap, "err");
-        showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
-        setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1700);
-        return;
-      }
-    }
-
-    const zone = sectorVal[0];
-    const sectorNum = parseInt(sectorVal.slice(1), 10);
-
-    try{
-      setRowState(wrap, "is-saving");
-      setBtnIcon(wrap, "saving");
-      showRowMsg(wrap, "Збереження…", true);
-
-      await db.collection("registrations").doc(docId).update({
-        drawKey: sectorVal,
-        drawZone: zone,
-        drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
-        bigFishTotal: bigFish,
-        drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
-      });
-      // ✅ MIRROR → public_participants (для participation / cabinet)
-await db.collection("public_participants").doc(docId).set({
-  drawKey: sectorVal,
-  drawZone: zone,
-  drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
-  bigFishTotal: bigFish,
-  drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
-}, { merge: true });
-
-      const a = regsAllConfirmed.find(x => x._id === docId);
-      if (a) {
-        a.drawKey = sectorVal;
-        a.bigFishTotal = bigFish;
-      }
-
-      setRowState(wrap, "is-ok");
-      setBtnIcon(wrap, "ok");
-      showRowMsg(wrap, `Збережено ${fmtTimeNow()}`, true);
-
-      applyStageFilter();
-      await publishStageResultsTeams();
-
-      setMsg("✅ Live оновлено", true);
-      setTimeout(()=> setMsg("", true), 900);
-
-    }catch(err){
-      console.error(err);
-      setRowState(wrap, "is-err");
-      setBtnIcon(wrap, "err");
-      showRowMsg(wrap, "Помилка (Rules/доступ)", false);
-      setTimeout(()=>{ setRowState(wrap, null); setBtnIcon(wrap, "save"); }, 1700);
-    }
-  });
-
-  async function boot(){
-    auth.onAuthStateChanged(async (user)=>{
+  // ─────────────────────────────────────────────────────────────
+  // BOOT
+  // ─────────────────────────────────────────────────────────────
+  const boot = () => {
+    auth.onAuthStateChanged(async (user) => {
       if (!user) {
-        setMsg("Увійдіть як адмін.", false);
-        if (stageSelect) stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
-        regsAllConfirmed = [];
-        regsFiltered = [];
-        render();
+        utils.setMsg("Увійдіть як адмін.", false);
+        if (els.stageSelect) els.stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
+        state.regsAllConfirmed = [];
+        state.regsFiltered = [];
+        render.list();
         return;
       }
 
-      try{
-        isAdmin = await requireAdmin(user);
-        if (!isAdmin) {
-          setMsg("Доступ заборонено. Цей акаунт не адмін.", false);
-          regsAllConfirmed = [];
-          regsFiltered = [];
-          render();
+      try {
+        state.isAdmin = await authModule.requireAdmin(user);
+        if (!state.isAdmin) {
+          utils.setMsg("Доступ заборонено. Цей акаунт не адмін.", false);
+          state.regsAllConfirmed = [];
+          state.regsFiltered = [];
+          render.list();
           return;
         }
 
-        await loadStagesToSelect();
-        await loadAllConfirmed();
+        await firestore.loadStagesToSelect();
+        await firestore.loadAllConfirmed();
 
-        const saved = loadStageFromLS();
+        const saved = utils.loadStageFromLS();
         if (saved) {
-          const opts = Array.from(stageSelect.options || []);
-          const ok = opts.find(o => String(o.value) === String(saved));
-          if (ok) stageSelect.value = saved;
+          const opts = Array.from(els.stageSelect.options || []);
+          const ok = opts.find((o) => String(o.value) === String(saved));
+          if (ok) els.stageSelect.value = saved;
         }
 
-        if (stageSelect?.value) {
-          applyStageFilter();
-          setMsg("", true);
+        if (els.stageSelect?.value) {
+          filters.apply();
+          utils.setMsg("", true);
         } else {
-          setMsg("Оберіть змагання/етап.", true);
+          utils.setMsg("Оберіть змагання/етап.", true);
         }
-      }catch(e){
+      } catch (e) {
         console.error(e);
-        setMsg("Помилка завантаження/перевірки адміна.", false);
+        utils.setMsg("Помилка завантаження/перевірки адміна.", false);
       }
     });
+  };
 
-    stageSelect?.addEventListener("change", ()=>{
-      saveStageToLS(stageSelect.value || "");
-      applyStageFilter();
-    });
-    qInput?.addEventListener("input", ()=> applyStageFilter());
-  }
-
+  // ─────────────────────────────────────────────────────────────
+  // START
+  // ─────────────────────────────────────────────────────────────
+  bindEvents();
   boot();
 })();

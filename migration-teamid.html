@@ -1,0 +1,343 @@
+async function fixAllTeamIds() {
+  const db = firebase.firestore();
+
+  console.log("🚀 Починаю повну міграцію teamId…");
+
+  // ========== 1. ЗБИРАЄМО ВСІ КОМАНДИ ==========
+  const teamsSnap = await db.collection("teams").get();
+  const teamsByOwner = new Map();   // ownerUid -> {teamId, name, joinCode}
+  const teamsByName = new Map();    // normalized name -> teamId
+  const teamsById = new Map();      // teamId -> team data
+  const teamsByNameStrict = new Map(); // оригінальна назва -> teamId (для перевірки)
+
+  teamsSnap.forEach(doc => {
+    const data = doc.data();
+    const teamId = doc.id;
+
+    teamsById.set(teamId, { ...data, teamId });
+
+    if (data.ownerUid) {
+      teamsByOwner.set(data.ownerUid, { teamId, name: data.name, joinCode: data.joinCode });
+    }
+    
+    if (data.name) {
+      const originalName = data.name.trim();
+      const normalizedName = originalName.toLowerCase();
+      const noSpaces = normalizedName.replace(/\s+/g, '');
+      const noDashes = normalizedName.replace(/-/g, ' ');
+      
+      teamsByNameStrict.set(originalName.toLowerCase(), teamId);
+      teamsByName.set(normalizedName, teamId);
+      teamsByName.set(noSpaces, teamId);
+      teamsByName.set(noDashes, teamId);
+    }
+    
+    if (data.joinCode) {
+      teamsByName.set(data.joinCode.toLowerCase(), teamId);
+    }
+  });
+
+  console.log(`📌 Знайдено команд: ${teamsByOwner.size}`);
+  console.log(`📌 Унікальних назв (нормалізованих): ${teamsByName.size}`);
+
+  let updateCount = 0;
+  let consistencyWarnings = 0;
+  const errors = [];
+  const warnings = [];
+
+  // ========== 2. ВИПРАВЛЯЄМО USERS ==========
+  console.log("\n👥 Обробляю users…");
+  const usersSnap = await db.collection("users").get();
+  
+  for (const userDoc of usersSnap.docs) {
+    try {
+      const userId = userDoc.id;
+      const data = userDoc.data();
+      let correctedTeamId = null;
+      let correctionReason = "";
+      let consistencyCheck = null;
+
+      // Стратегія 1: Капітан → по ownerUid
+      if (data.role === "captain") {
+        if (teamsByOwner.has(userId)) {
+          correctedTeamId = teamsByOwner.get(userId).teamId;
+          correctionReason = "ownerUid match";
+          
+          // 🔥 ПЕРЕВІРКА: чи співпадає teamName користувача з назвою команди
+          const teamInfo = teamsByOwner.get(userId);
+          if (data.teamName && data.teamName.trim().toLowerCase() !== teamInfo.name.toLowerCase()) {
+            consistencyCheck = {
+              type: "teamName_mismatch",
+              userTeamName: data.teamName,
+              actualTeamName: teamInfo.name,
+              suggestion: `Оновити teamName на "${teamInfo.name}"`
+            };
+            warnings.push({
+              user: userId,
+              name: data.fullName,
+              issue: `teamName "${data.teamName}" ≠ команді "${teamInfo.name}"`
+            });
+          }
+        }
+      }
+      
+      // Стратегія 2: Учасник → по teamName
+      if (!correctedTeamId && data.teamName) {
+        const key = data.teamName.trim().toLowerCase();
+        const keyNoSpaces = key.replace(/\s+/g, '');
+        const keyNoDashes = key.replace(/-/g, ' ');
+        
+        correctedTeamId = teamsByName.get(key) || 
+                         teamsByName.get(keyNoSpaces) || 
+                         teamsByName.get(keyNoDashes);
+        
+        if (correctedTeamId) correctionReason = "teamName match";
+      }
+
+      // Стратегія 3: Перевірка чи поточний teamId валідний
+      if (!correctedTeamId && data.teamId) {
+        if (teamsById.has(data.teamId)) {
+          correctedTeamId = data.teamId;
+          correctionReason = "existing valid teamId";
+          
+          // 🔥 ПЕРЕВІРКА: чи teamName відповідає цій команді
+          if (data.teamName) {
+            const actualTeam = teamsById.get(data.teamId);
+            const userTeamKey = data.teamName.trim().toLowerCase();
+            const actualTeamKey = actualTeam.name.trim().toLowerCase();
+            
+            if (userTeamKey !== actualTeamKey && 
+                userTeamKey.replace(/\s+/g, '') !== actualTeamKey.replace(/\s+/g, '')) {
+              consistencyCheck = {
+                type: "teamName_teamId_mismatch",
+                userTeamName: data.teamName,
+                actualTeamName: actualTeam.name,
+                teamId: data.teamId
+              };
+              warnings.push({
+                user: userId,
+                name: data.fullName,
+                issue: `teamName "${data.teamName}" не відповідає команді ${data.teamId} ("${actualTeam.name}")`
+              });
+            }
+          }
+        }
+        else if (teamsByOwner.has(data.teamId)) {
+          correctedTeamId = teamsByOwner.get(data.teamId).teamId;
+          correctionReason = "teamId was ownerUid";
+        }
+      }
+
+      // Стратегія 4: Email prefix (крайній випадок)
+      if (!correctedTeamId && data.email) {
+        const emailPrefix = data.email.split('@')[0].toLowerCase();
+        if (teamsByName.has(emailPrefix)) {
+          correctedTeamId = teamsByName.get(emailPrefix);
+          correctionReason = "email prefix match";
+        }
+      }
+
+      // Логуємо невідповідності
+      if (consistencyCheck) {
+        console.warn(`⚠️ Невідповідність для ${data.fullName || userId}:`, consistencyCheck);
+        consistencyWarnings++;
+      }
+
+      // Якщо не знайшли — логуємо і пропускаємо
+      if (!correctedTeamId) {
+        console.warn(`⚠️ Не знайдено команду для user ${userId}:`, {
+          name: data.fullName,
+          role: data.role,
+          teamName: data.teamName,
+          currentTeamId: data.teamId
+        });
+        continue;
+      }
+
+      // Оновлюємо якщо потрібно
+      if (data.teamId !== correctedTeamId) {
+        console.log(`🔧 user ${data.fullName || userId}: ${data.teamId} → ${correctedTeamId} (${correctionReason})`);
+        
+        const updateData = {
+          teamId: correctedTeamId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        // 🔥 Якщо знайшли по teamName — також оновимо teamName до правильного (з teams)
+        if (correctionReason === "teamName match" && data.teamName) {
+          const matchedTeam = teamsById.get(correctedTeamId);
+          if (matchedTeam && matchedTeam.name !== data.teamName) {
+            updateData.teamName = matchedTeam.name;
+            console.log(`  📝 Оновлюю teamName: "${data.teamName}" → "${matchedTeam.name}"`);
+          }
+        }
+        
+        await db.collection("users").doc(userId).update(updateData);
+        updateCount++;
+      }
+
+    } catch (err) {
+      errors.push({ collection: "users", id: userDoc.id, error: err.message });
+    }
+  }
+
+  // ========== 3. ВИПРАВЛЯЄМО PUBLIC_PARTICIPANTS ==========
+  console.log("\n📋 Обробляю public_participants…");
+  const ppSnap = await db.collection("public_participants").get();
+  
+  for (const doc of ppSnap.docs) {
+    try {
+      const data = doc.data();
+      
+      if (data.teamId && teamsById.has(data.teamId)) continue;
+
+      let correctedTeamId = null;
+      const teamName = (data.teamName || "").trim();
+
+      if (teamName) {
+        const key = teamName.toLowerCase();
+        const keyNoSpaces = key.replace(/\s+/g, '');
+        const keyNoDashes = key.replace(/-/g, ' ');
+        
+        correctedTeamId = teamsByName.get(key) || 
+                         teamsByName.get(keyNoSpaces) || 
+                         teamsByName.get(keyNoDashes);
+      }
+
+      // Перевірка по userId
+      if (!correctedTeamId && data.userId) {
+        const userSnap = await db.collection("users").doc(data.userId).get();
+        if (userSnap.exists) {
+          const userTeamId = userSnap.data().teamId;
+          if (userTeamId && teamsById.has(userTeamId)) {
+            correctedTeamId = userTeamId;
+          }
+        }
+      }
+
+      if (correctedTeamId && data.teamId !== correctedTeamId) {
+        const matchedTeam = teamsById.get(correctedTeamId);
+        console.log(`🛠️ public_participants ${doc.id}: ${data.teamId} → ${correctedTeamId}`);
+        
+        const updateData = {
+          teamId: correctedTeamId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // 🔥 Синхронізуємо teamName з teams
+        if (matchedTeam && matchedTeam.name !== data.teamName) {
+          updateData.teamName = matchedTeam.name;
+        }
+        
+        await db.collection("public_participants").doc(doc.id).update(updateData);
+        updateCount++;
+      } else if (!correctedTeamId && teamName) {
+        console.warn(`⚠️ Не знайдено команду для public_participants ${doc.id}:`, teamName);
+      }
+
+    } catch (err) {
+      errors.push({ collection: "public_participants", id: doc.id, error: err.message });
+    }
+  }
+
+  // ========== 4. ВИПРАВЛЯЄМО REGISTRATIONS ==========
+  console.log("\n📝 Обробляю registrations…");
+  const regSnap = await db.collection("registrations").get();
+  
+  for (const doc of regSnap.docs) {
+    try {
+      const data = doc.data();
+      
+      if (data.teamId && teamsById.has(data.teamId)) continue;
+
+      let correctedTeamId = null;
+      const teamName = (data.teamName || "").trim();
+
+      if (teamName) {
+        const key = teamName.toLowerCase();
+        const keyNoSpaces = key.replace(/\s+/g, '');
+        const keyNoDashes = key.replace(/-/g, ' ');
+        
+        correctedTeamId = teamsByName.get(key) || 
+                         teamsByName.get(keyNoSpaces) || 
+                         teamsByName.get(keyNoDashes);
+      }
+
+      // Перевірка по userId
+      if (!correctedTeamId && data.userId) {
+        const userSnap = await db.collection("users").doc(data.userId).get();
+        if (userSnap.exists) {
+          const userTeamId = userSnap.data().teamId;
+          if (userTeamId && teamsById.has(userTeamId)) {
+            correctedTeamId = userTeamId;
+          }
+        }
+      }
+
+      // Перевірка по captainUid
+      if (!correctedTeamId && data.captainUid && teamsByOwner.has(data.captainUid)) {
+        correctedTeamId = teamsByOwner.get(data.captainUid).teamId;
+      }
+
+      if (correctedTeamId && data.teamId !== correctedTeamId) {
+        const matchedTeam = teamsById.get(correctedTeamId);
+        console.log(`🛠️ registrations ${doc.id}: ${data.teamId} → ${correctedTeamId}`);
+        
+        const updateData = {
+          teamId: correctedTeamId,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // 🔥 Синхронізуємо teamName з teams
+        if (matchedTeam && matchedTeam.name !== data.teamName) {
+          updateData.teamName = matchedTeam.name;
+        }
+        
+        await db.collection("registrations").doc(doc.id).update(updateData);
+        updateCount++;
+      } else if (!correctedTeamId && teamName) {
+        console.warn(`⚠️ Не знайдено команду для registrations ${doc.id}:`, teamName);
+      }
+
+    } catch (err) {
+      errors.push({ collection: "registrations", id: doc.id, error: err.message });
+    }
+  }
+
+  // ========== 5. ПІДСУМОК ==========
+  console.log("\n" + "=".repeat(60));
+  console.log("✅ МІГРАЦІЯ ЗАВЕРШЕНА!");
+  console.log(`📊 Всього оновлено записів: ${updateCount}`);
+  console.log(`⚠️ Невідповідностей teamName: ${consistencyWarnings}`);
+  
+  if (warnings.length > 0) {
+    console.log("\n📋 Список невідповідностей (потребують ручної перевірки):");
+    warnings.forEach((w, i) => console.log(`  ${i + 1}. ${w.name} (${w.user}): ${w.issue}`));
+  }
+  
+  if (errors.length > 0) {
+    console.error(`\n❌ Помилок: ${errors.length}`);
+    errors.forEach(e => console.error(`  - ${e.collection}/${e.id}: ${e.error}`));
+  } else {
+    console.log("🎉 Без критичних помилок!");
+  }
+  
+  console.log("=".repeat(60));
+
+  return {
+    teamsFound: teamsByOwner.size,
+    updatesMade: updateCount,
+    consistencyWarnings: consistencyWarnings,
+    warnings: warnings,
+    errors: errors
+  };
+}
+
+// Запуск з підтвердженням
+if (confirm("🚨 Запустити міграцію teamId?\n\nЦе змінить дані у Firestore і синхронізує:\n• users\n• public_participants  \n• registrations\n\nПродовжити?")) {
+  fixAllTeamIds().then(result => {
+    console.log("📈 Результат міграції:", result);
+  }).catch(err => {
+    console.error("💥 Критична помилка:", err);
+  });
+}

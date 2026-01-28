@@ -166,48 +166,7 @@ async function openTeamPopup(teamName, teamDocId) {
   }
 }
 
-      if (members.length === 0) {
-        body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';
-        return;
-      }
-
-      // Сортуємо: капітан перший
-      members.sort((a, b) => {
-        const aIsCaptain = a.role === "captain" || a.id === ownerUid;
-        const bIsCaptain = b.role === "captain" || b.id === ownerUid;
-        if (aIsCaptain && !bIsCaptain) return -1;
-        if (bIsCaptain && !aIsCaptain) return 1;
-        return (a.fullName || "").localeCompare(b.fullName || "");
-      });
-
-      body.innerHTML = members.map(m => {
-        const name = m.fullName || m.email || "Учасник";
-        const isCaptain = m.role === "captain" || m.id === ownerUid;
-        const role = isCaptain ? "Капітан" : "Учасник";
-        const avatarUrl = m.avatarUrl || '';
-
-        const avatarHtml = avatarUrl
-          ? `<div class="member-avatar"><img src="${esc(avatarUrl)}" alt=""></div>`
-          : `<div class="member-avatar"><div class="member-avatar-placeholder">👤</div></div>`;
-
-        return `
-          <div class="team-member">
-            ${avatarHtml}
-            <div class="member-info">
-              <div class="member-name">${esc(name)}</div>
-              <div class="member-role">${esc(role)}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
-    } catch (err) {
-      console.error(err);
-      body.innerHTML = '<div class="team-loading">Помилка завантаження</div>';
-    }
-  }
-
-  function closeTeamPopup() {
+   function closeTeamPopup() {
     const popup = $("teamPopup");
     if (popup) popup.style.display = "none";
   }

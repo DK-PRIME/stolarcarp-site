@@ -412,38 +412,41 @@
     }
     
     // ==================== BACKUP ====================
-    async function createBackup(db, storage) {
-      log('💾 Створюю backup...', 'info');
-      
-      const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-      const backupData = {
-        timestamp: new Date().toISOString(),
-        collections: {}
-      };
-      
-      // Backup users
-      const usersSnap = await db.collection('users').get();
-      backupData.collections.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Backup public_participants
-      const ppSnap = await db.collection('public_participants').get();
-      backupData.collections.public_participants = ppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Backup registrations
-      const regSnap = await db.collection('registrations').get();
-      backupData.collections.registrations = regSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      
-      // Upload to Storage
-      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const ref = storage.ref().child(`backups/teamid-migration-${timestamp}.json`);
-      await ref.put(blob);
-      
-      const downloadUrl = await ref.getDownloadURL();
-      log(`✅ Backup збережено: ${downloadData.collections.users.length} users, ${backupData.collections.public_participants.length} pp, ${backupData.collections.registrations.length} reg`, 'success');
-      log(`🔗 URL: ${downloadUrl}`, 'info');
-      
-      return downloadUrl;
-    }
+async function createBackup(db, storage) {
+  log('💾 Створюю backup...', 'info');
+  
+  const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+  const backupData = {
+    timestamp: new Date().toISOString(),
+    collections: {}
+  };
+  
+  // Backup users
+  const usersSnap = await db.collection('users').get();
+  backupData.collections.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Backup public_participants
+  const ppSnap = await db.collection('public_participants').get();
+  backupData.collections.public_participants = ppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Backup registrations
+  const regSnap = await db.collection('registrations').get();
+  backupData.collections.registrations = regSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  // Upload to Storage
+  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+  const ref = storage.ref().child(`backups/teamid-migration-${timestamp}.json`);
+  await ref.put(blob);
+  
+  const downloadUrl = await ref.getDownloadURL();
+  
+  // 🔥 ВИПРАВЛЕНО: backupData замість downloadData
+  log(`✅ Backup збережено: ${backupData.collections.users.length} users, ${backupData.collections.public_participants.length} pp, ${backupData.collections.registrations.length} reg`, 'success');
+  log(`🔗 URL: ${downloadUrl}`, 'info');
+  
+  return downloadUrl;
+}
+
     
     // ==================== МІГРАЦІЯ ====================
     async function fixAllTeamIds(isDryRun, useThrottle) {

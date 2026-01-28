@@ -396,7 +396,6 @@
         log(`💾 Commit batch: ${this.count} операцій...`, 'info');
         await this.currentBatch.commit();
         
-        // Пауза перед наступним batch
         if (this.delayMs > 0) {
           await new Promise(r => setTimeout(r, this.delayMs));
         }
@@ -412,41 +411,35 @@
     }
     
     // ==================== BACKUP ====================
-async function createBackup(db, storage) {
-  log('💾 Створюю backup...', 'info');
-  
-  const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
-  const backupData = {
-    timestamp: new Date().toISOString(),
-    collections: {}
-  };
-  
-  // Backup users
-  const usersSnap = await db.collection('users').get();
-  backupData.collections.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  // Backup public_participants
-  const ppSnap = await db.collection('public_participants').get();
-  backupData.collections.public_participants = ppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  // Backup registrations
-  const regSnap = await db.collection('registrations').get();
-  backupData.collections.registrations = regSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-  
-  // Upload to Storage
-  const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-  const ref = storage.ref().child(`backups/teamid-migration-${timestamp}.json`);
-  await ref.put(blob);
-  
-  const downloadUrl = await ref.getDownloadURL();
-  
-  // 🔥 ВИПРАВЛЕНО: backupData замість downloadData
-  log(`✅ Backup збережено: ${backupData.collections.users.length} users, ${backupData.collections.public_participants.length} pp, ${backupData.collections.registrations.length} reg`, 'success');
-  log(`🔗 URL: ${downloadUrl}`, 'info');
-  
-  return downloadUrl;
-}
-
+    async function createBackup(db, storage) {
+      log('💾 Створюю backup...', 'info');
+      
+      const timestamp = new Date().toISOString().slice(0,19).replace(/:/g, '-');
+      const backupData = {
+        timestamp: new Date().toISOString(),
+        collections: {}
+      };
+      
+      const usersSnap = await db.collection('users').get();
+      backupData.collections.users = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const ppSnap = await db.collection('public_participants').get();
+      backupData.collections.public_participants = ppSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const regSnap = await db.collection('registrations').get();
+      backupData.collections.registrations = regSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const ref = storage.ref().child(`backups/teamid-migration-${timestamp}.json`);
+      await ref.put(blob);
+      
+      const downloadUrl = await ref.getDownloadURL();
+      
+      log(`✅ Backup збережено: ${backupData.collections.users.length} users, ${backupData.collections.public_participants.length} pp, ${backupData.collections.registrations.length} reg`, 'success');
+      log(`🔗 URL: ${downloadUrl}`, 'info');
+      
+      return downloadUrl;
+    }
     
     // ==================== МІГРАЦІЯ ====================
     async function fixAllTeamIds(isDryRun, useThrottle) {
@@ -455,7 +448,6 @@ async function createBackup(db, storage) {
       const warnings = [];
       const errors = [];
       
-      // Batch processor для live режиму
       const batch = useThrottle && !isDryRun ? new BatchProcessor(db) : null;
       
       log(`${isDryRun ? '🔍 DRY RUN:' : '🚀 LIVE:'} Починаю міграцію...`, isDryRun ? 'dryrun' : 'info');
@@ -482,8 +474,8 @@ async function createBackup(db, storage) {
           const normalized = data.name.trim().toLowerCase();
           teamsByName.set(normalized, teamId);
           teamsByName.set(normalized.replace(/\s+/g, ''), teamId);
-          teamsByName.set(normalized.replace(/-/g, ''), teamId); // Виправлено: просто видаляємо дефіси
-          teamsByName.set(normalized.replace(/[^a-zа-я0-9]/g, ''), teamId);
+          teamsByName.set(normalized.replace(/-/g, ''), teamId);
+          teamsByName.set(normalized.replace(/[^a-zа-яіїєґ0-9]/g, ''), teamId); // ✅ Повна українська абетка
         }
         
         if (data.joinCode) {
@@ -494,7 +486,6 @@ async function createBackup(db, storage) {
       stats.teams = teamsByOwner.size;
       log(`Знайдено команд: ${stats.teams}`, 'success');
       
-      // Загальна кількість для прогресу
       const usersSnap = await db.collection('users').get();
       const ppSnap = await db.collection('public_participants').get();
       const regSnap = await db.collection('registrations').get();
@@ -516,7 +507,6 @@ async function createBackup(db, storage) {
           let needsTeamNameUpdate = false;
           let correctTeamName = null;
           
-          // Стратегія 1: Капітан
           if (data.role === 'captain' && teamsByOwner.has(userId)) {
             const teamInfo = teamsByOwner.get(userId);
             correctedTeamId = teamInfo.teamId;
@@ -530,14 +520,13 @@ async function createBackup(db, storage) {
             }
           }
           
-          // Стратегія 2: Учасник по teamName
           if (!correctedTeamId && data.teamName) {
             const key = data.teamName.trim().toLowerCase();
             const variations = [
               key,
               key.replace(/\s+/g, ''),
-              key.replace(/-/g, ''), // Виправлено
-              key.replace(/[^a-zа-я0-9]/g, '')
+              key.replace(/-/g, ''),
+              key.replace(/[^a-zа-яіїєґ0-9]/g, '') // ✅ Повна українська абетка
             ];
             
             for (const variant of variations) {
@@ -550,7 +539,6 @@ async function createBackup(db, storage) {
             }
           }
           
-          // Стратегія 3: Перевірка валідності
           if (!correctedTeamId && data.teamId) {
             if (teamsById.has(data.teamId)) {
               correctedTeamId = data.teamId;
@@ -597,7 +585,6 @@ async function createBackup(db, storage) {
         }
       }
       
-      // Commit users batch
       if (batch) await batch.commit();
       
       // 3. PUBLIC_PARTICIPANTS
@@ -620,7 +607,7 @@ async function createBackup(db, storage) {
               key,
               key.replace(/\s+/g, ''),
               key.replace(/-/g, ''),
-              key.replace(/[^a-zа-я0-9]/g, '')
+              key.replace(/[^a-zа-яіїєґ0-9]/g, '') // ✅ Повна українська абетка
             ];
             
             for (const variant of variations) {
@@ -692,7 +679,7 @@ async function createBackup(db, storage) {
               key,
               key.replace(/\s+/g, ''),
               key.replace(/-/g, ''),
-              key.replace(/[^a-zа-я0-9]/g, '')
+              key.replace(/[^a-zа-яіїєґ0-9]/g, '') // ✅ Повна українська абетка
             ];
             
             for (const variant of variations) {
@@ -746,7 +733,6 @@ async function createBackup(db, storage) {
         }
       }
       
-      // Final commit
       if (batch) {
         const totalOps = await batch.finish();
         log(`Всього batch-операцій: ${totalOps}`, 'info');
@@ -771,21 +757,17 @@ async function createBackup(db, storage) {
         await waitFirebase();
         log('Firebase готовий', 'success');
         
-        // Backup перед live міграцією
         if (createBackup) {
           await createBackup(window.scDb, window.scStorage);
         }
         
-        // Міграція
         const result = await fixAllTeamIds(isDryRun, useThrottle);
         
-        // Оновлення статистики
         $('statTeams').textContent = result.stats.teams;
         $('statUpdates').textContent = result.stats.updates;
         $('statWarnings').textContent = result.stats.warnings;
         $('statErrors').textContent = result.stats.errors;
         
-        // Summary
         $('summary').style.display = 'block';
         let summaryHtml = `
           <p><strong>Режим:</strong> ${isDryRun ? 'Dry Run (без змін)' : 'LIVE (дані змінено)'}</p>
@@ -824,7 +806,6 @@ async function createBackup(db, storage) {
       }
     }
     
-    // Ініціалізація
     updateMode();
   </script>
 </body>

@@ -67,16 +67,14 @@
 
   function isValidTeamName(name) {
     const norm = normalizeTeamName(name);
-    // Мінімум 3 символи, тільки літери, цифри, пробіли, дефіси
     return norm.length >= 3 && /^[a-zA-Zа-яА-ЯіІїЇєЄґҐ0-9\s\-]+$/.test(norm);
   }
 
-  // ====== ПЕРЕВІРКА УНІКАЛЬНОСТІ НАЗВИ (case-insensitive) ======
+  // ====== ПЕРЕВІРКА УНІКАЛЬНОСТІ НАЗВИ ======
   async function isTeamNameTaken(db, name) {
     const norm = normalizeTeamName(name);
     const key = norm.toLowerCase();
 
-    // Шукаємо за нормалізованим ключем
     const snap = await db.collection("teams")
       .where("nameKey", "==", key)
       .limit(1)
@@ -97,7 +95,7 @@
 
     if (snap.empty) return null;
     const doc = snap.docs[0];
-    return { teamId: doc.id, ...doc.data() };
+    return { teamId: doc.id, ...doc.data() };  // teamId = Firestore Auto-ID
   }
 
   // ====== СТВОРЕННЯ КОМАНДИ ======
@@ -105,17 +103,14 @@
     const normName = normalizeTeamName(name);
     const nameKey = normName.toLowerCase();
 
-    // Перевіряємо чи не зайнята
     const taken = await isTeamNameTaken(db, normName);
     if (taken) {
       throw new Error("team_name_taken");
     }
 
-    // Генеруємо унікальний joinCode
     for (let i = 0; i < 15; i++) {
       const joinCode = genJoinCode(6);
       
-      // Перевіряємо чи не зайнятий код
       const exists = await db.collection("teams")
         .where("joinCode", "==", joinCode)
         .limit(1)
@@ -128,20 +123,21 @@
       const ref = await db.collection("teams").add({
         name: normName,
         nameKey: nameKey,
-        ownerUid: ownerUid,
+        ownerUid: ownerUid,  // Firebase UID капітана (28 символів)
         joinCode: joinCode,
         createdAt: now,
         updatedAt: now
       });
 
-      return { teamId: ref.id, joinCode, name: normName };
+      return { teamId: ref.id, joinCode, name: normName };  // ref.id = Auto-ID (20 символів)
     }
     
     throw new Error("Не вдалося згенерувати код команди");
   }
 
   // ====== РОБОТА З КОРИСТУВАЧЕМ ======
-  async function ensureUserDoc(db, uid, data) {
+  // 🔥 ВИПРАВЛЕНО: ЗАВЖДИ оновлюємо teamId, якщо він переданий!
+  async function ensureUserDoc(db, uid, data, forceUpdate = false) {
     const ref = db.collection("users").doc(uid);
     const snap = await ref.get();
     const now = window.firebase.firestore.FieldValue.serverTimestamp();
@@ -159,22 +155,30 @@
 
     if (!snap.exists) {
       await ref.set(base);
-    } else {
-      // Оновлюємо тільки якщо поля порожні
-      const cur = snap.data() || {};
-      const patch = {};
-      
-      if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
-      if (!cur.email && base.email) patch.email = base.email;
-      if (!cur.phone && base.phone) patch.phone = base.phone;
-      if (!cur.city && base.city) patch.city = base.city;
-      if (!cur.teamId && base.teamId) patch.teamId = base.teamId;
-      if (!cur.role && base.role) patch.role = base.role;
-      
-      if (Object.keys(patch).length) {
-        patch.updatedAt = now;
-        await ref.update(patch);
-      }
+      return;
+    }
+
+    // 🔥 ВИПРАВЛЕНО: Якщо forceUpdate = true — оновлюємо teamId навіть якщо він вже є
+    const cur = snap.data() || {};
+    const patch = {};
+    
+    if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
+    if (!cur.email && base.email) patch.email = base.email;
+    if (!cur.phone && base.phone) patch.phone = base.phone;
+    if (!cur.city && base.city) patch.city = base.city;
+    
+    // 🔥 КЛЮЧОВЕ ВИПРАВЛЕННЯ:
+    // Якщо forceUpdate = true — завжди оновлюємо teamId
+    // Якщо forceUpdate = false — оновлюємо тільки якщо був null
+    if (forceUpdate || cur.teamId == null) {
+      patch.teamId = base.teamId;
+    }
+    
+    if (!cur.role && base.role) patch.role = base.role;
+    
+    if (Object.keys(patch).length) {
+      patch.updatedAt = now;
+      await ref.update(patch);
     }
   }
 
@@ -223,7 +227,6 @@
     const auth = window.scAuth;
     const db = window.scDb;
 
-    // Збираємо дані
     const email = ($("signupEmail")?.value || "").trim();
     const pass = $("signupPassword")?.value || "";
     const fullName = ($("signupFullName")?.value || "").trim();
@@ -233,7 +236,6 @@
     const teamNameRaw = ($("signupTeamName")?.value || "").trim();
     const joinCodeRaw = ($("signupJoinCode")?.value || "").trim();
 
-    // Базова валідація
     if (!email || !pass || pass.length < 6 || !fullName || !phone || !city) {
       setMsg(signupMsg, "Заповни всі поля (пароль мін. 6 символів).", "err");
       return;
@@ -248,7 +250,6 @@
         return;
       }
 
-      // Перевіряємо унікальність назви ДО створення акаунта
       try {
         const taken = await isTeamNameTaken(db, teamNameRaw);
         if (taken) {
@@ -257,7 +258,6 @@
         }
       } catch (err) {
         console.warn("Перевірка назви:", err);
-        // Якщо немає прав — перевіримо після створення акаунта
       }
     }
 
@@ -270,7 +270,6 @@
         return;
       }
 
-      // ОБОВ'ЯЗКОВО шукаємо команду ПЕРЕД реєстрацією
       setMsg(signupMsg, "Перевіряю код команди…", "");
       
       const team = await findTeamByJoinCode(db, joinCode);
@@ -283,7 +282,6 @@
       teamContext = team;
     }
 
-    // ====== СТВОРЕННЯ АКАУНТА ======
     let createdUser = null;
     let createdTeamId = null;
 
@@ -303,35 +301,39 @@
           const team = await createTeam(db, teamNameRaw, user.uid);
           createdTeamId = team.teamId;
           
+          console.log("✅ Команда створена:", team.teamId, "для капітана:", user.uid);
+          
+          // 🔥 ВИПРАВЛЕНО: forceUpdate = true, щоб точно записати teamId
           await ensureUserDoc(db, user.uid, {
             fullName, email, phone, city,
             role: "captain",
             teamId: team.teamId
-          });
+          }, true); // ← forceUpdate!
 
           setMsg(signupMsg, `✅ Команда "${team.name}" створена! Код: ${team.joinCode}`, "ok");
           setTimeout(() => goAfterAuth(user), 800);
           
         } catch (teamErr) {
-          // Якщо не вдалось створити команду — видаляємо акаунт
           throw teamErr;
         }
       }
 
       // ====== УЧАСНИК: приєднуємо до команди ======
       else if (role === "member") {
-        // Перевіряємо ще раз (на випадок якщо команда зникла)
         const team = teamContext || await findTeamByJoinCode(db, joinCodeRaw);
         
         if (!team) {
           throw new Error("team_not_found");
         }
 
+        console.log("✅ Учасник приєднується до команди:", team.teamId);
+        
+        // 🔥 ВИПРАВЛЕНО: forceUpdate = true
         await ensureUserDoc(db, user.uid, {
           fullName, email, phone, city,
           role: "member",
           teamId: team.teamId
-        });
+        }, true); // ← forceUpdate!
 
         setMsg(signupMsg, `✅ Ти в команді "${team.name}"!`, "ok");
         setTimeout(() => goAfterAuth(user), 500);
@@ -340,7 +342,6 @@
     } catch (err) {
       console.error("Помилка реєстрації:", err);
 
-      // Cleanup: видаляємо створене при помилці
       if (createdUser) {
         try {
           if (createdTeamId) {
@@ -415,7 +416,6 @@
     });
   }
 
-  // Слідкуємо за станом авторизації
   (async () => {
     try {
       await waitFirebase();

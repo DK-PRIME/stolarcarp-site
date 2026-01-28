@@ -70,56 +70,101 @@
   }
 
   // === POPUP СКЛАДУ КОМАНДИ ===
-  async function openTeamPopup(teamName, teamDocId) {
-    const popup = $("teamPopup");
-    const title = $("teamPopupTitle");
-    const body = $("teamPopupBody");
+async function openTeamPopup(teamName, teamDocId) {
+  const popup = $("teamPopup");
+  const title = $("teamPopupTitle");
+  const body = $("teamPopupBody");
 
-    if (!popup || !title || !body) return;
+  if (!popup || !title || !body) return;
 
-    title.textContent = teamName || "Команда";
-    body.innerHTML = '<div class="team-loading">Завантаження складу…</div>';
-    popup.style.display = "flex";
+  title.textContent = teamName || "Команда";
+  body.innerHTML = '<div class="team-loading">Завантаження складу…</div>';
+  popup.style.display = "flex";
 
-    try {
-      const db = window.scDb;
+  try {
+    const db = window.scDb;
 
-      // 1. Отримуємо дані команди
-      const teamDoc = await db.collection("teams").doc(teamDocId).get();
-      if (!teamDoc.exists) {
-        body.innerHTML = '<div class="team-loading">Команду не знайдено</div>';
-        return;
-      }
+    // 1. Завантажуємо команду
+    const teamSnap = await db.collection("teams").doc(teamDocId).get();
+    if (!teamSnap.exists) {
+      body.innerHTML = `<div class="team-loading">Команду не знайдено</div>`;
+      return;
+    }
 
-      const teamData = teamDoc.data();
-      const ownerUid = teamData.ownerUid;
+    const team = teamSnap.data();
+    const ownerUid = team.ownerUid || null;
 
-      // 2. Знаходимо користувачів з цієї команди
-      let members = [];
-      
-      try {
-        const usersSnap = await db.collection("users")
-          .where("teamId", "==", teamDocId)
-          .get();
-        
-        usersSnap.forEach(doc => {
-          members.push({ id: doc.id, ...(doc.data() || {}) });
+    let members = [];
+    const used = new Set();
+
+    // 2. Основний пошук — усі учасники за teamId
+    const usersSnap = await db.collection("users")
+      .where("teamId", "==", teamDocId)
+      .get();
+
+    usersSnap.forEach(doc => {
+      const d = doc.data();
+      members.push({
+        id: doc.id,
+        fullName: d.fullName || d.displayName || d.email || "Учасник",
+        role: d.role || "member",
+        avatarUrl: d.avatarUrl || d.photoURL || null
+      });
+      used.add(doc.id);
+    });
+
+    // 3. Якщо капітана нема — додаємо його окремо
+    if (ownerUid && !used.has(ownerUid)) {
+      const capSnap = await db.collection("users").doc(ownerUid).get();
+      if (capSnap.exists) {
+        const c = capSnap.data();
+        members.push({
+          id: ownerUid,
+          fullName: c.fullName || c.displayName || c.email || "Капітан",
+          role: "captain",
+          avatarUrl: c.avatarUrl || c.photoURL || null
         });
-      } catch (err) {
-        console.log("Пошук по teamId не вдався:", err);
+        used.add(ownerUid);
       }
+    }
 
-      // Якщо не знайшли — додаємо капітана
-      if (members.length === 0 && ownerUid) {
-        const captainSnap = await db.collection("users").doc(ownerUid).get();
-        if (captainSnap.exists) {
-          members.push({ 
-            id: captainSnap.id, 
-            ...(captainSnap.data() || {}),
-            role: "captain" 
-          });
-        }
-      }
+    // 4. Якщо взагалі нікого немає…
+    if (members.length === 0) {
+      body.innerHTML = `<div class="team-loading">Склад команди порожній</div>`;
+      return;
+    }
+
+    // 5. Сортування: капітан згори
+    members.sort((a, b) => {
+      const aCap = a.role === "captain" || a.id === ownerUid;
+      const bCap = b.role === "captain" || b.id === ownerUid;
+      if (aCap && !bCap) return -1;
+      if (bCap && !aCap) return 1;
+      return a.fullName.localeCompare(b.fullName);
+    });
+
+    // 6. Відображення
+    body.innerHTML = members.map(m => {
+      const avatar = m.avatarUrl 
+        ? `<img src="${m.avatarUrl}" class="member-avatar">`
+        : `<div class="member-avatar-placeholder">👤</div>`;
+
+      return `
+        <div class="team-member">
+          <div class="member-avatar-wrap">${avatar}</div>
+          <div class="member-info">
+            <div class="member-name">${esc(m.fullName)}</div>
+            <div class="member-role">${m.role === "captain" ? "⭐ Капітан" : "Учасник"}</div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+  } catch (err) {
+    console.error("Помилка popup:", err);
+    body.innerHTML = `<div class="team-loading">Помилка: ${esc(err.message)}</div>`;
+  }
+}
 
       if (members.length === 0) {
         body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';

@@ -743,68 +743,68 @@
     }
     
     // ==================== ЗАПУСК ====================
-    async function runMigration() {
-      const isDryRun = $('dryRun').checked;
-      const createBackup = $('createBackup').checked && !isDryRun;
-      const useThrottle = $('throttle').checked && !isDryRun;
-      
-      $('startBtn').disabled = true;
-      $('progressContainer').style.display = 'block';
-      $('statsContainer').style.display = 'grid';
-      $('summary').style.display = 'none';
-      
-      try {
-        await waitFirebase();
-        log('Firebase готовий', 'success');
-        
-        if (createBackup) {
-          await createBackup(window.scDb, window.scStorage);
-        }
-        
-        const result = await fixAllTeamIds(isDryRun, useThrottle);
-        
-        $('statTeams').textContent = result.stats.teams;
-        $('statUpdates').textContent = result.stats.updates;
-        $('statWarnings').textContent = result.stats.warnings;
-        $('statErrors').textContent = result.stats.errors;
-        
-        $('summary').style.display = 'block';
-        let summaryHtml = `
-          <p><strong>Режим:</strong> ${isDryRun ? 'Dry Run (без змін)' : 'LIVE (дані змінено)'}</p>
-          <p><strong>Всього оновлено:</strong> ${result.stats.updates}</p>
-          <p><strong>Пропущено:</strong> ${result.stats.skipped}</p>
-        `;
-        
-        if (result.warnings.length) {
-          summaryHtml += `<h4>⚠️ Попередження (${result.warnings.length}):</h4><ul class="warning-list">`;
-          result.warnings.forEach(w => summaryHtml += `<li>${w}</li>`);
-          summaryHtml += '</ul>';
-        }
-        
-        if (result.errors.length) {
-          summaryHtml += `<h4>❌ Помилки (${result.errors.length}):</h4><ul class="error-list">`;
-          result.errors.forEach(e => summaryHtml += `<li>${e.col}/${e.id}: ${e.err}</li>`);
-          summaryHtml += '</ul>';
-        }
-        
-        if (!isDryRun && result.stats.updates > 0) {
-          summaryHtml += `<p style="color:#22c55e; font-weight:800; margin-top:20px;">✅ Міграція успішна! Popup складу команди тепер працює.</p>`;
-        }
-        
-        $('summaryContent').innerHTML = summaryHtml;
-        
-        if (isDryRun && result.stats.updates > 0) {
-          log(`\n🔍 Dry Run завершено. Знайдено ${result.stats.updates} записів для оновлення.`, 'dryrun');
-          log('Зніми галочку "Dry Run" і запусти знову для реальної міграції.', 'info');
-        }
-        
-      } catch (err) {
-        log(`Критична помилка: ${err.message}`, 'error');
-        console.error(err);
-      } finally {
-        $('startBtn').disabled = false;
-      }
+async function runMigration() {
+  const isDryRun = $('dryRun').checked;
+  const doBackup = $('createBackup').checked && !isDryRun;  // ✅ ВИПРАВЛЕНО
+  const useThrottle = $('throttle').checked && !isDryRun;
+  
+  $('startBtn').disabled = true;
+  $('progressContainer').style.display = 'block';
+  $('statsContainer').style.display = 'grid';
+  $('summary').style.display = 'none';
+  
+  try {
+    await waitFirebase();
+    log('Firebase готовий', 'success');
+    
+    if (doBackup) {  // ✅ ВИПРАВЛЕНО
+      await createBackup(window.scDb, window.scStorage);
     }
+    
+    const result = await fixAllTeamIds(isDryRun, useThrottle);
+    
+    $('statTeams').textContent = result.stats.teams;
+    $('statUpdates').textContent = result.stats.updates;
+    $('statWarnings').textContent = result.stats.warnings;
+    $('statErrors').textContent = result.stats.errors;
+    
+    $('summary').style.display = 'block';
+    let summaryHtml = `
+      <p><strong>Режим:</strong> ${isDryRun ? 'Dry Run (без змін)' : 'LIVE (дані змінено)'}</p>
+      <p><strong>Всього оновлено:</strong> ${result.stats.updates}</p>
+      <p><strong>Пропущено:</strong> ${result.stats.skipped}</p>
+    `;
+    
+    if (result.warnings.length) {
+      summaryHtml += `<h4>⚠️ Попередження (${result.warnings.length}):</h4><ul class="warning-list">`;
+      result.warnings.forEach(w => summaryHtml += `<li>${w}</li>`);
+      summaryHtml += '</ul>';
+    }
+    
+    if (result.errors.length) {
+      summaryHtml += `<h4>❌ Помилки (${result.errors.length}):</h4><ul class="error-list">`;
+      result.errors.forEach(e => summaryHtml += `<li>${e.col}/${e.id}: ${e.err}</li>`);
+      summaryHtml += '</ul>';
+    }
+    
+    if (!isDryRun && result.stats.updates > 0) {
+      summaryHtml += `<p style="color:#22c55e; font-weight:800; margin-top:20px;">✅ Міграція успішна! Popup складу команди тепер працює.</p>`;
+    }
+    
+    $('summaryContent').innerHTML = summaryHtml;
+    
+    if (isDryRun && result.stats.updates > 0) {
+      log(`\n🔍 Dry Run завершено. Знайдено ${result.stats.updates} записів для оновлення.`, 'dryrun');
+      log('Зніми галочку "Dry Run" і запусти знову для реальної міграції.', 'info');
+    }
+    
+  } catch (err) {
+    log(`Критична помилка: ${err.message}`, 'error');
+    console.error(err);
+  } finally {
+    $('startBtn').disabled = false;
+  }
+}
     
     updateMode();
   </script>

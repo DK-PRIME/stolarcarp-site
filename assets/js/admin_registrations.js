@@ -4,13 +4,13 @@
 // ✅ After CONFIRM: hide confirmed from list (doesn't delete)
 // ✅ After finishAt + 24h: hide ALL registrations for that stage/event
 // ✅ Archive uses fresh doc + removes undefined recursively to avoid Firestore errors
-// ✅ MIRROR: confirm/cancel/delete синхронить public_participants (щоб participation.html бачив оплату)
+// ✅ MIRROR: confirm/cancel/delete синхронизує public_participants (щоб participation.html бачив оплату)
 
 (function () {
   const auth = window.scAuth;
   const db = window.scDb;
 
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2"; // твій адмін UID (як у rules)
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
   const msgEl = document.getElementById("msg");
   const listEl = document.getElementById("list");
@@ -54,7 +54,6 @@
     setMsg(t, false);
   }
 
-  // ✅ прибирає undefined рекурсивно (Firestore не дозволяє undefined)
   function stripUndefinedDeep(v) {
     if (Array.isArray(v)) {
       return v.map(stripUndefinedDeep).filter((x) => x !== undefined);
@@ -78,7 +77,7 @@
         const d = new Date(x);
         return isFinite(d.getTime()) ? d : null;
       }
-      if (x && typeof x.toDate === "function") return x.toDate(); // Firestore Timestamp
+      if (x && typeof x.toDate === "function") return x.toDate();
     } catch {}
     return null;
   }
@@ -92,11 +91,7 @@
   let currentUser = null;
   let isAdminByRules = false;
   let isAdminByRole = false;
-
-  // map: "compId||stageId" -> label
   let stageNameByKey = new Map();
-
-  // map: "compId||stageId" -> endAt(Date|null)
   let stageEndAtByKey = new Map();
 
   async function loadCompetitionsMap() {
@@ -126,7 +121,6 @@
           stageEndAtByKey.set(key, toDateMaybe(endRaw));
         });
       } else {
-        // одноразове без events[]
         const key = `${compId}||`;
         stageNameByKey.set(key, `${brand} · ${compTitle}`);
 
@@ -148,7 +142,7 @@
   function isFinishedAndExpired(r) {
     const key = getStageKeyFromReg(r);
     const endAt = stageEndAtByKey.get(key) || null;
-    if (!endAt) return false; // якщо нема endAt — не ховаємо
+    if (!endAt) return false;
     return now().getTime() > (endAt.getTime() + GRACE_MS);
   }
 
@@ -156,7 +150,7 @@
     if (!q) return true;
     const hay = [
       r.teamName,
-      r.participantName, // для SOLO
+      r.participantName,
       r.captain,
       r.phone,
       r.competitionId,
@@ -191,89 +185,211 @@
     return true;
   }
 
-  // ✅ mirror helper: синхронізує public_participants
-  // ВАЖЛИВО: docId public_participants == docId registrations (r._id)
+  // ✅ ДЗЕРКАЛО: створює або оновлює public_participants
+  async function mirrorToPublic(regId, data) {
+    const pubRef = db.collection("public_participants").doc(String(regId));
+
+    const cleanData = stripUndefinedDeep({
+      ...data,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    try {
+      // 🔥 set з merge завжди працює:
+      // якщо документа нема → створить
+      // якщо є → оновить
+      await pubRef.set(cleanData, { merge: true });
+
+      console.log("✅ Дзеркалювання успішне:", regId);
+    } catch (err) {
+      console.error("❌ Помилка дзеркалювання:", err);
+      throw err;
+    }
+  }
+
   function pubRefFor(id){ return db.collection("public_participants").doc(String(id)); }
   function regRefFor(id){ return db.collection("registrations").doc(String(id)); }
 
   function render(regs) {
-  if (!listEl) return;
-  listEl.innerHTML = "";
+    if (!listEl) return;
+    listEl.innerHTML = "";
 
-  if (!regs.length) {
-    listEl.innerHTML = `<div class="form__hint">Нема заявок по цьому фільтру.</div>`;
-    return;
-  }
+    if (!regs.length) {
+      listEl.innerHTML = `<div class="form__hint">Нема заявок по цьому фільтру.</div>`;
+      return;
+    }
 
-  // 🟡 ГРУПУВАННЯ ПО ЕТАПАХ
-  const groups = {};
+    const groups = {};
 
-  regs.forEach(r => {
-    const key = `${r.competitionId || ""}||${r.stageId || ""}`;
-    const label = stageNameByKey.get(key) || `Етап: ${r.stageId || "main"}`;
+    regs.forEach(r => {
+      const key = `${r.competitionId || ""}||${r.stageId || ""}`;
+      const label = stageNameByKey.get(key) || `Етап: ${r.stageId || "main"}`;
 
-    if (!groups[label]) groups[label] = [];
-    groups[label].push(r);
-  });
+      if (!groups[label]) groups[label] = [];
+      groups[label].push(r);
+    });
 
-  // 🔥 ВИВОДИМО ГРУПАМИ
-  Object.keys(groups).forEach(label => {
-    const group = groups[label];
+    Object.keys(groups).forEach(label => {
+      const group = groups[label];
 
-    // Заголовок групи
-    const h = document.createElement("div");
-    h.style.cssText = "padding:12px 4px;font-size:18px;font-weight:700;color:#ffc300;";
-    h.textContent = `${label} (${group.length})`;
-    listEl.appendChild(h);
+      const h = document.createElement("div");
+      h.style.cssText = "padding:12px 4px;font-size:18px;font-weight:700;color:#ffc300;";
+      h.textContent = `${label} (${group.length})`;
+      listEl.appendChild(h);
 
-    // Виведення кожної заявки
-    group.forEach(r => {
-      const { label: statusLabel, style: badgeStyle } = badgeForStatus(r.status);
+      group.forEach(r => {
+        const { label: statusLabel, style: badgeStyle } = badgeForStatus(r.status);
 
-      const titleMain =
-        r.teamName ? r.teamName :
-        (r.participantName ? r.participantName : "Без назви");
+        const titleMain =
+          r.teamName ? r.teamName :
+          (r.participantName ? r.participantName : "Без назви");
 
-      const card = document.createElement("div");
-      card.className = "card";
-      card.style.padding = "14px";
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.padding = "14px";
 
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
-          <div style="min-width:0;">
-            <div style="font-weight:900;font-size:16px;line-height:1.25;">
-              ${escapeHtml(titleMain)}
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <div style="min-width:0;">
+              <div style="font-weight:900;font-size:16px;line-height:1.25;">
+                ${escapeHtml(titleMain)}
+              </div>
+              <div class="form__hint" style="margin-top:4px;">
+                ${escapeHtml(label)}
+              </div>
             </div>
-            <div class="form__hint" style="margin-top:4px;">
-              ${escapeHtml(label)}
-            </div>
+
+            <span class="badge" style="${badgeStyle}">
+              ${escapeHtml(statusLabel)}
+            </span>
           </div>
 
-          <span class="badge" style="${badgeStyle}">
-            ${escapeHtml(statusLabel)}
-          </span>
-        </div>
+          <div class="form__hint" style="margin-top:10px;">
+            Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>
+            Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
+            Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
+            ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
+            ${r.cancelledAt ? `<br>Скасовано: <b>${escapeHtml(fmtTs(r.cancelledAt))}</b>` : ""}
+            <br>ID: <span style="opacity:.7;">${escapeHtml(r._id || "—")}</span>
+          </div>
 
-        <div class="form__hint" style="margin-top:10px;">
-          Капітан: <b>${escapeHtml(r.captain || "—")}</b><br>
-          Телефон: <b>${escapeHtml(r.phone || "—")}</b><br>
-          Подано: <b>${escapeHtml(fmtTs(r.createdAt))}</b>
-          ${r.confirmedAt ? `<br>Підтверджено: <b>${escapeHtml(fmtTs(r.confirmedAt))}</b>` : ""}
-          ${r.cancelledAt ? `<br>Скасовано: <b>${escapeHtml(fmtTs(r.cancelledAt))}</b>` : ""}
-          <br>ID: <span style="opacity:.7;">${escapeHtml(r._id || "—")}</span>
-        </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+            <button class="btn btn--primary" data-act="confirm" ${String(r.status) === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
+            <button class="btn btn--ghost" data-act="cancel" ${String(r.status) === "cancelled" ? "disabled" : ""}>Скасувати</button>
+            <button class="btn btn--danger" data-act="delete">Видалити заявку</button>
+          </div>
+        `;
 
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-          <button class="btn btn--primary" data-act="confirm" ${String(r.status) === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
-          <button class="btn btn--ghost" data-act="cancel" ${String(r.status) === "cancelled" ? "disabled" : ""}>Скасувати</button>
-          <button class="btn btn--danger" data-act="delete">Видалити заявку</button>
-        </div>
-      `;
+        // 🔥 Додаємо обробники подій для кнопок
+        const confirmBtn = card.querySelector('[data-act="confirm"]');
+        const cancelBtn = card.querySelector('[data-act="cancel"]');
+        const deleteBtn = card.querySelector('[data-act="delete"]');
 
-      listEl.appendChild(card);
+        confirmBtn?.addEventListener("click", () => onConfirm(r._id, r));
+        cancelBtn?.addEventListener("click", () => onCancel(r._id, r));
+        deleteBtn?.addEventListener("click", () => onDelete(r._id, r));
+
+        listEl.appendChild(card);
+      });
     });
-  });
-}
+  }
+
+  // ✅ ПІДТВЕРДИТИ ОПЛАТУ
+  async function onConfirm(id, r) {
+    if (!ensureAdmin()) return;
+    if (!confirm("Підтвердити оплату для: " + (r.teamName || r.participantName || id) + "?")) return;
+
+    try {
+      const regRef = regRefFor(id);
+      const nowTs = firebase.firestore.FieldValue.serverTimestamp();
+
+      const updateData = {
+        status: "confirmed",
+        confirmedAt: nowTs,
+        updatedAt: nowTs
+      };
+
+      await regRef.update(updateData);
+
+      // 🔥 Дзеркалюємо в public_participants
+      const mirrorData = {
+        ...r,
+        ...updateData,
+        _id: id
+      };
+      delete mirrorData.createdAt; // залишаємо оригінальний createdAt якщо є
+
+      await mirrorToPublic(id, mirrorData);
+
+      setMsg("✅ Оплату підтверджено", true);
+    } catch (e) {
+      showError("Помилка підтвердження", e);
+    }
+  }
+
+  // ✅ СКАСУВАТИ
+  async function onCancel(id, r) {
+    if (!ensureAdmin()) return;
+    if (!confirm("Скасувати заявку: " + (r.teamName || r.participantName || id) + "?")) return;
+
+    try {
+      const regRef = regRefFor(id);
+      const nowTs = firebase.firestore.FieldValue.serverTimestamp();
+
+      const updateData = {
+        status: "cancelled",
+        cancelledAt: nowTs,
+        updatedAt: nowTs
+      };
+
+      await regRef.update(updateData);
+
+      // 🔥 Дзеркалюємо скасування
+      await mirrorToPublic(id, {
+        ...r,
+        ...updateData,
+        _id: id
+      });
+
+      setMsg("✅ Заявку скасовано", true);
+    } catch (e) {
+      showError("Помилка скасування", e);
+    }
+  }
+
+  // ✅ ВИДАЛИТИ (з архівацією)
+  async function onDelete(id, r) {
+    if (!ensureAdmin()) return;
+    if (!confirm("⚠️ ВИДАЛИТИ назавжди: " + (r.teamName || r.participantName || id) + "?")) return;
+
+    try {
+      // 1. Архівуємо
+      const archiveRef = db.collection("registrations_archive").doc(String(id));
+      const archiveData = stripUndefinedDeep({
+        ...r,
+        _id: id,
+        deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        deletedBy: currentUser?.uid || null
+      });
+
+      await archiveRef.set(archiveData);
+
+      // 2. Видаляємо з основної колекції
+      await regRefFor(id).delete();
+
+      // 3. Оновлюємо public_participants (статус cancelled або видаляємо)
+      await mirrorToPublic(id, {
+        ...r,
+        status: "deleted",
+        _id: id,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      setMsg("✅ Заявку видалено та заархівовано", true);
+    } catch (e) {
+      showError("Помилка видалення", e);
+    }
+  }
 
   let unsub = null;
   let allRegs = [];
@@ -292,7 +408,6 @@
         if (sf === "confirmed") return st === "confirmed";
 
         if (sf === "all") {
-          // ✅ щоб не заважали: confirmed ховаємо у "all"
           return st !== "confirmed";
         }
 
@@ -311,33 +426,29 @@
       .onSnapshot((snap) => {
         allRegs = [];
         snap.forEach((d) => allRegs.push({ _id: d.id, ...(d.data() || {}) }));
-        // 🔥 Правильне сортування напряму в allRegs
-// 1) confirmed → по confirmedAt (старші зверху)
-// 2) pending → по createdAt
-// 3) cancelled → внизу
-allRegs.sort((a, b) => {
-  const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
-  const A = order[a.status] || 99;
-  const B = order[b.status] || 99;
 
-  if (A !== B) return A - B;
+        allRegs.sort((a, b) => {
+          const order = { confirmed: 1, pending_payment: 2, cancelled: 3 };
+          const A = order[a.status] || 99;
+          const B = order[b.status] || 99;
 
-  // confirmed — сортуємо по confirmedAt ↑
-  if (A === 1) {
-    const tA = a.confirmedAt?.toMillis?.() || 0;
-    const tB = b.confirmedAt?.toMillis?.() || 0;
-    return tA - tB;
-  }
+          if (A !== B) return A - B;
 
-  // pending — по createdAt ↑
-  if (A === 2) {
-    const tA = a.createdAt?.toMillis?.() || 0;
-    const tB = b.createdAt?.toMillis?.() || 0;
-    return tA - tB;
-  }
+          if (A === 1) {
+            const tA = a.confirmedAt?.toMillis?.() || 0;
+            const tB = b.confirmedAt?.toMillis?.() || 0;
+            return tA - tB;
+          }
 
-  return 0;
-});
+          if (A === 2) {
+            const tA = a.createdAt?.toMillis?.() || 0;
+            const tB = b.createdAt?.toMillis?.() || 0;
+            return tA - tB;
+          }
+
+          return 0;
+        });
+
         applyFiltersAndRender();
       }, (err) => {
         console.error(err);

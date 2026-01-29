@@ -1,9 +1,8 @@
 // assets/js/bigfish_total_live.js
-// STOLAR CARP • BigFish Total (public)
-// Джерело риб: collection "weighings" (weights[] + weighNo)
-// Фільтр учасників: collection "registrations" (status="confirmed" + bigFishTotal=true)
-// Призи: Day1 (W1-2), Day2 (W3-4), Overall (W1-4)
-// 3 призи = 3 різні риби. Overall-риба не може забрати приз своєї доби.
+// STOLAR CARP • BigFish Total (public) — optimized with liveCache
+// Джерело учасників: public_participants (bigFishTotal=true)
+// Джерело результатів: liveCache/{stageId}.bigFishTotal
+// Логіка 3 призів збережена: Overall, Day1, Day2 — 3 різні риби
 
 (function () {
   "use strict";
@@ -15,12 +14,15 @@
 
   if (!btn || !wrap || !tbody) return;
 
-  // ===== UI toggle (через hidden) =====
-  function setOpen(isOpen) {
-    // isOpen=true => показати (hidden прибрати)
-    wrap.hidden = !isOpen;
+  const db = window.scDb;
+  if (!db) {
+    console.error("[BigFish] Firebase not loaded");
+    return;
+  }
 
-    // доступність + текст
+  // ===== UI toggle =====
+  function setOpen(isOpen) {
+    wrap.hidden = !isOpen;
     btn.setAttribute("aria-expanded", String(isOpen));
     btn.textContent = isOpen ? "Сховати BigFish Total" : "BigFish Total";
   }
@@ -32,128 +34,80 @@
     isOpen = !isOpen;
     localStorage.setItem("bf-is-open", isOpen ? "1" : "0");
     setOpen(isOpen);
-    if (isOpen) startSubscribe(); // перше відкриття — старт підписок
+    if (isOpen) startSubscribe();
   });
 
-  // ===== Firestore =====
-  const db = window.scDb;
-  if (!db) return;
-
+  // ===== Helpers =====
   const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
   const fmtKg = (n) => (Number.isFinite(n) && n > 0 ? n.toFixed(2) : "—");
 
   function readStageFromApp(app) {
     const compId  = app?.activeCompetitionId || app?.competitionId || "";
     const stageId = app?.activeStageId || app?.stageId || "";
-    return { compId: String(compId || ""), stageId: String(stageId || "") };
+    return { 
+      compId: String(compId || ""), 
+      stageId: String(stageId || "") 
+    };
   }
 
-  // ===== логіка 3 призів (3 різні риби) =====
-  function byWeightDesc(a, b) { return b.weight - a.weight; }
+  // ===== Render from cache =====
+  function renderFromCache(bfData, eligibleMap) {
+    const table = bfData?.table || [];
+    const winners = bfData?.winners || {};
 
-  function pickBest(list, excludedIds) {
-    const arr = (Array.isArray(list) ? list : []).filter(x => x && x.weight > 0);
-    arr.sort(byWeightDesc);
-    for (const c of arr) {
-      if (!excludedIds.has(c.fishId)) return c;
+    // Фільтруємо тільки eligible команди
+    const filtered = table.filter(row => eligibleMap.has(row.teamId));
+
+    if (countEl) {
+      countEl.textContent = `Учасників: ${eligibleMap.size} / Таблиця: ${filtered.length}`;
     }
-    return null;
-  }
 
-  function computeWinners(allFish) {
-    const excluded = new Set();
-
-    // Overall (W1-4)
-    const overall = pickBest(allFish, excluded);
-    if (overall) excluded.add(overall.fishId);
-
-    // Day1 (W1-2), без overall-риби
-    const day1 = pickBest(allFish.filter(f => f.day === 1), excluded);
-    if (day1) excluded.add(day1.fishId);
-
-    // Day2 (W3-4), без overall-риби
-    const day2 = pickBest(allFish.filter(f => f.day === 2), excluded);
-    if (day2) excluded.add(day2.fishId);
-
-    return { day1, day2, overall };
-  }
-
-  // ===== рендер таблиці BigFish Total =====
-  function render(eligibleTeamsMap, allFish, winners) {
-    const eligibleCount = eligibleTeamsMap.size;
-    if (countEl) countEl.textContent = `Учасників: ${eligibleCount}`;
-
-    if (!eligibleCount) {
-      tbody.innerHTML = `<tr><td colspan="4">Немає підтверджених учасників BigFish Total.</td></tr>`;
+    if (!eligibleMap.size) {
+      tbody.innerHTML = `<tr><td colspan="4">Немає учасників BigFish Total.</td></tr>`;
       return;
     }
 
-    // per-team max по Day1/Day2/Overall
-    const perTeam = new Map(); // teamId -> {teamName, d1, d2, all}
-    for (const [teamId, teamName] of eligibleTeamsMap.entries()) {
-      perTeam.set(teamId, { teamId, teamName, d1: 0, d2: 0, all: 0 });
-    }
-
-    for (const f of allFish) {
-      const t = perTeam.get(f.teamId);
-      if (!t) continue;
-      t.all = Math.max(t.all, f.weight);
-      if (f.day === 1) t.d1 = Math.max(t.d1, f.weight);
-      if (f.day === 2) t.d2 = Math.max(t.d2, f.weight);
-    }
-
-    const list = Array.from(perTeam.values())
-      .sort((a, b) => (b.all - a.all) || (b.d1 - a.d1) || (b.d2 - a.d2));
-
-    const wOverallTeam = winners?.overall?.teamId || "";
-    const wDay1Team    = winners?.day1?.teamId || "";
-    const wDay2Team    = winners?.day2?.teamId || "";
-
-    const wOverallW = winners?.overall?.weight ?? null;
-    const wDay1W    = winners?.day1?.weight ?? null;
-    const wDay2W    = winners?.day2?.weight ?? null;
-
-    // якщо риб ще нема — покажемо текст, але учасники є
-    if (!allFish.length) {
-      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів ще нема.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = list.map(t => {
-      const day1Cell = (t.teamId === wDay1Team && wDay1W !== null)
-        ? `<strong>${fmtKg(wDay1W)}</strong> 🏆`
-        : fmtKg(t.d1);
+    tbody.innerHTML = filtered.map(row => {
+      const day1Cell = row.isDay1Winner 
+        ? `<strong>${fmtKg(row.day1)}</strong> 🏆`
+        : fmtKg(row.day1);
 
-      const day2Cell = (t.teamId === wDay2Team && wDay2W !== null)
-        ? `<strong>${fmtKg(wDay2W)}</strong> 🏆`
-        : fmtKg(t.d2);
+      const day2Cell = row.isDay2Winner
+        ? `<strong>${fmtKg(row.day2)}</strong> 🏆`
+        : fmtKg(row.day2);
 
-      const overallCell = (t.teamId === wOverallTeam && wOverallW !== null)
-        ? `<strong>${fmtKg(wOverallW)}</strong> 🏆`
-        : `<strong>${fmtKg(t.all)}</strong>`;
-
-      const isMaxRow = (t.teamId === wOverallTeam);
+      const overallCell = row.isOverallWinner
+        ? `<strong>${fmtKg(row.overall)}</strong> 🏆`
+        : `<strong>${fmtKg(row.overall)}</strong>`;
 
       return `
-        <tr class="${isMaxRow ? "bigfish-row--max" : ""}">
-          <td>${fmt(t.teamName)}</td>
+        <tr class="${row.isOverallWinner ? 'bigfish-row--max' : ''}">
+          <td>${fmt(row.teamName)}</td>
           <td>${day1Cell}</td>
           <td>${day2Cell}</td>
           <td>${overallCell}</td>
         </tr>
       `;
-    }).join("");
+    }).join('');
   }
 
-  // ===== підписки Firestore =====
+  // ===== Subscriptions =====
   let started = false;
   let unsubSettings = null;
-  let unsubRegs = null;
-  let unsubWeigh = null;
+  let unsubPublic = null;
+  let unsubCache = null;
 
-  function stopAllStageSubs() {
-    if (unsubRegs)  { unsubRegs();  unsubRegs = null; }
-    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+  let currentStageId = "";
+  let eligibleTeams = new Map();
+
+  function stopAllSubs() {
+    if (unsubPublic) { unsubPublic(); unsubPublic = null; }
+    if (unsubCache) { unsubCache(); unsubCache = null; }
   }
 
   function startSubscribe() {
@@ -165,95 +119,78 @@
         const app = snap.exists ? (snap.data() || {}) : {};
         const { compId, stageId } = readStageFromApp(app);
 
-        stopAllStageSubs();
-
         if (!compId || !stageId) {
           if (countEl) countEl.textContent = `Учасників: 0`;
-          tbody.innerHTML = `<tr><td colspan="4">Немає активного етапу (compId/stageId).</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="4">Немає активного етапу.</td></tr>`;
+          stopAllSubs();
           return;
         }
 
-        // 1) confirmed + bigFishTotal=true (або bigfishTotal)
-        unsubRegs = db.collection("registrations")
+        // Не перепідписуємось якщо етап не змінився
+        if (stageId === currentStageId) return;
+        currentStageId = stageId;
+
+        stopAllSubs();
+
+        // 1️⃣ Підписка на public_participants (eligible teams)
+        unsubPublic = db.collection("public_participants")
           .where("competitionId", "==", compId)
           .where("stageId", "==", stageId)
-          .where("status", "==", "confirmed")
+          .where("bigFishTotal", "==", true)
           .onSnapshot(
             (qs) => {
-              const eligibleTeams = new Map(); // teamId -> teamName
-
+              eligibleTeams = new Map();
               qs.forEach(doc => {
-                const r = doc.data() || {};
-                const flag = (r.bigFishTotal === true) || (r.bigfishTotal === true);
-                if (!flag) return;
-
-                const teamId = String(r.teamId || "");
-                const teamName = String(r.teamName || "—");
-                if (teamId) eligibleTeams.set(teamId, teamName);
+                const d = doc.data();
+                if (d.teamId) {
+                  eligibleTeams.set(d.teamId, d.teamName || "—");
+                }
               });
 
-              // 2) weighings цього етапу, фільтр по eligibleTeams
-              if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
-
-              unsubWeigh = db.collection("weighings")
-                .where("compId", "==", compId)
-                .where("stageId", "==", stageId)
-                .onSnapshot(
-                  (wqs) => {
-                    const allFish = [];
-
-                    wqs.forEach(d => {
-                      const w = d.data() || {};
-                      const teamId = String(w.teamId || "");
-                      if (!teamId || !eligibleTeams.has(teamId)) return;
-
-                      const weighNo = Number(w.weighNo || 0);
-                      if (!(weighNo >= 1 && weighNo <= 4)) return;
-
-                      const day = weighNo <= 2 ? 1 : 2;
-                      const teamName = String(w.teamName || eligibleTeams.get(teamId) || "—");
-
-                      const weights = Array.isArray(w.weights) ? w.weights : [];
-                      weights.forEach((val, idx) => {
-                        const weight = Number(val);
-                        if (!Number.isFinite(weight) || weight <= 0) return;
-
-                        allFish.push({
-                          fishId: `${d.id}::${idx}`, // унікально => 1 риба не бере 2 призи
-                          teamId,
-                          teamName,
-                          weighNo,
-                          day,
-                          weight
-                        });
-                      });
-                    });
-
-                    const winners = computeWinners(allFish);
-                    render(eligibleTeams, allFish, winners);
-                  },
-                  (err) => {
-                    console.error("[BigFish] weighings error:", err);
-                    if (countEl) countEl.textContent = `Учасників: 0`;
-                    tbody.innerHTML = `<tr><td colspan="4">Помилка читання weighings.</td></tr>`;
-                  }
-                );
+              // Якщо кеш вже завантажений — рендеримо
+              if (unsubCache) {
+                // Тригериться оновленням кешу
+              }
             },
             (err) => {
-              console.error("[BigFish] registrations error:", err);
-              if (countEl) countEl.textContent = `Учасників: 0`;
-              tbody.innerHTML = `<tr><td colspan="4">Помилка читання registrations.</td></tr>`;
+              console.error("[BigFish] public_participants error:", err);
+              tbody.innerHTML = `<tr><td colspan="4">Помилка завантаження учасників.</td></tr>`;
+            }
+          );
+
+        // 2️⃣ Підписка на liveCache (результати)
+        unsubCache = db.collection("liveCache").doc(stageId)
+          .onSnapshot(
+            (doc) => {
+              if (!doc.exists) {
+                tbody.innerHTML = `<tr><td colspan="4">Дані завантажуються...</td></tr>`;
+                return;
+              }
+
+              const data = doc.data();
+              const bf = data?.bigFishTotal;
+
+              if (!bf?.enabled) {
+                tbody.innerHTML = `<tr><td colspan="4">BigFish Total не активний для цього етапу.</td></tr>`;
+                return;
+              }
+
+              renderFromCache(bf, eligibleTeams);
+            },
+            (err) => {
+              console.error("[BigFish] liveCache error:", err);
+              tbody.innerHTML = `<tr><td colspan="4">Помилка завантаження результатів.</td></tr>`;
             }
           );
       },
       (err) => {
-        console.error("[BigFish] settings/app error:", err);
-        if (countEl) countEl.textContent = `Учасників: 0`;
+        console.error("[BigFish] settings error:", err);
         tbody.innerHTML = `<tr><td colspan="4">Помилка налаштувань.</td></tr>`;
       }
     );
   }
 
-  // Якщо таблиця відкрита з localStorage — одразу підписуємось
+  // Auto-start if open
   if (isOpen) startSubscribe();
+
 })();

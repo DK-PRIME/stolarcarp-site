@@ -37,18 +37,35 @@
       team: null,
       members: [],
       competitions: [],
-      lastUpdate: 0
+      userLastUpdate: 0,
+      compsLastUpdate: 0
     },
-    isValid(maxAgeMs = 60000) { // 60 секунд
-      return this.data.lastUpdate && (Date.now() - this.data.lastUpdate < maxAgeMs);
+    isUserValid(maxAgeMs = 60000) {
+      return this.data.userLastUpdate && (Date.now() - this.data.userLastUpdate < maxAgeMs);
     },
-    set(key, value) {
-      this.data[key] = value;
-      this.data.lastUpdate = Date.now();
+    isCompsValid(maxAgeMs = 300000) {
+      return this.data.compsLastUpdate && (Date.now() - this.data.compsLastUpdate < maxAgeMs);
+    },
+    setUser(value) {
+      this.data.user = value;
+      this.data.userLastUpdate = Date.now();
+    },
+    setTeam(value) {
+      this.data.team = value;
+    },
+    setMembers(value) {
+      this.data.members = value;
+    },
+    setComps(value) {
+      this.data.competitions = value;
+      this.data.compsLastUpdate = Date.now();
     },
     get(key) { return this.data[key]; },
     clear() {
-      this.data = { user: null, team: null, members: [], competitions: [], lastUpdate: 0 };
+      this.data = { 
+        user: null, team: null, members: [], competitions: [],
+        userLastUpdate: 0, compsLastUpdate: 0 
+      };
     }
   };
 
@@ -117,7 +134,6 @@
   }
 
   function cleanup(){
-    // Не очищаємо Cache при cleanup — зберігаємо між сесіями!
     if (typeof unsubUser === "function") unsubUser();
     if (typeof unsubTeam === "function") unsubTeam();
     if (typeof unsubMembers === "function") unsubMembers();
@@ -126,7 +142,7 @@
   }
 
   // =========================
-  // POPUP SYSTEM (універсальний)
+  // POPUP SYSTEM
   // =========================
   function openImagePopup(imageUrl) {
     const popup = document.getElementById("avatarPopup");
@@ -164,7 +180,7 @@
   }
 
   // =========================
-  // RENDER MEMBERS (з аватарками + попап)
+  // RENDER MEMBERS
   // =========================
   function renderMembers(list){
     if (!membersEl) return;
@@ -215,46 +231,52 @@
   // =========================
   // CACHE RENDER (швидкий старт)
   // =========================
+  
+  // ОКРЕМО — завжди показуємо кеш змагань, навіть якщо профіль ще завантажується
+  function renderCompsFromCache() {
+    const comps = Cache.get('competitions');
+    if (Cache.isCompsValid() && comps?.length) {
+      renderMyParticipation(comps);
+      return true;
+    }
+    // Якщо кеш порожній але валідний — показуємо "немає участі"
+    if (Cache.isCompsValid()) {
+      renderMyParticipation([]);
+      return true;
+    }
+    return false;
+  }
+
   function renderFromCache() {
-    if (!Cache.isValid()) return false;
-    
     const user = Cache.get('user');
     const team = Cache.get('team');
     const members = Cache.get('members');
-    const competitions = Cache.get('competitions');
     
-    if (!user) return false;
-
-    // Миттєво показуємо профіль
-    const name = user.fullName || "Без імені";
-    const city = user.city ? ` · ${user.city}` : "";
-    if (captainTextEl) captainTextEl.textContent = name + city;
-    if (userRoleEl) userRoleEl.textContent = roleText(user.role);
-    if (userPhoneEl) userPhoneEl.textContent = user.phone || "—";
-    setAvatarUrl(user.avatarUrl || "");
-    
-    // Миттєво показуємо команду
-    if (team && teamNameEl) {
-      teamNameEl.textContent = team.name || "Команда";
-      if (team.joinCode && joinCodePillEl && joinCodeTextEl) {
-        joinCodePillEl.style.display = "inline-flex";
-        joinCodeTextEl.textContent = team.joinCode;
+    // Профіль — тільки якщо валідний
+    if (Cache.isUserValid() && user) {
+      const name = user.fullName || "Без імені";
+      const city = user.city ? ` · ${user.city}` : "";
+      if (captainTextEl) captainTextEl.textContent = name + city;
+      if (userRoleEl) userRoleEl.textContent = roleText(user.role);
+      if (userPhoneEl) userPhoneEl.textContent = user.phone || "—";
+      setAvatarUrl(user.avatarUrl || "");
+      
+      if (team && teamNameEl) {
+        teamNameEl.textContent = team.name || "Команда";
+        if (team.joinCode && joinCodePillEl && joinCodeTextEl) {
+          joinCodePillEl.style.display = "inline-flex";
+          joinCodeTextEl.textContent = team.joinCode;
+        }
+      } else if (!team) {
+        if (teamNameEl) teamNameEl.textContent = "Без команди";
+        if (joinCodePillEl) joinCodePillEl.style.display = "none";
       }
-    } else if (!team) {
-      if (teamNameEl) teamNameEl.textContent = "Без команди";
-      if (joinCodePillEl) joinCodePillEl.style.display = "none";
+      
+      renderMembers(members);
+      return true;
     }
     
-    // Миттєво показуємо склад
-    renderMembers(members);
-    
-    // Миттєво показуємо змагання
-    renderMyParticipation(competitions);
-    
-    showContent();
-    setStatus("Оновлення…");
-    
-    return true;
+    return false;
   }
 
   // =========================
@@ -330,14 +352,17 @@
     if (typeof unsubRegs === "function") { unsubRegs(); unsubRegs = null; }
     if (!myPartListEl) return;
 
-    // Спочатку показуємо кеш
-    const cached = Cache.get('competitions');
-    if (cached?.length) {
-      renderMyParticipation(cached);
-    } else if (!teamId && !uid) {
+    // Якщо кеш вже показано — не чіпаємо, оновимо в фоні
+    const hasCache = Cache.isCompsValid();
+    
+    if (!teamId && !uid){
+      Cache.setComps([]);
       renderMyParticipation([]);
       return;
-    } else {
+    }
+    
+    // Тільки якщо немає кешу — показуємо "Завантаження…"
+    if (!hasCache) {
       myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
     }
 
@@ -350,7 +375,7 @@
       qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
 
       if (!rows.length){ 
-        Cache.set('competitions', []);
+        Cache.setComps([]);
         renderMyParticipation([]); 
         return; 
       }
@@ -374,13 +399,15 @@
 
       uniq.sort((a,b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
       
-      Cache.set('competitions', uniq);
+      Cache.setComps(uniq);
       renderMyParticipation(uniq);
     }, (err) => {
       console.warn(err);
       // При помилці показуємо кеш
-      renderMyParticipation(Cache.get('competitions'));
-      myPartListEl.innerHTML = `<div class="cabinet-small-muted" style="color:#ef4444;">Офлайн-режим. Дані можуть бути застарілими.</div>`;
+      if (!hasCache) {
+        renderMyParticipation(Cache.get('competitions'));
+        myPartListEl.innerHTML += `<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Офлайн-режим. Дані можуть бути застарілими.</div>`;
+      }
     });
   }
 
@@ -389,8 +416,8 @@
   // =========================
   function subscribeTeam(db, teamId){
     if (!teamId){
-      Cache.set('team', null);
-      Cache.set('members', []);
+      Cache.setTeam(null);
+      Cache.setMembers([]);
       if (teamNameEl) teamNameEl.textContent = "Без команди";
       if (joinCodePillEl) joinCodePillEl.style.display = "none";
       renderMembers([]);
@@ -413,7 +440,7 @@
     unsubTeam = db.collection("teams").doc(teamId).onSnapshot((snap) => {
       if (!snap.exists) return;
       const t = snap.data() || {};
-      Cache.set('team', t);
+      Cache.setTeam(t);
       
       if (teamNameEl) teamNameEl.textContent = t.name || "Команда";
       if (t.joinCode && joinCodePillEl && joinCodeTextEl){
@@ -427,19 +454,28 @@
     unsubMembers = db.collection("users").where("teamId","==",teamId).onSnapshot((qs) => {
       const list = [];
       qs.forEach(d => list.push({ id:d.id, ...(d.data()||{}) }));
-      Cache.set('members', list);
+      Cache.setMembers(list);
       renderMembers(list);
     }, (err) => {
       console.warn(err);
       renderMembers(Cache.get('members'));
-      if (membersEl) membersEl.innerHTML += `<div class="form__hint" style="color:#ef4444;">Офлайн-режим.</div>`;
     });
   }
 
   function subscribeUser(auth, db, uid){
-    // Спроба показати з кешу миттєво
-    const hasCache = renderFromCache();
+    // 1. ЗАВЖДИ спочатку показуємо кеш змагань (майже миттєво)
+    const hasCompsCache = renderCompsFromCache();
     
+    // 2. Потім пробуємо показати профіль з кешу
+    const hasUserCache = renderFromCache();
+    
+    // 3. Якщо профілю немає в кешу — показуємо "Завантаження…"
+    if (!hasUserCache) {
+      setStatus("Завантаження…");
+      showContent(); // Показуємо сторінку з кешем змагань
+    }
+    
+    // 4. Підписки оновлюють дані в фоні
     unsubUser = db.collection("users").doc(uid).onSnapshot((snap) => {
       if (!snap.exists){
         setStatus("Анкета користувача не знайдена.");
@@ -448,7 +484,7 @@
       }
 
       const u = snap.data() || {};
-      Cache.set('user', u);
+      Cache.setUser(u);
       
       const name = u.fullName || auth.currentUser?.email || "Без імені";
       const city = u.city ? ` · ${u.city}` : "";
@@ -469,7 +505,7 @@
       setTimeout(() => { if (statusEl?.textContent === "Кабінет завантажено.") statusEl.textContent = ""; }, 1200);
     }, (err) => {
       console.error(err);
-      if (!hasCache) {
+      if (!hasUserCache) {
         setStatus("Помилка читання профілю.");
       }
       showContent();
@@ -542,40 +578,54 @@
   }
 
   // =========================
-  // INIT
-  // =========================
-  (async () => {
-    try {
-      await waitFirebase();
-      const auth = window.scAuth;
-      const db = window.scDb;
-
-      auth.onAuthStateChanged((user) => {
-        cleanup();
-        if (!user){
-          Cache.clear(); // Чистимо кеш при виході
-          setStatus("Ви не увійшли. Переходимо…");
-          hideContent();
-          setTimeout(() => window.location.href = "auth.html", 400);
-          return;
-        }
-        if (user.uid === ADMIN_UID){
-          setStatus("Адмін-акаунт → перехід…");
-          hideContent();
-          setTimeout(() => window.location.href = "admin.html", 200);
-          return;
-        }
-        setStatus("Перевірка доступу…");
-        subscribeUser(auth, db, user.uid);
-      });
-
-      setupCloudinaryWidget(auth, db);
-      enableAvatarPopup();
-
-    } catch (err) {
-      console.error(err);
-      setStatus("Помилка: " + (err?.message || err));
+// INIT
+// =========================
+(async () => {
+  try {
+    // 1) МИТТЄВО рендеримо кеш (без Firebase!)
+    const hasComps = renderCompsFromCache();
+    const hasUser = renderFromCache();
+    
+    if (hasComps || hasUser) {
       showContent();
+      setStatus("Оновлення…");
+    } else {
+      setStatus("Завантаження…");
     }
-  })();
+
+    // 2) Тільки потім чекаємо Firebase
+    await waitFirebase();
+    const auth = window.scAuth;
+    const db = window.scDb;
+
+    // 3) Потім запускаємо onAuthStateChanged для оновлення
+    auth.onAuthStateChanged((user) => {
+      cleanup();
+      if (!user){
+        Cache.clear();
+        setStatus("Ви не увійшли. Переходимо…");
+        hideContent();
+        setTimeout(() => window.location.href = "auth.html", 400);
+        return;
+      }
+      if (user.uid === ADMIN_UID){
+        setStatus("Адмін-акаунт → перехід…");
+        hideContent();
+        setTimeout(() => window.location.href = "admin.html", 200);
+        return;
+      }
+      
+      // Оновлюємо дані в фоні (кеш вже показано)
+      subscribeUser(auth, db, user.uid);
+    });
+
+    setupCloudinaryWidget(auth, db);
+    enableAvatarPopup();
+
+  } catch (err) {
+    console.error(err);
+    setStatus("Помилка: " + (err?.message || err));
+    showContent();
+  }
+})();
 })();

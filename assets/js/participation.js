@@ -247,9 +247,11 @@
 
       if ($("msg")) $("msg").textContent = "Завантаження списку…";
 
+      // ✅ Дозволяємо cancelled, але вони відображаються як «Очікується»
       const snap = await db.collection("public_participants")
         .where("competitionId", "==", compId)
         .where("entryType", "==", "team")
+        .where("status", "in", ["confirmed", "paid", "pending_payment", "cancelled"])
         .get();
 
       const rowsMap = new Map();
@@ -262,13 +264,10 @@
 
         if (!stageMatches) return;
 
-        const status = norm(r.status || "pending_payment");
-        if (!["confirmed", "pending_payment", "paid"].includes(status)) return;
-
         rowsMap.set(doc.id, {
           teamId: r.teamId,
           teamName: norm(r.teamName || "—"),
-          status,
+          status: norm(r.status || "pending_payment"),
           createdAt: r.createdAt || null,
           confirmedAt: r.confirmedAt || null,
           orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
@@ -277,9 +276,9 @@
 
       const rows = Array.from(rowsMap.values());
 
-      // === СОРТУВАННЯ ===
+      // === СОРТУВАННЯ: cancelled йдуть одразу після confirmed, але як «Очікується» ===
       rows.sort((a, b) => {
-        const rank = { confirmed: 1, paid: 1, pending_payment: 2 };
+        const rank = { confirmed: 1, paid: 1, cancelled: 1, pending_payment: 2 };
         const aRank = rank[a.status] || 99;
         const bRank = rank[b.status] || 99;
         if (aRank !== bRank) return aRank - bRank;

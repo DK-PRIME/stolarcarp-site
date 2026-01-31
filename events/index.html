@@ -1,119 +1,82 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-utf-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Архів турнірів — STOLAR CARP</title>
 
+  <!-- Стилі та скрипт з кореня -->
   <link rel="stylesheet" href="../assets/css/main.css">
   <script defer src="../assets/js/config.js"></script>
   <script defer src="archive.js"></script>
 
   <style>
-    /* ---------- 1. ARCHIVE PAGE BASE ---------- */
     body.archive-page{
       background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      margin: 0;
-    }
-    .archive-page .container{              /* повна ширина без !important */
-      max-width: 100%;
-      padding-left: 16px;
-      padding-right: 16px;
-    }
-    .main{
-      flex: 1 0 auto;
-      display: flex;
-      flex-direction: column;
     }
 
-    /* ---------- 2. HERO SECTION ---------- */
     .archive-hero{
-      text-align: center;
-      margin-top: 26px;
-      flex: 1 0 auto;
-      display: flex;
-      flex-direction: column;
+      text-align:center;
+      margin-top:26px;
     }
+
     .archive-title{
-      font-size: clamp(28px,5vw,42px);
-      font-weight: 900;
-      margin-bottom: 10px;
+      font-size:clamp(28px,5vw,42px);
+      font-weight:900;
     }
+
+    .archive-lead{
+      margin-top:10px;
+      color:#cbd5e1;
+      font-size:.95rem;
+    }
+
     .seasons-grid{
-      margin-top: 30px;
-      display: grid;
-      gap: 18px;
-      grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
-      flex: 1 0 auto;
-      margin-bottom: 40px;
+      margin-top:30px;
+      display:grid;
+      gap:18px;
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
     }
+
     .season-card{
-      background: radial-gradient(circle at top,#1e293b 0,#020617 60%);
-      border-radius: 18px;
-      border: 1px solid rgba(148,163,184,.35);
-      box-shadow: 0 14px 34px rgba(0,0,0,.8);
-      padding: 18px;
-      text-decoration: none;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      min-height: 150px;
-      transition: .25s;
+      background:radial-gradient(circle at top,#1e293b 0,#020617 60%);
+      border-radius:18px;
+      border:1px solid rgba(148,163,184,.35);
+      box-shadow:0 14px 34px rgba(0,0,0,.8);
+      padding:18px;
+      text-decoration:none;
+      color:#fff;
+      transition:.25s;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
     }
+
     .season-card:hover{
-      transform: translateY(-4px);
-      border-color: #facc15;
+      transform:translateY(-4px);
+      border-color:#facc15;
     }
+
     .season-year{
-      font-size: 1.4rem;
-      font-weight: 900;
-      color: #facc15;
+      font-size:1.4rem;
+      font-weight:900;
+      color:#facc15;
     }
+
+    .season-desc{
+      font-size:.9rem;
+      color:#cbd5f5;
+      margin-top:6px;
+    }
+
     .season-btn{
-      margin-top: 14px;
-      padding: 9px 14px;
-      border-radius: 10px;
-      background: #facc15;
-      color: #111;
-      text-align: center;
-      font-weight: 700;
-    }
-
-    /* ---------- 3. FULL-SCREEN BURGER MENU ---------- */
-    .nav{
-      position: fixed;
-      inset: 0;                       /* top:0 left:0 right:0 bottom:0 */
-      width: 100vw;
-      height: 100vh;
-      background: #05060a;
-      z-index: 999;
-      display: none;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: center;
-      padding-top: 90px;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-    .nav.active{ display: flex; }
-    .nav__link{
-      padding: 16px 0;
-      width: 100%;
-      text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-    }
-
-    /* ---------- 4. BODY LOCK ---------- */
-    body.menu-open{ overflow: hidden; }
-
-    /* ---------- 5. SMALL SCREEN ---------- */
-    @media (max-width: 480px){
-      .seasons-grid{ grid-template-columns: 1fr; }
-      .season-card{ min-height: 140px; }
+      margin-top:14px;
+      padding:9px 14px;
+      border-radius:10px;
+      background:#facc15;
+      color:#111;
+      text-align:center;
+      font-weight:700;
     }
   </style>
 </head>
@@ -127,37 +90,40 @@
     </a>
 
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-    </nav>
+  <a href="/index.html" class="nav__link">Головна</a>
+  <a href="/rules.html" class="nav__link">Регламент</a>
+  <a href="/register.html" class="nav__link">Реєстрація</a>
+  <a href="/live.html" class="nav__link">Live</a>
+  <a href="/rating.html" class="nav__link">Рейтинг</a>
+  <a href="/lakes.html" class="nav__link">Водойми</a>
+  <a href="/sponsors.html" class="nav__link">Спонсори</a>
+  <a href="/events/index.html" class="nav__link">Архів</a>
+  <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+</nav>
 
-    <button class="burger" id="burger"
-            aria-label="Відкрити меню"
-            aria-expanded="false"
-            aria-controls="nav">
+    <button class="burger" id="burger">
       <span></span><span></span><span></span>
     </button>
   </div>
 </header>
 
-<main class="main container">
-  <section class="archive-hero">
-    <h1 class="archive-title">Архів турнірів STOLAR CARP</h1>
+<main class="main">
+  <section class="container section archive-hero">
+    <h1 class="archive-title title-gradient">Архів турнірів STOLAR CARP</h1>
 
     <div class="seasons-grid">
-      <a class="season-card" href="season-2026.html">
-        <div>
-          <div class="season-year">Сезон 2026</div>
-        </div>
-        <div class="season-btn">Відкрити сезон</div>
-      </a>
+
+  <!-- Статична кнопка сезону -->
+  <a class="season-card" href="season-2026.html">
+    <div>
+      <div class="season-year">Сезон 2026</div>
+    </div>
+    <div class="season-btn">Відкрити сезон</div>
+  </a>
+
+  <!-- Сюди JS додає архів турнірів -->
+</div>
+
     </div>
   </section>
 </main>
@@ -166,30 +132,10 @@
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="#">Viber</a>
-      <a href="#">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
     </div>
   </div>
 </footer>
-
-<script>
-  /* ---------- 6. ULTRA-CLEAN BURGER ---------- */
-  const burger = document.getElementById('burger');
-  const nav    = document.getElementById('nav');
-
-  burger.addEventListener('click', () => {
-    const open = nav.classList.toggle('active');
-    document.body.classList.toggle('menu-open');
-    burger.setAttribute('aria-expanded', open);
-  });
-
-  nav.addEventListener('click', e => {
-    if (e.target.classList.contains('nav__link')) {
-      nav.classList.remove('active');
-      document.body.classList.remove('menu-open');
-      burger.setAttribute('aria-expanded', false);
-    }
-  });
-</script>
 </body>
 </html>

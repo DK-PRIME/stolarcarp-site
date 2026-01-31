@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="uk">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Архів турнірів — STOLAR CARP</title>
 
@@ -10,21 +10,83 @@
   <script defer src="archive.js"></script>
 
   <style>
-    /* ----------------------------------------------------
-       1) Головний FIX — контейнер на всю ширину
-       ---------------------------------------------------- */
-    .archive-page .container {
-      max-width: 100% !important;
+    /* ---------- 1. ARCHIVE PAGE BASE ---------- */
+    body.archive-page{
+      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+    .archive-page .container{              /* повна ширина без !important */
+      max-width: 100%;
       padding-left: 16px;
       padding-right: 16px;
     }
+    .main{
+      flex: 1 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
 
-    /* ----------------------------------------------------
-       2) Fullscreen BURGER MENU — без скролів і по центру
-       ---------------------------------------------------- */
-    .nav {
+    /* ---------- 2. HERO SECTION ---------- */
+    .archive-hero{
+      text-align: center;
+      margin-top: 26px;
+      flex: 1 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .archive-title{
+      font-size: clamp(28px,5vw,42px);
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+    .seasons-grid{
+      margin-top: 30px;
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit,minmax(240px,1fr));
+      flex: 1 0 auto;
+      margin-bottom: 40px;
+    }
+    .season-card{
+      background: radial-gradient(circle at top,#1e293b 0,#020617 60%);
+      border-radius: 18px;
+      border: 1px solid rgba(148,163,184,.35);
+      box-shadow: 0 14px 34px rgba(0,0,0,.8);
+      padding: 18px;
+      text-decoration: none;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 150px;
+      transition: .25s;
+    }
+    .season-card:hover{
+      transform: translateY(-4px);
+      border-color: #facc15;
+    }
+    .season-year{
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #facc15;
+    }
+    .season-btn{
+      margin-top: 14px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      background: #facc15;
+      color: #111;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    /* ---------- 3. FULL-SCREEN BURGER MENU ---------- */
+    .nav{
       position: fixed;
-      inset: 0;                /* top:0; left:0; right:0; bottom:0 */
+      inset: 0;                       /* top:0 left:0 right:0 bottom:0 */
       width: 100vw;
       height: 100vh;
       background: #05060a;
@@ -34,73 +96,24 @@
       justify-content: flex-start;
       align-items: center;
       padding-top: 90px;
-      overflow-y: auto;        /* тільки вертикальний скрол при потребі */
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
-
-    .nav.active {
-      display: flex;
-    }
-
-    .nav__link {
+    .nav.active{ display: flex; }
+    .nav__link{
       padding: 16px 0;
       width: 100%;
       text-align: center;
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      border-bottom: 1px solid rgba(255,255,255,.08);
     }
 
-    /* ----------------------------------------------------
-       3) Блокування scroll при відкритому меню
-       ---------------------------------------------------- */
-    body.menu-open {
-      overflow: hidden;
-    }
+    /* ---------- 4. BODY LOCK ---------- */
+    body.menu-open{ overflow: hidden; }
 
-    /* ----------------------------------------------------
-       4) Графіка архіву (не міняв — тільки підчистив)
-       ---------------------------------------------------- */
-    body.archive-page{
-      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
-    }
-
-    .archive-title{
-      font-size:clamp(28px,5vw,42px);
-      font-weight:900;
-      margin-top: 26px;
-      text-align:center;
-    }
-
-    .seasons-grid{
-      margin-top:30px;
-      display:grid;
-      gap:18px;
-      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
-    }
-
-    .season-card{
-      background:radial-gradient(circle at top,#1e293b 0,#020617 60%);
-      border-radius:18px;
-      border:1px solid rgba(148,163,184,.35);
-      padding:18px;
-      text-decoration:none;
-      color:#fff;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      box-shadow:0 14px 34px rgba(0,0,0,.8);
-      transition:.25s;
-    }
-
-    .season-card:hover{ border-color:#facc15; transform:translateY(-4px); }
-
-    .season-year{ font-size:1.4rem; font-weight:900; color:#facc15; }
-    .season-btn{
-      margin-top:14px;
-      padding:9px 14px;
-      border-radius:10px;
-      background:#facc15;
-      color:#111;
-      text-align:center;
-      font-weight:700;
+    /* ---------- 5. SMALL SCREEN ---------- */
+    @media (max-width: 480px){
+      .seasons-grid{ grid-template-columns: 1fr; }
+      .season-card{ min-height: 140px; }
     }
   </style>
 </head>
@@ -125,26 +138,28 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger">
+    <button class="burger" id="burger"
+            aria-label="Відкрити меню"
+            aria-expanded="false"
+            aria-controls="nav">
       <span></span><span></span><span></span>
     </button>
   </div>
 </header>
 
 <main class="main container">
-  <h1 class="archive-title">Архів турнірів STOLAR CARP</h1>
+  <section class="archive-hero">
+    <h1 class="archive-title">Архів турнірів STOLAR CARP</h1>
 
-  <div class="seasons-grid">
-
-    <!-- Поточний сезон -->
-    <a class="season-card" href="season-2026.html">
-      <div>
-        <div class="season-year">Сезон 2026</div>
-      </div>
-      <div class="season-btn">Відкрити сезон</div>
-    </a>
-
-  </div>
+    <div class="seasons-grid">
+      <a class="season-card" href="season-2026.html">
+        <div>
+          <div class="season-year">Сезон 2026</div>
+        </div>
+        <div class="season-btn">Відкрити сезон</div>
+      </a>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
@@ -158,24 +173,23 @@
 </footer>
 
 <script>
-  // ----------------------------------------------------
-  // 5) Найчистішe бургер-меню
-  // ----------------------------------------------------
+  /* ---------- 6. ULTRA-CLEAN BURGER ---------- */
   const burger = document.getElementById('burger');
-  const nav = document.getElementById('nav');
+  const nav    = document.getElementById('nav');
 
   burger.addEventListener('click', () => {
-    nav.classList.toggle('active');
+    const open = nav.classList.toggle('active');
     document.body.classList.toggle('menu-open');
+    burger.setAttribute('aria-expanded', open);
   });
 
-  document.querySelectorAll('.nav__link').forEach(a => {
-    a.addEventListener('click', () => {
+  nav.addEventListener('click', e => {
+    if (e.target.classList.contains('nav__link')) {
       nav.classList.remove('active');
       document.body.classList.remove('menu-open');
-    });
+      burger.setAttribute('aria-expanded', false);
+    }
   });
 </script>
-
 </body>
 </html>

@@ -12,7 +12,7 @@
   // ==================== КОНФІГУРАЦІЯ ====================
   const CONFIG = {
     DEFAULT_MAX_W: 4,
-    MAX_FISH_WEIGHT: 999.99,
+    MAX_FISH_WEIGHT: 49.99,
     TOKEN_TTL_HOURS: 72,
     ZONES: ["A", "B", "C"]
   };
@@ -30,7 +30,7 @@
     key: "",        // compId||stageId
     compId: "",
     stageId: "",
-    viewW: 1,       // поточна видима вагування
+    viewW: 1,       // поточне видиме зважування
     
     // Дані
     teams: [],
@@ -356,7 +356,7 @@
     }
   };
 
-  // ==================== МЕНЕДЖЕР ВАГУВАНЬ ====================
+  // ==================== МЕНЕДЖЕР ЗВАЖУВАНЬ ====================
   const WeighingManager = {
     async load(teamId, wNo) {
       const id = Utils.weighingDocId(teamId, wNo);

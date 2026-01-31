@@ -5,30 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Архів турнірів — STOLAR CARP</title>
 
-  <!-- Стилі та скрипт з кореня -->
   <link rel="stylesheet" href="../assets/css/main.css">
   <script defer src="../assets/js/config.js"></script>
   <script defer src="archive.js"></script>
 
   <style>
-    body.archive-page{
-      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+    /* ----------------------------------------------------
+       1) Головний FIX — контейнер на всю ширину
+       ---------------------------------------------------- */
+    .archive-page .container {
+      max-width: 100% !important;
+      padding-left: 16px;
+      padding-right: 16px;
     }
 
-    .archive-hero{
-      text-align:center;
-      margin-top:26px;
+    /* ----------------------------------------------------
+       2) Fullscreen BURGER MENU — без скролів і по центру
+       ---------------------------------------------------- */
+    .nav {
+      position: fixed;
+      inset: 0;                /* top:0; left:0; right:0; bottom:0 */
+      width: 100vw;
+      height: 100vh;
+      background: #05060a;
+      z-index: 999;
+      display: none;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      padding-top: 90px;
+      overflow-y: auto;        /* тільки вертикальний скрол при потребі */
+    }
+
+    .nav.active {
+      display: flex;
+    }
+
+    .nav__link {
+      padding: 16px 0;
+      width: 100%;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* ----------------------------------------------------
+       3) Блокування scroll при відкритому меню
+       ---------------------------------------------------- */
+    body.menu-open {
+      overflow: hidden;
+    }
+
+    /* ----------------------------------------------------
+       4) Графіка архіву (не міняв — тільки підчистив)
+       ---------------------------------------------------- */
+    body.archive-page{
+      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
     }
 
     .archive-title{
       font-size:clamp(28px,5vw,42px);
       font-weight:900;
-    }
-
-    .archive-lead{
-      margin-top:10px;
-      color:#cbd5e1;
-      font-size:.95rem;
+      margin-top: 26px;
+      text-align:center;
     }
 
     .seasons-grid{
@@ -42,33 +80,19 @@
       background:radial-gradient(circle at top,#1e293b 0,#020617 60%);
       border-radius:18px;
       border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 14px 34px rgba(0,0,0,.8);
       padding:18px;
       text-decoration:none;
       color:#fff;
-      transition:.25s;
       display:flex;
       flex-direction:column;
       justify-content:space-between;
+      box-shadow:0 14px 34px rgba(0,0,0,.8);
+      transition:.25s;
     }
 
-    .season-card:hover{
-      transform:translateY(-4px);
-      border-color:#facc15;
-    }
+    .season-card:hover{ border-color:#facc15; transform:translateY(-4px); }
 
-    .season-year{
-      font-size:1.4rem;
-      font-weight:900;
-      color:#facc15;
-    }
-
-    .season-desc{
-      font-size:.9rem;
-      color:#cbd5f5;
-      margin-top:6px;
-    }
-
+    .season-year{ font-size:1.4rem; font-weight:900; color:#facc15; }
     .season-btn{
       margin-top:14px;
       padding:9px 14px;
@@ -107,36 +131,51 @@
   </div>
 </header>
 
-<main class="main">
-  <section class="container section archive-hero">
-    <h1 class="archive-title title-gradient">Архів турнірів STOLAR CARP</h1>
+<main class="main container">
+  <h1 class="archive-title">Архів турнірів STOLAR CARP</h1>
 
-    <!-- ❗ Виправлений блок -->
-    <div class="seasons-grid">
+  <div class="seasons-grid">
 
-      <!-- Статична кнопка сезону -->
-      <a class="season-card" href="season-2026.html">
-        <div>
-          <div class="season-year">Сезон 2026</div>
-        </div>
-        <div class="season-btn">Відкрити сезон</div>
-      </a>
+    <!-- Поточний сезон -->
+    <a class="season-card" href="season-2026.html">
+      <div>
+        <div class="season-year">Сезон 2026</div>
+      </div>
+      <div class="season-btn">Відкрити сезон</div>
+    </a>
 
-      <!-- Сюди JS додає архів турнірів -->
-    </div>
-    <!-- ❗ Далі зайвого </div> більше НЕМає -->
-    
-  </section>
+  </div>
 </main>
 
 <footer class="footer">
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+      <a href="#">Viber</a>
+      <a href="#">YouTube</a>
     </div>
   </div>
 </footer>
+
+<script>
+  // ----------------------------------------------------
+  // 5) Найчистішe бургер-меню
+  // ----------------------------------------------------
+  const burger = document.getElementById('burger');
+  const nav = document.getElementById('nav');
+
+  burger.addEventListener('click', () => {
+    nav.classList.toggle('active');
+    document.body.classList.toggle('menu-open');
+  });
+
+  document.querySelectorAll('.nav__link').forEach(a => {
+    a.addEventListener('click', () => {
+      nav.classList.remove('active');
+      document.body.classList.remove('menu-open');
+    });
+  });
+</script>
+
 </body>
 </html>

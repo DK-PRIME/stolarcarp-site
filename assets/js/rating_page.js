@@ -146,6 +146,14 @@
       });
     });
     
+    // Додатковий захист: приховати всі елементи з data-stage > count
+    document.querySelectorAll('[data-stage]').forEach(el => {
+      const stageNum = Number(el.dataset.stage);
+      if (stageNum > count) {
+        el.style.display = 'none';
+      }
+    });
+    
     console.log(`[Rating] Applied ${count} stages`);
   }
 

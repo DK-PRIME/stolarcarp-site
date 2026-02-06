@@ -11,7 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="assets/js/config.js" defer></script>
     <style>
-        
         :root {
             --color-bg: #000000;
             --color-surface: #111111;
@@ -38,6 +37,159 @@
             min-height: 100vh;
         }
 
+        /* Стилі для хедера */
+        .header {
+            background-color: var(--color-surface);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(255, 214, 49, 0.2);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-unit);
+        }
+
+        .header__row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: var(--color-primary);
+            font-weight: 700;
+            font-size: 1.5rem;
+            transition: opacity var(--transition-speed) ease;
+        }
+
+        .logo:hover {
+            opacity: 0.8;
+        }
+
+        .logo__mark {
+            background-color: var(--color-primary);
+            color: var(--color-bg);
+            padding: 5px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+
+        .logo__text {
+            color: var(--color-text);
+        }
+
+        .nav {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .nav__link {
+            color: var(--color-text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: all var(--transition-speed) ease;
+            padding: 5px 0;
+            position: relative;
+        }
+
+        .nav__link:hover {
+            color: var(--color-primary);
+        }
+
+        .nav__link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--color-primary);
+            transition: width var(--transition-speed) ease;
+        }
+
+        .nav__link:hover::after {
+            width: 100%;
+        }
+
+        .burger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 30px;
+            height: 24px;
+        }
+
+        .burger span {
+            display: block;
+            width: 100%;
+            height: 3px;
+            background-color: var(--color-primary);
+            border-radius: 3px;
+            transition: all var(--transition-speed) ease;
+        }
+
+        /* Адаптивність для навігації */
+        @media (max-width: 1024px) {
+            .nav {
+                gap: 15px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                position: fixed;
+                top: 80px;
+                left: 0;
+                width: 100%;
+                background-color: var(--color-surface);
+                flex-direction: column;
+                padding: 20px;
+                gap: 15px;
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all var(--transition-speed) ease;
+                border-bottom: 1px solid rgba(255, 214, 49, 0.2);
+                z-index: 999;
+            }
+
+            .nav.active {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .burger {
+                display: flex;
+            }
+
+            .burger.active span:nth-child(1) {
+                transform: rotate(45deg) translate(5px, 5px);
+            }
+
+            .burger.active span:nth-child(2) {
+                opacity: 0;
+            }
+
+            .burger.active span:nth-child(3) {
+                transform: rotate(-45deg) translate(7px, -6px);
+            }
+        }
+
+        /* Основний контент */
         .page-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -302,8 +454,25 @@
     </style>
 </head>
 <body>
-    <!-- ХЕДЕР -->
-    <header id="main-header"></header>
+    <!-- ХЕДЕР З БУРГЕР-МЕНЮ -->
+    <header class="header">
+        <div class="container header__row">
+            <a class="logo" href="../index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+            <nav class="nav" id="nav">
+                <a href="/index.html" class="nav__link">Головна</a>
+                <a href="/rules.html" class="nav__link">Регламент</a>
+                <a href="/formats.html" class="nav__link">Формати змагань</a>
+                <a href="/register.html" class="nav__link">Реєстрація</a>
+                <a href="/live.html" class="nav__link">Live</a>
+                <a href="/rating.html" class="nav__link">Рейтинг</a>
+                <a href="/lakes.html" class="nav__link">Водойми</a>
+                <a href="/sponsors.html" class="nav__link">Спонсори</a>
+                <a href="/events/index.html" class="nav__link">Архів</a>
+                <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+            </nav>
+            <button class="burger" id="burger"><span></span><span></span><span></span></button>
+        </div>
+    </header>
 
     <main class="page-container">
         <header class="page-header">
@@ -608,6 +777,23 @@
             if (accordionHeaders.length > 0) {
                 accordionHeaders[0].click();
             }
+
+            // Бургер-меню
+            const burger = document.getElementById('burger');
+            const nav = document.getElementById('nav');
+            
+            burger.addEventListener('click', () => {
+                nav.classList.toggle('active');
+                burger.classList.toggle('active');
+            });
+
+            // Закриваємо меню при кліку на посилання
+            document.querySelectorAll('.nav__link').forEach(link => {
+                link.addEventListener('click', () => {
+                    nav.classList.remove('active');
+                    burger.classList.remove('active');
+                });
+            });
         });
     </script>
 </body>

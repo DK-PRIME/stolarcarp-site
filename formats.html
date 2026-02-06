@@ -4,18 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Формати змагань — Stolar Carp</title>
-
-    <!-- CSS -->
     <link rel="stylesheet" href="assets/css/main.css">
-
-    <!-- Шрифти -->
+    <!-- Підключаємо шрифт Inter через Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-    <!-- Config -->
     <script src="assets/js/config.js" defer></script>
-
     <style>
         :root {
             --color-bg: #000000;
@@ -38,182 +32,335 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--color-bg);
             color: var(--color-text);
+            line-height: 1.6;
             margin: 0;
             padding: 0;
             min-height: 100vh;
-            line-height: 1.6;
         }
 
-        /* ХЕДЕР */
-        .header {
-            background-color: var(--color-surface);
-            padding: 20px 0;
-            border-bottom: 1px solid rgba(255,214,49,0.2);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-
-        .container {
+        /* Основний контент */
+        .page-container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 var(--spacing-unit);
+            padding: 40px var(--spacing-unit);
         }
 
-        .header__row {
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.1;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Акцентна лінія під заголовком */
+        .title-underline {
+            width: 120px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            margin: 20px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Стилі для акордеону */
+        .formats-accordion {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .accordion-item {
+            margin-bottom: 16px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background-color: var(--color-surface);
+            transition: all var(--transition-speed) ease;
+            position: relative;
+        }
+
+        /* Градієнтна рамка */
+        .accordion-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--border-radius);
+            padding: 2px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .accordion-item:hover {
+            box-shadow: 0 0 25px rgba(255, 214, 49, 0.15);
+        }
+
+        .accordion-item:hover::before {
+            background: linear-gradient(135deg, var(--color-green), var(--color-primary));
+        }
+
+        .accordion-header {
+            width: 100%;
+            padding: 24px 30px;
+            background-color: transparent;
+            border: none;
+            color: var(--color-primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all var(--transition-speed) ease;
+            position: relative;
+            z-index: 1;
         }
 
-        .logo {
+        .accordion-header:hover {
+            background-color: rgba(255, 214, 49, 0.05);
+        }
+
+        /* Зелена стрілочка */
+        .accordion-header::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform var(--transition-speed) ease;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+
+        .accordion-header.active::after {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height var(--transition-speed) ease;
+        }
+
+        .accordion-content-inner {
+            padding: 0 30px 30px;
+        }
+
+        /* Стилі для контенту формату */
+        .format-card {
+            background: linear-gradient(145deg, rgba(255, 214, 49, 0.03), rgba(139, 0, 0, 0.03));
+            border-radius: 10px;
+            padding: 30px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .format-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--color-primary);
             display: flex;
             align-items: center;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--color-primary);
         }
 
-        .logo__mark {
+        .format-title::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
             background-color: var(--color-primary);
-            color: var(--color-bg);
-            padding: 5px 8px;
-            margin-right: 8px;
-            border-radius: 4px;
+            border-radius: 50%;
+            margin-right: 12px;
+            box-shadow: 0 0 8px var(--color-primary);
         }
 
-        .logo__text {
+        .format-description {
+            font-size: 1.1rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 25px;
+        }
+
+        .format-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-top: 0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: '→';
+            color: var(--color-green);
+            margin-right: 10px;
+            font-weight: 800;
+        }
+
+        .format-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .format-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
             color: var(--color-text);
         }
 
-        .nav {
-            display: flex;
-            gap: 25px;
-            align-items: center;
-        }
-
-        .nav__link {
-            color: var(--color-text-secondary);
-            text-decoration: none;
-            font-weight: 500;
-            position: relative;
-            padding: 5px 0;
-        }
-
-        .nav__link:hover {
-            color: var(--color-primary);
-        }
-
-        .nav__link::after {
-            content: '';
+        .format-list li::before {
+            content: '•';
+            color: var(--color-green);
+            font-size: 1.5rem;
             position: absolute;
             left: 0;
-            bottom: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--color-primary);
-            transition: width var(--transition-speed);
+            top: -2px;
         }
 
-        .nav__link:hover::after {
-            width: 100%;
+        .highlight-box {
+            background-color: rgba(34, 197, 94, 0.1);
+            border-radius: 10px;
+            padding: 22px;
+            margin: 25px 0;
+            border-left: 4px solid var(--color-green);
         }
 
-        .burger {
-            display: none;
-            width: 30px;
-            height: 24px;
-            padding: 10px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            flex-direction: column;
-            justify-content: space-between;
+        .highlight-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--color-green);
+            margin-top: 0;
+            margin-bottom: 10px;
         }
 
-        .burger span {
-            width: 100%;
-            height: 3px;
-            background-color: var(--color-primary);
-            border-radius: 3px;
-            transition: all var(--transition-speed);
+        .highlight-text {
+            color: var(--color-text);
+            margin: 0;
         }
 
-        /* RESPONSIVE */
+        /* Індикатор активного елемента */
+        .accordion-indicator {
+            font-size: 0.8rem;
+            color: var(--color-green);
+            background-color: rgba(34, 197, 94, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 15px;
+            font-weight: 600;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* Адаптивність */
         @media (max-width: 768px) {
-            .nav {
-                position: fixed;
-                top: 80px;
-                left: 0;
-                width: 100%;
-                flex-direction: column;
+            .page-title {
+                font-size: 2.2rem;
+            }
+
+            .page-subtitle {
+                font-size: 1rem;
+            }
+
+            .accordion-header {
                 padding: 20px;
-                gap: 15px;
-                background-color: var(--color-surface);
-                border-bottom: 1px solid rgba(255,214,49,0.2);
-                transform: translateY(-100%);
-                opacity: 0;
-                visibility: hidden;
-                transition: all var(--transition-speed);
+                font-size: 1.2rem;
             }
 
-            .nav.active {
-                transform: translateY(0);
-                opacity: 1;
-                visibility: visible;
+            .accordion-content-inner {
+                padding: 0 20px 20px;
             }
 
-            .burger {
-                display: flex;
+            .format-card {
+                padding: 20px;
             }
 
-            .burger.active span:nth-child(1) {
-                transform: rotate(45deg) translate(5px, 5px);
+            .format-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-container {
+                padding: 20px 15px;
             }
 
-            .burger.active span:nth-child(2) {
-                opacity: 0;
+            .page-header {
+                margin-bottom: 40px;
             }
 
-            .burger.active span:nth-child(3) {
-                transform: rotate(-45deg) translate(7px, -6px);
+            .accordion-header {
+                font-size: 1.1rem;
+                padding: 18px 15px;
+            }
+
+            .format-card {
+                padding: 15px;
+            }
+
+            .accordion-indicator {
+                display: none;
             }
         }
     </style>
 </head>
 
-<body class="rules-page">
-
-<!-- ХЕДЕР -->
+<body class="formats-page">
+<!-- ХЕДЕР ТОЧНО ТАКИЙ ЯК НА ЗРАЗКУ -->
 <header class="header">
-    <div class="container header__row">
-        <a class="logo" href="/index.html">
-            <span class="logo__mark">SC</span>
-            <span class="logo__text">STOLAR CARP</span>
-        </a>
-
-        <nav class="nav" id="nav">
-            <a href="/index.html" class="nav__link">Головна</a>
-            <a href="/rules.html" class="nav__link">Регламент</a>
-            <a href="/formats.html" class="nav__link nav__link--active">Формати змагань</a>
-            <a href="/register.html" class="nav__link">Реєстрація</a>
-            <a href="/live.html" class="nav__link">Live</a>
-            <a href="/rating.html" class="nav__link">Рейтинг</a>
-            <a href="/lakes.html" class="nav__link">Водойми</a>
-            <a href="/sponsors.html" class="nav__link">Спонсори</a>
-            <a href="/events/index.html" class="nav__link">Архів</a>
-            <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-        </nav>
-
-        <button class="burger" id="burger">
-            <span></span><span></span><span></span>
-        </button>
-    </div>
+  <div class="container header__row">
+    <a class="logo" href="/index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/formats.html" class="nav__link">Формати змагань</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
 </header>
 
-<!-- MAIN -->
-<main class="page-container">
+<main class="main">
+    <div class="page-container">
+        <header class="page-header">
+            <h1 class="page-title">Формати змагань</h1>
+            <p class="page-subtitle">Детальний STOLAR CARP. Ознайомтесь з правилами та особливостями кожного виду змагань.</p>
+            <div class="title-underline"></div>
+        </header>
 
         <div class="formats-accordion">
             
@@ -305,7 +452,7 @@
 
     <h3 class="section-title">Нагороди</h3>
     <ul class="format-list">
-        <li><strong>Кубки “Топи озера”</strong> — 1, 2, 3 місце</li>
+        <li><strong>Кубки "Топи озера"</strong> — 1, 2, 3 місце</li>
         <li><strong>9 кубків за зони</strong>:  
             A — 1/2/3 · B — 1/2/3 · C — 1/2/3
         </li>
@@ -541,10 +688,19 @@
             </article>
 
         </div>
-    </main>
+    </div>
+</main>
 
-    <!-- ФУТЕР -->
-    <footer id="main-footer"></footer>
+<!-- ФУТЕР -->
+<footer class="footer">
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+    <div class="footer__links">
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+    </div>
+  </div>
+</footer>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -568,25 +724,25 @@
                     }
                 });
             });
-            
-            // ВСЕ ЗАКРИТО за замовчуванням — прибрано автовідкриття першого акордеону
 
-            // Бургер-меню
+            // Бургер-меню — скрипт з вашого прикладу
             const burger = document.getElementById('burger');
             const nav = document.getElementById('nav');
             
-            burger.addEventListener('click', () => {
-                nav.classList.toggle('active');
-                burger.classList.toggle('active');
-            });
-
-            // Закриваємо меню при кліку на посилання
-            document.querySelectorAll('.nav__link').forEach(link => {
-                link.addEventListener('click', () => {
-                    nav.classList.remove('active');
-                    burger.classList.remove('active');
+            if (burger && nav) {
+                burger.addEventListener('click', () => {
+                    nav.classList.toggle('active');
+                    burger.classList.toggle('active');
                 });
-            });
+
+                // Закриваємо меню при кліку на посилання
+                document.querySelectorAll('.nav__link').forEach(link => {
+                    link.addEventListener('click', () => {
+                        nav.classList.remove('active');
+                        burger.classList.remove('active');
+                    });
+                });
+            }
         });
     </script>
 </body>

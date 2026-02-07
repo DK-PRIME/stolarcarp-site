@@ -198,11 +198,6 @@
   const btnLogout = $("logoutBtn");
   const loggedMsg = $("loggedMsg");
 
-  const signupForm = $("signupForm");
-  const loginForm  = $("loginForm");
-  const signupMsg  = $("signupMsg");
-  const loginMsg   = $("loginMsg");
-
   function showLoggedInUI(user) {
     if (loggedMsg) {
       loggedMsg.textContent = (ADMIN_MODE && user?.uid === ADMIN_UID)
@@ -310,6 +305,14 @@
             teamId: team.teamId
           }, true); // ← forceUpdate!
 
+          // 💾 Зберігаємо авторизацію в localStorage
+          localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
+            ts: Date.now(),
+            teamId: team.teamId,
+            name: team.name,
+            role: "captain"
+          }));
+
           setMsg(signupMsg, `✅ Команда "${team.name}" створена! Код: ${team.joinCode}`, "ok");
           setTimeout(() => goAfterAuth(user), 800);
           
@@ -334,6 +337,14 @@
           role: "member",
           teamId: team.teamId
         }, true); // ← forceUpdate!
+
+        // 💾 Зберігаємо авторизацію в localStorage
+        localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
+          ts: Date.now(),
+          teamId: team.teamId,
+          name: team.name,
+          role: "member"
+        }));
 
         setMsg(signupMsg, `✅ Ти в команді "${team.name}"!`, "ok");
         setTimeout(() => goAfterAuth(user), 500);
@@ -366,6 +377,7 @@
 
     await waitFirebase();
     const auth = window.scAuth;
+    const db = window.scDb;
 
     const email = ($("loginEmail")?.value || "").trim();
     const pass = $("loginPassword")?.value || "";
@@ -382,6 +394,23 @@
       await auth.signInWithEmailAndPassword(email, pass);
       const user = auth.currentUser;
       
+      // 💿 Після входу тягнемо команду з Firestore
+      const userDoc = await db.collection("users").doc(user.uid).get();
+
+      if (userDoc.exists && userDoc.data().teamId) {
+        const teamId = userDoc.data().teamId;
+        
+        const teamDoc = await db.collection("teams").doc(teamId).get();
+        const teamName = teamDoc.exists ? teamDoc.data().name : "Команда";
+
+        // 💾 зберігаємо маркер авторизації
+        localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
+          ts: Date.now(),
+          teamId,
+          name: teamName
+        }));
+      }
+
       setMsg(loginMsg, "✅ Успішно!", "ok");
       setTimeout(() => goAfterAuth(user), 300);
 

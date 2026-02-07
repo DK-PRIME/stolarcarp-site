@@ -4,7 +4,9 @@
 
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const qs = new URLSearchParams(location.search);
-  const ADMIN_MODE = qs.get("admin") === "1";
+  const ADMIN_MODE =
+  location.pathname.includes("admin.html") ||
+  (qs.get("admin") === "1" && location.pathname.includes("auth-admin.html"));
 
   function setMsg(el, text, type) {
     if (!el) return;

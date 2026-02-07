@@ -609,24 +609,5 @@
   })();
 </script>
 
-  <div id="debugStorage" style="
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  background:#111;
-  color:#0f0;
-  font-size:12px;
-  max-height:150px;
-  overflow:auto;
-  padding:6px;
-  z-index:99999;
-"></div>
-
-<script>
-  const dbg = document.getElementById("debugStorage");
-  dbg.innerText = JSON.stringify(localStorage, null, 2);
-</script>
-
 </body>
 </html>

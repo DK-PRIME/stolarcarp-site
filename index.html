@@ -410,7 +410,7 @@
     </nav>
 
     <!-- ОНОВЛЕНА КНОПКА -->
-    <a href="/auth.html" class="header-login">Увійти</a>
+    <a href="/auth.html" class="header-login" id="headerLoginBtn">Увійти</a>
 
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
   </div>
@@ -587,6 +587,25 @@
     el.addEventListener("click", () => {
       window.location.href = "/admin.html";
     });
+  })();
+</script>
+
+<script>
+  // Логіка кнопки Увійти / 🏠
+  (function(){
+    const btn = document.getElementById("headerLoginBtn");
+    if(!btn) return;
+    
+    // Перевіряємо, чи є токен авторизації
+    const token = localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
+    
+    if(token){
+      // Користувач авторизований — показуємо домік
+      btn.innerHTML = "🏠";
+      btn.href = "/cabinet.html";
+      btn.title = "Мій кабінет";
+    }
+    // Якщо не авторизований — залишаємо як є ("Увійти" → /auth.html)
   })();
 </script>
 

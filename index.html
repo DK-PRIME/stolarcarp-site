@@ -596,17 +596,17 @@
     const btn = document.getElementById("headerLoginBtn");
     if(!btn) return;
     
-    // Перевіряємо, чи є токен авторизації
-    const token = localStorage.getItem("sc_token") || sessionStorage.getItem("sc_token");
-    
-    if(token){
-      // Користувач авторизований — показуємо домік
-      btn.innerHTML = "🏠";
-      btn.href = "/cabinet.html";
-      btn.title = "Мій кабінет";
-    }
-    // Якщо не авторизований — залишаємо як є ("Увійти" → /auth.html)
-  })();
+    // Перевіряємо, чи існує ключ авторизованої команди
+const isLoggedIn = Object.keys(localStorage).some(key =>
+  key.startsWith("sc_team_cache_")
+);
+
+if (isLoggedIn) {
+  btn.innerHTML = "🏠";
+  btn.href = "/cabinet.html";
+  btn.title = "Мій кабінет";
+}
+})();
 </script>
 
 </body>

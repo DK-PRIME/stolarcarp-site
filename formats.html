@@ -573,7 +573,582 @@
                             </div>
 
                             <div class="highlight-box">
-                                <h4 class="highlight-title">Нагородження</h4>
+                     <!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Формат змагань — Stolar Carp</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <!-- Підключаємо шрифт Inter через Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="assets/js/config.js" defer></script>
+    <style>
+        :root {
+            --color-bg: #000000;
+            --color-surface: #111111;
+            --color-primary: #FFD631;
+            --color-secondary: #8B0000;
+            --color-text: #FFFFFF;
+            --color-text-secondary: #CCCCCC;
+            --color-green: #22c55e;
+            --border-radius: 12px;
+            --spacing-unit: 20px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        /* Основний контент */
+        .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px var(--spacing-unit);
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .page-title {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            line-height: 1.1;
+        }
+
+        .page-subtitle {
+            font-size: 1.2rem;
+            color: var(--color-text-secondary);
+            font-weight: 400;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Акцентна лінія під заголовком */
+        .title-underline {
+            width: 120px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            margin: 20px auto 0;
+            border-radius: 2px;
+        }
+
+        /* Стилі для акордеону */
+        .formats-accordion {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .accordion-item {
+            margin-bottom: 16px;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background-color: var(--color-surface);
+            transition: all var(--transition-speed) ease;
+            position: relative;
+        }
+
+        /* Градієнтна рамка */
+        .accordion-item::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--border-radius);
+            padding: 2px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box, 
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .accordion-item:hover {
+            box-shadow: 0 0 25px rgba(255, 214, 49, 0.15);
+        }
+
+        .accordion-item:hover::before {
+            background: linear-gradient(135deg, var(--color-green), var(--color-primary));
+        }
+
+        .accordion-header {
+            width: 100%;
+            padding: 24px 30px;
+            background-color: transparent;
+            border: none;
+            color: var(--color-primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all var(--transition-speed) ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .accordion-header:hover {
+            background-color: rgba(255, 214, 49, 0.05);
+        }
+
+        /* Зелена стрілочка */
+        .accordion-header::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2322c55e'%3E%3Cpath d='M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            transition: transform var(--transition-speed) ease;
+            flex-shrink: 0;
+            margin-left: 15px;
+        }
+
+        .accordion-header.active::after {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height var(--transition-speed) ease;
+        }
+
+        .accordion-content-inner {
+            padding: 0 30px 30px;
+        }
+
+        /* Стилі для контенту формату */
+        .format-card {
+            background: linear-gradient(145deg, rgba(255, 214, 49, 0.03), rgba(139, 0, 0, 0.03));
+            border-radius: 10px;
+            padding: 30px;
+            border-left: 4px solid var(--color-primary);
+        }
+
+        .format-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--color-primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .format-title::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--color-primary);
+            border-radius: 50%;
+            margin-right: 12px;
+            box-shadow: 0 0 8px var(--color-primary);
+        }
+
+        .format-description {
+            font-size: 1.1rem;
+            color: var(--color-text-secondary);
+            margin-bottom: 25px;
+        }
+
+        .format-section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--color-primary);
+            margin-top: 0;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: '→';
+            color: var(--color-green);
+            margin-right: 10px;
+            font-weight: 800;
+        }
+
+        .format-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .format-list li {
+            position: relative;
+            padding-left: 24px;
+            margin-bottom: 10px;
+            color: var(--color-text);
+        }
+
+        .format-list li::before {
+            content: '•';
+            color: var(--color-green);
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: -2px;
+        }
+
+        .highlight-box {
+            background-color: rgba(34, 197, 94, 0.1);
+            border-radius: 10px;
+            padding: 22px;
+            margin: 25px 0;
+            border-left: 4px solid var(--color-green);
+        }
+
+        .highlight-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--color-green);
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+
+        .highlight-text {
+            color: var(--color-text);
+            margin: 0;
+        }
+
+        /* Індикатор активного елемента */
+        .accordion-indicator {
+            font-size: 0.8rem;
+            color: var(--color-green);
+            background-color: rgba(34, 197, 94, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-left: 15px;
+            font-weight: 600;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* Адаптивність */
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2.2rem;
+            }
+
+            .page-subtitle {
+                font-size: 1rem;
+            }
+
+            .accordion-header {
+                padding: 20px;
+                font-size: 1.2rem;
+            }
+
+            .accordion-content-inner {
+                padding: 0 20px 20px;
+            }
+
+            .format-card {
+                padding: 20px;
+            }
+
+            .format-title {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .page-container {
+                padding: 20px 15px;
+            }
+
+            .page-header {
+                margin-bottom: 40px;
+            }
+
+            .accordion-header {
+                font-size: 1.1rem;
+                padding: 18px 15px;
+            }
+
+            .format-card {
+                padding: 15px;
+            }
+
+            .accordion-indicator {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="formats-page">
+<!-- ХЕДЕР ТОЧНО ТАКИЙ ЯК НА ЗРАЗКУ -->
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="/index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/formats.html" class="nav__link">Формат змагань</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    </nav>
+    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="main">
+    <div class="page-container">
+        <header class="page-header">
+            <h1 class="page-title">Формати змагань</h1>
+            <p class="page-subtitle">Детальний STOLAR CARP. Ознайомтесь з правилами та особливостями кожного виду змагань.</p>
+            <div class="title-underline"></div>
+        </header>
+
+        <div class="formats-accordion">
+            
+            <!-- Турнір STOLAR CARP -->
+            <article class="accordion-item">
+                <button class="accordion-header">
+                    Турнір STOLAR CARP
+                    <span class="accordion-indicator">Етапи + Фінал</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <div class="format-card">
+                            <h2 class="format-title">Турнір STOLAR CARP — Етапи та Фінал</h2>
+<p class="format-description">
+    Головний сезонний турнір Stolar Carp, що складається з відбіркових етапів та великого фіналу серед найсильніших команд року.
+</p>
+
+<!-- ЕТАПИ ТУРНІРУ -->
+<div class="format-section">
+    <h3 class="section-title">Етапи турніру</h3>
+    <p>
+        Кожен етап проходить у класичному форматі змагань. Результат визначається 
+        <strong>за загальною вагою зловленої риби</strong>.  
+        У змаганнях беруть участь <strong>три зони: A, B, C</strong>.
+        <strong> Внесок: 3500 грн </strong>
+    </p>
+
+    <ul class="format-list">
+        <li><strong>Зона А — 1, 2, 3 місце</strong></li>
+        <li><strong>Зона B — 1, 2, 3 місце</strong></li>
+        <li><strong>Зона C — 1, 2, 3 місце</strong></li>
+        <li><strong>Big Carp</strong> — найбільший короп етапу</li>
+        <li><strong>Big Amur</strong> — найбільший амур етапу</li>
+    </ul>
+</div>
+
+<!-- РЕЙТИНГ СЕЗОНУ -->
+<div class="format-section">
+    <h3 class="section-title">Рейтинг сезону</h3>
+    <p>
+        Команда отримує сезонні бали за кожен етап:
+    </p>
+    <ul class="format-list">
+        <li><strong>1 місце = 1 бал</strong></li>
+        <li><strong>2 місце = 2 бали</strong></li>
+        <li><strong>3 місце = 3 бали</strong></li>
+        <li>… і так далі</li>
+        <li><strong>Неучасть = 8 балів</strong></li>
+    </ul>
+
+    <p>
+        Сезонний рейтинг = <strong>сума балів за всі етапи</strong>.  
+        Чим менше балів, тим вище місце команди у сезонному рейтингу.
+    </p>
+</div>
+
+<!-- ВИХІД ДО ФІНАЛУ -->
+<div class="highlight-box">
+    <h4 class="highlight-title">Вихід до Фіналу</h4>
+    <p class="highlight-text">
+        <strong>18 найкращих команд сезону</strong> за сумою балів проходять до 
+        <strong>Фіналу сезону STOLAR CARP</strong>.  
+        Фінал — це змагання, де визначається Чемпіон року.
+    </p>
+</div>
+
+<!-- ФІНАЛ -->
+<div class="format-section">
+    <h3 class="section-title">Фінал сезону</h3>
+    <p>
+        У фіналі берують участь лише 18 команд, що пройшли відбір.                 
+         <strong> Внесок: 5000 грн </strong> 
+    </p>
+
+    <div class="highlight-box">
+        <h4 class="highlight-title">Організаційні деталі</h4>
+        <p class="highlight-text">
+            • <strong>Жеребкування</strong> — проводиться у четвер перед стартом.<br>
+            • <strong>Спільна вечеря</strong> — бограч, шашлик, для всіх учасників.<br>
+            • <strong>Окрема церемонія нагородження</strong> з кубками, медалями та подарунками партнерів.
+        </p>
+    </div>
+
+    <h3 class="section-title">Призовий фонд Фіналу</h3>
+    <ul class="format-list">
+        <li><strong>ТОП озера</strong></li>
+        <li>1 місце — <strong>12 000 грн</strong></li>
+        <li>2 місце — <strong>10 000 грн</strong></li>
+        <li>3 місце — <strong>8 000 грн</strong></li>
+    </ul>
+    
+     <h3 class="section-title">Зміщення місць у зонах</h3>
+<ul class="format-list">
+    <li>При виключенні ТОП-команд у зональному заліку відбувається зміщення місць:</li>
+    <li>2 місце → стає 1 місцем</li>
+    <li>3 місце → стає 2 місцем</li>
+    <li>4 місце → стає 3 місцем</li>
+</ul>
+    
+    <h3 class="section-title">Нагороди</h3>
+    <ul class="format-list">
+        <li><strong>Кубки "Топи озера"</strong> — 1, 2, 3 місце</li>
+        <li><strong>9 кубків за зони</strong>:  
+       <li> A — 1,2,3 </li>
+       <li> B — 1,2,3 </li>
+       <li> C — 1,2,3 </li>
+        <li><strong>Big Carp</strong> — кубок</li>
+        <li><strong>Big Amur</strong> — кубок</li>
+        <li><strong>Медалі всім учасникам фіналу</strong></li>
+    </ul>
+
+    <p>
+        <strong>кубки, медалі, призи та подарунки від партнерів та спонсорів</strong>.
+    </p>
+</div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- 3 Таблиці -->
+            <article class="accordion-item">
+                <button class="accordion-header">
+                    3 Таблиці
+                    <span class="accordion-indicator">Комбінований</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <div class="format-card">
+                            <h2 class="format-title">Формат — 3 Таблиці</h2>
+                            <p class="format-description">Унікальна система оцінки, де команди змагаються одночасно у трьох різних заліках.
+                                <strong> Внесок:6000 грн </strong>
+                            </p>
+                            
+                            <div class="format-section">
+                                <h3 class="section-title">Основна логіка</h3>
+                                <p>Команди отримують оцінку за трьома окремими таблицями:</p>
+                                <ul class="format-list">
+                                    <li><strong>Загальна вага</strong> — сума ваги всієї упійманої риби</li>
+                                    <li><strong>ТОП-5 найбільших риб</strong> — сума ваги п'яти найбільших екземплярів</li>
+                                    <li><strong>Big Fish команди</strong> — вага найбільшої риби, спійманої командою</li>
+                                </ul>
+                            </div>
+
+                            <div class="highlight-box">
+                                <h4 class="highlight-title">Фінальний бал</h4>
+                                <p class="highlight-text">Фінальний результат = сума місць команди у трьох таблицях.<br><strong>Менше балів = краще загальне місце.</strong></p>
+                            </div>
+
+                            <div class="format-section">
+    <h3 class="section-title">Зональні нагороди</h3>
+    <p>У кожній зоні (A, B, C) нагороджуються 1–3 місця.</p>
+    <p>ТОП-команди виключаються із зонального заліку (у зоні може бути 2 або 3 ТОП-команди).</p>
+    <p>Після виключення ТОП-команд інші команди в зоні автоматично зміщуються на вище місце.</p>
+                            </div>
+
+                            <h3 class="section-title">Нагородження</h3>
+
+                 <ul class="format-list">
+                  <li><strong>ТОП — озера</strong></li>
+                 <li>Призовий фонд при участі 21 команди:</li>
+                 <li>1 місце — <strong>20 000 грн</strong></li>
+                 <li>2 місце — <strong>15 000 грн</strong></li>
+                 <li>3 місце — <strong>10 000 грн</strong></li>
+                </ul>
+
+               <h4 class="section-title">Зміщення місць у зонах</h4>
+                <ul class="format-list">
+              <li>При виключенні ТОП-команд</li>
+           </ul>
+
+               <h4 class="section-title">Кубки та нагороди у зонах</h4>
+                 <ul class="format-list">
+                 <li>Зона А — 1, 2, 3 місця</li>
+                 <li>Зона B — 1, 2, 3 місця</li>
+                <li>Зона C — 1, 2, 3 місця</li>
+              <li>Також призи від наших партнерів та спонсорів</li>
+            </ul>
+
+                            <div class="highlight-box">
+                                <h4 class="highlight-title">Важливо</h4>
+                                <p class="highlight-text">Переможці визначаються виключно за спортивним результатом (сума місць у трьох таблицях), а не за зоною розташування.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <!-- STALKER SOLO SC -->
+            <article class="accordion-item">
+                <button class="accordion-header">
+                    STALKER SOLO SC
+                    <span class="accordion-indicator">Соло</span>
+                </button>
+                <div class="accordion-content">
+                    <div class="accordion-content-inner">
+                        <div class="format-card">
+                            <h2 class="format-title">STALKER SOLO SC</h2>
+                            <p class="format-description">
+                                Індивідуальний формат, у якому кожен Stalker змагається сам за себе.  
+                                Один учасник — один сектор — один особистий результат.
+                            </p>
+
+                            <div class="format-section">
+                                <h3 class="section-title">Підрахунок результатів</h3>
+                                <ul class="format-list">
+                                    <li><strong>Загальна вага</strong> — основний критерій.</li>
+                                    <li><strong>Зони A, B, C</strong> — усі учасники діляться на 3 зони.</li>
+                                </ul>
+                            </div>
+
+                            <div class="highlight-box">
+             <h4 class="highlight-title">Нагородження</h4>
                                 <p class="highlight-text">
                                     <strong>Кубки та призи "Топ Озера"</strong>:  
                                     1 місце · 2 місце · 3 місце (загальний залік).
@@ -590,78 +1165,7 @@
             </article>
 
             <!-- STALKER TEAMS -->
-            <article class="accordion-item">
-                <button class="accordion-header">
-                    STALKER TEAMS
-                    <span class="accordion-indicator">Командно-індивідуальний</span>
-                </button>
-                <div class="format-card">
-    <h2 class="format-title">STALKER TEAMS</h2>
-    <p class="format-description">
-        Командний формат з індивідуальним розподілом по зонах — стратегія має ключове значення.
-    </p>
-
-    <!-- Принцип -->
-    <div class="format-section">
-        <h3 class="section-title">Принцип</h3>
-        <p>Команда реєструється однією заявкою, але учасники виступають окремо в різних зонах:</p>
-        <ul class="format-list">
-            <li>Учасник 1 → Зона A</li>
-            <li>Учасник 2 → Зона B</li>
-            <li>Учасник 3 → Зона C</li>
-        </ul>
-    </div>
-
-    <!-- Склад та умови -->
-    <div class="format-section">
-        <h3 class="section-title">Склад та умови</h3>
-        <ul class="format-list">
-            <li>3 учасники в команді</li>
-            <li>Ловля — соло, фізична допомога заборонена</li>
-            <li><strong>Внесок:</strong> 6 500 грн з учасника (19 500 грн з команди)</li>
-        </ul>
-    </div>
-
-    <!-- Підрахунок -->
-    <div class="format-section">
-        <h3 class="section-title">Підрахунок</h3>
-        <ul class="format-list">
-            <li>Місце учасника в своїй зоні = кількість балів (1 місце = 1 бал)</li>
-            <li>Командний результат = сума балів трьох учасників</li>
-            <li>Тай-брейк у разі рівності балів — сумарна вага трьох учасників</li>
-        </ul>
-    </div>
-
-    <!-- Призи -->
-    <div class="format-section">
-        <h3 class="section-title">Призи та нагороди</h3>
-
-        <p><strong>Командний призовий фонд</strong> (при участі 8 команд):</p>
-        <ul class="format-list">
-            <li>🥇 1 місце — 30 000 грн</li>
-            <li>🥈 2 місце — 24 000 грн</li>
-            <li>🥉 3 місце — 21 000 грн</li>
-        </ul>
-
-        <p><strong>Індивідуальний залік у зонах</strong> (A, B, C):</p>
-        <ul class="format-list">
-            <li>🥇 1 місце — Кубок + приз</li>
-            <li>🥈 2 місце — Кубок + приз</li>
-            <li>🥉 3 місце — Кубок + приз</li>
-        </ul>
-
-        <p>Усього: <strong>9 індивідуальних призів</strong></p>
-    </div>
-
-    <!-- Пам'ятайте -->
-    <div class="highlight-box">
-        <h4 class="highlight-title">Пам'ятайте</h4>
-        <p class="highlight-text">
-            <strong>Менше балів = краще місце команди.</strong><br>
-            Ідеальний результат — 3 бали (три перших місця).
-        </p>
-    </div>
-
+            
 </div>
                         </div>
                     </div>

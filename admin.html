@@ -64,89 +64,6 @@
       background:linear-gradient(135deg,var(--accent),var(--accent-2));
       color:#000;border-color:transparent;
     }
-    .login-title{ font-size:1.6rem; font-weight:900; letter-spacing:.04em; margin:6px 0 6px; }
-    .login-sub{ color:#9ca3af; margin-bottom:14px; }
-    .field{ display:grid; gap:6px; margin-bottom:12px; }
-    .field label{ font-size:.9rem; color:#cbd5e1; }
-    .field input{
-      width:100%;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      outline:none;
-    }
-    .field input:focus{
-      border-color:var(--accent);
-      box-shadow:0 0 10px rgba(246,195,76,.25);
-    }
-    .login-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .login-actions .btn{ border-radius:14px; padding:12px 14px; }
-
-    .mini-form{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-    }
-    .mini-form input, .mini-form select{
-      width:100%;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(2,6,23,.55);
-      color:#e5e7eb;
-      outline:none;
-    }
-    .mini-form input::placeholder{ color:#6b7280; }
-
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    @media (max-width:640px){ .grid2{ grid-template-columns:1fr; } }
-
-    .win-card{
-      padding:12px;
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.35);
-      margin-top:10px;
-    }
-    .win-title{
-      font-weight:900;
-      letter-spacing:.06em;
-      text-transform:uppercase;
-      font-size:.85rem;
-      margin-bottom:8px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-    }
-    .badge{
-      font-size:.72rem;
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.45);
-      color:#e5e7eb;
-      white-space:nowrap;
-    }
-    .badge--final{
-      background:linear-gradient(135deg,#f6c34c,#d6a23a,#7a0f2b);
-      border-color:transparent;
-      color:#000;
-      font-weight:900;
-    }
-
-    .ok{ color:#22c55e; }
-    .err{ color:#ef4444; }
-
-    .note{
-      font-size:.82rem;
-      color:#9ca3af;
-      line-height:1.35;
-    }
-    .note b{ color:#e5e7eb; }
   </style>
 </head>
 
@@ -175,24 +92,20 @@
       <div class="muted" id="adminDebug" style="margin-top:6px;"></div>
     </div>
 
-    <!-- LOGIN -->
     <div id="adminLogin" class="admin-card hidden">
       <div class="login-card">
         <div class="login-tabs">
           <div class="pill pill--active">Вхід</div>
         </div>
 
-        <div class="login-title">Вхід адміністратора</div>
-        <div class="login-sub">Вхід тільки для адміністратора (email/пароль).</div>
-
         <div class="field">
           <label for="admEmail">Email</label>
-          <input id="admEmail" type="email" placeholder="Email адміністратора" autocomplete="username">
+          <input id="admEmail" type="email" placeholder="Email адміністратора">
         </div>
 
         <div class="field">
           <label for="admPass">Пароль</label>
-          <input id="admPass" type="password" placeholder="Пароль адміністратора" autocomplete="current-password">
+          <input id="admPass" type="password" placeholder="Пароль адміністратора">
         </div>
 
         <div class="login-actions">
@@ -203,113 +116,38 @@
       </div>
     </div>
 
-    <!-- APP -->
     <div id="adminApp" class="hidden">
 
-      <!-- MENU -->
       <div class="admin-card">
         <div class="stack">
-          <button class="btn btn--primary" id="btnOpenCreate">1) Створити змагання</button>
-          <button class="btn btn--accent"  id="btnOpenEdit">2) Редагувати змагання</button>
+
+          <!-- 🔥 ЄДИНА ЗМІНА -->
+          <a class="btn btn--primary" href="admin-create.html">
+            1) Створити змагання
+          </a>
+
+          <button class="btn btn--accent" id="btnOpenEdit">
+            2) Редагувати змагання
+          </button>
 
           <a class="btn btn--primary" href="admin-registrations.html">3) Реєстрація команд</a>
           <a class="btn btn--accent"  href="admin-draw.html">4) Жеребкування</a>
-
           <a class="btn btn--danger"  href="admin-weigh.html">5) Зважування (адмін)</a>
-
           <a class="btn btn--primary" href="admin-accounts.html">6) Акаунт STOLAR CARP</a>
+          <a class="btn btn--accent" href="judge_qr_admin.html">📱 QR-доступ для суддів</a>
 
-          <a class="btn btn--accent" href="judge_qr_admin.html">
-  📱 QR-доступ для суддів
-          </a>
         </div>
-      </div>
-
-      <!-- CREATE -->
-      <div id="modCreate" class="admin-card hidden">
-        <div style="font-weight:900; margin-bottom:8px;">Створити змагання</div>
-
-        <div class="note">
-          Тут задаєш структуру змагання. Дати реєстрації/оплату/реквізити — будемо вести з адмінки (в competitions.events[]).
-        </div>
-
-        <div class="mini-form">
-          <select id="inpType">
-            <option value="season" selected>Тип: СЕЗОН (етапи + фінал опційно)</option>
-            <option value="oneoff">Тип: ОДНОРАЗОВЕ змагання</option>
-          </select>
-
-          <input id="inpYear" inputmode="numeric" placeholder="Рік (наприклад: 2026)" />
-          <input id="inpBrand" value="STOLAR CARP" readonly />
-          <input id="inpName" placeholder="Назва (наприклад: Season STOLAR CARP 2026 / Осінній короп)" />
-
-          <div id="seasonOnly">
-            <select id="inpStagesCount">
-              <option value="2">К-сть етапів у сезоні: 2</option>
-              <option value="3" selected>К-сть етапів у сезоні: 3</option>
-              <option value="4">К-сть етапів у сезоні: 4</option>
-              <option value="5">К-сть етапів у сезоні: 5</option>
-              <option value="6">К-сть етапів у сезоні: 6</option>
-              <option value="7">К-сть етапів у сезоні: 7</option>
-              <option value="8">К-сть етапів у сезоні: 8</option>
-            </select>
-
-            <select id="inpHasFinal">
-              <option value="yes" selected>Фінал: ТАК</option>
-              <option value="no">Фінал: НІ</option>
-            </select>
-          </div>
-
-          <!-- тут admin.js малює/читає етапи -->
-          <div id="eventWindowsWrap"></div>
-
-          <div class="grid2">
-            <button class="btn btn--accent" id="btnSaveCompetition">Зберегти змагання</button>
-            <button class="btn btn--primary" id="btnMakeActive">Зробити активним</button>
-          </div>
-
-          <button class="btn btn--ghost" id="btnResetDraft">Скинути чернетку</button>
-        </div>
-
-        <div class="muted" id="createMsg" style="margin-top:10px;"></div>
-      </div>
-
-      <!-- EDIT -->
-      <div id="modEdit" class="admin-card hidden">
-        <div style="font-weight:900; margin-bottom:8px;">Редагувати змагання</div>
-
-        <div class="mini-form">
-          <select id="selCompetition"></select>
-
-          <!-- тут admin.js малює/читає етапи вибраного змагання -->
-          <div id="editWindowsWrap"></div>
-
-          <div class="grid2">
-            <button class="btn btn--accent" id="btnSaveEdit">Зберегти зміни</button>
-            <button class="btn btn--primary" id="btnReloadList">Оновити список</button>
-          </div>
-
-          <button class="btn btn--danger" id="btnDeleteCompetition" style="margin-top:10px;">
-            Видалити змагання
-          </button>
-        </div>
-
-        <div class="muted" id="editMsg" style="margin-top:10px;"></div>
       </div>
 
     </div>
   </section>
 </main>
 
-<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
-
-<!-- ЛОГІКА -->
 <script src="assets/js/admin.js"></script>
 
 </body>

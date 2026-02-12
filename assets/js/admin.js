@@ -5,6 +5,7 @@
 // ✅ access by users/{uid}.role === "admin"
 // ✅ no heavy Firestore reads here (no зависань)
 // ✅ navigation handled by plain <a href="..."> in HTML (no duplicate JS redirects)
+// ✅ РЕЖИМ 1: Ввів 1 раз — пускає на всі адмін-сторінки (сесія зберігається)
 
 (function(){
   "use strict";
@@ -68,12 +69,8 @@
       return;
     }
 
-    // ✅ FORCE LOGOUT ON START: always require fresh login
-    try{
-      await auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
-      await auth.signOut();
-      await new Promise(r => setTimeout(r, 50)); // brief pause for state cleanup
-    }catch(_){}
+    // ❌ ВИДАЛЕНО: FORCE LOGOUT ON START — не потрібно в Режимі 1
+    // Сесія зберігається, admin-create.html та інші бачать того ж користувача
 
     // UI refs
     const btnLogin = $("btnAdminLogin");
@@ -103,7 +100,7 @@
 
       try{
         await auth.signInWithEmailAndPassword(email, pass);
-        // Success -> onAuthStateChanged handles UI
+        // Успіх — onAuthStateChanged приховає форму і покаже меню
       }catch(e){
         const code = e?.code || "";
         const text = AUTH_ERRORS[code] || e?.message || "Помилка входу";
@@ -127,6 +124,7 @@
     // AUTH STATE (by role)
     auth.onAuthStateChanged(async (user) => {
       if(!user){
+        // Немає сесії — показуємо форму входу
         setStatus("Потрібен вхід");
         setDebug("");
         show(adminLogin);
@@ -135,22 +133,25 @@
         return;
       }
 
+      // Є користувач — перевіряємо чи це адмін
       const ok = await requireAdmin(user);
       if(!ok){
         setStatus("Доступ заборонено ❌");
         setDebug("Цей акаунт не має ролі admin (users/{uid}.role).");
-        try{ await auth.signOut(); }catch(_){}
+        // Не робимо signOut — просто показуємо що доступу нема
+        // Користувач може сам вийти через auth.html якщо потрібно
         show(adminLogin);
         hide(adminApp);
         setLoading(false);
         return;
       }
 
+      // ✅ АДМІН ПІДТВЕРДЖЕНО — показуємо меню
       setStatus("Адмін-доступ ✅");
       setDebug("");
       hide(adminLogin);
       show(adminApp);
-      // Note: button stays disabled (loading state) while logged in - that's fine
+      // Кнопка залишиться в стані "Вхід…" але форма прихована — не проблема
     });
   }
 

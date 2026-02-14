@@ -7,12 +7,14 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- Стилі: тримаємо в тому ж тоні, що й admin.html (нічого “зайвого” не вигадуємо) -->
   <style>
+    :root{
+      --accent:#f6c34c;
+      --accent-2:#f59e0b;
+    }
     body{ background: radial-gradient(circle at top,#111827 0,#020617 55%); }
     .admin-wrap{ max-width:980px; margin:0 auto; padding:22px 0 70px; }
 
-    /* FIX: щоб "SC" не обрізало в хедері */
     .header .header__row{ align-items:center; }
     .header .logo{ display:flex; align-items:center; gap:10px; min-height:56px; padding:8px 0; }
     .header .logo__mark{
@@ -81,6 +83,9 @@
       box-shadow:0 0 10px rgba(246,195,76,.25);
     }
     .field textarea{ resize:vertical; min-height:96px; }
+    .field input:disabled, .field select:disabled{
+      opacity:.6; cursor:not-allowed;
+    }
 
     .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
     .grid3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
@@ -99,6 +104,37 @@
 
     .actions{ display:flex; gap:10px; flex-wrap:wrap; }
     .actions .btn{ border-radius:14px; padding:12px 14px; }
+
+    /* Format-specific fields container */
+    #formatFields{
+      margin-top:12px;
+      padding:14px;
+      border-radius:14px;
+      background:rgba(2,6,23,.35);
+      border:1px solid rgba(148,163,184,.15);
+    }
+    #formatFields:empty{
+      display:none; /* щоб не було пустого блоку */
+    }
+
+    .format-section h4{
+      margin:0 0 12px 0;
+      color:var(--accent);
+      font-size:1rem;
+    }
+    .format-section label{
+      display:flex; align-items:center; gap:8px;
+      margin-bottom:10px;
+      font-size:.9rem;
+    }
+    .format-section input[type="number"],
+    .format-section input[type="text"]{
+      width:auto; min-width:80px;
+      padding:8px 12px;
+    }
+    .format-section input[type="checkbox"]{
+      width:20px; height:20px;
+    }
   </style>
 </head>
 
@@ -129,7 +165,7 @@
       <div class="muted" id="createDebug" style="margin-top:6px;"></div>
     </div>
 
-    <!-- GATE (без другого входу: тут тільки повідомлення/редірект) -->
+    <!-- GATE -->
     <div id="createGate" class="admin-card hidden">
       <div class="login-card">
         <div style="font-size:1.2rem; font-weight:900; margin-bottom:8px;">Доступ обмежено</div>
@@ -155,11 +191,11 @@
 
         <div class="note" style="margin-top:10px;">
           Тут задаємо <b>водойму</b>, <b>старт/фініш (дата+година)</b> і базові параметри змагання.
-          Логіка збереження/підвантаження буде в <b>assets/js/admin-create.js</b>.
+          Специфічні налаштування формату з'являться нижче після вибору "Формат".
         </div>
       </div>
 
-      <!-- EDIT SELECT (visible in edit mode) -->
+      <!-- EDIT SELECT -->
       <div id="editPicker" class="admin-card hidden">
         <div style="font-weight:900; margin-bottom:8px;">Вибір змагання для редагування</div>
         <div class="field">
@@ -203,13 +239,20 @@
           <div class="field">
             <label for="inpFormat">Формат</label>
             <select id="inpFormat">
+              <!-- канонічні ключі (1-в-1) -->
               <option value="classic" selected>Classic (загальна вага)</option>
-              <option value="threeTables">3 таблиці</option>
-              <option value="stalkerTeams">Stalker Teams</option>
+              <option value="3tables">3 таблиці</option>
+              <option value="stalker-solo">Stalker Solo</option>
+              <option value="stalker-teams">Stalker Teams</option>
+              <option value="bigfish30">Big Fish 30</option>
+              <option value="autumn-carp">Осінній Короп</option>
               <option value="trophy15">Трофейна 15</option>
             </select>
           </div>
         </div>
+
+        <!-- FORMAT-SPECIFIC FIELDS -->
+        <div id="formatFields"></div>
 
         <div class="hr"></div>
 
@@ -260,7 +303,7 @@
         <div class="hr"></div>
 
         <!-- SEASON ONLY -->
-        <div id="seasonOnly" class="">
+        <div id="seasonOnly">
           <div style="font-weight:900; margin-bottom:8px;">Сезонні налаштування</div>
           <div class="grid2">
             <div class="field">
@@ -287,7 +330,7 @@
 
         <div class="hr"></div>
 
-        <!-- REG + PAY (placeholder; логіку зробимо в admin-create.js) -->
+        <!-- REG + PAY -->
         <div style="font-weight:900; margin-bottom:8px;">Реєстрація та оплата</div>
 
         <div class="grid2">
@@ -353,7 +396,7 @@
 
         <div class="muted" id="createMsg" style="margin-top:10px;"></div>
 
-        <!-- DELETE (edit only) -->
+        <!-- DELETE -->
         <div id="deleteWrap" class="hidden" style="margin-top:12px;">
           <button class="btn btn--danger" id="btnDelete">Видалити змагання</button>
           <div class="note" style="margin-top:8px;">
@@ -367,15 +410,26 @@
   </section>
 </main>
 
-<!-- Firebase compat SDK -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<!-- init -->
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- ЛОГІКА (наступний крок): ми напишемо assets/js/admin-create.js -->
+<!-- ✅ REGISTRY (ОБОВʼЯЗКОВО ПЕРШИМ) -->
+<script src="assets/js/formats/registry.js"></script>
+
+<!-- ✅ PRESETS (після registry.js) -->
+<script src="assets/js/formats/format-classic.js"></script>
+<script src="assets/js/formats/format-3tables.js"></script>
+<script src="assets/js/formats/format-stalker-solo.js"></script>
+<script src="assets/js/formats/format-stalker-teams.js"></script>
+<script src="assets/js/formats/format-bigfish30.js"></script>
+<script src="assets/js/formats/format-autumn-carp.js"></script>
+<script src="assets/js/formats/format-trophy15.js"></script>
+
+<!-- MAIN -->
 <script src="assets/js/admin-create.js?v=20260212"></script>
 
 </body>

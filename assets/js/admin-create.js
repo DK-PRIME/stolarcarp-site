@@ -7,6 +7,10 @@
 // ✅ Тривалість рахуємо в UI автоматично
 // ✅ Реєстрація: auto (−28/−14) або manual (date/date)
 // ✅ Чернетка: localStorage
+// ✅ FIX: season не перезаписується в create (тільки edit)
+// ✅ FIX: oneoff має унікальний compId (не перетирає інші)
+// ✅ FIX: Make Active завжди робить active тільки після Save (щоб doc існував)
+// ✅ NEW: registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
 
 (function(){
   "use strict";
@@ -88,6 +92,72 @@
   const btnReloadList = $("btnReloadList");
   const editPickerMsg = $("editPickerMsg");
 
+  // ------------------------------------------------------------
+  // ✅ BLOCK #1: Formats loader (registry + format-*.js)
+  // ------------------------------------------------------------
+  const formatFieldsEl = $("formatFields");
+  let activeFormatName = "";
+  let activeFormat = null;
+
+  function renderFormatSpecificFields(html){
+    if(!formatFieldsEl) return;
+    formatFieldsEl.innerHTML = html || "";
+  }
+
+  function getRegistry(){
+    // підтримуємо і SC_FORMATS.registry, і SC_FORMATS.get
+    const sc = window.SC_FORMATS || null;
+    if(!sc) return null;
+    if(typeof sc.get === "function") return sc;          // варіант: SC_FORMATS.get(name)
+    if(sc.registry && typeof sc.registry.get === "function") return sc.registry; // варіант: SC_FORMATS.registry.get(name)
+    return null;
+  }
+
+  function getPreset(name){
+    const reg = getRegistry();
+    const key = String(name || "").toLowerCase();
+    if(!reg || !key) return null;
+    try{
+      return reg.get(key) || null;
+    }catch(_){
+      return null;
+    }
+  }
+
+  async function activateFormat(formatName, opts){
+    const requested = String(formatName || "classic").toLowerCase();
+    let preset = getPreset(requested);
+
+    if(!preset){
+      console.warn(`Формат "${requested}" не знайдено, fallback classic`);
+      preset = getPreset("classic");
+    }
+
+    activeFormatName = preset ? (requested || "classic") : "classic";
+    activeFormat = preset || null;
+
+    // reset UI
+    renderFormatSpecificFields("");
+
+    // init
+    if(activeFormat && typeof activeFormat.init === "function"){
+      activeFormat.init({
+        render: renderFormatSpecificFields,
+        $,
+        esc
+      });
+    }
+
+    // deserialize existing engine
+    if(opts && opts.deserializeData && activeFormat && typeof activeFormat.deserialize === "function"){
+      try{
+        activeFormat.deserialize(opts.deserializeData, { render: renderFormatSpecificFields, $, esc });
+      }catch(e){
+        console.warn("deserialize error:", e);
+      }
+    }
+  }
+
   // --- Helpers: Draft
   function getDraft(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); }catch{ return null; } }
   function setDraft(data){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); }catch{} }
@@ -101,8 +171,7 @@
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
     if(!m) return null;
     const y = +m[1], mo = +m[2]-1, d = +m[3], h = +m[4], mi = +m[5];
-    // Це локальний час браузера → конвертуємо в Date (локальний), а в Firestore пишемо Timestamp
-    const dt = new Date(y, mo, d, h, mi, 0, 0);
+    const dt = new Date(y, mo, d, h, mi, 0, 0); // локальний час браузера
     if(Number.isNaN(dt.getTime())) return null;
     return dt;
   }
@@ -145,7 +214,7 @@
   function regOpenFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -28) : ""; }
   function regCloseFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -14) : ""; }
 
-  // Беремо дату старту з datetime-local → YYYY-MM-DD
+  // Беремо дату старту з datetime-local → YYYY-MM-DD (локальна дата)
   function startDateOnly(){
     const dt = parseLocalDateTime(inpStartAt?.value || "");
     if(!dt) return "";
@@ -282,23 +351,25 @@
     const startD = startDateOnly();
 
     if(mode === "manual"){
-      inpRegOpen.disabled = false;
-      inpRegClose.disabled = false;
-      regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen.value)||"—")} → ${esc(normDate(inpRegClose.value)||"—")})`;
+      if(inpRegOpen) inpRegOpen.disabled = false;
+      if(inpRegClose) inpRegClose.disabled = false;
+      if(regPreview){
+        regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen?.value)||"—")} → ${esc(normDate(inpRegClose?.value)||"—")})`;
+      }
       return;
     }
 
     // auto
-    inpRegOpen.disabled = true;
-    inpRegClose.disabled = true;
+    if(inpRegOpen) inpRegOpen.disabled = true;
+    if(inpRegClose) inpRegClose.disabled = true;
 
     if(!startD){
-      regPreview.textContent = "Реєстрація: —";
+      if(regPreview) regPreview.textContent = "Реєстрація: —";
       return;
     }
     const o = regOpenFromStartDate(startD);
     const c = regCloseFromStartDate(startD);
-    regPreview.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b>`;
+    if(regPreview) regPreview.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b>`;
   }
 
   function collectForm(){
@@ -362,7 +433,9 @@
 
     // season
     if(inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
-    if(inpHasFinal) inpHasFinal.value = (data.hasFinal ? "yes" : (data.hasFinal === false ? "no" : (data.inpHasFinal || "yes")));
+    if(inpHasFinal){
+      inpHasFinal.value = (data.hasFinal ? "yes" : (data.hasFinal === false ? "no" : (data.inpHasFinal || "yes")));
+    }
 
     // reg + pay
     if(inpRegMode) inpRegMode.value = data.regMode || "auto";
@@ -393,19 +466,31 @@
       price: d.price,
       currency: d.currency,
       payDetails: d.payDetails,
+      // ✅ NEW: format engine draft
+      engine: (activeFormat && typeof activeFormat.serialize === "function")
+        ? (activeFormat.serialize({ $, format: activeFormatName }) || {})
+        : {},
       ts: Date.now()
     };
     setDraft(draft);
   }
 
+  // --- ID generator (FIX: oneoff не перетирає)
+  function rand4(){
+    return Math.random().toString(36).slice(2,6);
+  }
+
   function compIdFrom(type, yearStr, name){
     if(type === "season") return `season-${yearStr}`;
+
     const slug = (name||"event")
       .toLowerCase()
       .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
       .replace(/-+/g,"-")
-      .replace(/^-|-$/g,"");
-    return `oneoff-${yearStr}-${slug || "event"}`;
+      .replace(/^-|-$/g,"")
+      .slice(0,40);
+
+    return `oneoff-${yearStr}-${slug || "event"}-${rand4()}`;
   }
 
   // --- Validation
@@ -423,9 +508,7 @@
       if(!form.manualOpen && form.manualClose) throw new Error("Manual: заповни дату відкриття реєстрації.");
     }
 
-    // pay
     if(form.payEnabled){
-      // дозволяємо без внеску (якщо захочеш “пізніше”), але реквізити корисно мати
       if(form.price !== null && !Number.isFinite(form.price)) throw new Error("Внесок має бути числом.");
     }
   }
@@ -444,13 +527,9 @@
   }
 
   function computeRegistrationBlock(form){
-    const startD = startDateOnly(); // YYYY-MM-DD from current UI (same as form.startDt)
+    const startD = startDateOnly();
     if(form.regMode === "manual"){
-      return {
-        mode: "manual",
-        openDate: form.manualOpen || "",
-        closeDate: form.manualClose || ""
-      };
+      return { mode: "manual", openDate: form.manualOpen || "", closeDate: form.manualClose || "" };
     }
     return {
       mode: "auto",
@@ -459,7 +538,9 @@
     };
   }
 
-  // --- Load selected competition into form (edit)
+  // ------------------------------------------------------------
+  // ✅ BLOCK #2: loadCompetition => activateFormat + deserialize(engine)
+  // ------------------------------------------------------------
   async function loadCompetition(compId){
     if(!compId) return;
 
@@ -471,7 +552,6 @@
 
       const d = doc.data() || {};
 
-      // schedule Timestamp -> Date
       const startAt = d.schedule?.startAt?.toDate ? d.schedule.startAt.toDate() : null;
       const finishAt = d.schedule?.finishAt?.toDate ? d.schedule.finishAt.toDate() : null;
 
@@ -497,6 +577,9 @@
         payDetails: pay.details || ""
       });
 
+      // 🔥 activate format + deserialize engine
+      await activateFormat((d.format || "classic"), { deserializeData: (d.engine || {}) });
+
       setSeasonVisibility();
       updateDurationUI();
       updateRegUI();
@@ -510,23 +593,37 @@
     }
   }
 
-  // --- Save competition
+  // ------------------------------------------------------------
+  // ✅ BLOCK #3: saveCompetition => format validate + serialize -> engine
+  // ------------------------------------------------------------
   async function saveCompetition(editingCompId){
     const form = collectForm();
     validate(form);
 
+    // format-specific validate/serialize
+    let formatExtra = {};
+    if(activeFormat && typeof activeFormat.validate === "function"){
+      activeFormat.validate({ $, format: form.format });
+    }
+    if(activeFormat && typeof activeFormat.serialize === "function"){
+      formatExtra = activeFormat.serialize({ $, format: form.format }) || {};
+    }
+
     const compId = editingCompId || compIdFrom(form.type, form.yearStr, form.name);
 
     const lakeSnap = await getLakeSnapshot(form.lakeId);
-
     const regBlock = computeRegistrationBlock(form);
 
-    // Duration
     const mins = diffMinutes(form.startDt, form.finishDt);
-    const durationHours = mins ? (mins/60) : null;
+    const durationHours = (mins !== null) ? (mins/60) : null;
 
     const ref = db.collection("competitions").doc(compId);
     const snap = await ref.get();
+
+    // ✅ FIX: сезон не перезаписувати в create
+    if(!editingCompId && form.type === "season" && snap.exists){
+      throw new Error(`Сезон ${compId} вже існує. Перейди в режим "Редагування" і відкрий його.`);
+    }
 
     const data = {
       compId,
@@ -536,12 +633,18 @@
       brand: "STOLAR CARP",
       format: form.format,
 
+      // 🔥 engine (format-specific config)
+      engine: {
+        baseFormat: form.format,
+        ...formatExtra
+      },
+
       lake: lakeSnap ? { id: lakeSnap.id, name: lakeSnap.name } : { id: form.lakeId, name: form.lakeId },
 
       schedule: {
         startAt: fb.firestore.Timestamp.fromDate(form.startDt),
         finishAt: fb.firestore.Timestamp.fromDate(form.finishDt),
-        durationHours: durationHours ? Number(durationHours.toFixed(2)) : null
+        durationHours: (durationHours !== null) ? Number(durationHours.toFixed(2)) : null
       },
 
       stagesCount: form.type === "season" ? Number(form.stagesCount) : 1,
@@ -586,7 +689,6 @@
     const typed = prompt(`УВАГА! Видалення без відновлення.\nВведи точно ID змагання для підтвердження:\n\n${compId}`);
     if(typed !== compId) throw new Error("Видалення скасовано (ID не співпав).");
 
-    // якщо було активним — знімаємо
     try{
       const s = await db.collection("settings").doc("app").get();
       const activeId = s.exists ? ((s.data()||{}).activeCompetitionId || "") : "";
@@ -611,8 +713,19 @@
       saveDraftNow();
     });
 
+    // ------------------------------------------------------------
+    // ✅ BLOCK #4: inpFormat change => activateFormat()
+    // ------------------------------------------------------------
+    if(inpFormat){
+      inpFormat.addEventListener("change", async ()=>{
+        await activateFormat(inpFormat.value);
+        saveDraftNow();
+      });
+    }
+
+    // IMPORTANT: inpFormat тут не треба, бо ми окремо ловимо change вище
     [
-      inpYear, inpName, inpFormat, inpLake,
+      inpYear, inpName, inpLake,
       inpStartAt, inpFinishAt,
       inpStagesCount, inpHasFinal,
       inpRegMode, inpPayEnabled, inpRegOpen, inpRegClose,
@@ -632,9 +745,8 @@
     });
 
     if(btnResetDraft){
-      btnResetDraft.onclick = ()=>{
+      btnResetDraft.onclick = async ()=>{
         clearDraft();
-        // мінімальний reset (без фантазій)
         if(inpType) inpType.value = "season";
         if(inpYear) inpYear.value = "";
         if(inpName) inpName.value = "";
@@ -651,6 +763,8 @@
         if(inpPrice) inpPrice.value = "";
         if(inpCurrency) inpCurrency.value = "UAH";
         if(inpPayDetails) inpPayDetails.value = "";
+
+        await activateFormat("classic");
 
         setSeasonVisibility();
         updateDurationUI();
@@ -691,13 +805,18 @@
       };
     }
 
+    // ✅ FIX: Make Active => спочатку Save (якщо треба), потім active
     if(btnMakeActive){
       btnMakeActive.onclick = async ()=>{
         setMsg(`<span class="muted">Зробити активним…</span>`);
         try{
           const editingId = (isEditMode && selCompetition && selCompetition.value) ? selCompetition.value : "";
-          const compId = editingId || compIdFrom(inpType.value, (inpYear.value||"").trim(), (inpName.value||"").trim());
-          if(!compId) throw new Error("Нема ID. Заповни тип/рік/назву.");
+          let compId = editingId;
+
+          if(!compId){
+            compId = await saveCompetition(""); // гарантуємо, що doc існує
+          }
+
           await makeActive(compId);
           setMsg(`<span class="ok">✅ Активне:</span> ${esc(compId)}`);
         }catch(e){
@@ -715,9 +834,7 @@
           setMsg(`<span class="muted">Видаляю…</span>`);
           await deleteCompetition(compId);
           setMsg(`<span class="ok">✅ Видалено:</span> ${esc(compId)}`);
-          // після видалення — оновити список
           await loadCompetitionsList();
-          // очистити форму
           clearDraft();
         }catch(e){
           setMsg(`<span class="err">❌</span> ${esc(e?.message || String(e))}`);
@@ -743,7 +860,6 @@
 
     bindUI();
 
-    // Auth gate
     auth.onAuthStateChanged(async (user)=>{
       if(!user){
         setStatus("Нема сесії (увійди в admin.html)");
@@ -762,34 +878,32 @@
         return;
       }
 
-      // allowed
       hide(gate);
       show(app);
       setStatus(isEditMode ? "Режим: Редагування" : "Режим: Створення");
       setDebug("");
 
-      // tabs state
       setActiveTab(isEditMode);
 
-      // load lakes once
       await loadLakes();
 
-      // restore draft (create mode only; в edit ми завантажимо по вибору)
       const draft = getDraft();
       if(draft && !isEditMode){
         applyForm(draft);
+        // якщо в чернетці був engine — дамо його в deserialize
+        await activateFormat((draft.format || "classic"), { deserializeData: (draft.engine || {}) });
         setStatus("Чернетку відновлено ✅");
+      }else{
+        // ініціалізуємо формат з поточного select
+        await activateFormat((inpFormat && inpFormat.value) ? inpFormat.value : "classic");
       }
 
-      // set initial UI
       setSeasonVisibility();
       updateDurationUI();
       updateRegUI();
 
-      // edit mode: load list
       if(isEditMode){
         await loadCompetitionsList();
-        // якщо URL має compId=...
         const pre = url.searchParams.get("compId");
         if(pre){
           selCompetition.value = pre;

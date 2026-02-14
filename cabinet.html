@@ -27,7 +27,7 @@
     .card-subtitle{margin:0 0 10px;font-size:.86rem;color:#9ca3af;}
     .cabinet-small-muted{font-size:.8rem;color:#6b7280;margin-top:4px;}
     .team-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:12px;}
-    
+
     /* === КРУГЛИЙ АВАТАР === */
     .team-avatar-wrap{
       width:82px;
@@ -59,14 +59,14 @@
       color:#facc15;
     }
     /* === КІНЕЦЬ === */
-    
+
     .team-main{flex:1;}
     .team-name{font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .team-tagline{font-size:.85rem;color:#9ca3af;margin-bottom:8px;}
     .team-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:.8rem;}
     .meta-pill{border-radius:999px;padding:4px 8px;background:#020617;border:1px solid #374151;color:#e5e7eb;}
     .meta-pill strong{color:#facc15;font-weight:600;}
-    
+
     /* === CLOUDINARY WIDGET БЛОК === */
     .avatar-section{margin-top:12px;padding-top:12px;border-top:1px solid #1f2937;}
     .avatar-label{font-size:.8rem;color:#9ca3af;margin-bottom:8px;}
@@ -76,7 +76,30 @@
     #avatarMsg.ok{color:#22c55e;}
     #avatarMsg.err{color:#ef4444;}
     /* === КІНЕЦЬ БЛОКУ === */
-    
+
+    /* === EDIT PROFILE === */
+    .profile-actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+    .profile-btn{
+      border-radius:999px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;
+      padding:7px 14px;font-size:.8rem;cursor:pointer;transition:all .2s;
+    }
+    .profile-btn:hover{background:#1e293b;border-color:#facc15;}
+    .profile-btn--primary{background:linear-gradient(135deg,#facc15,#f97316);color:#0b1220;border:0;}
+    .profile-btn--primary:hover{filter:brightness(1.05);}
+
+    .profile-editbox{display:none;margin-top:10px;padding:12px;border-radius:16px;border:1px solid #1f2937;background:radial-gradient(circle at top,#0b1220 0,#020617 70%);}
+    .profile-grid{display:grid;grid-template-columns:1fr;gap:10px;}
+    .profile-label{font-size:.78rem;color:#9ca3af;margin-bottom:6px;}
+    .profile-input{
+      width:100%;border-radius:12px;border:1px solid #374151;background:#0b1220;color:#e5e7eb;
+      padding:10px 12px;font-size:.9rem;outline:none;
+    }
+    .profile-input:focus{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.12);}
+    #profileEditMsg{margin-top:10px;font-size:.82rem;min-height:18px;}
+    #profileEditMsg.ok{color:#22c55e;}
+    #profileEditMsg.err{color:#ef4444;}
+    /* === END EDIT PROFILE === */
+
     .members-list{margin-top:10px;border-top:1px solid #1f2937;padding-top:10px;}
     .members-title{font-size:.86rem;text-transform:uppercase;letter-spacing:.16rem;color:#9ca3af;margin-bottom:6px;}
     .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 10px;font-size:.85rem;}
@@ -168,6 +191,36 @@
         <strong>Код команди:</strong> <span id="joinCodeText"></span>
       </div>
     </div>
+
+    <!-- ✅ РЕДАГУВАННЯ ПРОФІЛЮ -->
+    <div class="profile-actions">
+      <button type="button" class="profile-btn" id="editProfileBtn">Редагувати дані</button>
+      <button type="button" class="profile-btn profile-btn--primary" id="saveProfileBtn" style="display:none;">Зберегти</button>
+      <button type="button" class="profile-btn" id="cancelProfileBtn" style="display:none;">Скасувати</button>
+    </div>
+
+    <div class="profile-editbox" id="profileEditBox">
+      <div class="profile-grid">
+        <div>
+          <div class="profile-label">Імʼя та прізвище</div>
+          <input id="fullNameInput" class="profile-input" type="text" placeholder="Напр. Іван Петренко" maxlength="80">
+        </div>
+
+        <div>
+          <div class="profile-label">Телефон</div>
+          <input id="phoneInput" class="profile-input" type="tel" placeholder="+380..." maxlength="25">
+          <div class="cabinet-small-muted">Можна з пробілами/дефісами. Головне — ваш контакт.</div>
+        </div>
+
+        <div>
+          <div class="profile-label">Місто проживання</div>
+          <input id="cityInput" class="profile-input" type="text" placeholder="Напр. Львів" maxlength="40">
+        </div>
+      </div>
+
+      <div id="profileEditMsg" class="cabinet-small-muted"></div>
+    </div>
+    <!-- ✅ КІНЕЦЬ РЕДАГУВАННЯ -->
 
     <!-- Cloudinary Widget -->
     <div class="avatar-section">

@@ -30,52 +30,25 @@
 
     /* === КРУГЛИЙ АВАТАР === */
     .team-avatar-wrap{
-      width:82px;
-      height:82px;
-      border-radius:50%;
-      overflow:hidden;
-      background:#0f172a;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border:2px solid #facc15;
-      flex-shrink:0;
-      cursor:pointer;
-      transition:transform .2s,box-shadow .2s;
+      width:82px;height:82px;border-radius:50%;overflow:hidden;background:#0f172a;
+      display:flex;align-items:center;justify-content:center;border:2px solid #facc15;
+      flex-shrink:0;cursor:pointer;transition:transform .2s,box-shadow .2s;
     }
-    .team-avatar-wrap:hover{
-      transform:scale(1.05);
-      box-shadow:0 0 15px rgba(250,204,21,.4);
-    }
-    .team-avatar{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:none;
-    }
-    .team-avatar-placeholder{
-      font-weight:800;
-      font-size:1.4rem;
-      color:#facc15;
-    }
-    /* === КІНЕЦЬ === */
+    .team-avatar-wrap:hover{transform:scale(1.05);box-shadow:0 0 15px rgba(250,204,21,.4);}
+    .team-avatar{width:100%;height:100%;object-fit:cover;display:none;}
+    .team-avatar-placeholder{font-weight:800;font-size:1.4rem;color:#facc15;}
 
     .team-main{flex:1;}
     .team-name{font-size:1.1rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .team-tagline{font-size:.85rem;color:#9ca3af;margin-bottom:8px;}
-    .team-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:.8rem;}
+
+    /* ✅ Нові рядки для ПІБ/місто */
+    .user-fullname{font-size:.95rem;font-weight:800;letter-spacing:.02em;margin-top:2px;}
+    .user-city{font-size:.85rem;color:#9ca3af;margin-top:2px;}
+
+    .team-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:.8rem;margin-top:8px;}
     .meta-pill{border-radius:999px;padding:4px 8px;background:#020617;border:1px solid #374151;color:#e5e7eb;}
     .meta-pill strong{color:#facc15;font-weight:600;}
-
-    /* === CLOUDINARY WIDGET БЛОК === */
-    .avatar-section{margin-top:12px;padding-top:12px;border-top:1px solid #1f2937;}
-    .avatar-label{font-size:.8rem;color:#9ca3af;margin-bottom:8px;}
-    .avatar-small-btn{border-radius:999px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;padding:6px 14px;font-size:.8rem;cursor:pointer;transition:all .2s;}
-    .avatar-small-btn:hover{background:#1e293b;border-color:#facc15;}
-    #avatarMsg{margin-top:6px;font-size:.8rem;min-height:20px;}
-    #avatarMsg.ok{color:#22c55e;}
-    #avatarMsg.err{color:#ef4444;}
-    /* === КІНЕЦЬ БЛОКУ === */
 
     /* === EDIT PROFILE === */
     .profile-actions{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
@@ -86,7 +59,6 @@
     .profile-btn:hover{background:#1e293b;border-color:#facc15;}
     .profile-btn--primary{background:linear-gradient(135deg,#facc15,#f97316);color:#0b1220;border:0;}
     .profile-btn--primary:hover{filter:brightness(1.05);}
-
     .profile-editbox{display:none;margin-top:10px;padding:12px;border-radius:16px;border:1px solid #1f2937;background:radial-gradient(circle at top,#0b1220 0,#020617 70%);}
     .profile-grid{display:grid;grid-template-columns:1fr;gap:10px;}
     .profile-label{font-size:.78rem;color:#9ca3af;margin-bottom:6px;}
@@ -98,42 +70,29 @@
     #profileEditMsg{margin-top:10px;font-size:.82rem;min-height:18px;}
     #profileEditMsg.ok{color:#22c55e;}
     #profileEditMsg.err{color:#ef4444;}
-    /* === END EDIT PROFILE === */
+
+    /* === CLOUDINARY WIDGET БЛОК === */
+    .avatar-section{margin-top:12px;padding-top:12px;border-top:1px solid #1f2937;}
+    .avatar-label{font-size:.8rem;color:#9ca3af;margin-bottom:8px;}
+    .avatar-small-btn{border-radius:999px;border:1px solid #374151;background:#0f172a;color:#e5e7eb;padding:6px 14px;font-size:.8rem;cursor:pointer;transition:all .2s;}
+    .avatar-small-btn:hover{background:#1e293b;border-color:#facc15;}
+    #avatarMsg{margin-top:6px;font-size:.8rem;min-height:20px;}
+    #avatarMsg.ok{color:#22c55e;}
+    #avatarMsg.err{color:#ef4444;}
 
     .members-list{margin-top:10px;border-top:1px solid #1f2937;padding-top:10px;}
     .members-title{font-size:.86rem;text-transform:uppercase;letter-spacing:.16rem;color:#9ca3af;margin-bottom:6px;}
-    .stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 10px;font-size:.85rem;}
-    .stat-card{border-radius:12px;padding:9px 10px;background:radial-gradient(circle at top,#0b1120 0,#020617 70%);border:1px solid #1f2937;}
-    .stat-label{color:#9ca3af;margin-bottom:4px;font-size:.78rem;}
-    .stat-value{font-size:1.05rem;font-weight:700;}
-    .stat-unit{font-size:.8rem;color:#9ca3af;margin-left:3px;}
-    #cabinetMsg{margin-top:8px;font-size:.82rem;}
-    #cabinetMsg.ok{color:#22c55e;}
-    #cabinetMsg.err{color:#ef4444;}
 
     /* === AVATAR POPUP === */
     #avatarPopup{
-      display:none;
-      position:fixed;
-      left:0;
-      top:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.85);
-      backdrop-filter:blur(4px);
-      z-index:9999;
-      align-items:center;
-      justify-content:center;
-      cursor:zoom-out;
+      display:none;position:fixed;left:0;top:0;width:100%;height:100%;
+      background:rgba(0,0,0,0.85);backdrop-filter:blur(4px);z-index:9999;
+      align-items:center;justify-content:center;cursor:zoom-out;
     }
     #avatarPopupImg{
-      max-width:90%;
-      max-height:90%;
-      border-radius:18px;
-      box-shadow:0 0 40px rgba(0,0,0,.9);
-      object-fit:contain;
+      max-width:90%;max-height:90%;border-radius:18px;
+      box-shadow:0 0 40px rgba(0,0,0,.9);object-fit:contain;
     }
-    /* === КІНЕЦЬ POPUP === */
   </style>
 </head>
 
@@ -174,7 +133,6 @@
 <p class="card-subtitle">Ваш акаунт, команда та базові дані.</p>
 
 <div class="team-header">
-  <!-- Клікабельний аватар з попапом -->
   <div class="team-avatar-wrap" id="avatarWrapper" title="Натисніть для збільшення">
     <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар">
     <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
@@ -182,7 +140,10 @@
 
   <div class="team-main">
     <div class="team-name" id="teamNameText">Команда…</div>
-    <div class="team-tagline" id="captainText">Капітан…</div>
+
+    <!-- ✅ Окремі елементи під твій JS -->
+    <div class="user-fullname" id="userFullName">—</div>
+    <div class="user-city" id="userCity" style="display:none;">—</div>
 
     <div class="team-meta">
       <div class="meta-pill"><strong>Роль:</strong> <span id="userRoleText">–</span></div>
@@ -220,7 +181,6 @@
 
       <div id="profileEditMsg" class="cabinet-small-muted"></div>
     </div>
-    <!-- ✅ КІНЕЦЬ РЕДАГУВАННЯ -->
 
     <!-- Cloudinary Widget -->
     <div class="avatar-section">
@@ -245,22 +205,22 @@
 
 <!-- МОЯ УЧАСТЬ -->
 <div class="card">
-<h2 class="card-title">Моя участь</h2>
-<div id="myCompetitions">
-  <div class="cabinet-small-muted">Завантаження участі…</div>
-</div>
+  <h2 class="card-title">Моя участь</h2>
+  <div id="myCompetitions">
+    <div class="cabinet-small-muted">Завантаження участі…</div>
+  </div>
 </div>
 
 <!-- ДОСЯГНЕННЯ -->
 <div class="card">
-<h2 class="card-title">Досягнення команди</h2>
-<p class="card-subtitle">Підсумки виступів у сезоні STOLAR CARP</p>
+  <h2 class="card-title">Досягнення команди</h2>
+  <p class="card-subtitle">Підсумки виступів у сезоні STOLAR CARP</p>
 
-<div class="stats-grid">
-  <div class="stat-card"><div class="stat-label">Загальний улов</div><div class="stat-value"><span id="statTotalWeight">—</span><span class="stat-unit">кг</span></div></div>
-  <div class="stat-card"><div class="stat-label">Big Fish</div><div class="stat-value"><span id="statBigFish">—</span><span class="stat-unit">кг</span></div></div>
-  <div class="stat-card"><div class="stat-label">Місце</div><div class="stat-value"><span id="statRank">—</span></div></div>
-</div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Загальний улов</div><div class="stat-value"><span id="statTotalWeight">—</span><span class="stat-unit">кг</span></div></div>
+    <div class="stat-card"><div class="stat-label">Big Fish</div><div class="stat-value"><span id="statBigFish">—</span><span class="stat-unit">кг</span></div></div>
+    <div class="stat-card"><div class="stat-label">Місце</div><div class="stat-value"><span id="statRank">—</span></div></div>
+  </div>
 </div>
 
 </div>
@@ -268,9 +228,9 @@
 </main>
 
 <footer class="footer">
-<div class="container footer__row">
-  <div>© 2025 STOLAR CARP · Львів</div>
-</div>
+  <div class="container footer__row">
+    <div>© 2025 STOLAR CARP · Львів</div>
+  </div>
 </footer>
 
 <!-- AVATAR POPUP -->
@@ -283,7 +243,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-<!-- Cloudinary Upload Widget -->
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
 <script src="assets/js/firebase-init.js"></script>

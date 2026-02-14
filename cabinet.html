@@ -9,8 +9,9 @@
   <link rel="apple-touch-icon" href="assets/favicon.png" />
   <meta name="theme-color" content="#020617" />
 
-  <link rel="stylesheet" href="assets/css/main.css" />
-  <script defer src="assets/js/config.js"></script>
+  <!-- ✅ анти-кеш -->
+  <link rel="stylesheet" href="assets/css/main.css?v=20260215-1" />
+  <script defer src="assets/js/config.js?v=20260215-1"></script>
 
   <style>
     body.cabinet-page{background:#020617;color:#e5e7eb;}
@@ -83,6 +84,13 @@
     .members-list{margin-top:10px;border-top:1px solid #1f2937;padding-top:10px;}
     .members-title{font-size:.86rem;text-transform:uppercase;letter-spacing:.16rem;color:#9ca3af;margin-bottom:6px;}
 
+    /* ✅ ДОСЯГНЕННЯ: тепер 2 колонки */
+    .stats-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0 10px;font-size:.85rem;}
+    .stat-card{border-radius:12px;padding:9px 10px;background:radial-gradient(circle at top,#0b1120 0,#020617 70%);border:1px solid #1f2937;}
+    .stat-label{color:#9ca3af;margin-bottom:4px;font-size:.78rem;}
+    .stat-value{font-size:1.05rem;font-weight:700;}
+    .stat-unit{font-size:.8rem;color:#9ca3af;margin-left:3px;}
+
     /* === AVATAR POPUP === */
     #avatarPopup{
       display:none;position:fixed;left:0;top:0;width:100%;height:100%;
@@ -141,7 +149,6 @@
   <div class="team-main">
     <div class="team-name" id="teamNameText">Команда…</div>
 
-    <!-- ✅ Окремі елементи під твій JS -->
     <div class="user-fullname" id="userFullName">—</div>
     <div class="user-city" id="userCity" style="display:none;">—</div>
 
@@ -217,9 +224,14 @@
   <p class="card-subtitle">Підсумки виступів у сезоні STOLAR CARP</p>
 
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-label">Загальний улов</div><div class="stat-value"><span id="statTotalWeight">—</span><span class="stat-unit">кг</span></div></div>
-    <div class="stat-card"><div class="stat-label">Big Fish</div><div class="stat-value"><span id="statBigFish">—</span><span class="stat-unit">кг</span></div></div>
-    <div class="stat-card"><div class="stat-label">Місце</div><div class="stat-value"><span id="statRank">—</span></div></div>
+    <div class="stat-card">
+      <div class="stat-label">Загальний улов</div>
+      <div class="stat-value"><span id="statTotalWeight">—</span><span class="stat-unit">кг</span></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Big Fish</div>
+      <div class="stat-value"><span id="statBigFish">—</span><span class="stat-unit">кг</span></div>
+    </div>
   </div>
 </div>
 
@@ -245,9 +257,9 @@
 
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
-<script src="assets/js/firebase-init.js"></script>
-<script src="assets/js/cabinet.js"></script>
-<script src="assets/js/cabinet_achievements.js"></script>
+<script src="assets/js/firebase-init.js?v=20260215-1"></script>
+<script src="assets/js/cabinet.js?v=20260215-1"></script>
+<script src="assets/js/cabinet_achievements.js?v=20260215-1"></script>
 
 </body>
 </html>

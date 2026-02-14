@@ -1,8 +1,10 @@
 // assets/js/cabinet.js
-// STOLAR CARP — Кабінет учасника з liveCache (Firebase compat 10.12.2)
+// STOLAR CARP — Кабінет учасника з liveCache + Profile Edit (Firebase compat 10.12.2)
 
 (function () {
   "use strict";
+
+  console.log("✅ cabinet.js LOADED v20260215-profile-edit");
 
   // =========================
   // BURGER MENU
@@ -50,21 +52,17 @@
       this.data.user = value;
       this.data.userLastUpdate = Date.now();
     },
-    setTeam(value) {
-      this.data.team = value;
-    },
-    setMembers(value) {
-      this.data.members = value;
-    },
+    setTeam(value) { this.data.team = value; },
+    setMembers(value) { this.data.members = value; },
     setComps(value) {
       this.data.competitions = value;
       this.data.compsLastUpdate = Date.now();
     },
     get(key) { return this.data[key]; },
     clear() {
-      this.data = { 
+      this.data = {
         user: null, team: null, members: [], competitions: [],
-        userLastUpdate: 0, compsLastUpdate: 0 
+        userLastUpdate: 0, compsLastUpdate: 0
       };
     }
   };
@@ -76,7 +74,12 @@
   const contentEl = document.getElementById("cabinetContent");
 
   const teamNameEl     = document.getElementById("teamNameText");
-  const captainTextEl  = document.getElementById("captainText");
+
+  // ✅ нові елементи (з твого HTML)
+  const userFullNameEl = document.getElementById("userFullName");
+  const userCityEl     = document.getElementById("userCity");
+
+  const captainTextEl  = document.getElementById("captainText"); // може бути у старому html
   const userRoleEl     = document.getElementById("userRoleText");
   const userPhoneEl    = document.getElementById("userPhoneText");
 
@@ -90,6 +93,20 @@
 
   const membersEl      = document.getElementById("membersContainer");
   const myPartListEl   = document.getElementById("myCompetitions");
+
+  // ✅ PROFILE EDIT DOM
+  const editProfileBtn   = document.getElementById("editProfileBtn");
+  const saveProfileBtn   = document.getElementById("saveProfileBtn");
+  const cancelProfileBtn = document.getElementById("cancelProfileBtn");
+  const profileEditBox   = document.getElementById("profileEditBox");
+  const fullNameInput    = document.getElementById("fullNameInput");
+  const phoneInput       = document.getElementById("phoneInput");
+  const cityInput        = document.getElementById("cityInput");
+  const profileEditMsg   = document.getElementById("profileEditMsg");
+
+  let isEditingProfile = false;
+  let isSavingProfile = false;
+  let lastProfileSnap = null;
 
   let unsubUser = null;
   let unsubTeam = null;
@@ -141,6 +158,100 @@
     unsubUser = unsubTeam = unsubMembers = unsubRegs = null;
   }
 
+  function serverTimestamp(){
+    try { return window.firebase.firestore.FieldValue.serverTimestamp(); }
+    catch { return null; }
+  }
+
+  // =========================
+  // PROFILE EDIT HELPERS
+  // =========================
+  function setEditMsg(txt, type){
+    if (!profileEditMsg) return;
+    profileEditMsg.textContent = txt || "";
+    profileEditMsg.classList.remove("ok","err");
+    if (type === "ok") profileEditMsg.classList.add("ok");
+    if (type === "err") profileEditMsg.classList.add("err");
+  }
+
+  function cleanName(v){
+    return String(v || "").trim().replace(/\s+/g, " ").slice(0, 80);
+  }
+  function cleanPhone(v){
+    return String(v || "")
+      .trim()
+      .replace(/[^\d+\-\s()]/g, "")
+      .replace(/\s+/g, " ")
+      .slice(0, 25);
+  }
+  function cleanCity(v){
+    return String(v || "").trim().replace(/\s+/g, " ").slice(0, 40);
+  }
+
+  function openEditProfile(u){
+    if (!profileEditBox || !fullNameInput || !phoneInput || !cityInput) return;
+
+    isEditingProfile = true;
+    lastProfileSnap = u || lastProfileSnap;
+
+    profileEditBox.style.display = "block";
+    if (editProfileBtn) editProfileBtn.style.display = "none";
+    if (saveProfileBtn) saveProfileBtn.style.display = "inline-flex";
+    if (cancelProfileBtn) cancelProfileBtn.style.display = "inline-flex";
+
+    fullNameInput.value = u?.fullName || "";
+    phoneInput.value = u?.phone || "";
+    cityInput.value = u?.city || "";
+
+    setEditMsg("", "");
+  }
+
+  function closeEditProfile(){
+    isEditingProfile = false;
+
+    if (profileEditBox) profileEditBox.style.display = "none";
+    if (editProfileBtn) editProfileBtn.style.display = "inline-flex";
+    if (saveProfileBtn) saveProfileBtn.style.display = "none";
+    if (cancelProfileBtn) cancelProfileBtn.style.display = "none";
+
+    setEditMsg("", "");
+  }
+
+  function renderUserInfo(u){
+    const name = u?.fullName || "Без імені";
+    const city = (u?.city || "").trim();
+
+    // ✅ ПІБ/місто окремими рядками (твій новий HTML)
+    if (userFullNameEl) userFullNameEl.textContent = name;
+
+    if (userCityEl){
+      if (city){
+        userCityEl.textContent = city;
+        userCityEl.style.display = "block";
+      } else {
+        userCityEl.textContent = "";
+        userCityEl.style.display = "none";
+      }
+    }
+
+    // ✅ якщо у старому HTML був captainTextEl — теж підтримаємо
+    if (captainTextEl){
+      const cityDot = city ? ` · ${city}` : "";
+      captainTextEl.textContent = name + cityDot;
+    }
+
+    if (userRoleEl) userRoleEl.textContent = roleText(u?.role);
+    if (userPhoneEl) userPhoneEl.textContent = u?.phone || "—";
+    setAvatarUrl(u?.avatarUrl || "");
+
+    // інпути — тільки якщо не редагуємо
+    if (!isEditingProfile) {
+      if (fullNameInput) fullNameInput.value = u?.fullName || "";
+      if (phoneInput) phoneInput.value = u?.phone || "";
+      if (cityInput) cityInput.value = u?.city || "";
+    }
+  }
+
   // =========================
   // POPUP SYSTEM
   // =========================
@@ -148,7 +259,7 @@
     const popup = document.getElementById("avatarPopup");
     const popupImg = document.getElementById("avatarPopupImg");
     if (!popup || !popupImg) return;
-    
+
     popupImg.src = imageUrl;
     popup.style.display = "flex";
     document.body.style.overflow = "hidden";
@@ -196,17 +307,17 @@
       const role = roleText(m.role);
       const avatarUrl = m.avatarUrl || '';
       const hasAvatar = !!avatarUrl;
-      
+
       const row = document.createElement("div");
       row.className = "card";
       row.style.cssText = "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
-      
-      const avatarHtml = hasAvatar 
+
+      const avatarHtml = hasAvatar
         ? `<div class="member-avatar-wrap" data-avatar="${escapeHtml(avatarUrl)}" style="width:50px;height:50px;border-radius:50%;overflow:hidden;border:2px solid #facc15;cursor:pointer;transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='scale(1.05)';this.style.boxShadow='0 0 10px rgba(250,204,21,.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
              <img src="${escapeHtml(avatarUrl)}" style="width:100%;height:100%;object-fit:cover;">
            </div>`
         : `<div style="width:50px;height:50px;border-radius:50%;background:#1f2937;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:default;">👤</div>`;
-      
+
       row.innerHTML = `
         ${avatarHtml}
         <div>
@@ -214,32 +325,25 @@
           <div class="form__hint">${escapeHtml(role)}</div>
         </div>
       `;
-      
+
       if (hasAvatar) {
         const avatarWrap = row.querySelector('.member-avatar-wrap');
-        if (avatarWrap) {
-          avatarWrap.addEventListener('click', () => {
-            openImagePopup(avatarUrl);
-          });
-        }
+        if (avatarWrap) avatarWrap.addEventListener('click', () => openImagePopup(avatarUrl));
       }
-      
+
       membersEl.appendChild(row);
     });
   }
 
   // =========================
-  // CACHE RENDER (швидкий старт)
+  // CACHE RENDER
   // =========================
-  
-  // ОКРЕМО — завжди показуємо кеш змагань, навіть якщо профіль ще завантажується
   function renderCompsFromCache() {
     const comps = Cache.get('competitions');
     if (Cache.isCompsValid() && comps?.length) {
       renderMyParticipation(comps);
       return true;
     }
-    // Якщо кеш порожній але валідний — показуємо "немає участі"
     if (Cache.isCompsValid()) {
       renderMyParticipation([]);
       return true;
@@ -251,16 +355,10 @@
     const user = Cache.get('user');
     const team = Cache.get('team');
     const members = Cache.get('members');
-    
-    // Профіль — тільки якщо валідний
+
     if (Cache.isUserValid() && user) {
-      const name = user.fullName || "Без імені";
-      const city = user.city ? ` · ${user.city}` : "";
-      if (captainTextEl) captainTextEl.textContent = name + city;
-      if (userRoleEl) userRoleEl.textContent = roleText(user.role);
-      if (userPhoneEl) userPhoneEl.textContent = user.phone || "—";
-      setAvatarUrl(user.avatarUrl || "");
-      
+      renderUserInfo(user);
+
       if (team && teamNameEl) {
         teamNameEl.textContent = team.name || "Команда";
         if (team.joinCode && joinCodePillEl && joinCodeTextEl) {
@@ -271,11 +369,10 @@
         if (teamNameEl) teamNameEl.textContent = "Без команди";
         if (joinCodePillEl) joinCodePillEl.style.display = "none";
       }
-      
+
       renderMembers(members);
       return true;
     }
-    
     return false;
   }
 
@@ -352,21 +449,17 @@
     if (typeof unsubRegs === "function") { unsubRegs(); unsubRegs = null; }
     if (!myPartListEl) return;
 
-    // Якщо кеш вже показано — не чіпаємо, оновимо в фоні
     const hasCache = Cache.isCompsValid();
-    
+
     if (!teamId && !uid){
       Cache.setComps([]);
       renderMyParticipation([]);
       return;
     }
-    
-    // Тільки якщо немає кешу — показуємо "Завантаження…"
-    if (!hasCache) {
-      myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
-    }
 
-    const q = teamId 
+    if (!hasCache) myPartListEl.innerHTML = `<div class="cabinet-small-muted">Завантаження…</div>`;
+
+    const q = teamId
       ? db.collection("public_participants").where("teamId", "==", teamId).where("entryType", "==", "team")
       : db.collection("public_participants").where("uid", "==", uid);
 
@@ -374,10 +467,10 @@
       const rows = [];
       qs.forEach(d => rows.push({ id:d.id, ...(d.data() || {}) }));
 
-      if (!rows.length){ 
+      if (!rows.length){
         Cache.setComps([]);
-        renderMyParticipation([]); 
-        return; 
+        renderMyParticipation([]);
+        return;
       }
 
       const map = Object.create(null);
@@ -398,12 +491,11 @@
       }
 
       uniq.sort((a,b) => toMillis(b.updatedAt) - toMillis(a.updatedAt));
-      
+
       Cache.setComps(uniq);
       renderMyParticipation(uniq);
     }, (err) => {
       console.warn(err);
-      // При помилці показуємо кеш
       if (!hasCache) {
         renderMyParticipation(Cache.get('competitions'));
         myPartListEl.innerHTML += `<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Офлайн-режим. Дані можуть бути застарілими.</div>`;
@@ -424,10 +516,9 @@
       return;
     }
 
-    // Спочатку показуємо кеш
     const cachedTeam = Cache.get('team');
     const cachedMembers = Cache.get('members');
-    
+
     if (cachedTeam && teamNameEl) {
       teamNameEl.textContent = cachedTeam.name || "Команда";
       if (cachedTeam.joinCode && joinCodePillEl && joinCodeTextEl) {
@@ -441,7 +532,7 @@
       if (!snap.exists) return;
       const t = snap.data() || {};
       Cache.setTeam(t);
-      
+
       if (teamNameEl) teamNameEl.textContent = t.name || "Команда";
       if (t.joinCode && joinCodePillEl && joinCodeTextEl){
         joinCodePillEl.style.display = "inline-flex";
@@ -463,19 +554,14 @@
   }
 
   function subscribeUser(auth, db, uid){
-    // 1. ЗАВЖДИ спочатку показуємо кеш змагань (майже миттєво)
-    const hasCompsCache = renderCompsFromCache();
-    
-    // 2. Потім пробуємо показати профіль з кешу
+    renderCompsFromCache();
     const hasUserCache = renderFromCache();
-    
-    // 3. Якщо профілю немає в кешу — показуємо "Завантаження…"
+
     if (!hasUserCache) {
       setStatus("Завантаження…");
-      showContent(); // Показуємо сторінку з кешем змагань
+      showContent();
     }
-    
-    // 4. Підписки оновлюють дані в фоні
+
     unsubUser = db.collection("users").doc(uid).onSnapshot((snap) => {
       if (!snap.exists){
         setStatus("Анкета користувача не знайдена.");
@@ -485,15 +571,9 @@
 
       const u = snap.data() || {};
       Cache.setUser(u);
-      
-      const name = u.fullName || auth.currentUser?.email || "Без імені";
-      const city = u.city ? ` · ${u.city}` : "";
+      lastProfileSnap = u;
 
-      if (captainTextEl) captainTextEl.textContent = name + city;
-      if (userRoleEl) userRoleEl.textContent = roleText(u.role);
-      if (userPhoneEl) userPhoneEl.textContent = u.phone || "—";
-
-      setAvatarUrl(u.avatarUrl || "");
+      renderUserInfo(u);
 
       if (typeof unsubTeam === "function") { unsubTeam(); unsubTeam = null; }
       if (typeof unsubMembers === "function") { unsubMembers(); unsubMembers = null; }
@@ -505,9 +585,7 @@
       setTimeout(() => { if (statusEl?.textContent === "Кабінет завантажено.") statusEl.textContent = ""; }, 1200);
     }, (err) => {
       console.error(err);
-      if (!hasUserCache) {
-        setStatus("Помилка читання профілю.");
-      }
+      if (!hasUserCache) setStatus("Помилка читання профілю.");
       showContent();
     });
   }
@@ -529,7 +607,9 @@
     function setMsg(txt, type){
       if (!msgEl) return;
       msgEl.textContent = txt;
-      msgEl.style.color = type === "ok" ? "#22c55e" : type === "err" ? "#ef4444" : "";
+      msgEl.classList.remove("ok","err");
+      if (type === "ok") msgEl.classList.add("ok");
+      if (type === "err") msgEl.classList.add("err");
     }
 
     openWidgetBtn.addEventListener("click", () => {
@@ -578,54 +658,112 @@
   }
 
   // =========================
-// INIT
-// =========================
-(async () => {
-  try {
-    // 1) МИТТЄВО рендеримо кеш (без Firebase!)
-    const hasComps = renderCompsFromCache();
-    const hasUser = renderFromCache();
-    
-    if (hasComps || hasUser) {
-      showContent();
-      setStatus("Оновлення…");
-    } else {
-      setStatus("Завантаження…");
+  // PROFILE EDIT EVENTS
+  // =========================
+  function setupProfileEdit(auth, db){
+    // якщо HTML без блоку редагування — тихо виходимо
+    if (!editProfileBtn || !saveProfileBtn || !cancelProfileBtn || !profileEditBox) {
+      console.warn("⚠️ Profile Edit UI not found in HTML");
+      return;
     }
 
-    // 2) Тільки потім чекаємо Firebase
-    await waitFirebase();
-    const auth = window.scAuth;
-    const db = window.scDb;
-
-    // 3) Потім запускаємо onAuthStateChanged для оновлення
-    auth.onAuthStateChanged((user) => {
-      cleanup();
-      if (!user){
-        Cache.clear();
-        setStatus("Ви не увійшли. Переходимо…");
-        hideContent();
-        setTimeout(() => window.location.href = "auth.html", 400);
-        return;
-      }
-      if (user.uid === ADMIN_UID){
-        setStatus("Адмін-акаунт → перехід…");
-        hideContent();
-        setTimeout(() => window.location.href = "admin.html", 200);
-        return;
-      }
-      
-      // Оновлюємо дані в фоні (кеш вже показано)
-      subscribeUser(auth, db, user.uid);
+    editProfileBtn.addEventListener("click", () => {
+      openEditProfile(lastProfileSnap || Cache.get("user"));
     });
 
-    setupCloudinaryWidget(auth, db);
-    enableAvatarPopup();
+    cancelProfileBtn.addEventListener("click", () => {
+      const u = lastProfileSnap || Cache.get("user") || {};
+      if (fullNameInput) fullNameInput.value = u.fullName || "";
+      if (phoneInput) phoneInput.value = u.phone || "";
+      if (cityInput) cityInput.value = u.city || "";
+      closeEditProfile();
+    });
 
-  } catch (err) {
-    console.error(err);
-    setStatus("Помилка: " + (err?.message || err));
-    showContent();
+    saveProfileBtn.addEventListener("click", async () => {
+      if (isSavingProfile) return;
+
+      const user = auth.currentUser;
+      if (!user) { setEditMsg("Увійдіть у акаунт.", "err"); return; }
+
+      const name = cleanName(fullNameInput?.value);
+      const phone = cleanPhone(phoneInput?.value);
+      const city = cleanCity(cityInput?.value);
+
+      if (!name) { setEditMsg("Вкажіть імʼя та прізвище.", "err"); return; }
+      if (!phone) { setEditMsg("Вкажіть номер телефону.", "err"); return; }
+
+      try {
+        isSavingProfile = true;
+        setEditMsg("Зберігаю…");
+
+        const upd = { fullName: name, phone: phone, city: city || "" };
+        const ts = serverTimestamp();
+        if (ts) upd.updatedAt = ts;
+
+        await db.collection("users").doc(user.uid).set(upd, { merge: true });
+
+        setEditMsg("Збережено!", "ok");
+        setTimeout(() => closeEditProfile(), 550);
+      } catch (e) {
+        console.error(e);
+        setEditMsg("Помилка збереження. Перевірте правила доступу.", "err");
+      } finally {
+        isSavingProfile = false;
+      }
+    });
   }
-})();
+
+  // =========================
+  // INIT
+  // =========================
+  (async () => {
+    try {
+      // 1) МИТТЄВО рендеримо кеш (без Firebase!)
+      const hasComps = renderCompsFromCache();
+      const hasUser = renderFromCache();
+
+      if (hasComps || hasUser) {
+        showContent();
+        setStatus("Оновлення…");
+      } else {
+        setStatus("Завантаження…");
+      }
+
+      // 2) Тільки потім чекаємо Firebase
+      await waitFirebase();
+      const auth = window.scAuth;
+      const db = window.scDb;
+
+      auth.onAuthStateChanged((user) => {
+        cleanup();
+
+        if (!user){
+          Cache.clear();
+          setStatus("Ви не увійшли. Переходимо…");
+          hideContent();
+          setTimeout(() => window.location.href = "auth.html", 400);
+          return;
+        }
+
+        if (user.uid === ADMIN_UID){
+          setStatus("Адмін-акаунт → перехід…");
+          hideContent();
+          setTimeout(() => window.location.href = "admin.html", 200);
+          return;
+        }
+
+        subscribeUser(auth, db, user.uid);
+      });
+
+      setupCloudinaryWidget(auth, db);
+      enableAvatarPopup();
+      setupProfileEdit(auth, db);
+
+    } catch (err) {
+      console.error(err);
+      setStatus("Помилка: " + (err?.message || err));
+      showContent();
+    }
+  })();
+
 })();

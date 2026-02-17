@@ -1,5 +1,6 @@
 // assets/js/admin-create.js
 // STOLAR CARP • admin-create (Create/Edit competitions)
+//
 // ✅ НІЯКОГО другого логіну: беремо існуючу сесію з admin.html
 // ✅ Перевірка доступу: users/{uid}.role === "admin"
 // ✅ Мінімум читань: lakes (1 раз), competitions (тільки в edit), settings/app (1 раз)
@@ -7,18 +8,25 @@
 // ✅ Тривалість рахуємо в UI автоматично
 // ✅ Реєстрація: auto (−28/−14) або manual (date/date)
 // ✅ Чернетка: localStorage
-// ✅ FIX: season не перезаписується в create (тільки edit)
-// ✅ FIX: oneoff має унікальний compId (не перетирає інші)
-// ✅ FIX: Make Active завжди робить active тільки після Save (щоб doc існував)
-// ✅ NEW: registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
-// ✅ FIX (важливо): НЕ чекаємо window.firebase (може не існувати) — чекаємо scAuth/scDb
-// ✅ FIX (важливо): activateFormat fallback правильно виставляє activeFormatName
-// ✅ FIX (важливо): draft serialize бере фактичний inpFormat.value, не старий activeFormatName
+// ✅ Make Active завжди робить active тільки після Save (щоб doc існував)
+// ✅ registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
+// ✅ FIX: НЕ чекаємо window.firebase (може не існувати) — чекаємо scAuth/scDb
+// ✅ FIX: activateFormat fallback правильно виставляє activeFormatName
+// ✅ FIX: draft serialize бере фактичний inpFormat.value, не старий activeFormatName
+//
+// ✅ NEW (головне): "СЕЗОН = РІК", а не "подія"
+//    - seasonYear = 2026/2027...
+//    - kind="tour"  => Турнір сезону (етапи+фінал), ID = tournament-2026 (стабільний)
+//    - kind="teams" => Командна подія в сезоні, ID = event-2026-...-abcd
+//    - kind="solo"  => Соло подія в сезоні, ID = event-2026-...-abcd
+//    - Обмеження форматів по kind (3tables НЕ може бути турніром)
 
 (function(){
   "use strict";
 
-  const DRAFT_KEY = "sc_admin_create_draft_v1";
+  // bump draft key because structure changed (kind/lakeCustom/etc)
+  const DRAFT_KEY = "sc_admin_create_draft_v2";
+
   const $ = (id)=>document.getElementById(id);
 
   const setStatus = (t)=>{ const e=$("createStatus"); if(e) e.textContent=t; };
@@ -42,7 +50,6 @@
   }
 
   function getFirebaseCompat(){
-    // compat може бути або window.firebase, або глобальний firebase (compat)
     if(window.firebase) return window.firebase;
     if(typeof firebase !== "undefined") return firebase;
     return null;
@@ -64,12 +71,11 @@
   const editPicker = $("editPicker");
   const deleteWrap = $("deleteWrap");
 
-  // Fields
-  const inpType = $("inpType");
+  // Fields (existing)
+  const inpType = $("inpType");     // legacy: season|oneoff (we keep for backward UI)
   const inpYear = $("inpYear");
   const inpName = $("inpName");
   const inpFormat = $("inpFormat");
-
   const inpLake = $("inpLake");
 
   const inpStartAt = $("inpStartAt");
@@ -92,6 +98,10 @@
   const inpPayDetails = $("inpPayDetails");
   const regPreview = $("regPreview");
 
+  // NEW optional fields (won't break if missing)
+  const inpKind = $("inpKind"); // tour|teams|solo (optional but recommended)
+  const inpLakeCustom = $("inpLakeCustom"); // custom lake name (optional)
+
   // Buttons
   const btnSave = $("btnSave");
   const btnMakeActive = $("btnMakeActive");
@@ -104,7 +114,7 @@
   const editPickerMsg = $("editPickerMsg");
 
   // ------------------------------------------------------------
-  // ✅ BLOCK #1: Formats loader (registry + format-*.js)
+  // ✅ Formats loader (registry + format-*.js)
   // ------------------------------------------------------------
   const formatFieldsEl = $("formatFields");
   let activeFormatName = "";
@@ -116,7 +126,6 @@
   }
 
   function getRegistry(){
-    // підтримуємо і SC_FORMATS.registry, і SC_FORMATS.get
     const sc = window.SC_FORMATS || null;
     if(!sc) return null;
     if(typeof sc.get === "function") return sc; // SC_FORMATS.get(name)
@@ -145,7 +154,6 @@
       preset = getPreset("classic");
     }
 
-    // ✅ тепер ключ завжди правильний (без "підміни" requested)
     activeFormatName = requested;
     activeFormat = preset || null;
 
@@ -170,14 +178,13 @@
   function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
 
   // --- Helpers: Date/time
-  // datetime-local value: "YYYY-MM-DDTHH:mm"
   function parseLocalDateTime(v){
     const s = (v||"").trim();
     if(!s) return null;
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
     if(!m) return null;
     const y = +m[1], mo = +m[2]-1, d = +m[3], h = +m[4], mi = +m[5];
-    const dt = new Date(y, mo, d, h, mi, 0, 0); // локальний час браузера
+    const dt = new Date(y, mo, d, h, mi, 0, 0);
     if(Number.isNaN(dt.getTime())) return null;
     return dt;
   }
@@ -207,7 +214,6 @@
     return s;
   }
 
-  // Рахуємо по UTC 12:00, щоб не плавало
   function addDays(dateStr, days){
     const [y,m,d] = dateStr.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m-1, d, 12, 0, 0));
@@ -220,7 +226,6 @@
   function regOpenFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -28) : ""; }
   function regCloseFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -14) : ""; }
 
-  // Беремо дату старту з datetime-local → YYYY-MM-DD (локальна дата)
   function startDateOnly(){
     const dt = parseLocalDateTime(inpStartAt?.value || "");
     if(!dt) return "";
@@ -259,7 +264,64 @@
     location.href = u.toString();
   }
 
-  // --- Load lakes (for dropdown)
+  // ------------------------------------------------------------
+  // ✅ Business rules: kind + форматні обмеження
+  // ------------------------------------------------------------
+  const KIND_LABELS = {
+    tour:  "Турнір сезону (етапи + фінал)",
+    teams: "Командні змагання (подія)",
+    solo:  "Соло змагання (подія)"
+  };
+
+  const TOUR_FORMATS  = ["classic"]; // турнір = тільки classic (за твоїм правилом)
+  const SOLO_FORMATS  = ["stalker-solo"];
+  const TEAMS_FORMATS = ["classic","3tables","stalker-teams","bigfish30","autumn-carp","trophy15"];
+
+  function inferKindFallback(){
+    // Якщо inpKind не існує — робимо розумний fallback:
+    // - inpType=season => турнір
+    // - інакше за форматом: stalker-solo => solo, інше => teams
+    const t = (inpType?.value || "oneoff").toLowerCase();
+    const fmt = String(inpFormat?.value || "classic").toLowerCase();
+    if(t === "season") return "tour";
+    if(fmt === "stalker-solo") return "solo";
+    return "teams";
+  }
+
+  function getKind(){
+    const k = String(inpKind?.value || "").toLowerCase().trim();
+    if(k === "tour" || k === "teams" || k === "solo") return k;
+    return inferKindFallback();
+  }
+
+  function allowedFormatsForKind(kind){
+    if(kind === "tour") return TOUR_FORMATS.slice();
+    if(kind === "solo") return SOLO_FORMATS.slice();
+    return TEAMS_FORMATS.slice();
+  }
+
+  function enforceFormatForKind(kind){
+    // Якщо вибраний формат не дозволений — переключаємо на перший дозволений
+    const allowed = allowedFormatsForKind(kind);
+    const current = String(inpFormat?.value || "classic").toLowerCase();
+    if(!allowed.includes(current)){
+      const next = allowed[0] || "classic";
+      if(inpFormat) inpFormat.value = next;
+    }
+  }
+
+  function setSeasonVisibility(){
+    // seasonOnly показуємо тільки для kind=tour
+    const kind = getKind();
+    if(seasonOnly){
+      if(kind === "tour") show(seasonOnly);
+      else hide(seasonOnly);
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Lakes
+  // ------------------------------------------------------------
   async function loadLakes(){
     if(!inpLake) return;
     inpLake.innerHTML = `<option value="">Завантаження…</option>`;
@@ -285,7 +347,47 @@
     }
   }
 
-  // --- Load competitions list (edit)
+  function getLakeInput(){
+    // Пріоритет: custom name -> select
+    const custom = (inpLakeCustom?.value || "").trim();
+    const lakeId = (inpLake?.value || "").trim();
+
+    if(custom){
+      return {
+        source: "custom",
+        id: `custom:${custom.toLowerCase().slice(0,60).replace(/[^a-z0-9а-яіїєґ\-\s]+/gi,"").trim().replace(/\s+/g,"-") || "lake"}`,
+        name: custom
+      };
+    }
+
+    if(lakeId){
+      return { source:"catalog", id: lakeId, name: "" }; // name буде з lakes або fallback
+    }
+
+    return null;
+  }
+
+  async function getLakeSnapshot(lakeObj){
+    if(!lakeObj) return null;
+
+    if(lakeObj.source === "custom"){
+      return { id: lakeObj.id, name: lakeObj.name, source:"custom" };
+    }
+
+    const lakeId = lakeObj.id;
+    try{
+      const doc = await db.collection("lakes").doc(lakeId).get();
+      if(!doc.exists) return { id: lakeId, name: lakeId, source:"catalog" };
+      const d = doc.data() || {};
+      return { id: lakeId, name: d.name || lakeId, source:"catalog" };
+    }catch(_){
+      return { id: lakeId, name: lakeId, source:"catalog" };
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Edit list
+  // ------------------------------------------------------------
   async function loadCompetitionsList(){
     if(!selCompetition) return;
     selCompetition.innerHTML = `<option value="">Завантаження…</option>`;
@@ -300,31 +402,41 @@
     const snap = await db.collection("competitions").get();
     const items = snap.docs.map(doc=>{
       const d = doc.data() || {};
-      return { id: doc.id, year: d.year||0, name: d.name||doc.id, active: doc.id === activeId };
+      const year = d.seasonYear || d.year || 0;
+      const kind = d.kind || ((d.type === "season") ? "tour" : "teams");
+      const name = d.name || doc.id;
+      return {
+        id: doc.id,
+        year,
+        kind,
+        name,
+        active: doc.id === activeId
+      };
     });
 
-    items.sort((a,b)=> (b.year-a.year) || (a.name||"").localeCompare(b.name||"","uk"));
+    items.sort((a,b)=>
+      (b.year - a.year) ||
+      (a.kind||"").localeCompare(b.kind||"","uk") ||
+      (a.name||"").localeCompare(b.name||"","uk")
+    );
 
     if(!items.length){
       selCompetition.innerHTML = `<option value="">Нема змагань</option>`;
       return;
     }
 
-    selCompetition.innerHTML = `<option value="">— вибери змагання —</option>` + items.map(it=>{
-      const label = `${it.active ? "✅ " : ""}${it.id} — ${it.name}`;
-      return `<option value="${esc(it.id)}">${esc(label)}</option>`;
-    }).join("");
+    selCompetition.innerHTML =
+      `<option value="">— вибери змагання —</option>` +
+      items.map(it=>{
+        const k = KIND_LABELS[it.kind] ? it.kind : "teams";
+        const label = `${it.active ? "✅ " : ""}${it.id} — ${it.name} (${it.year}, ${k})`;
+        return `<option value="${esc(it.id)}">${esc(label)}</option>`;
+      }).join("");
   }
 
-  // --- Form state
-  function setSeasonVisibility(){
-    const type = (inpType?.value || "season");
-    if(seasonOnly){
-      if(type === "season") show(seasonOnly);
-      else hide(seasonOnly);
-    }
-  }
-
+  // ------------------------------------------------------------
+  // UI updates
+  // ------------------------------------------------------------
   function updateDurationUI(){
     const a = parseLocalDateTime(inpStartAt?.value || "");
     const b = parseLocalDateTime(inpFinishAt?.value || "");
@@ -360,7 +472,8 @@
       if(inpRegOpen) inpRegOpen.disabled = false;
       if(inpRegClose) inpRegClose.disabled = false;
       if(regPreview){
-        regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen?.value)||"—")} → ${esc(normDate(inpRegClose?.value)||"—")})`;
+        regPreview.innerHTML =
+          `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen?.value)||"—")} → ${esc(normDate(inpRegClose?.value)||"—")})`;
       }
       return;
     }
@@ -377,19 +490,29 @@
     if(regPreview) regPreview.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b>`;
   }
 
+  function currentFormatKey(){
+    return String((inpFormat && inpFormat.value) ? inpFormat.value : (activeFormatName || "classic")).toLowerCase();
+  }
+
+  // ------------------------------------------------------------
+  // Form collect/apply/draft
+  // ------------------------------------------------------------
   function collectForm(){
-    const type = (inpType?.value || "season");
     const yearStr = (inpYear?.value || "").trim();
     const name = (inpName?.value || "").trim();
-    const format = (inpFormat?.value || "classic");
+    const kind = getKind(); // tour|teams|solo
 
-    const lakeId = (inpLake?.value || "").trim();
+    // legacy type mapping (for backward compatibility)
+    const type = (kind === "tour") ? "season" : "oneoff";
+
+    const format = String(inpFormat?.value || "classic").toLowerCase();
+    const lakeInput = getLakeInput();
 
     const startDt = parseLocalDateTime(inpStartAt?.value || "");
     const finishDt = parseLocalDateTime(inpFinishAt?.value || "");
 
-    const stagesCount = (type === "season") ? Number(inpStagesCount?.value || 3) : 1;
-    const hasFinal = (type === "season") ? ((inpHasFinal?.value || "yes") === "yes") : false;
+    const stagesCount = (kind === "tour") ? Number(inpStagesCount?.value || 3) : 1;
+    const hasFinal = (kind === "tour") ? ((inpHasFinal?.value || "yes") === "yes") : false;
 
     const regMode = (inpRegMode?.value || "auto");
     const payEnabled = (inpPayEnabled?.value || "yes") === "yes";
@@ -403,11 +526,13 @@
     const payDetails = (inpPayDetails?.value || "").trim();
 
     return {
-      type,
       yearStr,
+      seasonYear: /^\d{4}$/.test(yearStr) ? Number(yearStr) : null,
       name,
+      kind,
+      type,
       format,
-      lakeId,
+      lakeInput,
       startDt,
       finishDt,
       stagesCount,
@@ -425,21 +550,33 @@
   function applyForm(data){
     if(!data) return;
 
-    if(inpType) inpType.value = data.type || "season";
-    if(inpYear) inpYear.value = data.yearStr || data.year || "";
-    if(inpName) inpName.value = data.name || "";
-    if(inpFormat) inpFormat.value = data.format || "classic";
+    // kind first (if UI exists)
+    const kind = String(data.kind || "").toLowerCase();
+    if(inpKind && (kind === "tour" || kind === "teams" || kind === "solo")){
+      inpKind.value = kind;
+    }else{
+      // legacy mapping if no inpKind or old docs
+      if(inpType) inpType.value = (data.type === "season") ? "season" : "oneoff";
+    }
 
+    if(inpYear) inpYear.value = data.yearStr || String(data.seasonYear || data.year || "");
+    if(inpName) inpName.value = data.name || "";
+
+    if(inpFormat) inpFormat.value = (data.format || "classic");
+
+    // lake
+    if(inpLakeCustom) inpLakeCustom.value = data.lakeCustomName || "";
     if(inpLake) inpLake.value = data.lakeId || "";
 
+    // schedule
     if(inpStartAt) inpStartAt.value = data.startAtLocal || "";
     if(inpFinishAt) inpFinishAt.value = data.finishAtLocal || "";
 
+    // tour-only
     if(inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
-    if(inpHasFinal){
-      inpHasFinal.value = (data.hasFinal ? "yes" : (data.hasFinal === false ? "no" : (data.inpHasFinal || "yes")));
-    }
+    if(inpHasFinal) inpHasFinal.value = (data.hasFinal ? "yes" : "no");
 
+    // reg + pay
     if(inpRegMode) inpRegMode.value = data.regMode || "auto";
     if(inpPayEnabled) inpPayEnabled.value = (data.payEnabled === false ? "no" : "yes");
     if(inpRegOpen) inpRegOpen.value = data.manualOpen || "";
@@ -449,24 +586,26 @@
     if(inpPayDetails) inpPayDetails.value = data.payDetails || "";
   }
 
-  function currentFormatKey(){
-    return String((inpFormat && inpFormat.value) ? inpFormat.value : (activeFormatName || "classic")).toLowerCase();
-  }
-
   function saveDraftNow(){
     const d = collectForm();
     const fmtKey = currentFormatKey();
 
     const draft = {
-      type: d.type,
       yearStr: d.yearStr,
       name: d.name,
+      kind: d.kind,
+      type: d.type,
       format: d.format,
-      lakeId: d.lakeId,
+
+      lakeId: d.lakeInput?.source === "catalog" ? d.lakeInput.id : "",
+      lakeCustomName: d.lakeInput?.source === "custom" ? d.lakeInput.name : "",
+
       startAtLocal: inpStartAt?.value || "",
       finishAtLocal: inpFinishAt?.value || "",
+
       stagesCount: d.stagesCount,
       hasFinal: d.hasFinal,
+
       regMode: d.regMode,
       payEnabled: d.payEnabled,
       manualOpen: d.manualOpen,
@@ -474,42 +613,71 @@
       price: d.price,
       currency: d.currency,
       payDetails: d.payDetails,
-      // ✅ NEW: format engine draft (ключ береться з inpFormat)
+
       engine: (activeFormat && typeof activeFormat.serialize === "function")
         ? (activeFormat.serialize({ $, format: fmtKey }) || {})
         : {},
+
       ts: Date.now()
     };
     setDraft(draft);
   }
 
-  // --- ID generator (FIX: oneoff не перетирає)
+  // ------------------------------------------------------------
+  // IDs
+  // ------------------------------------------------------------
   function rand4(){
     return Math.random().toString(36).slice(2,6);
   }
 
-  function compIdFrom(type, yearStr, name){
-    if(type === "season") return `season-${yearStr}`;
-
-    const slug = (name||"event")
+  function slugify(name){
+    return (name||"event")
       .toLowerCase()
       .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
       .replace(/-+/g,"-")
       .replace(/^-|-$/g,"")
       .slice(0,40);
-
-    return `oneoff-${yearStr}-${slug || "event"}-${rand4()}`;
   }
 
-  // --- Validation
+  function compIdFrom(kind, yearStr, name){
+    // Турнір року має бути стабільний 1-в-1
+    if(kind === "tour"){
+      return `tournament-${yearStr}`;
+    }
+
+    const slug = slugify(name);
+    return `event-${yearStr}-${slug || "event"}-${rand4()}`;
+  }
+
+  // ------------------------------------------------------------
+  // Validation
+  // ------------------------------------------------------------
   function validate(form){
     if(!/^\d{4}$/.test(form.yearStr)) throw new Error("Вкажи рік (4 цифри), наприклад 2026.");
     if(!form.name) throw new Error("Вкажи назву змагання.");
-    if(!form.lakeId) throw new Error("Вибери водойму.");
+
+    // lake: either selected or custom
+    if(!form.lakeInput) throw new Error("Вкажи водойму: або вибери зі списку, або впиши назву.");
 
     if(!form.startDt) throw new Error("Заповни старт (дата + година).");
     if(!form.finishDt) throw new Error("Заповни фініш (дата + година).");
     if(form.finishDt.getTime() <= form.startDt.getTime()) throw new Error("Фініш має бути після старту.");
+
+    // kind + format restriction
+    const kind = form.kind;
+    const allowed = allowedFormatsForKind(kind);
+    if(!allowed.includes(String(form.format||"").toLowerCase())){
+      const msg =
+        kind === "tour"
+          ? `Турнір сезону може бути тільки у форматі: ${allowed.join(", ")}.`
+          : `Для цього виду доступні формати: ${allowed.join(", ")}.`;
+      throw new Error(msg);
+    }
+
+    if(form.kind === "tour"){
+      const sc = Number(form.stagesCount || 0);
+      if(!Number.isFinite(sc) || sc < 2 || sc > 8) throw new Error("Турнір: к-сть етапів має бути 2–8.");
+    }
 
     if(form.regMode === "manual"){
       if(form.manualOpen && !form.manualClose) throw new Error("Manual: заповни дату закриття реєстрації.");
@@ -518,19 +686,6 @@
 
     if(form.payEnabled){
       if(form.price !== null && !Number.isFinite(form.price)) throw new Error("Внесок має бути числом.");
-    }
-  }
-
-  // --- Firestore mappers
-  async function getLakeSnapshot(lakeId){
-    if(!lakeId) return null;
-    try{
-      const doc = await db.collection("lakes").doc(lakeId).get();
-      if(!doc.exists) return { id: lakeId, name: lakeId };
-      const d = doc.data() || {};
-      return { id: lakeId, name: d.name || lakeId };
-    }catch(_){
-      return { id: lakeId, name: lakeId };
     }
   }
 
@@ -547,13 +702,13 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ BLOCK #2: loadCompetition => activateFormat + deserialize(engine)
+  // Load one competition
   // ------------------------------------------------------------
   async function loadCompetition(compId){
     if(!compId) return;
 
     setMsg("");
-    setStatus("Завантаження змагання…");
+    setStatus("Завантаження…");
     try{
       const doc = await db.collection("competitions").doc(compId).get();
       if(!doc.exists) throw new Error(`Не знайдено competitions/${compId}`);
@@ -566,26 +721,45 @@
       const reg = d.registration || {};
       const pay = d.payment || {};
 
+      const kind = String(d.kind || "").toLowerCase() ||
+        ((d.type === "season") ? "tour" : "teams");
+
+      const lakeId = d.lake?.id || d.lakeId || "";
+      const lakeSource = d.lake?.source || (String(lakeId).startsWith("custom:") ? "custom" : "catalog");
+      const lakeCustomName = (lakeSource === "custom") ? (d.lake?.name || "") : "";
+
       applyForm({
-        type: d.type || "season",
-        yearStr: String(d.year || ""),
+        type: d.type || ((kind === "tour") ? "season" : "oneoff"),
+        kind,
+        yearStr: String(d.seasonYear || d.year || ""),
+        seasonYear: d.seasonYear || d.year || null,
         name: d.name || "",
         format: d.format || "classic",
-        lakeId: d.lake?.id || d.lakeId || "",
+
+        lakeId: (lakeSource === "catalog") ? lakeId : "",
+        lakeCustomName: lakeCustomName,
+
         startAtLocal: startAt ? toDateTimeLocalValue(startAt) : "",
         finishAtLocal: finishAt ? toDateTimeLocalValue(finishAt) : "",
+
         stagesCount: d.stagesCount || 3,
         hasFinal: !!d.hasFinal,
+
         regMode: reg.mode || "auto",
         payEnabled: pay.enabled !== false,
         manualOpen: reg.openDate || "",
         manualClose: reg.closeDate || "",
+
         price: (pay.price === 0 || pay.price) ? pay.price : null,
         currency: pay.currency || "UAH",
         payDetails: pay.details || ""
       });
 
-      await activateFormat((d.format || "classic"), { deserializeData: (d.engine || {}) });
+      // enforce kind restrictions in UI
+      enforceFormatForKind(getKind());
+
+      // activate format + deserialize engine
+      await activateFormat((inpFormat?.value || d.format || "classic"), { deserializeData: (d.engine || {}) });
 
       setSeasonVisibility();
       updateDurationUI();
@@ -601,10 +775,17 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ BLOCK #3: saveCompetition => format validate + serialize -> engine
+  // Save
   // ------------------------------------------------------------
   async function saveCompetition(editingCompId){
     const form = collectForm();
+
+    // enforce UI before validate (so it doesn't surprise)
+    enforceFormatForKind(form.kind);
+
+    // refresh format after possible enforce
+    form.format = String(inpFormat?.value || form.format || "classic").toLowerCase();
+
     validate(form);
 
     // format-specific validate/serialize
@@ -616,9 +797,9 @@
       formatExtra = activeFormat.serialize({ $, format: String(form.format || "").toLowerCase() }) || {};
     }
 
-    const compId = editingCompId || compIdFrom(form.type, form.yearStr, form.name);
+    const compId = editingCompId || compIdFrom(form.kind, form.yearStr, form.name);
 
-    const lakeSnap = await getLakeSnapshot(form.lakeId);
+    const lakeSnap = await getLakeSnapshot(form.lakeInput);
     const regBlock = computeRegistrationBlock(form);
 
     const mins = diffMinutes(form.startDt, form.finishDt);
@@ -627,26 +808,31 @@
     const ref = db.collection("competitions").doc(compId);
     const snap = await ref.get();
 
-    // ✅ FIX: сезон не перезаписувати в create
-    if(!editingCompId && form.type === "season" && snap.exists){
-      throw new Error(`Сезон ${compId} вже існує. Перейди в режим "Редагування" і відкрий його.`);
+    // ✅ RULE: tournament-year is unique
+    if(!editingCompId && form.kind === "tour" && snap.exists){
+      throw new Error(`Турнір сезону ${form.yearStr} вже існує (ID: ${compId}). Перейди в "Редагувати" і відкрий його.`);
     }
 
     const data = {
       compId,
-      type: form.type,
-      year: Number(form.yearStr),
+
+      // legacy but kept
+      type: form.type, // "season" for tour, "oneoff" for events
+      year: Number(form.yearStr), // legacy compatibility
+      seasonYear: Number(form.yearStr), // canonical
+
+      kind: form.kind, // canonical: tour|teams|solo
       name: form.name,
       brand: "STOLAR CARP",
       format: String(form.format || "classic").toLowerCase(),
 
-      // 🔥 engine (format-specific config)
+      // engine (format-specific config)
       engine: {
         baseFormat: String(form.format || "classic").toLowerCase(),
         ...formatExtra
       },
 
-      lake: lakeSnap ? { id: lakeSnap.id, name: lakeSnap.name } : { id: form.lakeId, name: form.lakeId },
+      lake: lakeSnap ? { id: lakeSnap.id, name: lakeSnap.name, source: lakeSnap.source || "catalog" } : null,
 
       schedule: {
         startAt: fb.firestore.Timestamp.fromDate(form.startDt),
@@ -654,8 +840,9 @@
         durationHours: (durationHours !== null) ? Number(durationHours.toFixed(2)) : null
       },
 
-      stagesCount: form.type === "season" ? Number(form.stagesCount) : 1,
-      hasFinal: form.type === "season" ? !!form.hasFinal : false,
+      // only meaningful for tour
+      stagesCount: form.kind === "tour" ? Number(form.stagesCount) : 1,
+      hasFinal: form.kind === "tour" ? !!form.hasFinal : false,
 
       registration: {
         mode: regBlock.mode,
@@ -710,25 +897,56 @@
     await db.collection("competitions").doc(compId).delete();
   }
 
-  // --- Bind UI events
+  // ------------------------------------------------------------
+  // Bind UI
+  // ------------------------------------------------------------
   function bindUI(){
     if(tabCreate) tabCreate.onclick = ()=> gotoMode("create");
     if(tabEdit) tabEdit.onclick = ()=> gotoMode("edit");
 
-    if(inpType) inpType.addEventListener("change", ()=>{
-      setSeasonVisibility();
-      saveDraftNow();
-    });
+    // If legacy inpType exists, we map it:
+    // season -> kind=tour ; oneoff -> kind based on format (solo/teams)
+    if(inpType){
+      inpType.addEventListener("change", async ()=>{
+        if(inpType.value === "season"){
+          if(inpKind) inpKind.value = "tour";
+        }else{
+          // oneoff
+          if(inpKind){
+            const fmt = String(inpFormat?.value || "classic").toLowerCase();
+            inpKind.value = (fmt === "stalker-solo") ? "solo" : "teams";
+          }
+        }
+        enforceFormatForKind(getKind());
+        await activateFormat(inpFormat?.value || "classic");
+        setSeasonVisibility();
+        updateRegUI();
+        saveDraftNow();
+      });
+    }
+
+    if(inpKind){
+      inpKind.addEventListener("change", async ()=>{
+        enforceFormatForKind(getKind());
+        await activateFormat(inpFormat?.value || "classic");
+        setSeasonVisibility();
+        updateRegUI();
+        saveDraftNow();
+      });
+    }
 
     if(inpFormat){
       inpFormat.addEventListener("change", async ()=>{
+        // keep restrictions by kind
+        enforceFormatForKind(getKind());
         await activateFormat(inpFormat.value);
         saveDraftNow();
       });
     }
 
+    // Inputs
     [
-      inpYear, inpName, inpLake,
+      inpYear, inpName, inpLake, inpLakeCustom,
       inpStartAt, inpFinishAt,
       inpStagesCount, inpHasFinal,
       inpRegMode, inpPayEnabled, inpRegOpen, inpRegClose,
@@ -750,15 +968,23 @@
     if(btnResetDraft){
       btnResetDraft.onclick = async ()=>{
         clearDraft();
+
+        if(inpKind) inpKind.value = "tour";
         if(inpType) inpType.value = "season";
+
         if(inpYear) inpYear.value = "";
         if(inpName) inpName.value = "";
         if(inpFormat) inpFormat.value = "classic";
+
         if(inpLake) inpLake.value = "";
+        if(inpLakeCustom) inpLakeCustom.value = "";
+
         if(inpStartAt) inpStartAt.value = "";
         if(inpFinishAt) inpFinishAt.value = "";
+
         if(inpStagesCount) inpStagesCount.value = "3";
         if(inpHasFinal) inpHasFinal.value = "yes";
+
         if(inpRegMode) inpRegMode.value = "auto";
         if(inpPayEnabled) inpPayEnabled.value = "yes";
         if(inpRegOpen) inpRegOpen.value = "";
@@ -767,7 +993,8 @@
         if(inpCurrency) inpCurrency.value = "UAH";
         if(inpPayDetails) inpPayDetails.value = "";
 
-        await activateFormat("classic");
+        enforceFormatForKind(getKind());
+        await activateFormat(inpFormat?.value || "classic");
 
         setSeasonVisibility();
         updateDurationUI();
@@ -816,7 +1043,7 @@
           let compId = editingId;
 
           if(!compId){
-            compId = await saveCompetition(""); // гарантуємо, що doc існує
+            compId = await saveCompetition("");
           }
 
           await makeActive(compId);
@@ -845,7 +1072,9 @@
     }
   }
 
-  // --- Init
+  // ------------------------------------------------------------
+  // Init
+  // ------------------------------------------------------------
   async function init(){
     try{
       await waitForFirebase();
@@ -890,12 +1119,25 @@
 
       await loadLakes();
 
+      // default kind mapping (if no inpKind)
+      if(inpType && !inpKind){
+        // nothing to do, fallback works
+      }else{
+        // if inpKind exists and empty -> set default tour
+        if(inpKind && !inpKind.value) inpKind.value = "tour";
+      }
+
       const draft = getDraft();
       if(draft && !isEditMode){
         applyForm(draft);
-        await activateFormat((draft.format || "classic"), { deserializeData: (draft.engine || {}) });
+
+        // enforce restrictions after apply
+        enforceFormatForKind(getKind());
+
+        await activateFormat((inpFormat?.value || draft.format || "classic"), { deserializeData: (draft.engine || {}) });
         setStatus("Чернетку відновлено ✅");
       }else{
+        enforceFormatForKind(getKind());
         await activateFormat((inpFormat && inpFormat.value) ? inpFormat.value : "classic");
       }
 

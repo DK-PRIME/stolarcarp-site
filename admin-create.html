@@ -105,7 +105,6 @@
     .actions{ display:flex; gap:10px; flex-wrap:wrap; }
     .actions .btn{ border-radius:14px; padding:12px 14px; }
 
-    /* Format-specific fields container */
     #formatFields{
       margin-top:12px;
       padding:14px;
@@ -113,27 +112,27 @@
       background:rgba(2,6,23,.35);
       border:1px solid rgba(148,163,184,.15);
     }
-    #formatFields:empty{
-      display:none; /* щоб не було пустого блоку */
-    }
+    #formatFields:empty{ display:none; }
 
-    .format-section h4{
-      margin:0 0 12px 0;
-      color:var(--accent);
-      font-size:1rem;
+    .inline-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
     }
-    .format-section label{
-      display:flex; align-items:center; gap:8px;
-      margin-bottom:10px;
-      font-size:.9rem;
-    }
-    .format-section input[type="number"],
-    .format-section input[type="text"]{
-      width:auto; min-width:80px;
+    .mini-pill{
       padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      background:rgba(2,6,23,.35);
+      color:#e5e7eb;
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
     }
-    .format-section input[type="checkbox"]{
-      width:20px; height:20px;
+    .mini-pill--active{
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      color:#000;border-color:transparent;
     }
   </style>
 </head>
@@ -158,14 +157,12 @@
 <main class="main">
   <section class="section container admin-wrap">
 
-    <!-- TOP STATUS -->
     <div class="admin-top">
       <div class="title-gradient" style="font-size:1.2rem; font-weight:900;">Створення / редагування змагання</div>
       <div class="muted" id="createStatus">Запуск…</div>
       <div class="muted" id="createDebug" style="margin-top:6px;"></div>
     </div>
 
-    <!-- GATE -->
     <div id="createGate" class="admin-card hidden">
       <div class="login-card">
         <div style="font-size:1.2rem; font-weight:900; margin-bottom:8px;">Доступ обмежено</div>
@@ -178,10 +175,8 @@
       </div>
     </div>
 
-    <!-- APP -->
     <div id="createApp" class="hidden">
 
-      <!-- TABS -->
       <div class="admin-card">
         <div class="tabs">
           <div class="pill" id="tabCreate">Створити</div>
@@ -190,12 +185,11 @@
         </div>
 
         <div class="note" style="margin-top:10px;">
-          Тут задаємо <b>водойму</b>, <b>старт/фініш (дата+година)</b> і базові параметри змагання.
-          Специфічні налаштування формату з'являться нижче після вибору "Формат".
+          <b>Сезон = рік.</b> В межах сезону ти створюєш різні події.
+          <b>Турнір</b> = тільки <b>етапи + фінал</b>. Інші формати (3 tables, stalker, bigfish…) — це <b>окремі змагання сезону</b>.
         </div>
       </div>
 
-      <!-- EDIT SELECT -->
       <div id="editPicker" class="admin-card hidden">
         <div style="font-weight:900; margin-bottom:8px;">Вибір змагання для редагування</div>
         <div class="field">
@@ -210,36 +204,47 @@
         <div class="muted" id="editPickerMsg" style="margin-top:10px;"></div>
       </div>
 
-      <!-- FORM -->
       <div class="admin-card" id="createFormCard">
         <div style="font-weight:900; margin-bottom:8px;">Параметри змагання</div>
 
-        <!-- BASIC -->
+        <!-- СЕЗОН (РІК) + ВИД -->
         <div class="grid2">
           <div class="field">
-            <label for="inpType">Тип</label>
-            <select id="inpType">
-              <option value="season" selected>СЕЗОН (етапи + фінал опційно)</option>
-              <option value="oneoff">ОДНОРАЗОВЕ змагання</option>
-            </select>
+            <label for="inpYear">Сезон (рік)</label>
+            <input id="inpYear" inputmode="numeric" placeholder="Наприклад: 2026">
           </div>
 
           <div class="field">
-            <label for="inpYear">Рік</label>
-            <input id="inpYear" inputmode="numeric" placeholder="Наприклад: 2026">
+            <label for="inpKind">Вид змагань</label>
+            <select id="inpKind">
+              <option value="teams" selected>Командні</option>
+              <option value="solo">Соло</option>
+              <option value="tour">Турнір (етапи + фінал)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Тип (залишаємо ID inpType, щоб JS/інші сторінки не ламалися) -->
+        <div class="grid2">
+          <div class="field">
+            <label for="inpType">Тип події</label>
+            <select id="inpType">
+              <option value="season">Турнір сезону (етапи + фінал)</option>
+              <option value="oneoff" selected>Окреме змагання сезону</option>
+            </select>
+            <div class="note">Це технічне поле. Для тебе головне: “Вид змагань”.</div>
+          </div>
+
+          <div class="field">
+            <label for="inpName">Назва змагання</label>
+            <input id="inpName" placeholder="Наприклад: 3 таблиці • Весна 2026">
           </div>
         </div>
 
         <div class="grid2">
           <div class="field">
-            <label for="inpName">Назва</label>
-            <input id="inpName" placeholder="Наприклад: Осінній Короп 2026">
-          </div>
-
-          <div class="field">
             <label for="inpFormat">Формат</label>
             <select id="inpFormat">
-              <!-- канонічні ключі (1-в-1) -->
               <option value="classic" selected>Classic (загальна вага)</option>
               <option value="3tables">3 таблиці</option>
               <option value="stalker-solo">Stalker Solo</option>
@@ -248,21 +253,39 @@
               <option value="autumn-carp">Осінній Короп</option>
               <option value="trophy15">Трофейна 15</option>
             </select>
+            <div class="note" id="formatHint"></div>
+          </div>
+
+          <div class="field">
+            <label>Швидкі правила</label>
+            <input id="outQuickInfo" readonly value="—">
           </div>
         </div>
 
-        <!-- FORMAT-SPECIFIC FIELDS -->
         <div id="formatFields"></div>
 
         <div class="hr"></div>
 
-        <!-- LAKE -->
-        <div class="field">
-          <label for="inpLake">Водойма</label>
+        <!-- ВОДОЙМА: вибрати або вписати -->
+        <div style="font-weight:900; margin-bottom:8px;">Водойма</div>
+
+        <div class="inline-row" style="margin:6px 0 12px;">
+          <div class="mini-pill mini-pill--active" id="lakeModePick">Обрати зі списку</div>
+          <div class="mini-pill" id="lakeModeType">Вписати вручну</div>
+        </div>
+
+        <div class="field" id="lakePickWrap">
+          <label for="inpLake">Водойма (зі списку)</label>
           <select id="inpLake">
             <option value="">Завантаження водойм…</option>
           </select>
-          <div class="note" id="lakeHint">Вибери водойму, щоб учасники бачили де проходить змагання.</div>
+          <div class="note">Вибери водойму зі списку (колекція lakes).</div>
+        </div>
+
+        <div class="field hidden" id="lakeTypeWrap">
+          <label for="inpLakeText">Водойма (вручну)</label>
+          <input id="inpLakeText" placeholder="Наприклад: Лелехівка">
+          <div class="note">Це поле дозволяє створити змагання навіть якщо водойми немає в довіднику.</div>
         </div>
 
         <div class="hr"></div>
@@ -272,11 +295,11 @@
 
         <div class="grid2">
           <div class="field">
-            <label for="inpStartAt">Старт (дата + година)</label>
+            <label for="inpStartAt">Дата проведення (старт)</label>
             <input id="inpStartAt" type="datetime-local">
           </div>
           <div class="field">
-            <label for="inpFinishAt">Фініш (дата + година)</label>
+            <label for="inpFinishAt">Дата завершення (фініш)</label>
             <input id="inpFinishAt" type="datetime-local">
           </div>
         </div>
@@ -297,14 +320,14 @@
         </div>
 
         <div class="note">
-          Тривалість рахується автоматично з старт/фініш. (Напр: 48 год = 2 доби)
+          Тривалість рахується автоматично з старт/фініш.
         </div>
 
         <div class="hr"></div>
 
-        <!-- SEASON ONLY -->
-        <div id="seasonOnly">
-          <div style="font-weight:900; margin-bottom:8px;">Сезонні налаштування</div>
+        <!-- TOUR ONLY (етапи + фінал) -->
+        <div id="seasonOnly" class="hidden">
+          <div style="font-weight:900; margin-bottom:8px;">Турнір сезону (етапи + фінал)</div>
           <div class="grid2">
             <div class="field">
               <label for="inpStagesCount">К-сть етапів</label>
@@ -325,6 +348,9 @@
                 <option value="no">НІ</option>
               </select>
             </div>
+          </div>
+          <div class="note">
+            Увага: “Турнір” — це структура сезону. 3 tables та інші формати сюди не входять.
           </div>
         </div>
 
@@ -387,7 +413,6 @@
 
         <div class="hr"></div>
 
-        <!-- ACTIONS -->
         <div class="actions">
           <button class="btn btn--accent" id="btnSave">Зберегти</button>
           <button class="btn btn--primary" id="btnMakeActive">Зробити активним</button>
@@ -396,7 +421,6 @@
 
         <div class="muted" id="createMsg" style="margin-top:10px;"></div>
 
-        <!-- DELETE -->
         <div id="deleteWrap" class="hidden" style="margin-top:12px;">
           <button class="btn btn--danger" id="btnDelete">Видалити змагання</button>
           <div class="note" style="margin-top:8px;">
@@ -405,32 +429,28 @@
         </div>
       </div>
 
-    </div><!-- /createApp -->
+    </div>
 
   </section>
 </main>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script src="assets/js/firebase-init.js"></script>
 
-<!-- ✅ REGISTRY (ОБОВʼЯЗКОВО ПЕРШИМ) -->
 <script src="assets/js/formats/registry.js"></script>
-
-<!-- ✅ PRESETS (після registry.js) -->
 <script src="assets/js/formats/format-classic.js"></script>
 <script src="assets/js/formats/format-3tables.js"></script>
 <script src="assets/js/formats/format-stalker-solo.js"></script>
 <script src="assets/js/formats/format-stalker-teams.js"></script>
 <script src="assets/js/formats/format-bigfish30.js"></script>
 <script src="assets/js/formats/format-autumn-carp.js"></script>
+<script src="assets/js/formats/format-autumn-carp.js"></script>
 <script src="assets/js/formats/format-trophy15.js"></script>
 
-<!-- MAIN -->
-<script src="assets/js/admin-create.js?v=20260212"></script>
+<script src="assets/js/admin-create.js?v=20260217"></script>
 
 </body>
 </html>

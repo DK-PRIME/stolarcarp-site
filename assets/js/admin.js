@@ -1,3 +1,7 @@
+ });
+
+  init();
+})();
 // assets/js/admin.js
 // STOLAR CARP • Admin panel (Home)
 // ✅ admin.html = login + menu only
@@ -55,6 +59,22 @@
     }
   }
 
+  // ✅ Logout (admin -> auth.html + clear team caches)
+  async function doLogout(){
+    try{
+      if(auth) await auth.signOut();
+    }catch(_){}
+
+    // чистимо кеші команд, щоб потім зайти як учасник з іншої пошти
+    try{
+      Object.keys(localStorage).forEach(k => {
+        if(k.startsWith("sc_team_cache_")) localStorage.removeItem(k);
+      });
+    }catch(_){}
+
+    window.location.href = "/auth.html";
+  }
+
   async function init(){
     // Firebase init
     try{
@@ -69,8 +89,11 @@
       return;
     }
 
-    // ❌ ВИДАЛЕНО: FORCE LOGOUT ON START — не потрібно в Режимі 1
-    // Сесія зберігається, admin-create.html та інші бачать того ж користувача
+    // ✅ bind logout button (header)
+    const btnLogout = $("btnAdminLogout");
+    if(btnLogout){
+      btnLogout.addEventListener("click", doLogout);
+    }
 
     // UI refs
     const btnLogin = $("btnAdminLogin");

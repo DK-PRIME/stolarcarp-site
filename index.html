@@ -596,18 +596,23 @@
   (function(){
     const btn = document.getElementById("headerLoginBtn");
     if(!btn) return;
-    
-    // Перевіряємо, чи існує ключ авторизованої команди
-const isLoggedIn = Object.keys(localStorage).some(key =>
-  key.startsWith("sc_team_cache_")
-);
 
-if (isLoggedIn) {
-  btn.innerHTML = "🏠";
-  btn.href = "/cabinet.html";
-  btn.title = "Мій кабінет";
-}
-})();
+    // 🏠 показуємо ТІЛЬКИ якщо є кеш команди (учасник/капітан)
+    const hasTeamCache = Object.keys(localStorage).some(key =>
+      key.startsWith("sc_team_cache_")
+    );
+
+    if (hasTeamCache) {
+      btn.textContent = "🏠";
+      btn.href = "/cabinet.html";
+      btn.title = "Мій кабінет";
+    } else {
+      // інакше — це просто вхід для учасників
+      btn.textContent = "Увійти";
+      btn.href = "/auth.html";
+      btn.title = "Увійти";
+    }
+  })();
 </script>
 
 </body>

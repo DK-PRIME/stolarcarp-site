@@ -11,31 +11,31 @@
     /* ============================================
        БАЗОВІ НАЛАШТУВАННЯ
        ============================================ */
-    body { 
-      background: radial-gradient(circle at top, #111827 0, #020617 55%); 
+    body {
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
     }
-    
-    .admin-wrap { 
-      max-width: 980px; 
-      margin: 0 auto; 
-      padding: 22px 0 70px; 
+
+    .admin-wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 22px 0 70px;
     }
 
     /* ============================================
        ХЕДЕР (FIX для "SC")
        ============================================ */
-    .header .header__row { 
-      align-items: center; 
+    .header .header__row {
+      align-items: center;
     }
-    
-    .header .logo { 
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      min-height: 56px; 
-      padding: 8px 0; 
+
+    .header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 56px;
+      padding: 8px 0;
     }
-    
+
     .header .logo__mark {
       width: 42px;
       height: 42px;
@@ -46,14 +46,33 @@
       overflow: visible;
       padding: 0;
     }
-    
-    .header .logo__text { 
-      line-height: 1.1; 
+
+    .header .logo__text {
+      line-height: 1.1;
     }
-    
-    .header, 
-    .header .container { 
-      overflow: visible; 
+
+    .header,
+    .header .container {
+      overflow: visible;
+    }
+
+    /* ✅ КНОПКА ВИХОДУ В ХЕДЕРІ */
+    .header-logout{
+      margin-left: auto;
+      margin-right: 12px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,.6);
+      background: rgba(15,23,42,.9);
+      color: #e5e7eb;
+      font-size: .85rem;
+      text-decoration: none;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .header-logout:hover{
+      border-color: #facc15;
+      color: #facc15;
     }
 
     /* ============================================
@@ -79,43 +98,43 @@
     /* ============================================
        ТИПОГРАФІКА ТА ДОПОМІЖНІ КЛАСИ
        ============================================ */
-    .muted { 
-      color: #9ca3af; 
-    }
-    
-    .hidden { 
-      display: none !important; 
-    }
-    
-    .ok { 
-      color: #22c55e; 
-    }
-    
-    .err { 
-      color: #ef4444; 
+    .muted {
+      color: #9ca3af;
     }
 
-    .hr { 
-      height: 1px; 
-      background: rgba(148, 163, 184, .18); 
-      margin: 12px 0; 
-      border-radius: 99px; 
+    .hidden {
+      display: none !important;
+    }
+
+    .ok {
+      color: #22c55e;
+    }
+
+    .err {
+      color: #ef4444;
+    }
+
+    .hr {
+      height: 1px;
+      background: rgba(148, 163, 184, .18);
+      margin: 12px 0;
+      border-radius: 99px;
     }
 
     /* ============================================
        СТЕК КНОПОК
        ============================================ */
-    .stack { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 10px; 
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
-    
-    .stack .btn { 
-      width: 100%; 
-      justify-content: center; 
-      padding: 12px 14px; 
-      border-radius: 14px; 
+
+    .stack .btn {
+      width: 100%;
+      justify-content: center;
+      padding: 12px 14px;
+      border-radius: 14px;
     }
 
     /* ============================================
@@ -131,10 +150,10 @@
       box-shadow: 0 18px 40px rgba(0, 0, 0, .6);
     }
 
-    .login-tabs { 
-      display: flex; 
-      gap: 10px; 
-      margin-bottom: 12px; 
+    .login-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
     }
 
     .pill {
@@ -152,30 +171,30 @@
       border-color: transparent;
     }
 
-    .login-title { 
-      font-size: 1.6rem; 
-      font-weight: 900; 
-      letter-spacing: .04em; 
-      margin: 6px 0 6px; 
+    .login-title {
+      font-size: 1.6rem;
+      font-weight: 900;
+      letter-spacing: .04em;
+      margin: 6px 0 6px;
     }
 
-    .login-sub { 
-      color: #9ca3af; 
-      margin-bottom: 14px; 
+    .login-sub {
+      color: #9ca3af;
+      margin-bottom: 14px;
     }
 
     /* ============================================
        ПОЛЯ ВВОДУ
        ============================================ */
-    .field { 
-      display: grid; 
-      gap: 6px; 
-      margin-bottom: 12px; 
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
     }
-    
-    .field label { 
-      font-size: .9rem; 
-      color: #cbd5e1; 
+
+    .field label {
+      font-size: .9rem;
+      color: #cbd5e1;
     }
 
     .field input {
@@ -193,16 +212,16 @@
       box-shadow: 0 0 10px rgba(246, 195, 76, .25);
     }
 
-    .login-actions { 
-      display: flex; 
-      gap: 10px; 
-      flex-wrap: wrap; 
-      margin-top: 10px; 
+    .login-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
     }
 
-    .login-actions .btn { 
-      border-radius: 14px; 
-      padding: 12px 14px; 
+    .login-actions .btn {
+      border-radius: 14px;
+      padding: 12px 14px;
     }
 
     /* ============================================
@@ -215,7 +234,7 @@
       gap: 10px;
     }
 
-    .mini-form input, 
+    .mini-form input,
     .mini-form select {
       width: 100%;
       padding: 10px 12px;
@@ -226,23 +245,23 @@
       outline: none;
     }
 
-    .mini-form input::placeholder { 
-      color: #6b7280; 
+    .mini-form input::placeholder {
+      color: #6b7280;
     }
 
     /* ============================================
        СІТКА
        ============================================ */
-    .grid2 { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 10px; 
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
     }
 
-    @media (max-width: 640px) { 
-      .grid2 { 
-        grid-template-columns: 1fr; 
-      } 
+    @media (max-width: 640px) {
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
     }
 
     /* ============================================
@@ -293,9 +312,9 @@
       color: #9ca3af;
       line-height: 1.35;
     }
-    
-    .note b { 
-      color: #e5e7eb; 
+
+    .note b {
+      color: #e5e7eb;
     }
   </style>
 </head>
@@ -311,11 +330,17 @@
         <span class="logo__mark">SC</span>
         <span class="logo__text">STOLAR CARP</span>
       </a>
+
       <nav class="nav">
         <a href="live.html" class="nav__link">Live</a>
         <a href="rating.html" class="nav__link">Рейтинг</a>
         <a href="auth.html" class="nav__link">Акаунт</a>
       </nav>
+
+      <!-- ✅ ВИХІД (праворуч вгорі) -->
+      <button class="header-logout" id="btnAdminLogout" type="button" title="Вийти з адмінки">
+        Вийти
+      </button>
     </div>
   </header>
 
@@ -337,7 +362,7 @@
       <!-- Форма входу -->
       <div id="adminLogin" class="admin-card hidden">
         <div class="login-card">
-          
+
           <!-- Таби -->
           <div class="login-tabs">
             <div class="pill pill--active">Вхід</div>
@@ -350,20 +375,20 @@
           <!-- Поля -->
           <div class="field">
             <label for="admEmail">Email</label>
-            <input 
-              id="admEmail" 
-              type="email" 
-              placeholder="Email адміністратора" 
+            <input
+              id="admEmail"
+              type="email"
+              placeholder="Email адміністратора"
               autocomplete="username"
             >
           </div>
 
           <div class="field">
             <label for="admPass">Пароль</label>
-            <input 
-              id="admPass" 
-              type="password" 
-              placeholder="Пароль адміністратора" 
+            <input
+              id="admPass"
+              type="password"
+              placeholder="Пароль адміністратора"
               autocomplete="current-password"
             >
           </div>

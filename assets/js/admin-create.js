@@ -11,6 +11,9 @@
 // ✅ FIX: oneoff має унікальний compId (не перетирає інші)
 // ✅ FIX: Make Active завжди робить active тільки після Save (щоб doc існував)
 // ✅ NEW: registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
+// ✅ FIX (важливо): НЕ чекаємо window.firebase (може не існувати) — чекаємо scAuth/scDb
+// ✅ FIX (важливо): activateFormat fallback правильно виставляє activeFormatName
+// ✅ FIX (важливо): draft serialize бере фактичний inpFormat.value, не старий activeFormatName
 
 (function(){
   "use strict";
@@ -29,12 +32,20 @@
     return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
   }
 
+  // ---- Firebase wait (НЕ чекаємо window.firebase!) ----
   async function waitForFirebase(){
     for(let i=0;i<140;i++){
-      if(window.scAuth && window.scDb && window.firebase) return;
+      if(window.scAuth && window.scDb) return;
       await new Promise(r=>setTimeout(r,100));
     }
     throw new Error("Firebase init не підняв scAuth/scDb. Перевір assets/js/firebase-init.js.");
+  }
+
+  function getFirebaseCompat(){
+    // compat може бути або window.firebase, або глобальний firebase (compat)
+    if(window.firebase) return window.firebase;
+    if(typeof firebase !== "undefined") return firebase;
+    return null;
   }
 
   let auth=null, db=null, fb=null;
@@ -108,8 +119,8 @@
     // підтримуємо і SC_FORMATS.registry, і SC_FORMATS.get
     const sc = window.SC_FORMATS || null;
     if(!sc) return null;
-    if(typeof sc.get === "function") return sc;          // варіант: SC_FORMATS.get(name)
-    if(sc.registry && typeof sc.registry.get === "function") return sc.registry; // варіант: SC_FORMATS.registry.get(name)
+    if(typeof sc.get === "function") return sc; // SC_FORMATS.get(name)
+    if(sc.registry && typeof sc.registry.get === "function") return sc.registry; // SC_FORMATS.registry.get(name)
     return null;
   }
 
@@ -125,30 +136,25 @@
   }
 
   async function activateFormat(formatName, opts){
-    const requested = String(formatName || "classic").toLowerCase();
+    let requested = String(formatName || "classic").toLowerCase();
     let preset = getPreset(requested);
 
     if(!preset){
       console.warn(`Формат "${requested}" не знайдено, fallback classic`);
+      requested = "classic";
       preset = getPreset("classic");
     }
 
-    activeFormatName = preset ? (requested || "classic") : "classic";
+    // ✅ тепер ключ завжди правильний (без "підміни" requested)
+    activeFormatName = requested;
     activeFormat = preset || null;
 
-    // reset UI
     renderFormatSpecificFields("");
 
-    // init
     if(activeFormat && typeof activeFormat.init === "function"){
-      activeFormat.init({
-        render: renderFormatSpecificFields,
-        $,
-        esc
-      });
+      activeFormat.init({ render: renderFormatSpecificFields, $, esc });
     }
 
-    // deserialize existing engine
     if(opts && opts.deserializeData && activeFormat && typeof activeFormat.deserialize === "function"){
       try{
         activeFormat.deserialize(opts.deserializeData, { render: renderFormatSpecificFields, $, esc });
@@ -359,7 +365,6 @@
       return;
     }
 
-    // auto
     if(inpRegOpen) inpRegOpen.disabled = true;
     if(inpRegClose) inpRegClose.disabled = true;
 
@@ -427,17 +432,14 @@
 
     if(inpLake) inpLake.value = data.lakeId || "";
 
-    // schedule
     if(inpStartAt) inpStartAt.value = data.startAtLocal || "";
     if(inpFinishAt) inpFinishAt.value = data.finishAtLocal || "";
 
-    // season
     if(inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
     if(inpHasFinal){
       inpHasFinal.value = (data.hasFinal ? "yes" : (data.hasFinal === false ? "no" : (data.inpHasFinal || "yes")));
     }
 
-    // reg + pay
     if(inpRegMode) inpRegMode.value = data.regMode || "auto";
     if(inpPayEnabled) inpPayEnabled.value = (data.payEnabled === false ? "no" : "yes");
     if(inpRegOpen) inpRegOpen.value = data.manualOpen || "";
@@ -447,8 +449,14 @@
     if(inpPayDetails) inpPayDetails.value = data.payDetails || "";
   }
 
+  function currentFormatKey(){
+    return String((inpFormat && inpFormat.value) ? inpFormat.value : (activeFormatName || "classic")).toLowerCase();
+  }
+
   function saveDraftNow(){
     const d = collectForm();
+    const fmtKey = currentFormatKey();
+
     const draft = {
       type: d.type,
       yearStr: d.yearStr,
@@ -466,9 +474,9 @@
       price: d.price,
       currency: d.currency,
       payDetails: d.payDetails,
-      // ✅ NEW: format engine draft
+      // ✅ NEW: format engine draft (ключ береться з inpFormat)
       engine: (activeFormat && typeof activeFormat.serialize === "function")
-        ? (activeFormat.serialize({ $, format: activeFormatName }) || {})
+        ? (activeFormat.serialize({ $, format: fmtKey }) || {})
         : {},
       ts: Date.now()
     };
@@ -577,7 +585,6 @@
         payDetails: pay.details || ""
       });
 
-      // 🔥 activate format + deserialize engine
       await activateFormat((d.format || "classic"), { deserializeData: (d.engine || {}) });
 
       setSeasonVisibility();
@@ -603,10 +610,10 @@
     // format-specific validate/serialize
     let formatExtra = {};
     if(activeFormat && typeof activeFormat.validate === "function"){
-      activeFormat.validate({ $, format: form.format });
+      activeFormat.validate({ $, format: String(form.format || "").toLowerCase() });
     }
     if(activeFormat && typeof activeFormat.serialize === "function"){
-      formatExtra = activeFormat.serialize({ $, format: form.format }) || {};
+      formatExtra = activeFormat.serialize({ $, format: String(form.format || "").toLowerCase() }) || {};
     }
 
     const compId = editingCompId || compIdFrom(form.type, form.yearStr, form.name);
@@ -631,11 +638,11 @@
       year: Number(form.yearStr),
       name: form.name,
       brand: "STOLAR CARP",
-      format: form.format,
+      format: String(form.format || "classic").toLowerCase(),
 
       // 🔥 engine (format-specific config)
       engine: {
-        baseFormat: form.format,
+        baseFormat: String(form.format || "classic").toLowerCase(),
         ...formatExtra
       },
 
@@ -713,9 +720,6 @@
       saveDraftNow();
     });
 
-    // ------------------------------------------------------------
-    // ✅ BLOCK #4: inpFormat change => activateFormat()
-    // ------------------------------------------------------------
     if(inpFormat){
       inpFormat.addEventListener("change", async ()=>{
         await activateFormat(inpFormat.value);
@@ -723,7 +727,6 @@
       });
     }
 
-    // IMPORTANT: inpFormat тут не треба, бо ми окремо ловимо change вище
     [
       inpYear, inpName, inpLake,
       inpStartAt, inpFinishAt,
@@ -805,7 +808,6 @@
       };
     }
 
-    // ✅ FIX: Make Active => спочатку Save (якщо треба), потім active
     if(btnMakeActive){
       btnMakeActive.onclick = async ()=>{
         setMsg(`<span class="muted">Зробити активним…</span>`);
@@ -849,7 +851,8 @@
       await waitForFirebase();
       auth = window.scAuth;
       db   = window.scDb;
-      fb   = window.firebase;
+      fb   = getFirebaseCompat();
+      if(!fb || !fb.firestore) throw new Error("Firebase compat (firebase) не доступний. Перевір підключення firebase-*-compat.js.");
     }catch(e){
       setStatus("Firebase не запустився ❌");
       setDebug(e?.message || String(e));
@@ -890,11 +893,9 @@
       const draft = getDraft();
       if(draft && !isEditMode){
         applyForm(draft);
-        // якщо в чернетці був engine — дамо його в deserialize
         await activateFormat((draft.format || "classic"), { deserializeData: (draft.engine || {}) });
         setStatus("Чернетку відновлено ✅");
       }else{
-        // ініціалізуємо формат з поточного select
         await activateFormat((inpFormat && inpFormat.value) ? inpFormat.value : "classic");
       }
 
@@ -917,6 +918,7 @@
     setStatus("Помилка JS ❌");
     setDebug(e?.message || "Помилка");
   });
+
   window.addEventListener("unhandledrejection", (e)=>{
     setStatus("Помилка Promise ❌");
     setDebug(e?.reason?.message || String(e?.reason || "Promise error"));

@@ -1,14 +1,7 @@
- });
-
-  init();
-})();
 // assets/js/admin.js
 // STOLAR CARP • Admin panel (Home)
 // ✅ admin.html = login + menu only
-// ✅ create/edit logic moved to admin-create.html + admin-create.js
 // ✅ access by users/{uid}.role === "admin"
-// ✅ no heavy Firestore reads here (no зависань)
-// ✅ navigation handled by plain <a href="..."> in HTML (no duplicate JS redirects)
 // ✅ РЕЖИМ 1: Ввів 1 раз — пускає на всі адмін-сторінки (сесія зберігається)
 
 (function(){
@@ -22,13 +15,13 @@
   function show(el){ el && el.classList.remove("hidden"); }
   function hide(el){ el && el.classList.add("hidden"); }
 
-  // ---- Firebase wait ----
+  // ---- Firebase wait (✅ тільки scAuth/scDb) ----
   async function waitForFirebase(){
     for(let i = 0; i < 140; i++){
-      if(window.scAuth && window.scDb && window.firebase) return;
+      if(window.scAuth && window.scDb) return;
       await new Promise(r => setTimeout(r, 100));
     }
-    throw new Error("Firebase init не підняв scAuth/scDb. Перевір assets/js/firebase-init.js.");
+    throw new Error("Firebase init не підняв scAuth/scDb. Перевір assets/js/firebase-init.js (або порядок підключення).");
   }
 
   let auth = null, db = null;
@@ -76,6 +69,9 @@
   }
 
   async function init(){
+    setStatus("Запуск…");
+    setDebug("");
+
     // Firebase init
     try{
       await waitForFirebase();
@@ -84,6 +80,7 @@
     }catch(e){
       setStatus("Firebase не запустився ❌");
       setDebug(e.message || String(e));
+      // ✅ важливо: показуємо форму, щоб не було “порожньо”
       show(adminLogin);
       hide(adminApp);
       return;
@@ -147,7 +144,6 @@
     // AUTH STATE (by role)
     auth.onAuthStateChanged(async (user) => {
       if(!user){
-        // Немає сесії — показуємо форму входу
         setStatus("Потрібен вхід");
         setDebug("");
         show(adminLogin);
@@ -156,25 +152,20 @@
         return;
       }
 
-      // Є користувач — перевіряємо чи це адмін
       const ok = await requireAdmin(user);
       if(!ok){
         setStatus("Доступ заборонено ❌");
         setDebug("Цей акаунт не має ролі admin (users/{uid}.role).");
-        // Не робимо signOut — просто показуємо що доступу нема
-        // Користувач може сам вийти через auth.html якщо потрібно
         show(adminLogin);
         hide(adminApp);
         setLoading(false);
         return;
       }
 
-      // ✅ АДМІН ПІДТВЕРДЖЕНО — показуємо меню
       setStatus("Адмін-доступ ✅");
       setDebug("");
       hide(adminLogin);
       show(adminApp);
-      // Кнопка залишиться в стані "Вхід…" але форма прихована — не проблема
     });
   }
 
@@ -182,11 +173,16 @@
   window.addEventListener("error", (e) => {
     setStatus("Помилка JS ❌");
     setDebug(e?.message || "Помилка");
+    // ✅ щоб не було порожньо
+    show(adminLogin);
+    hide(adminApp);
   });
 
   window.addEventListener("unhandledrejection", (e) => {
     setStatus("Помилка Promise ❌");
     setDebug(e?.reason?.message || String(e?.reason || "Promise error"));
+    show(adminLogin);
+    hide(adminApp);
   });
 
   init();

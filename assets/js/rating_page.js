@@ -1,12 +1,17 @@
 /**
- * rating_page.js — Рейтинг сезону STOLAR CARP
- * Архітектура: Firebase Firestore, колекції competitions/registrations/seasonRating
+ * rating_page.js — Рейтинг сезону STOLAR CARP (FIXED)
+ * Архітектура: Firebase Firestore, колекції competitions/registrations/stageResults/seasonRating
+ *
+ * ✅ FIX: fallback якщо нема composite index на competitions (where+where+orderBy)
+ * ✅ FIX: stageResults teams може бути map або array або teamsByTeamId
+ * ✅ FIX: absentPoints = (maxPlaceInStage + 1) динамічно, не "8"
+ * ✅ FIX: points завжди number
+ * ✅ FIX: missingStages рахується по visibleStages
+ * ✅ FIX: фінал шукаємо по isFinal==true без привʼязки до type
  */
 
-(function() {
+(function () {
   'use strict';
-
-  // ==================== КОНФІГУРАЦІЯ ====================
 
   const CONFIG = {
     collections: {
@@ -15,64 +20,49 @@
       competitions: 'competitions',
       registrations: 'registrations',
       seasonRating: 'seasonRating',
-      stageResults: 'stageResults'
+      stageResults: 'stageResults',
     },
     docIds: {
-      appSettings: 'app'
+      appSettings: 'app',
     },
     defaults: {
-      absentPoints: 8,      // Бали за неучасть у завершеному етапі
-      finalSpots: 18,       // Кількість місць у фіналі
-      maxStages: 5          // Максимум етапів для відображення (E1-E5)
-    }
+      finalSpots: 18,
+      maxStages: 5,
+    },
   };
-
-  // ==================== СТАТ ====================
 
   let state = {
     seasonId: null,
     seasonData: null,
-    competitions: [],       // Етапи сезону (type: "season", без фіналу)
-    finalComp: null,        // Фінал (якщо є)
-    teams: [],              // Команди з confirmed реєстраціями
-    ratingData: [],         // Обчислені рейтинги
-    finishedStagesCount: 0  // Для CSS [data-stages]
+    competitions: [],
+    finalComp: null,
+    teams: [],
+    stageResults: [],
+    ratingData: [],
+    finishedStagesCount: 0,
   };
-
-  // ==================== ІНІЦІАЛІЗАЦІЯ ====================
 
   document.addEventListener('DOMContentLoaded', init);
 
   async function init() {
     try {
       showLoadingState();
-      
+
       const db = getDb();
       if (!db) throw new Error('Firebase DB не доступний');
 
-      // Крок 1: Отримуємо поточний сезон
       await loadCurrentSeason(db);
-      
-      // Крок 2: Завантажуємо етапи сезону
       await loadCompetitions(db);
-      
-      // Крок 3: Завантажуємо команди з confirmed реєстраціями
       await loadTeams(db);
-      
-      // Крок 4: Завантажуємо агреговані результати етапів
       await loadStageResults(db);
-      
-      // Крок 5: Обчислюємо рейтинг
+
       calculateRatings();
-      
-      // Крок 6: Рендеримо таблицю
       renderTable();
-      
-      // Крок 7: Оновлюємо CSS-атрибут
       updateStagesAttribute();
-      
-      console.log(`[Rating] Сезон ${state.seasonId}: ${state.teams.length} команд, ${state.finishedStagesCount} завершених етапів`);
-      
+
+      console.log(
+        `[Rating] season=${state.seasonId} teams=${state.teams.length} finished=${state.finishedStagesCount} stages=${state.competitions.length}`
+      );
     } catch (err) {
       console.error('[Rating] Помилка:', err);
       showError('Не вдалося завантажити рейтинг. Спробуйте оновити сторінку.');
@@ -80,106 +70,132 @@
   }
 
   function getDb() {
-    return window.firebase?.db || window.db;
+    // compat init: window.firebase.db або window.db
+    return window.firebase?.db || window.db || window.scDb || null;
   }
 
   function showLoadingState() {
     document.body.setAttribute('data-stages', '0');
   }
 
-  // ==================== ЗАВАНТАЖЕННЯ ДАНИХ ====================
+  // ==================== LOADERS ====================
 
   async function loadCurrentSeason(db) {
     const settingsSnap = await db
       .collection(CONFIG.collections.settings)
       .doc(CONFIG.docIds.appSettings)
       .get();
-    
-    if (!settingsSnap.exists) {
-      throw new Error('Не знайдено налаштування app');
-    }
-    
-    const settings = settingsSnap.data();
-    state.seasonId = settings.activeSeasonId;
-    
-    if (!state.seasonId) {
-      throw new Error('Не встановлено activeSeasonId');
-    }
 
-    // Завантажуємо інфо про сезон
+    if (!settingsSnap.exists) throw new Error('Не знайдено settings/app');
+
+    const settings = settingsSnap.data() || {};
+    state.seasonId = settings.activeSeasonId;
+
+    if (!state.seasonId) throw new Error('Не встановлено activeSeasonId у settings/app');
+
     const seasonSnap = await db
       .collection(CONFIG.collections.seasons)
       .doc(state.seasonId)
       .get();
-    
-    state.seasonData = seasonSnap.exists ? seasonSnap.data() : {};
+
+    state.seasonData = seasonSnap.exists ? (seasonSnap.data() || {}) : {};
   }
 
   async function loadCompetitions(db) {
-    // Всі змагання сезону, type: "season", сортуємо за stageNumber
-    const compsSnap = await db
-      .collection(CONFIG.collections.competitions)
-      .where('seasonId', '==', state.seasonId)
-      .where('type', '==', 'season')
-      .orderBy('stageNumber')
-      .get();
+    // 1) Пробуємо канонічний запит з orderBy
+    // 2) Якщо впаде через index — fallback без orderBy і сортуємо в JS
 
-    state.competitions = compsSnap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      isFinished: doc.data().status === 'finished'
-    }));
+    let docs = [];
+    try {
+      const snap = await db
+        .collection(CONFIG.collections.competitions)
+        .where('seasonId', '==', state.seasonId)
+        .where('type', '==', 'season')
+        .orderBy('stageNumber')
+        .get();
+      docs = snap.docs;
+    } catch (e) {
+      console.warn('[Rating] competitions query (orderBy) failed, fallback без orderBy:', e?.message || e);
 
-    // Рахуємо завершені етапи для CSS
-    state.finishedStagesCount = state.competitions.filter(c => c.isFinished).length;
+      const snap = await db
+        .collection(CONFIG.collections.competitions)
+        .where('seasonId', '==', state.seasonId)
+        .where('type', '==', 'season')
+        .get();
+      docs = snap.docs;
+    }
 
-    // Шукаємо фінал окремо (якщо потрібно буде)
-    const finalSnap = await db
-      .collection(CONFIG.collections.competitions)
-      .where('seasonId', '==', state.seasonId)
-      .where('type', '==', 'oneoff')
-      .where('isFinal', '==', true)
-      .limit(1)
-      .get();
-    
-    if (!finalSnap.empty) {
-      state.finalComp = { id: finalSnap.docs[0].id, ...finalSnap.docs[0].data() };
+    state.competitions = docs
+      .map((doc) => {
+        const d = doc.data() || {};
+        const stageNumber = toNumberOrNull(d.stageNumber);
+        return {
+          id: doc.id,
+          ...d,
+          stageNumber: stageNumber,
+          isFinished: d.status === 'finished',
+        };
+      })
+      // stageNumber може бути null — ставимо в кінець
+      .sort((a, b) => {
+        const aa = a.stageNumber ?? 9999;
+        const bb = b.stageNumber ?? 9999;
+        return aa - bb;
+      });
+
+    state.finishedStagesCount = state.competitions.filter((c) => c.isFinished).length;
+
+    // Фінал: шукаємо просто isFinal==true (без type)
+    try {
+      const finalSnap = await db
+        .collection(CONFIG.collections.competitions)
+        .where('seasonId', '==', state.seasonId)
+        .where('isFinal', '==', true)
+        .limit(1)
+        .get();
+
+      if (!finalSnap.empty) {
+        state.finalComp = { id: finalSnap.docs[0].id, ...(finalSnap.docs[0].data() || {}) };
+      }
+    } catch (e) {
+      // якщо нема індексу — не критично для рейтингу
+      console.warn('[Rating] final query failed (not critical):', e?.message || e);
+      state.finalComp = null;
     }
   }
 
   async function loadTeams(db) {
-    // Отримуємо ВСІХ унікальних команд, які мають confirmed реєстрацію на будь-який етап сезону
+    // Беремо всі confirmed реєстрації сезону — формуємо roster команд
     const regsSnap = await db
       .collection(CONFIG.collections.registrations)
       .where('seasonId', '==', state.seasonId)
       .where('status', '==', 'confirmed')
       .get();
 
-    // Групуємо по teamId, збираємо на які етапи зареєстрована команда
     const teamsMap = new Map();
 
-    regsSnap.docs.forEach(doc => {
-      const reg = doc.data();
+    regsSnap.docs.forEach((doc) => {
+      const reg = doc.data() || {};
       const teamId = reg.teamId;
-      
+      if (!teamId) return;
+
       if (!teamsMap.has(teamId)) {
         teamsMap.set(teamId, {
           id: teamId,
-          name: reg.teamName || 'Без назви',
-          registrations: [] // { compId, stageNumber }
+          name: reg.teamName || reg.name || 'Без назви',
+          registrations: [], // { compId, stageNumber, regId }
         });
       }
-      
+
       const team = teamsMap.get(teamId);
-      
-      // Знаходимо stageNumber для цього compId
-      const comp = state.competitions.find(c => c.id === reg.competitionId);
-      const stageNumber = comp ? comp.stageNumber : null;
-      
+
+      const compId = reg.competitionId || reg.compId || null;
+      const comp = compId ? state.competitions.find((c) => c.id === compId) : null;
+
       team.registrations.push({
-        compId: reg.competitionId,
-        stageNumber: stageNumber,
-        regId: doc.id
+        compId: compId,
+        stageNumber: comp?.stageNumber ?? null,
+        regId: doc.id,
       });
     });
 
@@ -187,84 +203,99 @@
   }
 
   async function loadStageResults(db) {
-    // Завантажуємо stageResults для всіх етапів
-    const resultsPromises = state.competitions.map(async comp => {
-      const resultSnap = await db
-        .collection(CONFIG.collections.stageResults)
-        .doc(comp.id)
-        .get();
-      
-      return {
-        compId: comp.id,
-        stageNumber: comp.stageNumber,
-        isFinished: comp.isFinished,
-        data: resultSnap.exists ? resultSnap.data() : null
-      };
+    // Для кожного етапу читаємо stageResults/{compId}
+    // Якщо правил/доступу нема — це дасть помилку і ми покажемо showError.
+    const promises = state.competitions.map(async (comp) => {
+      try {
+        const snap = await db.collection(CONFIG.collections.stageResults).doc(comp.id).get();
+        return {
+          compId: comp.id,
+          stageNumber: comp.stageNumber,
+          isFinished: comp.isFinished,
+          data: snap.exists ? (snap.data() || {}) : null,
+        };
+      } catch (e) {
+        // Важливо: якщо rules забороняють, тут буде PERMISSION_DENIED
+        console.error(`[Rating] stageResults read failed comp=${comp.id}:`, e?.message || e);
+        throw e;
+      }
     });
 
-    state.stageResults = await Promise.all(resultsPromises);
+    state.stageResults = await Promise.all(promises);
   }
 
-  // ==================== ОБЧИСЛЕННЯ РЕЙТИНГІВ ====================
+  // ==================== CALC ====================
 
   function calculateRatings() {
-    state.ratingData = state.teams.map(team => {
+    // Підготовка: для кожного етапу визначити absentPoints (maxPlace+1) якщо finished
+    const absentByCompId = new Map();
+    state.competitions.forEach((comp) => {
+      if (!comp.isFinished) return;
+      const sr = state.stageResults.find((r) => r.compId === comp.id);
+      const maxPlace = inferMaxPlaceFromStageResult(sr?.data);
+      // якщо взагалі нема даних — absent = teamsCount + 1
+      const fallbackMax = Math.max(0, state.teams.length);
+      const useMax = Number.isFinite(maxPlace) && maxPlace > 0 ? maxPlace : fallbackMax;
+      absentByCompId.set(comp.id, useMax + 1);
+    });
+
+    state.ratingData = state.teams.map((team) => {
       const stageScores = [];
       let totalPoints = 0;
       let totalWeight = 0;
       let maxBigFish = 0;
 
-      // Проходимо по всіх етапах сезону
-      state.competitions.forEach(comp => {
-        const stageResult = state.stageResults.find(r => r.compId === comp.id);
-        const hasRegistration = team.registrations.some(r => r.compId === comp.id);
-        
+      state.competitions.forEach((comp) => {
+        const stageResult = state.stageResults.find((r) => r.compId === comp.id);
+        const hasRegistration = team.registrations.some((r) => r.compId === comp.id);
+        const absentPoints = absentByCompId.get(comp.id) ?? (state.teams.length + 1);
+
         const score = {
           stageNumber: comp.stageNumber,
           compId: comp.id,
           isFinished: comp.isFinished,
-          place: null,
-          points: null,
+          place: '—',
+          points: '—',
           weight: 0,
           bigFish: 0,
-          participated: false
+          participated: false,
         };
 
         if (!comp.isFinished) {
-          // Етап ще не завершено — показуємо "—"
-          score.place = '—';
-          score.points = '—';
-        } else {
-          // Етап завершено
-          const teamResult = stageResult?.data?.teams?.[team.id];
-          
-          if (teamResult) {
-            // Команда брала участь і має результати
-            score.place = teamResult.place || teamResult.rank || '—';
-            score.points = teamResult.points || score.place || CONFIG.defaults.absentPoints;
-            score.weight = teamResult.totalWeight || teamResult.weight || 0;
-            score.bigFish = teamResult.bigFish || teamResult.bigFishKg || 0;
-            score.participated = true;
-          } else if (hasRegistration) {
-            // Була реєстрація, але немає результатів (можливо, знялась або дискваліфікація)
-            score.place = '—';
-            score.points = CONFIG.defaults.absentPoints;
-            score.weight = 0;
-            score.bigFish = 0;
-          } else {
-            // Не було реєстрації на цей етап — штрафні бали
-            score.place = '—';
-            score.points = CONFIG.defaults.absentPoints;
-            score.weight = 0;
-            score.bigFish = 0;
-          }
-
-          // Додаємо до підсумків тільки якщо етап завершено
-          const pointsNum = typeof score.points === 'number' ? score.points : CONFIG.defaults.absentPoints;
-          totalPoints += pointsNum;
-          totalWeight += score.weight;
-          maxBigFish = Math.max(maxBigFish, score.bigFish);
+          // ще не finished
+          stageScores.push(score);
+          return;
         }
+
+        // finished: шукаємо результат команди
+        const teamResult = pickTeamResult(stageResult?.data, team.id);
+
+        if (teamResult) {
+          const placeNum = toNumberOrNull(teamResult.place ?? teamResult.rank ?? teamResult.sectorPlace);
+          const pointsNum = toNumberOrNull(teamResult.points);
+
+          score.place = placeNum ?? '—';
+          // points: якщо є points — беремо. якщо нема — points = placeNum. якщо нема й place — absentPoints
+          score.points = pointsNum ?? placeNum ?? absentPoints;
+
+          score.weight = toNumberOrZero(teamResult.totalWeight ?? teamResult.totalWeightKg ?? teamResult.weight ?? 0);
+          score.bigFish = toNumberOrZero(teamResult.bigFish ?? teamResult.bigFishKg ?? 0);
+          score.participated = true;
+        } else if (hasRegistration) {
+          // була confirmed реєстрація, але немає результату
+          score.place = '—';
+          score.points = absentPoints;
+        } else {
+          // не було confirmed реєстрації на етап — теж absent
+          score.place = '—';
+          score.points = absentPoints;
+        }
+
+        // підсумки (лише finished)
+        const p = typeof score.points === 'number' && Number.isFinite(score.points) ? score.points : absentPoints;
+        totalPoints += p;
+        totalWeight += score.weight;
+        maxBigFish = Math.max(maxBigFish, score.bigFish);
 
         stageScores.push(score);
       });
@@ -276,22 +307,17 @@
         totalPoints,
         totalWeight,
         maxBigFish,
-        registrationsCount: team.registrations.length
+        registrationsCount: team.registrations.length,
       };
     });
 
-    // Сортування: 1) бали (менше), 2) вага (більше), 3) біг фіш (більше)
+    // Sort: points asc, weight desc, bigFish desc
     state.ratingData.sort((a, b) => {
-      if (a.totalPoints !== b.totalPoints) {
-        return a.totalPoints - b.totalPoints;
-      }
-      if (a.totalWeight !== b.totalWeight) {
-        return b.totalWeight - a.totalWeight;
-      }
+      if (a.totalPoints !== b.totalPoints) return a.totalPoints - b.totalPoints;
+      if (a.totalWeight !== b.totalWeight) return b.totalWeight - a.totalWeight;
       return b.maxBigFish - a.maxBigFish;
     });
 
-    // Призначаємо місця та статус фіналіста
     state.ratingData.forEach((r, idx) => {
       r.seasonPlace = idx + 1;
       r.isFinalist = idx < CONFIG.defaults.finalSpots;
@@ -299,27 +325,24 @@
     });
   }
 
-  // ==================== РЕНДЕРИНГ ====================
+  // ==================== RENDER ====================
 
   function renderTable() {
     const topTbody = document.getElementById('season-top');
     const contendersTbody = document.getElementById('season-contenders');
 
     if (!topTbody || !contendersTbody) {
-      console.error('[Rating] Не знайдено елементи таблиць');
+      console.error('[Rating] Не знайдено season-top або season-contenders');
       return;
     }
 
-    // Розділяємо на фіналістів і претендентів
-    const finalists = state.ratingData.filter(r => r.isFinalist);
-    const contenders = state.ratingData.filter(r => !r.isFinalist);
+    const finalists = state.ratingData.filter((r) => r.isFinalist);
+    const contenders = state.ratingData.filter((r) => !r.isFinalist);
 
-    // Рендеримо фіналістів (1-18 місце)
-    topTbody.innerHTML = finalists.map(r => createRowHTML(r, true)).join('');
+    topTbody.innerHTML = finalists.map((r) => createRowHTML(r, true)).join('');
 
-    // Рендеримо претендентів (19+ місце)
     if (contenders.length > 0) {
-      contendersTbody.innerHTML = contenders.map(r => createRowHTML(r, false)).join('');
+      contendersTbody.innerHTML = contenders.map((r) => createRowHTML(r, false)).join('');
     } else {
       contendersTbody.innerHTML = `
         <tr>
@@ -332,21 +355,21 @@
   }
 
   function createRowHTML(rating, isFinalist) {
-    // Форматування чисел
-    const fmtWeight = (w) => w > 0 ? w.toFixed(3) : '—';
-    const fmtBigFish = (bf) => bf > 0 ? bf.toFixed(3) : '—';
-    
-    // Створюємо комірки етапів (E1-E5) — беремо перші 5 етапів
-    const stageCells = rating.stageScores
-      .slice(0, CONFIG.defaults.maxStages)
-      .map(sc => {
+    const fmtWeight = (w) => (w > 0 ? w.toFixed(3) : '—');
+    const fmtBigFish = (bf) => (bf > 0 ? bf.toFixed(3) : '—');
+
+    const visibleScores = rating.stageScores.slice(0, CONFIG.defaults.maxStages);
+
+    const stageCells = visibleScores
+      .map((sc) => {
         if (!sc.isFinished) {
           return `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`;
         }
-        
-        const placeDisplay = sc.participated && sc.place !== '—' ? sc.place : '—';
-        const pointsDisplay = sc.points !== '—' ? sc.points : '—';
-        
+
+        const placeDisplay =
+          sc.participated && sc.place !== '—' && sc.place !== null && sc.place !== undefined ? sc.place : '—';
+        const pointsDisplay = typeof sc.points === 'number' ? sc.points : '—';
+
         return `
           <td class="col-stage">
             <div class="stage-cell">
@@ -356,15 +379,14 @@
             </div>
           </td>
         `;
-      }).join('');
+      })
+      .join('');
 
-    // Доповнюємо порожніми колонками, якщо етапів менше 5
-    const missingStages = CONFIG.defaults.maxStages - rating.stageScores.length;
-    const emptyCells = Array(missingStages).fill(
-      `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`
-    ).join('');
+    const missingStages = Math.max(0, CONFIG.defaults.maxStages - visibleScores.length);
+    const emptyCells = Array(missingStages)
+      .fill(`<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`)
+      .join('');
 
-    // Рух (placeholder — можна додати порівняння з попереднім тижнем)
     const moveClass = 'move--same';
     const moveIcon = '—';
 
@@ -383,17 +405,100 @@
   }
 
   function updateStagesAttribute() {
-    // Встановлюємо атрибут для CSS приховування колонок
-    document.body.setAttribute('data-stages', state.finishedStagesCount);
+    document.body.setAttribute('data-stages', String(state.finishedStagesCount || 0));
   }
 
-  // ==================== УТИЛІТИ ====================
+  // ==================== HELPERS ====================
 
   function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = String(text);
     return div.innerHTML;
+  }
+
+  function toNumberOrNull(v) {
+    if (v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function toNumberOrZero(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  /**
+   * Повертає teamResult з stageResults data для teamId.
+   * Підтримує формати:
+   * 1) data.teamsByTeamId[teamId]
+   * 2) data.teams[teamId] (map)
+   * 3) data.teams = [{teamId, ...}, ...] (array)
+   * 4) data.teams = [{id: teamId, ...}, ...] (array)
+   */
+  function pickTeamResult(stageData, teamId) {
+    if (!stageData || !teamId) return null;
+
+    // 1) teamsByTeamId
+    if (stageData.teamsByTeamId && typeof stageData.teamsByTeamId === 'object') {
+      const tr = stageData.teamsByTeamId[teamId];
+      if (tr) return tr;
+    }
+
+    const teams = stageData.teams;
+
+    // 2) teams map
+    if (teams && !Array.isArray(teams) && typeof teams === 'object') {
+      const tr = teams[teamId];
+      if (tr) return tr;
+    }
+
+    // 3) teams array
+    if (Array.isArray(teams)) {
+      return teams.find((t) => t && (t.teamId === teamId || t.id === teamId)) || null;
+    }
+
+    return null;
+  }
+
+  /**
+   * Визначає maxPlace з stageResults:
+   * - якщо teams array: max(place)
+   * - якщо teams map: max(place)
+   * - якщо є поле maxPlace / teamsCount: беремо як підказку
+   */
+  function inferMaxPlaceFromStageResult(stageData) {
+    if (!stageData) return null;
+
+    const hinted = toNumberOrNull(stageData.maxPlace);
+    if (hinted) return hinted;
+
+    const teamsCount = toNumberOrNull(stageData.teamsCount);
+    // teamsCount сам по собі може бути “кількість”, але maxPlace не завжди == teamsCount
+    // беремо як fallback тільки якщо нема інших даних
+    let max = null;
+
+    const teams = stageData.teamsByTeamId || stageData.teams;
+
+    if (Array.isArray(teams)) {
+      teams.forEach((t) => {
+        const p = toNumberOrNull(t?.place ?? t?.rank);
+        if (p && (max === null || p > max)) max = p;
+      });
+      if (max !== null) return max;
+    }
+
+    if (teams && !Array.isArray(teams) && typeof teams === 'object') {
+      Object.keys(teams).forEach((k) => {
+        const t = teams[k];
+        const p = toNumberOrNull(t?.place ?? t?.rank);
+        if (p && (max === null || p > max)) max = p;
+      });
+      if (max !== null) return max;
+    }
+
+    if (teamsCount) return teamsCount;
+    return null;
   }
 
   function showError(msg) {
@@ -402,18 +507,17 @@
       container.innerHTML = `
         <div style="color:#ef4444;padding:40px 20px;text-align:center;background:#0b0d14;border-radius:14px;">
           <div style="font-size:1.2rem;margin-bottom:10px;">⚠️ Помилка завантаження</div>
-          <div style="opacity:0.8;">${msg}</div>
+          <div style="opacity:0.8;">${escapeHtml(msg)}</div>
         </div>
       `;
     }
   }
 
-  // ==================== ПУБЛІЧНИЙ API ====================
+  // ==================== PUBLIC API ====================
 
   window.SeasonRating = {
     refresh: init,
     getState: () => ({ ...state }),
-    getConfig: () => ({ ...CONFIG })
+    getConfig: () => ({ ...CONFIG }),
   };
-
 })();

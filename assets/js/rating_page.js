@@ -1,616 +1,419 @@
-// assets/js/rating_page.js
-// STOLAR CARP — Rating Page (ENTERPRISE GRADE)
-// 🔥 ВСЕ ВКЛЮЧЕНО: fault-tolerance, retry, offline, cache, hot-reload
+/**
+ * rating_page.js — Рейтинг сезону STOLAR CARP
+ * Архітектура: Firebase Firestore, колекції competitions/registrations/seasonRating
+ */
 
-(function () {
-  "use strict";
+(function() {
+  'use strict';
 
-  // ======================================================
-  // 0) КОНФІГУРАЦІЯ
-  // ======================================================
+  // ==================== КОНФІГУРАЦІЯ ====================
+
   const CONFIG = {
-    RETRY_MAX_ATTEMPTS: 3,
-    RETRY_BASE_DELAY: 1000,
-    CACHE_REFRESH_INTERVAL: 5000,
-    OFFLINE_CHECK_INTERVAL: 30000
+    collections: {
+      settings: 'settings',
+      seasons: 'seasons',
+      competitions: 'competitions',
+      registrations: 'registrations',
+      seasonRating: 'seasonRating',
+      stageResults: 'stageResults'
+    },
+    docIds: {
+      appSettings: 'app'
+    },
+    defaults: {
+      absentPoints: 8,      // Бали за неучасть у завершеному етапі
+      finalSpots: 18,       // Кількість місць у фіналі
+      maxStages: 5          // Максимум етапів для відображення (E1-E5)
+    }
   };
 
-  // ======================================================
-  // 1) ІНІЦІАЛІЗАЦІЯ ТА ВАЛІДАЦІЯ
-  // ======================================================
-  const db = window.scDb;
-  if (!db || !window.firebase?.firestore) {
-    console.error("[Rating] Firebase не завантажено");
-    document.body?.setAttribute('data-error', 'firebase-missing');
-    return;
-  }
+  // ==================== СТАТ ====================
 
-  // ======================================================
-  // 2) DOM КЕШ ТА СТАН
-  // ======================================================
-  const SELECTORS = {
-    KICKER: ".season-rating-head .kicker",
-    TITLE: ".season-rating-head .page-title",
-    DESC: ".season-rating-head .rating-desc",
+  let state = {
+    seasonId: null,
+    seasonData: null,
+    competitions: [],       // Етапи сезону (type: "season", без фіналу)
+    finalComp: null,        // Фінал (якщо є)
+    teams: [],              // Команди з confirmed реєстраціями
+    ratingData: [],         // Обчислені рейтинги
+    finishedStagesCount: 0  // Для CSS [data-stages]
   };
 
-  const els = {};
-  Object.keys(SELECTORS).forEach(key => {
-    els[key.toLowerCase()] = document.querySelector(SELECTORS[key]);
-  });
+  // ==================== ІНІЦІАЛІЗАЦІЯ ====================
 
-  // Кеш колонок з data-stage
-  const stageCache = new Map();
-  let lastStages = -1;
-  let lastYear = -1;
-  let snapshotUnsubscribe = null;
-  let offlineCheckInterval = null;
-  let retryCount = 0;
-  let isDestroyed = false;
+  document.addEventListener('DOMContentLoaded', init);
 
-  // ======================================================
-  // 3) УТІЛІТІ-ФУНКЦІЇ
-  // ======================================================
-
-  // 🔄 Оновлення кешу DOM-елементів
-  function refreshStageCache() {
-    const previousSize = Array.from(stageCache.values())
-      .reduce((sum, arr) => sum + arr.length, 0);
-    
-    stageCache.clear();
-    
-    document.querySelectorAll("[data-stage]").forEach(el => {
-      const stageNum = Number(el.dataset.stage);
-      if (!isNaN(stageNum)) {
-        if (!stageCache.has(stageNum)) {
-          stageCache.set(stageNum, []);
-        }
-        stageCache.get(stageNum).push(el);
-      }
-    });
-
-    const newSize = Array.from(stageCache.values())
-      .reduce((sum, arr) => sum + arr.length, 0);
-    
-    if (previousSize !== newSize) {
-      console.log(`[Rating] Cache refreshed: ${newSize} elements`);
-    }
-  }
-
-  // 🎯 Перевірка чи є етап фіналом
-  function isFinalEvent(event) {
-    if (!event) return false;
-    
-    const eventKey = String(
-      event.key || 
-      event.stageId || 
-      event.id || 
-      event.name || 
-      ''
-    ).toLowerCase();
-    
-    return !!event.isFinal || 
-           eventKey.includes('final') ||
-           eventKey.includes('фінал');
-  }
-
-  // 📊 Підрахунок етапів без фіналу
-  function countNonFinalStages(events) {
-    if (!Array.isArray(events)) return 0;
-    
-    return events.reduce((count, event) => {
-      return count + (isFinalEvent(event) ? 0 : 1);
-    }, 0);
-  }
-
-  // 🌐 Визначення стану з'єднання
-  function updateConnectionStatus(isOffline) {
-    if (isDestroyed) return;
-    
-    const body = document.body;
-    if (!body) return;
-    
-    body.toggleAttribute('data-offline', isOffline);
-    
-    if (isOffline) {
-      body.setAttribute('data-last-online', new Date().toLocaleTimeString());
-    }
-  }
-
-  // ======================================================
-  // 4) ОСНОВНА ЛОГІКА ВІДОБРАЖЕННЯ
-  // ======================================================
-
-  // 🏆 Застосування кількості етапів до таблиці
-  function applyStages(stagesCount) {
-    if (isDestroyed) return;
-    
-    const count = Number(stagesCount) || 0;
-    
-    // Оптимізація: не робимо нічого якщо нічого не змінилося
-    if (count === lastStages) return;
-    lastStages = count;
-    
-    // Оновлюємо атрибут для CSS
-    document.body.setAttribute('data-stages', count.toString());
-    
-    // Швидке оновлення всіх відповідних елементів
-    stageCache.forEach((elements, stageNum) => {
-      const shouldShow = stageNum >= 1 && stageNum <= count;
-      const displayValue = shouldShow ? '' : 'none';
+  async function init() {
+    try {
+      showLoadingState();
       
-      elements.forEach(el => {
-        if (el.style.display !== displayValue) {
-          el.style.display = displayValue;
-        }
+      const db = getDb();
+      if (!db) throw new Error('Firebase DB не доступний');
+
+      // Крок 1: Отримуємо поточний сезон
+      await loadCurrentSeason(db);
+      
+      // Крок 2: Завантажуємо етапи сезону
+      await loadCompetitions(db);
+      
+      // Крок 3: Завантажуємо команди з confirmed реєстраціями
+      await loadTeams(db);
+      
+      // Крок 4: Завантажуємо агреговані результати етапів
+      await loadStageResults(db);
+      
+      // Крок 5: Обчислюємо рейтинг
+      calculateRatings();
+      
+      // Крок 6: Рендеримо таблицю
+      renderTable();
+      
+      // Крок 7: Оновлюємо CSS-атрибут
+      updateStagesAttribute();
+      
+      console.log(`[Rating] Сезон ${state.seasonId}: ${state.teams.length} команд, ${state.finishedStagesCount} завершених етапів`);
+      
+    } catch (err) {
+      console.error('[Rating] Помилка:', err);
+      showError('Не вдалося завантажити рейтинг. Спробуйте оновити сторінку.');
+    }
+  }
+
+  function getDb() {
+    return window.firebase?.db || window.db;
+  }
+
+  function showLoadingState() {
+    document.body.setAttribute('data-stages', '0');
+  }
+
+  // ==================== ЗАВАНТАЖЕННЯ ДАНИХ ====================
+
+  async function loadCurrentSeason(db) {
+    const settingsSnap = await db
+      .collection(CONFIG.collections.settings)
+      .doc(CONFIG.docIds.appSettings)
+      .get();
+    
+    if (!settingsSnap.exists) {
+      throw new Error('Не знайдено налаштування app');
+    }
+    
+    const settings = settingsSnap.data();
+    state.seasonId = settings.activeSeasonId;
+    
+    if (!state.seasonId) {
+      throw new Error('Не встановлено activeSeasonId');
+    }
+
+    // Завантажуємо інфо про сезон
+    const seasonSnap = await db
+      .collection(CONFIG.collections.seasons)
+      .doc(state.seasonId)
+      .get();
+    
+    state.seasonData = seasonSnap.exists ? seasonSnap.data() : {};
+  }
+
+  async function loadCompetitions(db) {
+    // Всі змагання сезону, type: "season", сортуємо за stageNumber
+    const compsSnap = await db
+      .collection(CONFIG.collections.competitions)
+      .where('seasonId', '==', state.seasonId)
+      .where('type', '==', 'season')
+      .orderBy('stageNumber')
+      .get();
+
+    state.competitions = compsSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      isFinished: doc.data().status === 'finished'
+    }));
+
+    // Рахуємо завершені етапи для CSS
+    state.finishedStagesCount = state.competitions.filter(c => c.isFinished).length;
+
+    // Шукаємо фінал окремо (якщо потрібно буде)
+    const finalSnap = await db
+      .collection(CONFIG.collections.competitions)
+      .where('seasonId', '==', state.seasonId)
+      .where('type', '==', 'oneoff')
+      .where('isFinal', '==', true)
+      .limit(1)
+      .get();
+    
+    if (!finalSnap.empty) {
+      state.finalComp = { id: finalSnap.docs[0].id, ...finalSnap.docs[0].data() };
+    }
+  }
+
+  async function loadTeams(db) {
+    // Отримуємо ВСІХ унікальних команд, які мають confirmed реєстрацію на будь-який етап сезону
+    const regsSnap = await db
+      .collection(CONFIG.collections.registrations)
+      .where('seasonId', '==', state.seasonId)
+      .where('status', '==', 'confirmed')
+      .get();
+
+    // Групуємо по teamId, збираємо на які етапи зареєстрована команда
+    const teamsMap = new Map();
+
+    regsSnap.docs.forEach(doc => {
+      const reg = doc.data();
+      const teamId = reg.teamId;
+      
+      if (!teamsMap.has(teamId)) {
+        teamsMap.set(teamId, {
+          id: teamId,
+          name: reg.teamName || 'Без назви',
+          registrations: [] // { compId, stageNumber }
+        });
+      }
+      
+      const team = teamsMap.get(teamId);
+      
+      // Знаходимо stageNumber для цього compId
+      const comp = state.competitions.find(c => c.id === reg.competitionId);
+      const stageNumber = comp ? comp.stageNumber : null;
+      
+      team.registrations.push({
+        compId: reg.competitionId,
+        stageNumber: stageNumber,
+        regId: doc.id
       });
     });
-    
-    // Додатковий захист: приховати всі елементи з data-stage > count
-    document.querySelectorAll('[data-stage]').forEach(el => {
-      const stageNum = Number(el.dataset.stage);
-      if (stageNum > count) {
-        el.style.display = 'none';
-      }
+
+    state.teams = Array.from(teamsMap.values());
+  }
+
+  async function loadStageResults(db) {
+    // Завантажуємо stageResults для всіх етапів
+    const resultsPromises = state.competitions.map(async comp => {
+      const resultSnap = await db
+        .collection(CONFIG.collections.stageResults)
+        .doc(comp.id)
+        .get();
+      
+      return {
+        compId: comp.id,
+        stageNumber: comp.stageNumber,
+        isFinished: comp.isFinished,
+        data: resultSnap.exists ? resultSnap.data() : null
+      };
     });
-    
-    console.log(`[Rating] Applied ${count} stages`);
+
+    state.stageResults = await Promise.all(resultsPromises);
   }
 
-  // 📝 Оновлення заголовків
-  function updateHeaders(year) {
-    if (isDestroyed) return;
-    
-    const currentYear = year || new Date().getFullYear();
-    if (currentYear === lastYear) return;
-    lastYear = currentYear;
-    
-    if (els.kicker) {
-      els.kicker.textContent = `СЕЗОН ${currentYear}`;
-    }
-    
-    if (els.title) {
-      els.title.textContent = 'Рейтинг сезону STOLAR CARP';
-    }
-  }
+  // ==================== ОБЧИСЛЕННЯ РЕЙТИНГІВ ====================
 
-  // 🔽 Кнопка "Детальніше"
-  function setupDescriptionToggle() {
-    if (!els.desc || !els.title || isDestroyed) return;
-    if (document.getElementById('ratingDescToggle')) return;
-    
-    // Приховуємо опис за замовчуванням
-    els.desc.hidden = true;
-    
-    // Створюємо унікальний ID якщо потрібно
-    if (!els.desc.id) {
-      els.desc.id = 'ratingDescription_' + Date.now();
-    }
-    
-    // Створюємо кнопку
-    const toggleBtn = document.createElement('button');
-    toggleBtn.id = 'ratingDescToggle';
-    toggleBtn.className = 'btn btn--ghost rating-toggle-btn';
-    toggleBtn.innerHTML = `
-      <span>Детальніше…</span>
-      <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24">
-        <path fill="currentColor" d="M7 10l5 5 5-5z"/>
-      </svg>
-    `;
-    
-    toggleBtn.setAttribute('aria-expanded', 'false');
-    toggleBtn.setAttribute('aria-controls', els.desc.id);
-    
-    // Обробник кліку
-    toggleBtn.addEventListener('click', () => {
-      const willBeVisible = els.desc.hidden;
-      els.desc.hidden = !willBeVisible;
-      
-      // Оновлюємо стан
-      toggleBtn.setAttribute('aria-expanded', willBeVisible.toString());
-      toggleBtn.querySelector('span').textContent = 
-        willBeVisible ? 'Згорнути' : 'Детальніше…';
-      
-      // Анімація іконки
-      const icon = toggleBtn.querySelector('.toggle-icon');
-      icon.style.transform = willBeVisible ? 'rotate(180deg)' : 'rotate(0)';
-      
-      // Подія для аналітики
-      window.dispatchEvent(new CustomEvent('rating-description-toggle', {
-        detail: { expanded: willBeVisible }
-      }));
-    });
-    
-    // Додаємо після заголовка
-    els.title.insertAdjacentElement('afterend', toggleBtn);
-  }
+  function calculateRatings() {
+    state.ratingData = state.teams.map(team => {
+      const stageScores = [];
+      let totalPoints = 0;
+      let totalWeight = 0;
+      let maxBigFish = 0;
 
-  // ======================================================
-  // 5) РОБОТА З ДАНИМИ
-  // ======================================================
-
-  // 🔍 Пошук ID сезону (багаторівневий)
-  async function findSeasonId() {
-    // Рівень 1: Глобальні змінні
-    const globalSources = [
-      window.SC_ACTIVE_SEASON_ID,
-      window.scActiveSeasonId,
-      window.scSeasonId,
-      window.SC_SEASON_ID,
-      window.currentSeasonId,
-      window.activeSeasonId
-    ];
-    
-    for (const source of globalSources) {
-      if (source) {
-        const id = String(source).trim();
-        if (id) {
-          console.log('[Rating] Found season ID from globals:', id);
-          return id;
-        }
-      }
-    }
-    
-    // Рівень 2: Налаштування Firestore
-    try {
-      const settingsDoc = await db.collection('settings').doc('active').get();
-      
-      if (settingsDoc.exists) {
-        const data = settingsDoc.data() || {};
-        const settingKeys = [
-          'seasonId',
-          'competitionId',
-          'activeSeasonId',
-          'currentSeasonId',
-          'activeCompetitionId'
-        ];
+      // Проходимо по всіх етапах сезону
+      state.competitions.forEach(comp => {
+        const stageResult = state.stageResults.find(r => r.compId === comp.id);
+        const hasRegistration = team.registrations.some(r => r.compId === comp.id);
         
-        for (const key of settingKeys) {
-          if (data[key]) {
-            const id = String(data[key]).trim();
-            if (id) {
-              console.log('[Rating] Found season ID from settings:', id);
-              return id;
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('[Rating] Failed to read settings:', error);
-    }
-    
-    // Рівень 3: Пошук активного сезону
-    try {
-      const now = new Date().toISOString();
-      
-      // Спроба 1: Активний сезон за датами
-      let snapshot = await db.collection('competitions')
-        .where('status', 'in', ['active', 'published', 'running'])
-        .where('startDate', '<=', now)
-        .where('endDate', '>=', now)
-        .orderBy('startDate', 'desc')
-        .limit(1)
-        .get();
-      
-      if (!snapshot.empty) {
-        const id = snapshot.docs[0].id;
-        console.log('[Rating] Found active season by date:', id);
-        return id;
-      }
-      
-      // Спроба 2: Останній сезон за роком
-      const currentYear = new Date().getFullYear();
-      snapshot = await db.collection('competitions')
-        .where('year', '==', currentYear)
-        .orderBy('createdAt', 'desc')
-        .limit(1)
-        .get();
-      
-      if (!snapshot.empty) {
-        const id = snapshot.docs[0].id;
-        console.log('[Rating] Found season by current year:', id);
-        return id;
-      }
-      
-      // Спроба 3: Будь-який сезон
-      snapshot = await db.collection('competitions')
-        .orderBy('year', 'desc')
-        .limit(1)
-        .get();
-      
-      if (!snapshot.empty) {
-        const id = snapshot.docs[0].id;
-        console.log('[Rating] Found latest season:', id);
-        return id;
-      }
-      
-    } catch (error) {
-      console.error('[Rating] Season lookup failed:', error);
-    }
-    
-    // Рівень 4: URL параметри
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const seasonFromUrl = urlParams.get('season') || 
-                           urlParams.get('competition') || 
-                           urlParams.get('seasonId');
-      
-      if (seasonFromUrl) {
-        console.log('[Rating] Found season ID from URL:', seasonFromUrl);
-        return seasonFromUrl.trim();
-      }
-    } catch (error) {
-      console.warn('[Rating] Failed to parse URL params:', error);
-    }
-    
-    console.warn('[Rating] No season ID found');
-    return null;
-  }
+        const score = {
+          stageNumber: comp.stageNumber,
+          compId: comp.id,
+          isFinished: comp.isFinished,
+          place: null,
+          points: null,
+          weight: 0,
+          bigFish: 0,
+          participated: false
+        };
 
-  // 🔄 Retry-механізм для snapshot
-  function createRetrySubscription(seasonId) {
-    let currentUnsubscribe = null;
-    let isActive = true;
-    
-    const attemptSubscribe = (attempt = 1) => {
-      if (!isActive || isDestroyed) return;
-      
-      console.log(`[Rating] Snapshot attempt ${attempt}/${CONFIG.RETRY_MAX_ATTEMPTS}`);
-      
-      try {
-        currentUnsubscribe = db.collection('competitions')
-          .doc(seasonId)
-          .onSnapshot(
-            // Успішна обробка
-            (snapshot) => {
-              if (!isActive || isDestroyed) return;
-              
-              retryCount = 0; // Скидаємо лічильник при успіху
-              
-              // Статус з'єднання
-              updateConnectionStatus(snapshot.metadata.fromCache);
-              
-              // Автооновлення кешу при потребі
-              if (performance.now() - lastCacheRefresh > CONFIG.CACHE_REFRESH_INTERVAL) {
-                refreshStageCache();
-                lastCacheRefresh = performance.now();
-              }
-              
-              // Обробка даних
-              if (!snapshot.exists) {
-                applyStages(0);
-                updateHeaders(new Date().getFullYear());
-                document.body.removeAttribute('data-loading');
-                return;
-              }
-              
-              const data = snapshot.data();
-              const year = data.year || data.seasonYear || new Date().getFullYear();
-              
-              // Визначення кількості етапів
-              let stagesCount = 0;
-              if (typeof data.stagesCount === 'number' && data.stagesCount > 0) {
-                stagesCount = data.stagesCount;
-              } else if (data.events) {
-                stagesCount = countNonFinalStages(data.events);
-              }
-              
-              updateHeaders(year);
-              applyStages(stagesCount);
-              document.body.removeAttribute('data-loading');
-            },
-            
-            // Обробка помилок з retry
-            (error) => {
-              if (!isActive || isDestroyed) return;
-              
-              console.error(`[Rating] Snapshot error (attempt ${attempt}):`, error);
-              
-              // Скасовуємо поточну підписку
-              if (currentUnsubscribe) {
-                currentUnsubscribe();
-                currentUnsubscribe = null;
-              }
-              
-              // Перевіряємо чи варто пробувати ще
-              if (attempt < CONFIG.RETRY_MAX_ATTEMPTS) {
-                const delay = CONFIG.RETRY_BASE_DELAY * Math.pow(2, attempt - 1);
-                
-                console.log(`[Rating] Retrying in ${delay}ms...`);
-                
-                setTimeout(() => {
-                  if (isActive && !isDestroyed) {
-                    attemptSubscribe(attempt + 1);
-                  }
-                }, delay);
-              } else {
-                // Максимальна кількість спроб досягнута
-                console.error('[Rating] Max retry attempts reached');
-                document.body.setAttribute('data-error', 'snapshot-failed');
-                document.body.removeAttribute('data-loading');
-              }
-            }
-          );
+        if (!comp.isFinished) {
+          // Етап ще не завершено — показуємо "—"
+          score.place = '—';
+          score.points = '—';
+        } else {
+          // Етап завершено
+          const teamResult = stageResult?.data?.teams?.[team.id];
           
-      } catch (error) {
-        console.error('[Rating] Subscription setup failed:', error);
-        
-        if (attempt < CONFIG.RETRY_MAX_ATTEMPTS) {
-          setTimeout(() => attemptSubscribe(attempt + 1), 
-                    CONFIG.RETRY_BASE_DELAY * attempt);
-        }
-      }
-    };
-    
-    // Почати підписку
-    attemptSubscribe(1);
-    
-    // Функція для скасування
-    return () => {
-      isActive = false;
-      if (currentUnsubscribe) {
-        currentUnsubscribe();
-        currentUnsubscribe = null;
-      }
-    };
-  }
+          if (teamResult) {
+            // Команда брала участь і має результати
+            score.place = teamResult.place || teamResult.rank || '—';
+            score.points = teamResult.points || score.place || CONFIG.defaults.absentPoints;
+            score.weight = teamResult.totalWeight || teamResult.weight || 0;
+            score.bigFish = teamResult.bigFish || teamResult.bigFishKg || 0;
+            score.participated = true;
+          } else if (hasRegistration) {
+            // Була реєстрація, але немає результатів (можливо, знялась або дискваліфікація)
+            score.place = '—';
+            score.points = CONFIG.defaults.absentPoints;
+            score.weight = 0;
+            score.bigFish = 0;
+          } else {
+            // Не було реєстрації на цей етап — штрафні бали
+            score.place = '—';
+            score.points = CONFIG.defaults.absentPoints;
+            score.weight = 0;
+            score.bigFish = 0;
+          }
 
-  // ======================================================
-  // 6) ІНІЦІАЛІЗАЦІЯ ТА ЖИТТЄВИЙ ЦИКЛ
-  // ======================================================
+          // Додаємо до підсумків тільки якщо етап завершено
+          const pointsNum = typeof score.points === 'number' ? score.points : CONFIG.defaults.absentPoints;
+          totalPoints += pointsNum;
+          totalWeight += score.weight;
+          maxBigFish = Math.max(maxBigFish, score.bigFish);
+        }
 
-  let lastCacheRefresh = 0;
-  
-  async function initialize() {
-    if (isDestroyed) return;
-    
-    console.log('[Rating] Initializing...');
-    
-    try {
-      // Встановлюємо стан завантаження
-      document.body.setAttribute('data-loading', 'true');
-      
-      // Налаштовуємо UI компоненти
-      setupDescriptionToggle();
-      refreshStageCache();
-      
-      // Пошук сезону
-      const seasonId = await findSeasonId();
-      
-      if (!seasonId) {
-        // Режим без сезону
-        applyStages(0);
-        updateHeaders(new Date().getFullYear());
-        document.body.removeAttribute('data-loading');
-        document.body.setAttribute('data-mode', 'no-season');
-        return;
-      }
-      
-      console.log('[Rating] Using season:', seasonId);
-      
-      // Скасовуємо попередню підписку
-      if (snapshotUnsubscribe) {
-        snapshotUnsubscribe();
-      }
-      
-      // Створюємо нову підписку з retry
-      snapshotUnsubscribe = createRetrySubscription(seasonId);
-      
-      // Моніторинг offline статусу
-      if (offlineCheckInterval) {
-        clearInterval(offlineCheckInterval);
-      }
-      
-      offlineCheckInterval = setInterval(() => {
-        if (navigator.onLine === false) {
-          updateConnectionStatus(true);
-        }
-      }, CONFIG.OFFLINE_CHECK_INTERVAL);
-      
-      // Обробник візуального оновлення
-      window.addEventListener('visibilitychange', () => {
-        if (!document.hidden && performance.now() - lastCacheRefresh > 10000) {
-          refreshStageCache();
-        }
+        stageScores.push(score);
       });
-      
-    } catch (error) {
-      console.error('[Rating] Initialization failed:', error);
-      document.body.setAttribute('data-error', 'init-failed');
-      document.body.removeAttribute('data-loading');
-    }
-  }
 
-  // 🧹 Очищення ресурсів
-  function destroy() {
-    if (isDestroyed) return;
-    
-    console.log('[Rating] Cleaning up...');
-    isDestroyed = true;
-    
-    // Скасовуємо snapshot
-    if (snapshotUnsubscribe) {
-      snapshotUnsubscribe();
-      snapshotUnsubscribe = null;
-    }
-    
-    // Очищуємо інтервали
-    if (offlineCheckInterval) {
-      clearInterval(offlineCheckInterval);
-      offlineCheckInterval = null;
-    }
-    
-    // Очищуємо кеш
-    stageCache.clear();
-    
-    // Видаляємо атрибути
-    document.body.removeAttribute('data-loading');
-    document.body.removeAttribute('data-offline');
-    document.body.removeAttribute('data-stages');
-    
-    // Видаляємо кнопку toggle
-    const toggleBtn = document.getElementById('ratingDescToggle');
-    if (toggleBtn && toggleBtn.parentNode) {
-      toggleBtn.parentNode.removeChild(toggleBtn);
-    }
-  }
+      return {
+        teamId: team.id,
+        teamName: team.name,
+        stageScores,
+        totalPoints,
+        totalWeight,
+        maxBigFish,
+        registrationsCount: team.registrations.length
+      };
+    });
 
-  // ======================================================
-  // 7) PUBLIC API ТА INTEGRATION
-  // ======================================================
-  
-  // Експортуємо публічні методи
-  window.SC_RatingPage = {
-    initialize,
-    destroy,
-    refreshCache: refreshStageCache,
-    getState: () => ({
-      stages: lastStages,
-      year: lastYear,
-      isDestroyed,
-      cacheSize: stageCache.size
-    }),
-    
-    // Ручне оновлення (для dev tools)
-    forceUpdate: async (customSeasonId) => {
-      if (customSeasonId) {
-        if (snapshotUnsubscribe) snapshotUnsubscribe();
-        snapshotUnsubscribe = createRetrySubscription(customSeasonId);
-      } else {
-        await initialize();
+    // Сортування: 1) бали (менше), 2) вага (більше), 3) біг фіш (більше)
+    state.ratingData.sort((a, b) => {
+      if (a.totalPoints !== b.totalPoints) {
+        return a.totalPoints - b.totalPoints;
       }
-    }
-  };
-
-  // ======================================================
-  // 8) HOT RELoad ПІДТРИМКА
-  // ======================================================
-  
-  // Для Vite/Webpack HMR
-  if (import.meta?.hot) {
-    import.meta.hot.dispose(() => {
-      destroy();
+      if (a.totalWeight !== b.totalWeight) {
+        return b.totalWeight - a.totalWeight;
+      }
+      return b.maxBigFish - a.maxBigFish;
     });
+
+    // Призначаємо місця та статус фіналіста
+    state.ratingData.forEach((r, idx) => {
+      r.seasonPlace = idx + 1;
+      r.isFinalist = idx < CONFIG.defaults.finalSpots;
+      r.finalStatus = r.isFinalist ? 'Так' : '—';
+    });
+  }
+
+  // ==================== РЕНДЕРИНГ ====================
+
+  function renderTable() {
+    const topTbody = document.getElementById('season-top');
+    const contendersTbody = document.getElementById('season-contenders');
+
+    if (!topTbody || !contendersTbody) {
+      console.error('[Rating] Не знайдено елементи таблиць');
+      return;
+    }
+
+    // Розділяємо на фіналістів і претендентів
+    const finalists = state.ratingData.filter(r => r.isFinalist);
+    const contenders = state.ratingData.filter(r => !r.isFinalist);
+
+    // Рендеримо фіналістів (1-18 місце)
+    topTbody.innerHTML = finalists.map(r => createRowHTML(r, true)).join('');
+
+    // Рендеримо претендентів (19+ місце)
+    if (contenders.length > 0) {
+      contendersTbody.innerHTML = contenders.map(r => createRowHTML(r, false)).join('');
+    } else {
+      contendersTbody.innerHTML = `
+        <tr>
+          <td colspan="12" style="text-align:center;padding:20px;opacity:0.7;">
+            Поки що немає команд поза зоною фіналу
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  function createRowHTML(rating, isFinalist) {
+    // Форматування чисел
+    const fmtWeight = (w) => w > 0 ? w.toFixed(3) : '—';
+    const fmtBigFish = (bf) => bf > 0 ? bf.toFixed(3) : '—';
     
-    import.meta.hot.accept(() => {
-      console.log('[Rating] Hot reload detected');
-      setTimeout(initialize, 100);
-    });
+    // Створюємо комірки етапів (E1-E5) — беремо перші 5 етапів
+    const stageCells = rating.stageScores
+      .slice(0, CONFIG.defaults.maxStages)
+      .map(sc => {
+        if (!sc.isFinished) {
+          return `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`;
+        }
+        
+        const placeDisplay = sc.participated && sc.place !== '—' ? sc.place : '—';
+        const pointsDisplay = sc.points !== '—' ? sc.points : '—';
+        
+        return `
+          <td class="col-stage">
+            <div class="stage-cell">
+              <span class="stage-place">${placeDisplay}</span>
+              <span class="stage-slash">/</span>
+              <span class="stage-points">${pointsDisplay}</span>
+            </div>
+          </td>
+        `;
+      }).join('');
+
+    // Доповнюємо порожніми колонками, якщо етапів менше 5
+    const missingStages = CONFIG.defaults.maxStages - rating.stageScores.length;
+    const emptyCells = Array(missingStages).fill(
+      `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`
+    ).join('');
+
+    // Рух (placeholder — можна додати порівняння з попереднім тижнем)
+    const moveClass = 'move--same';
+    const moveIcon = '—';
+
+    return `
+      <tr class="${isFinalist ? 'row-qualified' : ''}">
+        <td class="col-place"><span class="place-num">${rating.seasonPlace}</span></td>
+        <td class="col-move"><span class="move ${moveClass}">${moveIcon}</span></td>
+        <td class="col-team">${escapeHtml(rating.teamName)}</td>
+        ${stageCells}${emptyCells}
+        <td class="col-points"><b>${rating.totalPoints}</b></td>
+        <td class="col-final">${rating.finalStatus}</td>
+        <td class="col-weight">${fmtWeight(rating.totalWeight)}</td>
+        <td class="col-big">${fmtBigFish(rating.maxBigFish)}</td>
+      </tr>
+    `;
   }
 
-  // Автоматичний запуск
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initialize);
-  } else {
-    setTimeout(initialize, 0);
+  function updateStagesAttribute() {
+    // Встановлюємо атрибут для CSS приховування колонок
+    document.body.setAttribute('data-stages', state.finishedStagesCount);
   }
 
-  // Глобальний обробник помилок
-  window.addEventListener('error', (event) => {
-    if (event.message.includes('rating') || event.filename?.includes('rating_page')) {
-      console.error('[Rating] Global error caught:', event.error);
-      document.body.setAttribute('data-error', 'runtime-error');
+  // ==================== УТИЛІТИ ====================
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function showError(msg) {
+    const container = document.querySelector('.card--season');
+    if (container) {
+      container.innerHTML = `
+        <div style="color:#ef4444;padding:40px 20px;text-align:center;background:#0b0d14;border-radius:14px;">
+          <div style="font-size:1.2rem;margin-bottom:10px;">⚠️ Помилка завантаження</div>
+          <div style="opacity:0.8;">${msg}</div>
+        </div>
+      `;
     }
-  });
+  }
+
+  // ==================== ПУБЛІЧНИЙ API ====================
+
+  window.SeasonRating = {
+    refresh: init,
+    getState: () => ({ ...state }),
+    getConfig: () => ({ ...CONFIG })
+  };
 
 })();

@@ -17,19 +17,17 @@
   <link rel="preload" href="/assets/css/main.css" as="style">
   <link rel="stylesheet" href="/assets/css/main.css">
 
+  <!-- твій конфіг (бургер/хедер/іконки тощо) -->
+  <script defer src="/assets/js/config.js"></script>
+
   <!-- ✅ SPEED: Firebase завантажується раніше, але НЕ блокує HTML (defer зберігає порядок) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- ✅ ВАЖЛИВО: init Firebase ПІСЛЯ firebase-compat, але ДО логіки сторінки -->
+  <!-- init + логіка реєстрації (теж defer, щоб не блокувати рендер) -->
   <script defer src="/assets/js/firebase-init.js"></script>
-
-  <!-- твій конфіг (бургер/хедер/іконки тощо) -->
-  <script defer src="/assets/js/config.js"></script>
-
-  <!-- логіка реєстрації -->
   <script defer src="/assets/js/register_firebase.js"></script>
 
   <style>
@@ -68,31 +66,6 @@
       margin-top:10px;width:120px;height:2px;border-radius:999px;
       background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
       box-shadow:0 0 10px rgba(246,195,76,.5);
-    }
-
-    /* ✅ ЗГОРТАННЯ ОПИСУ (стиль не ламаємо) */
-    .details-wrap{margin-top:10px;max-width:860px;}
-    .details-wrap details{
-      border:1px solid rgba(148,163,184,.18);
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      border-radius:14px;
-      padding:10px 12px;
-    }
-    .details-wrap summary{
-      cursor:pointer;
-      font-weight:900;
-      letter-spacing:.04em;
-      text-transform:uppercase;
-      color:#e5e7eb;
-      font-size:.82rem;
-      list-style:none;
-    }
-    .details-wrap summary::-webkit-details-marker{display:none;}
-    .details-wrap .details-body{
-      margin-top:10px;
-      color:var(--muted);
-      font-size:.92rem;
-      line-height:1.6;
     }
 
     .register-layout{
@@ -318,19 +291,6 @@
       </div>
       <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ ЗМАГАНЬ STOLAR CARP</span></h1>
       <p>Оберіть відкрите змагання/етап, налаштуйте харчування — і подайте заявку.</p>
-
-      <!-- ✅ ОПИС ЗГОРНУТИЙ -->
-      <div class="details-wrap">
-        <details>
-          <summary>Детальніше</summary>
-          <div class="details-body">
-            Тут можна розмістити весь розширений опис/правила реєстрації (весь текст лишається, просто згорнутий).
-            Після подачі заявки участь підтверджується після оплати внеску. У коментарі до платежу обовʼязково
-            вкажіть назву команди.
-          </div>
-        </details>
-      </div>
-
       <div class="register-hero__divider"></div>
     </div>
 
@@ -391,22 +351,22 @@
       </div>
 
       <div class="card register-card card--payment" id="payCard">
-        <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
+  <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
 
-        <p id="payLine">
-          Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
-        </p>
+  <p id="payLine">
+    Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
+  </p>
 
-        <p id="payLabel">Реквізити:</p>
-        <p><span id="cardNum" class="card-number">—</span></p>
+  <p id="payLabel">Реквізити:</p>
+  <p><span id="cardNum" class="card-number">—</span></p>
 
-        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
-          Скопіювати реквізити
-        </button>
+  <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
+    Скопіювати реквізити
+  </button>
 
-        <p class="card-note" id="payNote">
-          У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
-        </p>
+  <p class="card-note" id="payNote">
+    У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
+  </p>
       </div>
 
     </div>

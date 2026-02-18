@@ -7,19 +7,14 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- ✅ Firebase (обовʼязково, інакше DB не доступний) -->
+  <!-- Firebase -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- ✅ init Firebase (створює window.scDb / window.db) -->
   <script defer src="assets/js/firebase-init.js"></script>
-
-  <!-- твій конфіг (бургер/хедер/іконки тощо) -->
   <script defer src="assets/js/config.js"></script>
-
-  <!-- логіка рейтингу -->
   <script defer src="assets/js/rating_page.js"></script>
 
   <style>
@@ -32,10 +27,8 @@
       --accent-red:#ef4444;
       --accent-blue:#38bdf8;
     }
-
     .hint{opacity:.75}
 
-    /* ===== Преміальний хедер рейтингу сезону ===== */
     .season-rating-head{
       margin-bottom:24px;
       padding:24px 22px;
@@ -61,26 +54,8 @@
       line-height:1.7;
       opacity:.9;
     }
-    .rating-tags{
-      margin-top:14px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      font-size:.8rem;
-      opacity:.9;
-    }
-    .pill{
-      padding:4px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.18);
-      background:rgba(0,0,0,.25);
-      box-shadow:0 0 0 1px rgba(0,0,0,.3);
-    }
-    @media (max-width:640px){
-      .season-rating-head{ padding:18px 16px; }
-    }
 
-    /* ✅ ЗГОРТАННЯ ОПИСУ (СТИЛЬ ТВОГО БЛОКУ НЕ ЛАМАЄМО) */
+    /* Згортання опису */
     .rating-desc-wrap details{
       margin-top:10px;
       border:1px solid rgba(255,255,255,.12);
@@ -90,18 +65,19 @@
     }
     .rating-desc-wrap summary{
       cursor:pointer;
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.06em;
       text-transform:uppercase;
       list-style:none;
       opacity:.95;
     }
     .rating-desc-wrap summary::-webkit-details-marker{display:none;}
-    .rating-desc-wrap .details-body{
-      margin-top:10px;
+    .rating-desc-wrap .details-body{ margin-top:10px; }
+
+    @media (max-width:640px){
+      .season-rating-head{ padding:18px 16px; }
     }
 
-    /* ===== Блок рейтингу ===== */
     .card--season{
       margin-top:20px;
       padding:0;
@@ -109,9 +85,7 @@
       border:none;
       box-shadow:none;
     }
-    .card--season h3{
-      margin:0 0 10px;
-    }
+    .card--season h3{ margin:0 0 10px; }
 
     .season-table-wrapper{
       margin-top:6px;
@@ -125,7 +99,6 @@
       margin-left:-4%;
     }
 
-    /* ===== Базова таблиця ===== */
     .table--season{
       width:100%;
       table-layout:fixed;
@@ -152,21 +125,15 @@
       letter-spacing:.04em;
       color:#e5e7eb;
     }
-    .table--season thead th:first-child{
-      text-align:left;
-    }
+    .table--season thead th:first-child{ text-align:left; }
 
     .table--season tbody tr{
       background:#0b0d14;
       transition:background .15s ease, transform .1s ease;
       height:40px;
     }
-    .table--season tbody tr:nth-child(odd){
-      background:#10121b;
-    }
-    .table--season tbody tr:hover{
-      background:#191b27;
-    }
+    .table--season tbody tr:nth-child(odd){ background:#10121b; }
+    .table--season tbody tr:hover{ background:#191b27; }
     .table--season tbody td{
       padding:3px 2px;
       border-bottom:1px solid rgba(255,255,255,.04);
@@ -179,11 +146,8 @@
       font-size:.7rem;
       color:#e5e7eb;
     }
-    .table--season tbody td.col-team{
-      text-align:left;
-    }
+    .table--season tbody td.col-team{ text-align:left; }
 
-    /* === ШИРИНИ КОЛОНОК (сума ~100%) === */
     .col-place  { width:8%; }
     .col-move   { width:6%; }
     .col-team   { width:19%; }
@@ -193,7 +157,6 @@
     .col-weight { width:8%; }
     .col-big    { width:7%; }
 
-    /* Місце */
     .col-place .place-num{
       display:block;
       font-size:.9rem;
@@ -202,7 +165,6 @@
       padding-left:5px;
     }
 
-    /* Рух */
     .move{
       font-size:.6rem;
       display:inline-flex;
@@ -219,7 +181,6 @@
     .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.55)}
     .move--same{color:#e5e7eb;border-style:dashed}
 
-    /* Етап: місце / бали */
     .stage-cell{
       display:flex;
       flex-direction:row;
@@ -233,7 +194,6 @@
     .stage-slash{ opacity:.7; }
     .stage-points{ font-size:.64rem; opacity:.85; color:#9ca3af; }
 
-    /* Перші 18 команд — учасники фіналу */
     .table--main tbody tr.row-qualified td.col-place{
       box-shadow:inset 3px 0 0 var(--accent-gold-soft);
     }
@@ -241,28 +201,7 @@
       color:var(--accent-gold-soft);
     }
 
-    /* Топ-5 підсвічування */
-    .table--main tbody tr:nth-child(1){
-      background:radial-gradient(circle at left,rgba(251,191,36,.35) 0,rgba(15,23,42,1) 55%);
-      transform:translateY(-1px);
-    }
-    .table--main tbody tr:nth-child(2){
-      background:radial-gradient(circle at left,rgba(148,163,184,.35) 0,rgba(15,23,42,1) 55%);
-    }
-    .table--main tbody tr:nth-child(3){
-      background:radial-gradient(circle at left,rgba(248,113,113,.32) 0,rgba(15,23,42,1) 55%);
-    }
-    .table--main tbody tr:nth-child(4),
-    .table--main tbody tr:nth-child(5){
-      background:radial-gradient(circle at left,rgba(56,189,248,.22) 0,rgba(15,23,42,1) 55%);
-    }
-    .table--main tbody tr:nth-child(-n+5) td{
-      border-bottom-color:rgba(248,250,252,.16);
-    }
-
-    /* Цифри */
     .col-points b{ color:var(--accent-gold); letter-spacing:.02em; }
-    .col-weight{ color:#e5e7eb; }
     .col-big{ color:var(--accent-blue); font-weight:500; }
 
     .rating-note{
@@ -271,7 +210,6 @@
       opacity:.75;
     }
 
-    /* Підзаголовок для претендентів */
     .subhead{
       margin:18px 0 6px;
       font-weight:600;
@@ -283,6 +221,17 @@
       font-weight:400;
     }
 
+    .rating-error{
+      margin-top:14px;
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid rgba(239,68,68,.35);
+      background:rgba(239,68,68,.10);
+      color:#ffb4b4;
+      display:none;
+    }
+    .rating-error b{ color:#ffd1d1; }
+
     @media (max-width:480px){
       .table--season{ font-size:.55rem; }
       .table--season thead th,
@@ -293,7 +242,6 @@
       .stage-points{font-size:.6rem;}
     }
 
-    /* ===== Тимчасово ховаємо колонки Е1..Е5, якщо етапів ще нема ===== */
     body[data-stages="0"] .table--season thead th:nth-child(4),
     body[data-stages="0"] .table--season thead th:nth-child(5),
     body[data-stages="0"] .table--season thead th:nth-child(6),
@@ -323,7 +271,7 @@
       <a href="/formats.html" class="nav__link">Формат змагань</a>
       <a href="/register.html" class="nav__link">Реєстрація</a>
       <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/rating.html" class="nav__link nav__link--active">Рейтинг</a>
       <a href="/lakes.html" class="nav__link">Водойми</a>
       <a href="/sponsors.html" class="nav__link">Спонсори</a>
       <a href="/events/index.html" class="nav__link">Архів</a>
@@ -337,13 +285,11 @@
 <main class="main">
   <section class="container section">
 
-    <!-- Преміальний заголовок сезону -->
     <div class="season-rating-head">
       <div class="kicker title-gradient" id="seasonKicker">СЕЗОН</div>
       <h1 class="page-title title-gradient" id="seasonTitle">Рейтинг сезону STOLAR CARP</h1>
 
-      <!-- ✅ коротко + "Детальніше" -->
-      <div class="rating-desc-wrap" id="ratingDescWrap">
+      <div class="rating-desc-wrap">
         <p class="lead rating-desc" style="margin-bottom:8px;">
           Рейтинг сезону STOLAR CARP — це офіційна підсумкова таблиця результатів команд за всі етапи сезону.
         </p>
@@ -351,8 +297,7 @@
         <details>
           <summary>Детальніше</summary>
           <div class="details-body">
-            <p class="lead rating-desc" id="ratingDesc" style="margin:0;">
-              Рейтинг сезону STOLAR CARP — це офіційна підсумкова таблиця результатів команд за всі етапи сезону.
+            <p class="lead rating-desc" style="margin:0;">
               Розташування в рейтингу визначається за сумою балів (менше — краще), а при рівності балів вирішальними є
               загальна вага вилову та Big Fish сезону. У таблиці відображаються місце та бали команди за кожен етап.
               <b>18 найкращих команд сезону</b> отримують право участі у <b>Фіналі сезону STOLAR CARP</b>.
@@ -361,9 +306,10 @@
           </div>
         </details>
       </div>
+
+      <div class="rating-error" id="ratingError"></div>
     </div>
 
-    <!-- Рейтинг команд сезону — ТОП-18 -->
     <div class="card card--season">
       <h3>Рейтинг команд сезону</h3>
 
@@ -387,13 +333,10 @@
               <th class="col-big">Big Fish</th>
             </tr>
           </thead>
-
-          <!-- ✅ ВАЖЛИВО: JS сам заповнить, заготовки можна не тримати -->
           <tbody id="season-top"></tbody>
         </table>
       </div>
 
-      <!-- Блок претендентів -->
       <h4 class="subhead">
         Претенденти на участь у Фіналі сезону
         <span>— команди, що знаходяться нижче 18-го місця</span>

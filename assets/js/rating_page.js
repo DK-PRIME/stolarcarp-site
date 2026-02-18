@@ -1,11 +1,15 @@
 // assets/js/rating_page.js
 // STOLAR CARP • Season Rating page
-// ✅ Не ламаємо таблицю при помилці (placeholder лишається)
-// ✅ Показуємо помилку в #ratingError
-// ✅ Читаємо публічний документ results/realtime (рекомендується для public read)
+// ✅ Завжди будує 18 рядків (скелет)
+// ✅ Підтягує команди з previewTeams (оплатили 1 етап) навіть без результатів
+// ✅ Результати (Е1..Е5) підтягнуться пізніше з seasonRatingTop
+// ✅ Таблицю не зносить при помилці
 
 (function () {
   const $ = (id) => document.getElementById(id);
+
+  const TOP_COUNT = 18;
+  const STAGES_MAX = 5;
 
   function showError(msg) {
     const box = $("ratingError");
@@ -13,69 +17,101 @@
     box.style.display = "block";
     box.innerHTML = msg;
   }
-
   function hideError() {
     const box = $("ratingError");
     if (!box) return;
     box.style.display = "none";
     box.innerHTML = "";
   }
-
   function safeText(v, dash = "—") {
     if (v === null || v === undefined || v === "") return dash;
     return String(v);
   }
 
-  // Очікуваний формат даних у results/realtime:
-  // {
-  //   seasonTitle: "Рейтинг сезону STOLAR CARP",
-  //   seasonYear: 2026,
-  //   seasonStages: 5,
-  //   seasonRatingTop: [ { place, move, team, stages:[{p,pts}...], points, finalPlace, weight, bigFish } ... ],
-  //   seasonRatingContenders: [ ... ]
-  // }
-  //
-  // Якщо поля названі інакше — скажи, я піджену 1-в-1 під твою структуру.
+  function rowHTML(place, qualified) {
+    const trClass = qualified ? "row-qualified" : "";
+    return `
+      <tr class="${trClass}">
+        <td class="col-place"><span class="place-num">${place}</span></td>
+        <td class="col-move"><span class="move move--same">–</span></td>
+        <td class="col-team">-</td>
+        ${new Array(STAGES_MAX).fill(0).map(() => `
+          <td class="col-stage">
+            <div class="stage-cell">
+              <span class="stage-place">–</span>
+              <span class="stage-slash">/</span>
+              <span class="stage-points">–</span>
+            </div>
+          </td>
+        `).join("")}
+        <td class="col-points"><b>-</b></td>
+        <td class="col-final">–</td>
+        <td class="col-weight">-</td>
+        <td class="col-big">-</td>
+      </tr>
+    `;
+  }
+
+  function buildSkeleton() {
+    const topTbody = $("season-top");
+    const contTbody = $("season-contenders");
+    if (!topTbody || !contTbody) return;
+
+    // ТОП-18 завжди показуємо
+    topTbody.innerHTML = "";
+    for (let i = 1; i <= TOP_COUNT; i++) {
+      topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
+    }
+
+    // Претенденти — поки мінімум 3 рядки-заглушки (щоб не було “порожньо”)
+    contTbody.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      contTbody.insertAdjacentHTML("beforeend", rowHTML("—", false));
+    }
+  }
+
+  function setMove(el, mv) {
+    if (!el) return;
+    el.classList.remove("move--up", "move--down", "move--same");
+
+    if (mv === "up") {
+      el.classList.add("move--up");
+      el.textContent = "▲";
+      return;
+    }
+    if (mv === "down") {
+      el.classList.add("move--down");
+      el.textContent = "▼";
+      return;
+    }
+    if (mv === "same" || mv === 0 || mv === "0" || mv === "-" || mv === "—") {
+      el.classList.add("move--same");
+      el.textContent = "–";
+      return;
+    }
+    if (typeof mv === "number") {
+      el.classList.add(mv > 0 ? "move--up" : mv < 0 ? "move--down" : "move--same");
+      el.textContent = mv > 0 ? `▲${mv}` : mv < 0 ? `▼${Math.abs(mv)}` : "–";
+      return;
+    }
+    el.classList.add("move--same");
+    el.textContent = safeText(mv, "–");
+  }
 
   function renderRow(tr, item) {
     if (!tr || !item) return;
-
     const tds = tr.querySelectorAll("td");
     if (!tds || tds.length < 12) return;
 
-    // 0 place (span.place-num вже є)
-    const placeSpan = tds[0].querySelector(".place-num");
-    if (placeSpan) placeSpan.textContent = safeText(item.place, placeSpan.textContent);
+    // move
+    setMove(tds[1].querySelector(".move"), item.move);
 
-    // 1 move
-    const moveEl = tds[1].querySelector(".move");
-    if (moveEl) {
-      const mv = item.move; // "up" | "down" | "same" | number | "—"
-      moveEl.classList.remove("move--up", "move--down", "move--same");
-      if (mv === "up") {
-        moveEl.classList.add("move--up");
-        moveEl.textContent = "▲";
-      } else if (mv === "down") {
-        moveEl.classList.add("move--down");
-        moveEl.textContent = "▼";
-      } else if (mv === "same" || mv === 0 || mv === "0") {
-        moveEl.classList.add("move--same");
-        moveEl.textContent = "–";
-      } else if (typeof mv === "number") {
-        moveEl.classList.add(mv > 0 ? "move--up" : mv < 0 ? "move--down" : "move--same");
-        moveEl.textContent = mv > 0 ? `▲${mv}` : mv < 0 ? `▼${Math.abs(mv)}` : "–";
-      } else {
-        moveEl.classList.add("move--same");
-        moveEl.textContent = safeText(mv, "–");
-      }
-    }
-
-    // 2 team
+    // team
     tds[2].textContent = safeText(item.team, tds[2].textContent);
 
-    // 3..7 stages
+    // stages
     const stages = Array.isArray(item.stages) ? item.stages : [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < STAGES_MAX; i++) {
       const cell = tds[3 + i];
       const place = cell.querySelector(".stage-place");
       const pts = cell.querySelector(".stage-points");
@@ -84,26 +120,27 @@
       if (pts) pts.textContent = safeText(s.pts, "–");
     }
 
-    // 8 points
+    // points / final / weight / bigFish
     const b = tds[8].querySelector("b");
     if (b) b.textContent = safeText(item.points, b.textContent);
 
-    // 9 final
     tds[9].textContent = safeText(item.finalPlace, tds[9].textContent);
-
-    // 10 weight
     tds[10].textContent = safeText(item.weight, tds[10].textContent);
-
-    // 11 bigFish
     tds[11].textContent = safeText(item.bigFish, tds[11].textContent);
   }
 
-  function applyQualifiedRows() {
-    // якщо у тебе раптом JS додає/знімає row-qualified — ми нічого не ламаємо
+  function applyPreviewTeams(topRows, previewTeams) {
+    // previewTeams: [{ team:"Назва", teamId?, paidStage:1? }, ...]
+    if (!Array.isArray(previewTeams) || !previewTeams.length) return;
+    for (let i = 0; i < Math.min(TOP_COUNT, previewTeams.length, topRows.length); i++) {
+      const item = previewTeams[i] || {};
+      renderRow(topRows[i], { team: item.team || item.teamName || "-" });
+    }
   }
 
   async function loadRating() {
     hideError();
+    buildSkeleton(); // ✅ спочатку завжди показуємо 18 рядків
 
     const db =
       window.scDb ||
@@ -116,7 +153,6 @@
     }
 
     try {
-      // ✅ один публічний документ
       const snap = await db.doc("results/realtime").get();
 
       if (!snap.exists) {
@@ -130,51 +166,36 @@
       if ($("seasonTitle") && data.seasonTitle) $("seasonTitle").textContent = data.seasonTitle;
       if ($("seasonKicker") && data.seasonYear) $("seasonKicker").textContent = `СЕЗОН ${data.seasonYear}`;
 
-      // Скільки етапів (для твого CSS hide колонок)
-      const stagesCount = Number(data.seasonStages || 0);
-      document.body.setAttribute("data-stages", String(stagesCount));
+      // Етапи для hide/show колонок
+      const stagesCount = Number(data.seasonStages ?? STAGES_MAX);
+      document.body.setAttribute("data-stages", String(stagesCount || 0));
 
-      // ТОП
-      const top = Array.isArray(data.seasonRatingTop) ? data.seasonRatingTop : [];
       const topTbody = $("season-top");
-      if (topTbody && top.length) {
-        const rows = topTbody.querySelectorAll("tr");
-        for (let i = 0; i < rows.length; i++) renderRow(rows[i], top[i]);
+      const topRows = topTbody ? topTbody.querySelectorAll("tr") : [];
+
+      // 1) Якщо вже є результати сезону (після проведення етапів) — підставляємо їх
+      const top = Array.isArray(data.seasonRatingTop) ? data.seasonRatingTop : [];
+      if (top.length && topRows.length) {
+        for (let i = 0; i < Math.min(topRows.length, top.length); i++) {
+          renderRow(topRows[i], top[i]);
+        }
+        hideError();
+        return;
       }
 
-      // Претенденти
-      const cont = Array.isArray(data.seasonRatingContenders) ? data.seasonRatingContenders : [];
-      const contTbody = $("season-contenders");
-      if (contTbody && cont.length) {
-        // якщо є реальні претенденти — перемальовуємо tbody під них
-        contTbody.innerHTML = "";
-        cont.forEach((item) => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td class="col-place"><span class="place-num">${safeText(item.place, "—")}</span></td>
-            <td class="col-move"><span class="move move--same">–</span></td>
-            <td class="col-team">${safeText(item.team, "—")}</td>
-            ${new Array(5).fill(0).map((_,i)=>{
-              const s = (item.stages && item.stages[i]) || {};
-              return `<td class="col-stage"><div class="stage-cell"><span class="stage-place">${safeText(s.p,"–")}</span><span class="stage-slash">/</span><span class="stage-points">${safeText(s.pts,"–")}</span></div></td>`;
-            }).join("")}
-            <td class="col-points"><b>${safeText(item.points,"—")}</b></td>
-            <td class="col-final">${safeText(item.finalPlace,"—")}</td>
-            <td class="col-weight">${safeText(item.weight,"—")}</td>
-            <td class="col-big">${safeText(item.bigFish,"—")}</td>
-          `;
-          contTbody.appendChild(tr);
-        });
+      // 2) Якщо результатів ще нема — але є список “оплатили 1 етап” → показуємо їх як майбутній ТОП-18
+      const previewTeams = Array.isArray(data.previewTeams) ? data.previewTeams : [];
+      if (previewTeams.length && topRows.length) {
+        applyPreviewTeams(topRows, previewTeams);
+        hideError();
+        return;
       }
 
-      applyQualifiedRows();
-      hideError();
+      // Якщо нічого нема — лишається скелет
+      showError("⚠️ Дані рейтингу поки порожні. Додай previewTeams у results/realtime (команди з оплатою етапу 1).");
     } catch (e) {
       const msg = String(e && e.message ? e.message : e);
-      // ✅ Не чіпаємо таблицю, тільки показуємо помилку
-      showError(
-        `⚠️ <b>Помилка завантаження</b><br>Не вдалося завантажити рейтинг.<br>Причина: <span class="hint">${msg}</span>`
-      );
+      showError(`⚠️ <b>Помилка завантаження</b><br>Причина: <span class="hint">${msg}</span>`);
     }
   }
 

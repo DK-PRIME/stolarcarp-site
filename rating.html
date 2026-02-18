@@ -3,290 +3,316 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Реєстрація змагань — STOLAR CARP</title>
+  <title>Рейтинг сезону — STOLAR CARP</title>
 
-  <link rel="icon" type="image/png" href="/assets/favicon.png">
-  <link rel="apple-touch-icon" href="/assets/favicon.png">
-  <meta name="theme-color" content="#1a1a1a">
+  <link rel="stylesheet" href="assets/css/main.css">
 
-  <!-- ✅ SPEED: швидший старт мережі під Firebase -->
-  <link rel="dns-prefetch" href="https://www.gstatic.com">
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-
-  <!-- ✅ SPEED: швидше підтягуються стилі -->
-  <link rel="preload" href="/assets/css/main.css" as="style">
-  <link rel="stylesheet" href="/assets/css/main.css">
-
-  <!-- ✅ SPEED: Firebase завантажується раніше, але НЕ блокує HTML (defer зберігає порядок) -->
+  <!-- ✅ Firebase (обовʼязково, інакше DB не доступний) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- ✅ ВАЖЛИВО: init Firebase ПІСЛЯ firebase-compat, але ДО логіки сторінки -->
-  <script defer src="/assets/js/firebase-init.js"></script>
+  <!-- ✅ init Firebase (створює window.scDb / window.db) -->
+  <script defer src="assets/js/firebase-init.js"></script>
 
   <!-- твій конфіг (бургер/хедер/іконки тощо) -->
-  <script defer src="/assets/js/config.js"></script>
+  <script defer src="assets/js/config.js"></script>
 
-  <!-- логіка реєстрації -->
-  <script defer src="/assets/js/register_firebase.js"></script>
+  <!-- логіка рейтингу -->
+  <script defer src="assets/js/rating_page.js"></script>
 
   <style>
-    body.register-page{background:var(--bg); overflow-x:hidden;}
-    .section--narrow{max-width:1100px;margin:0 auto;}
-
-    .register-hero{
-      margin-top:14px;margin-bottom:22px;padding:18px 16px 16px;border-radius:16px;
-      background:linear-gradient(145deg,#14141d,#08080d);border:1px solid #262636;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-    .register-hero__kicker{
-      font-size:.72rem;text-transform:uppercase;letter-spacing:.18em;
-      color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;
-    }
-    .register-hero__kicker-tag{
-      display:inline-flex;align-items:center;justify-content:center;
-      width:22px;height:22px;border-radius:999px;
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      font-weight:800;font-size:.75rem;color:#000;
-      box-shadow:0 0 8px rgba(0,0,0,.7);
-      flex:0 0 auto;
-    }
-    .register-hero h1{
-      margin:0 0 8px;font-size:clamp(22px,3.4vw,28px);
-      font-weight:900;letter-spacing:.06em;text-transform:uppercase;
-      line-height:1.15;
-    }
-    .register-hero .title-gradient{
-      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 40%,#7a0f2b 100%);
-      -webkit-background-clip:text;background-clip:text;color:transparent;
-    }
-    .register-hero p{margin:0;color:var(--muted);font-size:.92rem;max-width:720px;}
-    .register-hero__divider{
-      margin-top:10px;width:120px;height:2px;border-radius:999px;
-      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
-      box-shadow:0 0 10px rgba(246,195,76,.5);
+    :root{
+      --line:rgba(255,255,255,.08);
+      --panel:#111215;
+      --accent-gold:#fbbf24;
+      --accent-gold-soft:#facc15;
+      --accent-green:#22c55e;
+      --accent-red:#ef4444;
+      --accent-blue:#38bdf8;
     }
 
-    /* ✅ ЗГОРТАННЯ ОПИСУ (стиль не ламаємо) */
-    .details-wrap{margin-top:10px;max-width:860px;}
-    .details-wrap details{
-      border:1px solid rgba(148,163,184,.18);
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+    .hint{opacity:.75}
+
+    /* ===== Преміальний хедер рейтингу сезону ===== */
+    .season-rating-head{
+      margin-bottom:24px;
+      padding:24px 22px;
+      background:
+        radial-gradient(circle at top left,rgba(250,204,21,.18) 0,transparent 38%),
+        radial-gradient(circle at bottom right,#111827 0,#050609 55%);
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 18px 40px rgba(0,0,0,.7);
+    }
+    .season-rating-head .kicker{
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      opacity:.8;
+      font-size:.78rem;
+      margin-bottom:4px;
+    }
+    .season-rating-head .page-title{ margin:0; }
+    .rating-desc{
+      max-width:900px;
+      margin-top:10px;
+      font-size:1rem;
+      line-height:1.7;
+      opacity:.9;
+    }
+    .rating-tags{
+      margin-top:14px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      font-size:.8rem;
+      opacity:.9;
+    }
+    .pill{
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.25);
+      box-shadow:0 0 0 1px rgba(0,0,0,.3);
+    }
+    @media (max-width:640px){
+      .season-rating-head{ padding:18px 16px; }
+    }
+
+    /* ✅ ЗГОРТАННЯ ОПИСУ (СТИЛЬ ТВОГО БЛОКУ НЕ ЛАМАЄМО) */
+    .rating-desc-wrap details{
+      margin-top:10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
       border-radius:14px;
       padding:10px 12px;
     }
-    .details-wrap summary{
+    .rating-desc-wrap summary{
       cursor:pointer;
-      font-weight:900;
-      letter-spacing:.04em;
+      font-weight:800;
+      letter-spacing:.06em;
       text-transform:uppercase;
-      color:#e5e7eb;
-      font-size:.82rem;
       list-style:none;
+      opacity:.95;
     }
-    .details-wrap summary::-webkit-details-marker{display:none;}
-    .details-wrap .details-body{
+    .rating-desc-wrap summary::-webkit-details-marker{display:none;}
+    .rating-desc-wrap .details-body{
       margin-top:10px;
-      color:var(--muted);
-      font-size:.92rem;
-      line-height:1.6;
     }
 
-    .register-layout{
-      display:grid;
-      grid-template-columns:minmax(0,2fr) minmax(0,1.1fr);
-      gap:18px;align-items:flex-start;
+    /* ===== Блок рейтингу ===== */
+    .card--season{
+      margin-top:20px;
+      padding:0;
+      background:transparent;
+      border:none;
+      box-shadow:none;
     }
-    @media (max-width:860px){.register-layout{grid-template-columns:1fr;}}
-
-    .register-form-card h2{
-      margin:0 0 6px;
-      font-size:1.05rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-    .form__hint{font-size:.8rem;color:var(--muted);}
-
-    .field{display:grid;gap:6px;margin-bottom:12px;}
-    .field label{font-size:.9rem;font-weight:600;}
-    #foodQtyField.field--disabled{opacity:.55;}
-
-    .register-page input[type="number"]{
-      background:#0f0f14;border:1px solid #2a2a39;color:#fff;
-      padding:10px 14px;border-radius:12px;font-size:.96rem;
-      width:100%;
-    }
-    .register-page input::placeholder{color:#6b7280;}
-    .register-page input:focus{
-      outline:none;border-color:var(--accent);
-      box-shadow:0 0 10px rgba(246,195,76,0.35);
+    .card--season h3{
+      margin:0 0 10px;
     }
 
-    .radio-row{display:flex;flex-wrap:wrap;gap:16px;}
-    .radio-row label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;}
-
-    .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
-    .spinner{
-      width:18px;height:18px;border-radius:50%;
-      border:3px solid rgba(255,255,255,.2);border-top-color:#fff;
-      display:none;
-    }
-    .spinner--on{display:inline-block;animation:spin .9s linear infinite;}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .form-msg{margin-top:6px;font-weight:700;font-size:.92rem;}
-    .form-msg.ok{color:#43d18a;}
-    .form-msg.err{color:#ff6c6c;}
-
-    .profile-summary{font-size:.85rem;color:var(--muted);margin-bottom:10px;}
-    .profile-summary b{color:#e5e7eb;}
-
-    .card--payment{background:#05060c;border:1px solid #262636;box-shadow:var(--shadow);}
-    .card-payment-title{
-      font-weight:800;margin-bottom:6px;display:flex;align-items:center;gap:8px;
-      text-transform:uppercase;font-size:.84rem;letter-spacing:.12em;color:#e5e7eb;
-    }
-    .card-payment-title span{
-      width:20px;height:20px;border-radius:50%;
-      background:linear-gradient(135deg,var(--accent),var(--accent-2));
-      display:inline-flex;align-items:center;justify-content:center;
-      font-size:.9rem;color:#000;font-weight:900;
-    }
-    .card-number{
-      font-weight:800;letter-spacing:.16em;padding:10px 12px;border-radius:12px;
-      background:#020308;border:1px solid #33384a;display:inline-block;
-      margin:4px 0;font-size:.92rem;
-      max-width:100%;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    .card-note{font-size:.8rem;color:var(--muted);margin-top:6px;}
-
-    .event-options{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      padding:10px;
-      border-radius:16px;
-      border:1px solid rgba(148,163,184,.18);
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      overflow:hidden;
-      max-width:100%;
-    }
-
-    .event-item{
-      position:relative;
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:12px 12px;
-      border-radius:14px;
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border:1px solid rgba(148,163,184,.22);
-      box-shadow:0 10px 26px rgba(0,0,0,.35);
-      transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease;
-      width:100%;
-      max-width:100%;
-      box-sizing:border-box;
-      overflow:hidden;
-    }
-    .event-item:hover{
-      transform:translateY(-1px);
-      border-color:rgba(246,195,76,.55);
-      box-shadow:0 14px 34px rgba(0,0,0,.45);
-    }
-    .event-item input[type="radio"]{
-      width:18px;height:18px;
-      accent-color:var(--accent);
-      margin-top:2px;
-      flex:0 0 auto;
-    }
-
-    .event-content{min-width:0;flex:1;}
-    .event-title{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:10px;
-      font-weight:900;
-      letter-spacing:.02em;
-      line-height:1.2;
-    }
-    .event-title .text{
-      min-width:0;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    .event-meta{
+    .season-table-wrapper{
       margin-top:6px;
-      font-size:12px;
-      color:var(--muted);
+      border-radius:14px;
+      overflow:hidden;
+      background:radial-gradient(circle at top,#0b0d14 0,#05060a 55%);
+      border:1px solid rgba(255,255,255,.09);
+      box-shadow:0 14px 30px rgba(0,0,0,.75);
+
+      width:108%;
+      margin-left:-4%;
+    }
+
+    /* ===== Базова таблиця ===== */
+    .table--season{
+      width:100%;
+      table-layout:fixed;
+      border-collapse:collapse;
+      font-size:.7rem;
+      background:#05060a;
+    }
+    .table--season thead{
+      background:linear-gradient(90deg,#181920,#111827);
+    }
+    .table--season thead th{
+      border-bottom:1px solid var(--line);
+      border-right:1px solid rgba(255,255,255,.04);
+      padding:4px 2px;
+      text-align:center;
+      font-weight:600;
+      opacity:.95;
+      white-space:normal;
+      overflow:hidden;
+      text-overflow:clip;
+      font-size:.6rem;
+      line-height:1.25;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+      color:#e5e7eb;
+    }
+    .table--season thead th:first-child{
+      text-align:left;
+    }
+
+    .table--season tbody tr{
+      background:#0b0d14;
+      transition:background .15s ease, transform .1s ease;
+      height:40px;
+    }
+    .table--season tbody tr:nth-child(odd){
+      background:#10121b;
+    }
+    .table--season tbody tr:hover{
+      background:#191b27;
+    }
+    .table--season tbody td{
+      padding:3px 2px;
+      border-bottom:1px solid rgba(255,255,255,.04);
+      border-right:1px solid rgba(255,255,255,.02);
+      text-align:center;
+      white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
-      white-space:nowrap;
-    }
-    .event-badges{
-      display:flex;
-      gap:6px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      flex:0 0 auto;
-    }
-
-    .pill-b{
-      font-size:11px;
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.25);
-      background:rgba(2,6,23,.55);
+      box-sizing:border-box;
+      font-size:.7rem;
       color:#e5e7eb;
-      white-space:nowrap;
-      font-weight:900;
+    }
+    .table--season tbody td.col-team{
+      text-align:left;
     }
 
-    .pill-b--stage{   background:rgba(59,130,246,.16);  border-color:rgba(59,130,246,.35);  color:#bfe0ff; }
-    .pill-b--final{   background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b); border-color:transparent; color:#120a00; }
-    .pill-b--oneoff{  background:rgba(168,85,247,.16);  border-color:rgba(168,85,247,.35);  color:#efd6ff; }
-    .pill-b--stalker{ background:rgba(239,68,68,.16);   border-color:rgba(239,68,68,.35);   color:#ffb4b4; }
+    /* === ШИРИНИ КОЛОНОК (сума ~100%) === */
+    .col-place  { width:8%; }
+    .col-move   { width:6%; }
+    .col-team   { width:19%; }
+    .col-stage  { width:8%; }
+    .col-points { width:7%; }
+    .col-final  { width:8%; }
+    .col-weight { width:8%; }
+    .col-big    { width:7%; }
 
-    .pill-b--open{
-      background:linear-gradient(135deg,#22c55e,#16a34a);
-      border-color:transparent;
-      color:#04110a;
-    }
-    .pill-b--closed{
-      background:rgba(239,68,68,.15);
-      border-color:rgba(239,68,68,.35);
-      color:#ffb4b4;
-    }
-    .pill-b--active{
-      background:rgba(246,195,76,.16);
-      border-color:rgba(246,195,76,.35);
-      color:#ffe7a6;
+    /* Місце */
+    .col-place .place-num{
+      display:block;
+      font-size:.9rem;
+      line-height:1;
+      font-weight:700;
+      padding-left:5px;
     }
 
-    .event-item.is-closed{opacity:.6; filter:saturate(.9);}
-    .event-item.is-closed:hover{transform:none; box-shadow:0 10px 26px rgba(0,0,0,.35);}
+    /* Рух */
+    .move{
+      font-size:.6rem;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      opacity:.9;
+      background:rgba(15,23,42,.7);
+    }
+    .move--up{color:var(--accent-green);border-color:rgba(34,197,94,.55)}
+    .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.55)}
+    .move--same{color:#e5e7eb;border-style:dashed}
 
-    @media (max-width:520px){
-      .register-hero{padding:16px 14px;}
-      .card{padding:16px;}
-      .event-options{padding:10px;}
-      .event-item{padding:12px 10px;}
-      .event-title .text{max-width:220px;}
+    /* Етап: місце / бали */
+    .stage-cell{
+      display:flex;
+      flex-direction:row;
+      align-items:center;
+      justify-content:center;
+      gap:2px;
+      font-size:.68rem;
+      line-height:1;
+    }
+    .stage-place{ font-weight:600; color:#e5e7eb; }
+    .stage-slash{ opacity:.7; }
+    .stage-points{ font-size:.64rem; opacity:.85; color:#9ca3af; }
+
+    /* Перші 18 команд — учасники фіналу */
+    .table--main tbody tr.row-qualified td.col-place{
+      box-shadow:inset 3px 0 0 var(--accent-gold-soft);
+    }
+    .table--main tbody tr.row-qualified .place-num{
+      color:var(--accent-gold-soft);
+    }
+
+    /* Топ-5 підсвічування */
+    .table--main tbody tr:nth-child(1){
+      background:radial-gradient(circle at left,rgba(251,191,36,.35) 0,rgba(15,23,42,1) 55%);
+      transform:translateY(-1px);
+    }
+    .table--main tbody tr:nth-child(2){
+      background:radial-gradient(circle at left,rgba(148,163,184,.35) 0,rgba(15,23,42,1) 55%);
+    }
+    .table--main tbody tr:nth-child(3){
+      background:radial-gradient(circle at left,rgba(248,113,113,.32) 0,rgba(15,23,42,1) 55%);
+    }
+    .table--main tbody tr:nth-child(4),
+    .table--main tbody tr:nth-child(5){
+      background:radial-gradient(circle at left,rgba(56,189,248,.22) 0,rgba(15,23,42,1) 55%);
+    }
+    .table--main tbody tr:nth-child(-n+5) td{
+      border-bottom-color:rgba(248,250,252,.16);
+    }
+
+    /* Цифри */
+    .col-points b{ color:var(--accent-gold); letter-spacing:.02em; }
+    .col-weight{ color:#e5e7eb; }
+    .col-big{ color:var(--accent-blue); font-weight:500; }
+
+    .rating-note{
+      margin-top:8px;
+      font-size:.8rem;
+      opacity:.75;
+    }
+
+    /* Підзаголовок для претендентів */
+    .subhead{
+      margin:18px 0 6px;
+      font-weight:600;
+      font-size:.95rem;
+    }
+    .subhead span{
+      opacity:.7;
+      font-size:.8rem;
+      font-weight:400;
+    }
+
+    @media (max-width:480px){
+      .table--season{ font-size:.55rem; }
+      .table--season thead th,
+      .table--season tbody td{ padding:3px 1px; }
+      .table--season thead th{ font-size:.55rem; }
+      .col-place .place-num{font-size:.78rem;}
+      .stage-cell{font-size:.64rem;}
+      .stage-points{font-size:.6rem;}
+    }
+
+    /* ===== Тимчасово ховаємо колонки Е1..Е5, якщо етапів ще нема ===== */
+    body[data-stages="0"] .table--season thead th:nth-child(4),
+    body[data-stages="0"] .table--season thead th:nth-child(5),
+    body[data-stages="0"] .table--season thead th:nth-child(6),
+    body[data-stages="0"] .table--season thead th:nth-child(7),
+    body[data-stages="0"] .table--season thead th:nth-child(8),
+    body[data-stages="0"] .table--season tbody td:nth-child(4),
+    body[data-stages="0"] .table--season tbody td:nth-child(5),
+    body[data-stages="0"] .table--season tbody td:nth-child(6),
+    body[data-stages="0"] .table--season tbody td:nth-child(7),
+    body[data-stages="0"] .table--season tbody td:nth-child(8){
+      display:none;
     }
   </style>
 </head>
 
-<body class="register-page">
-
+<body>
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="/index.html">
+    <a class="logo" href="index.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
@@ -295,13 +321,13 @@
       <a href="/index.html" class="nav__link">Головна</a>
       <a href="/rules.html" class="nav__link">Регламент</a>
       <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="/register.html" class="nav__link nav__link--active">Реєстрація</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
       <a href="/live.html" class="nav__link">Live</a>
       <a href="/rating.html" class="nav__link">Рейтинг</a>
       <a href="/lakes.html" class="nav__link">Водойми</a>
       <a href="/sponsors.html" class="nav__link">Спонсори</a>
       <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="#" class="nav__link" id="goCabinet">Мій кабінет</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
     <button class="burger" id="burger"><span></span><span></span><span></span></button>
@@ -309,107 +335,102 @@
 </header>
 
 <main class="main">
-  <section class="container section section--narrow">
+  <section class="container section">
 
-    <div class="register-hero">
-      <div class="register-hero__kicker">
-        <span class="register-hero__kicker-tag">SC</span>
-        STOLAR CARP · REGISTRATION
-      </div>
-      <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ ЗМАГАНЬ STOLAR CARP</span></h1>
-      <p>Оберіть відкрите змагання/етап, налаштуйте харчування — і подайте заявку.</p>
+    <!-- Преміальний заголовок сезону -->
+    <div class="season-rating-head">
+      <div class="kicker title-gradient" id="seasonKicker">СЕЗОН</div>
+      <h1 class="page-title title-gradient" id="seasonTitle">Рейтинг сезону STOLAR CARP</h1>
 
-      <!-- ✅ ОПИС ЗГОРНУТИЙ -->
-      <div class="details-wrap">
+      <!-- ✅ коротко + "Детальніше" -->
+      <div class="rating-desc-wrap" id="ratingDescWrap">
+        <p class="lead rating-desc" style="margin-bottom:8px;">
+          Рейтинг сезону STOLAR CARP — це офіційна підсумкова таблиця результатів команд за всі етапи сезону.
+        </p>
+
         <details>
           <summary>Детальніше</summary>
           <div class="details-body">
-            Тут можна розмістити весь розширений опис/правила реєстрації (весь текст лишається, просто згорнутий).
-            Після подачі заявки участь підтверджується після оплати внеску. У коментарі до платежу обовʼязково
-            вкажіть назву команди.
+            <p class="lead rating-desc" id="ratingDesc" style="margin:0;">
+              Рейтинг сезону STOLAR CARP — це офіційна підсумкова таблиця результатів команд за всі етапи сезону.
+              Розташування в рейтингу визначається за сумою балів (менше — краще), а при рівності балів вирішальними є
+              загальна вага вилову та Big Fish сезону. У таблиці відображаються місце та бали команди за кожен етап.
+              <b>18 найкращих команд сезону</b> отримують право участі у <b>Фіналі сезону STOLAR CARP</b>.
+              Саме там кращі з кращих розігрують головний титул року.
+            </p>
           </div>
         </details>
       </div>
-
-      <div class="register-hero__divider"></div>
     </div>
 
-    <div class="register-layout">
+    <!-- Рейтинг команд сезону — ТОП-18 -->
+    <div class="card card--season">
+      <h3>Рейтинг команд сезону</h3>
 
-      <div class="card register-form-card">
-        <h2>ФОРМА РЕЄСТРАЦІЇ</h2>
-        <p class="form__hint">Поля з позначкою <span style="color:var(--accent);">*</span> є обовʼязковими.</p>
+      <div class="season-table-wrapper">
+        <table class="table table--season table--main">
+          <thead>
+            <tr>
+              <th class="col-place">Місце</th>
+              <th class="col-move">▲▼</th>
+              <th class="col-team">Команда</th>
 
-        <div id="profileSummary" class="profile-summary">Профіль: завантаження...</div>
+              <th class="col-stage">Е1<br>м / б</th>
+              <th class="col-stage">Е2<br>м / б</th>
+              <th class="col-stage">Е3<br>м / б</th>
+              <th class="col-stage">Е4<br>м / б</th>
+              <th class="col-stage">Е5<br>м / б</th>
 
-        <form id="regForm" class="form" novalidate>
-          <input type="text" name="hp" id="hp" autocomplete="off"
-                 style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"/>
+              <th class="col-points">Бали</th>
+              <th class="col-final">Фінал</th>
+              <th class="col-weight">Вага</th>
+              <th class="col-big">Big Fish</th>
+            </tr>
+          </thead>
 
-          <div class="field">
-            <label>Оберіть змагання / етап <span style="color:var(--accent);">*</span></label>
-            <div id="eventOptions" class="event-options">
-              <p class="form__hint">Завантаження списку...</p>
-            </div>
-          </div>
-
-          <div class="field">
-            <label>Харчування<span style="color:var(--accent);">*</span></label>
-            <div class="radio-row">
-              <label><input type="radio" name="food" value="Так" required> <span>Так</span></label>
-              <label><input type="radio" name="food" value="Ні"> <span>Ні</span></label>
-            </div>
-          </div>
-
-          <div class="field field--disabled" id="foodQtyField">
-            <label for="food_qty">Кількість харчуючих (1–6)</label>
-            <input type="number" id="food_qty" name="food_qty" min="1" max="6" inputmode="numeric"
-                   placeholder="Вкажіть кількість, якщо замовляєте харчування" disabled />
-            <div class="form__hint">Якщо харчування не потрібне — залиште поле порожнім.</div>
-          </div>
-
-          <div class="field">
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
-              <input type="checkbox" id="rules" required style="transform:scale(1.25);accent-color:#f6c34c;">
-              <span>Підтверджую, що ознайомлений із
-                <a href="/rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
-              </span>
-            </label>
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" id="submitBtn" class="btn btn--primary" disabled>Подати заявку</button>
-            <div id="spinner" class="spinner" aria-hidden="true"></div>
-          </div>
-
-          <div id="msg" class="form-msg"></div>
-
-          <p class="form__hint" style="margin-top:6px;">
-            Після подачі заявки участь підтверджується після оплати внеску.
-          </p>
-        </form>
+          <!-- ✅ ВАЖЛИВО: JS сам заповнить, заготовки можна не тримати -->
+          <tbody id="season-top"></tbody>
+        </table>
       </div>
 
-      <div class="card register-card card--payment" id="payCard">
-        <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
+      <!-- Блок претендентів -->
+      <h4 class="subhead">
+        Претенденти на участь у Фіналі сезону
+        <span>— команди, що знаходяться нижче 18-го місця</span>
+      </h4>
 
-        <p id="payLine">
-          Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
-        </p>
+      <div class="season-table-wrapper">
+        <table class="table table--season table--contenders">
+          <thead>
+            <tr>
+              <th class="col-place">Місце</th>
+              <th class="col-move">▲▼</th>
+              <th class="col-team">Команда</th>
 
-        <p id="payLabel">Реквізити:</p>
-        <p><span id="cardNum" class="card-number">—</span></p>
+              <th class="col-stage">Е1<br>м / б</th>
+              <th class="col-stage">Е2<br>м / б</th>
+              <th class="col-stage">Е3<br>м / б</th>
+              <th class="col-stage">Е4<br>м / б</th>
+              <th class="col-stage">Е5<br>м / б</th>
 
-        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
-          Скопіювати реквізити
-        </button>
-
-        <p class="card-note" id="payNote">
-          У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
-        </p>
+              <th class="col-points">Бали</th>
+              <th class="col-final">Фінал</th>
+              <th class="col-weight">Вага</th>
+              <th class="col-big">Big Fish</th>
+            </tr>
+          </thead>
+          <tbody id="season-contenders"></tbody>
+        </table>
       </div>
-
     </div>
+
+    <p class="rating-note">
+      Підсумкове місце сезону визначається так:<br>
+      <b>1)</b> менша сума балів сезону — краще місце;<br>
+      <b>2)</b> якщо бали однакові — вище команда з більшою загальною вагою;<br>
+      <b>3)</b> якщо вага теж однакова — вище команда з більшим Big Fish.<br><br>
+    </p>
+
   </section>
 </main>
 
@@ -417,11 +438,10 @@
   <div class="container footer__row">
     <div>© 2025 STOLAR CARP · Львів</div>
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9" rel="noopener">YouTube</a>
     </div>
   </div>
 </footer>
-
 </body>
 </html>

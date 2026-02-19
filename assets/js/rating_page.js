@@ -4,7 +4,7 @@
 // ✅ Етапи з competitions/{seasonCompId}.events (stage-1, stage1, Stage_2, "етап 3"...)
 // ✅ TOP-18 + Претенденти (19+) з правильною нумерацією
 // ✅ Етапи (Е1..Е5) видно і в верхній, і в нижній таблиці (FIX idx)
-// ✅ Preview з public_participants (оплачені stage1), потім realtime перезаписує TOP
+// ✅ Preview з public_participants (ВСІ етапи сезону, унікальні команди), потім realtime перезаписує TOP
 // ✅ Кеш 5 хв + м’які помилки
 
 (function () {
@@ -15,7 +15,7 @@
   const TOP_COUNT = 18;
   const STAGES_MAX_IN_HTML = 5; // у верстці E1..E5
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_v3";
+  const CACHE_KEY = "sc_rating_cache_v4";
 
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
@@ -95,24 +95,24 @@
   }
 
   function buildSkeleton(contendersCount = 3) {
-  const topTbody = $("season-top");
-  const contTbody = $("season-contenders");
-  if (!topTbody || !contTbody) return;
+    const topTbody = $("season-top");
+    const contTbody = $("season-contenders");
+    if (!topTbody || !contTbody) return;
 
-  // TOP
-  topTbody.innerHTML = "";
-  for (let i = 1; i <= TOP_COUNT; i++) {
-    topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
-  }
+    // TOP
+    topTbody.innerHTML = "";
+    for (let i = 1; i <= TOP_COUNT; i++) {
+      topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
+    }
 
-  // CONTENDERS
-  const cc = Math.max(3, Number(contendersCount || 0));
-  contTbody.innerHTML = "";
-  for (let i = 0; i < cc; i++) {
-    // ✅ Ось головний FIX: одразу ставимо 19,20,21...
-    contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
+    // CONTENDERS
+    const cc = Math.max(3, Number(contendersCount || 0));
+    contTbody.innerHTML = "";
+    for (let i = 0; i < cc; i++) {
+      // ✅ FIX: одразу 19,20,21...
+      contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
+    }
   }
-}
 
   // ===================== MOVE =====================
   function setMove(el, mv) {
@@ -170,17 +170,17 @@
   function applyStageVisibility(stagesCount) {
     const count = Math.max(0, Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0)));
 
-    // ✅ FIX: рахуємо stageNo окремо для кожної таблиці, а не загальним idx по сторінці
+    // ✅ FIX: stageNo рахуємо окремо для кожної таблиці
     document.querySelectorAll(".table--season").forEach((table) => {
       const ths = table.querySelectorAll("thead th.col-stage");
       ths.forEach((th, i) => {
-        const stageNo = i + 1; // 1..5 для КОЖНОЇ таблиці
+        const stageNo = i + 1;
         th.style.display = stageNo <= count ? "" : "none";
         if (stageNo <= count) th.innerHTML = `Е${stageNo}<br>м / б`;
       });
     });
 
-    // cells (в кожному рядку теж 1..5)
+    // cells (у кожному рядку 1..5)
     document.querySelectorAll(".table--season tbody tr").forEach((tr) => {
       const tds = tr.querySelectorAll("td.col-stage");
       tds.forEach((td, i) => {
@@ -245,7 +245,6 @@
 
     list.sort((a, b) => a.n - b.n);
 
-    // uniq by number
     const uniq = [];
     const used = new Set();
     for (const it of list) {
@@ -259,7 +258,6 @@
   async function getSeasonConfig(db, seasonCompId) {
     let stagesCount = 0;
     let hasFinal = false;
-    let stage1Key = "stage-1";
 
     try {
       const c = await db.collection("competitions").doc(seasonCompId).get();
@@ -275,8 +273,6 @@
           return k === "final" || k.includes("final") || k.includes("фінал");
         });
 
-        if (stageEvents[0]?.key) stage1Key = String(stageEvents[0].key);
-
         if ($("seasonTitle") && (data.name || data.title)) $("seasonTitle").textContent = String(data.name || data.title);
         if ($("seasonKicker") && (data.year || data.seasonYear)) $("seasonKicker").textContent = `СЕЗОН ${data.year || data.seasonYear}`;
       }
@@ -287,10 +283,10 @@
 
     document.body.setAttribute("data-has-final", hasFinal ? "1" : "0");
 
-    return { stagesCount, hasFinal, stage1Key };
+    return { stagesCount, hasFinal };
   }
 
-  // ===================== PAID TEAMS (STAGE 1) =====================
+  // ===================== TS HELPERS =====================
   function getTsMillis(ts) {
     if (!ts) return 0;
     if (typeof ts.toMillis === "function") return ts.toMillis();
@@ -298,8 +294,9 @@
     return 0;
   }
 
-  async function loadPaidTeamsForStage1(db, seasonCompId, stage1Key) {
-    // ✅ FIX: entryType може бути відсутній — робимо мʼякий fallback
+  // ===================== PAID TEAMS (SEASON: ANY STAGE) =====================
+  // ✅ FIX: беремо всі етапи сезону і робимо унікальні teamId
+  async function loadPaidTeamsForSeason(db, seasonCompId) {
     let snap;
 
     try {
@@ -309,46 +306,36 @@
         .where("status", "in", PAID_STATUSES)
         .get();
     } catch (e) {
-      // fallback без entryType (на випадок відсутнього поля/індексу)
+      // fallback без entryType
       snap = await db.collection("public_participants")
         .where("competitionId", "==", seasonCompId)
         .where("status", "in", PAID_STATUSES)
         .get();
     }
 
-    const map = new Map(); // teamId -> row
+    const map = new Map(); // teamId -> {teamId, team, firstTs}
+
     snap.forEach((doc) => {
       const r = doc.data() || {};
-      const docStage = String(r.stageId || "").trim();
-
-      // строго stage1Key
-      if (String(docStage) !== String(stage1Key)) return;
-
       const teamId = r.teamId || doc.id;
       if (!teamId) return;
 
-      if (!map.has(teamId)) {
-        map.set(teamId, {
-          teamId,
-          team: norm(r.teamName || "—"),
-          orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null,
-          confirmedAt: r.confirmedAt || null,
-          createdAt: r.createdAt || null
-        });
+      const teamName = norm(r.teamName || "—");
+      const ts = getTsMillis(r.confirmedAt) || getTsMillis(r.createdAt) || 0;
+
+      const prev = map.get(teamId);
+      if (!prev) {
+        map.set(teamId, { teamId, team: teamName, firstTs: ts });
+      } else {
+        if (ts && (!prev.firstTs || ts < prev.firstTs)) prev.firstTs = ts;
+        if ((prev.team === "—" || prev.team === "-") && teamName && teamName !== "—") prev.team = teamName;
       }
     });
 
     const rows = Array.from(map.values());
 
-    rows.sort((a, b) => {
-      if (Number.isFinite(a.orderPaid) && Number.isFinite(b.orderPaid)) return a.orderPaid - b.orderPaid;
-      if (Number.isFinite(a.orderPaid)) return -1;
-      if (Number.isFinite(b.orderPaid)) return 1;
-
-      const at = getTsMillis(a.confirmedAt) || getTsMillis(a.createdAt);
-      const bt = getTsMillis(b.confirmedAt) || getTsMillis(b.createdAt);
-      return at - bt;
-    });
+    // preview-сортування: найраніші вище
+    rows.sort((a, b) => (a.firstTs || 0) - (b.firstTs || 0));
 
     return rows;
   }
@@ -379,7 +366,7 @@
       renderRow(topRows[i], { place: i + 1, team: paidTeams[i].team });
     }
 
-    // ✅ Preview contenders 19+ (нумерація)
+    // Preview contenders 19+
     if (paidTeams.length > TOP_COUNT) {
       const rest = paidTeams.slice(TOP_COUNT);
       for (let i = 0; i < Math.min(rest.length, contRows.length); i++) {
@@ -387,7 +374,7 @@
       }
     }
 
-    // Realtime overwrite TOP
+    // Realtime overwrite TOP (як у твоєму каноні)
     if (realtime && !realtime.__error) {
       if ($("seasonTitle") && realtime.seasonTitle) $("seasonTitle").textContent = String(realtime.seasonTitle);
       if ($("seasonKicker") && realtime.seasonYear) $("seasonKicker").textContent = `СЕЗОН ${realtime.seasonYear}`;
@@ -403,7 +390,7 @@
     }
 
     if (!paidTeams.length && !isOffline) {
-      showError("⚠️ Немає даних: ще немає оплачених команд Етапу 1 або їх не записано в public_participants.");
+      showError("⚠️ Немає даних: немає жодної команди зі статусом confirmed/paid у public_participants для цього сезону.");
     } else if (!isOffline) {
       hideError();
     }
@@ -429,11 +416,12 @@
     try {
       const db = await waitFirestore();
       const seasonCompId = await resolveSeasonCompId(db);
-      const { stagesCount, stage1Key } = await getSeasonConfig(db, seasonCompId);
+      const { stagesCount } = await getSeasonConfig(db, seasonCompId);
 
       let paidTeams = [];
       try {
-        paidTeams = await loadPaidTeamsForStage1(db, seasonCompId, stage1Key);
+        // ✅ FIX: тепер по ВСІХ етапах сезону (унікальні команди)
+        paidTeams = await loadPaidTeamsForSeason(db, seasonCompId);
       } catch {}
 
       const realtime = await loadRealtimeIfAllowed(db);
@@ -457,7 +445,7 @@
     }
   }
 
-  // ручне оновлення (якщо треба)
+  // ручне оновлення
   window.refreshRating = async function () {
     cacheClear();
     showError("⏳ Оновлення...");

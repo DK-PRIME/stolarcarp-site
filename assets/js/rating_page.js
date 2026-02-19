@@ -7,6 +7,7 @@
 // ✅ Results: results/realtime може заповнити ВСЮ таблицю (top + contenders)
 // ✅ Кеш по seasonCompId (не плутає сезони)
 // ✅ Не ламає сторінку при помилках/permission-denied
+// ✅ FIX: фінал розпізнається ТІЛЬКИ як точне "final" (не semifinal, не finalstage, не фінал)
 
 (function () {
   "use strict";
@@ -120,6 +121,7 @@
   // 2) Season config: stages + final
   // Беремо competitions/{seasonCompId}.events
   // Розпізнаємо stage-1, stage1, Stage_2, "ЕТАП 3", etc (будь-що з цифрою)
+  // Фінал = ТІЛЬКИ точне "final" (case-insensitive)
   async function getSeasonConfig(db, seasonCompId) {
     let stagesCount = 0;
     let hasFinal = false;
@@ -149,7 +151,7 @@
             // якщо нема цифри — швидше за все це не етап (може "final")
             if (!Number.isFinite(n)) return null;
 
-            // фільтр: щоб не тягнути “2026” з season-2026 випадково — беремо події, де є "stage" або "етап"
+            // фільтр: щоб не тягнути "2026" з season-2026 випадково — беремо події, де є "stage" або "етап"
             const low = keyRaw.toLowerCase();
             const looksLikeStage = low.includes("stage") || low.includes("етап") || low.startsWith("e");
             if (!looksLikeStage) return null;
@@ -162,10 +164,10 @@
         stagesCount = stageEvents.length;
         stage1Key = stageEvents[0]?.key || null;
 
-        // final event
+        // ✅ FIX: final event — ТІЛЬКИ точне співпадіння "final" (не semifinal, не finalstage, не фінал)
         hasFinal = events.some((e) => {
-          const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase();
-          return k === "final" || k.includes("final") || k.includes("фінал");
+          const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase().trim();
+          return k === "final";
         });
       }
     } catch {}
@@ -425,7 +427,7 @@
     const realtime = await loadRealtime(db);
 
     if (realtime && realtime.__error) {
-      // m’яко: залишаємо preview, показуємо попередження
+      // m'яко: залишаємо preview, показуємо попередження
       showError(`⚠️ <b>Немає доступу/помилка results</b><br><span class="hint">${safeText(realtime.__error)}</span>`);
     } else if (realtime) {
       // headers
@@ -516,7 +518,7 @@
       }
     }
 
-    // Якщо кеш містить повний рейтинг — показуємо і його (не обовʼязково, але корисно)
+    // Якщо кеш містить повний рейтинг — показуємо і його (не обов'язково, але корисно)
     const full = getFullRatingFromRealtime(realtime);
     if (full && full.length) {
       const fullContendersCount = Math.max(0, full.length - TOP_COUNT);
@@ -538,7 +540,7 @@
     }
 
     if (fromCache) {
-      // не показуємо помилку, просто “тихо” відмалювали
+      // не показуємо помилку, просто "тихо" відмалювали
     }
   }
 

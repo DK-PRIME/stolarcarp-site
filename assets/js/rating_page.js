@@ -1,10 +1,11 @@
 // assets/js/rating_page.js
-// STOLAR CARP • Season Rating page (CANON)
-// ✅ Немає "порожнього" стану при завантаженні (no flicker)
-// ✅ Етапи визначаються по competitions/{seasonCompId}.events (будь-який формат ключів stage-1, stage1, Stage_2...)
-// ✅ TOP-18 + Претенденти (19+) з коректною нумерацією та ЕТАПАМИ
-// ✅ Перший рендер = скелет, потім підстановка даних
-// ✅ М'які помилки + кеш 5 хв
+// STOLAR CARP • Season Rating page (CANON FINAL)
+// ✅ NO-FLICKER (етапи приховані до готовності)
+// ✅ Етапи з competitions/{seasonCompId}.events (stage-1, stage1, Stage_2, "етап 3"...)
+// ✅ TOP-18 + Претенденти (19+) з правильною нумерацією
+// ✅ Етапи (Е1..Е5) видно і в верхній, і в нижній таблиці (FIX idx)
+// ✅ Preview з public_participants (оплачені stage1), потім realtime перезаписує TOP
+// ✅ Кеш 5 хв + м’які помилки
 
 (function () {
   "use strict";
@@ -12,16 +13,16 @@
   const $ = (id) => document.getElementById(id);
 
   const TOP_COUNT = 18;
-  const STAGES_MAX_IN_HTML = 5; // у верстці E1..E5 (максимум)
+  const STAGES_MAX_IN_HTML = 5; // у верстці E1..E5
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_v2";
+  const CACHE_KEY = "sc_rating_cache_v3";
 
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
   const norm = (v) => String(v ?? "").trim();
   const safeText = (v, dash = "—") => (v === null || v === undefined || v === "" ? dash : String(v));
 
-  // ===================== UI FLAGS (NO FLICKER) =====================
+  // ===================== READY FLAG (NO FLICKER) =====================
   function setReadyFlag(isReady) {
     document.documentElement.setAttribute("data-rating-ready", isReady ? "1" : "0");
   }
@@ -65,7 +66,6 @@
   }
 
   // ===================== TABLE SKELETON =====================
-  // ✅ FIX: Уніфікована структура для обох таблиць — однаковий порядок колонок
   function rowHTML(place, qualified) {
     const trClass = qualified ? "row-qualified" : "";
     const placeStr = place === "—" ? "—" : String(place);
@@ -99,18 +99,15 @@
     const contTbody = $("season-contenders");
     if (!topTbody || !contTbody) return;
 
-    // TOP
     topTbody.innerHTML = "";
     for (let i = 1; i <= TOP_COUNT; i++) {
       topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
     }
 
-    // CONTENDERS
     const cc = Math.max(3, Number(contendersCount || 0));
     contTbody.innerHTML = "";
     for (let i = 0; i < cc; i++) {
-      // ✅ FIX: місце 19, 20, 21... замість "—"
-      contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
+      contTbody.insertAdjacentHTML("beforeend", rowHTML("—", false));
     }
   }
 
@@ -137,22 +134,17 @@
   function renderRow(tr, item) {
     if (!tr || !item) return;
     const tds = tr.querySelectorAll("td");
-    // ✅ FIX: Перевірка мінімальної кількості колонок (3 + stages + 4)
     if (!tds || tds.length < (3 + STAGES_MAX_IN_HTML + 4)) return;
 
-    // place
     if (item.place !== undefined && item.place !== null) {
       const pl = tr.querySelector(".place-num");
       if (pl) pl.textContent = String(item.place);
     }
 
-    // move
     setMove(tds[1].querySelector(".move"), item.move);
 
-    // team
     tds[2].textContent = safeText(item.team, tds[2].textContent);
 
-    // stages (E1, E2, E3...)
     const stages = Array.isArray(item.stages) ? item.stages : [];
     for (let i = 0; i < STAGES_MAX_IN_HTML; i++) {
       const cell = tds[3 + i];
@@ -163,33 +155,33 @@
       if (ptsEl) ptsEl.textContent = safeText(s.pts, "–");
     }
 
-    // points
     const b = tds[3 + STAGES_MAX_IN_HTML].querySelector("b");
     if (b) b.textContent = safeText(item.points, b.textContent);
 
-    // final/weight/big
     tds[4 + STAGES_MAX_IN_HTML].textContent = safeText(item.finalPlace, tds[4 + STAGES_MAX_IN_HTML].textContent);
     tds[5 + STAGES_MAX_IN_HTML].textContent = safeText(item.weight, tds[5 + STAGES_MAX_IN_HTML].textContent);
     tds[6 + STAGES_MAX_IN_HTML].textContent = safeText(item.bigFish, tds[6 + STAGES_MAX_IN_HTML].textContent);
   }
 
-  // ===================== STAGES VISIBILITY =====================
-  // ✅ FIX: Застосовується до ОБОХ таблиць одночасно
+  // ===================== STAGES VISIBILITY (FIXED FOR 2 TABLES) =====================
   function applyStageVisibility(stagesCount) {
     const count = Math.max(0, Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0)));
 
-    // headings (обидві таблиці — селектор .table--season)
-    document.querySelectorAll(".table--season thead th.col-stage").forEach((th, idx) => {
-      const stageNo = idx + 1;
-      th.style.display = stageNo <= count ? "" : "none";
-      if (stageNo <= count) th.innerHTML = `E${stageNo}<br>м / б`;
+    // ✅ FIX: рахуємо stageNo окремо для кожної таблиці, а не загальним idx по сторінці
+    document.querySelectorAll(".table--season").forEach((table) => {
+      const ths = table.querySelectorAll("thead th.col-stage");
+      ths.forEach((th, i) => {
+        const stageNo = i + 1; // 1..5 для КОЖНОЇ таблиці
+        th.style.display = stageNo <= count ? "" : "none";
+        if (stageNo <= count) th.innerHTML = `Е${stageNo}<br>м / б`;
+      });
     });
 
-    // cells (обидві таблиці — top + contenders)
+    // cells (в кожному рядку теж 1..5)
     document.querySelectorAll(".table--season tbody tr").forEach((tr) => {
       const tds = tr.querySelectorAll("td.col-stage");
-      tds.forEach((td, idx) => {
-        const stageNo = idx + 1;
+      tds.forEach((td, i) => {
+        const stageNo = i + 1;
         td.style.display = stageNo <= count ? "" : "none";
       });
     });
@@ -238,7 +230,7 @@
       if (!raw) continue;
 
       const low = raw.toLowerCase();
-      const looksLikeStage = low.includes("stage") || low.includes("етап") || low.startsWith("e") || low.startsWith("s");
+      const looksLikeStage = low.includes("stage") || low.includes("етап") || low.startsWith("e");
       const m = raw.match(/(\d+)/);
       if (!m) continue;
 
@@ -250,6 +242,7 @@
 
     list.sort((a, b) => a.n - b.n);
 
+    // uniq by number
     const uniq = [];
     const used = new Set();
     for (const it of list) {
@@ -281,12 +274,8 @@
 
         if (stageEvents[0]?.key) stage1Key = String(stageEvents[0].key);
 
-        if ($("seasonTitle") && (data.name || data.title)) {
-          $("seasonTitle").textContent = String(data.name || data.title);
-        }
-        if ($("seasonKicker") && data.year) {
-          $("seasonKicker").textContent = `СЕЗОН ${data.year}`;
-        }
+        if ($("seasonTitle") && (data.name || data.title)) $("seasonTitle").textContent = String(data.name || data.title);
+        if ($("seasonKicker") && (data.year || data.seasonYear)) $("seasonKicker").textContent = `СЕЗОН ${data.year || data.seasonYear}`;
       }
     } catch {}
 
@@ -307,17 +296,29 @@
   }
 
   async function loadPaidTeamsForStage1(db, seasonCompId, stage1Key) {
-    const snap = await db.collection("public_participants")
-      .where("competitionId", "==", seasonCompId)
-      .where("entryType", "==", "team")
-      .where("status", "in", PAID_STATUSES)
-      .get();
+    // ✅ FIX: entryType може бути відсутній — робимо мʼякий fallback
+    let snap;
 
-    const map = new Map();
+    try {
+      snap = await db.collection("public_participants")
+        .where("competitionId", "==", seasonCompId)
+        .where("entryType", "==", "team")
+        .where("status", "in", PAID_STATUSES)
+        .get();
+    } catch (e) {
+      // fallback без entryType (на випадок відсутнього поля/індексу)
+      snap = await db.collection("public_participants")
+        .where("competitionId", "==", seasonCompId)
+        .where("status", "in", PAID_STATUSES)
+        .get();
+    }
+
+    const map = new Map(); // teamId -> row
     snap.forEach((doc) => {
       const r = doc.data() || {};
-      const docStage = r.stageId || "";
+      const docStage = String(r.stageId || "").trim();
 
+      // строго stage1Key
       if (String(docStage) !== String(stage1Key)) return;
 
       const teamId = r.teamId || doc.id;
@@ -362,83 +363,38 @@
 
   // ===================== RENDER DATA =====================
   function renderData({ stagesCount, paidTeams = [], realtime = null }, isOffline = false) {
-    // ✅ FIX: contendersCount враховує всі команди, не тільки paidTeams
-    const totalTeams = paidTeams.length;
-    const contendersCount = Math.max(0, totalTeams - TOP_COUNT);
-    
+    const contendersCount = Math.max(0, paidTeams.length - TOP_COUNT);
     buildSkeleton(contendersCount);
+
     applyStageVisibility(stagesCount);
 
     const topRows = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
     const contRows = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
 
-    // TOP-18
+    // Preview TOP
     for (let i = 0; i < Math.min(TOP_COUNT, paidTeams.length, topRows.length); i++) {
       renderRow(topRows[i], { place: i + 1, team: paidTeams[i].team });
     }
 
-    // ✅ FIX: Претенденти 19+ з правильною нумерацією та етапами
+    // ✅ Preview contenders 19+ (нумерація)
     if (paidTeams.length > TOP_COUNT) {
       const rest = paidTeams.slice(TOP_COUNT);
       for (let i = 0; i < Math.min(rest.length, contRows.length); i++) {
-        // ✅ Місце 19, 20, 21... (вже встановлено в buildSkeleton, але перестрахуємось)
-        renderRow(contRows[i], { 
-          place: TOP_COUNT + i + 1, 
-          team: rest[i].team 
-        });
+        renderRow(contRows[i], { place: TOP_COUNT + i + 1, team: rest[i].team });
       }
     }
 
-    // REALTIME перезаписує якщо є
+    // Realtime overwrite TOP
     if (realtime && !realtime.__error) {
       if ($("seasonTitle") && realtime.seasonTitle) $("seasonTitle").textContent = String(realtime.seasonTitle);
       if ($("seasonKicker") && realtime.seasonYear) $("seasonKicker").textContent = `СЕЗОН ${realtime.seasonYear}`;
 
-      if (realtime.seasonStages) {
-        applyStageVisibility(Number(realtime.seasonStages));
-      }
+      if (realtime.seasonStages) applyStageVisibility(Number(realtime.seasonStages));
 
-      // ✅ FIX: Обробка повного рейтингу (top + contenders) з realtime
-      const all = Array.isArray(realtime.seasonRatingAll) ? realtime.seasonRatingAll : null;
       const top = Array.isArray(realtime.seasonRatingTop) ? realtime.seasonRatingTop : [];
-      const cont = Array.isArray(realtime.seasonRatingContenders) ? realtime.seasonRatingContenders : [];
-
-      if (all && all.length) {
-        // Перебудова скелета під точну кількість
-        const fullContendersCount = Math.max(0, all.length - TOP_COUNT);
-        buildSkeleton(fullContendersCount);
-        applyStageVisibility(realtime.seasonStages || stagesCount);
-
-        const topRows2 = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
-        const contRows2 = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
-
-        // TOP
-        for (let i = 0; i < Math.min(TOP_COUNT, all.length, topRows2.length); i++) {
-          renderRow(topRows2[i], Object.assign({ place: i + 1 }, all[i]));
-        }
-        // CONTENDERS 19+
-        for (let i = TOP_COUNT; i < Math.min(all.length, topRows2.length + contRows2.length); i++) {
-          const idx = i - TOP_COUNT;
-          if (contRows2[idx]) {
-            renderRow(contRows2[idx], Object.assign({ place: i + 1 }, all[i]));
-          }
-        }
-      } else if (top.length || cont.length) {
-        // Окремі масиви top + contenders
-        const fullContendersCount = Math.max(0, cont.length);
-        buildSkeleton(fullContendersCount);
-        applyStageVisibility(realtime.seasonStages || stagesCount);
-
-        const topRows2 = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
-        const contRows2 = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
-
-        // TOP
-        for (let i = 0; i < Math.min(top.length, topRows2.length); i++) {
-          renderRow(topRows2[i], Object.assign({ place: i + 1 }, top[i]));
-        }
-        // CONTENDERS 19+
-        for (let i = 0; i < Math.min(cont.length, contRows2.length); i++) {
-          renderRow(contRows2[i], Object.assign({ place: TOP_COUNT + i + 1 }, cont[i]));
+      if (top.length && topRows.length) {
+        for (let i = 0; i < Math.min(topRows.length, top.length); i++) {
+          renderRow(topRows[i], top[i]);
         }
       }
     }
@@ -449,6 +405,7 @@
       hideError();
     }
 
+    // ✅ ТІЛЬКИ ТЕПЕР показуємо stage-колонки (no-flicker)
     setReadyFlag(true);
   }
 
@@ -457,14 +414,13 @@
     hideError();
     setReadyFlag(false);
 
-    // Перший скелет (мінімум)
+    // миттєвий скелет (етапи приховані CSS-ом)
     buildSkeleton(3);
 
+    // швидкий кеш
     const cached = cacheGet();
     if (cached) {
-      try {
-        renderData(cached, true);
-      } catch {}
+      try { renderData(cached, true); } catch {}
     }
 
     try {
@@ -498,6 +454,7 @@
     }
   }
 
+  // ручне оновлення (якщо треба)
   window.refreshRating = async function () {
     cacheClear();
     showError("⏳ Оновлення...");

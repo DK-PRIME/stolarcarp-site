@@ -1,518 +1,344 @@
-/**
- * rating_page.js — Рейтинг сезону STOLAR CARP
- * ✅ season doc: seasons/{seasonId} або competitions/{seasonId} з events:[{key:"stage1"...}]
- * ✅ команди: public_participants (competitionId, stageId, status, teamId, teamName)
- * ✅ результати: public_stageResults або stageResults (авто-підбір docId)
- *
- * Важливо:
- * - data-stages = КІЛЬКІСТЬ ЕТАПІВ СЕЗОНУ (а не finished)
- * - у "Претендентах" нумерація починається з 19, етапи показуються так само як у ТОП-18
- */
+// assets/js/rating_page.js
+// STOLAR CARP • Season Rating page
+// ✅ Завжди будує 18 рядків (скелет)
+// ✅ Автоматично підтягує команди, що оплатили Етап 1, з public_participants
+// ✅ Якщо зʼявляться результати (results/realtime.seasonRatingTop) — підставить їх
+// ✅ Колонки етапів автоматично ховає/показує під реальну кількість етапів (навіть якщо у верстці E1..E5)
+// ✅ Таблицю не зносить при помилці
+// ✅ FIX: претенденти (19+) мають правильну нумерацію + етапи
 
 (function () {
-  'use strict';
+  "use strict";
 
-  const CONFIG = {
-    collections: {
-      settings: 'settings',
-      seasons: 'seasons',
-      competitions: 'competitions',
-      publicParticipants: 'public_participants',
-      publicStageResults: 'public_stageResults',
-      stageResults: 'stageResults',
-    },
-    docIds: { appSettings: 'app' },
-    defaults: {
-      finalSpots: 18,
-      maxStages: 5, // максимум колонок Е1..Е5 у таблиці
-    },
-    paidStatuses: ['confirmed', 'paid', 'payment_confirmed'],
-  };
+  const $ = (id) => document.getElementById(id);
 
-  const state = {
-    seasonId: null,
-    seasonDocPath: null,
-    seasonData: null,
-    stages: [],              // [{key, idx, startAt, finishAt, isFinished}]
-    teams: [],               // [{id,name, regsByStage:Set}]
-    stageResults: new Map(), // stageKey -> Map(teamId->result)
-    ratingData: [],
-    finishedStagesCount: 0,
-    seasonStagesCount: 0,    // ✅ СКІЛЬКИ етапів у сезоні (events.length, max 5)
-  };
+  const TOP_COUNT = 18;
+  const STAGES_MAX_IN_HTML = 5; // у твоїй верстці зараз E1..E5
 
-  document.addEventListener('DOMContentLoaded', init);
+  const norm = (v) => String(v ?? "").trim();
+  const safeText = (v, dash = "—") => (v === null || v === undefined || v === "" ? dash : String(v));
 
-  async function init() {
-    try {
-      setRatingError(''); // очистити помилку
-      showLoadingState();
+  const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
+  const isPaidStatus = (s) => PAID_STATUSES.includes(norm(s).toLowerCase());
 
-      const db = getDb();
-      if (!db) throw new Error('Firebase DB не доступний');
-
-      await loadActiveSeasonId(db);
-      await loadSeasonDoc(db);
-      buildStagesFromSeason();       // ✅ тут ми знаємо seasonStagesCount
-      updateStagesAttribute();       // ✅ ставимо data-stages одразу
-
-      await loadTeamsFromPublicParticipants(db);
-      await loadResultsForStages(db);
-
-      calculateRatings();
-      renderTable();
-
-      console.log(
-        `[Rating] season=${state.seasonId} stages=${state.stages.length} teams=${state.teams.length} finished=${state.finishedStagesCount}`
-      );
-    } catch (err) {
-      console.error('[Rating] Помилка:', err);
-      setRatingError(`⚠️ Помилка завантаження: ${escapeHtml(safeMsg(err))}`);
-      // таблицю не валимо — просто лишається те що було/скелет
-    }
+  function showError(msgHtml) {
+    const box = $("ratingError");
+    if (!box) return;
+    box.style.display = "block";
+    box.innerHTML = msgHtml;
+  }
+  function hideError() {
+    const box = $("ratingError");
+    if (!box) return;
+    box.style.display = "none";
+    box.innerHTML = "";
   }
 
-  function getDb() {
-    return window.firebase?.db || window.db || window.scDb || null;
-  }
-
-  function showLoadingState() {
-    // показуємо хоча б 0, далі оновимо після buildStagesFromSeason()
-    document.body.setAttribute('data-stages', '0');
-  }
-
-  // ==================== Active seasonId ====================
-
-  async function loadActiveSeasonId(db) {
-    const snap = await db.collection(CONFIG.collections.settings).doc(CONFIG.docIds.appSettings).get();
-    if (!snap.exists) throw new Error('Не знайдено settings/app');
-
-    const s = snap.data() || {};
-    state.seasonId = s.activeSeasonId || s.activeCompetitionId || s.activeCompId || null;
-
-    if (!state.seasonId) throw new Error('У settings/app не знайдено activeSeasonId/activeCompetitionId');
-  }
-
-  // ==================== Season doc ====================
-
-  async function loadSeasonDoc(db) {
-    const tryPaths = [
-      { col: CONFIG.collections.seasons, doc: state.seasonId },
-      { col: CONFIG.collections.competitions, doc: state.seasonId },
-    ];
-
-    for (const p of tryPaths) {
-      const snap = await db.collection(p.col).doc(p.doc).get();
-      if (snap.exists) {
-        state.seasonDocPath = `${p.col}/${p.doc}`;
-        state.seasonData = snap.data() || {};
-        return;
-      }
-    }
-
-    throw new Error(`Не знайдено документ сезону ${state.seasonId} ні в seasons, ні в competitions`);
-  }
-
-  // ==================== Build stages from season.events[] ====================
-
-  function buildStagesFromSeason() {
-    const events = Array.isArray(state.seasonData?.events) ? state.seasonData.events : [];
-
-    if (!events.length) {
-      state.stages = [];
-      state.finishedStagesCount = 0;
-      state.seasonStagesCount = 0;
-      return;
-    }
-
-    const now = Date.now();
-
-    const stages = events
-      .map((ev, i) => {
-        const key = String(ev.key || ev.stageId || ev.id || `stage${i + 1}`);
-        const startAt = parseDateLike(ev.startDate || ev.startAt || ev.start || null);
-        const finishAt = parseDateLike(ev.finishDate || ev.finishAt || ev.finish || null);
-
-        const isFinished =
-          (String(ev.status || '').toLowerCase() === 'finished') ||
-          (!!finishAt && finishAt.getTime() < now);
-
-        const idx = inferStageIndex(key, i);
-        return { key, idx, startAt, finishAt, isFinished };
-      })
-      .sort((a, b) => (a.idx || 999) - (b.idx || 999));
-
-    state.stages = stages;
-    state.finishedStagesCount = stages.filter(s => s.isFinished).length;
-
-    // ✅ СКІЛЬКИ етапів у сезоні (для таблиці Е1..Еn)
-    state.seasonStagesCount = Math.min(stages.length, CONFIG.defaults.maxStages);
-  }
-
-  function inferStageIndex(key, fallbackI) {
-    const m = String(key).match(/(\d+)/);
-    if (m) return Number(m[1]);
-    return fallbackI + 1;
-  }
-
-  function parseDateLike(v) {
-    if (!v) return null;
-    if (typeof v === 'object' && typeof v.toDate === 'function') return v.toDate();
-    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) return new Date(v + 'T00:00:00');
-    if (typeof v === 'string') {
-      const d = new Date(v);
-      return isNaN(d.getTime()) ? null : d;
-    }
-    return null;
-  }
-
-  // ==================== Teams from public_participants ====================
-
-  async function loadTeamsFromPublicParticipants(db) {
-    let snap;
-
-    // Спочатку пробуємо "status in" (краще)
-    try {
-      snap = await db
-        .collection(CONFIG.collections.publicParticipants)
-        .where('competitionId', '==', state.seasonId)
-        .where('status', 'in', CONFIG.paidStatuses)
-        .get();
-    } catch (e) {
-      console.warn('[Rating] public_participants query with status IN failed, fallback:', safeMsg(e));
-      snap = await db
-        .collection(CONFIG.collections.publicParticipants)
-        .where('competitionId', '==', state.seasonId)
-        .get();
-    }
-
-    const map = new Map();
-
-    snap.docs.forEach((doc) => {
-      const r = doc.data() || {};
-      const status = String(r.status || '').toLowerCase();
-
-      // якщо fallback — відсікаємо зайве тут
-      if (status && !CONFIG.paidStatuses.includes(status)) return;
-
-      const teamId = r.teamId;
-      if (!teamId) return;
-
-      if (!map.has(teamId)) {
-        map.set(teamId, {
-          id: teamId,
-          name: r.teamName || r.name || 'Без назви',
-          regsByStage: new Set(),
-        });
-      }
-
-      const t = map.get(teamId);
-      if (r.stageId) t.regsByStage.add(String(r.stageId));
-    });
-
-    state.teams = Array.from(map.values());
-  }
-
-  // ==================== Results loading ====================
-
-  async function loadResultsForStages(db) {
-    state.stageResults.clear();
-    if (!state.stages.length) return;
-
-    for (const st of state.stages) {
-      const docIds = [
-        `${state.seasonId}_${st.key}`,
-        `${state.seasonId}__${st.key}`,
-        `${state.seasonId}||${st.key}`,
-        `${st.key}`,
-      ];
-
-      const data = await tryReadStageResult(db, docIds);
-      if (data) {
-        state.stageResults.set(st.key, normalizeStageTeams(data));
-      } else {
-        state.stageResults.set(st.key, new Map());
-      }
-    }
-  }
-
-  async function tryReadStageResult(db, docIds) {
-    const cols = [CONFIG.collections.publicStageResults, CONFIG.collections.stageResults];
-
-    for (const col of cols) {
-      for (const id of docIds) {
-        try {
-          const snap = await db.collection(col).doc(id).get();
-          if (snap.exists) return snap.data() || {};
-        } catch (e) {
-          // якщо permission — не валимо все, просто пропускаємо цей docId
-          const msg = String(e?.message || '');
-          if (msg.includes('Missing or insufficient permissions') || msg.toLowerCase().includes('permission')) {
-            // просто continue
-            continue;
-          }
-          // інші помилки краще показати
-          console.warn('[Rating] stageResults read failed:', safeMsg(e));
-        }
-      }
-    }
-    return null;
-  }
-
-  function normalizeStageTeams(stageData) {
-    const map = new Map();
-    if (!stageData) return map;
-
-    const by = stageData.teamsByTeamId;
-    if (by && typeof by === 'object' && !Array.isArray(by)) {
-      Object.keys(by).forEach((teamId) => map.set(teamId, by[teamId] || {}));
-      return map;
-    }
-
-    const teams = stageData.teams;
-
-    if (teams && typeof teams === 'object' && !Array.isArray(teams)) {
-      Object.keys(teams).forEach((teamId) => map.set(teamId, teams[teamId] || {}));
-      return map;
-    }
-
-    if (Array.isArray(teams)) {
-      teams.forEach((t) => {
-        const teamId = t?.teamId || t?.id;
-        if (teamId) map.set(String(teamId), t);
-      });
-    }
-
-    return map;
-  }
-
-  // ==================== CALC ====================
-
-  function calculateRatings() {
-    const absentByStage = new Map();
-
-    state.stages.forEach((st) => {
-      if (!st.isFinished) return;
-      const m = state.stageResults.get(st.key) || new Map();
-      let maxPlace = 0;
-
-      m.forEach((r) => {
-        const p = toNum(r?.place ?? r?.rank);
-        if (p && p > maxPlace) maxPlace = p;
-      });
-
-      const fallback = Math.max(0, state.teams.length);
-      const useMax = maxPlace > 0 ? maxPlace : fallback;
-      absentByStage.set(st.key, useMax + 1);
-    });
-
-    state.ratingData = state.teams.map((team) => {
-      const stageScores = [];
-      let totalPoints = 0;
-      let totalWeight = 0;
-      let maxBigFish = 0;
-
-      state.stages.forEach((st) => {
-        const isFinished = !!st.isFinished;
-        const absentPoints = absentByStage.get(st.key) ?? (state.teams.length + 1);
-
-        const score = {
-          stageKey: st.key,
-          stageIndex: st.idx,
-          isFinished,
-          place: '—',
-          points: '—',
-          weight: 0,
-          bigFish: 0,
-          participated: false,
-        };
-
-        // якщо етап ще не завершено — показуємо —
-        if (!isFinished) {
-          stageScores.push(score);
-          return;
-        }
-
-        const stageMap = state.stageResults.get(st.key) || new Map();
-        const tr = stageMap.get(team.id) || null;
-
-        const hasReg = team.regsByStage?.has(st.key);
-
-        if (tr) {
-          const placeNum = toNum(tr.place ?? tr.rank);
-          const pointsNum = toNum(tr.points);
-
-          score.place = placeNum ?? '—';
-          score.points = (pointsNum ?? placeNum ?? absentPoints);
-
-          score.weight = toNum0(tr.totalWeight ?? tr.totalWeightKg ?? tr.weight);
-          score.bigFish = toNum0(tr.bigFish ?? tr.bigFishKg);
-          score.participated = true;
-        } else {
-          score.place = '—';
-          score.points = absentPoints;
-          score.participated = !!hasReg;
-        }
-
-        const p = (typeof score.points === 'number' && isFinite(score.points)) ? score.points : absentPoints;
-        totalPoints += p;
-        totalWeight += score.weight;
-        maxBigFish = Math.max(maxBigFish, score.bigFish);
-
-        stageScores.push(score);
-      });
-
-      stageScores.sort((a, b) => (a.stageIndex ?? 999) - (b.stageIndex ?? 999));
-
-      return {
-        teamId: team.id,
-        teamName: team.name,
-        stageScores,
-        totalPoints,
-        totalWeight,
-        maxBigFish,
-      };
-    });
-
-    state.ratingData.sort((a, b) => {
-      if (a.totalPoints !== b.totalPoints) return a.totalPoints - b.totalPoints;
-      if (a.totalWeight !== b.totalWeight) return b.totalWeight - a.totalWeight;
-      return b.maxBigFish - a.maxBigFish;
-    });
-
-    state.ratingData.forEach((r, i) => {
-      r.seasonPlace = i + 1;
-      r.isFinalist = i < CONFIG.defaults.finalSpots;
-      r.finalStatus = r.isFinalist ? 'Так' : '—';
-    });
-  }
-
-  function toNum(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  }
-  function toNum0(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
-  }
-
-  // ==================== RENDER ====================
-
-  function renderTable() {
-    const topTbody = document.getElementById('season-top');
-    const contendersTbody = document.getElementById('season-contenders');
-
-    if (!topTbody || !contendersTbody) return;
-
-    if (!state.ratingData.length) {
-      topTbody.innerHTML = `
-        <tr>
-          <td colspan="12" style="text-align:center;padding:20px;opacity:0.7;">
-            Поки що немає підтверджених/оплачених команд у сезоні
-          </td>
-        </tr>
-      `;
-      contendersTbody.innerHTML = '';
-      return;
-    }
-
-    const finalists = state.ratingData.filter(r => r.isFinalist);
-    const contenders = state.ratingData.filter(r => !r.isFinalist);
-
-    topTbody.innerHTML = finalists.map(r => createRowHTML(r, true)).join('');
-
-    if (contenders.length) {
-      contendersTbody.innerHTML = contenders.map(r => createRowHTML(r, false)).join('');
-    } else {
-      contendersTbody.innerHTML = `
-        <tr>
-          <td colspan="12" style="text-align:center;padding:20px;opacity:0.7;">
-            Поки що немає команд поза зоною фіналу
-          </td>
-        </tr>
-      `;
-    }
-  }
-
-  function createRowHTML(rating, isFinalist) {
-    const fmtWeight = (w) => (w > 0 ? w.toFixed(3) : '—');
-    const fmtBigFish = (bf) => (bf > 0 ? bf.toFixed(3) : '—');
-
-    const max = CONFIG.defaults.maxStages; // таблиця має Е1..Е5, зайве сховає CSS
-    const scores = Array.isArray(rating.stageScores) ? rating.stageScores.slice(0, max) : [];
-
-    const stageCells = scores.map(sc => {
-      if (!sc.isFinished) {
-        return `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`;
-      }
-      const placeDisplay = (typeof sc.place === 'number') ? sc.place : '—';
-      const pointsDisplay = (typeof sc.points === 'number') ? sc.points : '—';
-      return `
-        <td class="col-stage">
-          <div class="stage-cell">
-            <span class="stage-place">${placeDisplay}</span>
-            <span class="stage-slash">/</span>
-            <span class="stage-points">${pointsDisplay}</span>
-          </div>
-        </td>
-      `;
-    }).join('');
-
-    const missing = Math.max(0, max - scores.length);
-    const emptyCells = Array(missing).fill(
-      `<td class="col-stage"><div class="stage-cell"><span class="stage-place">—</span></div></td>`
-    ).join('');
-
+  function rowHTML(place, qualified) {
+    const trClass = qualified ? "row-qualified" : "";
     return `
-      <tr class="${isFinalist ? 'row-qualified' : ''}">
-        <td class="col-place"><span class="place-num">${rating.seasonPlace}</span></td>
-        <td class="col-move"><span class="move move--same">—</span></td>
-        <td class="col-team">${escapeHtml(rating.teamName)}</td>
-        ${stageCells}${emptyCells}
-        <td class="col-points"><b>${rating.totalPoints}</b></td>
-        <td class="col-final">${rating.finalStatus}</td>
-        <td class="col-weight">${fmtWeight(rating.totalWeight)}</td>
-        <td class="col-big">${fmtBigFish(rating.maxBigFish)}</td>
+      <tr class="${trClass}">
+        <td class="col-place"><span class="place-num">${place}</span></td>
+        <td class="col-move"><span class="move move--same">–</span></td>
+        <td class="col-team">-</td>
+        ${new Array(STAGES_MAX_IN_HTML).fill(0).map(() => `
+          <td class="col-stage">
+            <div class="stage-cell">
+              <span class="stage-place">–</span>
+              <span class="stage-slash">/</span>
+              <span class="stage-points">–</span>
+            </div>
+          </td>
+        `).join("")}
+        <td class="col-points"><b>-</b></td>
+        <td class="col-final">–</td>
+        <td class="col-weight">-</td>
+        <td class="col-big">-</td>
       </tr>
     `;
   }
 
-  // ✅ ГОЛОВНЕ: data-stages = кількість етапів сезону (events.length), а не finishedStagesCount
-  function updateStagesAttribute() {
-    document.body.setAttribute('data-stages', String(state.seasonStagesCount || 0));
+  // ✅ buildSkeleton тепер будує 18 зверху + N знизу (мін. 3)
+  function buildSkeleton(contendersCount = 3) {
+    const topTbody = $("season-top");
+    const contTbody = $("season-contenders");
+    if (!topTbody || !contTbody) return;
+
+    topTbody.innerHTML = "";
+    for (let i = 1; i <= TOP_COUNT; i++) {
+      topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
+    }
+
+    const cc = Math.max(3, Number(contendersCount || 0));
+    contTbody.innerHTML = "";
+    for (let i = 0; i < cc; i++) {
+      // ⚠️ місце тут поки заглушка — виставимо реально при рендері (19+)
+      contTbody.insertAdjacentHTML("beforeend", rowHTML("—", false));
+    }
   }
 
-  // ==================== UI ====================
+  function setMove(el, mv) {
+    if (!el) return;
+    el.classList.remove("move--up", "move--down", "move--same");
 
-  function setRatingError(html) {
-    const box = document.getElementById('ratingError');
-    if (!box) return;
-    if (!html) {
-      box.style.display = 'none';
-      box.innerHTML = '';
+    if (mv === "up") { el.classList.add("move--up"); el.textContent = "▲"; return; }
+    if (mv === "down") { el.classList.add("move--down"); el.textContent = "▼"; return; }
+    if (mv === "same" || mv === 0 || mv === "0" || mv === "-" || mv === "—") {
+      el.classList.add("move--same"); el.textContent = "–"; return;
+    }
+    if (typeof mv === "number") {
+      el.classList.add(mv > 0 ? "move--up" : mv < 0 ? "move--down" : "move--same");
+      el.textContent = mv > 0 ? `▲${mv}` : mv < 0 ? `▼${Math.abs(mv)}` : "–";
       return;
     }
-    box.style.display = 'block';
-    box.innerHTML = html;
+    el.classList.add("move--same");
+    el.textContent = safeText(mv, "–");
   }
 
-  function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = String(text || '');
-    return div.innerHTML;
+  function renderRow(tr, item) {
+    if (!tr || !item) return;
+    const tds = tr.querySelectorAll("td");
+    if (!tds || tds.length < (3 + STAGES_MAX_IN_HTML + 4)) return;
+
+    // place (важливо для 19+)
+    if (item.place !== undefined && item.place !== null) {
+      const pl = tr.querySelector(".place-num");
+      if (pl) pl.textContent = String(item.place);
+    }
+
+    setMove(tds[1].querySelector(".move"), item.move);
+    tds[2].textContent = safeText(item.team, tds[2].textContent);
+
+    const stages = Array.isArray(item.stages) ? item.stages : [];
+    for (let i = 0; i < STAGES_MAX_IN_HTML; i++) {
+      const cell = tds[3 + i];
+      const place = cell.querySelector(".stage-place");
+      const pts = cell.querySelector(".stage-points");
+      const s = stages[i] || {};
+      if (place) place.textContent = safeText(s.p, "–");
+      if (pts) pts.textContent = safeText(s.pts, "–");
+    }
+
+    const b = tds[3 + STAGES_MAX_IN_HTML].querySelector("b");
+    if (b) b.textContent = safeText(item.points, b.textContent);
+
+    tds[4 + STAGES_MAX_IN_HTML].textContent = safeText(item.finalPlace, tds[4 + STAGES_MAX_IN_HTML].textContent);
+    tds[5 + STAGES_MAX_IN_HTML].textContent = safeText(item.weight, tds[5 + STAGES_MAX_IN_HTML].textContent);
+    tds[6 + STAGES_MAX_IN_HTML].textContent = safeText(item.bigFish, tds[6 + STAGES_MAX_IN_HTML].textContent);
   }
 
-  function safeMsg(err) {
-    return (err && (err.message || err.code))
-      ? `${err.code ? err.code + ': ' : ''}${err.message || ''}`
-      : String(err);
+  // Ховаємо зайві колонки етапів (E4,E5...) або показуємо, якщо етапів більше
+  function applyStageVisibility(stagesCount) {
+    const count = Math.max(0, Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0)));
+
+    document.querySelectorAll(".table--season thead th.col-stage").forEach((th, idx) => {
+      const stageNo = idx + 1;
+      th.style.display = stageNo <= count ? "" : "none";
+      if (stageNo <= count) th.innerHTML = `E${stageNo}<br>м / б`;
+    });
+
+    document.querySelectorAll(".table--season tbody tr").forEach((tr) => {
+      const tds = tr.querySelectorAll("td.col-stage");
+      tds.forEach((td, idx) => {
+        const stageNo = idx + 1;
+        td.style.display = stageNo <= count ? "" : "none";
+      });
+    });
   }
 
-  // ==================== PUBLIC API ====================
+  async function waitFirestore(maxMs = 12000) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      const db =
+        window.scDb ||
+        window.db ||
+        (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      if (db) return db;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    throw new Error("Firebase DB не готовий (нема scDb).");
+  }
 
-  window.SeasonRating = {
-    refresh: init,
-    getState: () => JSON.parse(JSON.stringify(state)),
-    getConfig: () => JSON.parse(JSON.stringify(CONFIG)),
-  };
+  function getTsMillis(ts) {
+    if (!ts) return 0;
+    if (typeof ts.toMillis === "function") return ts.toMillis();
+    if (ts._seconds) return ts._seconds * 1000;
+    return 0;
+  }
+
+  async function resolveSeasonCompId(db) {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get("season");
+    if (fromUrl) return fromUrl;
+
+    try {
+      const s = await db.collection("settings").doc("app").get();
+      if (s.exists) {
+        const d = s.data() || {};
+        if (d.activeCompetitionId) return String(d.activeCompetitionId);
+      }
+    } catch {}
+    return "season-2026";
+  }
+
+  async function getSeasonConfig(db, seasonCompId) {
+    let stagesCount = 3;
+    let hasFinal = true;
+    let stage1Key = "stage-1";
+
+    try {
+      const c = await db.collection("competitions").doc(seasonCompId).get();
+      if (c.exists) {
+        const data = c.data() || {};
+        const events = Array.isArray(data.events) ? data.events : [];
+
+        const stageEvents = events.filter(e => String(e?.key || "").startsWith("stage-"));
+        const finalEvent = events.find(e => String(e?.key || "") === "final");
+
+        if (stageEvents.length) stagesCount = stageEvents.length;
+        hasFinal = !!finalEvent;
+
+        if (stageEvents[0]?.key) stage1Key = String(stageEvents[0].key);
+
+        if ($("seasonTitle") && (data.name || data.title)) $("seasonTitle").textContent = String(data.name || data.title);
+      }
+    } catch {}
+
+    document.body.setAttribute("data-stages", String(stagesCount || 0));
+    document.body.setAttribute("data-has-final", hasFinal ? "1" : "0");
+
+    return { stagesCount, hasFinal, stage1Key };
+  }
+
+  async function loadPaidTeamsForStage1(db, seasonCompId, stage1Key) {
+    const snap = await db.collection("public_participants")
+      .where("competitionId", "==", seasonCompId)
+      .where("entryType", "==", "team")
+      .where("status", "in", PAID_STATUSES)
+      .get();
+
+    const map = new Map(); // teamId -> row
+    snap.forEach((doc) => {
+      const r = doc.data() || {};
+      const docStage = r.stageId || "main";
+
+      if (String(docStage) !== String(stage1Key)) return;
+
+      const teamId = r.teamId || doc.id;
+      if (!teamId) return;
+
+      if (!map.has(teamId)) {
+        map.set(teamId, {
+          teamId,
+          team: norm(r.teamName || "—"),
+          status: norm(r.status),
+          orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null,
+          confirmedAt: r.confirmedAt || null,
+          createdAt: r.createdAt || null
+        });
+      }
+    });
+
+    const rows = Array.from(map.values());
+
+    rows.sort((a, b) => {
+      if (Number.isFinite(a.orderPaid) && Number.isFinite(b.orderPaid)) return a.orderPaid - b.orderPaid;
+      if (Number.isFinite(a.orderPaid)) return -1;
+      if (Number.isFinite(b.orderPaid)) return 1;
+
+      const at = getTsMillis(a.confirmedAt) || getTsMillis(a.createdAt);
+      const bt = getTsMillis(b.confirmedAt) || getTsMillis(b.createdAt);
+      return at - bt;
+    });
+
+    return rows;
+  }
+
+  async function loadRealtimeIfAllowed(db) {
+    try {
+      const snap = await db.collection("results").doc("realtime").get();
+      if (!snap.exists) return null;
+      return snap.data() || {};
+    } catch (e) {
+      return { __error: String(e?.message || e) };
+    }
+  }
+
+  async function loadRating() {
+    hideError();
+
+    const db = await waitFirestore();
+
+    const seasonCompId = await resolveSeasonCompId(db);
+    const { stagesCount, stage1Key } = await getSeasonConfig(db, seasonCompId);
+
+    // ✅ ПІДТЯГУЄМО ОПЛАЧЕНІ СПОЧАТКУ, щоб знати скільки претендентів
+    let paidTeams = [];
+    try {
+      paidTeams = await loadPaidTeamsForStage1(db, seasonCompId, stage1Key);
+    } catch {}
+
+    const contendersCount = Math.max(0, paidTeams.length - TOP_COUNT);
+    buildSkeleton(contendersCount); // ✅ будує низ потрібної довжини (мін. 3)
+
+    applyStageVisibility(stagesCount);
+
+    const topRows = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
+    const contRows = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
+
+    // ✅ 1) Заповнюємо TOP-18 з paidTeams
+    for (let i = 0; i < Math.min(TOP_COUNT, paidTeams.length, topRows.length); i++) {
+      renderRow(topRows[i], { place: i + 1, team: paidTeams[i].team });
+    }
+
+    // ✅ 2) Заповнюємо претендентів (19+)
+    if (paidTeams.length > TOP_COUNT) {
+      const rest = paidTeams.slice(TOP_COUNT);
+      for (let i = 0; i < Math.min(rest.length, contRows.length); i++) {
+        renderRow(contRows[i], { place: TOP_COUNT + i + 1, team: rest[i].team });
+      }
+    } else {
+      // якщо претендентів нема — залишаться 3 заглушки, але з етапами видимими
+    }
+
+    // ✅ 3) Потім — якщо є results/realtime.seasonRatingTop → він перезапише верхню таблицю
+    const realtime = await loadRealtimeIfAllowed(db);
+
+    if (realtime && realtime.__error) {
+      showError(`⚠️ <b>Помилка завантаження</b><br>Причина: <span class="hint">${safeText(realtime.__error)}</span>`);
+      return;
+    }
+
+    if (realtime) {
+      if ($("seasonTitle") && realtime.seasonTitle) $("seasonTitle").textContent = String(realtime.seasonTitle);
+      if ($("seasonKicker") && realtime.seasonYear) $("seasonKicker").textContent = `СЕЗОН ${realtime.seasonYear}`;
+
+      if (realtime.seasonStages) {
+        applyStageVisibility(Number(realtime.seasonStages));
+      }
+
+      const top = Array.isArray(realtime.seasonRatingTop) ? realtime.seasonRatingTop : [];
+      if (top.length && topRows.length) {
+        for (let i = 0; i < Math.min(topRows.length, top.length); i++) {
+          // тут уже приходить готове місце, команда, етапи, бали і т.д.
+          renderRow(topRows[i], top[i]);
+        }
+        hideError();
+        return;
+      }
+    }
+
+    // М’які повідомлення
+    if (!paidTeams.length) {
+      showError("⚠️ Немає даних: ще немає оплачених команд Етапу 1 або їх не записано в public_participants.");
+    } else {
+      hideError();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    loadRating().catch((e) => {
+      showError(`⚠️ <b>Помилка</b><br>Причина: <span class="hint">${safeText(e?.message || e)}</span>`);
+    });
+  });
 })();

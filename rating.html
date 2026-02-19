@@ -1,18 +1,19 @@
 <!doctype html>
 <html lang="uk" data-rating-ready="0">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Рейтинг сезону — STOLAR CARP</title>
 
-  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/main.css" />
 
-  <!-- Firebase -->
+  <!-- Firebase (compat) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
+  <!-- App -->
   <script defer src="assets/js/firebase-init.js"></script>
   <script defer src="assets/js/config.js"></script>
   <script defer src="assets/js/rating_page.js"></script>
@@ -20,23 +21,55 @@
   <style>
     :root{
       --line:rgba(255,255,255,.08);
-      --panel:#111215;
       --accent-gold:#fbbf24;
       --accent-gold-soft:#facc15;
       --accent-green:#22c55e;
       --accent-red:#ef4444;
       --accent-blue:#38bdf8;
+      --panel:#0b0d14;
+      --panel2:#05060a;
     }
+
     .hint{opacity:.75}
 
-    /* ✅ NO-FLICKER:
-       Поки JS не визначив реальну кількість етапів і не проставив data-rating-ready="1",
-       ми НЕ показуємо stage-колонки, щоб не було "порожнього" вигляду як на 1-му скріні. */
-    html[data-rating-ready="0"] .table--season thead th.col-stage,
-    html[data-rating-ready="0"] .table--season tbody td.col-stage{
-      display:none !important;
-    }
+    /* =========================
+       ✅ NO-FLICKER (ідеально)
+       - Поки rating не готовий: показуємо ЛОАДЕР, а таблиці повністю ховаємо.
+       - Після data-rating-ready="1": таблиці з’являються одразу правильно.
+       ========================= */
+    html[data-rating-ready="0"] .season-tables { display:none !important; }
+    html[data-rating-ready="1"] .rating-loader { display:none !important; }
 
+    .rating-loader{
+      margin-top:14px;
+      padding:14px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(90deg, rgba(250,204,21,.08), rgba(17,24,39,.25));
+      color:#e5e7eb;
+      box-shadow:0 14px 30px rgba(0,0,0,.55);
+    }
+    .rating-loader__row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .rating-loader__dot{
+      width:10px;height:10px;border-radius:999px;
+      background:var(--accent-gold-soft);
+      box-shadow:0 0 0 6px rgba(250,204,21,.08);
+      animation:pulse 1.1s infinite ease-in-out;
+    }
+    @keyframes pulse{
+      0%,100%{ transform:scale(1); opacity:.85 }
+      50%{ transform:scale(1.25); opacity:1 }
+    }
+    .rating-loader__title{ font-weight:800; letter-spacing:.02em; }
+    .rating-loader__sub{ opacity:.8; margin-top:6px; line-height:1.45; }
+
+    /* =========================
+       HERO
+       ========================= */
     .season-rating-head{
       margin-bottom:24px;
       padding:24px 22px;
@@ -63,7 +96,7 @@
       opacity:.9;
     }
 
-    /* Згортання опису */
+    /* details */
     .rating-desc-wrap details{
       margin-top:10px;
       border:1px solid rgba(255,255,255,.12);
@@ -86,6 +119,9 @@
       .season-rating-head{ padding:18px 16px; }
     }
 
+    /* =========================
+       TABLES
+       ========================= */
     .card--season{
       margin-top:20px;
       padding:0;
@@ -99,7 +135,7 @@
       margin-top:6px;
       border-radius:14px;
       overflow:hidden;
-      background:radial-gradient(circle at top,#0b0d14 0,#05060a 55%);
+      background:radial-gradient(circle at top,var(--panel) 0,var(--panel2) 55%);
       border:1px solid rgba(255,255,255,.09);
       box-shadow:0 14px 30px rgba(0,0,0,.75);
 
@@ -112,7 +148,7 @@
       table-layout:fixed;
       border-collapse:collapse;
       font-size:.7rem;
-      background:#05060a;
+      background:var(--panel2);
     }
     .table--season thead{
       background:linear-gradient(90deg,#181920,#111827);
@@ -136,8 +172,8 @@
     .table--season thead th:first-child{ text-align:left; }
 
     .table--season tbody tr{
-      background:#0b0d14;
-      transition:background .15s ease, transform .1s ease;
+      background:var(--panel);
+      transition:background .15s ease;
       height:40px;
     }
     .table--season tbody tr:nth-child(odd){ background:#10121b; }
@@ -156,6 +192,7 @@
     }
     .table--season tbody td.col-team{ text-align:left; }
 
+    /* widths */
     .col-place  { width:8%; }
     .col-move   { width:6%; }
     .col-team   { width:19%; }
@@ -255,7 +292,7 @@
 <body>
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html">
+    <a class="logo" href="index.html" aria-label="STOLAR CARP">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
@@ -273,7 +310,9 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger" aria-label="Відкрити меню">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
 
@@ -303,71 +342,85 @@
       </div>
 
       <div class="rating-error" id="ratingError"></div>
-    </div>
 
-    <div class="card card--season">
-      <h3>Рейтинг команд сезону</h3>
-
-      <div class="season-table-wrapper">
-        <table class="table table--season table--main">
-          <thead>
-            <tr>
-              <th class="col-place">Місце</th>
-              <th class="col-move">▲▼</th>
-              <th class="col-team">Команда</th>
-
-              <th class="col-stage">Е1<br>м / б</th>
-              <th class="col-stage">Е2<br>м / б</th>
-              <th class="col-stage">Е3<br>м / б</th>
-              <th class="col-stage">Е4<br>м / б</th>
-              <th class="col-stage">Е5<br>м / б</th>
-
-              <th class="col-points">Бали</th>
-              <th class="col-final">Фінал</th>
-              <th class="col-weight">Вага</th>
-              <th class="col-big">Big Fish</th>
-            </tr>
-          </thead>
-          <tbody id="season-top"></tbody>
-        </table>
-      </div>
-
-      <h4 class="subhead">
-        Претенденти на участь у Фіналі сезону
-        <span>— команди, що знаходяться нижче 18-го місця</span>
-      </h4>
-
-      <div class="season-table-wrapper">
-        <table class="table table--season table--contenders">
-          <thead>
-            <tr>
-              <th class="col-place">Місце</th>
-              <th class="col-move">▲▼</th>
-              <th class="col-team">Команда</th>
-
-              <th class="col-stage">Е1<br>м / б</th>
-              <th class="col-stage">Е2<br>м / б</th>
-              <th class="col-stage">Е3<br>м / б</th>
-              <th class="col-stage">Е4<br>м / б</th>
-              <th class="col-stage">Е5<br>м / б</th>
-
-              <th class="col-points">Бали</th>
-              <th class="col-final">Фінал</th>
-              <th class="col-weight">Вага</th>
-              <th class="col-big">Big Fish</th>
-            </tr>
-          </thead>
-          <tbody id="season-contenders"></tbody>
-        </table>
+      <!-- ✅ Loader замість "порожньої" таблиці -->
+      <div class="rating-loader" role="status" aria-live="polite">
+        <div class="rating-loader__row">
+          <span class="rating-loader__dot" aria-hidden="true"></span>
+          <div class="rating-loader__title">Завантаження рейтингу сезону…</div>
+        </div>
+        <div class="rating-loader__sub">
+          Підтягуємо етапи та список команд. Таблиця зʼявиться одразу в правильному вигляді.
+        </div>
       </div>
     </div>
 
-    <p class="rating-note">
-      Підсумкове місце сезону визначається так:<br>
-      <b>1)</b> менша сума балів сезону — краще місце;<br>
-      <b>2)</b> якщо бали однакові — вище команда з більшою загальною вагою;<br>
-      <b>3)</b> якщо вага теж однакова — вище команда з більшим Big Fish.<br><br>
-    </p>
+    <!-- ✅ Таблиці (показуються тільки коли data-rating-ready="1") -->
+    <div class="season-tables">
+      <div class="card card--season">
+        <h3>Рейтинг команд сезону</h3>
+
+        <div class="season-table-wrapper">
+          <table class="table table--season table--main">
+            <thead>
+              <tr>
+                <th class="col-place">Місце</th>
+                <th class="col-move">▲▼</th>
+                <th class="col-team">Команда</th>
+
+                <th class="col-stage">Е1<br>м / б</th>
+                <th class="col-stage">Е2<br>м / б</th>
+                <th class="col-stage">Е3<br>м / б</th>
+                <th class="col-stage">Е4<br>м / б</th>
+                <th class="col-stage">Е5<br>м / б</th>
+
+                <th class="col-points">Бали</th>
+                <th class="col-final">Фінал</th>
+                <th class="col-weight">Вага</th>
+                <th class="col-big">Big Fish</th>
+              </tr>
+            </thead>
+            <tbody id="season-top"></tbody>
+          </table>
+        </div>
+
+        <h4 class="subhead">
+          Претенденти на участь у Фіналі сезону
+          <span>— команди, що знаходяться нижче 18-го місця</span>
+        </h4>
+
+        <div class="season-table-wrapper">
+          <table class="table table--season table--contenders">
+            <thead>
+              <tr>
+                <th class="col-place">Місце</th>
+                <th class="col-move">▲▼</th>
+                <th class="col-team">Команда</th>
+
+                <th class="col-stage">Е1<br>м / б</th>
+                <th class="col-stage">Е2<br>м / б</th>
+                <th class="col-stage">Е3<br>м / б</th>
+                <th class="col-stage">Е4<br>м / б</th>
+                <th class="col-stage">Е5<br>м / б</th>
+
+                <th class="col-points">Бали</th>
+                <th class="col-final">Фінал</th>
+                <th class="col-weight">Вага</th>
+                <th class="col-big">Big Fish</th>
+              </tr>
+            </thead>
+            <tbody id="season-contenders"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="rating-note">
+        Підсумкове місце сезону визначається так:<br />
+        <b>1)</b> менша сума балів сезону — краще місце;<br />
+        <b>2)</b> якщо бали однакові — вище команда з більшою загальною вагою;<br />
+        <b>3)</b> якщо вага теж однакова — вище команда з більшим Big Fish.
+      </p>
+    </div>
 
   </section>
 </main>

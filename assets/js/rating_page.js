@@ -95,21 +95,24 @@
   }
 
   function buildSkeleton(contendersCount = 3) {
-    const topTbody = $("season-top");
-    const contTbody = $("season-contenders");
-    if (!topTbody || !contTbody) return;
+  const topTbody = $("season-top");
+  const contTbody = $("season-contenders");
+  if (!topTbody || !contTbody) return;
 
-    topTbody.innerHTML = "";
-    for (let i = 1; i <= TOP_COUNT; i++) {
-      topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
-    }
-
-    const cc = Math.max(3, Number(contendersCount || 0));
-    contTbody.innerHTML = "";
-    for (let i = 0; i < cc; i++) {
-      contTbody.insertAdjacentHTML("beforeend", rowHTML("—", false));
-    }
+  // TOP
+  topTbody.innerHTML = "";
+  for (let i = 1; i <= TOP_COUNT; i++) {
+    topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
   }
+
+  // CONTENDERS
+  const cc = Math.max(3, Number(contendersCount || 0));
+  contTbody.innerHTML = "";
+  for (let i = 0; i < cc; i++) {
+    // ✅ Ось головний FIX: одразу ставимо 19,20,21...
+    contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
+  }
+}
 
   // ===================== MOVE =====================
   function setMove(el, mv) {

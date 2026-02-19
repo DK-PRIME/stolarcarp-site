@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="uk">
+<html lang="uk" data-rating-ready="0">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -28,6 +28,14 @@
       --accent-blue:#38bdf8;
     }
     .hint{opacity:.75}
+
+    /* ✅ NO-FLICKER:
+       Поки JS не визначив реальну кількість етапів і не проставив data-rating-ready="1",
+       ми НЕ показуємо stage-колонки, щоб не було "порожнього" вигляду як на 1-му скріні. */
+    html[data-rating-ready="0"] .table--season thead th.col-stage,
+    html[data-rating-ready="0"] .table--season tbody td.col-stage{
+      display:none !important;
+    }
 
     .season-rating-head{
       margin-bottom:24px;
@@ -241,19 +249,6 @@
       .stage-cell{font-size:.64rem;}
       .stage-points{font-size:.6rem;}
     }
-
-    body[data-stages="0"] .table--season thead th:nth-child(4),
-    body[data-stages="0"] .table--season thead th:nth-child(5),
-    body[data-stages="0"] .table--season thead th:nth-child(6),
-    body[data-stages="0"] .table--season thead th:nth-child(7),
-    body[data-stages="0"] .table--season thead th:nth-child(8),
-    body[data-stages="0"] .table--season tbody td:nth-child(4),
-    body[data-stages="0"] .table--season tbody td:nth-child(5),
-    body[data-stages="0"] .table--season tbody td:nth-child(6),
-    body[data-stages="0"] .table--season tbody td:nth-child(7),
-    body[data-stages="0"] .table--season tbody td:nth-child(8){
-      display:none;
-    }
   </style>
 </head>
 
@@ -386,5 +381,6 @@
     </div>
   </div>
 </footer>
+
 </body>
 </html>

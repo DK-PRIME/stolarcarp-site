@@ -353,6 +353,34 @@
       color:#facc15;
     }
 
+    /* Кнопка керування музикою */
+    .music-toggle{
+      position:fixed;
+      right:1rem;
+      bottom:1rem;
+      z-index:9999;
+      padding:6px 14px;
+      border-radius:999px;
+      border:none;
+      background:linear-gradient(135deg,#f6c34c,#f28b2b);
+      color:#111;
+      font-size:.85rem;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow:0 4px 14px rgba(0,0,0,.4);
+      transition:transform .15s ease,box-shadow .15s ease,opacity .2s ease;
+    }
+
+    .music-toggle:hover{
+      transform:translateY(-1px);
+      box-shadow:0 6px 18px rgba(0,0,0,.5);
+    }
+
+    .music-toggle:active{
+      transform:translateY(1px);
+      box-shadow:0 2px 8px rgba(0,0,0,.4);
+    }
+
     /* Анімації */
     @keyframes heroTitleFade{
       0%{
@@ -431,7 +459,6 @@
     <p class="hero-subtitle">
       STOLAR CARP — це поєднання:
 спортивної боротьби, дружньої атмосфери, драйву, командного духу та поваги до справжніх цінностей карпфішингу.
-
     </p>
 
     <div class="hero-tags">
@@ -452,7 +479,6 @@
       </a>
     </div>
 
-
     <div class="hero-season-card">
       <h2 class="title-gradient">🏆 Сезон STOLAR CARP </h2>
       <p>
@@ -470,9 +496,8 @@
     <h2 class="section-title">Хто може взяти участь?</h2>
     <p class="info-text">
       STOLAR CARP відкритий для всіх, хто живе карпфішингом та цінує не лише перемогу, а й шлях до неї. Професійний досвід не є обов’язковим — головне бажання розвиватися, змагатися, поважати природу та суперників .
-
-До участі запрошуються:
-  </p>
+      До участі запрошуються:
+    </p>
 
     <ul class="info-list">
       <li>• Команди з 1–3 учасників</li>
@@ -488,7 +513,6 @@
       Місія <span class="section-title__brand">STOLAR CARP</span>
     </h2>
     <p class="info-text">
-       
       Місія - забезпечити чесні та прозорі змагання завдяки сучасному підходу до фіксації результатів і чіткій організації роботи суддів.
     </p>
 
@@ -503,7 +527,7 @@
   <section class="section container info-block">
     <h2 class="section-title">Структура сезону</h2>
     <p class="info-text">
-      У сезоні: STalker, 3 таблиці, Осінній короп та турнір STOLAR CARP,який складається з рейтингових етапів. 
+      У сезоні: STalker, 3 таблиці, Осінній короп та турнір STOLAR CARP, який складається з рейтингових етапів. 
       Команди набирають бали на кожному з них, а за підсумком сезону найкращі потрапляють 
       у Великий Фінал, де і визначається Чемпіон сезону.
     </p>
@@ -612,6 +636,66 @@
       btn.href = "/auth.html";
       btn.title = "Увійти";
     }
+  })();
+</script>
+
+<!-- 🎵 Фонова музика тільки на головній -->
+<audio id="bg-music"
+       src="assets/audio/stolar-theme.m4a"
+       preload="auto"
+       loop></audio>
+
+<button id="music-toggle" class="music-toggle" aria-label="Перемикач музики">
+  ♫ Звук: ВИМК.
+</button>
+
+<script>
+  (function(){
+    const audio = document.getElementById("bg-music");
+    const btn   = document.getElementById("music-toggle");
+    if (!audio || !btn) return;
+
+    // трохи тихіше
+    audio.volume = 0.3;
+
+    function setButtonState(isPlaying){
+      btn.textContent = isPlaying ? "♫ Звук: УВІМК." : "♫ Звук: ВИМК.";
+    }
+
+    // Спроба автозапуску
+    audio.play().then(() => {
+      setButtonState(true);
+    }).catch(() => {
+      // Браузер заблокував автоплей — чекаємо першої дії
+      setButtonState(false);
+
+      const unlock = () => {
+        audio.play().then(() => {
+          setButtonState(true);
+        }).catch(() => {
+          // якщо зовсім не дає — лишаємо вимкненим
+        });
+
+        window.removeEventListener("click", unlock);
+        window.removeEventListener("keydown", unlock);
+        window.removeEventListener("touchstart", unlock);
+      };
+
+      window.addEventListener("click", unlock);
+      window.addEventListener("keydown", unlock);
+      window.addEventListener("touchstart", unlock);
+    });
+
+    // Перемикач
+    btn.addEventListener("click", function(){
+      if (audio.paused){
+        audio.play().then(() => setButtonState(true))
+          .catch(() => setButtonState(false));
+      } else {
+        audio.pause();
+        setButtonState(false);
+      }
+    });
   })();
 </script>
 

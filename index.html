@@ -352,33 +352,6 @@
       border-color:#facc15;
       color:#facc15;
     }
-
-    /* Кнопка керування музикою */
-    .music-toggle{
-      position:fixed;
-      right:1rem;
-      bottom:1rem;
-      z-index:9999;
-      padding:6px 14px;
-      border-radius:999px;
-      border:none;
-      background:linear-gradient(135deg,#f6c34c,#f28b2b);
-      color:#111;
-      font-size:.85rem;
-      font-weight:600;
-      cursor:pointer;
-      box-shadow:0 4px 14px rgba(0,0,0,.4);
-      transition:transform .15s ease,box-shadow .15s ease,opacity .2s ease;
-    }
-
-    .music-toggle:hover{
-      transform:translateY(-1px);
-      box-shadow:0 6px 18px rgba(0,0,0,.5);
-    }
-
-    .music-toggle:active{
-      transform:translateY(1px);
-      box-shadow:0 2px 8px rgba(0,0,0,.4);
     }
 
     /* Анімації */
@@ -636,66 +609,6 @@
       btn.href = "/auth.html";
       btn.title = "Увійти";
     }
-  })();
-</script>
-
-<!-- 🎵 Фонова музика тільки на головній -->
-<audio id="bg-music"
-       src="assets/assets/audio/stolar-theme.m4a"
-       preload="auto"
-       loop></audio>
-
-<button id="music-toggle" class="music-toggle" aria-label="Перемикач музики">
-  ♫ Звук: ВИМК.
-</button>
-
-<script>
-  (function(){
-    const audio = document.getElementById("bg-music");
-    const btn   = document.getElementById("music-toggle");
-    if (!audio || !btn) return;
-
-    // трохи тихіше
-    audio.volume = 0.3;
-
-    function setButtonState(isPlaying){
-      btn.textContent = isPlaying ? "♫ Звук: УВІМК." : "♫ Звук: ВИМК.";
-    }
-
-    // Спроба автозапуску
-    audio.play().then(() => {
-      setButtonState(true);
-    }).catch(() => {
-      // Браузер заблокував автоплей — чекаємо першої дії
-      setButtonState(false);
-
-      const unlock = () => {
-        audio.play().then(() => {
-          setButtonState(true);
-        }).catch(() => {
-          // якщо зовсім не дає — лишаємо вимкненим
-        });
-
-        window.removeEventListener("click", unlock);
-        window.removeEventListener("keydown", unlock);
-        window.removeEventListener("touchstart", unlock);
-      };
-
-      window.addEventListener("click", unlock);
-      window.addEventListener("keydown", unlock);
-      window.addEventListener("touchstart", unlock);
-    });
-
-    // Перемикач
-    btn.addEventListener("click", function(){
-      if (audio.paused){
-        audio.play().then(() => setButtonState(true))
-          .catch(() => setButtonState(false));
-      } else {
-        audio.pause();
-        setButtonState(false);
-      }
-    });
   })();
 </script>
 

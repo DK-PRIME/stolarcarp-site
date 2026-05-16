@@ -50,6 +50,17 @@
     };
   }
 
+  function buildCacheKey(app) {
+    if (app?.activeKey) return String(app.activeKey);
+
+    const compId  = app?.activeCompetitionId || app?.competitionId || "";
+    const stageId = app?.activeStageId || app?.stageId || "";
+
+    if (!compId || !stageId) return "";
+
+    return `${compId}||${stageId}`;
+  }
+
   // ===== Render from cache =====
   function renderFromCache(bfData, eligibleMap) {
     const table = bfData?.table || [];
@@ -119,6 +130,7 @@
       (snap) => {
         const app = snap.exists ? (snap.data() || {}) : {};
         const { compId, stageId } = readStageFromApp(app);
+        const cacheKey = buildCacheKey(app);
 
         if (!compId || !stageId) {
           if (countEl) countEl.textContent = `Учасників: 0`;
@@ -128,8 +140,8 @@
         }
 
         // Не перепідписуємось якщо етап не змінився
-        if (stageId === currentStageId) return;
-        currentStageId = stageId;
+        if (cacheKey === currentStageId) return;
+        currentStageId = cacheKey;
 
         stopAllSubs();
 
@@ -160,7 +172,7 @@
           );
 
         // 2️⃣ Підписка на liveCache (результати)
-        unsubCache = db.collection("liveCache").doc(stageId)
+        unsubCache = db.collection("liveCache").doc(cacheKey)
           .onSnapshot(
             (doc) => {
               if (!doc.exists) {

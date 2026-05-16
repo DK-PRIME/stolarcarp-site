@@ -104,6 +104,7 @@
 
   let currentStageId = "";
   let eligibleTeams = new Map();
+  let latestBfData = null;
 
   function stopAllSubs() {
     if (unsubPublic) { unsubPublic(); unsubPublic = null; }
@@ -148,8 +149,8 @@
               });
 
               // Якщо кеш вже завантажений — рендеримо
-              if (unsubCache) {
-                // Тригериться оновленням кешу
+              if (latestBfData) {
+                renderFromCache(latestBfData, eligibleTeams);
               }
             },
             (err) => {
@@ -169,6 +170,7 @@
 
               const data = doc.data();
               const bf = data?.bigFishTotal;
+              latestBfData = bf;
 
               if (!bf?.enabled) {
                 tbody.innerHTML = `<tr><td colspan="4">BigFish Total не активний для цього етапу.</td></tr>`;

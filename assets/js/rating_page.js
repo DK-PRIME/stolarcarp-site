@@ -1,13 +1,11 @@
-
-# Створюю виправлений rating_page.js — миттєвий показ таблиці
-
-rating_page_js = '''// assets/js/rating_page.js
-// STOLAR CARP • Season Rating page (STALKER SYSTEM — Командний Сталкер)
-// ✅ МИТТЄВИЙ ПОКАЗ: таблиця з'являється відразу, дані підвантажуються потім
-// ✅ Кеш 5 хв — показуємо кеш одразу, потім оновлюємо
-// ✅ Fallback: якщо немає Firestore — показуємо порожню таблицю
-// ✅ Завантаження зважувань з колекції weighings
-// ✅ Розрахунок місць в зонах по сумарній вазі
+// assets/js/rating_page.js
+// STOLAR CARP • Season Rating page (CANON FINAL, NO EXTRA SCREENS)
+// ✅ Немає окремого "екрану завантаження" — одразу таблиця
+// ✅ Етапи з competitions/{seasonCompId}.events (stage-1, stage1, Stage_2, "етап 3"...)
+// ✅ TOP-18 + Претенденти (19+) з правильною нумерацією
+// ✅ Етапи (Е1..Е5) видно і в верхній, і в нижній таблиці (FIX idx)
+// ✅ Preview з public_participants (ВСІ етапи сезону, унікальні команди), потім realtime перезаписує TOP
+// ✅ Кеш 5 хв + м’які помилки
 
 (function () {
   "use strict";
@@ -15,9 +13,9 @@ rating_page_js = '''// assets/js/rating_page.js
   const $ = (id) => document.getElementById(id);
 
   const TOP_COUNT = 18;
-  const STAGES_MAX_IN_HTML = 5;
+  const STAGES_MAX_IN_HTML = 5; // у верстці E1..E5
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_v6_stalker";
+  const CACHE_KEY = "sc_rating_cache_v4";
 
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
@@ -26,11 +24,10 @@ rating_page_js = '''// assets/js/rating_page.js
     v === null || v === undefined || v === "" ? dash : String(v);
 
   // ===================== READY FLAG =====================
-  function setReadyFlag() {
+  // 🔹 Головна фішка: ми БІЛЬШЕ не вмикаємо стан "0".
+  // Завжди кажемо верстці, що сторінка готова → ніяких проміжних екранів.
+  function setReadyFlag(isReady) {
     document.documentElement.setAttribute("data-rating-ready", "1");
-    // Ховаємо екран завантаження якщо є
-    const loader = document.querySelector('.rating-loader, .season-loader, [class*="loader"]');
-    if (loader) loader.style.display = 'none';
   }
 
   // ===================== ERROR BOX =====================
@@ -113,14 +110,17 @@ rating_page_js = '''// assets/js/rating_page.js
     const contTbody = $("season-contenders");
     if (!topTbody || !contTbody) return;
 
+    // TOP
     topTbody.innerHTML = "";
     for (let i = 1; i <= TOP_COUNT; i++) {
       topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
     }
 
+    // CONTENDERS
     const cc = Math.max(3, Number(contendersCount || 0));
     contTbody.innerHTML = "";
     for (let i = 0; i < cc; i++) {
+      // 19,20,21...
       contTbody.insertAdjacentHTML(
         "beforeend",
         rowHTML(TOP_COUNT + i + 1, false)
@@ -207,13 +207,14 @@ rating_page_js = '''// assets/js/rating_page.js
     );
   }
 
-  // ===================== STAGES VISIBILITY =====================
+  // ===================== STAGES VISIBILITY (для 2 таблиць) =====================
   function applyStageVisibility(stagesCount) {
     const count = Math.max(
       0,
       Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0))
     );
 
+    // заголовки
     document.querySelectorAll(".table--season").forEach((table) => {
       const ths = table.querySelectorAll("thead th.col-stage");
       ths.forEach((th, i) => {
@@ -223,6 +224,7 @@ rating_page_js = '''// assets/js/rating_page.js
       });
     });
 
+    // клітинки
     document.querySelectorAll(".table--season tbody tr").forEach((tr) => {
       const tds = tr.querySelectorAll("td.col-stage");
       tds.forEach((td, i) => {
@@ -234,8 +236,8 @@ rating_page_js = '''// assets/js/rating_page.js
     document.body.setAttribute("data-stages", String(count));
   }
 
-  // ===================== FIRESTORE READY (з таймаутом) =====================
-  async function waitFirestore(maxMs = 3000) {
+  // ===================== FIRESTORE READY =====================
+  async function waitFirestore(maxMs = 12000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
       const db =
@@ -245,9 +247,9 @@ rating_page_js = '''// assets/js/rating_page.js
           window.firebase.firestore &&
           window.firebase.firestore());
       if (db) return db;
-      await new Promise((r) => setTimeout(r, 50));
+      await new Promise((r) => setTimeout(r, 100));
     }
-    return null; // Не кидаємо помилку, просто повертаємо null
+    throw new Error("Firebase DB не готовий (нема scDb).");
   }
 
   // ===================== SEASON COMP ID =====================
@@ -256,17 +258,15 @@ rating_page_js = '''// assets/js/rating_page.js
     const fromUrl = params.get("season");
     if (fromUrl) return fromUrl;
 
-    if (db) {
-      try {
-        const s = await db.collection("settings").doc("app").get();
-        if (s.exists) {
-          const d = s.data() || {};
-          if (d.activeSeasonId) return String(d.activeSeasonId);
-          if (d.activeCompetitionId) return String(d.activeCompetitionId);
-          if (d.activeCompId) return String(d.activeCompId);
-        }
-      } catch {}
-    }
+    try {
+      const s = await db.collection("settings").doc("app").get();
+      if (s.exists) {
+        const d = s.data() || {};
+        if (d.activeSeasonId) return String(d.activeSeasonId);
+        if (d.activeCompetitionId) return String(d.activeCompetitionId);
+        if (d.activeCompId) return String(d.activeCompId);
+      }
+    } catch {}
 
     return "season-2026";
   }
@@ -281,7 +281,7 @@ rating_page_js = '''// assets/js/rating_page.js
       const low = raw.toLowerCase();
       const looksLikeStage =
         low.includes("stage") || low.includes("етап") || low.startsWith("e");
-      const m = raw.match(/(\\d+)/);
+      const m = raw.match(/(\d+)/);
       if (!m) continue;
 
       const n = parseInt(m[1], 10);
@@ -306,30 +306,28 @@ rating_page_js = '''// assets/js/rating_page.js
     let stagesCount = 0;
     let hasFinal = false;
 
-    if (db) {
-      try {
-        const c = await db.collection("competitions").doc(seasonCompId).get();
-        if (c.exists) {
-          const data = c.data() || {};
-          const events = Array.isArray(data.events) ? data.events : [];
+    try {
+      const c = await db.collection("competitions").doc(seasonCompId).get();
+      if (c.exists) {
+        const data = c.data() || {};
+        const events = Array.isArray(data.events) ? data.events : [];
 
-          const stageEvents = extractStageEvents(events);
-          stagesCount = stageEvents.length;
+        const stageEvents = extractStageEvents(events);
+        stagesCount = stageEvents.length;
 
-          hasFinal = events.some((e) => {
-            const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase();
-            return k === "final" || k.includes("final") || k.includes("фінал");
-          });
+        hasFinal = events.some((e) => {
+          const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase();
+          return k === "final" || k.includes("final") || k.includes("фінал");
+        });
 
-          if ($("seasonTitle") && (data.name || data.title))
-            $("seasonTitle").textContent = String(data.name || data.title);
-          if ($("seasonKicker") && (data.year || data.seasonYear))
-            $("seasonKicker").textContent = `СЕЗОН ${
-              data.year || data.seasonYear
-            }`;
-        }
-      } catch {}
-    }
+        if ($("seasonTitle") && (data.name || data.title))
+          $("seasonTitle").textContent = String(data.name || data.title);
+        if ($("seasonKicker") && (data.year || data.seasonYear))
+          $("seasonKicker").textContent = `СЕЗОН ${
+            data.year || data.seasonYear
+          }`;
+      }
+    } catch {}
 
     if (!Number.isFinite(stagesCount) || stagesCount < 0) stagesCount = 0;
     if (stagesCount > STAGES_MAX_IN_HTML) stagesCount = STAGES_MAX_IN_HTML;
@@ -347,9 +345,8 @@ rating_page_js = '''// assets/js/rating_page.js
     return 0;
   }
 
-  // ===================== PAID TEAMS =====================
+  // ===================== PAID TEAMS (SEASON: ANY STAGE) =====================
   async function loadPaidTeamsForSeason(db, seasonCompId) {
-    if (!db) return [];
     let snap;
 
     try {
@@ -360,18 +357,15 @@ rating_page_js = '''// assets/js/rating_page.js
         .where("status", "in", PAID_STATUSES)
         .get();
     } catch (e) {
-      try {
-        snap = await db
-          .collection("public_participants")
-          .where("competitionId", "==", seasonCompId)
-          .where("status", "in", PAID_STATUSES)
-          .get();
-      } catch {
-        return [];
-      }
+      // fallback без entryType
+      snap = await db
+        .collection("public_participants")
+        .where("competitionId", "==", seasonCompId)
+        .where("status", "in", PAID_STATUSES)
+        .get();
     }
 
-    const map = new Map();
+    const map = new Map(); // teamId -> {teamId, team, firstTs}
 
     snap.forEach((doc) => {
       const r = doc.data() || {};
@@ -402,177 +396,23 @@ rating_page_js = '''// assets/js/rating_page.js
     return rows;
   }
 
-  // ===================== STALKER RATING ENGINE =====================
-
-  async function loadWeighingsForStage(db, seasonCompId, stageId) {
-    if (!db) return [];
-    const weighings = [];
-    
+  // ===================== REALTIME RESULTS =====================
+  async function loadRealtimeIfAllowed(db) {
     try {
-      const snap = await db
-        .collection("weighings")
-        .where("compId", "==", seasonCompId)
-        .where("stageId", "==", stageId)
-        .get();
-
-      snap.forEach((doc) => {
-        const w = doc.data() || {};
-        if (w.status !== "submitted" && w.status !== "confirmed") return;
-        
-        weighings.push({
-          teamId: w.teamId || "",
-          teamName: w.teamName || "—",
-          zone: (w.zone || "").toUpperCase(),
-          weighNo: parseInt(w.weighNo) || 0,
-          weight: parseFloat(w.totalWeightKg) || 0,
-          bigFish: parseFloat(w.bigFishKg) || 0,
-          fishCount: parseInt(w.fishCount) || 0
-        });
-      });
+      const snap = await db.collection("results").doc("realtime").get();
+      if (!snap.exists) return null;
+      return snap.data() || {};
     } catch (e) {
-      console.warn(`Failed to load weighings for ${stageId}:`, e);
+      return { __error: String(e?.message || e) };
     }
-
-    return weighings;
-  }
-
-  function calculateStageResults(weighings) {
-    const teamMap = new Map();
-    
-    for (const w of weighings) {
-      const existing = teamMap.get(w.teamId);
-      if (!existing) {
-        teamMap.set(w.teamId, {
-          teamId: w.teamId,
-          teamName: w.teamName,
-          zone: w.zone,
-          totalWeight: w.weight,
-          bigFish: w.bigFish,
-          fishCount: w.fishCount
-        });
-      } else {
-        existing.totalWeight += w.weight;
-        existing.fishCount += w.fishCount;
-        if (w.bigFish > existing.bigFish) {
-          existing.bigFish = w.bigFish;
-        }
-      }
-    }
-
-    const zones = { A: [], B: [], C: [] };
-    for (const team of teamMap.values()) {
-      const zone = team.zone;
-      if (zones[zone]) {
-        zones[zone].push(team);
-      }
-    }
-
-    const results = [];
-    
-    for (const [zoneName, teams] of Object.entries(zones)) {
-      teams.sort((a, b) => b.totalWeight - a.totalWeight);
-      
-      teams.forEach((team, idx) => {
-        team.place = idx + 1;
-        team.points = idx + 1;
-        team.zone = zoneName;
-        results.push(team);
-      });
-    }
-
-    return results;
-  }
-
-  function calculateSeasonRating(stageResults, paidTeams) {
-    const teamMap = new Map();
-    
-    for (const pt of paidTeams) {
-      teamMap.set(pt.teamId, {
-        teamId: pt.teamId,
-        teamName: pt.team,
-        totalPoints: 0,
-        totalWeight: 0,
-        maxBigFish: 0,
-        stages: []
-      });
-    }
-    
-    for (let stageIdx = 0; stageIdx < stageResults.length; stageIdx++) {
-      const stage = stageResults[stageIdx];
-      
-      for (const team of stage) {
-        let entry = teamMap.get(team.teamId);
-        if (!entry) {
-          entry = {
-            teamId: team.teamId,
-            teamName: team.teamName,
-            totalPoints: 0,
-            totalWeight: 0,
-            maxBigFish: 0,
-            stages: []
-          };
-          teamMap.set(team.teamId, entry);
-        }
-
-        entry.totalPoints += team.points;
-        entry.totalWeight += team.totalWeight;
-        if (team.bigFish > entry.maxBigFish) {
-          entry.maxBigFish = team.bigFish;
-        }
-
-        entry.stages[stageIdx] = {
-          p: team.place,
-          pts: team.points,
-          w: team.totalWeight.toFixed(2),
-          bf: team.bigFish.toFixed(2),
-          z: team.zone
-        };
-      }
-    }
-
-    const teams = Array.from(teamMap.values());
-    
-    teams.sort((a, b) => {
-      if (a.totalPoints !== b.totalPoints) {
-        return a.totalPoints - b.totalPoints;
-      }
-      if (a.totalWeight !== b.totalWeight) {
-        return b.totalWeight - a.totalWeight;
-      }
-      return b.maxBigFish - a.maxBigFish;
-    });
-
-    return teams.map((team, idx) => ({
-      place: idx + 1,
-      team: team.teamName,
-      points: team.totalPoints,
-      weight: team.totalWeight.toFixed(2),
-      bigFish: team.maxBigFish.toFixed(2),
-      stages: team.stages.map(s => s ? { p: s.p, pts: s.pts } : { p: "—", pts: "—" })
-    }));
-  }
-
-  async function loadAllStageData(db, seasonCompId, stageEvents) {
-    const stageResults = [];
-    
-    for (const event of stageEvents) {
-      const weighings = await loadWeighingsForStage(db, seasonCompId, event.key);
-      
-      if (weighings.length > 0) {
-        const results = calculateStageResults(weighings);
-        stageResults.push(results);
-      }
-    }
-    
-    return stageResults;
   }
 
   // ===================== RENDER DATA =====================
   function renderData(
-    { stagesCount, rating = [], paidTeams = [] },
+    { stagesCount, paidTeams = [], realtime = null },
     isOffline = false
   ) {
-    const contendersCount = Math.max(0, rating.length - TOP_COUNT);
+    const contendersCount = Math.max(0, paidTeams.length - TOP_COUNT);
     buildSkeleton(contendersCount);
 
     applyStageVisibility(stagesCount);
@@ -584,36 +424,66 @@ rating_page_js = '''// assets/js/rating_page.js
       ? $("season-contenders").querySelectorAll("tr")
       : [];
 
-    for (let i = 0; i < Math.min(TOP_COUNT, rating.length, topRows.length); i++) {
-      renderRow(topRows[i], rating[i]);
+    // Preview TOP
+    for (
+      let i = 0;
+      i < Math.min(TOP_COUNT, paidTeams.length, topRows.length);
+      i++
+    ) {
+      renderRow(topRows[i], { place: i + 1, team: paidTeams[i].team });
     }
 
-    if (rating.length > TOP_COUNT) {
-      const rest = rating.slice(TOP_COUNT);
+    // Preview contenders 19+
+    if (paidTeams.length > TOP_COUNT) {
+      const rest = paidTeams.slice(TOP_COUNT);
       for (let i = 0; i < Math.min(rest.length, contRows.length); i++) {
-        renderRow(contRows[i], rest[i]);
+        renderRow(contRows[i], {
+          place: TOP_COUNT + i + 1,
+          team: rest[i].team,
+        });
       }
     }
 
-    if (!rating.length && !isOffline) {
-      // Не показуємо помилку — просто порожня таблиця
+    // Realtime overwrite TOP (як у каноні)
+    if (realtime && !realtime.__error) {
+      if ($("seasonTitle") && realtime.seasonTitle)
+        $("seasonTitle").textContent = String(realtime.seasonTitle);
+      if ($("seasonKicker") && realtime.seasonYear)
+        $("seasonKicker").textContent = `СЕЗОН ${realtime.seasonYear}`;
+
+      if (realtime.seasonStages)
+        applyStageVisibility(Number(realtime.seasonStages));
+
+      const top = Array.isArray(realtime.seasonRatingTop)
+        ? realtime.seasonRatingTop
+        : [];
+      if (top.length && topRows.length) {
+        for (let i = 0; i < Math.min(topRows.length, top.length); i++) {
+          renderRow(topRows[i], top[i]);
+        }
+      }
+    }
+
+    if (!paidTeams.length && !isOffline) {
+      showError(
+        "⚠️ Немає даних: немає жодної команди зі статусом confirmed/paid у public_participants для цього сезону."
+      );
     } else if (!isOffline) {
       hideError();
     }
 
-    setReadyFlag();
+    setReadyFlag(true);
   }
 
   // ===================== MAIN LOAD =====================
   async function loadRating() {
     hideError();
 
-    // 1. ОДРАЗУ показуємо таблицю (скелет)
+    // 1) Одразу малюємо таблицю (скелет) і кажемо верстці, що все ОК
     buildSkeleton(3);
-    applyStageVisibility(0); // Поки 0 етапів видно, потім оновимо
-    setReadyFlag();
+    setReadyFlag(true);
 
-    // 2. Якщо є кеш — одразу заповнюємо даними
+    // 2) Якщо є кеш — миттєво показуємо останній живий рейтинг
     const cached = cacheGet();
     if (cached) {
       try {
@@ -623,52 +493,52 @@ rating_page_js = '''// assets/js/rating_page.js
       }
     }
 
-    // 3. У фоні тягнемо свіжі дані
+    // 3) У фоні тягнемо свіжі дані з Firestore
     try {
       const db = await waitFirestore();
-      
-      if (!db) {
-        console.warn("Firebase DB не доступний");
-        return;
-      }
-      
       const seasonCompId = await resolveSeasonCompId(db);
       const { stagesCount } = await getSeasonConfig(db, seasonCompId);
 
-      let stageEvents = [];
-      try {
-        const c = await db.collection("competitions").doc(seasonCompId).get();
-        if (c.exists) {
-          const data = c.data() || {};
-          const events = Array.isArray(data.events) ? data.events : [];
-          stageEvents = extractStageEvents(events);
-        }
-      } catch (e) {
-        console.warn("Failed to get stage events:", e);
-      }
-
-      const stageResults = await loadAllStageData(db, seasonCompId, stageEvents);
-      
       let paidTeams = [];
       try {
         paidTeams = await loadPaidTeamsForSeason(db, seasonCompId);
       } catch {}
 
-      const rating = calculateSeasonRating(stageResults, paidTeams);
-      
-      const payload = { stagesCount, rating, paidTeams };
+      const realtime = await loadRealtimeIfAllowed(db);
+      if (realtime && realtime.__error) {
+        showError(
+          `⚠️ <b>Realtime недоступний</b><br><span class="hint">${safeText(
+            realtime.__error
+          )}</span>`
+        );
+      }
+
+      const payload = { stagesCount, paidTeams, realtime };
       cacheSet(payload);
 
       renderData(payload, false);
     } catch (e) {
-      console.warn("Load rating error:", e);
-      // Не показуємо помилку — таблиця вже показана
+      const c = cacheGet();
+      if (c) {
+        renderData(c, true);
+        showError(
+          `⚠️ <b>Офлайн-режим</b><br>Показано кеш. Спробуй оновити сторінку.`
+        );
+      } else {
+        showError(
+          `⚠️ <b>Помилка завантаження</b><br>Причина: <span class="hint">${safeText(
+            e?.message || e
+          )}</span>`
+        );
+      }
+      setReadyFlag(true);
     }
   }
 
-  // ручне оновлення
+  // ручне оновлення з кнопки
   window.refreshRating = async function () {
     cacheClear();
+    showError("⏳ Оновлення...");
     await loadRating();
   };
 
@@ -676,17 +546,3 @@ rating_page_js = '''// assets/js/rating_page.js
     loadRating();
   });
 })();
-'''
-
-# Зберігаємо файл
-with open('/mnt/agents/output/rating_page_fast.js', 'w', encoding='utf-8') as f:
-    f.write(rating_page_js)
-
-print("✅ Файл створено!")
-print(f"Розмір: {len(rating_page_js)} символів")
-print("\n📋 Ключові зміни для швидкого показу:")
-print("1. setReadyFlag() — одразу ховає loader і показує таблицю")
-print("2. waitFirestore() — таймаут 3 сек замість 12, не кидає помилку")
-print("3. loadRating() — спочатку buildSkeleton(), потім дані")
-print("4. Кеш — показується МИТТЄВО, потім оновлюється")
-print("5. Немає блокуючих помилок — таблиця завжди видима")

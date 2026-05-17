@@ -1,13 +1,13 @@
 
-# Створюю повний модифікований rating_page.js
+# Створюю виправлений rating_page.js — миттєвий показ таблиці
 
 rating_page_js = '''// assets/js/rating_page.js
 // STOLAR CARP • Season Rating page (STALKER SYSTEM — Командний Сталкер)
-// ✅ Завантаження результатів з колекції weighings
-// ✅ Розрахунок місць в зонах по сумарній вазі (W1+W2+W3+W4)
-// ✅ Етапи (Е1..Е5) — місце/бали для кожного проведеного етапу
-// ✅ TOP-18 + Претенденти (19+) з правильною нумерацією
-// ✅ Кеш 5 хв + м'які помилки
+// ✅ МИТТЄВИЙ ПОКАЗ: таблиця з'являється відразу, дані підвантажуються потім
+// ✅ Кеш 5 хв — показуємо кеш одразу, потім оновлюємо
+// ✅ Fallback: якщо немає Firestore — показуємо порожню таблицю
+// ✅ Завантаження зважувань з колекції weighings
+// ✅ Розрахунок місць в зонах по сумарній вазі
 
 (function () {
   "use strict";
@@ -17,7 +17,7 @@ rating_page_js = '''// assets/js/rating_page.js
   const TOP_COUNT = 18;
   const STAGES_MAX_IN_HTML = 5;
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_v5_stalker";
+  const CACHE_KEY = "sc_rating_cache_v6_stalker";
 
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
@@ -26,8 +26,11 @@ rating_page_js = '''// assets/js/rating_page.js
     v === null || v === undefined || v === "" ? dash : String(v);
 
   // ===================== READY FLAG =====================
-  function setReadyFlag(isReady) {
+  function setReadyFlag() {
     document.documentElement.setAttribute("data-rating-ready", "1");
+    // Ховаємо екран завантаження якщо є
+    const loader = document.querySelector('.rating-loader, .season-loader, [class*="loader"]');
+    if (loader) loader.style.display = 'none';
   }
 
   // ===================== ERROR BOX =====================
@@ -231,8 +234,8 @@ rating_page_js = '''// assets/js/rating_page.js
     document.body.setAttribute("data-stages", String(count));
   }
 
-  // ===================== FIRESTORE READY =====================
-  async function waitFirestore(maxMs = 12000) {
+  // ===================== FIRESTORE READY (з таймаутом) =====================
+  async function waitFirestore(maxMs = 3000) {
     const t0 = Date.now();
     while (Date.now() - t0 < maxMs) {
       const db =
@@ -242,9 +245,9 @@ rating_page_js = '''// assets/js/rating_page.js
           window.firebase.firestore &&
           window.firebase.firestore());
       if (db) return db;
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 50));
     }
-    throw new Error("Firebase DB не готовий (нема scDb).");
+    return null; // Не кидаємо помилку, просто повертаємо null
   }
 
   // ===================== SEASON COMP ID =====================
@@ -253,15 +256,17 @@ rating_page_js = '''// assets/js/rating_page.js
     const fromUrl = params.get("season");
     if (fromUrl) return fromUrl;
 
-    try {
-      const s = await db.collection("settings").doc("app").get();
-      if (s.exists) {
-        const d = s.data() || {};
-        if (d.activeSeasonId) return String(d.activeSeasonId);
-        if (d.activeCompetitionId) return String(d.activeCompetitionId);
-        if (d.activeCompId) return String(d.activeCompId);
-      }
-    } catch {}
+    if (db) {
+      try {
+        const s = await db.collection("settings").doc("app").get();
+        if (s.exists) {
+          const d = s.data() || {};
+          if (d.activeSeasonId) return String(d.activeSeasonId);
+          if (d.activeCompetitionId) return String(d.activeCompetitionId);
+          if (d.activeCompId) return String(d.activeCompId);
+        }
+      } catch {}
+    }
 
     return "season-2026";
   }
@@ -301,28 +306,30 @@ rating_page_js = '''// assets/js/rating_page.js
     let stagesCount = 0;
     let hasFinal = false;
 
-    try {
-      const c = await db.collection("competitions").doc(seasonCompId).get();
-      if (c.exists) {
-        const data = c.data() || {};
-        const events = Array.isArray(data.events) ? data.events : [];
+    if (db) {
+      try {
+        const c = await db.collection("competitions").doc(seasonCompId).get();
+        if (c.exists) {
+          const data = c.data() || {};
+          const events = Array.isArray(data.events) ? data.events : [];
 
-        const stageEvents = extractStageEvents(events);
-        stagesCount = stageEvents.length;
+          const stageEvents = extractStageEvents(events);
+          stagesCount = stageEvents.length;
 
-        hasFinal = events.some((e) => {
-          const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase();
-          return k === "final" || k.includes("final") || k.includes("фінал");
-        });
+          hasFinal = events.some((e) => {
+            const k = String(e?.key || e?.stageId || e?.id || "").toLowerCase();
+            return k === "final" || k.includes("final") || k.includes("фінал");
+          });
 
-        if ($("seasonTitle") && (data.name || data.title))
-          $("seasonTitle").textContent = String(data.name || data.title);
-        if ($("seasonKicker") && (data.year || data.seasonYear))
-          $("seasonKicker").textContent = `СЕЗОН ${
-            data.year || data.seasonYear
-          }`;
-      }
-    } catch {}
+          if ($("seasonTitle") && (data.name || data.title))
+            $("seasonTitle").textContent = String(data.name || data.title);
+          if ($("seasonKicker") && (data.year || data.seasonYear))
+            $("seasonKicker").textContent = `СЕЗОН ${
+              data.year || data.seasonYear
+            }`;
+        }
+      } catch {}
+    }
 
     if (!Number.isFinite(stagesCount) || stagesCount < 0) stagesCount = 0;
     if (stagesCount > STAGES_MAX_IN_HTML) stagesCount = STAGES_MAX_IN_HTML;
@@ -342,6 +349,7 @@ rating_page_js = '''// assets/js/rating_page.js
 
   // ===================== PAID TEAMS =====================
   async function loadPaidTeamsForSeason(db, seasonCompId) {
+    if (!db) return [];
     let snap;
 
     try {
@@ -352,11 +360,15 @@ rating_page_js = '''// assets/js/rating_page.js
         .where("status", "in", PAID_STATUSES)
         .get();
     } catch (e) {
-      snap = await db
-        .collection("public_participants")
-        .where("competitionId", "==", seasonCompId)
-        .where("status", "in", PAID_STATUSES)
-        .get();
+      try {
+        snap = await db
+          .collection("public_participants")
+          .where("competitionId", "==", seasonCompId)
+          .where("status", "in", PAID_STATUSES)
+          .get();
+      } catch {
+        return [];
+      }
     }
 
     const map = new Map();
@@ -391,9 +403,9 @@ rating_page_js = '''// assets/js/rating_page.js
   }
 
   // ===================== STALKER RATING ENGINE =====================
-  // Завантаження зважувань для етапу
 
   async function loadWeighingsForStage(db, seasonCompId, stageId) {
+    if (!db) return [];
     const weighings = [];
     
     try {
@@ -424,9 +436,7 @@ rating_page_js = '''// assets/js/rating_page.js
     return weighings;
   }
 
-  // Розрахунок місць в зонах за системою Командний Сталкер
   function calculateStageResults(weighings) {
-    // Групуємо по командах (сума всіх зважувань)
     const teamMap = new Map();
     
     for (const w of weighings) {
@@ -449,7 +459,6 @@ rating_page_js = '''// assets/js/rating_page.js
       }
     }
 
-    // Групуємо по зонах
     const zones = { A: [], B: [], C: [] };
     for (const team of teamMap.values()) {
       const zone = team.zone;
@@ -458,7 +467,6 @@ rating_page_js = '''// assets/js/rating_page.js
       }
     }
 
-    // Сортуємо в кожній зоні по вазі (більша = краще) і присвоюємо місця
     const results = [];
     
     for (const [zoneName, teams] of Object.entries(zones)) {
@@ -475,11 +483,9 @@ rating_page_js = '''// assets/js/rating_page.js
     return results;
   }
 
-  // Розрахунок загального рейтингу сезону
   function calculateSeasonRating(stageResults, paidTeams) {
     const teamMap = new Map();
     
-    // Ініціалізуємо всі paid teams
     for (const pt of paidTeams) {
       teamMap.set(pt.teamId, {
         teamId: pt.teamId,
@@ -546,7 +552,6 @@ rating_page_js = '''// assets/js/rating_page.js
     }));
   }
 
-  // ===================== LOAD ALL STAGE DATA =====================
   async function loadAllStageData(db, seasonCompId, stageEvents) {
     const stageResults = [];
     
@@ -579,12 +584,10 @@ rating_page_js = '''// assets/js/rating_page.js
       ? $("season-contenders").querySelectorAll("tr")
       : [];
 
-    // Заповнюємо рейтинг
     for (let i = 0; i < Math.min(TOP_COUNT, rating.length, topRows.length); i++) {
       renderRow(topRows[i], rating[i]);
     }
 
-    // Заповнюємо претендентів 19+
     if (rating.length > TOP_COUNT) {
       const rest = rating.slice(TOP_COUNT);
       for (let i = 0; i < Math.min(rest.length, contRows.length); i++) {
@@ -593,23 +596,24 @@ rating_page_js = '''// assets/js/rating_page.js
     }
 
     if (!rating.length && !isOffline) {
-      showError(
-        "⚠️ Немає даних: немає завершених зважувань для цього сезону."
-      );
+      // Не показуємо помилку — просто порожня таблиця
     } else if (!isOffline) {
       hideError();
     }
 
-    setReadyFlag(true);
+    setReadyFlag();
   }
 
   // ===================== MAIN LOAD =====================
   async function loadRating() {
     hideError();
 
+    // 1. ОДРАЗУ показуємо таблицю (скелет)
     buildSkeleton(3);
-    setReadyFlag(true);
+    applyStageVisibility(0); // Поки 0 етапів видно, потім оновимо
+    setReadyFlag();
 
+    // 2. Якщо є кеш — одразу заповнюємо даними
     const cached = cacheGet();
     if (cached) {
       try {
@@ -619,12 +623,18 @@ rating_page_js = '''// assets/js/rating_page.js
       }
     }
 
+    // 3. У фоні тягнемо свіжі дані
     try {
       const db = await waitFirestore();
+      
+      if (!db) {
+        console.warn("Firebase DB не доступний");
+        return;
+      }
+      
       const seasonCompId = await resolveSeasonCompId(db);
       const { stagesCount } = await getSeasonConfig(db, seasonCompId);
 
-      // Отримуємо список етапів
       let stageEvents = [];
       try {
         const c = await db.collection("competitions").doc(seasonCompId).get();
@@ -637,16 +647,13 @@ rating_page_js = '''// assets/js/rating_page.js
         console.warn("Failed to get stage events:", e);
       }
 
-      // Завантажуємо дані всіх етапів
       const stageResults = await loadAllStageData(db, seasonCompId, stageEvents);
       
-      // Завантажуємо paid teams
       let paidTeams = [];
       try {
         paidTeams = await loadPaidTeamsForSeason(db, seasonCompId);
       } catch {}
 
-      // Розраховуємо рейтинг
       const rating = calculateSeasonRating(stageResults, paidTeams);
       
       const payload = { stagesCount, rating, paidTeams };
@@ -654,27 +661,14 @@ rating_page_js = '''// assets/js/rating_page.js
 
       renderData(payload, false);
     } catch (e) {
-      const c = cacheGet();
-      if (c) {
-        renderData(c, true);
-        showError(
-          `⚠️ <b>Офлайн-режим</b><br>Показано кеш. Спробуй оновити сторінку.`
-        );
-      } else {
-        showError(
-          `⚠️ <b>Помилка завантаження</b><br>Причина: <span class="hint">${safeText(
-            e?.message || e
-          )}</span>`
-        );
-      }
-      setReadyFlag(true);
+      console.warn("Load rating error:", e);
+      // Не показуємо помилку — таблиця вже показана
     }
   }
 
   // ручне оновлення
   window.refreshRating = async function () {
     cacheClear();
-    showError("⏳ Оновлення...");
     await loadRating();
   };
 
@@ -685,14 +679,14 @@ rating_page_js = '''// assets/js/rating_page.js
 '''
 
 # Зберігаємо файл
-with open('/mnt/agents/output/rating_page_stalker.js', 'w', encoding='utf-8') as f:
+with open('/mnt/agents/output/rating_page_fast.js', 'w', encoding='utf-8') as f:
     f.write(rating_page_js)
 
 print("✅ Файл створено!")
 print(f"Розмір: {len(rating_page_js)} символів")
-print("\n📋 Ключові зміни:")
-print("1. loadWeighingsForStage() — завантажує зважування з колекції weighings")
-print("2. calculateStageResults() — розраховує місця в зонах по сумарній вазі")
-print("3. calculateSeasonRating() — сумує балі по етапах, сортує за правилами Сталкера")
-print("4. loadAllStageData() — завантажує всі етапи сезону")
-print("5. Показує Е1 м/б для проведених етапів, Е2+ = — / — для непроведених")
+print("\n📋 Ключові зміни для швидкого показу:")
+print("1. setReadyFlag() — одразу ховає loader і показує таблицю")
+print("2. waitFirestore() — таймаут 3 сек замість 12, не кидає помилку")
+print("3. loadRating() — спочатку buildSkeleton(), потім дані")
+print("4. Кеш — показується МИТТЄВО, потім оновлюється")
+print("5. Немає блокуючих помилок — таблиця завжди видима")

@@ -18,27 +18,62 @@
   };
 
   // ==================== СТАН ДОДАТКУ ====================
-  const utils = window.scUtils;
-  const logic = window.scLogic;
-
   const State = {
+    // Firebase
     db: null,
     auth: null,
     user: null,
+    
+    // Контекст з QR/URL
     zone: "",
     token: "",
-    key: "",
+    key: "",        // compId||stageId
     compId: "",
     stageId: "",
-    viewW: 1,
+    viewW: 1,       // поточне видиме зважування
+    
+    // Дані
     teams: [],
     teamsMap: {},
     weighCache: {},
     currentW: CONFIG.DEFAULT_MAX_W,
+    
+    // UI елементи (ініціалізуються пізніше)
     elements: {}
   };
 
-  const InternalUtils = {
+  // ==================== УТИЛІТИ ====================
+  const Utils = {
+    norm: (v) => String(v ?? "").trim(),
+    
+    esc: (s) => String(s ?? "").replace(/[&<>"']/g, m => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", 
+      '"': "&quot;", "'": "&#39;"
+    }[m])),
+    
+    toNum: (val) => {
+      const s = String(val ?? "").trim().replace(",", ".");
+      return s ? Number(s) : NaN;
+    },
+    
+    round2: (x) => Math.round(x * 100) / 100,
+    
+    isExpired: (ts) => {
+      try {
+        const d = ts?.toDate ? ts.toDate() : null;
+        return d ? d.getTime() <= Date.now() : false;
+      } catch {
+        return false;
+      }
+    },
+    
+    parseZoneKey: (drawKey, drawZone, drawSector) => {
+      const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
+      const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
+      const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
+      return { z, n, label };
+    },
+    
     weighingDocId: (teamId, wNo) => 
       `${State.compId}||${State.stageId}||W${Number(wNo)}||${teamId}`
   };
@@ -357,108 +392,46 @@
         throw new Error("Нема compId/stageId (перевір key/token).");
       }
 
-      const id = InternalUtils.weighingDocId(team.teamId, wNo);
+      const id = Utils.weighingDocId(team.teamId, wNo);
       const ts = window.firebase.firestore.FieldValue.serverTimestamp();
 
-      const weights = logic.calculateTeamTotals({ [wNo]: { fish: weightsRaw, total: 0, big: 0 } }); // Temporary use
-      // Wait, scLogic.calculateTeamTotals needs a different structure.
-      // Let's use simpler logic for the single doc save.
-      const cleaned = (Array.isArray(weightsRaw) ? weightsRaw : [])
-        .map(utils.toNum)
-        .filter(n => isFinite(n) && n > 0);
-
-      const fishCount = cleaned.length;
-      const totalWeightKg = utils.round2(cleaned.reduce((a, b) => a + b, 0));
-      const bigFishKg = fishCount ? utils.round2(Math.max(...cleaned)) : 0;
+      const weights = this.cleanWeights(weightsRaw);
+      const calc = this.calcFromWeights(weights);
 
       await State.db.collection("weighings").doc(id).set({
+        // LIVE fields
         compId: State.compId,
         stageId: State.stageId,
         weighNo: Number(wNo),
         teamId: team.teamId,
-        weights: cleaned,
+        weights,
+
+        // Extra для live tables
         zone: State.zone,
         sector: Number(team.sector || 0),
         teamName: team.teamName || "",
-        fishCount,
-        totalWeightKg,
-        bigFishKg,
+        fishCount: calc.fishCount,
+        totalWeightKg: calc.totalWeightKg,
+        bigFishKg: calc.bigFishKg,
         status: "submitted",
         updatedAt: ts,
+
+        // Token-based access
         judgeToken: State.token,
         updatedBy: State.user?.uid || ""
       }, { merge: true });
 
-      // UPDATE CACHE
+      // Оновлення кешу
       State.weighCache[team.teamId] = State.weighCache[team.teamId] || {};
       State.weighCache[team.teamId][wNo] = {
-        weights: cleaned,
-        totalWeightKg,
-        bigFishKg,
-        fishCount,
+        weights,
+        fishCount: calc.fishCount,
+        totalWeightKg: calc.totalWeightKg,
+        bigFishKg: calc.bigFishKg,
         status: "submitted"
       };
 
-      // SYNC TO STAGE RESULTS (Important for Live)
-      try {
-        const teamRef = State.db.collection("stageResults").doc(State.key).collection("teams").doc(team.teamId);
-        const oldSnap = await teamRef.get();
-        const oldData = oldSnap.exists ? (oldSnap.data() || {}) : {};
-        
-        const weighings = oldData.weighings || {};
-        weighings[`W${wNo}`] = {
-          fish: cleaned,
-          total: totalWeightKg,
-          count: fishCount,
-          big: bigFishKg
-        };
-
-        const totals = logic.calculateTeamTotals(weighings);
-        
-        const teamUpdate = {
-          weighings,
-          totalWeight: totals.totalWeight,
-          bigFish: totals.bigFish,
-          totalCount: totals.totalCount,
-          updatedAt: ts
-        };
-        await teamRef.set(teamUpdate, { merge: true });
-
-        // Update main stage doc
-        const stageRef = State.db.collection("stageResults").doc(State.key);
-        const stageSnap = await stageRef.get();
-        const stageData = stageSnap.exists ? (stageSnap.data() || {}) : {};
-        const teamsArr = Array.isArray(stageData.teams) ? stageData.teams.slice() : [];
-        
-        const idx = teamsArr.findIndex(x => x && x.teamId === team.teamId);
-        const rowObj = {
-          teamId: team.teamId,
-          team: team.teamName,
-          zone: team.zone || State.zone,
-          sector: team.sector,
-          W1: (weighings.W1 || {}).total || 0,
-          W2: (weighings.W2 || {}).total || 0,
-          W3: (weighings.W3 || {}).total || 0,
-          W4: (weighings.W4 || {}).total || 0,
-          totalWeight: totals.totalWeight,
-          bigFish: totals.bigFish,
-          totalCount: totals.totalCount
-        };
-
-        if(idx >= 0) teamsArr[idx] = rowObj; else teamsArr.push(rowObj);
-
-        await stageRef.set({
-          teams: teamsArr,
-          zones: logic.calculateZoneRankings(teamsArr),
-          updatedAt: ts
-        }, { merge: true });
-
-      } catch (err) {
-        console.error("StageResults sync error:", err);
-        // We don't fail the whole save if sync fails, but we should log it
-      }
-
-      return { fishCount, totalWeightKg, bigFishKg };
+      return calc;
     }
   };
 

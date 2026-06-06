@@ -734,7 +734,7 @@
     setMsg(`✅ Таблиці готові. ${compId}__${stageKey} · ${wKey}`, true);
   }
 
-    // ====== 7) АРХІВАЦІЯ ЕТАПУ — тільки підсумки ======
+      // ====== 7) АРХІВАЦІЯ ЕТАПУ — тільки підсумки ======
   async function archiveStage(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const seasonYear = norm(seasonYearInp.value) || "2026";
@@ -744,7 +744,6 @@
       return;
     }
 
-    // Підрахунок місць по вазі
     function calcPlaces(teamsArr) {
       const sorted = teamsArr.slice().sort((a, b) => {
         if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
@@ -767,11 +766,9 @@
       const stageDocId = stageResultsId(compId, stageKey);
       const ts = fb.firestore.FieldValue.serverTimestamp();
 
-      // 7a) Зчитати stageResults
       const stageSnap = await db.collection("stageResults").doc(stageDocId).get();
       const stageData = stageSnap.exists ? (stageSnap.data() || {}) : {};
 
-      // 7b) Зчитати команди з підколекції
       const teamsSnap = await db.collection("stageResults").doc(stageDocId).collection("teams").get();
       const teamsData = [];
       teamsSnap.forEach(d => {
@@ -791,14 +788,12 @@
         });
       });
 
-      // 7c) Розрахувати місця
       const places = calcPlaces(teamsData);
       const standings = teamsData.map(t => ({
         ...t,
         place: places[t.teamId] || 0
       })).sort((a, b) => a.place - b.place);
 
-      // 7d) Записати в seasonResults — тільки підсумки
       const seasonRef = db.collection("seasonResults").doc(seasonYear).collection("stages").doc(stageDocId);
 
       await seasonRef.set({
@@ -808,7 +803,7 @@
         stageName: stageData.stageName || stageDocId,
         archivedAt: ts,
         archivedBy: auth.currentUser?.uid || "unknown",
-        standings,                    // ← підсумкова таблиця
+        standings,
         summary: {
           teamsCount: standings.length,
           totalWeight: standings.reduce((s, t) => s + t.totalWeight, 0),
@@ -818,7 +813,6 @@
         isActive: false
       });
 
-      // 7e) Очистити weighings (batch з лімітом 400)
       const weighingsSnap = await db.collection("weighings")
         .where("compId", "==", compId)
         .where("stageId", "==", stageKey)
@@ -840,7 +834,6 @@
       });
       if (delCount > 0) await delBatch.commit();
 
-      // 7f) Позначити stageResults як archived
       await db.collection("stageResults").doc(stageDocId).set({
         archived: true,
         archivedAt: ts,
@@ -857,3 +850,42 @@
       btnArchive.disabled = false;
     }
   }
+
+  // ====== INIT ======
+  async function init(){
+    if(!auth || !db || !fb){
+      setMsg("Firebase не ініціалізувався.", false);
+      return;
+    }
+
+    auth.onAuthStateChanged(async (user)=>{
+      if(!user){
+        setMsg("Увійди як адмін.", false);
+        return;
+      }
+      const ok = await requireAdmin(user);
+      if(!ok){
+        setMsg("Доступ заборонено.", false);
+        setTimeout(()=>{ window.location.href = "index.html"; }, 2000);
+        return;
+      }
+
+      await loadStages();
+      setMsg("Обери етап та W → натисни «Завантажити таблиці».", true);
+
+      $("btnReloadStages").onclick = async ()=>{
+        setMsg("Оновлюю список…", true);
+        await loadStages();
+        setMsg("✅ Список оновлено.", true);
+      };
+
+      $("btnLoadTables").onclick = loadTables;
+      btnArchive.onclick = archiveStage;
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

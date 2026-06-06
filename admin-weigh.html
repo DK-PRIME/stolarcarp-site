@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Зважування — Адмін</title>
 
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <link rel="stylesheet" href="assets/css/main.css?v=20260514-7" />
 
   <style>
     body{background:#020617}
@@ -118,25 +118,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="assets/js/firebase-init.js"></script>
+<script src="assets/js/sc-core.js?v=20260514-3"></script>
+<script src="assets/js/sc-logic.js"></script>
 
 <script>
 (function(){
   "use strict";
 
-  const auth = window.scAuth;
-  const db   = window.scDb;
-  const fb   = window.firebase;
+  const utils = window.scUtils;
+  const logic = window.scLogic;
+  const auth  = window.scAuth;
+  const db    = window.scDb;
+  const fb    = window.firebase;
+  const esc   = utils.esc;
+  const $     = utils.$;
 
-  const $ = (id)=>document.getElementById(id);
-
-  const stageSelect = $("stageSelect");
-  const wSelect     = $("wSelect");
-  const msgEl       = $("msg");
-  const dbgEl       = $("debug");
-  const zonesWrap   = $("zonesWrap");
-
-  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
-  function norm(s){ return String(s ?? "").trim(); }
+  const stageSelect = utils.$("stageSelect");
+  const wSelect     = utils.$("wSelect");
+  const msgEl       = utils.$("msg");
+  const dbgEl       = utils.$("debug");
+  const zonesWrap   = utils.$("zonesWrap");
 
   function setMsg(t, ok=true){
     msgEl.textContent = t || "";
@@ -155,7 +156,7 @@
   // value: compId||stageKey
   function parseStageValue(v){
     const [compId, stageKey] = String(v||"").split("||");
-    return { compId: norm(compId), stageKey: norm(stageKey) };
+    return { compId: utils.norm(compId), stageKey: utils.norm(stageKey) };
   }
 
   // stageResults doc id: compId__stageKey
@@ -179,17 +180,28 @@
       const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
 
       const events = Array.isArray(c.events) ? c.events : [];
-      events.forEach((ev, idx)=>{
-        const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
-        const stageTitle = ev.name || ev.title || ev.label || `Етап ${idx+1}`;
-        const label = `${brand} · ${compTitle} — ${stageTitle}`;
-        const value = `${compId}||${key}`;
+      
+      if (events.length) {
+        events.forEach((ev, idx)=>{
+          const key = String(ev.key || ev.stageId || ev.id || `stage-${idx+1}`);
+          const stageTitle = ev.name || ev.title || ev.label || `Етап ${idx+1}`;
+          const label = `${brand} · ${compTitle} — ${stageTitle}`;
+          const value = `${compId}||${key}`;
 
+          if(!seen.has(value)){
+            seen.add(value);
+            items.push({value, label});
+          }
+        });
+      } else {
+        // Fallback for one-off competitions without explicit events array
+        const label = `${brand} · ${compTitle} (Основний етап)`;
+        const value = `${compId}||main`;
         if(!seen.has(value)){
           seen.add(value);
           items.push({value, label});
         }
-      });
+      }
     });
 
     items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
@@ -200,11 +212,18 @@
 
   // ====== 2) Тягнемо команди з registrations (confirmed + drawZone/drawSector) ======
   async function loadTeamsFromRegistrations(compId, stageKey){
-    const q = await db.collection("registrations")
+    let qRef = db.collection("registrations")
       .where("competitionId","==",compId)
-      .where("stageId","==",stageKey)
-      .where("status","==","confirmed")
-      .get();
+      .where("status","==","confirmed");
+    
+    // Handle 'main' as null for one-off competitions
+    if (stageKey === "main" || !stageKey) {
+      qRef = qRef.where("stageId", "==", null);
+    } else {
+      qRef = qRef.where("stageId", "==", stageKey);
+    }
+
+    const q = await qRef.get();
 
     const teams = [];
     q.forEach(d=>{
@@ -354,24 +373,16 @@
     const old = oldSnap.exists ? (oldSnap.data()||{}) : {};
 
     const weighings = old.weighings || {};
+    const fishNum = fish.map(v => Number(v) || 0);
+
     weighings[wKey] = {
-      fish: fish,
-      total: fish.reduce((s,v)=>s+(Number(v)||0),0),
-      count: fish.length,
-      big: fish.reduce((m,v)=>Math.max(m,Number(v)||0),0)
+      fish: fishNum,
+      total: fishNum.reduce((s,v)=>s+v, 0),
+      count: fishNum.length,
+      big: fishNum.reduce((m,v)=>Math.max(m,v), 0)
     };
 
-    const W = ["W1","W2","W3","W4"];
-    let totalWeight = 0;
-    let bigFish = 0;
-    const sums = {};
-    W.forEach(k=>{
-      const slot = weighings[k] || {};
-      const s = Number(slot.total || 0) || 0;
-      sums[k] = s;
-      totalWeight += s;
-      bigFish = Math.max(bigFish, Number(slot.big||0)||0);
-    });
+    const totals = logic.calculateTeamTotals(weighings);
 
     await teamRef.set({
       compId,
@@ -381,9 +392,10 @@
       zone: team.zone,
       sector: team.sector,
       weighings,
-      sums,
-      totalWeight,
-      bigFish,
+      sums: Object.fromEntries(Object.entries(weighings).map(([k,v]) => [k, v.total])),
+      totalWeight: totals.totalWeight,
+      bigFish: totals.bigFish,
+      totalCount: totals.totalCount,
       updatedAt: fb.firestore.FieldValue.serverTimestamp()
     }, { merge:true });
 
@@ -399,36 +411,53 @@
       team: team.team,
       zone: team.zone,
       sector: team.sector,
-      W1: sums.W1 || 0,
-      W2: sums.W2 || 0,
-      W3: sums.W3 || 0,
-      W4: sums.W4 || 0,
-      totalWeight: totalWeight,
-      bigFish: bigFish
+      w1: { c: (weighings.W1 || {}).count || 0, w: (weighings.W1 || {}).total || 0 },
+      w2: { c: (weighings.W2 || {}).count || 0, w: (weighings.W2 || {}).total || 0 },
+      w3: { c: (weighings.W3 || {}).count || 0, w: (weighings.W3 || {}).total || 0 },
+      w4: { c: (weighings.W4 || {}).count || 0, w: (weighings.W4 || {}).total || 0 },
+      totalWeight: totals.totalWeight,
+      bigFish: totals.bigFish,
+      total: totals.totalCount
     };
 
     if(idx >= 0) teamsArr[idx] = rowObj; else teamsArr.push(rowObj);
 
-    const zoneOrder = {A:1,B:2,C:3};
-    teamsArr.sort((a,b)=>{
-      const za = zoneOrder[a.zone] || 9;
-      const zb = zoneOrder[b.zone] || 9;
-      if(za !== zb) return za - zb;
-      const na = Number(String(a.sector).replace(/[^\d.]/g,""));
-      const nb = Number(String(b.sector).replace(/[^\d.]/g,""));
-      if(Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
-      return String(a.sector).localeCompare(String(b.sector),"uk");
-    });
+    // Re-rank teams by zones
+    const zones = logic.calculateZoneRankings(teamsArr);
+    
+    const ts = fb.firestore.FieldValue.serverTimestamp();
 
     await stageRef.set({
       compId,
       stageId: stageKey,
       stageName: stageData.stageName || stageData.name || stageDocId,
       teams: teamsArr,
-      updatedAt: fb.firestore.FieldValue.serverTimestamp()
+      zones,
+      updatedAt: ts
     }, { merge:true });
 
-    return { sums, totalWeight, bigFish };
+    // ✅ ALSO save to 'weighings' collection so LIVE bottom table works!
+    const weighNo = Number(wKey.replace("W", ""));
+    const weighingDocId = `${compId}||${stageKey}||W${weighNo}||${team.teamId}`;
+    
+    await db.collection("weighings").doc(weighingDocId).set({
+      compId,
+      stageId: stageKey,
+      weighNo,
+      teamId: team.teamId,
+      weights: fishNum,
+      zone: team.zone,
+      sector: team.sector,
+      teamName: team.team,
+      fishCount: weighings[wKey].count,
+      totalWeightKg: weighings[wKey].total,
+      bigFishKg: weighings[wKey].big,
+      status: "submitted",
+      updatedAt: ts,
+      updatedBy: "admin"
+    }, { merge: true });
+
+    return totals;
   }
 
   // ====== 6) Завантаження таблиць ======
@@ -556,12 +585,13 @@
       }
       const ok = await requireAdmin(user);
       if(!ok){
-        setMsg("Цей акаунт не адмін.", false);
+        setMsg("Доступ заборонено ❌ Редірект...", false);
+        setTimeout(() => { window.location.href = "index.html"; }, 2000);
         return;
       }
 
       await loadStages();
-      setMsg("Обери етап та W → натисни “Завантажити таблиці”.", true);
+      setMsg("Обери етап та W → натисни \"Завантажити таблиці\".", true);
 
       $("btnReloadStages").onclick = async ()=>{
         setMsg("Оновлюю список етапів…", true);

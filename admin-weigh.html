@@ -117,18 +117,18 @@
 
 <body>
 
-<header class="header">
+<<header class="header">
   <div class="container header__row">
     <div class="logo"><span class="logo__mark">SC</span> STOLAR CARP</div>
   </div>
 </header>
 
-<main class="container">
+<<main class="container">
 
   <div class="card">
     <h2 style="margin:0 0 8px 0;">⚖️ Зважування (адмін)</h2>
     <div class="muted" style="line-height:1.5">
-      1) Обери етап → 2) Обери W → 3) Внось/виправляй ваги → <b>Зберегти</b>.<br>
+      1) Обери етап → 2) Обери W → 3) Внось/виправляй ваги → <b>Зберегти</b>.<<br>
       Дані зберігаються в <b>weighings</b> (судді бачать) та <b>stageResults</b> (LIVE бачить).
     </div>
 
@@ -165,7 +165,7 @@
   <div id="archiveSection" class="card archive-section" style="display:none;">
     <h3 style="margin:0 0 12px 0;">📦 Архівація етапу</h3>
     <div class="archive-info muted">
-      Після завершення всіх зважувань натисни <b>«Архівувати етап»</b>.<br>
+      Після завершення всіх зважувань натисни <b>«Архівувати етап»</b>.<<br>
       Створить копію в <b>seasonResults/{рік}/{етап}</b> для загального рейтингу.<br>
       Очистить <b>weighings</b> для наступного етапу.
     </div>
@@ -216,7 +216,7 @@
   const btnArchive    = $("btnArchive");
   const archiveMsg    = $("archiveMsg");
 
-  function esc(s){ return String(s ?? "").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+  function esc(s){ return String(s ?? "").replace(/[&<<>"']/g, m=>({ "&":"&amp;","<<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
   function norm(s){ return String(s ?? "").trim(); }
 
   function setMsg(t, ok=true){
@@ -734,7 +734,7 @@
     setMsg(`✅ Таблиці готові. ${compId}__${stageKey} · ${wKey}`, true);
   }
 
-      // ====== 7) АРХІВАЦІЯ ЕТАПУ — тільки підсумки ======
+  // ====== 7) АРХІВАЦІЯ ЕТАПУ — тільки підсумки ======
   async function archiveStage(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const seasonYear = norm(seasonYearInp.value) || "2026";
@@ -760,15 +760,17 @@
     }
 
     btnArchive.disabled = true;
-    setArchiveMsg("Архівую підсумки…", true);
+    setArchiveMsg("STEP 0 — Підготовка…", true);
 
     try {
       const stageDocId = stageResultsId(compId, stageKey);
       const ts = fb.firestore.FieldValue.serverTimestamp();
 
+      setArchiveMsg("STEP 1 — Читаю stageResults…", true);
       const stageSnap = await db.collection("stageResults").doc(stageDocId).get();
       const stageData = stageSnap.exists ? (stageSnap.data() || {}) : {};
 
+      setArchiveMsg("STEP 2 — Читаю команди…", true);
       const teamsSnap = await db.collection("stageResults").doc(stageDocId).collection("teams").get();
       const teamsData = [];
       teamsSnap.forEach(d => {
@@ -794,6 +796,7 @@
         place: places[t.teamId] || 0
       })).sort((a, b) => a.place - b.place);
 
+      setArchiveMsg("STEP 3 — Записую в seasonResults…", true);
       const seasonRef = db.collection("seasonResults").doc(seasonYear).collection("stages").doc(stageDocId);
 
       await seasonRef.set({
@@ -813,11 +816,13 @@
         isActive: false
       });
 
+      setArchiveMsg("STEP 4 — Читаю weighings для видалення…", true);
       const weighingsSnap = await db.collection("weighings")
         .where("compId", "==", compId)
         .where("stageId", "==", stageKey)
         .get();
 
+      setArchiveMsg("STEP 5 — Видаляю weighings…", true);
       let delBatch = db.batch();
       let delCount = 0;
       let deletedTotal = 0;
@@ -834,6 +839,7 @@
       });
       if (delCount > 0) await delBatch.commit();
 
+      setArchiveMsg("STEP 6 — Позначаю stageResults як архівований…", true);
       await db.collection("stageResults").doc(stageDocId).set({
         archived: true,
         archivedAt: ts,
@@ -845,7 +851,14 @@
 
     } catch(e) {
       console.error("Archive error:", e);
-      setArchiveMsg("❌ Помилка: " + (e.message || e), false);
+
+      setArchiveMsg(
+        `❌ ПОМИЛКА НА STEP
+CODE: ${e.code || "—"}
+MSG: ${e.message || "—"}
+STACK: ${e.stack || "—"}`,
+        false
+      );
     } finally {
       btnArchive.disabled = false;
     }

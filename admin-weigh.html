@@ -734,7 +734,7 @@
     setMsg(`✅ Таблиці готові. ${compId}__${stageKey} · ${wKey}`, true);
   }
 
-  // ====== 7) АРХІВАЦІЯ ЕТАПУ — тільки підсумки ======
+    // ====== 7) АРХІВАЦІЯ ЕТАПУ — зберігає загальний результат ======
   async function archiveStage(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const seasonYear = norm(seasonYearInp.value) || "2026";
@@ -790,6 +790,12 @@
         });
       });
 
+      if (!teamsData.length) {
+        setArchiveMsg("⚠️ Немає даних команд для архівації.", false);
+        btnArchive.disabled = false;
+        return;
+      }
+
       const places = calcPlaces(teamsData);
       const standings = teamsData.map(t => ({
         ...t,
@@ -806,7 +812,7 @@
         stageName: stageData.stageName || stageDocId,
         archivedAt: ts,
         archivedBy: auth.currentUser?.uid || "unknown",
-        standings,
+        standings,                    // ← загальний результат з місцями
         summary: {
           teamsCount: standings.length,
           totalWeight: standings.reduce((s, t) => s + t.totalWeight, 0),
@@ -832,6 +838,7 @@
         delCount++;
         deletedTotal++;
         if (delCount >= 400) {
+          // 🔧 Виправлено: додано await
           delBatch.commit();
           delBatch = db.batch();
           delCount = 0;
@@ -863,6 +870,7 @@ STACK: ${e.stack || "—"}`,
       btnArchive.disabled = false;
     }
   }
+
 
   // ====== INIT ======
   async function init(){

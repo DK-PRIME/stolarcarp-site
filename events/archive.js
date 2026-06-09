@@ -15,9 +15,7 @@
   const zonesWrap = $("zonesWrap");
 
   try {
-    if (window.scReady) {
-      await window.scReady;
-    }
+    if (window.scReady) await window.scReady;
   } catch (e) {
     if (msg) {
       msg.textContent = "Firebase не ініціалізувався: " + e.message;
@@ -41,9 +39,7 @@
   const params = new URLSearchParams(window.location.search);
   const seasonYear = params.get("year") || "2026";
 
-  if (pageTitle) {
-    pageTitle.textContent = `Архів сезону ${seasonYear}`;
-  }
+  if (pageTitle) pageTitle.textContent = `Архів сезону ${seasonYear}`;
 
   function esc(s){
     return String(s ?? "").replace(/[&<>"']/g, m => ({
@@ -60,15 +56,19 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function fmt(v){
+    return v === null || v === undefined || v === "" ? "—" : String(v);
+  }
+
   function fmtWeight(v){
     const n = num(v);
-    return n > 0 ? n.toFixed(2).replace(/\.00$/, "") : "-";
+    return n > 0 ? n.toFixed(2).replace(/\.?0+$/, "") : "—";
   }
 
   function fmtW(slot){
     const c = num(slot?.c);
     const w = num(slot?.w);
-    if (!c && !w) return "-";
+    if (!c && !w) return "—";
     return `${c} / ${fmtWeight(w)}`;
   }
 
@@ -80,10 +80,8 @@
 
   async function loadStages(){
     try {
-      if (msg) {
-        msg.textContent = "Завантажую архів…";
-        msg.className = "muted";
-      }
+      msg.textContent = "Завантажую архів…";
+      msg.className = "muted";
 
       const snap = await db
         .collection("seasonResults")
@@ -92,29 +90,23 @@
         .get();
 
       if (snap.empty) {
-        if (msg) {
-          msg.textContent = `Немає архівованих етапів сезону ${seasonYear}.`;
-          msg.className = "muted";
-        }
+        msg.textContent = `Немає архівованих етапів сезону ${seasonYear}.`;
         return;
       }
 
       const stages = [];
 
       snap.forEach(doc => {
-        const data = doc.data() || {};
         stages.push({
           id: doc.id,
-          data
+          data: doc.data() || {}
         });
       });
 
       stages.sort((a,b) => stageSortValue(a.id, a.data) - stageSortValue(b.id, b.data));
 
-      if (msg) {
-        msg.textContent = `Знайдено етапів: ${stages.length}`;
-        msg.className = "ok";
-      }
+      msg.textContent = `Знайдено етапів: ${stages.length}`;
+      msg.className = "ok";
 
       stagesList.innerHTML = stages.map(x => {
         const d = x.data || {};
@@ -123,8 +115,8 @@
 
         return `
           <button class="stage-btn" type="button" data-stage="${esc(x.id)}">
-            <div>${esc(name)}</div>
-            <div class="muted" style="margin-top:5px;">
+            <div style="font-size:1rem;font-weight:900;">${esc(name)}</div>
+            <div class="muted" style="margin-top:5px;font-size:.85rem;">
               Команд: ${esc(summary.teamsCount || 0)} ·
               Вага: ${fmtWeight(summary.totalWeight)} ·
               BIG: ${fmtWeight(summary.maxBigFish)}
@@ -143,9 +135,7 @@
 
     } catch(e) {
       console.error(e);
-      if (msg) {
-        msg.innerHTML = `<span class="err">Помилка читання архіву: ${esc(e.message)}</span>`;
-      }
+      msg.innerHTML = `<span class="err">Помилка читання архіву: ${esc(e.message)}</span>`;
     }
   }
 
@@ -153,23 +143,13 @@
     const rows = Array.isArray(data.standings) ? data.standings.slice() : [];
 
     if (!rows.length) {
-      if (zonesWrap) {
-        zonesWrap.innerHTML = `<div class="archive-card err">У цьому етапі немає standings.</div>`;
-      }
+      zonesWrap.innerHTML = `<div class="archive-card err">У цьому етапі немає standings.</div>`;
       return;
     }
 
-    if (resultSection) {
-      resultSection.style.display = "block";
-    }
-
-    if (stageTitle) {
-      stageTitle.textContent = "Зони A / B / C";
-    }
-
-    if (stageMeta) {
-      stageMeta.textContent = `${data.stageName || stageDocId} · Команд: ${rows.length}`;
-    }
+    resultSection.style.display = "block";
+    stageTitle.textContent = "Зони A / B / C";
+    stageMeta.textContent = `${data.stageName || stageDocId} · Команд: ${rows.length}`;
 
     const zones = { A:[], B:[], C:[] };
 
@@ -178,16 +158,12 @@
       if (zones[z]) zones[z].push(r);
     });
 
-    if (zonesWrap) {
-      zonesWrap.innerHTML =
-        renderZone("A", zones.A) +
-        renderZone("B", zones.B) +
-        renderZone("C", zones.C);
-    }
+    zonesWrap.innerHTML =
+      renderZone("A", zones.A) +
+      renderZone("B", zones.B) +
+      renderZone("C", zones.C);
 
-    if (resultSection) {
-      resultSection.scrollIntoView({ behavior:"smooth", block:"start" });
-    }
+    resultSection.scrollIntoView({ behavior:"smooth", block:"start" });
   }
 
   function renderZone(zone, rows){
@@ -205,28 +181,28 @@
       return `
         <tr>
           <td>${esc(sector)}</td>
-          <td class="team">${esc(r.team || "—")}</td>
+          <td class="team-col">${esc(r.team || "—")}</td>
           <td>${fmtW(r.w1)}</td>
           <td>${fmtW(r.w2)}</td>
           <td>${fmtW(r.w3)}</td>
           <td>${fmtW(r.w4)}</td>
-          <td>${esc(num(r.totalCount) || "-")}</td>
+          <td>${fmt(num(r.totalCount) || "—")}</td>
           <td>${fmtWeight(r.bigFish)}</td>
-          <td class="weight">${fmtWeight(r.totalWeight)}</td>
-          <td class="place">${zonePlace}</td>
+          <td><b>${fmtWeight(r.totalWeight)}</b></td>
+          <td><b>${zonePlace}</b></td>
         </tr>
       `;
     }).join("");
 
     return `
-      <div class="zone-card">
-        <div class="zone-head">
-          <h2>Зона ${esc(zone)}</h2>
-          <div class="zone-badge">команд: ${sorted.length}</div>
+      <div class="live-zone card" style="margin:14px 0;">
+        <div class="live-zone-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h3 style="margin:0;">Зона ${esc(zone)}</h3>
+          <span class="badge badge--warn">команд: ${sorted.length}</span>
         </div>
 
-        <div class="table-wrap">
-          <table>
+        <div class="table-wrap" style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;">
+          <table class="table table-sm">
             <thead>
               <tr>
                 <th>Зона</th>

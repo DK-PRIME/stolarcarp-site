@@ -1,9 +1,10 @@
 // assets/js/rating_page.js
 // STOLAR CARP • Season Rating page
-// Джерело: seasonRating/{year}
-// Рейтинг: best 2 of 3
-// Якщо зіграно тільки 1 етап → додається 8 балів
-// Сортування фіналу: бали ↑, вага зарахованих етапів ↓, Big Fish ↓
+// Джерело: seasonRating/{year} + seasonResults/{year}/stages
+// Бал = місце в зоні.
+// Best 2 of 3.
+// Якщо команда має тільки 1 етап → додається 8 балів.
+// Сортування: бали ↑, вага зарахованих етапів ↓, Big Fish ↓.
 
 (function () {
   "use strict";
@@ -17,7 +18,7 @@
   const ABSENT_POINTS = 8;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_best2_v1";
+  const CACHE_KEY = "sc_rating_cache_zone_best2_v1";
 
   function safeText(v, dash = "—") {
     return v === null || v === undefined || v === "" ? dash : String(v);
@@ -32,6 +33,10 @@
     const n = num(v);
     if (n <= 0) return "—";
     return n.toFixed(2).replace(/\.?0+$/, "");
+  }
+
+  function clean(s) {
+    return String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
   }
 
   function setReadyFlag() {
@@ -217,7 +222,6 @@
     if (window.scReady) await window.scReady;
 
     const db = window.scDb;
-
     if (!db) throw new Error("Firestore не ініціалізований.");
 
     return db;
@@ -235,11 +239,7 @@
     return arr
       .map(s => {
         if (typeof s === "string") {
-          return {
-            stageDocId: s,
-            stageId: s,
-            stageName: s
-          };
+          return { stageDocId: s, stageId: s, stageName: s };
         }
 
         return {
@@ -252,33 +252,129 @@
       .sort((a, b) => stageSortValue(a) - stageSortValue(b));
   }
 
-  function readStageResult(stageData) {
-    if (!stageData) return null;
+  function normalizeStandingRow(r) {
+    return {
+      teamId: String(r.teamId || "").trim(),
+      team: String(r.team || r.teamName || "—").trim(),
+      zone: String(r.zone || "").toUpperCase().trim(),
+      sector: String(r.sector || "").trim(),
 
-    const place = num(stageData.zonePlace || stageData.points || stageData.place);
-    const points = num(stageData.points || stageData.zonePlace || stageData.place);
+      overallPlace: num(r.overallPlace || r.place),
+      zonePlace: num(r.zonePlace),
+      points: num(r.points || r.zonePlace),
+
+      totalWeight: num(r.totalWeight),
+      bigFish: num(r.bigFish),
+      totalCount: num(r.totalCount)
+    };
+  }
+
+  function computeZonePlaces(standings) {
+    const rows = (Array.isArray(standings) ? standings : []).map(normalizeStandingRow);
+    const byTeamId = new Map();
+    const byTeamName = new Map();
+
+    ["A", "B", "C"].forEach(zone => {
+      const zoneRows = rows
+        .filter(r => r.zone === zone)
+        .sort((a, b) => {
+          if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+          if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
+          return b.totalCount - a.totalCount;
+        });
+
+      zoneRows.forEach((r, i) => {
+        const zonePlace = r.zonePlace || (i + 1);
+        const fixed = {
+          ...r,
+          zonePlace,
+          points: zonePlace
+        };
+
+        if (fixed.teamId) byTeamId.set(fixed.teamId, fixed);
+        if (fixed.team) byTeamName.set(clean(fixed.team), fixed);
+      });
+    });
+
+    return { byTeamId, byTeamName };
+  }
+
+  async function loadArchiveStageMaps(db, seasonYear, archivedStages) {
+    const result = new Map();
+
+    await Promise.all(archivedStages.map(async stage => {
+      try {
+        const snap = await db
+          .collection("seasonResults")
+          .doc(seasonYear)
+          .collection("stages")
+          .doc(stage.stageDocId)
+          .get();
+
+        if (!snap.exists) return;
+
+        const d = snap.data() || {};
+        const standings = Array.isArray(d.standings) ? d.standings : [];
+
+        result.set(stage.stageDocId, computeZonePlaces(standings));
+      } catch (e) {
+        console.warn("[Rating] Не вдалося прочитати архів етапу:", stage.stageDocId, e);
+      }
+    }));
+
+    return result;
+  }
+
+  function findArchiveRowForTeam(stageMap, team) {
+    if (!stageMap || !team) return null;
+
+    const teamId = String(team.teamId || "").trim();
+    const teamName = clean(team.team || team.teamName || "");
+
+    if (teamId && stageMap.byTeamId.has(teamId)) return stageMap.byTeamId.get(teamId);
+    if (teamName && stageMap.byTeamName.has(teamName)) return stageMap.byTeamName.get(teamName);
+
+    return null;
+  }
+
+  function readStageResultFromArchiveOrRating(team, stage, archiveMaps) {
+    const archiveMap = archiveMaps.get(stage.stageDocId);
+    const archiveRow = findArchiveRowForTeam(archiveMap, team);
+
+    if (archiveRow) {
+      return {
+        p: archiveRow.zonePlace,
+        pts: archiveRow.zonePlace,
+        totalWeight: archiveRow.totalWeight,
+        bigFish: archiveRow.bigFish,
+        totalCount: archiveRow.totalCount
+      };
+    }
+
+    const stagesObj = team.stages || {};
+    const s = stagesObj[stage.stageDocId] || stagesObj[stage.stageId] || null;
+
+    if (!s) return null;
+
+    const zonePlace = num(s.zonePlace || s.points || s.place);
+    const points = num(s.points || s.zonePlace || s.place);
 
     if (!points) return null;
 
     return {
-      p: place || points,
+      p: zonePlace || points,
       pts: points,
-      totalWeight: num(stageData.totalWeight),
-      bigFish: num(stageData.bigFish),
-      totalCount: num(stageData.totalCount)
+      totalWeight: num(s.totalWeight),
+      bigFish: num(s.bigFish),
+      totalCount: num(s.totalCount)
     };
   }
 
-  function calculateBestResults(stageResults, archivedStages) {
+  function calculateBestResults(team, archivedStages, archiveMaps) {
     const played = [];
 
     archivedStages.forEach(stage => {
-      const s =
-        stageResults[stage.stageDocId] ||
-        stageResults[stage.stageId] ||
-        null;
-
-      const result = readStageResult(s);
+      const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (result) {
         played.push({
@@ -297,7 +393,7 @@
     const countedKeys = new Set();
     const droppedKeys = new Set();
 
-    let counted = sortedPlayed.slice(0, BEST_COUNT);
+    const counted = sortedPlayed.slice(0, BEST_COUNT);
 
     if (counted.length < BEST_COUNT && archivedStages.length > 0) {
       const missing = BEST_COUNT - counted.length;
@@ -316,30 +412,20 @@
     }
 
     counted.forEach(x => countedKeys.add(x.stageDocId));
-
     sortedPlayed.slice(BEST_COUNT).forEach(x => droppedKeys.add(x.stageDocId));
-
-    const ratingPoints = counted.reduce((s, x) => s + num(x.pts), 0);
-    const ratingWeight = counted.reduce((s, x) => s + num(x.totalWeight), 0);
-    const ratingBigFish = counted.reduce((m, x) => Math.max(m, num(x.bigFish)), 0);
 
     return {
       countedKeys,
       droppedKeys,
-      ratingPoints,
-      ratingWeight,
-      ratingBigFish
+      ratingPoints: counted.reduce((s, x) => s + num(x.pts), 0),
+      ratingWeight: counted.reduce((s, x) => s + num(x.totalWeight), 0),
+      ratingBigFish: counted.reduce((m, x) => Math.max(m, num(x.bigFish)), 0)
     };
   }
 
-  function makeStageCells(stageResults, archivedStages, bestInfo) {
+  function makeStageCells(team, archivedStages, bestInfo, archiveMaps) {
     return archivedStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
-      const s =
-        stageResults[stage.stageDocId] ||
-        stageResults[stage.stageId] ||
-        null;
-
-      const result = readStageResult(s);
+      const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (!result) {
         return {
@@ -350,24 +436,42 @@
         };
       }
 
-      const isCounted = bestInfo.countedKeys.has(stage.stageDocId);
-      const isDropped = bestInfo.droppedKeys.has(stage.stageDocId);
-
       return {
         p: result.p,
         pts: result.pts,
-        counted: isCounted,
+        counted: bestInfo.countedKeys.has(stage.stageDocId),
         noShow: false,
-        dropped: isDropped
+        dropped: bestInfo.droppedKeys.has(stage.stageDocId)
       };
     });
   }
 
-  function rankTeams(rawTeams, archivedStages) {
+  function getSeasonDisplayWeight(team, archivedStages, archiveMaps) {
+    let w = 0;
+
+    archivedStages.forEach(stage => {
+      const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
+      if (r) w += num(r.totalWeight);
+    });
+
+    return w || num(team.totalWeight);
+  }
+
+  function getSeasonDisplayBigFish(team, archivedStages, archiveMaps) {
+    let bf = 0;
+
+    archivedStages.forEach(stage => {
+      const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
+      if (r) bf = Math.max(bf, num(r.bigFish));
+    });
+
+    return bf || num(team.bigFish);
+  }
+
+  function rankTeams(rawTeams, archivedStages, archiveMaps) {
     const rows = rawTeams.map(team => {
-      const stagesObj = team.stages || {};
-      const bestInfo = calculateBestResults(stagesObj, archivedStages);
-      const stageCells = makeStageCells(stagesObj, archivedStages, bestInfo);
+      const bestInfo = calculateBestResults(team, archivedStages, archiveMaps);
+      const stageCells = makeStageCells(team, archivedStages, bestInfo, archiveMaps);
 
       return {
         teamId: String(team.teamId || ""),
@@ -379,10 +483,8 @@
         ratingWeight: bestInfo.ratingWeight,
         ratingBigFish: bestInfo.ratingBigFish,
 
-        displayWeight: num(team.totalWeight),
-        displayBigFish: num(team.bigFish),
-
-        totalCount: num(team.totalCount)
+        displayWeight: getSeasonDisplayWeight(team, archivedStages, archiveMaps),
+        displayBigFish: getSeasonDisplayBigFish(team, archivedStages, archiveMaps)
       };
     });
 
@@ -398,11 +500,11 @@
     }));
   }
 
-  function calculatePreviousPlaces(rawTeams, archivedStages) {
+  function calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps) {
     if (archivedStages.length <= 1) return new Map();
 
     const previousStages = archivedStages.slice(0, -1);
-    const previousRows = rankTeams(rawTeams, previousStages);
+    const previousRows = rankTeams(rawTeams, previousStages, archiveMaps);
 
     const map = new Map();
 
@@ -413,14 +515,15 @@
     return map;
   }
 
-  function convertRatingToRows(rating) {
+  async function convertRatingToRows(db, rating) {
     const archivedStages = getArchivedStages(rating);
     const stagesCount = Math.min(archivedStages.length, STAGES_MAX_IN_HTML);
-
     const rawTeams = Array.isArray(rating.teams) ? rating.teams.slice() : [];
 
-    const currentRows = rankTeams(rawTeams, archivedStages);
-    const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages);
+    const archiveMaps = await loadArchiveStageMaps(db, SEASON_YEAR, archivedStages);
+
+    const currentRows = rankTeams(rawTeams, archivedStages, archiveMaps);
+    const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps);
 
     const rows = currentRows.map(row => {
       const prevPlace = previousPlaces.get(row.teamId) || row.place;
@@ -432,22 +535,14 @@
         stages: row.stages,
         points: row.ratingPoints || "—",
         finalPlace: "–",
-
-        // Показуємо всю вагу сезону, не тільки зарахованих етапів
         weight: fmtKg(row.displayWeight),
-
-        // Показуємо найбільшу рибу сезону
         bigFish: fmtKg(row.displayBigFish),
-
         moveDelta,
         qualifiedForFinal: row.place <= TOP_COUNT
       };
     });
 
-    return {
-      stagesCount,
-      rows
-    };
+    return { stagesCount, rows };
   }
 
   function renderRatingPayload(payload, offline = false) {
@@ -468,10 +563,7 @@
       } else {
         const ci = index - TOP_COUNT;
         if (contRows[ci]) {
-          renderRow(contRows[ci], {
-            ...item,
-            qualifiedForFinal: false
-          });
+          renderRow(contRows[ci], { ...item, qualifiedForFinal: false });
         }
       }
     });
@@ -510,7 +602,7 @@
       db.collection("seasonRating")
         .doc(SEASON_YEAR)
         .onSnapshot(
-          (snap) => {
+          async (snap) => {
             if (!snap.exists) {
               showError(`⚠️ Немає документа seasonRating/${SEASON_YEAR}`);
               setReadyFlag();
@@ -518,7 +610,7 @@
             }
 
             const rating = snap.data() || {};
-            const payload = convertRatingToRows(rating);
+            const payload = await convertRatingToRows(db, rating);
 
             cacheSet(payload);
             renderRatingPayload(payload, false);
@@ -532,9 +624,7 @@
               renderRatingPayload(c, true);
               showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
             } else {
-              showError(
-                `⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(err.message)}`
-              );
+              showError(`⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(err.message)}`);
             }
 
             setReadyFlag();
@@ -548,9 +638,7 @@
         renderRatingPayload(c, true);
         showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
       } else {
-        showError(
-          `⚠️ Помилка завантаження рейтингу: ${safeText(e.message || e)}`
-        );
+        showError(`⚠️ Помилка завантаження рейтингу: ${safeText(e.message || e)}`);
       }
 
       setReadyFlag();

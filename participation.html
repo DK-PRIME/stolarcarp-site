@@ -12,11 +12,9 @@
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    /* база */
     body{ background:#020617; }
     .wrap{ max-width:980px; margin:0 auto; padding:18px 12px 80px; }
 
-    /* header */
     .header{
       position:sticky; top:0; z-index:20;
       backdrop-filter: blur(10px);
@@ -36,7 +34,6 @@
       background:rgba(15,23,42,.55);
     }
 
-    /* заголовок */
     .pageTitle{
       margin:18px 0 8px;
       text-align:center;
@@ -50,6 +47,7 @@
       color:transparent;
       -webkit-text-fill-color:transparent;
     }
+
     .pageSub{
       text-align:center;
       color:#94a3b8;
@@ -57,7 +55,6 @@
       margin-bottom:14px;
     }
 
-    /* список */
     .list{
       margin-top:8px;
       display:flex;
@@ -75,6 +72,7 @@
       transition:background .2s;
       border-radius:8px;
     }
+
     .row:hover{
       background:rgba(250,204,21,.05);
     }
@@ -84,6 +82,7 @@
       flex:0 0 10px;
       box-shadow: 0 0 0 3px rgba(255,255,255,.03);
     }
+
     .lamp--green{ background:#22c55e; }
     .lamp--red{ background:#ef4444; }
 
@@ -111,6 +110,7 @@
       white-space:nowrap;
       color:#94a3b8;
     }
+
     .status--paid{ color:#22c55e; }
     .status--unpaid{ color:#ef4444; }
 
@@ -120,6 +120,7 @@
       font-weight:800;
       margin-top:14px;
     }
+
     .dividerLabel{
       margin-top:14px;
       color:#94a3b8;
@@ -127,6 +128,251 @@
       text-transform:uppercase;
       letter-spacing:.08em;
       font-size:.85rem;
+    }
+
+    /* ===== ХАРЧУВАННЯ ===== */
+    .mealBox{
+      margin:10px 0 12px;
+      padding:14px;
+      border-radius:18px;
+      border:1px solid rgba(250,204,21,.35);
+      background:
+        radial-gradient(circle at top left,rgba(250,204,21,.12),transparent 38%),
+        rgba(15,23,42,.65);
+      box-shadow:0 16px 34px rgba(0,0,0,.35);
+    }
+
+    .mealHead{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .mealTitle{
+      font-weight:950;
+      color:#facc15;
+      letter-spacing:.04em;
+    }
+
+    .mealHint{
+      margin-top:3px;
+      color:#94a3b8;
+      font-size:.86rem;
+      line-height:1.45;
+    }
+
+    .mealActions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+
+    .mealBtn{
+      border:1px solid rgba(148,163,184,.24);
+      background:#0f172a;
+      color:#e5e7eb;
+      border-radius:14px;
+      padding:10px 12px;
+      font-weight:900;
+      cursor:pointer;
+      font-size:.9rem;
+    }
+
+    .mealBtn--primary{
+      border:none;
+      background:linear-gradient(90deg,#facc15,#f97316);
+      color:#111827;
+    }
+
+    .mealBtn--danger{
+      border:none;
+      background:linear-gradient(90deg,#ef4444,#991b1b);
+      color:#fff;
+    }
+
+    .mealBtn[hidden]{
+      display:none !important;
+    }
+
+    .mealStatus{
+      color:#94a3b8;
+      font-size:.85rem;
+      margin-top:8px;
+      min-height:18px;
+    }
+
+    .mealStatus.ok{ color:#22c55e; }
+    .mealStatus.err{ color:#ef4444; }
+
+    #mealPopup{
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.9);
+      backdrop-filter:blur(6px);
+      z-index:10000;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+    }
+
+    #mealPopupContent{
+      width:100%;
+      max-width:760px;
+      max-height:88vh;
+      overflow:auto;
+      background:#0f172a;
+      border:1px solid #1f2937;
+      border-radius:20px;
+      box-shadow:0 26px 70px rgba(0,0,0,.75);
+    }
+
+    #mealPopupHeader{
+      position:sticky;
+      top:0;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:14px 16px;
+      border-bottom:1px solid #1f2937;
+      background:#0f172a;
+    }
+
+    #mealPopupTitle{
+      color:#facc15;
+      font-weight:950;
+      font-size:1.05rem;
+    }
+
+    #mealPopupClose{
+      background:none;
+      border:none;
+      color:#94a3b8;
+      font-size:1.6rem;
+      cursor:pointer;
+      width:34px;
+      height:34px;
+      border-radius:10px;
+    }
+
+    #mealPopupClose:hover{
+      background:#1f2937;
+      color:#e5e7eb;
+    }
+
+    #mealPopupBody{
+      padding:16px;
+    }
+
+    .mealGrid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+      margin:10px 0 14px;
+    }
+
+    .mealField{
+      background:#020617;
+      border:1px solid #1f2937;
+      border-radius:14px;
+      padding:10px;
+    }
+
+    .mealField label{
+      display:block;
+      color:#94a3b8;
+      font-size:.8rem;
+      margin-bottom:6px;
+      font-weight:800;
+    }
+
+    .mealField input,
+    .mealField textarea{
+      width:100%;
+      background:#0b1220;
+      border:1px solid #374151;
+      color:#e5e7eb;
+      border-radius:12px;
+      padding:10px;
+      outline:none;
+      font-weight:800;
+    }
+
+    .mealField textarea{
+      min-height:80px;
+      resize:vertical;
+      font-weight:600;
+    }
+
+    .mealDayTitle{
+      color:#e5e7eb;
+      font-weight:950;
+      margin:14px 0 6px;
+    }
+
+    .mealTableWrap{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      border-radius:14px;
+      border:1px solid #1f2937;
+    }
+
+    .mealTable{
+      width:100%;
+      min-width:780px;
+      border-collapse:collapse;
+      font-size:.86rem;
+    }
+
+    .mealTable th,
+    .mealTable td{
+      border-bottom:1px solid #1f2937;
+      padding:8px;
+      text-align:center;
+      white-space:nowrap;
+    }
+
+    .mealTable th{
+      background:#020617;
+      color:#facc15;
+      font-weight:950;
+    }
+
+    .mealTable td{
+      color:#e5e7eb;
+    }
+
+    .mealTable td.teamCell{
+      text-align:left;
+      font-weight:900;
+    }
+
+    .mealTotals{
+      margin-top:10px;
+      color:#facc15;
+      font-weight:950;
+      line-height:1.6;
+    }
+
+    @media(max-width:720px){
+      .mealHead{
+        flex-direction:column;
+      }
+
+      .mealActions{
+        width:100%;
+      }
+
+      .mealBtn{
+        flex:1 1 auto;
+      }
+
+      .mealGrid{
+        grid-template-columns:1fr;
+      }
     }
 
     /* === POPUP СКЛАДУ КОМАНДИ === */
@@ -144,6 +390,7 @@
       justify-content:center;
       padding:20px;
     }
+
     #teamPopupContent{
       background:#0f172a;
       border-radius:18px;
@@ -154,6 +401,7 @@
       overflow-y:auto;
       box-shadow:0 25px 50px rgba(0,0,0,.8);
     }
+
     #teamPopupHeader{
       padding:16px;
       border-bottom:1px solid #1f2937;
@@ -161,11 +409,13 @@
       align-items:center;
       justify-content:space-between;
     }
+
     #teamPopupTitle{
       font-size:1.1rem;
       font-weight:800;
       color:#facc15;
     }
+
     #teamPopupClose{
       background:none;
       border:none;
@@ -181,13 +431,16 @@
       border-radius:8px;
       transition:all .2s;
     }
+
     #teamPopupClose:hover{
       background:#1f2937;
       color:#e5e7eb;
     }
+
     #teamPopupBody{
       padding:16px;
     }
+
     .team-member{
       display:flex;
       align-items:center;
@@ -195,9 +448,11 @@
       padding:10px 0;
       border-bottom:1px solid #1f2937;
     }
+
     .team-member:last-child{
       border-bottom:none;
     }
+
     .member-avatar{
       width:50px;
       height:50px;
@@ -206,11 +461,13 @@
       border:2px solid #facc15;
       flex-shrink:0;
     }
+
     .member-avatar img{
       width:100%;
       height:100%;
       object-fit:cover;
     }
+
     .member-avatar-placeholder{
       width:100%;
       height:100%;
@@ -220,24 +477,27 @@
       justify-content:center;
       font-size:20px;
     }
+
     .member-info{
       flex:1;
     }
+
     .member-name{
       font-weight:800;
       color:#e5e7eb;
       margin-bottom:2px;
     }
+
     .member-role{
       font-size:.8rem;
       color:#94a3b8;
     }
+
     .team-loading{
       text-align:center;
       color:#94a3b8;
       padding:20px;
     }
-    /* === КІНЕЦЬ POPUP === */
   </style>
 </head>
 
@@ -256,12 +516,11 @@
     <div id="msg" class="mutedCenter"></div>
   </main>
 
-  <!-- POPUP СКЛАДУ КОМАНДИ -->
   <div id="teamPopup">
     <div id="teamPopupContent">
       <div id="teamPopupHeader">
         <div id="teamPopupTitle">Склад команди</div>
-        <button id="teamPopupClose">×</button>
+        <button id="teamPopupClose" type="button">×</button>
       </div>
       <div id="teamPopupBody">
         <div class="team-loading">Завантаження…</div>
@@ -269,12 +528,24 @@
     </div>
   </div>
 
-  <!-- Firebase compat CDN -->
+  <div id="mealPopup">
+    <div id="mealPopupContent">
+      <div id="mealPopupHeader">
+        <div id="mealPopupTitle">Харчування</div>
+        <button id="mealPopupClose" type="button">×</button>
+      </div>
+      <div id="mealPopupBody">
+        <div class="team-loading">Завантаження…</div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script src="assets/js/firebase-init.js"></script>
-  <script src="assets/js/participation.js"></script>
+  <script src="assets/js/firebase-init.js?v=20260610-1"></script>
+  <script src="assets/js/participation.js?v=20260610-1"></script>
+  <script src="assets/js/meal_orders.js?v=20260610-1"></script>
 </body>
 </html>

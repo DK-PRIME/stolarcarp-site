@@ -81,7 +81,49 @@
     return maxTeams;
   }
 
-  // === POPUP СКЛАДУ ===
+  async function loadDrawFromRegistrations(compId, stageParam, rows) {
+    const db = window.scDb;
+    const byTeam = new Map();
+
+    rows.forEach(r => {
+      if (r.teamId) byTeam.set(String(r.teamId), r);
+    });
+
+    try {
+      const snap = await db.collection("registrations")
+        .where("competitionId", "==", compId)
+        .where("status", "==", "confirmed")
+        .get();
+
+      snap.forEach(doc => {
+        const r = doc.data() || {};
+        const teamId = String(r.teamId || "").trim();
+        if (!teamId || !byTeam.has(teamId)) return;
+
+        const docStageId = String(r.stageId || "main");
+        const stageOk =
+          docStageId === stageParam ||
+          docStageId === ("stage-" + stageParam) ||
+          docStageId === stageParam.replace(/^stage-/, "") ||
+          (stageParam === "main" && (!r.stageId || r.stageId === "main"));
+
+        if (!stageOk) return;
+
+        const row = byTeam.get(teamId);
+        const z = r.drawZone || r.zone || "";
+        const s = r.drawSector || r.sector || "";
+
+        row.drawZone = z;
+        row.drawSector = s;
+        row.drawKey = r.drawKey || (z && s ? `${z}${s}` : row.drawKey || "");
+      });
+    } catch (e) {
+      console.warn("[participation] registrations draw skipped:", e.message || e);
+    }
+
+    return rows;
+  }
+
   async function openTeamPopup(teamName, teamDocId) {
     const popup = $("teamPopup");
     const title = $("teamPopupTitle");
@@ -95,7 +137,6 @@
 
     try {
       const db = window.scDb;
-
       const teamSnap = await db.collection("teams").doc(teamDocId).get();
 
       if (!teamSnap.exists) {
@@ -112,14 +153,12 @@
 
       usersSnap.forEach(doc => {
         const d = doc.data() || {};
-
         members.push({
           id: doc.id,
           fullName: d.fullName || d.displayName || d.email || "Учасник",
           role: d.role || "member",
           avatarUrl: d.avatarUrl || d.photoURL || null
         });
-
         used.add(doc.id);
       });
 
@@ -128,7 +167,6 @@
 
         if (capSnap.exists) {
           const c = capSnap.data() || {};
-
           members.push({
             id: ownerUid,
             fullName: c.fullName || c.displayName || c.email || "Капітан",
@@ -138,7 +176,7 @@
         }
       }
 
-      if (members.length === 0) {
+      if (!members.length) {
         body.innerHTML = '<div class="team-loading">Склад команди порожній</div>';
         return;
       }
@@ -202,17 +240,12 @@
 
   window.addEventListener("popstate", closeTeamPopup);
 
-  // === ХАРЧУВАННЯ UI ===
   function mealBoxHtml() {
     return `
       <div class="mealBox" id="mealBox">
         <div class="mealHead">
           <div>
             <div class="mealTitle">🍽 Харчування</div>
-            <div class="mealHint">
-              Заявка подається тільки для команд, які харчуються.
-              У списку буде видно сектор, зону та кількість порцій на 2 доби.
-            </div>
           </div>
 
           <div class="mealActions">
@@ -220,7 +253,7 @@
               Подати / змінити заявку
             </button>
 
-            <button class="mealBtn" id="btnOpenMealList" type="button" hidden>
+            <button class="mealBtn" id="btnOpenMealList" type="button">
               Список заявок
             </button>
 
@@ -269,7 +302,6 @@
     }
   }
 
-  // === RENDER ===
   function rowHtml(idx, r, teamId) {
     const paid = isPaidStatus(r.status);
 
@@ -302,9 +334,7 @@
       return;
     }
 
-
     list.innerHTML += mealBoxHtml();
-
     list.innerHTML += main.map((r, i) => rowHtml(i + 1, r, r.teamId)).join("");
 
     if (reserve.length) {
@@ -324,7 +354,6 @@
     attachMealButtons();
   }
 
-  // === INIT ===
   (async function init() {
     try {
       await waitFirebase();
@@ -351,7 +380,6 @@
 
       if ($("pageTitle")) $("pageTitle").textContent = meta.title;
       if ($("pageSub")) $("pageSub").textContent = meta.stageTitle || "";
-
       if ($("msg")) $("msg").textContent = "Завантаження списку…";
 
       const snap = await db.collection("public_participants")
@@ -393,7 +421,8 @@
         });
       });
 
-      const rows = Array.from(rowsMap.values());
+      let rows = Array.from(rowsMap.values());
+      rows = await loadDrawFromRegistrations(compId, stageParam, rows);
 
       rows.sort((a, b) => {
         const rank = { confirmed: 1, paid: 1, cancelled: 1, pending_payment: 2 };

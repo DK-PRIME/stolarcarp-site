@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Архів сезону — STOLAR CARP</title>
+
+  <link rel="stylesheet" href="../assets/css/main.css">
+
+  <style>
+    body.archive-page{
+      background:radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+      color:#e5e7eb;
+      min-height:100vh;
+    }
+    .archive-title{font-size:clamp(30px,6vw,54px);font-weight:900;text-align:center;margin:34px 0 24px}
+    .archive-card{background:#0f172a;border:1px solid #334155;border-radius:18px;padding:16px;margin:16px 0}
+    .stage-btn{width:100%;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:14px;padding:14px;text-align:left;font-weight:800;margin:8px 0}
+    .stage-btn:hover{border-color:#facc15}
+    .muted{color:#94a3b8}
+    .err{color:#ef4444}
+    .ok{color:#22c55e}
+    .zone-card{background:#11111a;border:1px solid #2f3144;border-radius:18px;padding:12px;margin:14px 0}
+    .zone-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .zone-head h2{font-size:clamp(32px,8vw,58px);margin:0}
+    .zone-badge{border:2px solid #333;border-radius:999px;padding:8px 14px;color:#d1d5db;background:#111}
+    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table{width:100%;min-width:780px;border-collapse:collapse;font-size:.9rem}
+    th,td{border:1px solid #2f3144;padding:7px 8px;text-align:center;white-space:nowrap}
+    th{background:#191923;color:#d1d5db;font-weight:900}
+    td{color:#d1d5db}
+    td.team{text-align:left;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+    td.weight,td.place{font-weight:900;color:#f8fafc}
+    .back-link{display:inline-block;margin:18px 0;color:#facc15;text-decoration:none;font-weight:800}
+  </style>
+</head>
+
+<body class="archive-page">
+
+<header class="header">
+  <div class="container header__row">
+    <a class="logo" href="../index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+    <nav class="nav" id="nav">
+      <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/live.html" class="nav__link">Live</a>
+      <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/events/index.html" class="nav__link">Архів</a>
+    </nav>
+    <button class="burger" id="burger" type="button"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main class="container">
+  <a class="back-link" href="index.html">← До сезонів</a>
+
+  <h1 id="pageTitle" class="archive-title">Архів сезону</h1>
+
+  <section class="archive-card">
+    <h2 style="margin-top:0;">Етапи сезону</h2>
+    <div id="msg" class="muted">Завантаження…</div>
+    <div id="stagesList"></div>
+  </section>
+
+  <section id="resultSection" style="display:none;">
+    <h1 id="stageTitle" class="archive-title">Зони A / B / C</h1>
+    <div id="stageMeta" class="muted"></div>
+    <div id="zonesWrap"></div>
+    <div class="muted" style="margin:20px 0 40px;">Місця у зоні.</div>
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="../assets/js/firebase-init.js"></script>
+<script src="archive.js?v=20260610-2"></script>
+
+<script>
+  const burger = document.getElementById("burger");
+  const nav = document.getElementById("nav");
+  if (burger && nav) {
+    burger.addEventListener("click", () => {
+      nav.classList.toggle("active");
+      document.body.classList.toggle("menu-open");
+    });
+  }
+</script>
+
+</body>
+</html>

@@ -302,11 +302,6 @@
       return;
     }
 
-    list.innerHTML += `
-      <div class="participantsSub" style="margin:0 0 10px; color:#94a3b8; font-size:.9rem;">
-        Учасники: ${main.length} / ${maxTeams} (натисніть на команду для перегляду складу)
-      </div>
-    `;
 
     list.innerHTML += mealBoxHtml();
 

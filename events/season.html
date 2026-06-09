@@ -13,25 +13,137 @@
       color:#e5e7eb;
       min-height:100vh;
     }
-    .archive-title{font-size:clamp(30px,6vw,54px);font-weight:900;text-align:center;margin:34px 0 24px}
-    .archive-card{background:#0f172a;border:1px solid #334155;border-radius:18px;padding:16px;margin:16px 0}
-    .stage-btn{width:100%;background:#111827;border:1px solid #334155;color:#e5e7eb;border-radius:14px;padding:14px;text-align:left;font-weight:800;margin:8px 0}
-    .stage-btn:hover{border-color:#facc15}
+
+    .archive-title{
+      font-size:clamp(30px,6vw,54px);
+      font-weight:900;
+      text-align:center;
+      margin:34px 0 24px;
+    }
+
+    .archive-card{
+      background:#0f172a;
+      border:1px solid #334155;
+      border-radius:18px;
+      padding:16px;
+      margin:16px 0;
+    }
+
+    .stage-btn{
+      width:100%;
+      background:#111827;
+      border:1px solid #334155;
+      color:#e5e7eb;
+      border-radius:14px;
+      padding:14px;
+      text-align:left;
+      font-weight:800;
+      margin:8px 0;
+      cursor:pointer;
+    }
+
+    .stage-btn:hover{
+      border-color:#facc15;
+    }
+
     .muted{color:#94a3b8}
     .err{color:#ef4444}
     .ok{color:#22c55e}
-    .zone-card{background:#11111a;border:1px solid #2f3144;border-radius:18px;padding:12px;margin:14px 0}
-    .zone-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .zone-head h2{font-size:clamp(32px,8vw,58px);margin:0}
-    .zone-badge{border:2px solid #333;border-radius:999px;padding:8px 14px;color:#d1d5db;background:#111}
-    .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-    table{width:100%;min-width:780px;border-collapse:collapse;font-size:.9rem}
-    th,td{border:1px solid #2f3144;padding:7px 8px;text-align:center;white-space:nowrap}
-    th{background:#191923;color:#d1d5db;font-weight:900}
-    td{color:#d1d5db}
-    td.team{text-align:left;max-width:190px;overflow:hidden;text-overflow:ellipsis}
-    td.weight,td.place{font-weight:900;color:#f8fafc}
-    .back-link{display:inline-block;margin:18px 0;color:#facc15;text-decoration:none;font-weight:800}
+
+    .zone-card{
+      background:#11111a;
+      border:1px solid #2f3144;
+      border-radius:18px;
+      padding:12px;
+      margin:14px 0;
+    }
+
+    .zone-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+      gap:10px;
+    }
+
+    .zone-head h2{
+      font-size:clamp(32px,8vw,58px);
+      margin:0;
+    }
+
+    .zone-badge{
+      border:2px solid #333;
+      border-radius:999px;
+      padding:8px 14px;
+      color:#d1d5db;
+      background:#111;
+      white-space:nowrap;
+    }
+
+    .table-wrap{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      border-radius:12px;
+    }
+
+    table{
+      width:100%;
+      min-width:780px;
+      border-collapse:collapse;
+      font-size:.9rem;
+    }
+
+    th,td{
+      border:1px solid #2f3144;
+      padding:7px 8px;
+      text-align:center;
+      white-space:nowrap;
+    }
+
+    th{
+      background:#191923;
+      color:#d1d5db;
+      font-weight:900;
+    }
+
+    td{
+      color:#d1d5db;
+    }
+
+    td.team{
+      text-align:left;
+      max-width:190px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    td.weight,
+    td.place{
+      font-weight:900;
+      color:#f8fafc;
+    }
+
+    .back-link{
+      display:inline-block;
+      margin:18px 0;
+      color:#facc15;
+      text-decoration:none;
+      font-weight:800;
+    }
+
+    @media(max-width:768px){
+      .archive-card{
+        padding:14px;
+      }
+
+      .zone-head h2{
+        font-size:2rem;
+      }
+
+      table{
+        font-size:.82rem;
+      }
+    }
   </style>
 </head>
 
@@ -43,13 +155,23 @@
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
+
     <nav class="nav" id="nav">
       <a href="/index.html" class="nav__link">Головна</a>
+      <a href="/rules.html" class="nav__link">Регламент</a>
+      <a href="/formats.html" class="nav__link">Формат змагань</a>
+      <a href="/register.html" class="nav__link">Реєстрація</a>
       <a href="/live.html" class="nav__link">Live</a>
       <a href="/rating.html" class="nav__link">Рейтинг</a>
+      <a href="/lakes.html" class="nav__link">Водойми</a>
+      <a href="/sponsors.html" class="nav__link">Спонсори</a>
       <a href="/events/index.html" class="nav__link">Архів</a>
+      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
-    <button class="burger" id="burger" type="button"><span></span><span></span><span></span></button>
+
+    <button class="burger" id="burger" type="button" aria-label="Меню">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
 
@@ -73,17 +195,27 @@
 </main>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <script src="../assets/js/firebase-init.js"></script>
-<script src="archive.js?v=20260610-2"></script>
+<script src="archive.js?v=20260610-5"></script>
 
 <script>
   const burger = document.getElementById("burger");
   const nav = document.getElementById("nav");
+
   if (burger && nav) {
     burger.addEventListener("click", () => {
       nav.classList.toggle("active");
       document.body.classList.toggle("menu-open");
+    });
+
+    nav.addEventListener("click", e => {
+      if (e.target.classList.contains("nav__link")) {
+        nav.classList.remove("active");
+        document.body.classList.remove("menu-open");
+      }
     });
   }
 </script>

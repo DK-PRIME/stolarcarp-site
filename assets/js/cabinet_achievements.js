@@ -1,8 +1,5 @@
+// assets/js/cabinet_achievements.js
 // STOLAR CARP — Досягнення команди в кабінеті
-// Читає готовий рейтинг сезону: seasonRating/{year}
-// Показує:
-// - Загальний улов команди за сезон
-// - Big Fish команди за сезон
 
 (function () {
   "use strict";
@@ -11,6 +8,7 @@
 
   const totalWeightEl = document.getElementById("statTotalWeight");
   const bigFishEl = document.getElementById("statBigFish");
+  const teamNameEl = document.getElementById("teamNameText");
 
   if (!totalWeightEl || !bigFishEl) return;
 
@@ -20,12 +18,24 @@
     return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
+  function clean(s) {
+    return String(s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
+  }
+
   function setEmpty() {
     totalWeightEl.textContent = "—";
     bigFishEl.textContent = "—";
   }
 
-  function getTeamIdFromWindow() {
+  function setLoading() {
+    totalWeightEl.textContent = "…";
+    bigFishEl.textContent = "…";
+  }
+
+  function getWindowTeamId() {
     return String(
       window.currentTeamId ||
       window.teamId ||
@@ -35,103 +45,138 @@
     ).trim();
   }
 
-  async function waitForReady() {
-    if (window.scReady) {
-      await window.scReady;
-    }
+  function getDisplayedTeamName() {
+    const txt = teamNameEl ? teamNameEl.textContent : "";
+    if (!txt || txt === "Команда…" || txt === "—") return "";
+    return String(txt).trim();
   }
 
-  async function waitForTeamId(timeoutMs = 10000) {
+  async function waitForAuth(auth, timeoutMs = 8000) {
+    return new Promise(resolve => {
+      if (auth.currentUser) {
+        resolve(auth.currentUser);
+        return;
+      }
+
+      const started = Date.now();
+
+      const unsub = auth.onAuthStateChanged(user => {
+        if (user || Date.now() - started > timeoutMs) {
+          unsub();
+          resolve(user || null);
+        }
+      });
+    });
+  }
+
+  async function waitForTeamData(timeoutMs = 10000) {
     const started = Date.now();
 
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const timer = setInterval(() => {
-        const teamId = getTeamIdFromWindow();
+        const teamId = getWindowTeamId();
+        const teamName = getDisplayedTeamName();
 
-        if (teamId) {
+        if (teamId || teamName) {
           clearInterval(timer);
-          resolve(teamId);
+          resolve({ teamId, teamName });
           return;
         }
 
         if (Date.now() - started > timeoutMs) {
           clearInterval(timer);
-          resolve("");
+          resolve({ teamId: "", teamName: "" });
         }
-      }, 150);
+      }, 200);
     });
   }
 
-  async function findTeamIdFallback(db) {
-    const auth = window.scAuth;
-    const user = auth && auth.currentUser ? auth.currentUser : null;
-
-    if (!user) return "";
+  async function getTeamIdFromUserDoc(db, uid) {
+    if (!uid) return "";
 
     try {
-      const userSnap = await db.collection("users").doc(user.uid).get();
-      const userData = userSnap.exists ? (userSnap.data() || {}) : {};
+      const snap = await db.collection("users").doc(uid).get();
+      const u = snap.exists ? (snap.data() || {}) : {};
 
       return String(
-        userData.teamId ||
-        userData.team ||
-        userData.currentTeamId ||
+        u.teamId ||
+        u.currentTeamId ||
+        u.team ||
         ""
       ).trim();
-
     } catch (e) {
-      console.warn("[cabinet_achievements] Не вдалося прочитати users:", e);
+      console.warn("[achievements] users fallback error:", e);
       return "";
     }
   }
 
-  function findTeamInRating(teams, teamId) {
-    if (!Array.isArray(teams) || !teamId) return null;
+  function findTeam(teams, teamId, teamName) {
+    if (!Array.isArray(teams)) return null;
 
-    return teams.find(t => String(t.teamId || "") === String(teamId));
+    if (teamId) {
+      const byId = teams.find(t => String(t.teamId || "").trim() === String(teamId).trim());
+      if (byId) return byId;
+    }
+
+    if (teamName) {
+      const target = clean(teamName);
+
+      const byName = teams.find(t =>
+        clean(t.team || t.teamName || "") === target
+      );
+
+      if (byName) return byName;
+
+      const byNameSoft = teams.find(t =>
+        clean(t.team || t.teamName || "").includes(target) ||
+        target.includes(clean(t.team || t.teamName || ""))
+      );
+
+      if (byNameSoft) return byNameSoft;
+    }
+
+    return null;
   }
 
   async function init() {
     try {
-      setEmpty();
+      setLoading();
 
-      await waitForReady();
+      if (window.scReady) await window.scReady;
 
       const db = window.scDb;
+      const auth = window.scAuth;
 
-      if (!db) {
-        console.warn("[cabinet_achievements] Firestore не ініціалізований");
+      if (!db || !auth) {
+        setEmpty();
         return;
       }
 
-      let teamId = await waitForTeamId();
+      const user = await waitForAuth(auth);
+      const waited = await waitForTeamData();
 
-      if (!teamId) {
-        teamId = await findTeamIdFallback(db);
+      let teamId = waited.teamId;
+      let teamName = waited.teamName;
+
+      if (!teamId && user) {
+        teamId = await getTeamIdFromUserDoc(db, user.uid);
       }
 
-      if (!teamId) {
-        console.warn("[cabinet_achievements] teamId не знайдено");
-        return;
-      }
-
-      const ratingSnap = await db
-        .collection("seasonRating")
-        .doc(SEASON_YEAR)
-        .get();
+      const ratingSnap = await db.collection("seasonRating").doc(SEASON_YEAR).get();
 
       if (!ratingSnap.exists) {
-        console.warn("[cabinet_achievements] seasonRating не знайдено:", SEASON_YEAR);
+        setEmpty();
         return;
       }
 
       const rating = ratingSnap.data() || {};
       const teams = Array.isArray(rating.teams) ? rating.teams : [];
 
-      const team = findTeamInRating(teams, teamId);
+      const team = findTeam(teams, teamId, teamName);
 
       if (!team) {
-        console.warn("[cabinet_achievements] Команду не знайдено в seasonRating:", teamId);
+        console.warn("[achievements] Команду не знайдено", { teamId, teamName });
+        setEmpty();
         return;
       }
 
@@ -139,7 +184,7 @@
       bigFishEl.textContent = fmtKg(team.bigFish);
 
     } catch (e) {
-      console.error("[cabinet_achievements] Помилка:", e);
+      console.error("[achievements] Помилка:", e);
       setEmpty();
     }
   }

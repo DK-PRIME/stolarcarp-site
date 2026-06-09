@@ -3,17 +3,28 @@
   "use strict";
 
   const $ = id => document.getElementById(id);
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  }[m]));
+
   const norm = v => String(v ?? "").trim();
 
-  const isPaidStatus = status => ["confirmed", "paid", "payment_confirmed"].includes(norm(status).toLowerCase());
+  const isPaidStatus = status =>
+    ["confirmed", "paid", "payment_confirmed"].includes(norm(status).toLowerCase());
 
   async function waitFirebase(maxMs = 12000) {
     const t0 = Date.now();
+
     while (Date.now() - t0 < maxMs) {
       if (window.scDb) return;
       await new Promise(r => setTimeout(r, 100));
     }
+
     throw new Error("Firestore не готовий (нема scDb)");
   }
 
@@ -24,13 +35,19 @@
 
     try {
       const cSnap = await db.collection("competitions").doc(compId).get();
+
       if (cSnap.exists) {
         const c = cSnap.data() || {};
         title = c.name || c.title || title;
 
         const events = Array.isArray(c.events) ? c.events : [];
-        const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(stageId).trim());
-        stageTitle = ev && (ev.title || ev.name || ev.label) ? String(ev.title || ev.name || ev.label) : "";
+        const ev = events.find(e =>
+          String(e?.key || e?.stageId || e?.id || "").trim() === String(stageId).trim()
+        );
+
+        stageTitle = ev && (ev.title || ev.name || ev.label)
+          ? String(ev.title || ev.name || ev.label)
+          : "";
       }
     } catch {}
 
@@ -50,21 +67,26 @@
 
       const c = cSnap.data() || {};
       const events = Array.isArray(c.events) ? c.events : [];
-      const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(stageId).trim());
+
+      const ev = events.find(e =>
+        String(e?.key || e?.stageId || e?.id || "").trim() === String(stageId).trim()
+      );
 
       const v = ev?.maxTeams ?? ev?.teamsLimit ?? c?.maxTeams ?? c?.teamsLimit ?? null;
       const n = typeof v === "number" ? v : parseInt(String(v || ""), 10);
+
       if (Number.isFinite(n) && n > 0) maxTeams = n;
     } catch {}
 
     return maxTeams;
   }
 
-  // === POPUP ===
+  // === POPUP СКЛАДУ ===
   async function openTeamPopup(teamName, teamDocId) {
     const popup = $("teamPopup");
     const title = $("teamPopupTitle");
     const body = $("teamPopupBody");
+
     if (!popup || !title || !body) return;
 
     title.textContent = teamName || "Команда";
@@ -73,33 +95,40 @@
 
     try {
       const db = window.scDb;
+
       const teamSnap = await db.collection("teams").doc(teamDocId).get();
+
       if (!teamSnap.exists) {
         body.innerHTML = '<div class="team-loading">Команду не знайдено</div>';
         return;
       }
 
-      const team = teamSnap.data();
+      const team = teamSnap.data() || {};
       const ownerUid = team.ownerUid || null;
       const members = [];
       const used = new Set();
 
       const usersSnap = await db.collection("users").where("teamId", "==", teamDocId).get();
+
       usersSnap.forEach(doc => {
-        const d = doc.data();
+        const d = doc.data() || {};
+
         members.push({
           id: doc.id,
           fullName: d.fullName || d.displayName || d.email || "Учасник",
           role: d.role || "member",
           avatarUrl: d.avatarUrl || d.photoURL || null
         });
+
         used.add(doc.id);
       });
 
       if (ownerUid && !used.has(ownerUid)) {
         const capSnap = await db.collection("users").doc(ownerUid).get();
+
         if (capSnap.exists) {
-          const c = capSnap.data();
+          const c = capSnap.data() || {};
+
           members.push({
             id: ownerUid,
             fullName: c.fullName || c.displayName || c.email || "Капітан",
@@ -117,15 +146,18 @@
       members.sort((a, b) => {
         const aCap = a.role === "captain" || (ownerUid && a.id === ownerUid);
         const bCap = b.role === "captain" || (ownerUid && b.id === ownerUid);
+
         if (aCap && !bCap) return -1;
         if (bCap && !aCap) return 1;
-        return (a.fullName || "").localeCompare(b.fullName || "");
+
+        return (a.fullName || "").localeCompare(b.fullName || "", "uk");
       });
 
       body.innerHTML = members.map(m => {
         const avatarHtml = m.avatarUrl
           ? `<div class="member-avatar"><img src="${esc(m.avatarUrl)}" alt=""></div>`
           : `<div class="member-avatar"><div class="member-avatar-placeholder">👤</div></div>`;
+
         return `
           <div class="team-member">
             ${avatarHtml}
@@ -135,7 +167,7 @@
             </div>
           </div>
         `;
-      }).join('');
+      }).join("");
 
     } catch (err) {
       console.error("Помилка popup:", err);
@@ -158,18 +190,91 @@
   document.addEventListener("click", e => {
     const popup = $("teamPopup");
     const content = $("teamPopupContent");
-    if (popup?.style.display === "flex" && e.target === popup && !content?.contains(e.target)) {
+
+    if (
+      popup?.style.display === "flex" &&
+      e.target === popup &&
+      !content?.contains(e.target)
+    ) {
       closeTeamPopup();
     }
   });
 
   window.addEventListener("popstate", closeTeamPopup);
 
+  // === ХАРЧУВАННЯ UI ===
+  function mealBoxHtml() {
+    return `
+      <div class="mealBox" id="mealBox">
+        <div class="mealHead">
+          <div>
+            <div class="mealTitle">🍽 Харчування</div>
+            <div class="mealHint">
+              Заявка подається тільки для команд, які харчуються.
+              У списку буде видно сектор, зону та кількість порцій на 2 доби.
+            </div>
+          </div>
+
+          <div class="mealActions">
+            <button class="mealBtn mealBtn--primary" id="btnOpenMealOrder" type="button">
+              Подати / змінити заявку
+            </button>
+
+            <button class="mealBtn" id="btnOpenMealList" type="button" hidden>
+              Список заявок
+            </button>
+
+            <button class="mealBtn mealBtn--danger" id="btnClearMealOrders" type="button" hidden>
+              Очистити харчування
+            </button>
+          </div>
+        </div>
+
+        <div class="mealStatus" id="mealStatus"></div>
+      </div>
+    `;
+  }
+
+  function attachMealButtons() {
+    const btnOrder = $("btnOpenMealOrder");
+    const btnList = $("btnOpenMealList");
+    const btnClear = $("btnClearMealOrders");
+
+    if (btnOrder) {
+      btnOrder.addEventListener("click", () => {
+        if (window.scMeals && typeof window.scMeals.openOrder === "function") {
+          window.scMeals.openOrder();
+        }
+      });
+    }
+
+    if (btnList) {
+      btnList.addEventListener("click", () => {
+        if (window.scMeals && typeof window.scMeals.openList === "function") {
+          window.scMeals.openList();
+        }
+      });
+    }
+
+    if (btnClear) {
+      btnClear.addEventListener("click", () => {
+        if (window.scMeals && typeof window.scMeals.clearOrders === "function") {
+          window.scMeals.clearOrders();
+        }
+      });
+    }
+
+    if (window.scMeals && typeof window.scMeals.refreshAdminButtons === "function") {
+      window.scMeals.refreshAdminButtons();
+    }
+  }
+
   // === RENDER ===
   function rowHtml(idx, r, teamId) {
     const paid = isPaidStatus(r.status);
+
     return `
-      <div class="row" data-team-id="${esc(teamId)}" data-team-name="${esc(r.teamName || 'Команда')}">
+      <div class="row" data-team-id="${esc(teamId)}" data-team-name="${esc(r.teamName || "Команда")}">
         <span class="lamp ${paid ? "lamp--green" : "lamp--red"}"></span>
         <span class="idx">${idx}.</span>
         <span class="name">${esc(r.teamName || "—")}</span>
@@ -183,6 +288,7 @@
   function render(rows, maxTeams) {
     const list = $("teamsList");
     const msg = $("msg");
+
     if (!list) return;
 
     list.innerHTML = "";
@@ -202,6 +308,8 @@
       </div>
     `;
 
+    list.innerHTML += mealBoxHtml();
+
     list.innerHTML += main.map((r, i) => rowHtml(i + 1, r, r.teamId)).join("");
 
     if (reserve.length) {
@@ -209,19 +317,23 @@
       list.innerHTML += reserve.map((r, i) => rowHtml(maxTeams + i + 1, r, r.teamId)).join("");
     }
 
-    list.querySelectorAll('.row').forEach(row => {
-      row.addEventListener('click', () => {
+    list.querySelectorAll(".row").forEach(row => {
+      row.addEventListener("click", () => {
         const teamId = row.dataset.teamId;
         const teamName = row.dataset.teamName;
+
         if (teamId) openTeamPopup(teamName, teamId);
       });
     });
+
+    attachMealButtons();
   }
 
   // === INIT ===
   (async function init() {
     try {
       await waitFirebase();
+
       const db = window.scDb;
 
       const params = new URLSearchParams(location.search);
@@ -247,7 +359,6 @@
 
       if ($("msg")) $("msg").textContent = "Завантаження списку…";
 
-      // ✅ Дозволяємо cancelled, але вони відображаються як «Очікується»
       const snap = await db.collection("public_participants")
         .where("competitionId", "==", compId)
         .where("entryType", "==", "team")
@@ -259,51 +370,92 @@
       snap.forEach(doc => {
         const r = doc.data() || {};
         const docStageId = r.stageId || "main";
+
         const stageMatches = stageIdVariants.includes(docStageId) ||
           (stageParam === "main" && (!r.stageId || r.stageId === "main"));
 
         if (!stageMatches) return;
 
+        const teamId = String(r.teamId || "").trim();
+
         rowsMap.set(doc.id, {
-          teamId: r.teamId,
+          participantDocId: doc.id,
+          uid: r.uid || "",
+          teamId,
           teamName: norm(r.teamName || "—"),
           status: norm(r.status || "pending_payment"),
           createdAt: r.createdAt || null,
           confirmedAt: r.confirmedAt || null,
-          orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null
+          orderPaid: Number.isFinite(r.orderPaid) ? r.orderPaid : null,
+
+          drawZone: r.drawZone || r.zone || "",
+          drawSector: r.drawSector || r.sector || "",
+          drawKey: r.drawKey || (
+            (r.drawZone || r.zone) && (r.drawSector || r.sector)
+              ? `${r.drawZone || r.zone}${r.drawSector || r.sector}`
+              : ""
+          )
         });
       });
 
       const rows = Array.from(rowsMap.values());
 
-      // === СОРТУВАННЯ: cancelled йдуть одразу після confirmed, але як «Очікується» ===
       rows.sort((a, b) => {
         const rank = { confirmed: 1, paid: 1, cancelled: 1, pending_payment: 2 };
         const aRank = rank[a.status] || 99;
         const bRank = rank[b.status] || 99;
+
         if (aRank !== bRank) return aRank - bRank;
 
         if (aRank === 1) {
-          if (Number.isFinite(a.orderPaid) && Number.isFinite(b.orderPaid)) return a.orderPaid - b.orderPaid;
+          if (Number.isFinite(a.orderPaid) && Number.isFinite(b.orderPaid)) {
+            return a.orderPaid - b.orderPaid;
+          }
+
           if (Number.isFinite(a.orderPaid)) return -1;
           if (Number.isFinite(b.orderPaid)) return 1;
 
-          const aTime = a.confirmedAt?.toMillis?.() || (a.confirmedAt?._seconds ? a.confirmedAt._seconds * 1000 : 0);
-          const bTime = b.confirmedAt?.toMillis?.() || (b.confirmedAt?._seconds ? b.confirmedAt._seconds * 1000 : 0);
+          const aTime = a.confirmedAt?.toMillis?.() ||
+            (a.confirmedAt?._seconds ? a.confirmedAt._seconds * 1000 : 0);
+
+          const bTime = b.confirmedAt?.toMillis?.() ||
+            (b.confirmedAt?._seconds ? b.confirmedAt._seconds * 1000 : 0);
+
           return aTime - bTime;
         }
 
-        const aTime = a.createdAt?.toMillis?.() || (a.createdAt?._seconds ? a.createdAt._seconds * 1000 : 0);
-        const bTime = b.createdAt?.toMillis?.() || (b.createdAt?._seconds ? b.createdAt._seconds * 1000 : 0);
+        const aTime = a.createdAt?.toMillis?.() ||
+          (a.createdAt?._seconds ? a.createdAt._seconds * 1000 : 0);
+
+        const bTime = b.createdAt?.toMillis?.() ||
+          (b.createdAt?._seconds ? b.createdAt._seconds * 1000 : 0);
+
         return aTime - bTime;
       });
+
+      window.scMealContext = {
+        competitionId: compId,
+        stageId: stageParam,
+        stageIdVariants,
+        competitionTitle: meta.title,
+        stageTitle: meta.stageTitle,
+        maxTeams,
+        teams: rows
+      };
+
+      if (window.scMeals && typeof window.scMeals.setContext === "function") {
+        window.scMeals.setContext(window.scMealContext);
+      }
 
       if ($("msg")) $("msg").textContent = "";
       render(rows, maxTeams);
 
     } catch (e) {
       console.error(e);
-      if ($("msg")) $("msg").textContent = "❌ " + (e?.message || e);
+
+      if ($("msg")) {
+        $("msg").textContent = "❌ " + (e?.message || e);
+      }
     }
   })();
 })();

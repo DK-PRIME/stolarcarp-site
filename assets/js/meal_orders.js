@@ -5,7 +5,6 @@
   "use strict";
 
   let ctx = window.scMealContext || null;
-  let isAdmin = false;
   let currentUser = null;
   let userTeamId = "";
 
@@ -16,6 +15,8 @@
   }[m]));
 
   const norm = v => String(v ?? "").trim();
+
+  const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
   function num(v) {
     const n = Number(v);
@@ -69,12 +70,11 @@
     });
   }
 
-  async function loadUserFlags() {
+  async function loadUserData() {
     const { db } = await waitReady();
     currentUser = await getAuthUser();
 
     if (!currentUser) {
-      isAdmin = false;
       userTeamId = "";
       return;
     }
@@ -82,20 +82,29 @@
     const snap = await db.collection("users").doc(currentUser.uid).get();
     const u = snap.exists ? (snap.data() || {}) : {};
 
-    isAdmin = u.role === "admin";
     userTeamId = norm(u.teamId || u.currentTeamId || "");
   }
 
+  function getMainPaidTeams() {
+    if (!ctx || !Array.isArray(ctx.teams)) return [];
+
+    const maxTeams = Number(ctx.maxTeams || 21);
+
+    return ctx.teams
+      .filter(t => PAID_STATUSES.includes(norm(t.status).toLowerCase()))
+      .slice(0, maxTeams);
+  }
+
   function getMyTeam() {
-    if (!ctx || !Array.isArray(ctx.teams)) return null;
+    const mainPaidTeams = getMainPaidTeams();
 
     if (userTeamId) {
-      const byTeamId = ctx.teams.find(t => norm(t.teamId) === userTeamId);
+      const byTeamId = mainPaidTeams.find(t => norm(t.teamId) === userTeamId);
       if (byTeamId) return byTeamId;
     }
 
     if (currentUser) {
-      const byUid = ctx.teams.find(t => norm(t.uid) === currentUser.uid);
+      const byUid = mainPaidTeams.find(t => norm(t.uid) === currentUser.uid);
       if (byUid) return byUid;
     }
 
@@ -169,7 +178,7 @@
 
   async function openOrder() {
     try {
-      await loadUserFlags();
+      await loadUserData();
 
       if (!currentUser) {
         setStatus("Увійди в кабінет, щоб подати заявку.", false);
@@ -179,11 +188,12 @@
       const team = getMyTeam();
 
       if (!team) {
-        setStatus("Не знайдено твою команду в цьому змаганні.", false);
+        setStatus("Заявку на харчування можуть подати тільки оплачені команди основного списку.", false);
         return;
       }
 
       const old = await readMyOrder(team);
+
       openPopup("🍽 Заявка на харчування", orderFormHtml(team, old));
 
       $("btnCloseMealPopup").onclick = closePopup;
@@ -218,21 +228,16 @@
       const data = {
         competitionId: ctx.competitionId,
         stageId: ctx.stageId,
-
         teamId: team.teamId,
         teamName: team.teamName || "—",
-
         zone: z,
         sector: s,
         drawKey: key,
-
         day1,
         day2,
         note: norm($("mealNote")?.value),
-
         uid: currentUser.uid,
         status: totalOrder({ day1, day2 }) > 0 ? "submitted" : "empty",
-
         updatedAt: fb.firestore.FieldValue.serverTimestamp(),
         createdAt: fb.firestore.FieldValue.serverTimestamp()
       };
@@ -345,13 +350,6 @@
 
   async function openList() {
     try {
-      await loadUserFlags();
-
-      if (!isAdmin) {
-        setStatus("Список заявок доступний тільки адміну.", false);
-        return;
-      }
-
       openPopup("🍽 Список заявок на харчування", `<div class="team-loading">Завантаження…</div>`);
 
       const rows = await loadOrders();
@@ -363,67 +361,16 @@
     }
   }
 
-  async function clearOrders() {
-    try {
-      await loadUserFlags();
-
-      if (!isAdmin) {
-        setStatus("Очищення доступне тільки адміну.", false);
-        return;
-      }
-
-      if (!confirm("Точно видалити всі заявки на харчування цього етапу?")) return;
-
-      const { db } = await waitReady();
-
-      const snap = await db.collection("mealOrders")
-        .where("competitionId", "==", ctx.competitionId)
-        .where("stageId", "==", ctx.stageId)
-        .get();
-
-      let batch = db.batch();
-      let count = 0;
-      let total = 0;
-
-      for (const doc of snap.docs) {
-        batch.delete(doc.ref);
-        count++;
-        total++;
-
-        if (count >= 400) {
-          await batch.commit();
-          batch = db.batch();
-          count = 0;
-        }
-      }
-
-      if (count > 0) await batch.commit();
-
-      setStatus(`✅ Видалено заявок: ${total}`, true);
-      closePopup();
-
-    } catch (e) {
-      console.error(e);
-      setStatus("Помилка очищення: " + (e.message || e), false);
-    }
+  function clearOrders() {
+    setStatus("Очищення заявок буде в адмінці.", false);
   }
 
-  async function refreshAdminButtons() {
-    try {
-      await loadUserFlags();
+  function refreshAdminButtons() {
+    const listBtn = $("btnOpenMealList");
+    const clearBtn = $("btnClearMealOrders");
 
-      const listBtn = $("btnOpenMealList");
-      const clearBtn = $("btnClearMealOrders");
-
-      if (listBtn) listBtn.hidden = !isAdmin;
-      if (clearBtn) clearBtn.hidden = !isAdmin;
-
-    } catch {
-      const listBtn = $("btnOpenMealList");
-      const clearBtn = $("btnClearMealOrders");
-      if (listBtn) listBtn.hidden = true;
-      if (clearBtn) clearBtn.hidden = true;
-    }
+    if (listBtn) listBtn.hidden = false;
+    if (clearBtn) clearBtn.hidden = true;
   }
 
   function setContext(nextCtx) {

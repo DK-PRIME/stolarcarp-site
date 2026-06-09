@@ -12,11 +12,7 @@
   const $ = id => document.getElementById(id);
 
   const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;",
-    "<":"&lt;",
-    ">":"&gt;",
-    '"':"&quot;",
-    "'":"&#39;"
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
   }[m]));
 
   const norm = v => String(v ?? "").trim();
@@ -37,6 +33,13 @@
     el.className = "mealStatus " + (text ? (ok ? "ok" : "err") : "");
   }
 
+  function setPopupStatus(text, ok = true) {
+    const el = $("mealPopupStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className = "mealStatus " + (text ? (ok ? "ok" : "err") : "");
+  }
+
   function openPopup(title, html) {
     $("mealPopupTitle").textContent = title;
     $("mealPopupBody").innerHTML = html;
@@ -51,17 +54,11 @@
   async function waitReady() {
     if (window.scReady) await window.scReady;
     if (!window.scDb || !window.scAuth) throw new Error("Firebase не готовий");
-
-    return {
-      db: window.scDb,
-      auth: window.scAuth,
-      fb: window.firebase
-    };
+    return { db: window.scDb, auth: window.scAuth, fb: window.firebase };
   }
 
   async function getAuthUser() {
     const { auth } = await waitReady();
-
     if (auth.currentUser) return auth.currentUser;
 
     return new Promise(resolve => {
@@ -74,7 +71,6 @@
 
   async function loadUserFlags() {
     const { db } = await waitReady();
-
     currentUser = await getAuthUser();
 
     if (!currentUser) {
@@ -124,10 +120,15 @@
   }
 
   async function readMyOrder(team) {
-    const { db } = await waitReady();
-    const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
-    const snap = await db.collection("mealOrders").doc(id).get();
-    return snap.exists ? (snap.data() || {}) : null;
+    try {
+      const { db } = await waitReady();
+      const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
+      const snap = await db.collection("mealOrders").doc(id).get();
+      return snap.exists ? (snap.data() || {}) : null;
+    } catch (e) {
+      console.warn("[Meals] readMyOrder skipped:", e.message || e);
+      return null;
+    }
   }
 
   function orderFormHtml(team, old) {
@@ -140,34 +141,16 @@
 
       <div class="mealDayTitle">Доба 1</div>
       <div class="mealGrid">
-        <div class="mealField">
-          <label>Обід</label>
-          <input id="mealD1Lunch" type="number" min="0" max="20" value="${esc(d1.lunch || 0)}">
-        </div>
-        <div class="mealField">
-          <label>Вечеря</label>
-          <input id="mealD1Dinner" type="number" min="0" max="20" value="${esc(d1.dinner || 0)}">
-        </div>
-        <div class="mealField">
-          <label>Сніданок</label>
-          <input id="mealD1Breakfast" type="number" min="0" max="20" value="${esc(d1.breakfast || 0)}">
-        </div>
+        <div class="mealField"><label>Обід</label><input id="mealD1Lunch" type="number" min="0" max="20" value="${esc(d1.lunch || 0)}"></div>
+        <div class="mealField"><label>Вечеря</label><input id="mealD1Dinner" type="number" min="0" max="20" value="${esc(d1.dinner || 0)}"></div>
+        <div class="mealField"><label>Сніданок</label><input id="mealD1Breakfast" type="number" min="0" max="20" value="${esc(d1.breakfast || 0)}"></div>
       </div>
 
       <div class="mealDayTitle">Доба 2</div>
       <div class="mealGrid">
-        <div class="mealField">
-          <label>Обід</label>
-          <input id="mealD2Lunch" type="number" min="0" max="20" value="${esc(d2.lunch || 0)}">
-        </div>
-        <div class="mealField">
-          <label>Вечеря</label>
-          <input id="mealD2Dinner" type="number" min="0" max="20" value="${esc(d2.dinner || 0)}">
-        </div>
-        <div class="mealField">
-          <label>Сніданок</label>
-          <input id="mealD2Breakfast" type="number" min="0" max="20" value="${esc(d2.breakfast || 0)}">
-        </div>
+        <div class="mealField"><label>Обід</label><input id="mealD2Lunch" type="number" min="0" max="20" value="${esc(d2.lunch || 0)}"></div>
+        <div class="mealField"><label>Вечеря</label><input id="mealD2Dinner" type="number" min="0" max="20" value="${esc(d2.dinner || 0)}"></div>
+        <div class="mealField"><label>Сніданок</label><input id="mealD2Breakfast" type="number" min="0" max="20" value="${esc(d2.breakfast || 0)}"></div>
       </div>
 
       <div class="mealField">
@@ -182,13 +165,6 @@
 
       <div class="mealStatus" id="mealPopupStatus"></div>
     `;
-  }
-
-  function setPopupStatus(text, ok = true) {
-    const el = $("mealPopupStatus");
-    if (!el) return;
-    el.textContent = text || "";
-    el.className = "mealStatus " + (text ? (ok ? "ok" : "err") : "");
   }
 
   async function openOrder() {
@@ -208,19 +184,10 @@
       }
 
       const old = await readMyOrder(team);
-
       openPopup("🍽 Заявка на харчування", orderFormHtml(team, old));
 
       $("btnCloseMealPopup").onclick = closePopup;
-
-      $("btnSaveMealOrder").onclick = async () => {
-        try {
-          await saveOrder(team);
-        } catch (e) {
-          console.error(e);
-          setPopupStatus("❌ " + (e.message || e), false);
-        }
-      };
+      $("btnSaveMealOrder").onclick = () => saveOrder(team);
 
     } catch (e) {
       console.error(e);
@@ -229,72 +196,68 @@
   }
 
   async function saveOrder(team) {
-    const { db, fb } = await waitReady();
+    try {
+      const { db, fb } = await waitReady();
 
-    const day1 = {
-      lunch: num($("mealD1Lunch")?.value),
-      dinner: num($("mealD1Dinner")?.value),
-      breakfast: num($("mealD1Breakfast")?.value)
-    };
+      const day1 = {
+        lunch: num($("mealD1Lunch")?.value),
+        dinner: num($("mealD1Dinner")?.value),
+        breakfast: num($("mealD1Breakfast")?.value)
+      };
 
-    const day2 = {
-      lunch: num($("mealD2Lunch")?.value),
-      dinner: num($("mealD2Dinner")?.value),
-      breakfast: num($("mealD2Breakfast")?.value)
-    };
+      const day2 = {
+        lunch: num($("mealD2Lunch")?.value),
+        dinner: num($("mealD2Dinner")?.value),
+        breakfast: num($("mealD2Breakfast")?.value)
+      };
 
-    const note = norm($("mealNote")?.value);
+      const z = norm(team.drawZone || team.zone).toUpperCase();
+      const s = norm(team.drawSector || team.sector);
+      const key = teamDrawKey(team);
 
-    const z = norm(team.drawZone || team.zone).toUpperCase();
-    const s = norm(team.drawSector || team.sector);
-    const key = teamDrawKey(team);
+      const data = {
+        competitionId: ctx.competitionId,
+        stageId: ctx.stageId,
 
-    const data = {
-      competitionId: ctx.competitionId,
-      stageId: ctx.stageId,
+        teamId: team.teamId,
+        teamName: team.teamName || "—",
 
-      teamId: team.teamId,
-      teamName: team.teamName || "—",
+        zone: z,
+        sector: s,
+        drawKey: key,
 
-      zone: z,
-      sector: s,
-      drawKey: key,
+        day1,
+        day2,
+        note: norm($("mealNote")?.value),
 
-      day1,
-      day2,
-      note,
+        uid: currentUser.uid,
+        status: totalOrder({ day1, day2 }) > 0 ? "submitted" : "empty",
 
-      uid: currentUser.uid,
-      status: totalOrder({ day1, day2 }) > 0 ? "submitted" : "empty",
+        updatedAt: fb.firestore.FieldValue.serverTimestamp(),
+        createdAt: fb.firestore.FieldValue.serverTimestamp()
+      };
 
-      updatedAt: fb.firestore.FieldValue.serverTimestamp()
-    };
+      const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
 
-    const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
-    const ref = db.collection("mealOrders").doc(id);
-    const snap = await ref.get();
+      await db.collection("mealOrders").doc(id).set(data, { merge: true });
 
-    if (!snap.exists) {
-      data.createdAt = fb.firestore.FieldValue.serverTimestamp();
+      setPopupStatus("✅ Заявку збережено.", true);
+      setStatus("✅ Заявку на харчування збережено.", true);
+
+    } catch (e) {
+      console.error(e);
+      setPopupStatus("❌ " + (e.message || e), false);
     }
-
-    await ref.set(data, { merge: true });
-
-    setPopupStatus("✅ Заявку збережено.", true);
-    setStatus("✅ Заявку на харчування збережено.", true);
   }
 
   function sortOrders(a, b) {
     const zOrder = { A: 1, B: 2, C: 3 };
-
     const za = zOrder[String(a.zone || "").toUpperCase()] || 9;
     const zb = zOrder[String(b.zone || "").toUpperCase()] || 9;
-
     if (za !== zb) return za - zb;
 
     const sa = Number(a.sector || 999);
     const sb = Number(b.sector || 999);
-
     if (sa !== sb) return sa - sb;
 
     return String(a.teamName || "").localeCompare(String(b.teamName || ""), "uk");
@@ -322,14 +285,9 @@
   }
 
   function listHtml(rows) {
-    if (!rows.length) {
-      return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
-    }
+    if (!rows.length) return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
 
-    const totals = {
-      d1l: 0, d1d: 0, d1b: 0,
-      d2l: 0, d2d: 0, d2b: 0
-    };
+    const totals = { d1l:0, d1d:0, d1b:0, d2l:0, d2d:0, d2b:0 };
 
     const body = rows.map(r => {
       const d1 = r.day1 || {};
@@ -423,11 +381,6 @@
         .where("stageId", "==", ctx.stageId)
         .get();
 
-      if (snap.empty) {
-        setStatus("Заявок на харчування немає.", true);
-        return;
-      }
-
       let batch = db.batch();
       let count = 0;
       let total = 0;
@@ -468,7 +421,6 @@
     } catch {
       const listBtn = $("btnOpenMealList");
       const clearBtn = $("btnClearMealOrders");
-
       if (listBtn) listBtn.hidden = true;
       if (clearBtn) clearBtn.hidden = true;
     }
@@ -485,11 +437,7 @@
     const popup = $("mealPopup");
     const content = $("mealPopupContent");
 
-    if (
-      popup?.style.display === "flex" &&
-      e.target === popup &&
-      !content?.contains(e.target)
-    ) {
+    if (popup?.style.display === "flex" && e.target === popup && !content?.contains(e.target)) {
       closePopup();
     }
   });

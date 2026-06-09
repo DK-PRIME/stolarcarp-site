@@ -1,7 +1,9 @@
 // assets/js/rating_page.js
 // STOLAR CARP • Season Rating page
 // Джерело: seasonRating/{year}
-// Дані вже підраховані під час архівації етапів
+// Рейтинг: best 2 of 3
+// Якщо зіграно тільки 1 етап → додається 8 балів
+// Сортування фіналу: бали ↑, вага зарахованих етапів ↓, Big Fish ↓
 
 (function () {
   "use strict";
@@ -11,17 +13,24 @@
   const TOP_COUNT = 18;
   const STAGES_MAX_IN_HTML = 5;
   const SEASON_YEAR = "2026";
+  const BEST_COUNT = 2;
+  const ABSENT_POINTS = 8;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_archive_v1";
+  const CACHE_KEY = "sc_rating_cache_best2_v1";
 
   function safeText(v, dash = "—") {
     return v === null || v === undefined || v === "" ? dash : String(v);
   }
 
+  function num(v) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function fmtKg(v) {
-    const n = Number(v || 0);
-    if (!Number.isFinite(n) || n <= 0) return "—";
+    const n = num(v);
+    if (n <= 0) return "—";
     return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
@@ -47,11 +56,9 @@
     try {
       const raw = localStorage.getItem(CACHE_KEY);
       if (!raw) return null;
-
       const obj = JSON.parse(raw);
       if (!obj || !obj.ts) return null;
       if (Date.now() - obj.ts > CACHE_TTL_MS) return null;
-
       return obj.payload || null;
     } catch {
       return null;
@@ -60,10 +67,7 @@
 
   function cacheSet(payload) {
     try {
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({ ts: Date.now(), payload })
-      );
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), payload }));
     } catch {}
   }
 
@@ -74,12 +78,9 @@
   }
 
   function rowHTML(place, qualified) {
-    const trClass = qualified ? "row-qualified" : "";
-    const placeStr = place === "—" ? "—" : String(place);
-
     return `
-      <tr class="${trClass}">
-        <td class="col-place"><span class="place-num">${placeStr}</span></td>
+      <tr class="${qualified ? "row-qualified" : ""}">
+        <td class="col-place"><span class="place-num">${place}</span></td>
         <td class="col-move"><span class="move move--same">–</span></td>
         <td class="col-team">-</td>
 
@@ -111,8 +112,8 @@
       topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
     }
 
-    const cc = Math.max(3, Number(contendersCount || 0));
     contTbody.innerHTML = "";
+    const cc = Math.max(3, Number(contendersCount || 0));
 
     for (let i = 0; i < cc; i++) {
       contTbody.insertAdjacentHTML(
@@ -122,12 +123,23 @@
     }
   }
 
-  function setMove(el, mv) {
+  function setMove(el, moveDelta) {
     if (!el) return;
 
     el.classList.remove("move--up", "move--down", "move--same");
-    el.classList.add("move--same");
-    el.textContent = "–";
+
+    const d = Number(moveDelta || 0);
+
+    if (d > 0) {
+      el.classList.add("move--up");
+      el.textContent = `▲${d}`;
+    } else if (d < 0) {
+      el.classList.add("move--down");
+      el.textContent = `▼${Math.abs(d)}`;
+    } else {
+      el.classList.add("move--same");
+      el.textContent = "–";
+    }
   }
 
   function renderRow(tr, item) {
@@ -139,7 +151,7 @@
     const pl = tr.querySelector(".place-num");
     if (pl) pl.textContent = safeText(item.place);
 
-    setMove(tds[1].querySelector(".move"), item.move);
+    setMove(tds[1].querySelector(".move"), item.moveDelta);
 
     tds[2].textContent = safeText(item.team);
 
@@ -160,6 +172,8 @@
         cell.classList.add("stage-noshow");
       } else if (s.counted === true) {
         cell.classList.add("stage-counted");
+      } else if (s.counted === false) {
+        cell.classList.add("stage-dropped");
       }
     }
 
@@ -170,18 +184,12 @@
     tds[5 + STAGES_MAX_IN_HTML].textContent = safeText(item.weight);
     tds[6 + STAGES_MAX_IN_HTML].textContent = safeText(item.bigFish);
 
-    if (item.qualifiedForFinal === true) {
-      tr.classList.add("row-qualified");
-    } else {
-      tr.classList.remove("row-qualified");
-    }
+    if (item.qualifiedForFinal === true) tr.classList.add("row-qualified");
+    else tr.classList.remove("row-qualified");
   }
 
   function applyStageVisibility(stagesCount) {
-    const count = Math.max(
-      0,
-      Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0))
-    );
+    const count = Math.max(0, Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0)));
 
     document.querySelectorAll(".table--season").forEach((table) => {
       const ths = table.querySelectorAll("thead th.col-stage");
@@ -189,10 +197,7 @@
       ths.forEach((th, i) => {
         const stageNo = i + 1;
         th.style.display = stageNo <= count ? "" : "none";
-
-        if (stageNo <= count) {
-          th.innerHTML = `Е${stageNo}<br>м / б`;
-        }
+        if (stageNo <= count) th.innerHTML = `Е${stageNo}<br>м / б`;
       });
     });
 
@@ -209,35 +214,23 @@
   }
 
   async function waitReady() {
-    if (window.scReady) {
-      await window.scReady;
-    }
+    if (window.scReady) await window.scReady;
 
     const db = window.scDb;
 
-    if (!db) {
-      throw new Error("Firestore не ініціалізований.");
-    }
+    if (!db) throw new Error("Firestore не ініціалізований.");
 
     return db;
   }
 
   function stageSortValue(stage) {
-    const raw = String(
-      stage.stageId ||
-      stage.stageDocId ||
-      stage.id ||
-      ""
-    );
-
+    const raw = String(stage.stageId || stage.stageDocId || stage.id || "");
     const m = raw.match(/(\d+)/);
     return m ? Number(m[1]) : 999;
   }
 
-  function getArchivedStageIds(rating) {
-    const arr = Array.isArray(rating.archivedStages)
-      ? rating.archivedStages
-      : [];
+  function getArchivedStages(rating) {
+    const arr = Array.isArray(rating.archivedStages) ? rating.archivedStages : [];
 
     return arr
       .map(s => {
@@ -259,58 +252,195 @@
       .sort((a, b) => stageSortValue(a) - stageSortValue(b));
   }
 
-  function convertRatingToRows(rating) {
-    const teams = Array.isArray(rating.teams) ? rating.teams.slice() : [];
-    const archivedStages = getArchivedStageIds(rating);
+  function readStageResult(stageData) {
+    if (!stageData) return null;
 
-    const stagesCount = Math.min(archivedStages.length, STAGES_MAX_IN_HTML);
+    const place = num(stageData.zonePlace || stageData.points || stageData.place);
+    const points = num(stageData.points || stageData.zonePlace || stageData.place);
 
-    teams.sort((a, b) => {
-      if (Number(a.totalPoints || 0) !== Number(b.totalPoints || 0)) {
-        return Number(a.totalPoints || 0) - Number(b.totalPoints || 0);
+    if (!points) return null;
+
+    return {
+      p: place || points,
+      pts: points,
+      totalWeight: num(stageData.totalWeight),
+      bigFish: num(stageData.bigFish),
+      totalCount: num(stageData.totalCount)
+    };
+  }
+
+  function calculateBestResults(stageResults, archivedStages) {
+    const played = [];
+
+    archivedStages.forEach(stage => {
+      const s =
+        stageResults[stage.stageDocId] ||
+        stageResults[stage.stageId] ||
+        null;
+
+      const result = readStageResult(s);
+
+      if (result) {
+        played.push({
+          stageDocId: stage.stageDocId,
+          ...result
+        });
       }
-
-      if (Number(b.totalWeight || 0) !== Number(a.totalWeight || 0)) {
-        return Number(b.totalWeight || 0) - Number(a.totalWeight || 0);
-      }
-
-      return Number(b.bigFish || 0) - Number(a.bigFish || 0);
     });
 
-    const rows = teams.map((team, index) => {
-      const stagesObj = team.stages || {};
+    const sortedPlayed = played.slice().sort((a, b) => {
+      if (a.pts !== b.pts) return a.pts - b.pts;
+      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+      return b.bigFish - a.bigFish;
+    });
 
-      const stageCells = archivedStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
-        const s =
-          stagesObj[stage.stageDocId] ||
-          stagesObj[stage.stageId] ||
-          null;
+    const countedKeys = new Set();
+    const droppedKeys = new Set();
 
-        if (!s) {
-          return {
-            p: "–",
-            pts: "–",
-            noShow: true
-          };
-        }
+    let counted = sortedPlayed.slice(0, BEST_COUNT);
 
+    if (counted.length < BEST_COUNT && archivedStages.length > 0) {
+      const missing = BEST_COUNT - counted.length;
+
+      for (let i = 0; i < missing; i++) {
+        counted.push({
+          stageDocId: `__absent_${i}`,
+          p: "–",
+          pts: ABSENT_POINTS,
+          totalWeight: 0,
+          bigFish: 0,
+          totalCount: 0,
+          noShowPenalty: true
+        });
+      }
+    }
+
+    counted.forEach(x => countedKeys.add(x.stageDocId));
+
+    sortedPlayed.slice(BEST_COUNT).forEach(x => droppedKeys.add(x.stageDocId));
+
+    const ratingPoints = counted.reduce((s, x) => s + num(x.pts), 0);
+    const ratingWeight = counted.reduce((s, x) => s + num(x.totalWeight), 0);
+    const ratingBigFish = counted.reduce((m, x) => Math.max(m, num(x.bigFish)), 0);
+
+    return {
+      countedKeys,
+      droppedKeys,
+      ratingPoints,
+      ratingWeight,
+      ratingBigFish
+    };
+  }
+
+  function makeStageCells(stageResults, archivedStages, bestInfo) {
+    return archivedStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
+      const s =
+        stageResults[stage.stageDocId] ||
+        stageResults[stage.stageId] ||
+        null;
+
+      const result = readStageResult(s);
+
+      if (!result) {
         return {
-          p: s.place || "–",
-          pts: s.points || s.place || "–",
-          counted: true,
-          noShow: false
+          p: "–",
+          pts: "–",
+          noShow: true,
+          counted: false
         };
-      });
+      }
+
+      const isCounted = bestInfo.countedKeys.has(stage.stageDocId);
+      const isDropped = bestInfo.droppedKeys.has(stage.stageDocId);
 
       return {
-        place: team.seasonPlace || index + 1,
+        p: result.p,
+        pts: result.pts,
+        counted: isCounted,
+        noShow: false,
+        dropped: isDropped
+      };
+    });
+  }
+
+  function rankTeams(rawTeams, archivedStages) {
+    const rows = rawTeams.map(team => {
+      const stagesObj = team.stages || {};
+      const bestInfo = calculateBestResults(stagesObj, archivedStages);
+      const stageCells = makeStageCells(stagesObj, archivedStages, bestInfo);
+
+      return {
+        teamId: String(team.teamId || ""),
         team: team.team || team.teamName || "—",
+
         stages: stageCells,
-        points: Number(team.totalPoints || 0) || "—",
+
+        ratingPoints: bestInfo.ratingPoints,
+        ratingWeight: bestInfo.ratingWeight,
+        ratingBigFish: bestInfo.ratingBigFish,
+
+        displayWeight: num(team.totalWeight),
+        displayBigFish: num(team.bigFish),
+
+        totalCount: num(team.totalCount)
+      };
+    });
+
+    rows.sort((a, b) => {
+      if (a.ratingPoints !== b.ratingPoints) return a.ratingPoints - b.ratingPoints;
+      if (b.ratingWeight !== a.ratingWeight) return b.ratingWeight - a.ratingWeight;
+      return b.ratingBigFish - a.ratingBigFish;
+    });
+
+    return rows.map((r, i) => ({
+      ...r,
+      place: i + 1
+    }));
+  }
+
+  function calculatePreviousPlaces(rawTeams, archivedStages) {
+    if (archivedStages.length <= 1) return new Map();
+
+    const previousStages = archivedStages.slice(0, -1);
+    const previousRows = rankTeams(rawTeams, previousStages);
+
+    const map = new Map();
+
+    previousRows.forEach(r => {
+      if (r.teamId) map.set(r.teamId, r.place);
+    });
+
+    return map;
+  }
+
+  function convertRatingToRows(rating) {
+    const archivedStages = getArchivedStages(rating);
+    const stagesCount = Math.min(archivedStages.length, STAGES_MAX_IN_HTML);
+
+    const rawTeams = Array.isArray(rating.teams) ? rating.teams.slice() : [];
+
+    const currentRows = rankTeams(rawTeams, archivedStages);
+    const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages);
+
+    const rows = currentRows.map(row => {
+      const prevPlace = previousPlaces.get(row.teamId) || row.place;
+      const moveDelta = prevPlace - row.place;
+
+      return {
+        place: row.place,
+        team: row.team,
+        stages: row.stages,
+        points: row.ratingPoints || "—",
         finalPlace: "–",
-        weight: fmtKg(team.totalWeight),
-        bigFish: fmtKg(team.bigFish),
-        qualifiedForFinal: index < TOP_COUNT
+
+        // Показуємо всю вагу сезону, не тільки зарахованих етапів
+        weight: fmtKg(row.displayWeight),
+
+        // Показуємо найбільшу рибу сезону
+        bigFish: fmtKg(row.displayBigFish),
+
+        moveDelta,
+        qualifiedForFinal: row.place <= TOP_COUNT
       };
     });
 
@@ -325,16 +455,12 @@
     const stagesCount = Number(payload.stagesCount || 0);
 
     const contendersCount = Math.max(3, rows.length - TOP_COUNT);
+
     buildSkeleton(contendersCount);
     applyStageVisibility(stagesCount);
 
-    const topRows = $("season-top")
-      ? $("season-top").querySelectorAll("tr")
-      : [];
-
-    const contRows = $("season-contenders")
-      ? $("season-contenders").querySelectorAll("tr")
-      : [];
+    const topRows = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
+    const contRows = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
 
     rows.forEach((item, index) => {
       if (index < TOP_COUNT) {
@@ -350,13 +476,8 @@
       }
     });
 
-    if ($("seasonTitle")) {
-      $("seasonTitle").textContent = `Рейтинг STOLAR CARP`;
-    }
-
-    if ($("seasonKicker")) {
-      $("seasonKicker").textContent = `СЕЗОН ${SEASON_YEAR}`;
-    }
+    if ($("seasonTitle")) $("seasonTitle").textContent = "Рейтинг STOLAR CARP";
+    if ($("seasonKicker")) $("seasonKicker").textContent = `СЕЗОН ${SEASON_YEAR}`;
 
     if (!rows.length && !offline) {
       showError("⚠️ Немає даних рейтингу. Спочатку потрібно архівувати хоча б один етап.");
@@ -369,6 +490,7 @@
 
   async function loadRating() {
     hideError();
+
     buildSkeleton(3);
     setReadyFlag();
 
@@ -378,7 +500,7 @@
       try {
         renderRatingPayload(cached, true);
       } catch (e) {
-        console.warn("[Rating] Помилка кешу:", e);
+        console.warn("[Rating] cache render error:", e);
       }
     }
 
@@ -405,11 +527,14 @@
             console.error("[Rating] onSnapshot error:", err);
 
             const c = cacheGet();
+
             if (c) {
               renderRatingPayload(c, true);
               showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
             } else {
-              showError(`⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(err.message)}`);
+              showError(
+                `⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(err.message)}`
+              );
             }
 
             setReadyFlag();
@@ -423,7 +548,9 @@
         renderRatingPayload(c, true);
         showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
       } else {
-        showError(`⚠️ Помилка завантаження рейтингу: ${safeText(e.message || e)}`);
+        showError(
+          `⚠️ Помилка завантаження рейтингу: ${safeText(e.message || e)}`
+        );
       }
 
       setReadyFlag();

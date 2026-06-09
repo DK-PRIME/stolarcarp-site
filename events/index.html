@@ -7,47 +7,214 @@
 
   <link rel="stylesheet" href="../assets/css/main.css">
   <script defer src="../assets/js/config.js"></script>
-  <script defer src="archive.js"></script>
 
   <style>
-    body.archive-page{
-      background: radial-gradient(circle at top,#1f2937 0,#05060a 55%);
-      display: flex;          /* 1. флекс-контейнер */
+    body.archive-page {
+      min-height: 100vh;
+      display: flex;
       flex-direction: column;
-      min-height: 100vh;      /* 2. ≥ висоти viewport */
+      background:
+        radial-gradient(circle at 50% 0%, rgba(250,204,21,.16), transparent 26%),
+        radial-gradient(circle at 15% 15%, rgba(251,113,133,.13), transparent 28%),
+        linear-gradient(180deg, #111827 0%, #020617 55%, #030712 100%);
+      color: #e5e7eb;
     }
-    main.main{                /* 3. займає весь вільний простір */
+
+    main.main {
       flex: 1 0 auto;
     }
-    footer.footer{             /* 4. притискається донизу */
+
+    .archive-hero {
+      text-align: center;
+      padding: 56px 0 34px;
+    }
+
+    .archive-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 8px 14px;
+      border: 1px solid rgba(250,204,21,.45);
+      border-radius: 999px;
+      background: rgba(15,23,42,.72);
+      color: #facc15;
+      font-weight: 800;
+      font-size: .9rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .archive-title {
+      margin: 0;
+      font-size: clamp(34px, 8vw, 72px);
+      line-height: 1.06;
+      font-weight: 950;
+      letter-spacing: -.04em;
+      color: #f8fafc;
+      text-shadow: 0 16px 45px rgba(0,0,0,.55);
+    }
+
+    .archive-subtitle {
+      max-width: 680px;
+      margin: 18px auto 0;
+      color: #cbd5e1;
+      line-height: 1.65;
+      font-size: clamp(15px, 3.6vw, 18px);
+    }
+
+    .seasons-grid {
+      max-width: 760px;
+      margin: 34px auto 0;
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .season-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 190px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-decoration: none;
+      color: #fff;
+      border-radius: 26px;
+      border: 1px solid rgba(250,204,21,.65);
+      background:
+        linear-gradient(135deg, rgba(250,204,21,.14), rgba(236,72,153,.08)),
+        radial-gradient(circle at 20% 0%, rgba(250,204,21,.32), transparent 32%),
+        radial-gradient(circle at 100% 100%, rgba(249,115,22,.24), transparent 34%),
+        #050816;
+      box-shadow:
+        0 26px 70px rgba(0,0,0,.55),
+        inset 0 1px 0 rgba(255,255,255,.08);
+      transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+
+    .season-card::before {
+      content: "";
+      position: absolute;
+      inset: -80px -80px auto auto;
+      width: 190px;
+      height: 190px;
+      border-radius: 999px;
+      background: rgba(250,204,21,.18);
+      filter: blur(8px);
+    }
+
+    .season-card:hover {
+      transform: translateY(-5px);
+      border-color: #facc15;
+      box-shadow:
+        0 34px 90px rgba(0,0,0,.65),
+        0 0 0 1px rgba(250,204,21,.25);
+    }
+
+    .season-top {
+      position: relative;
+      z-index: 1;
+    }
+
+    .season-label {
+      color: #94a3b8;
+      font-size: .9rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .season-year {
+      font-size: clamp(32px, 8vw, 48px);
+      line-height: 1;
+      font-weight: 950;
+      color: #facc15;
+      letter-spacing: -.03em;
+    }
+
+    .season-desc {
+      margin-top: 12px;
+      color: #cbd5e1;
+      line-height: 1.45;
+      font-size: .95rem;
+    }
+
+    .season-btn {
+      position: relative;
+      z-index: 1;
+      margin-top: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: linear-gradient(90deg, #facc15, #f97316);
+      color: #111827;
+      text-align: center;
+      font-weight: 950;
+      box-shadow: 0 14px 32px rgba(249,115,22,.28);
+    }
+
+    .archive-note {
+      max-width: 760px;
+      margin: 18px auto 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: 18px;
+      background: rgba(15,23,42,.45);
+      color: #94a3b8;
+      line-height: 1.55;
+      font-size: .92rem;
+      text-align: center;
+    }
+
+    footer.footer {
       flex-shrink: 0;
       margin-top: auto;
       text-align: center;
-      padding: 20px 0;
-      font-size: 0.875rem;
+      padding: 22px 0;
+      font-size: .875rem;
       color: #cbd5e1;
+      border-top: 1px solid rgba(148,163,184,.12);
+      background: rgba(2,6,23,.65);
     }
-    footer.footer a{
+
+    footer.footer a {
       color: #facc15;
       text-decoration: none;
       margin: 0 8px;
+      font-weight: 800;
     }
 
-    /* ---------- оформлення сторінки (без змін) ---------- */
-    .archive-hero{ text-align:center; margin-top:26px; }
-    .archive-title{ font-size:clamp(28px,5vw,42px); font-weight:900; }
-    .seasons-grid{ margin-top:30px; display:grid; gap:18px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); }
-    .season-card{ background:radial-gradient(circle at top,#1e293b 0,#020617 60%); border-radius:18px; border:1px solid rgba(148,163,184,.35); box-shadow:0 14px 34px rgba(0,0,0,.8); padding:18px; text-decoration:none; color:#fff; transition:.25s; display:flex; flex-direction:column; justify-content:space-between; }
-    .season-card:hover{ transform:translateY(-4px); border-color:#facc15; }
-    .season-year{ font-size:1.4rem; font-weight:900; color:#facc15; }
-    .season-btn{ margin-top:14px; padding:9px 14px; border-radius:10px; background:#facc15; color:#111; text-align:center; font-weight:700; }
+    @media (max-width: 768px) {
+      .archive-hero {
+        padding: 44px 0 24px;
+      }
+
+      .season-card {
+        min-height: 180px;
+        padding: 22px;
+      }
+
+      .archive-note {
+        text-align: left;
+      }
+    }
   </style>
 </head>
 
 <body class="archive-page">
+
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="../index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+    <a class="logo" href="../index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+
     <nav class="nav" id="nav">
       <a href="/index.html" class="nav__link">Головна</a>
       <a href="/rules.html" class="nav__link">Регламент</a>
@@ -60,18 +227,45 @@
       <a href="/events/index.html" class="nav__link">Архів</a>
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+
+    <button class="burger" id="burger" type="button" aria-label="Меню">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
 
 <main class="main">
   <section class="container section archive-hero">
-    <h1 class="archive-title title-gradient">Архів турнірів STOLAR CARP</h1>
+    <div class="archive-kicker">🏆 Архів результатів</div>
+
+    <h1 class="archive-title">
+      Архів турнірів<br>STOLAR CARP
+    </h1>
+
+    <p class="archive-subtitle">
+      Тут зберігаються завершені етапи сезону: місця команд, W1–W4,
+      загальна вага, Big Fish та підсумкові результати.
+    </p>
+
     <div class="seasons-grid">
-      <a class="season-card" href="season-2026.html">
-        <div><div class="season-year">Сезон 2026</div></div>
-        <div class="season-btn">Відкрити сезон</div>
+      <a class="season-card" href="season.html?year=2026">
+        <div class="season-top">
+          <div class="season-label">Активний архів</div>
+          <div class="season-year">Сезон 2026</div>
+          <div class="season-desc">
+            Перегляд завершених етапів, зон A/B/C та підсумкових таблиць.
+          </div>
+        </div>
+
+        <div class="season-btn">
+          Відкрити сезон →
+        </div>
       </a>
+    </div>
+
+    <div class="archive-note">
+      Дані архіву беруться з готової колекції <b>seasonResults</b>,
+      тому сторінка не перераховує live-зважування і не створює зайвих читань.
     </div>
   </section>
 </main>
@@ -85,19 +279,23 @@
 </footer>
 
 <script>
-  /* бургер-меню (мінімум коду) */
-  const burger = document.getElementById('burger');
-  const nav = document.getElementById('nav');
-  burger.addEventListener('click', () => {
-    nav.classList.toggle('active');
-    document.body.classList.toggle('menu-open');
-  });
-  nav.addEventListener('click', e => {
-    if (e.target.classList.contains('nav__link')) {
-      nav.classList.remove('active');
-      document.body.classList.remove('menu-open');
-    }
-  });
+  const burger = document.getElementById("burger");
+  const nav = document.getElementById("nav");
+
+  if (burger && nav) {
+    burger.addEventListener("click", () => {
+      nav.classList.toggle("active");
+      document.body.classList.toggle("menu-open");
+    });
+
+    nav.addEventListener("click", e => {
+      if (e.target.classList.contains("nav__link")) {
+        nav.classList.remove("active");
+        document.body.classList.remove("menu-open");
+      }
+    });
+  }
 </script>
+
 </body>
 </html>

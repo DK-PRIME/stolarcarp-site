@@ -24,7 +24,6 @@
     .zoneTitle h3{margin:0;font-size:1.1rem}
     .badge{border:1px solid #334155;border-radius:999px;padding:6px 10px;background:#0b1224;color:#e5e7eb;font-size:.85rem}
 
-    /* ===== АДАПТИВНА ТАБЛИЦЯ ===== */
     .table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -54,7 +53,6 @@
     }
     tr:last-child td { border-bottom: none; }
 
-    /* Ширина колонок */
     td:nth-child(1), th:nth-child(1) { width: 60px; text-align: center; }
     td:nth-child(2), th:nth-child(2) { min-width: 140px; max-width: 200px; }
     td:nth-child(3), th:nth-child(3) { min-width: 220px; }
@@ -99,7 +97,13 @@
     .archive-section{background:#1e1b4b;border:1px solid #6366f1}
     .archive-info{font-size:.9rem;line-height:1.6}
 
-    /* Мобільна адаптація */
+    .btnArchive{
+      background:linear-gradient(90deg,#8b5cf6,#ec4899);
+      color:#fff;border:none;border-radius:14px;padding:12px 24px;font-weight:900;
+      cursor:pointer;font-size:1rem
+    }
+    .btnArchive:disabled{opacity:.5;cursor:not-allowed}
+
     @media (max-width: 768px) {
       .row { gap: 8px; }
       .row > * { flex: 1 1 100%; min-width: 0; }
@@ -117,19 +121,19 @@
 
 <body>
 
-<<header class="header">
+<header class="header">
   <div class="container header__row">
     <div class="logo"><span class="logo__mark">SC</span> STOLAR CARP</div>
   </div>
 </header>
 
-<<main class="container">
+<main class="container">
 
   <div class="card">
     <h2 style="margin:0 0 8px 0;">⚖️ Зважування (адмін)</h2>
     <div class="muted" style="line-height:1.5">
-      1) Обери етап → 2) Обери W → 3) Внось/виправляй ваги → <b>Зберегти</b>.<<br>
-      Дані зберігаються в <b>weighings</b> (судді бачать) та <b>stageResults</b> (LIVE бачить).
+      1) Обери етап → 2) Обери W → 3) Внось/виправляй ваги → <b>Зберегти</b>.<br>
+      Дані зберігаються в <b>weighings</b> та <b>stageResults</b>.
     </div>
 
     <div class="hr"></div>
@@ -165,9 +169,9 @@
   <div id="archiveSection" class="card archive-section" style="display:none;">
     <h3 style="margin:0 0 12px 0;">📦 Архівація етапу</h3>
     <div class="archive-info muted">
-      Після завершення всіх зважувань натисни <b>«Архівувати етап»</b>.<<br>
-      Створить копію в <b>seasonResults/{рік}/{етап}</b> для загального рейтингу.<br>
-      Очистить <b>weighings</b> для наступного етапу.
+      Після завершення всіх зважувань натисни <b>«Архівувати етап»</b>.<br>
+      Архів збере підсумок етапу: місце, бал, вагу, Big Fish.<br>
+      Після цього сезонний рейтинг буде перерахований з усього архіву.
     </div>
     <div class="hr"></div>
     <div class="row" style="align-items:flex-end;">
@@ -186,15 +190,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="assets/js/firebase-init.js"></script>
-
-<style>
-  .btnArchive{
-    background:linear-gradient(90deg,#8b5cf6,#ec4899);
-    color:#fff;border:none;border-radius:14px;padding:12px 24px;font-weight:900;
-    cursor:pointer;font-size:1rem
-  }
-  .btnArchive:disabled{opacity:.5;cursor:not-allowed}
-</style>
 
 <script>
 (function(){
@@ -216,16 +211,34 @@
   const btnArchive    = $("btnArchive");
   const archiveMsg    = $("archiveMsg");
 
-  function esc(s){ return String(s ?? "").replace(/[&<<>"']/g, m=>({ "&":"&amp;","<<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+  let currentTeams = [];
+
+  function esc(s){
+    return String(s ?? "").replace(/[&<>"']/g, m=>({
+      "&":"&amp;",
+      "<":"&lt;",
+      ">":"&gt;",
+      '"':"&quot;",
+      "'":"&#39;"
+    }[m]));
+  }
+
   function norm(s){ return String(s ?? "").trim(); }
+
+  function num(v){
+    const n = Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+  }
 
   function setMsg(t, ok=true){
     msgEl.textContent = t || "";
     msgEl.className = "muted " + (t ? (ok ? "ok" : "err") : "");
   }
+
   function setDbg(t){
     dbgEl.textContent = t || "";
   }
+
   function setArchiveMsg(t, ok=true){
     archiveMsg.textContent = t || "";
     archiveMsg.className = "muted " + (t ? (ok ? "ok" : "err") : "");
@@ -252,7 +265,6 @@
     return `${compId}||${stageKey}||W${Number(wNo)}||${teamId}`;
   }
 
-  // ====== 1) Завантаження етапів ======
   async function loadStages(){
     stageSelect.innerHTML = `<option value="">— Завантаження… —</option>`;
     const items = [];
@@ -260,6 +272,7 @@
 
     try {
       const snap = await db.collection("competitions").get();
+
       snap.forEach(docSnap=>{
         const c = docSnap.data()||{};
         const compId = docSnap.id;
@@ -274,17 +287,19 @@
             const stageTitle = ev.name || ev.title || ev.label || `Етап ${idx+1}`;
             const label = `${brand} · ${compTitle} — ${stageTitle}`;
             const value = `${compId}||${key}`;
+
             if(!seen.has(value)){
               seen.add(value);
-              items.push({value, label, compId, stageKey: key});
+              items.push({value, label});
             }
           });
         } else {
           const label = `${brand} · ${compTitle} (Основний етап)`;
           const value = `${compId}||main`;
+
           if(!seen.has(value)){
             seen.add(value);
-            items.push({value, label, compId, stageKey: "main"});
+            items.push({value, label});
           }
         }
       });
@@ -294,12 +309,12 @@
     }
 
     items.sort((a,b)=>a.label.localeCompare(b.label,"uk"));
+
     stageSelect.innerHTML =
       `<option value="">— Обери етап —</option>` +
       items.map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
   }
 
-  // ====== 2) Команди з registrations ======
   async function loadTeamsFromRegistrations(compId, stageKey){
     let qRef = db.collection("registrations")
       .where("competitionId","==",compId)
@@ -322,42 +337,48 @@
       const teamName = r.teamName || r.team || r.name || "Команда";
 
       if(!zone) return;
+
       teams.push({
         regId: d.id,
         teamId: String(teamId),
         team: String(teamName),
         zone,
-        sector: String(sector),
+        sector: String(sector)
       });
     });
 
     const zoneOrder = {A:1,B:2,C:3};
+
     teams.sort((a,b)=>{
       const za = zoneOrder[a.zone] || 9;
       const zb = zoneOrder[b.zone] || 9;
       if(za !== zb) return za - zb;
+
       const na = Number(String(a.sector).replace(/[^\d.]/g,""));
       const nb = Number(String(b.sector).replace(/[^\d.]/g,""));
       if(Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+
       return String(a.sector).localeCompare(String(b.sector),"uk");
     });
 
     return teams;
   }
 
-  // ====== 3) Читаємо weighings (пріоритет) + stageResults (fallback) ======
   async function loadTeamData(compId, stageKey, teamId, wNo){
     const wId = weighingDocId(compId, stageKey, wNo, teamId);
+
     try {
       const wSnap = await db.collection("weighings").doc(wId).get();
+
       if (wSnap.exists) {
         const d = wSnap.data() || {};
+
         return {
           source: d.source === "admin-weigh" ? "admin" : "judge",
           weights: Array.isArray(d.weights) ? d.weights : [],
-          totalWeightKg: d.totalWeightKg || 0,
-          fishCount: d.fishCount || 0,
-          bigFishKg: d.bigFishKg || 0,
+          totalWeightKg: num(d.totalWeightKg),
+          fishCount: num(d.fishCount),
+          bigFishKg: num(d.bigFishKg),
           updatedAt: d.updatedAt || null
         };
       }
@@ -366,19 +387,27 @@
     }
 
     const stageDocId = stageResultsId(compId, stageKey);
+
     try {
-      const sSnap = await db.collection("stageResults").doc(stageDocId).collection("teams").doc(teamId).get();
+      const sSnap = await db
+        .collection("stageResults")
+        .doc(stageDocId)
+        .collection("teams")
+        .doc(teamId)
+        .get();
+
       if (sSnap.exists) {
         const d = sSnap.data() || {};
         const weighings = d.weighings || {};
         const slot = weighings[`W${wNo}`] || {};
         const fish = Array.isArray(slot.fish) ? slot.fish : [];
+
         return {
           source: "admin",
           weights: fish,
-          totalWeightKg: slot.total || 0,
-          fishCount: slot.count || 0,
-          bigFishKg: slot.big || 0,
+          totalWeightKg: num(slot.total),
+          fishCount: num(slot.count),
+          bigFishKg: num(slot.big),
           updatedAt: d.updatedAt || null
         };
       }
@@ -389,7 +418,6 @@
     return { source: "none", weights: [], totalWeightKg: 0, fishCount: 0, bigFishKg: 0 };
   }
 
-  // ====== 4) Рендер таблиць ======
   function zoneBlock(zone, rowsHtml, count){
     return `
       <div class="card">
@@ -431,16 +459,22 @@
       const fish = data.weights;
 
       const inputs = fish.map(v=>{
-        const val = (Number(v)||0) ? Number(v).toFixed(3) : "";
+        const val = num(v) > 0 ? num(v).toFixed(3) : "";
         return `<input class="fishInput" inputmode="decimal" placeholder="0.000" value="${esc(val)}" data-fish />`;
       }).join("");
 
-      const sum = fish.reduce((s,v)=>s + (Number(v)||0), 0);
+      const sum = fish.reduce((s,v)=>s + num(v), 0);
 
       let sourceClass = "source-none";
       let sourceText = "—";
-      if (data.source === "judge") { sourceClass = "source-judge"; sourceText = "суддя"; }
-      else if (data.source === "admin") { sourceClass = "source-admin"; sourceText = "адмін"; }
+
+      if (data.source === "judge") {
+        sourceClass = "source-judge";
+        sourceText = "суддя";
+      } else if (data.source === "admin") {
+        sourceClass = "source-admin";
+        sourceText = "адмін";
+      }
 
       return `
         <tr data-team="${esc(t.teamId)}" data-zone="${esc(t.zone)}">
@@ -454,7 +488,7 @@
               ${inputs || `<span class="muted">Немає риби</span>`}
               <button class="btnPlus" type="button" data-plus>+</button>
             </div>
-            <div class="small">Вписуй вагу окремо (4.560)</div>
+            <div class="small">Вписуй вагу окремо: 4.560</div>
           </td>
           <td style="text-align:right;">
             <div class="sumBox" data-sum>${sum.toFixed(3)}</div>
@@ -470,39 +504,39 @@
       `;
     }));
 
-    const tail = `</tbody></table>`;
-    return head + bodyRows.join("") + tail;
+    return head + bodyRows.join("") + `</tbody></table>`;
   }
 
   function recalcRowSum(tr){
-    const inputs = tr.querySelectorAll("input[data-fish]");
     let sum = 0;
-    inputs.forEach(inp=>{
-      const v = Number(String(inp.value||"").replace(",","."));
-      if(Number.isFinite(v) && v > 0) sum += v;
+
+    tr.querySelectorAll("input[data-fish]").forEach(inp=>{
+      const v = num(inp.value);
+      if(v > 0) sum += v;
     });
+
     const sumEl = tr.querySelector("[data-sum]");
     if(sumEl) sumEl.textContent = sum.toFixed(3);
   }
 
   function collectFish(tr){
     const arr = [];
+
     tr.querySelectorAll("input[data-fish]").forEach(inp=>{
-      const v = Number(String(inp.value||"").replace(",","."));
-      if(Number.isFinite(v) && v > 0) arr.push(v);
+      const v = num(inp.value);
+      if(v > 0) arr.push(v);
     });
+
     return arr;
   }
 
-  // ====== 5) Зберегти — пишемо в weighings + stageResults ======
   async function saveTeam(compId, stageKey, wKey, team, fish){
     const wNo = Number(wKey.replace("W", ""));
     const stageDocId = stageResultsId(compId, stageKey);
     const ts = fb.firestore.FieldValue.serverTimestamp();
 
-    // 5a) Зберегти в weighings
     const wDocId = weighingDocId(compId, stageKey, wNo, team.teamId);
-    const fishNum = fish.map(v => Number(v) || 0);
+    const fishNum = fish.map(v => num(v)).filter(v => v > 0);
     const total = fishNum.reduce((s,v)=>s+v, 0);
     const big = fishNum.length ? Math.max(...fishNum) : 0;
 
@@ -524,17 +558,21 @@
       source: "admin-weigh"
     }, { merge: true });
 
-    // 5b) Оновити stageResults/{doc}/teams/{teamId}
-    const teamRef = db.collection("stageResults").doc(stageDocId).collection("teams").doc(team.teamId);
+    const teamRef = db
+      .collection("stageResults")
+      .doc(stageDocId)
+      .collection("teams")
+      .doc(team.teamId);
+
     const oldSnap = await teamRef.get();
     const old = oldSnap.exists ? (oldSnap.data()||{}) : {};
-
     const weighings = old.weighings || {};
+
     weighings[wKey] = {
       fish: fishNum,
-      total: total,
+      total,
       count: fishNum.length,
-      big: big
+      big
     };
 
     const allW = ["W1","W2","W3","W4"];
@@ -545,11 +583,11 @@
 
     allW.forEach(k=>{
       const slot = weighings[k] || {};
-      const s = Number(slot.total || 0) || 0;
+      const s = num(slot.total);
       sums[k] = s;
       totalWeight += s;
-      totalBigFish = Math.max(totalBigFish, Number(slot.big || 0) || 0);
-      totalCount += Number(slot.count || 0) || 0;
+      totalBigFish = Math.max(totalBigFish, num(slot.big));
+      totalCount += num(slot.count);
     });
 
     await teamRef.set({
@@ -568,38 +606,42 @@
       updatedBy: "admin"
     }, { merge: true });
 
-    // 5c) Оновити stageResults/{doc} (teams масив для LIVE)
     const stageRef = db.collection("stageResults").doc(stageDocId);
     const stageSnap = await stageRef.get();
     const stageData = stageSnap.exists ? (stageSnap.data()||{}) : {};
 
     const teamsArr = Array.isArray(stageData.teams) ? stageData.teams.slice() : [];
-    const idx = teamsArr.findIndex(x => (x && (x.teamId === team.teamId)));
+    const idx = teamsArr.findIndex(x => x && x.teamId === team.teamId);
 
     const rowObj = {
       teamId: team.teamId,
       team: team.team,
       zone: team.zone,
       sector: team.sector,
-      w1: { c: (weighings.W1 || {}).count || 0, w: (weighings.W1 || {}).total || 0 },
-      w2: { c: (weighings.W2 || {}).count || 0, w: (weighings.W2 || {}).total || 0 },
-      w3: { c: (weighings.W3 || {}).count || 0, w: (weighings.W3 || {}).total || 0 },
-      w4: { c: (weighings.W4 || {}).count || 0, w: (weighings.W4 || {}).total || 0 },
+      w1: { c: num((weighings.W1 || {}).count), w: num((weighings.W1 || {}).total) },
+      w2: { c: num((weighings.W2 || {}).count), w: num((weighings.W2 || {}).total) },
+      w3: { c: num((weighings.W3 || {}).count), w: num((weighings.W3 || {}).total) },
+      w4: { c: num((weighings.W4 || {}).count), w: num((weighings.W4 || {}).total) },
       totalWeight,
       bigFish: totalBigFish,
-      total: totalCount
+      total: totalCount,
+      totalCount
     };
 
-    if(idx >= 0) teamsArr[idx] = rowObj; else teamsArr.push(rowObj);
+    if(idx >= 0) teamsArr[idx] = rowObj;
+    else teamsArr.push(rowObj);
 
     const zoneOrder = {A:1,B:2,C:3};
+
     teamsArr.sort((a,b)=>{
       const za = zoneOrder[a.zone] || 9;
       const zb = zoneOrder[b.zone] || 9;
       if(za !== zb) return za - zb;
+
       const na = Number(String(a.sector).replace(/[^\d.]/g,""));
       const nb = Number(String(b.sector).replace(/[^\d.]/g,""));
       if(Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+
       return String(a.sector).localeCompare(String(b.sector),"uk");
     });
 
@@ -614,7 +656,6 @@
     return { totalWeight, bigFish: totalBigFish, totalCount };
   }
 
-  // ====== 6) Завантаження таблиць ======
   async function loadTables(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const wKey = wSelect.value;
@@ -628,8 +669,10 @@
     setDbg("");
 
     let teams = [];
+
     try{
       teams = await loadTeamsFromRegistrations(compId, stageKey);
+      currentTeams = teams;
     }catch(e){
       setMsg("Помилка читання registrations: " + e.message, false);
       setDbg(String(e));
@@ -647,6 +690,7 @@
     setMsg(`✅ Команди: ${teams.length}. Завантажую дані…`, true);
 
     const zones = {A:[],B:[],C:[]};
+
     teams.forEach(t=>{
       if(zones[t.zone]) zones[t.zone].push(t);
     });
@@ -672,69 +716,158 @@
       });
     });
 
-    zonesWrap.addEventListener("click", async (ev)=>{
-      const btnPlus = ev.target.closest("[data-plus]");
-      const btnSave = ev.target.closest("[data-save]");
-      const tr = ev.target.closest("tr[data-team]");
-      if(!tr) return;
-
-      const { compId, stageKey } = parseStageValue(stageSelect.value);
-      const wKey = wSelect.value;
-
-      if(btnPlus){
-        const wrap = tr.querySelector(".fishWrap");
-        const noFish = wrap.querySelector(".muted");
-        if(noFish) noFish.remove();
-
-        const inp = document.createElement("input");
-        inp.className = "fishInput";
-        inp.setAttribute("inputmode","decimal");
-        inp.setAttribute("placeholder","0.000");
-        inp.setAttribute("data-fish","");
-        wrap.insertBefore(inp, wrap.querySelector("[data-plus]"));
-        inp.focus();
-        return;
-      }
-
-      if(btnSave){
-        const statusEl = tr.querySelector("[data-status]");
-        statusEl.textContent = "Зберігаю…";
-
-        const teamId = tr.getAttribute("data-team");
-        const teamObj = teams.find(x => x.teamId === teamId);
-        if(!teamObj){
-          statusEl.textContent = "❌ Немає команди";
-          return;
-        }
-
-        const fish = collectFish(tr);
-
-        try{
-          await saveTeam(compId, stageKey, wKey, teamObj, fish);
-          statusEl.innerHTML = "<span class='ok'>✅ Збережено</span>";
-          recalcRowSum(tr);
-
-          const sourceBadge = tr.querySelector(".source-badge");
-          if(sourceBadge){
-            sourceBadge.className = "source-badge source-admin";
-            sourceBadge.textContent = "адмін";
-          }
-
-          setMsg("✅ Збережено в weighings + stageResults.", true);
-          setDbg(`weighings/${weighingDocId(compId, stageKey, Number(wKey.replace("W","")), teamObj.teamId)}`);
-        }catch(e){
-          console.error(e);
-          statusEl.innerHTML = "<span class='err'>❌ Помилка</span>";
-          setMsg("Помилка збереження: " + e.message, false);
-          setDbg(String(e));
-        }
-      }
-    });
-
     setMsg(`✅ Таблиці готові. ${compId}__${stageKey} · ${wKey}`, true);
   }
 
-    // ====== 7) АРХІВАЦІЯ ЕТАПУ — зберігає загальний результат ======
+  zonesWrap.addEventListener("click", async (ev)=>{
+    const btnPlus = ev.target.closest("[data-plus]");
+    const btnSave = ev.target.closest("[data-save]");
+    const tr = ev.target.closest("tr[data-team]");
+    if(!tr) return;
+
+    const { compId, stageKey } = parseStageValue(stageSelect.value);
+    const wKey = wSelect.value;
+
+    if(btnPlus){
+      const wrap = tr.querySelector(".fishWrap");
+      const noFish = wrap.querySelector(".muted");
+      if(noFish) noFish.remove();
+
+      const inp = document.createElement("input");
+      inp.className = "fishInput";
+      inp.setAttribute("inputmode","decimal");
+      inp.setAttribute("placeholder","0.000");
+      inp.setAttribute("data-fish","");
+      wrap.insertBefore(inp, wrap.querySelector("[data-plus]"));
+      inp.focus();
+      return;
+    }
+
+    if(btnSave){
+      const statusEl = tr.querySelector("[data-status]");
+      statusEl.textContent = "Зберігаю…";
+
+      const teamId = tr.getAttribute("data-team");
+      const teamObj = currentTeams.find(x => x.teamId === teamId);
+
+      if(!teamObj){
+        statusEl.textContent = "❌ Немає команди";
+        return;
+      }
+
+      const fish = collectFish(tr);
+
+      try{
+        await saveTeam(compId, stageKey, wKey, teamObj, fish);
+
+        statusEl.innerHTML = "<span class='ok'>✅ Збережено</span>";
+        recalcRowSum(tr);
+
+        const sourceBadge = tr.querySelector(".source-badge");
+        if(sourceBadge){
+          sourceBadge.className = "source-badge source-admin";
+          sourceBadge.textContent = "адмін";
+        }
+
+        setMsg("✅ Збережено в weighings + stageResults.", true);
+        setDbg(`weighings/${weighingDocId(compId, stageKey, Number(wKey.replace("W","")), teamObj.teamId)}`);
+      }catch(e){
+        console.error(e);
+        statusEl.innerHTML = "<span class='err'>❌ Помилка</span>";
+        setMsg("Помилка збереження: " + e.message, false);
+        setDbg(String(e));
+      }
+    }
+  });
+
+  async function rebuildSeasonRatingFromArchive(seasonYear, ts){
+    const archivedStagesSnap = await db
+      .collection("seasonResults")
+      .doc(seasonYear)
+      .collection("stages")
+      .get();
+
+    const byTeam = new Map();
+    const archivedStages = [];
+
+    archivedStagesSnap.forEach(stageDoc => {
+      const stage = stageDoc.data() || {};
+      const archivedStageId = stageDoc.id;
+      const rows = Array.isArray(stage.standings) ? stage.standings : [];
+
+      archivedStages.push({
+        stageDocId: archivedStageId,
+        compId: stage.compId || "",
+        stageId: stage.stageId || "",
+        stageName: stage.stageName || archivedStageId,
+        archivedAt: stage.archivedAt || null
+      });
+
+      rows.forEach(row => {
+        const teamId = String(row.teamId || "");
+        if (!teamId) return;
+
+        const old = byTeam.get(teamId) || {
+          teamId,
+          team: String(row.team || "—"),
+          stages: {}
+        };
+
+        old.team = String(row.team || old.team || "—");
+
+        old.stages[archivedStageId] = {
+          stageDocId: archivedStageId,
+          compId: stage.compId || "",
+          stageId: stage.stageId || "",
+          stageName: stage.stageName || archivedStageId,
+
+          place: num(row.place),
+          points: num(row.points || row.place),
+          totalWeight: num(row.totalWeight),
+          bigFish: num(row.bigFish),
+          totalCount: num(row.totalCount)
+        };
+
+        byTeam.set(teamId, old);
+      });
+    });
+
+    const teams = Array.from(byTeam.values()).map(t => {
+      const stageValues = Object.values(t.stages || {});
+
+      const totalPoints = stageValues.reduce((s, x) => s + num(x.points), 0);
+      const totalWeight = stageValues.reduce((s, x) => s + num(x.totalWeight), 0);
+      const bigFish = stageValues.reduce((m, x) => Math.max(m, num(x.bigFish)), 0);
+      const totalCount = stageValues.reduce((s, x) => s + num(x.totalCount), 0);
+
+      return {
+        ...t,
+        played: stageValues.length,
+        totalPoints,
+        totalWeight,
+        bigFish,
+        totalCount
+      };
+    }).sort((a, b) => {
+      if (a.totalPoints !== b.totalPoints) return a.totalPoints - b.totalPoints;
+      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+      return b.bigFish - a.bigFish;
+    }).map((t, i) => ({
+      ...t,
+      seasonPlace: i + 1
+    }));
+
+    await db.collection("seasonRating").doc(seasonYear).set({
+      seasonYear,
+      updatedAt: ts,
+      source: "seasonResults",
+      archivedStages,
+      teams
+    }, { merge: true });
+
+    return { teamsCount: teams.length, stagesCount: archivedStages.length };
+  }
+
   async function archiveStage(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const seasonYear = norm(seasonYearInp.value) || "2026";
@@ -744,123 +877,180 @@
       return;
     }
 
-    function calcPlaces(teamsArr) {
-      const sorted = teamsArr.slice().sort((a, b) => {
-        if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
-        if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
-        return b.totalCount - a.totalCount;
-      });
-      const places = {};
-      sorted.forEach((t, i) => { places[t.teamId] = i + 1; });
-      return places;
-    }
+    const stageDocId = stageResultsId(compId, stageKey);
 
-    if(!confirm(`Архівувати етап ${compId}__${stageKey} у seasonResults/${seasonYear}?`)){
+    if(!confirm(`Архівувати готовий результат ${stageDocId} у сезон ${seasonYear}?`)){
       return;
     }
 
     btnArchive.disabled = true;
-    setArchiveMsg("STEP 0 — Підготовка…", true);
+    setArchiveMsg("STEP 0 — Підготовка архіву…", true);
 
     try {
-      const stageDocId = stageResultsId(compId, stageKey);
       const ts = fb.firestore.FieldValue.serverTimestamp();
 
+      const stageRef = db.collection("stageResults").doc(stageDocId);
+
       setArchiveMsg("STEP 1 — Читаю stageResults…", true);
-      const stageSnap = await db.collection("stageResults").doc(stageDocId).get();
+      const stageSnap = await stageRef.get();
       const stageData = stageSnap.exists ? (stageSnap.data() || {}) : {};
 
-      setArchiveMsg("STEP 2 — Читаю команди…", true);
-      const teamsSnap = await db.collection("stageResults").doc(stageDocId).collection("teams").get();
-      const teamsData = [];
+      setArchiveMsg("STEP 2 — Читаю команди етапу…", true);
+      const teamsSnap = await stageRef.collection("teams").get();
+
+      let teamsData = [];
+
       teamsSnap.forEach(d => {
-        const t = d.data();
+        const t = d.data() || {};
+
         teamsData.push({
-          teamId: d.id,
-          team: t.team || "—",
-          zone: t.zone || "",
+          teamId: String(t.teamId || d.id),
+          team: String(t.team || t.teamName || "—"),
+          zone: String(t.zone || ""),
           sector: String(t.sector || ""),
-          w1: t.weighings?.W1 ? { c: t.weighings.W1.count, w: t.weighings.W1.total } : null,
-          w2: t.weighings?.W2 ? { c: t.weighings.W2.count, w: t.weighings.W2.total } : null,
-          w3: t.weighings?.W3 ? { c: t.weighings.W3.count, w: t.weighings.W3.total } : null,
-          w4: t.weighings?.W4 ? { c: t.weighings.W4.count, w: t.weighings.W4.total } : null,
-          totalCount: t.totalCount || 0,
-          bigFish: t.bigFish || 0,
-          totalWeight: t.totalWeight || 0
+
+          w1: t.weighings?.W1 ? { c: num(t.weighings.W1.count), w: num(t.weighings.W1.total) } : { c: 0, w: 0 },
+          w2: t.weighings?.W2 ? { c: num(t.weighings.W2.count), w: num(t.weighings.W2.total) } : { c: 0, w: 0 },
+          w3: t.weighings?.W3 ? { c: num(t.weighings.W3.count), w: num(t.weighings.W3.total) } : { c: 0, w: 0 },
+          w4: t.weighings?.W4 ? { c: num(t.weighings.W4.count), w: num(t.weighings.W4.total) } : { c: 0, w: 0 },
+
+          totalWeight: num(t.totalWeight),
+          bigFish: num(t.bigFish),
+          totalCount: num(t.totalCount)
         });
       });
 
+      if (!teamsData.length && Array.isArray(stageData.teams)) {
+        teamsData = stageData.teams.map(t => ({
+          teamId: String(t.teamId || ""),
+          team: String(t.team || t.teamName || "—"),
+          zone: String(t.zone || ""),
+          sector: String(t.sector || ""),
+
+          w1: t.w1 || { c: 0, w: 0 },
+          w2: t.w2 || { c: 0, w: 0 },
+          w3: t.w3 || { c: 0, w: 0 },
+          w4: t.w4 || { c: 0, w: 0 },
+
+          totalWeight: num(t.totalWeight),
+          bigFish: num(t.bigFish),
+          totalCount: num(t.total || t.totalCount)
+        })).filter(t => t.teamId);
+      }
+
       if (!teamsData.length) {
-        setArchiveMsg("⚠️ Немає даних команд для архівації.", false);
-        btnArchive.disabled = false;
+        setArchiveMsg("❌ Немає команд для архівації.", false);
         return;
       }
 
-      const places = calcPlaces(teamsData);
-      const standings = teamsData.map(t => ({
-        ...t,
-        place: places[t.teamId] || 0
-      })).sort((a, b) => a.place - b.place);
+      setArchiveMsg("STEP 3 — Рахую місця етапу…", true);
 
-      setArchiveMsg("STEP 3 — Записую в seasonResults…", true);
-      const seasonRef = db.collection("seasonResults").doc(seasonYear).collection("stages").doc(stageDocId);
+      const standings = teamsData
+        .slice()
+        .sort((a, b) => {
+          if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+          if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
+          return b.totalCount - a.totalCount;
+        })
+        .map((t, i) => ({
+          place: i + 1,
+          points: i + 1,
 
-      await seasonRef.set({
+          teamId: t.teamId,
+          team: t.team,
+          zone: t.zone,
+          sector: t.sector,
+
+          w1: t.w1,
+          w2: t.w2,
+          w3: t.w3,
+          w4: t.w4,
+
+          totalWeight: num(t.totalWeight),
+          bigFish: num(t.bigFish),
+          totalCount: num(t.totalCount)
+        }));
+
+      const archiveRef = db
+        .collection("seasonResults")
+        .doc(seasonYear)
+        .collection("stages")
+        .doc(stageDocId);
+
+      setArchiveMsg("STEP 4 — Записую результат етапу в архів…", true);
+
+      await archiveRef.set({
+        seasonYear,
         compId,
         stageId: stageKey,
-        seasonYear,
-        stageName: stageData.stageName || stageDocId,
+        stageDocId,
+
+        stageName: stageData.stageName || stageData.name || stageDocId,
+
         archivedAt: ts,
-        archivedBy: auth.currentUser?.uid || "unknown",
-        standings,                    // ← загальний результат з місцями
+        archivedBy: auth.currentUser ? auth.currentUser.uid : "unknown",
+
+        standings,
+
         summary: {
           teamsCount: standings.length,
-          totalWeight: standings.reduce((s, t) => s + t.totalWeight, 0),
-          maxBigFish: Math.max(...standings.map(t => t.bigFish), 0)
+          totalWeight: standings.reduce((s, t) => s + num(t.totalWeight), 0),
+          maxBigFish: standings.reduce((m, t) => Math.max(m, num(t.bigFish)), 0),
+          totalCount: standings.reduce((s, t) => s + num(t.totalCount), 0)
         },
+
         isArchived: true,
         isActive: false
-      });
+      }, { merge: true });
 
-      setArchiveMsg("STEP 4 — Читаю weighings для видалення…", true);
+      setArchiveMsg("STEP 5 — Перераховую рейтинг сезону з усього архіву…", true);
+
+      const ratingInfo = await rebuildSeasonRatingFromArchive(seasonYear, ts);
+
+      setArchiveMsg("STEP 6 — Читаю weighings для очищення…", true);
+
       const weighingsSnap = await db.collection("weighings")
         .where("compId", "==", compId)
         .where("stageId", "==", stageKey)
         .get();
 
-      setArchiveMsg("STEP 5 — Видаляю weighings…", true);
-      let delBatch = db.batch();
-      let delCount = 0;
+      const refs = [];
+      weighingsSnap.forEach(d => refs.push(d.ref));
+
       let deletedTotal = 0;
 
-      weighingsSnap.forEach(d => {
-        delBatch.delete(db.collection("weighings").doc(d.id));
-        delCount++;
-        deletedTotal++;
-        if (delCount >= 400) {
-          // 🔧 Виправлено: додано await
-          delBatch.commit();
-          delBatch = db.batch();
-          delCount = 0;
-        }
-      });
-      if (delCount > 0) await delBatch.commit();
+      for (let i = 0; i < refs.length; i += 400) {
+        const batch = db.batch();
+        const chunk = refs.slice(i, i + 400);
 
-      setArchiveMsg("STEP 6 — Позначаю stageResults як архівований…", true);
-      await db.collection("stageResults").doc(stageDocId).set({
+        chunk.forEach(ref => batch.delete(ref));
+
+        await batch.commit();
+        deletedTotal += chunk.length;
+
+        setArchiveMsg(`STEP 6 — Видалено weighings ${deletedTotal}/${refs.length}…`, true);
+      }
+
+      setArchiveMsg("STEP 7 — Позначаю stageResults як архівований…", true);
+
+      await stageRef.set({
         archived: true,
         archivedAt: ts,
         archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
       }, { merge: true });
 
-      setArchiveMsg(`✅ Архівовано! ${standings.length} команд. Видалено ${deletedTotal} weighings.`, true);
-      setMsg("Етап архівовано. Можна починати наступний.", true);
+      setArchiveMsg(
+        `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Видалено weighings: ${deletedTotal}.`,
+        true
+      );
+
+      setMsg("✅ Етап архівовано. Сезонний рейтинг перераховано з архіву.", true);
 
     } catch(e) {
       console.error("Archive error:", e);
 
       setArchiveMsg(
-        `❌ ПОМИЛКА НА STEP
+        `❌ ПОМИЛКА
 CODE: ${e.code || "—"}
 MSG: ${e.message || "—"}
 STACK: ${e.stack || "—"}`,
@@ -871,8 +1061,6 @@ STACK: ${e.stack || "—"}`,
     }
   }
 
-
-  // ====== INIT ======
   async function init(){
     if(!auth || !db || !fb){
       setMsg("Firebase не ініціалізувався.", false);
@@ -884,7 +1072,9 @@ STACK: ${e.stack || "—"}`,
         setMsg("Увійди як адмін.", false);
         return;
       }
+
       const ok = await requireAdmin(user);
+
       if(!ok){
         setMsg("Доступ заборонено.", false);
         setTimeout(()=>{ window.location.href = "index.html"; }, 2000);
@@ -892,6 +1082,7 @@ STACK: ${e.stack || "—"}`,
       }
 
       await loadStages();
+
       setMsg("Обери етап та W → натисни «Завантажити таблиці».", true);
 
       $("btnReloadStages").onclick = async ()=>{

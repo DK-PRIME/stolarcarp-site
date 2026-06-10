@@ -225,19 +225,25 @@
                       const weights = Array.isArray(w.weights) ? w.weights : [];
 
                       weights.forEach((val, idx) => {
-                        const weight = Number(val);
-                        if (!Number.isFinite(weight) || weight <= 0) return;
+  let weight = 0;
 
-                        allFish.push({
-                          fishId: `${d.id}::${idx}`,
-                          teamId,
-                          teamName,
-                          weighNo,
-                          day,
-                          weight
-                        });
-                      });
-                    });
+  if (typeof val === "number" || typeof val === "string") {
+    weight = Number(val);
+  } else if (val && typeof val === "object") {
+    weight = Number(val.kg ?? val.weight ?? val.value ?? 0);
+  }
+
+  if (!Number.isFinite(weight) || weight <= 0) return;
+
+  allFish.push({
+    fishId: `${d.id}::${idx}`,
+    teamId,
+    teamName,
+    weighNo,
+    day,
+    weight
+  });
+});
 
                     const winners = computeWinners(allFish);
                     render(eligibleTeams, allFish, winners);

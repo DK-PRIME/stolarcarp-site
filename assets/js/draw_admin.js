@@ -3,17 +3,15 @@
 // ✅ competitions -> stageSelect
 // ✅ loads ALL confirmed registrations once, filters locally
 // ✅ unique sectors A1..C8
-// ✅ per-row save: drawKey/drawZone/drawSector/bigFishTotal/drawAt
+// ✅ per-row save/clear: drawKey/drawZone/drawSector/bigFishTotal/drawAt
+// ✅ if sector = empty -> removes team from draw
 // ✅ keeps selected stage (localStorage restore)
-// ✅ after save -> sorts A..C + sector
-// ✅ after each save -> updates stageResults/{activeKey} + settings/app.activeKey (LIVE)
+// ✅ after save/clear -> sorts A..C + sector
+// ✅ after each save/clear -> updates stageResults/{activeKey} + settings/app.activeKey (LIVE)
 
 (function () {
   "use strict";
 
-  // ─────────────────────────────────────────────────────────────
-  // CONFIG
-  // ─────────────────────────────────────────────────────────────
   const CONFIG = {
     ADMIN_UID: "5Dt6fN64c3aWACYV1WacxV2BHDl2",
     LS_KEY_STAGE: "sc_draw_selected_stage_v2",
@@ -35,9 +33,6 @@
     return arr;
   })();
 
-  // ─────────────────────────────────────────────────────────────
-  // STATE
-  // ─────────────────────────────────────────────────────────────
   const state = {
     isAdmin: false,
     stageNameByKey: new Map(),
@@ -46,9 +41,6 @@
     usedSectorSet: new Set()
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // DOM ELEMENTS
-  // ─────────────────────────────────────────────────────────────
   const els = {
     stageSelect: document.getElementById("stageSelect"),
     qInput: document.getElementById("q"),
@@ -57,9 +49,6 @@
     countInfo: document.getElementById("countInfo")
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // INIT CHECK
-  // ─────────────────────────────────────────────────────────────
   const auth = window.scAuth;
   const db = window.scDb;
 
@@ -68,9 +57,6 @@
     return;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // UTILS
-  // ─────────────────────────────────────────────────────────────
   const utils = {
     esc: (s) =>
       String(s ?? "")
@@ -154,9 +140,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // AUTH
-  // ─────────────────────────────────────────────────────────────
   const authModule = {
     requireAdmin: async (user) => {
       if (!user) return false;
@@ -167,9 +150,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // FIRESTORE
-  // ─────────────────────────────────────────────────────────────
   const firestore = {
     loadStagesToSelect: async () => {
       if (!els.stageSelect) return;
@@ -316,9 +296,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // FILTERS
-  // ─────────────────────────────────────────────────────────────
   const filters = {
     rebuildUsedSectors: () => {
       state.usedSectorSet = new Set();
@@ -367,9 +344,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // RENDER
-  // ─────────────────────────────────────────────────────────────
   const render = {
     sectorOptionsHTML: (cur, docId) => {
       const current = utils.norm(cur);
@@ -416,7 +390,6 @@
       els.drawRows.innerHTML = `<div class="draw-wrap">${state.regsFiltered.map(render.rowHTML).join("")}</div>`;
     },
 
-    // Row feedback helpers
     showRowMsg: (wrap, text, ok = true) => {
       const el = wrap.querySelector(".rowMsg");
       if (!el) return;
@@ -438,9 +411,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // HANDLERS
-  // ─────────────────────────────────────────────────────────────
   const handlers = {
     saveRow: async (e) => {
       const btn = e.target.closest(".saveBtnRow");
@@ -465,15 +435,69 @@
       const docId = wrap.getAttribute("data-docid");
       const sectorVal = utils.norm(wrap.querySelector(".sectorPick")?.value || "");
       const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
+      const ts = window.firebase.firestore.FieldValue.serverTimestamp();
 
+      if (!docId) return;
+
+      // ✅ NEW: якщо вибрано "— Оберіть сектор —", очищаємо жеребкування команди
       if (!sectorVal) {
-        render.setRowState(wrap, "is-err");
-        render.setBtnIcon(wrap, "err");
-        render.showRowMsg(wrap, "Оберіть сектор", false);
-        setTimeout(() => {
-          render.setRowState(wrap, null);
-          render.setBtnIcon(wrap, "save");
-        }, 1400);
+        try {
+          render.setRowState(wrap, "is-saving");
+          render.setBtnIcon(wrap, "saving");
+          render.showRowMsg(wrap, "Очищення…", true);
+
+          const del = window.firebase.firestore.FieldValue.delete();
+
+          await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).update({
+            drawKey: del,
+            drawZone: del,
+            drawSector: del,
+            bigFishTotal: bigFish,
+            drawAt: ts
+          });
+
+          await db
+            .collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
+            .doc(docId)
+            .set(
+              {
+                drawKey: del,
+                drawZone: del,
+                drawSector: del,
+                bigFishTotal: bigFish,
+                drawAt: ts
+              },
+              { merge: true }
+            );
+
+          const a = state.regsAllConfirmed.find((x) => x._id === docId);
+          if (a) {
+            a.drawKey = "";
+            a.bigFishTotal = bigFish;
+          }
+
+          render.setRowState(wrap, "is-ok");
+          render.setBtnIcon(wrap, "ok");
+          render.showRowMsg(wrap, `Очищено ${utils.fmtTimeNow()}`, true);
+
+          filters.apply();
+          await firestore.publishStageResultsTeams();
+
+          utils.setMsg("✅ Команду забрано з сектора, Live оновлено", true);
+          setTimeout(() => utils.setMsg("", true), 1200);
+        } catch (err) {
+          console.error(err);
+          render.setRowState(wrap, "is-err");
+          render.setBtnIcon(wrap, "err");
+          render.showRowMsg(wrap, "Помилка очищення", false);
+          utils.setMsg("Помилка очищення жеребкування", false);
+
+          setTimeout(() => {
+            render.setRowState(wrap, null);
+            render.setBtnIcon(wrap, "save");
+          }, 1700);
+        }
+
         return;
       }
 
@@ -506,10 +530,9 @@
           drawZone: zone,
           drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
           bigFishTotal: bigFish,
-          drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
+          drawAt: ts
         });
 
-        // MIRROR → public_participants
         await db
           .collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
           .doc(docId)
@@ -519,7 +542,7 @@
               drawZone: zone,
               drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
               bigFishTotal: bigFish,
-              drawAt: window.firebase.firestore.FieldValue.serverTimestamp()
+              drawAt: ts
             },
             { merge: true }
           );
@@ -544,6 +567,8 @@
         render.setRowState(wrap, "is-err");
         render.setBtnIcon(wrap, "err");
         render.showRowMsg(wrap, "Помилка (Rules/доступ)", false);
+        utils.setMsg("Помилка збереження", false);
+
         setTimeout(() => {
           render.setRowState(wrap, null);
           render.setBtnIcon(wrap, "save");
@@ -552,9 +577,6 @@
     }
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // EVENT LISTENERS
-  // ─────────────────────────────────────────────────────────────
   const bindEvents = () => {
     document.addEventListener("click", handlers.saveRow);
 
@@ -566,9 +588,6 @@
     els.qInput?.addEventListener("input", () => filters.apply());
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // BOOT
-  // ─────────────────────────────────────────────────────────────
   const boot = () => {
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
@@ -613,9 +632,6 @@
     });
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // START
-  // ─────────────────────────────────────────────────────────────
   bindEvents();
   boot();
 })();

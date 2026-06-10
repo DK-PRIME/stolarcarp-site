@@ -138,6 +138,26 @@
       font-size:.85rem;
     }
 
+    .mealOpenWrap{
+      display:flex;
+      justify-content:center;
+      margin:12px 0 16px;
+    }
+
+    .mealOpenBtn{
+      border:none;
+      width:100%;
+      max-width:420px;
+      border-radius:18px;
+      padding:13px 18px;
+      font-weight:950;
+      font-size:1rem;
+      cursor:pointer;
+      color:#111827;
+      background:linear-gradient(90deg,#facc15,#f97316);
+      box-shadow:0 16px 34px rgba(0,0,0,.35);
+    }
+
     .mealBox{
       margin:10px 0 12px;
       padding:14px;
@@ -192,7 +212,12 @@
       color:#fff;
     }
 
-    .mealBtn[hidden]{ display:none !important; }
+    [hidden],
+    .mealBtn[hidden],
+    .mealBox[hidden],
+    .mealOpenWrap[hidden]{
+      display:none !important;
+    }
 
     .mealStatus{
       color:#94a3b8;
@@ -517,7 +542,13 @@
     <h1 id="pageTitle" class="pageTitle">Змагання</h1>
     <div id="pageSub" class="pageSub"></div>
 
-    <div id="mealBox" class="mealBox">
+    <div id="mealOpenWrap" class="mealOpenWrap" hidden>
+      <button id="btnMealGateOpen" class="mealOpenBtn" type="button">
+        🍽 Відкрити харчування
+      </button>
+    </div>
+
+    <div id="mealBox" class="mealBox" hidden>
       <div class="mealHead">
         <div>
           <div class="mealTitle">🍽 Харчування</div>
@@ -592,6 +623,177 @@
 
   <script src="assets/js/firebase-init.js?v=20260610-2"></script>
   <script src="assets/js/participation.js?v=20260610-7"></script>
-  <script src="assets/js/meal_orders.js?v=20260611-2"></script>
+  <script src="assets/js/meal_orders.js?v=20260611-3"></script>
+
+  <script>
+    (function(){
+      "use strict";
+
+      const MEAL_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+
+      const $ = id => document.getElementById(id);
+
+      const openWrap = $("mealOpenWrap");
+      const openBtn  = $("btnMealGateOpen");
+      const mealBox  = $("mealBox");
+
+      const btnOrder = $("btnOpenMealOrder");
+      const btnList  = $("btnOpenMealList");
+      const btnClear = $("btnClearMealOrders");
+
+      let currentUser = null;
+      let isOwner = false;
+      let ctx = null;
+      let unsubGate = null;
+
+      function waitScReady(){
+        return new Promise(resolve => {
+          const tick = () => {
+            if (window.scDb && window.scAuth && window.firebase) {
+              resolve();
+              return;
+            }
+            setTimeout(tick, 100);
+          };
+          tick();
+        });
+      }
+
+      function waitContext(){
+        return new Promise(resolve => {
+          const tick = () => {
+            ctx = window.scMealContext || ctx;
+
+            if (ctx && ctx.competitionId && ctx.stageId) {
+              resolve(ctx);
+              return;
+            }
+
+            setTimeout(tick, 150);
+          };
+          tick();
+        });
+      }
+
+      function gateDocId(){
+        if (!ctx || !ctx.competitionId || !ctx.stageId) return "";
+        return String(`${ctx.competitionId}__${ctx.stageId}`).replace(/[\/#?\[\]]/g, "_");
+      }
+
+      function setMealVisible(open){
+        if (mealBox) mealBox.hidden = !open;
+
+        if (btnOrder) btnOrder.hidden = !open;
+        if (btnList)  btnList.hidden = !open;
+
+        if (btnClear) btnClear.hidden = !(open && isOwner);
+
+        if (openWrap) openWrap.hidden = open || !isOwner;
+
+        if (open && window.scMeals && typeof window.scMeals.refreshAdminButtons === "function") {
+          window.scMeals.refreshAdminButtons();
+          setTimeout(() => {
+            if (btnOrder) btnOrder.hidden = false;
+            if (btnList)  btnList.hidden = false;
+            if (btnClear) btnClear.hidden = !isOwner;
+          }, 300);
+        }
+      }
+
+      async function setGateOpen(open){
+        const db = window.scDb;
+        const fb = window.firebase;
+        const id = gateDocId();
+
+        if (!db || !fb || !id || !isOwner) return;
+
+        await db.collection("mealGates").doc(id).set({
+          competitionId: ctx.competitionId,
+          stageId: ctx.stageId,
+          isOpen: !!open,
+          openedBy: currentUser ? currentUser.uid : "",
+          updatedAt: fb.firestore.FieldValue.serverTimestamp()
+        }, { merge:true });
+      }
+
+      function subscribeGate(){
+        const db = window.scDb;
+        const id = gateDocId();
+
+        if (!db || !id) return;
+
+        if (unsubGate) {
+          unsubGate();
+          unsubGate = null;
+        }
+
+        unsubGate = db.collection("mealGates").doc(id).onSnapshot(
+          snap => {
+            const data = snap.exists ? (snap.data() || {}) : {};
+            setMealVisible(data.isOpen === true);
+          },
+          err => {
+            console.error("[MealGate] read error:", err);
+            setMealVisible(false);
+          }
+        );
+      }
+
+      async function init(){
+        await waitScReady();
+
+        const auth = window.scAuth;
+
+        currentUser = auth.currentUser || await new Promise(resolve => {
+          const unsub = auth.onAuthStateChanged(user => {
+            unsub();
+            resolve(user || null);
+          });
+        });
+
+        isOwner = !!currentUser && currentUser.uid === MEAL_OWNER_UID;
+
+        await waitContext();
+
+        subscribeGate();
+
+        if (openBtn) {
+          openBtn.onclick = async () => {
+            try {
+              await setGateOpen(true);
+            } catch (e) {
+              console.error("[MealGate] open error:", e);
+              alert("Не вдалося відкрити харчування. Перевір Firestore Rules для mealGates.");
+            }
+          };
+        }
+
+        const patchClear = () => {
+          if (!window.scMeals || typeof window.scMeals.clearOrders !== "function") {
+            setTimeout(patchClear, 150);
+            return;
+          }
+
+          const oldClear = window.scMeals.clearOrders;
+
+          window.scMeals.clearOrders = async function(){
+            await oldClear.apply(window.scMeals, arguments);
+
+            if (isOwner) {
+              try {
+                await setGateOpen(false);
+              } catch (e) {
+                console.error("[MealGate] close after clear error:", e);
+              }
+            }
+          };
+        };
+
+        patchClear();
+      }
+
+      init();
+    })();
+  </script>
 </body>
 </html>

@@ -1,5 +1,12 @@
 // assets/js/admin-weighings.js
-// STOLAR CARP • Адмін зважування + архів + очищення LIVE / BigFish Total + автоактивація наступного етапу
+// STOLAR CARP • Адмін зважування + архів + очищення LIVE
+// ✅ Вага кожної риби окремо
+// ✅ Галочка "Амур" біля кожної риби
+// ✅ Короп = fishType: "carp"
+// ✅ Амур = fishType: "amur"
+// ✅ bigCarp = найбільший короп
+// ✅ bigAmur = найбільший амур
+// ✅ backward compatible зі старими weights: [4.560, 7.100]
 
 (function(){
   "use strict";
@@ -40,6 +47,61 @@
   function num(v){
     const n = Number(String(v ?? "").replace(",", "."));
     return Number.isFinite(n) ? n : 0;
+  }
+
+  function fishKg(f){
+    if (typeof f === "number" || typeof f === "string") return num(f);
+    return num(f?.kg ?? f?.weight ?? f?.value);
+  }
+
+  function fishIsAmur(f){
+    if (!f || typeof f !== "object") return false;
+    return f.isAmur === true || f.fishType === "amur" || f.type === "amur";
+  }
+
+  function normalizeFishItem(f){
+    const kg = fishKg(f);
+    if (kg <= 0) return null;
+
+    const isAmur = fishIsAmur(f);
+
+    return {
+      kg,
+      fishType: isAmur ? "amur" : "carp",
+      isAmur
+    };
+  }
+
+  function normalizeFishArray(arr){
+    return Array.isArray(arr)
+      ? arr.map(normalizeFishItem).filter(Boolean)
+      : [];
+  }
+
+  function fishStats(fishArr){
+    const fish = normalizeFishArray(fishArr);
+    const total = fish.reduce((s, f) => s + num(f.kg), 0);
+    const count = fish.length;
+    const bigFish = count ? Math.max(...fish.map(f => num(f.kg))) : 0;
+
+    const carp = fish.filter(f => f.fishType === "carp");
+    const amur = fish.filter(f => f.fishType === "amur");
+
+    const carpWeight = carp.reduce((s, f) => s + num(f.kg), 0);
+    const amurWeight = amur.reduce((s, f) => s + num(f.kg), 0);
+
+    return {
+      fish,
+      total,
+      count,
+      bigFish,
+      bigCarp: carp.length ? Math.max(...carp.map(f => num(f.kg))) : 0,
+      bigAmur: amur.length ? Math.max(...amur.map(f => num(f.kg))) : 0,
+      carpCount: carp.length,
+      amurCount: amur.length,
+      carpWeight,
+      amurWeight
+    };
   }
 
   function eventKey(ev, idx){
@@ -267,12 +329,16 @@
 
       if (wSnap.exists) {
         const d = wSnap.data() || {};
+        const fish = normalizeFishArray(d.weights || d.fish || []);
+
         return {
           source: d.source === "admin-weigh" ? "admin" : "judge",
-          weights: Array.isArray(d.weights) ? d.weights : [],
+          weights: fish,
           totalWeightKg: num(d.totalWeightKg),
           fishCount: num(d.fishCount),
-          bigFishKg: num(d.bigFishKg)
+          bigFishKg: num(d.bigFishKg),
+          bigCarpKg: num(d.bigCarpKg || d.bigCarp),
+          bigAmurKg: num(d.bigAmurKg || d.bigAmur)
         };
       }
     } catch(e) {
@@ -291,14 +357,16 @@
       if (sSnap.exists) {
         const d = sSnap.data() || {};
         const slot = (d.weighings || {})[`W${wNo}`] || {};
-        const fish = Array.isArray(slot.fish) ? slot.fish : [];
+        const fish = normalizeFishArray(slot.fish || []);
 
         return {
           source: "admin",
           weights: fish,
           totalWeightKg: num(slot.total),
           fishCount: num(slot.count),
-          bigFishKg: num(slot.big)
+          bigFishKg: num(slot.big),
+          bigCarpKg: num(slot.bigCarp),
+          bigAmurKg: num(slot.bigAmur)
         };
       }
     } catch(e) {
@@ -310,7 +378,9 @@
       weights: [],
       totalWeightKg: 0,
       fishCount: 0,
-      bigFishKg: 0
+      bigFishKg: 0,
+      bigCarpKg: 0,
+      bigAmurKg: 0
     };
   }
 
@@ -322,6 +392,29 @@
           <span class="badge">команд: ${count}</span>
         </div>
         <div class="table-wrap">${rowsHtml}</div>
+      </div>
+    `;
+  }
+
+  function fishInputHTML(f){
+    const fish = normalizeFishItem(f) || { kg: "", fishType: "carp", isAmur: false };
+    const val = num(fish.kg) > 0 ? num(fish.kg).toFixed(3) : "";
+    const checked = fish.fishType === "amur" ? "checked" : "";
+    const cls = fish.fishType === "amur" ? " fishLine-amur" : "";
+
+    return `
+      <div class="fishLine${cls}" data-fish-line>
+        <input
+          class="fishInput"
+          inputmode="decimal"
+          placeholder="0.000"
+          value="${esc(val)}"
+          data-fish
+        />
+        <label class="amurCheck">
+          <input type="checkbox" data-amur ${checked}>
+          <span>Амур</span>
+        </label>
       </div>
     `;
   }
@@ -350,14 +443,9 @@
 
     const bodyRows = await Promise.all(teams.map(async t => {
       const data = await loadTeamData(compId, stageKey, t.teamId, wNo);
-      const fish = data.weights || [];
-
-      const inputs = fish.map(v => {
-        const val = num(v) > 0 ? num(v).toFixed(3) : "";
-        return `<input class="fishInput" inputmode="decimal" placeholder="0.000" value="${esc(val)}" data-fish />`;
-      }).join("");
-
-      const sum = fish.reduce((s, v) => s + num(v), 0);
+      const fish = normalizeFishArray(data.weights || []);
+      const inputs = fish.map(fishInputHTML).join("");
+      const stats = fishStats(fish);
 
       let sourceClass = "source-none";
       let sourceText = "—";
@@ -382,10 +470,13 @@
               ${inputs || `<span class="muted">Немає риби</span>`}
               <button class="btnPlus" type="button" data-plus>+</button>
             </div>
-            <div class="small">Вписуй вагу окремо: 4.560</div>
+            <div class="small">Вага окремо. Галочка тільки якщо це амур.</div>
           </td>
           <td style="text-align:right;">
-            <div class="sumBox" data-sum>${sum.toFixed(3)}</div>
+            <div class="sumBox" data-sum>${stats.total.toFixed(3)}</div>
+            <div class="small" data-fish-stats>
+              Короп BF: ${stats.bigCarp.toFixed(3)} · Амур BF: ${stats.bigAmur.toFixed(3)}
+            </div>
           </td>
           <td style="text-align:center;">
             <span class="source-badge ${sourceClass}">${sourceText}</span>
@@ -402,23 +493,34 @@
   }
 
   function recalcRowSum(tr){
-    let sum = 0;
-
-    tr.querySelectorAll("input[data-fish]").forEach(inp => {
-      const v = num(inp.value);
-      if (v > 0) sum += v;
-    });
+    const fish = collectFish(tr);
+    const stats = fishStats(fish);
 
     const sumEl = tr.querySelector("[data-sum]");
-    if (sumEl) sumEl.textContent = sum.toFixed(3);
+    if (sumEl) sumEl.textContent = stats.total.toFixed(3);
+
+    const statsEl = tr.querySelector("[data-fish-stats]");
+    if (statsEl) {
+      statsEl.textContent = `Короп BF: ${stats.bigCarp.toFixed(3)} · Амур BF: ${stats.bigAmur.toFixed(3)}`;
+    }
   }
 
   function collectFish(tr){
     const arr = [];
 
-    tr.querySelectorAll("input[data-fish]").forEach(inp => {
-      const v = num(inp.value);
-      if (v > 0) arr.push(v);
+    tr.querySelectorAll("[data-fish-line]").forEach(line => {
+      const inp = line.querySelector("input[data-fish]");
+      const chk = line.querySelector("input[data-amur]");
+      const kg = num(inp?.value);
+
+      if (kg > 0) {
+        const isAmur = !!chk?.checked;
+        arr.push({
+          kg,
+          fishType: isAmur ? "amur" : "carp",
+          isAmur
+        });
+      }
     });
 
     return arr;
@@ -429,9 +531,8 @@
     const stageDocId = stageResultsId(compId, stageKey);
     const ts = fb.firestore.FieldValue.serverTimestamp();
 
-    const fishNum = fish.map(v => num(v)).filter(v => v > 0);
-    const total = fishNum.reduce((s, v) => s + v, 0);
-    const big = fishNum.length ? Math.max(...fishNum) : 0;
+    const stats = fishStats(fish);
+    const fishArr = stats.fish;
 
     const wDocId = weighingDocId(compId, stageKey, wNo, team.teamId);
 
@@ -443,10 +544,21 @@
       teamName: team.team,
       zone: team.zone,
       sector: Number(team.sector || 0),
-      weights: fishNum,
-      fishCount: fishNum.length,
-      totalWeightKg: total,
-      bigFishKg: big,
+
+      weights: fishArr,
+      weightsKg: fishArr.map(f => num(f.kg)),
+
+      fishCount: stats.count,
+      totalWeightKg: stats.total,
+      bigFishKg: stats.bigFish,
+
+      bigCarpKg: stats.bigCarp,
+      bigAmurKg: stats.bigAmur,
+      carpCount: stats.carpCount,
+      amurCount: stats.amurCount,
+      carpWeightKg: stats.carpWeight,
+      amurWeightKg: stats.amurWeight,
+
       status: "submitted",
       source: "admin-weigh",
       updatedAt: ts,
@@ -463,27 +575,48 @@
     const weighings = old.weighings || {};
 
     weighings[wKey] = {
-      fish: fishNum,
-      total,
-      count: fishNum.length,
-      big
+      fish: fishArr,
+      fishKg: fishArr.map(f => num(f.kg)),
+      total: stats.total,
+      count: stats.count,
+      big: stats.bigFish,
+      bigCarp: stats.bigCarp,
+      bigAmur: stats.bigAmur,
+      carpCount: stats.carpCount,
+      amurCount: stats.amurCount,
+      carpWeight: stats.carpWeight,
+      amurWeight: stats.amurWeight
     };
 
     let totalWeight = 0;
     let bigFish = 0;
+    let bigCarp = 0;
+    let bigAmur = 0;
     let totalCount = 0;
+    let carpCount = 0;
+    let amurCount = 0;
+    let carpWeight = 0;
+    let amurWeight = 0;
     const sums = {};
 
     ["W1", "W2", "W3", "W4"].forEach(k => {
       const slot = weighings[k] || {};
       const slotTotal = num(slot.total);
       const slotBig = num(slot.big);
+      const slotBigCarp = num(slot.bigCarp);
+      const slotBigAmur = num(slot.bigAmur);
       const slotCount = num(slot.count);
 
       sums[k] = slotTotal;
       totalWeight += slotTotal;
       bigFish = Math.max(bigFish, slotBig);
+      bigCarp = Math.max(bigCarp, slotBigCarp);
+      bigAmur = Math.max(bigAmur, slotBigAmur);
       totalCount += slotCount;
+      carpCount += num(slot.carpCount);
+      amurCount += num(slot.amurCount);
+      carpWeight += num(slot.carpWeight);
+      amurWeight += num(slot.amurWeight);
     });
 
     await teamRef.set({
@@ -497,11 +630,20 @@
       drawZone: team.zone,
       drawSector: team.sector,
       drawKey: `${team.zone}${team.sector}`,
+
       weighings,
       sums,
+
       totalWeight,
       bigFish,
+      bigCarp,
+      bigAmur,
       totalCount,
+      carpCount,
+      amurCount,
+      carpWeight,
+      amurWeight,
+
       updatedAt: ts,
       updatedBy: "admin"
     }, { merge: true });
@@ -521,13 +663,41 @@
       drawZone: team.zone,
       drawSector: team.sector,
       drawKey: `${team.zone}${team.sector}`,
-      w1: { c: num((weighings.W1 || {}).count), w: num((weighings.W1 || {}).total) },
-      w2: { c: num((weighings.W2 || {}).count), w: num((weighings.W2 || {}).total) },
-      w3: { c: num((weighings.W3 || {}).count), w: num((weighings.W3 || {}).total) },
-      w4: { c: num((weighings.W4 || {}).count), w: num((weighings.W4 || {}).total) },
+
+      w1: {
+        c: num((weighings.W1 || {}).count),
+        w: num((weighings.W1 || {}).total),
+        bigCarp: num((weighings.W1 || {}).bigCarp),
+        bigAmur: num((weighings.W1 || {}).bigAmur)
+      },
+      w2: {
+        c: num((weighings.W2 || {}).count),
+        w: num((weighings.W2 || {}).total),
+        bigCarp: num((weighings.W2 || {}).bigCarp),
+        bigAmur: num((weighings.W2 || {}).bigAmur)
+      },
+      w3: {
+        c: num((weighings.W3 || {}).count),
+        w: num((weighings.W3 || {}).total),
+        bigCarp: num((weighings.W3 || {}).bigCarp),
+        bigAmur: num((weighings.W3 || {}).bigAmur)
+      },
+      w4: {
+        c: num((weighings.W4 || {}).count),
+        w: num((weighings.W4 || {}).total),
+        bigCarp: num((weighings.W4 || {}).bigCarp),
+        bigAmur: num((weighings.W4 || {}).bigAmur)
+      },
+
       totalWeight,
       bigFish,
+      bigCarp,
+      bigAmur,
       totalCount,
+      carpCount,
+      amurCount,
+      carpWeight,
+      amurWeight,
       total: totalCount
     };
 
@@ -545,7 +715,7 @@
       updatedAt: ts
     }, { merge: true });
 
-    return { totalWeight, bigFish, totalCount };
+    return { totalWeight, bigFish, bigCarp, bigAmur, totalCount };
   }
 
   async function loadTables(){
@@ -608,6 +778,16 @@
       if (tr && ev.target.matches("input[data-fish]")) recalcRowSum(tr);
     });
 
+    zonesWrap.addEventListener("change", ev => {
+      if (!ev.target.matches("input[data-amur]")) return;
+
+      const line = ev.target.closest("[data-fish-line]");
+      const tr = ev.target.closest("tr[data-team]");
+
+      if (line) line.classList.toggle("fishLine-amur", ev.target.checked);
+      if (tr) recalcRowSum(tr);
+    });
+
     zonesWrap.addEventListener("click", async ev => {
       const btnPlus = ev.target.closest("[data-plus]");
       const btnSave = ev.target.closest("[data-save]");
@@ -622,14 +802,16 @@
         const noFish = wrap.querySelector(".muted");
         if (noFish) noFish.remove();
 
-        const inp = document.createElement("input");
-        inp.className = "fishInput";
-        inp.setAttribute("inputmode", "decimal");
-        inp.setAttribute("placeholder", "0.000");
-        inp.setAttribute("data-fish", "");
+        const holder = document.createElement("div");
+        holder.innerHTML = fishInputHTML(null).trim();
+        const line = holder.firstElementChild;
 
-        wrap.insertBefore(inp, wrap.querySelector("[data-plus]"));
-        inp.focus();
+        wrap.insertBefore(line, wrap.querySelector("[data-plus]"));
+
+        const inp = line.querySelector("input[data-fish]");
+        if (inp) inp.focus();
+
+        recalcRowSum(tr);
         return;
       }
 
@@ -647,9 +829,15 @@
 
         try {
           const fish = collectFish(tr);
-          await saveTeam(compId, stageKey, wKey, teamObj, fish);
+          const result = await saveTeam(compId, stageKey, wKey, teamObj, fish);
 
-          if (statusEl) statusEl.innerHTML = "<span class='ok'>✅ Збережено</span>";
+          if (statusEl) {
+            statusEl.innerHTML =
+              `<span class='ok'>✅ Збережено</span><br>` +
+              `<span>BF короп: ${result.bigCarp.toFixed(3)}</span><br>` +
+              `<span>BF амур: ${result.bigAmur.toFixed(3)}</span>`;
+          }
+
           recalcRowSum(tr);
 
           const sourceBadge = tr.querySelector(".source-badge");
@@ -658,7 +846,7 @@
             sourceBadge.textContent = "адмін";
           }
 
-          setMsg("✅ Збережено в weighings + stageResults.", true);
+          setMsg("✅ Збережено в weighings + stageResults. Короп/амур враховано.", true);
           setDbg(`weighings/${weighingDocId(compId, stageKey, Number(wKey.replace("W", "")), teamObj.teamId)}`);
         } catch(e) {
           console.error(e);
@@ -691,24 +879,40 @@
         team: String(w.teamName || "—"),
         zone: String(w.zone || ""),
         sector: String(w.sector || ""),
-        w1: { c:0, w:0 },
-        w2: { c:0, w:0 },
-        w3: { c:0, w:0 },
-        w4: { c:0, w:0 },
+        w1: { c:0, w:0, bigCarp:0, bigAmur:0 },
+        w2: { c:0, w:0, bigCarp:0, bigAmur:0 },
+        w3: { c:0, w:0, bigCarp:0, bigAmur:0 },
+        w4: { c:0, w:0, bigCarp:0, bigAmur:0 },
         totalWeight: 0,
         bigFish: 0,
-        totalCount: 0
+        bigCarp: 0,
+        bigAmur: 0,
+        totalCount: 0,
+        carpCount: 0,
+        amurCount: 0,
+        carpWeight: 0,
+        amurWeight: 0
       };
 
-      const weights = Array.isArray(w.weights) ? w.weights.map(num).filter(x => x > 0) : [];
-      const total = weights.reduce((s, x) => s + x, 0);
-      const big = weights.length ? Math.max(...weights) : 0;
-      const count = weights.length;
+      const fish = normalizeFishArray(w.weights || []);
+      const stats = fishStats(fish);
 
-      old[`w${weighNo}`] = { c: count, w: total };
-      old.totalWeight += total;
-      old.totalCount += count;
-      old.bigFish = Math.max(old.bigFish, big);
+      old[`w${weighNo}`] = {
+        c: stats.count,
+        w: stats.total,
+        bigCarp: stats.bigCarp,
+        bigAmur: stats.bigAmur
+      };
+
+      old.totalWeight += stats.total;
+      old.totalCount += stats.count;
+      old.bigFish = Math.max(old.bigFish, stats.bigFish);
+      old.bigCarp = Math.max(old.bigCarp, stats.bigCarp);
+      old.bigAmur = Math.max(old.bigAmur, stats.bigAmur);
+      old.carpCount += stats.carpCount;
+      old.amurCount += stats.amurCount;
+      old.carpWeight += stats.carpWeight;
+      old.amurWeight += stats.amurWeight;
 
       byTeam.set(teamId, old);
     });
@@ -759,6 +963,8 @@
           points: num(row.points || row.place),
           totalWeight: num(row.totalWeight),
           bigFish: num(row.bigFish),
+          bigCarp: num(row.bigCarp),
+          bigAmur: num(row.bigAmur),
           totalCount: num(row.totalCount)
         };
 
@@ -774,6 +980,8 @@
         totalPoints: vals.reduce((s, x) => s + num(x.points), 0),
         totalWeight: vals.reduce((s, x) => s + num(x.totalWeight), 0),
         bigFish: vals.reduce((m, x) => Math.max(m, num(x.bigFish)), 0),
+        bigCarp: vals.reduce((m, x) => Math.max(m, num(x.bigCarp)), 0),
+        bigAmur: vals.reduce((m, x) => Math.max(m, num(x.bigAmur)), 0),
         totalCount: vals.reduce((s, x) => s + num(x.totalCount), 0)
       };
     }).sort((a, b) => {
@@ -837,13 +1045,44 @@
           team: String(t.team || t.teamName || "—"),
           zone: String(t.zone || ""),
           sector: String(t.sector || ""),
-          w1: t.weighings?.W1 ? { c:num(t.weighings.W1.count), w:num(t.weighings.W1.total) } : { c:0, w:0 },
-          w2: t.weighings?.W2 ? { c:num(t.weighings.W2.count), w:num(t.weighings.W2.total) } : { c:0, w:0 },
-          w3: t.weighings?.W3 ? { c:num(t.weighings.W3.count), w:num(t.weighings.W3.total) } : { c:0, w:0 },
-          w4: t.weighings?.W4 ? { c:num(t.weighings.W4.count), w:num(t.weighings.W4.total) } : { c:0, w:0 },
+
+          w1: t.weighings?.W1 ? {
+            c:num(t.weighings.W1.count),
+            w:num(t.weighings.W1.total),
+            bigCarp:num(t.weighings.W1.bigCarp),
+            bigAmur:num(t.weighings.W1.bigAmur)
+          } : { c:0, w:0, bigCarp:0, bigAmur:0 },
+
+          w2: t.weighings?.W2 ? {
+            c:num(t.weighings.W2.count),
+            w:num(t.weighings.W2.total),
+            bigCarp:num(t.weighings.W2.bigCarp),
+            bigAmur:num(t.weighings.W2.bigAmur)
+          } : { c:0, w:0, bigCarp:0, bigAmur:0 },
+
+          w3: t.weighings?.W3 ? {
+            c:num(t.weighings.W3.count),
+            w:num(t.weighings.W3.total),
+            bigCarp:num(t.weighings.W3.bigCarp),
+            bigAmur:num(t.weighings.W3.bigAmur)
+          } : { c:0, w:0, bigCarp:0, bigAmur:0 },
+
+          w4: t.weighings?.W4 ? {
+            c:num(t.weighings.W4.count),
+            w:num(t.weighings.W4.total),
+            bigCarp:num(t.weighings.W4.bigCarp),
+            bigAmur:num(t.weighings.W4.bigAmur)
+          } : { c:0, w:0, bigCarp:0, bigAmur:0 },
+
           totalWeight: num(t.totalWeight),
           bigFish: num(t.bigFish),
-          totalCount: num(t.totalCount)
+          bigCarp: num(t.bigCarp),
+          bigAmur: num(t.bigAmur),
+          totalCount: num(t.totalCount),
+          carpCount: num(t.carpCount),
+          amurCount: num(t.amurCount),
+          carpWeight: num(t.carpWeight),
+          amurWeight: num(t.amurWeight)
         });
       });
 
@@ -855,13 +1094,19 @@
           team: String(t.team || t.teamName || "—"),
           zone: String(t.zone || ""),
           sector: String(t.sector || ""),
-          w1: t.w1 || { c:0, w:0 },
-          w2: t.w2 || { c:0, w:0 },
-          w3: t.w3 || { c:0, w:0 },
-          w4: t.w4 || { c:0, w:0 },
+          w1: t.w1 || { c:0, w:0, bigCarp:0, bigAmur:0 },
+          w2: t.w2 || { c:0, w:0, bigCarp:0, bigAmur:0 },
+          w3: t.w3 || { c:0, w:0, bigCarp:0, bigAmur:0 },
+          w4: t.w4 || { c:0, w:0, bigCarp:0, bigAmur:0 },
           totalWeight: num(t.totalWeight),
           bigFish: num(t.bigFish),
-          totalCount: num(t.total || t.totalCount)
+          bigCarp: num(t.bigCarp),
+          bigAmur: num(t.bigAmur),
+          totalCount: num(t.total || t.totalCount),
+          carpCount: num(t.carpCount),
+          amurCount: num(t.amurCount),
+          carpWeight: num(t.carpWeight),
+          amurWeight: num(t.amurWeight)
         })).filter(t => t.teamId);
       }
 
@@ -897,7 +1142,13 @@
           w4: t.w4,
           totalWeight: num(t.totalWeight),
           bigFish: num(t.bigFish),
-          totalCount: num(t.totalCount)
+          bigCarp: num(t.bigCarp),
+          bigAmur: num(t.bigAmur),
+          totalCount: num(t.totalCount),
+          carpCount: num(t.carpCount),
+          amurCount: num(t.amurCount),
+          carpWeight: num(t.carpWeight),
+          amurWeight: num(t.amurWeight)
         }));
 
       setArchiveMsg("STEP 4 — Записую архів етапу…", true);
@@ -920,7 +1171,11 @@
           teamsCount: standings.length,
           totalWeight: standings.reduce((s, t) => s + num(t.totalWeight), 0),
           maxBigFish: standings.reduce((m, t) => Math.max(m, num(t.bigFish)), 0),
-          totalCount: standings.reduce((s, t) => s + num(t.totalCount), 0)
+          maxBigCarp: standings.reduce((m, t) => Math.max(m, num(t.bigCarp)), 0),
+          maxBigAmur: standings.reduce((m, t) => Math.max(m, num(t.bigAmur)), 0),
+          totalCount: standings.reduce((s, t) => s + num(t.totalCount), 0),
+          carpCount: standings.reduce((s, t) => s + num(t.carpCount), 0),
+          amurCount: standings.reduce((s, t) => s + num(t.amurCount), 0)
         },
         isArchived: true,
         isActive: false
@@ -1048,7 +1303,6 @@ STACK: ${e.stack || "—"}`,
       `• weighings цього етапу\n` +
       `• stageResults цього етапу\n` +
       `• stageResults/teams цього етапу\n\n` +
-      `BigFish Total також очиститься, бо він читає weighings.\n\n` +
       `Архів seasonResults НЕ буде видалено.\n\n` +
       `Після очищення система автоматично активує наступний етап.`
     )) {
@@ -1085,7 +1339,7 @@ STACK: ${e.stack || "—"}`,
 
       if (activated) {
         setArchiveMsg(
-          `✅ LIVE очищено. Видалено weighings: ${deletedWeighings}, teams: ${deletedTeams}. BigFish Total очищено. Активовано: ${activated.title}.`,
+          `✅ LIVE очищено. Видалено weighings: ${deletedWeighings}, teams: ${deletedTeams}. Активовано: ${activated.title}.`,
           true
         );
 

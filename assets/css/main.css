@@ -928,3 +928,67 @@ body.rules-page{
   font-weight: 900;
   text-shadow: 0 0 8px rgba(74, 222, 128, .45);
 }
+
+/* =========================
+   LIVE • FINAL BIG FISH BLOCK
+   Big Fish Короп / Амур після W4
+   ========================= */
+
+.final-bigfish-box{
+  margin:18px 0 22px;
+  padding:14px;
+  border:1px solid #262636;
+  border-radius:16px;
+  background:rgba(19,19,26,.82);
+  box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+
+.final-bigfish-box .muted{
+  color:var(--muted);
+  font-size:15px;
+}
+
+.final-bigfish-line{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:11px 0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.final-bigfish-line:last-child{
+  border-bottom:0;
+}
+
+.final-bigfish-line strong{
+  color:#ffcc00;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.final-bigfish-line span{
+  text-align:right;
+  color:#f2f3f5;
+  font-weight:700;
+}
+
+.final-bigfish-line--amur strong{
+  color:#4ade80;
+}
+
+.final-bigfish-line--amur span{
+  color:#4ade80;
+}
+
+@media (max-width:560px){
+  .final-bigfish-line{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:4px;
+  }
+
+  .final-bigfish-line span{
+    text-align:left;
+  }
+}

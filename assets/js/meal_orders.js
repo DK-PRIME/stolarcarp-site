@@ -7,6 +7,14 @@
   let ctx = window.scMealContext || null;
   let currentUser = null;
   let userTeamId = "";
+  let canClearMeals = false;
+
+  const CLEAR_MEALS_UIDS = [
+    "5Dt6fN64c3aWACYV1WacxV2BHDl2",
+    "T1BNuXaDM2f2Tf8KZosgFlAGmTu1"
+  ];
+
+  const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
   const $ = id => document.getElementById(id);
 
@@ -15,8 +23,6 @@
   }[m]));
 
   const norm = v => String(v ?? "").trim();
-
-  const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
   function num(v) {
     const n = Number(v);
@@ -76,6 +82,7 @@
 
     if (!currentUser) {
       userTeamId = "";
+      canClearMeals = false;
       return;
     }
 
@@ -83,6 +90,7 @@
     const u = snap.exists ? (snap.data() || {}) : {};
 
     userTeamId = norm(u.teamId || u.currentTeamId || "");
+    canClearMeals = CLEAR_MEALS_UIDS.includes(currentUser.uid);
   }
 
   function getMainPaidTeams() {
@@ -298,59 +306,71 @@
       const d1 = r.day1 || {};
       const d2 = r.day2 || {};
 
-      totals.d1l += num(d1.lunch);
-      totals.d1d += num(d1.dinner);
-      totals.d1b += num(d1.breakfast);
-      totals.d2l += num(d2.lunch);
-      totals.d2d += num(d2.dinner);
-      totals.d2b += num(d2.breakfast);
+      const d1l = num(d1.lunch);
+      const d1d = num(d1.dinner);
+      const d1b = num(d1.breakfast);
+      const d2l = num(d2.lunch);
+      const d2d = num(d2.dinner);
+      const d2b = num(d2.breakfast);
+
+      totals.d1l += d1l;
+      totals.d1d += d1d;
+      totals.d1b += d1b;
+      totals.d2l += d2l;
+      totals.d2d += d2d;
+      totals.d2b += d2b;
+
+      const sector = r.drawKey || ((r.zone || "") + (r.sector || "")) || "—";
 
       return `
         <tr>
-          <td><b>${esc(r.drawKey || ((r.zone || "") + (r.sector || "")) || "—")}</b></td>
-          <td class="teamCell">${esc(r.teamName || "—")}</td>
-          <td>${num(d1.lunch)}</td>
-          <td>${num(d1.dinner)}</td>
-          <td>${num(d1.breakfast)}</td>
-          <td>${num(d2.lunch)}</td>
-          <td>${num(d2.dinner)}</td>
-          <td>${num(d2.breakfast)}</td>
-          <td>${esc(r.note || "")}</td>
+          <td class="m-sector">${esc(sector)}</td>
+          <td class="m-team">${esc(r.teamName || "—")}</td>
+          <td>${d1l || ""}</td>
+          <td>${d1d || ""}</td>
+          <td>${d1b || ""}</td>
+          <td>${d2l || ""}</td>
+          <td>${d2d || ""}</td>
+          <td>${d2b || ""}</td>
         </tr>
       `;
     }).join("");
 
     return `
-      <div class="mealTableWrap">
-        <table class="mealTable">
+      <div class="mealScreenTableWrap">
+        <table class="mealScreenTable">
           <thead>
             <tr>
-              <th>Сектор</th>
+              <th>С</th>
               <th>Команда</th>
-              <th>Д1 Обід</th>
-              <th>Д1 Вечеря</th>
-              <th>Д1 Сніданок</th>
-              <th>Д2 Обід</th>
-              <th>Д2 Вечеря</th>
-              <th>Д2 Сніданок</th>
-              <th>Коментар</th>
+              <th>1О</th>
+              <th>1В</th>
+              <th>1С</th>
+              <th>2О</th>
+              <th>2В</th>
+              <th>2С</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2">Разом</td>
+              <td>${totals.d1l}</td>
+              <td>${totals.d1d}</td>
+              <td>${totals.d1b}</td>
+              <td>${totals.d2l}</td>
+              <td>${totals.d2d}</td>
+              <td>${totals.d2b}</td>
+            </tr>
+          </tfoot>
         </table>
-      </div>
-
-      <div class="mealTotals">
-        Разом:<br>
-        Доба 1 — Обід: ${totals.d1l}, Вечеря: ${totals.d1d}, Сніданок: ${totals.d1b}<br>
-        Доба 2 — Обід: ${totals.d2l}, Вечеря: ${totals.d2d}, Сніданок: ${totals.d2b}
       </div>
     `;
   }
 
   async function openList() {
     try {
-      openPopup("🍽 Список заявок на харчування", `<div class="team-loading">Завантаження…</div>`);
+      openPopup("🍽 Харчування", `<div class="team-loading">Завантаження…</div>`);
 
       const rows = await loadOrders();
       $("mealPopupBody").innerHTML = listHtml(rows);
@@ -361,16 +381,63 @@
     }
   }
 
-  function clearOrders() {
-    setStatus("Очищення заявок буде в адмінці.", false);
+  async function clearOrders() {
+    try {
+      await loadUserData();
+
+      if (!canClearMeals) {
+        setStatus("Очищення доступне тільки відповідальному.", false);
+        return;
+      }
+
+      if (!confirm("Точно видалити всі заявки на харчування цього етапу?")) return;
+
+      const { db } = await waitReady();
+
+      const snap = await db.collection("mealOrders")
+        .where("competitionId", "==", ctx.competitionId)
+        .where("stageId", "==", ctx.stageId)
+        .get();
+
+      let batch = db.batch();
+      let count = 0;
+      let total = 0;
+
+      for (const doc of snap.docs) {
+        batch.delete(doc.ref);
+        count++;
+        total++;
+
+        if (count >= 400) {
+          await batch.commit();
+          batch = db.batch();
+          count = 0;
+        }
+      }
+
+      if (count > 0) await batch.commit();
+
+      setStatus(`✅ Видалено заявок: ${total}`, true);
+      closePopup();
+
+    } catch (e) {
+      console.error(e);
+      setStatus("Помилка очищення: " + (e.message || e), false);
+    }
   }
 
-  function refreshAdminButtons() {
+  async function refreshAdminButtons() {
     const listBtn = $("btnOpenMealList");
     const clearBtn = $("btnClearMealOrders");
 
     if (listBtn) listBtn.hidden = false;
-    if (clearBtn) clearBtn.hidden = true;
+
+    try {
+      await loadUserData();
+      if (clearBtn) clearBtn.hidden = !canClearMeals;
+    } catch {
+      if (clearBtn) clearBtn.hidden = true;
+    }
   }
 
   function setContext(nextCtx) {

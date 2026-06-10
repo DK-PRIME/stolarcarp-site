@@ -1,5 +1,6 @@
 // STOLAR CARP — Архів сезону
 // Читає готовий архів: seasonResults/{year}/stages
+// Компактні таблиці зон A/B/C для телефону
 
 (async function(){
   "use strict";
@@ -13,6 +14,8 @@
   const stageTitle = $("stageTitle");
   const stageMeta = $("stageMeta");
   const zonesWrap = $("zonesWrap");
+
+  injectCompactArchiveCss();
 
   try {
     if (window.scReady) await window.scReady;
@@ -69,7 +72,7 @@
     const c = num(slot?.c);
     const w = num(slot?.w);
     if (!c && !w) return "—";
-    return `${c} / ${fmtWeight(w)}`;
+    return `${c}/${fmtWeight(w)}`;
   }
 
   function stageSortValue(id, data){
@@ -180,41 +183,41 @@
 
       return `
         <tr>
-          <td>${esc(sector)}</td>
-          <td class="team-col">${esc(r.team || "—")}</td>
+          <td class="a-sector">${esc(sector)}</td>
+          <td class="a-team">${esc(r.team || "—")}</td>
           <td>${fmtW(r.w1)}</td>
           <td>${fmtW(r.w2)}</td>
           <td>${fmtW(r.w3)}</td>
           <td>${fmtW(r.w4)}</td>
           <td>${fmt(num(r.totalCount) || "—")}</td>
           <td>${fmtWeight(r.bigFish)}</td>
-          <td><b>${fmtWeight(r.totalWeight)}</b></td>
-          <td><b>${zonePlace}</b></td>
+          <td class="a-weight">${fmtWeight(r.totalWeight)}</td>
+          <td class="a-place">${zonePlace}</td>
         </tr>
       `;
     }).join("");
 
     return `
-      <div class="live-zone card" style="margin:14px 0;">
-        <div class="live-zone-title" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <h3 style="margin:0;">Зона ${esc(zone)}</h3>
-          <span class="badge badge--warn">команд: ${sorted.length}</span>
+      <div class="archive-zone-card">
+        <div class="archive-zone-head">
+          <h3>Зона ${esc(zone)}</h3>
+          <span>команд: ${sorted.length}</span>
         </div>
 
-        <div class="table-wrap" style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;">
-          <table class="table table-sm">
+        <div class="archive-table-wrap">
+          <table class="archive-compact-table">
             <thead>
               <tr>
-                <th>Зона</th>
+                <th>З</th>
                 <th>Команда</th>
                 <th>W1</th>
                 <th>W2</th>
                 <th>W3</th>
                 <th>W4</th>
-                <th>Разом</th>
+                <th>Р</th>
                 <th>BIG</th>
-                <th>Вага</th>
-                <th>Місце</th>
+                <th>кг</th>
+                <th>М</th>
               </tr>
             </thead>
             <tbody>
@@ -224,6 +227,193 @@
         </div>
       </div>
     `;
+  }
+
+  function injectCompactArchiveCss(){
+    if (document.getElementById("archiveCompactCss")) return;
+
+    const style = document.createElement("style");
+    style.id = "archiveCompactCss";
+    style.textContent = `
+      .archive-zone-card{
+        margin:14px 0;
+        padding:10px;
+        border-radius:18px;
+        border:1px solid rgba(148,163,184,.22);
+        background:#11111a;
+      }
+
+      .archive-zone-head{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:10px;
+        margin-bottom:8px;
+      }
+
+      .archive-zone-head h3{
+        margin:0;
+        font-size:clamp(26px,7vw,42px);
+        line-height:1;
+        font-weight:950;
+        color:#f8fafc;
+      }
+
+      .archive-zone-head span{
+        flex:0 0 auto;
+        padding:6px 10px;
+        border-radius:999px;
+        border:1px solid rgba(148,163,184,.28);
+        color:#d1d5db;
+        background:#111827;
+        font-size:.78rem;
+        font-weight:800;
+      }
+
+      .archive-table-wrap{
+        width:100%;
+        overflow:visible;
+      }
+
+      .archive-compact-table{
+        width:100%;
+        min-width:0 !important;
+        table-layout:fixed;
+        border-collapse:collapse;
+        font-size:9px;
+        line-height:1.05;
+      }
+
+      .archive-compact-table th,
+      .archive-compact-table td{
+        border:1px solid rgba(148,163,184,.20);
+        padding:2px 1px;
+        text-align:center;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+        height:18px;
+        color:#d1d5db;
+      }
+
+      .archive-compact-table th{
+        background:#191923;
+        color:#e5e7eb;
+        font-weight:950;
+        font-size:9px;
+      }
+
+      .archive-compact-table td{
+        background:#11111a;
+        font-weight:700;
+      }
+
+      .archive-compact-table .a-sector{
+        color:#facc15;
+        font-weight:950;
+      }
+
+      .archive-compact-table .a-team{
+        text-align:left;
+        font-size:8px;
+        font-weight:800;
+      }
+
+      .archive-compact-table .a-weight,
+      .archive-compact-table .a-place{
+        color:#f8fafc;
+        font-weight:950;
+      }
+
+      .archive-compact-table th:nth-child(1),
+      .archive-compact-table td:nth-child(1){
+        width:25px;
+      }
+
+      .archive-compact-table th:nth-child(2),
+      .archive-compact-table td:nth-child(2){
+        width:auto;
+      }
+
+      .archive-compact-table th:nth-child(3),
+      .archive-compact-table td:nth-child(3),
+      .archive-compact-table th:nth-child(4),
+      .archive-compact-table td:nth-child(4),
+      .archive-compact-table th:nth-child(5),
+      .archive-compact-table td:nth-child(5),
+      .archive-compact-table th:nth-child(6),
+      .archive-compact-table td:nth-child(6){
+        width:46px;
+      }
+
+      .archive-compact-table th:nth-child(7),
+      .archive-compact-table td:nth-child(7){
+        width:28px;
+      }
+
+      .archive-compact-table th:nth-child(8),
+      .archive-compact-table td:nth-child(8){
+        width:34px;
+      }
+
+      .archive-compact-table th:nth-child(9),
+      .archive-compact-table td:nth-child(9){
+        width:42px;
+      }
+
+      .archive-compact-table th:nth-child(10),
+      .archive-compact-table td:nth-child(10){
+        width:25px;
+      }
+
+      @media(max-width:420px){
+        .archive-zone-card{
+          padding:8px;
+          border-radius:16px;
+        }
+
+        .archive-compact-table{
+          font-size:8px;
+        }
+
+        .archive-compact-table th,
+        .archive-compact-table td{
+          height:17px;
+          padding:1px;
+        }
+
+        .archive-compact-table th{
+          font-size:8px;
+        }
+
+        .archive-compact-table .a-team{
+          font-size:7.4px;
+        }
+
+        .archive-compact-table th:nth-child(3),
+        .archive-compact-table td:nth-child(3),
+        .archive-compact-table th:nth-child(4),
+        .archive-compact-table td:nth-child(4),
+        .archive-compact-table th:nth-child(5),
+        .archive-compact-table td:nth-child(5),
+        .archive-compact-table th:nth-child(6),
+        .archive-compact-table td:nth-child(6){
+          width:42px;
+        }
+
+        .archive-compact-table th:nth-child(8),
+        .archive-compact-table td:nth-child(8){
+          width:32px;
+        }
+
+        .archive-compact-table th:nth-child(9),
+        .archive-compact-table td:nth-child(9){
+          width:40px;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
   await loadStages();

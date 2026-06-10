@@ -1,10 +1,8 @@
 /* =========================
    STOLAR CARP • main.css
-   STABLE HEADER + BURGER PANEL (bg photo, NOT full-screen)
-   NO register-page styling here
+   STABLE HEADER + BURGER PANEL
    ========================= */
 
-/* === BASE COLORS & FONTS === */
 :root{
   --bg:#0b0b0f;
   --panel:#13131a;
@@ -17,23 +15,38 @@
   --header-h:72px;
 }
 
-*{ box-sizing:border-box; }
+*{box-sizing:border-box;}
+
 html,body{
-  margin:0; padding:0;
+  margin:0;
+  padding:0;
   background:var(--bg);
   color:var(--text);
   font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
   line-height:1.55;
-
-  /* FIX: сторінка не має розпиратись по X */
   max-width:100%;
   overflow-x:hidden;
 }
-a{ color:var(--accent); text-decoration:none; }
-img{ max-width:100%; height:auto; display:block; }
 
-.container{ width:min(1100px,92%); margin-inline:auto; }
-.hidden{ display:none !important; }
+a{
+  color:var(--accent);
+  text-decoration:none;
+}
+
+img{
+  max-width:100%;
+  height:auto;
+  display:block;
+}
+
+.container{
+  width:min(1100px,92%);
+  margin-inline:auto;
+}
+
+.hidden{
+  display:none !important;
+}
 
 /* === HEADER === */
 .header{
@@ -65,8 +78,11 @@ img{ max-width:100%; height:auto; display:block; }
   font-weight:900;
   letter-spacing:.5px;
 }
+
 .logo__mark{
-  width:44px; height:44px; min-width:44px;
+  width:44px;
+  height:44px;
+  min-width:44px;
   border-radius:12px;
   background:linear-gradient(135deg,var(--accent),var(--accent-2));
   color:#000;
@@ -78,6 +94,7 @@ img{ max-width:100%; height:auto; display:block; }
   font-weight:900;
   font-size:16px;
 }
+
 .logo__text{
   font-weight:900;
   line-height:1.1;
@@ -90,6 +107,7 @@ img{ max-width:100%; height:auto; display:block; }
   gap:16px;
   align-items:center;
 }
+
 .nav__link{
   padding:10px 12px;
   border-radius:12px;
@@ -97,13 +115,18 @@ img{ max-width:100%; height:auto; display:block; }
   opacity:.9;
   border:1px solid transparent;
 }
-.nav__link:hover{ opacity:1; background:rgba(255,255,255,.06); }
+
+.nav__link:hover{
+  opacity:1;
+  background:rgba(255,255,255,.06);
+}
+
 .nav__link--active{
   border-color:#333;
   background:linear-gradient(180deg,#14141c,#0f0f15);
 }
 
-/* LOGIN BUTTON (header) */
+/* LOGIN BUTTON */
 .header-login{
   padding:6px 14px;
   border-radius:999px;
@@ -114,12 +137,13 @@ img{ max-width:100%; height:auto; display:block; }
   text-decoration:none;
   white-space:nowrap;
 }
+
 .header-login:hover{
   border-color:rgba(255,204,0,.9);
   color:rgba(255,204,0,.95);
 }
 
-/* BURGER BUTTON */
+/* BURGER */
 .burger{
   display:none;
   background:transparent;
@@ -129,6 +153,7 @@ img{ max-width:100%; height:auto; display:block; }
   border-radius:12px;
   -webkit-tap-highlight-color:transparent;
 }
+
 .burger span{
   display:block;
   width:26px;
@@ -136,9 +161,21 @@ img{ max-width:100%; height:auto; display:block; }
   background:#fff;
   margin:5px 0;
   border-radius:3px;
+  transition:.22s ease;
 }
 
-/* прибираємо outline у хедері */
+.burger.active span:nth-child(1){
+  transform:translateY(8px) rotate(45deg);
+}
+
+.burger.active span:nth-child(2){
+  opacity:0;
+}
+
+.burger.active span:nth-child(3){
+  transform:translateY(-8px) rotate(-45deg);
+}
+
 .header *:focus,
 .header *:focus-visible,
 .header a:focus,
@@ -149,12 +186,14 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* =========================
-   MOBILE: burger panel (NOT fullscreen)
+   MOBILE BURGER PANEL
+   Працює і з .open, і з .active
    ========================= */
 @media (max-width:860px){
-  .burger{ display:block; }
+  .burger{
+    display:block;
+  }
 
-  /* desktop nav ховаємо, керуємо панеллю */
   .nav{
     position:fixed;
     left:12px;
@@ -192,7 +231,8 @@ img{ max-width:100%; height:auto; display:block; }
     -webkit-backdrop-filter:blur(2px);
   }
 
-  .nav.open{
+  .nav.open,
+  .nav.active{
     transform:translateY(0);
     opacity:1;
     pointer-events:auto;
@@ -227,8 +267,13 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* === LAYOUT === */
-.main{ padding:28px 0 60px; }
-.section{ margin-top:40px; }
+.main{
+  padding:28px 0 60px;
+}
+
+.section{
+  margin-top:40px;
+}
 
 .card{
   background:var(--panel);
@@ -238,16 +283,26 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* === TABLES === */
-.table{ width:100%; border-collapse:collapse; }
-.table th,.table td{
+.table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+.table th,
+.table td{
   border:1px solid #262636;
   padding:10px 12px;
   text-align:left;
 }
-.table th{ background:#15151e; }
-.table tr:nth-child(even){ background:#0f0f16; }
 
-/* FIX: скрол таблиць тільки всередині обгортки */
+.table th{
+  background:#15151e;
+}
+
+.table tr:nth-child(even){
+  background:#0f0f16;
+}
+
 .table-wrap{
   max-width:100%;
   overflow-x:auto;
@@ -255,11 +310,24 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* === GRID === */
-.grid{ display:grid; gap:16px; }
-.grid-2{ grid-template-columns:repeat(2,1fr); }
-.grid-3{ grid-template-columns:repeat(3,1fr); }
+.grid{
+  display:grid;
+  gap:16px;
+}
+
+.grid-2{
+  grid-template-columns:repeat(2,1fr);
+}
+
+.grid-3{
+  grid-template-columns:repeat(3,1fr);
+}
+
 @media (max-width:900px){
-  .grid-2,.grid-3{ grid-template-columns:1fr; }
+  .grid-2,
+  .grid-3{
+    grid-template-columns:1fr;
+  }
 }
 
 /* === BUTTONS === */
@@ -275,11 +343,34 @@ img{ max-width:100%; height:auto; display:block; }
   border:1px solid #333;
   transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
 }
-.btn:hover{ transform:translateY(-1px); box-shadow:var(--shadow); }
-.btn--primary{ background:linear-gradient(135deg,var(--accent),#ffd84d); color:#000; border-color:transparent; }
-.btn--accent{ background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#000; border-color:transparent; }
-.btn--danger{ background:linear-gradient(135deg,var(--accent-2),#8b1020); color:#fff; border-color:transparent; }
-.btn--ghost{ background:#0d0d13; color:var(--text); }
+
+.btn:hover{
+  transform:translateY(-1px);
+  box-shadow:var(--shadow);
+}
+
+.btn--primary{
+  background:linear-gradient(135deg,var(--accent),#ffd84d);
+  color:#000;
+  border-color:transparent;
+}
+
+.btn--accent{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#000;
+  border-color:transparent;
+}
+
+.btn--danger{
+  background:linear-gradient(135deg,var(--accent-2),#8b1020);
+  color:#fff;
+  border-color:transparent;
+}
+
+.btn--ghost{
+  background:#0d0d13;
+  color:var(--text);
+}
 
 /* === BADGES === */
 .badge{
@@ -291,8 +382,10 @@ img{ max-width:100%; height:auto; display:block; }
   color:#ddd;
 }
 
-/* === INPUTS (базові, без реєстру) === */
-.input,.select,.textarea{
+/* === INPUTS === */
+.input,
+.select,
+.textarea{
   width:100%;
   padding:12px 14px;
   border-radius:12px;
@@ -302,11 +395,25 @@ img{ max-width:100%; height:auto; display:block; }
 }
 
 /* === FOOTER === */
-.footer{ border-top:1px solid #222; background:#0c0c12; }
-.footer__row{ display:flex; align-items:center; justify-content:space-between; padding:18px 0; color:#aab; }
-.footer__links{ display:flex; gap:12px; }
+.footer{
+  border-top:1px solid #222;
+  background:#0c0c12;
+}
 
-/* === HERO (як було) === */
+.footer__row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:18px 0;
+  color:#aab;
+}
+
+.footer__links{
+  display:flex;
+  gap:12px;
+}
+
+/* === HERO === */
 .hero{
   display:grid;
   grid-template-columns:1.2fr .8fr;
@@ -314,6 +421,7 @@ img{ max-width:100%; height:auto; display:block; }
   align-items:center;
   margin-top:18px;
 }
+
 .hero__card{
   background:linear-gradient(180deg,#161620,#0d0d13);
   border:1px solid #262636;
@@ -321,6 +429,7 @@ img{ max-width:100%; height:auto; display:block; }
   padding:26px;
   box-shadow:var(--shadow);
 }
+
 .hero__kicker{
   display:inline-block;
   font-weight:800;
@@ -331,26 +440,59 @@ img{ max-width:100%; height:auto; display:block; }
   border-radius:999px;
   margin-bottom:12px;
 }
-.hero h1{ font-size:40px; line-height:1.1; margin:0 0 12px; }
-.hero p{ color:var(--muted); margin:0 0 18px; }
-.cta-row{ display:flex; gap:12px; flex-wrap:wrap; }
-@media (max-width:900px){
-  .hero{ grid-template-columns:1fr; }
-  .hero h1{ font-size:34px; }
+
+.hero h1{
+  font-size:40px;
+  line-height:1.1;
+  margin:0 0 12px;
 }
 
-/* === CABINET small fixes (окремо від register) === */
+.hero p{
+  color:var(--muted);
+  margin:0 0 18px;
+}
+
+.cta-row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+@media (max-width:900px){
+  .hero{
+    grid-template-columns:1fr;
+  }
+
+  .hero h1{
+    font-size:34px;
+  }
+}
+
+/* === CABINET small fixes === */
 .avatar-actions{
   display:flex;
   gap:10px;
   align-items:center;
   flex-wrap:wrap;
 }
-.avatar-actions input[type="file"]{ max-width:100%; }
+
+.avatar-actions input[type="file"]{
+  max-width:100%;
+}
+
 @media (max-width:560px){
-  .avatar-actions{ align-items:stretch; }
-  .avatar-actions input[type="file"]{ width:100%; }
-  .avatar-small-btn{ width:100%; justify-content:center; }
+  .avatar-actions{
+    align-items:stretch;
+  }
+
+  .avatar-actions input[type="file"]{
+    width:100%;
+  }
+
+  .avatar-small-btn{
+    width:100%;
+    justify-content:center;
+  }
 }
 
 body.cabinet-page .avatar-upload{
@@ -359,44 +501,94 @@ body.cabinet-page .avatar-upload{
   align-items:center;
   flex-wrap:wrap;
 }
+
 body.cabinet-page .avatar-upload input[type="file"]{
   max-width:100% !important;
 }
+
 @media (max-width:560px){
   body.cabinet-page .avatar-upload{
     flex-direction:column;
     align-items:stretch;
   }
-  body.cabinet-page .avatar-upload input[type="file"]{ width:100%; }
-  body.cabinet-page .avatar-small-btn{ width:100%; justify-content:center; }
+
+  body.cabinet-page .avatar-upload input[type="file"]{
+    width:100%;
+  }
+
+  body.cabinet-page .avatar-small-btn{
+    width:100%;
+    justify-content:center;
+  }
 }
 
 /* =========================
-   REGISTER • stage cards 10/10
-   Lamp status + clean layout
+   REGISTER • stage cards
    ========================= */
-
 .stage-card{
-  background: rgba(15,23,42,.55);
-  border: 1px solid rgba(148,163,184,.22);
-  border-radius: 18px;
-  padding: 14px 14px;
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-  transition: transform .08s ease, border-color .18s ease, box-shadow .18s ease;
+  position:relative;
+  display:block;
+  border-radius:22px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(10,10,16,.45);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  cursor:pointer;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
 }
 
-.stage-card + .stage-card{ margin-top: 12px; }
-
-.stage-card[role="button"]{ cursor:pointer; user-select:none; }
-.stage-card[role="button"]:active{ transform: translateY(1px); }
-
-.stage-card.is-selected{
-  border-color: rgba(255,204,0,.55);
-  box-shadow: 0 14px 34px rgba(0,0,0,.45);
+.stage-card + .stage-card{
+  margin-top:12px;
 }
 
-.stage-card.is-disabled{
-  opacity:.55;
+.stage-card:hover{
+  border-color:rgba(246,195,76,.28);
+  background:rgba(10,10,16,.55);
+}
+
+.stage-card:active{
+  transform:scale(.995);
+}
+
+.stage-card[role="button"]{
+  cursor:pointer;
+  user-select:none;
+}
+
+.stage-card.is-selected,
+.stage-card:has(input[name="stagePick"]:checked){
+  border-color:rgba(255,204,0,.55);
+  box-shadow:0 12px 35px rgba(0,0,0,.45);
+  background:linear-gradient(180deg, rgba(255,204,0,.06), rgba(0,0,0,.45));
+}
+
+.stage-card:has(input[name="stagePick"]:checked)::after{
+  content:"✓";
+  position:absolute;
+  top:12px;
+  right:14px;
+  width:28px;
+  height:28px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:linear-gradient(135deg, #ffcc00, #ffd84d);
+  color:#000;
+  font-weight:900;
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+
+.stage-card:has(input[name="stagePick"]:checked) .stage-title::after{
+  content:" • ОБРАНО";
+  font-weight:800;
+  color:rgba(255,204,0,.95);
+}
+
+.stage-card.is-disabled,
+.stage-card:has(input[name="stagePick"]:disabled){
+  opacity:.65;
   filter:saturate(.9);
   cursor:not-allowed;
 }
@@ -405,7 +597,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
   display:flex;
   align-items:center;
   gap:12px;
-  min-width: 0;
+  min-width:0;
 }
 
 .lamp{
@@ -430,7 +622,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(255,204,0,.75);
-  animation: lampPulse 1.3s ease-in-out infinite;
+  animation:lampPulse 1.3s ease-in-out infinite;
 }
 
 .lamp-green{
@@ -438,12 +630,19 @@ body.cabinet-page .avatar-upload input[type="file"]{
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(46,204,113,.75);
-  animation: lampPulse 1.6s ease-in-out infinite;
+  animation:lampPulse 1.6s ease-in-out infinite;
 }
 
 @keyframes lampPulse{
-  0%,100%{ transform: scale(1); filter: brightness(1); }
-  50%{ transform: scale(1.08); filter: brightness(1.12); }
+  0%,100%{
+    transform:scale(1);
+    filter:brightness(1);
+  }
+
+  50%{
+    transform:scale(1.08);
+    filter:brightness(1.12);
+  }
 }
 
 .stage-info{
@@ -454,101 +653,47 @@ body.cabinet-page .avatar-upload input[type="file"]{
 }
 
 .stage-title{
-  font-weight: 800;
-  font-size: .98rem;
-  color: #f2f3f5;
-  letter-spacing: .01em;
-
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  line-height: 1.25;
+  font-weight:800;
+  font-size:.98rem;
+  color:#f2f3f5;
+  letter-spacing:.01em;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:unset;
+  line-height:1.25;
 }
 
 .stage-dates{
-  font-size: .88rem;
-  color: rgba(226,232,240,.78);
+  font-size:.88rem;
+  color:rgba(226,232,240,.78);
   display:flex;
   align-items:center;
   gap:8px;
-  flex-wrap: wrap;
+  flex-wrap:wrap;
 }
 
 .stage-sub{
-  font-size: .78rem;
-  color: rgba(148,163,184,.85);
+  font-size:.78rem;
+  color:rgba(148,163,184,.85);
 }
 
-@media (max-width: 420px){
-  .stage-card{ padding: 12px; }
-  .stage-title{ font-size: .94rem; }
-  .stage-dates{ font-size: .84rem; }
-}
+@media (max-width:420px){
+  .stage-card{
+    padding:12px;
+  }
 
-/* ===== REGISTER: stage pick visual selection ===== */
+  .stage-title{
+    font-size:.94rem;
+  }
 
-.stage-card{
-  position:relative;
-  display:block;
-  border-radius:22px;
-  padding:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(10,10,16,.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  cursor:pointer;
-  transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
-}
-
-.stage-card:hover{
-  border-color: rgba(246,195,76,.28);
-  background:rgba(10,10,16,.55);
-}
-
-.stage-card:active{ transform: scale(.995); }
-
-/* коли radio всередині вибраний — даємо чітку ознаку */
-.stage-card:has(input[name="stagePick"]:checked){
-  border-color: rgba(255,204,0,.55);
-  box-shadow: 0 12px 35px rgba(0,0,0,.45);
-  background: linear-gradient(180deg, rgba(255,204,0,.06), rgba(0,0,0,.45));
-}
-
-/* галочка справа зверху */
-.stage-card:has(input[name="stagePick"]:checked)::after{
-  content:"✓";
-  position:absolute;
-  top:12px;
-  right:14px;
-  width:28px;
-  height:28px;
-  display:grid;
-  place-items:center;
-  border-radius:999px;
-  background: linear-gradient(135deg, #ffcc00, #ffd84d);
-  color:#000;
-  font-weight:900;
-  box-shadow: 0 10px 26px rgba(0,0,0,.35);
-}
-
-/* тонка “плашка” з текстом ОБРАНО (опціонально) */
-.stage-card:has(input[name="stagePick"]:checked) .stage-title::after{
-  content:" • ОБРАНО";
-  font-weight:800;
-  color:rgba(255,204,0,.95);
-}
-
-/* якщо disabled radio — курсор і вигляд */
-.stage-card:has(input[name="stagePick"]:disabled){
-  cursor:not-allowed;
-  opacity:.65;
+  .stage-dates{
+    font-size:.84rem;
+  }
 }
 
 /* =========================================================
-   LIVE: FIX overflow + таблиця зважувань (#totalTable)
-   (прибрано зайве/дублі, щоб НЕ вилазило за екран)
+   LIVE TABLE FIX
    ========================================================= */
-
 #totalTable{
   width:100%;
   max-width:100%;
@@ -564,8 +709,13 @@ body.cabinet-page .avatar-upload input[type="file"]{
   vertical-align:middle;
 }
 
-#totalTable th{ background:#15151e; }
-#totalTable tr:nth-child(even){ background:#0f0f16; }
+#totalTable th{
+  background:#15151e;
+}
+
+#totalTable tr:nth-child(even){
+  background:#0f0f16;
+}
 
 #totalTable th:nth-child(1),
 #totalTable td:nth-child(1){
@@ -593,10 +743,11 @@ body.cabinet-page .avatar-upload input[type="file"]{
   white-space:nowrap;
   font-size:11px;
   min-width:28px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric:tabular-nums;
 }
+
 /* =========================
-   LIVE PAGE BACKGROUND (fixed)
+   LIVE PAGE BACKGROUND
    ========================= */
 body.live-page{
   background:
@@ -604,26 +755,23 @@ body.live-page{
     radial-gradient(900px 600px at 85% 20%, rgba(215,38,56,.10), transparent 60%),
     linear-gradient(180deg, #07070b 0%, #0b0b0f 55%, #07070b 100%),
     url("../dk-dva-kuma-banner.jpg") center/cover no-repeat fixed;
-  background-color: var(--bg);
+  background-color:var(--bg);
+  overflow-x:hidden;
 }
 
-/* щоб фон не “вилазив” і не давав горизонтальний скрол */
-body.live-page{
-  overflow-x: hidden;
-}
 body.live-page .main,
 body.live-page .section,
 body.live-page .container{
-  max-width: 100%;
+  max-width:100%;
 }
 
-/* на всякий — таблиці і обгортки не розпирають сторінку */
 body.live-page .table-wrap{
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
 }
-/* ===== Judge: велика кольорова зона ===== */
+
+/* ===== Judge zone title ===== */
 #zoneTitle.zoneTitle{
   font-size:36px;
   font-weight:1000;
@@ -638,132 +786,139 @@ body.live-page .table-wrap{
   gap:10px;
 }
 
-/* A зелена, B синя, C помаранчева */
-#zoneTitle.zone-a{ color:#22c55e; box-shadow:0 0 18px rgba(34,197,94,.18); }
-#zoneTitle.zone-b{ color:#3b82f6; box-shadow:0 0 18px rgba(59,130,246,.18); }
-#zoneTitle.zone-c{ color:#f59e0b; box-shadow:0 0 18px rgba(245,158,11,.18); }
+#zoneTitle.zone-a{
+  color:#22c55e;
+  box-shadow:0 0 18px rgba(34,197,94,.18);
+}
+
+#zoneTitle.zone-b{
+  color:#3b82f6;
+  box-shadow:0 0 18px rgba(59,130,246,.18);
+}
+
+#zoneTitle.zone-c{
+  color:#f59e0b;
+  box-shadow:0 0 18px rgba(245,158,11,.18);
+}
+
 /* === STOLAR CARP • Premium Rules === */
 body.rules-page{
-  background: radial-gradient(circle at top, #111827 0%, #05060a 55%);
+  background:radial-gradient(circle at top, #111827 0%, #05060a 55%);
 }
 
 .rules-page .section{
-  max-width: 980px;
-  margin: 0 auto;
+  max-width:980px;
+  margin:0 auto;
 }
 
 .rules-page h3{
-  margin: 26px 0 12px;
-  font-weight: 900;
-  letter-spacing: .2px;
-  font-size: 1.05rem;
-  line-height: 1.2;
-  position: relative;
-  padding-left: 14px;
+  margin:26px 0 12px;
+  font-weight:900;
+  letter-spacing:.2px;
+  font-size:1.05rem;
+  line-height:1.2;
+  position:relative;
+  padding-left:14px;
 }
 
 .rules-page h3:before{
   content:"";
   position:absolute;
-  left:0; top:.15em;
-  width:6px; height:1.1em;
+  left:0;
+  top:.15em;
+  width:6px;
+  height:1.1em;
   border-radius:999px;
-  background: linear-gradient(180deg, #facc15 0%, #b91c1c 100%);
-  box-shadow: 0 8px 22px rgba(250,204,21,.18);
+  background:linear-gradient(180deg, #facc15 0%, #b91c1c 100%);
+  box-shadow:0 8px 22px rgba(250,204,21,.18);
 }
 
-/* Cards: ul/p blocks become premium blocks */
 .rules-page .section > ul,
 .rules-page .section > p{
-  background: rgba(15,23,42,.78);
-  border: 1px solid rgba(148,163,184,.18);
-  border-radius: 16px;
-  padding: 14px 14px;
-  margin: 10px 0 0;
-  box-shadow: 0 14px 40px rgba(0,0,0,.35);
+  background:rgba(15,23,42,.78);
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:16px;
+  padding:14px;
+  margin:10px 0 0;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
 }
 
-/* Nice reading rhythm */
 .rules-page .section > p{
   color:#cbd5e1;
-  line-height: 1.55;
+  line-height:1.55;
 }
 
 .rules-page ul{
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  list-style:none;
+  margin:0;
+  padding:0;
 }
 
 .rules-page ul > li{
-  position: relative;
-  padding-left: 22px;
-  margin: 10px 0;
-  color: #e5e7eb;
-  line-height: 1.55;
+  position:relative;
+  padding-left:22px;
+  margin:10px 0;
+  color:#e5e7eb;
+  line-height:1.55;
 }
 
 .rules-page ul > li:before{
   content:"";
   position:absolute;
-  left: 4px;
-  top: .62em;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgba(250,204,21,.95);
-  box-shadow: 0 0 0 4px rgba(250,204,21,.12);
+  left:4px;
+  top:.62em;
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:rgba(250,204,21,.95);
+  box-shadow:0 0 0 4px rgba(250,204,21,.12);
 }
 
-/* Nested lists = subtle, premium */
 .rules-page ul ul{
-  margin-top: 10px;
-  padding-left: 10px;
-  border-left: 1px solid rgba(148,163,184,.18);
+  margin-top:10px;
+  padding-left:10px;
+  border-left:1px solid rgba(148,163,184,.18);
 }
 
 .rules-page ul ul > li{
-  padding-left: 20px;
-  color: #d1d5db;
-  margin: 8px 0;
+  padding-left:20px;
+  color:#d1d5db;
+  margin:8px 0;
 }
 
 .rules-page ul ul > li:before{
-  width: 6px;
-  height: 6px;
-  top: .68em;
-  background: rgba(148,163,184,.9);
-  box-shadow: none;
+  width:6px;
+  height:6px;
+  top:.68em;
+  background:rgba(148,163,184,.9);
+  box-shadow:none;
 }
 
-/* Strong text looks premium (not too bright) */
 .rules-page strong{
   color:#f8fafc;
-  font-weight: 800;
+  font-weight:800;
 }
 
-/* Tables also premium */
 .rules-page .table{
-  background: rgba(15,23,42,.78);
-  border: 1px solid rgba(148,163,184,.18);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 14px 40px rgba(0,0,0,.35);
+  background:rgba(15,23,42,.78);
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
 }
 
 .rules-page .table th{
-  background: rgba(2,6,23,.55);
+  background:rgba(2,6,23,.55);
   color:#f8fafc;
-  font-weight: 800;
+  font-weight:800;
 }
 
 .rules-page .table td{
   color:#e5e7eb;
 }
 
-/* Hint block (if exists) */
 .rules-page .form__hint{
-  border-radius: 16px;
-  border: 1px solid rgba(250,204,21,.18);
-  background: linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
+  border-radius:16px;
+  border:1px solid rgba(250,204,21,.18);
+  background:linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
 }

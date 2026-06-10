@@ -22,10 +22,18 @@
       border-bottom: 1px solid rgba(148,163,184,.12);
       padding:10px 12px;
     }
-    .headerInner{ max-width:980px; margin:0 auto; display:flex; align-items:center; }
+
+    .headerInner{
+      max-width:980px;
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+    }
 
     .btnBack{
-      display:inline-flex; align-items:center; gap:8px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
       padding:10px 12px;
       border-radius:14px;
       text-decoration:none;
@@ -73,12 +81,12 @@
       border-radius:8px;
     }
 
-    .row:hover{
-      background:rgba(250,204,21,.05);
-    }
+    .row:hover{ background:rgba(250,204,21,.05); }
 
     .lamp{
-      width:10px; height:10px; border-radius:999px;
+      width:10px;
+      height:10px;
+      border-radius:999px;
       flex:0 0 10px;
       box-shadow: 0 0 0 3px rgba(255,255,255,.03);
     }
@@ -156,13 +164,6 @@
       letter-spacing:.04em;
     }
 
-    .mealHint{
-      margin-top:3px;
-      color:#94a3b8;
-      font-size:.86rem;
-      line-height:1.45;
-    }
-
     .mealActions{
       display:flex;
       flex-wrap:wrap;
@@ -192,9 +193,7 @@
       color:#fff;
     }
 
-    .mealBtn[hidden]{
-      display:none !important;
-    }
+    .mealBtn[hidden]{ display:none !important; }
 
     .mealStatus{
       color:#94a3b8;
@@ -210,22 +209,22 @@
       display:none;
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,.9);
+      background:rgba(0,0,0,.92);
       backdrop-filter:blur(6px);
       z-index:10000;
       align-items:center;
       justify-content:center;
-      padding:18px;
+      padding:4px;
     }
 
     #mealPopupContent{
       width:100%;
-      max-width:760px;
-      max-height:88vh;
+      max-width:100%;
+      max-height:96vh;
       overflow:auto;
       background:#0f172a;
       border:1px solid #1f2937;
-      border-radius:20px;
+      border-radius:12px;
       box-shadow:0 26px 70px rgba(0,0,0,.75);
     }
 
@@ -236,7 +235,7 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:14px 16px;
+      padding:8px 10px;
       border-bottom:1px solid #1f2937;
       background:#0f172a;
     }
@@ -244,17 +243,17 @@
     #mealPopupTitle{
       color:#facc15;
       font-weight:950;
-      font-size:1.05rem;
+      font-size:.9rem;
     }
 
     #mealPopupClose{
       background:none;
       border:none;
       color:#94a3b8;
-      font-size:1.6rem;
+      font-size:1.35rem;
       cursor:pointer;
-      width:34px;
-      height:34px;
+      width:30px;
+      height:30px;
       border-radius:10px;
     }
 
@@ -263,9 +262,7 @@
       color:#e5e7eb;
     }
 
-    #mealPopupBody{
-      padding:16px;
-    }
+    #mealPopupBody{ padding:4px; }
 
     .mealGrid{
       display:grid;
@@ -313,76 +310,89 @@
       margin:14px 0 6px;
     }
 
-    .mealTableWrap{
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
-      border-radius:14px;
-      border:1px solid #1f2937;
-    }
-
-    .mealTable{
+    /* ===== КОМПАКТНА ТАБЛИЦЯ ХАРЧУВАННЯ ДЛЯ СКРІНУ ===== */
+    .mealScreenTableWrap{
       width:100%;
-      min-width:780px;
+      overflow:visible;
+    }
+
+    .mealScreenTable{
+      width:100%;
       border-collapse:collapse;
-      font-size:.86rem;
+      table-layout:fixed;
+      font-size:8px;
+      line-height:1.02;
     }
 
-    .mealTable th,
-    .mealTable td{
-      border-bottom:1px solid #1f2937;
-      padding:8px;
+    .mealScreenTable th,
+    .mealScreenTable td{
+      border:1px solid rgba(148,163,184,.18);
+      padding:1px;
       text-align:center;
+      color:#e5e7eb;
       white-space:nowrap;
+      height:17px;
     }
 
-    .mealTable th{
+    .mealScreenTable th{
       background:#020617;
       color:#facc15;
       font-weight:950;
+      font-size:8px;
     }
 
-    .mealTable td{
-      color:#e5e7eb;
+    .mealScreenTable td{
+      background:#0b1120;
+      font-weight:800;
     }
 
-    .mealTable td.teamCell{
-      text-align:left;
-      font-weight:900;
-    }
-
-    .mealTotals{
-      margin-top:10px;
+    .mealScreenTable .m-sector{
       color:#facc15;
       font-weight:950;
-      line-height:1.6;
+    }
+
+    .mealScreenTable .m-team{
+      text-align:left;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size:7px;
+      max-width:92px;
+    }
+
+    .mealScreenTable th:nth-child(1),
+    .mealScreenTable td:nth-child(1){
+      width:23px;
+    }
+
+    .mealScreenTable th:nth-child(2),
+    .mealScreenTable td:nth-child(2){
+      width:auto;
+    }
+
+    .mealScreenTable th:nth-child(n+3),
+    .mealScreenTable td:nth-child(n+3){
+      width:18px;
+    }
+
+    .mealScreenTable tfoot td{
+      background:#1e293b;
+      color:#facc15;
+      font-weight:950;
+      height:18px;
     }
 
     @media(max-width:720px){
-      .mealHead{
-        flex-direction:column;
-      }
-
-      .mealActions{
-        width:100%;
-      }
-
-      .mealBtn{
-        flex:1 1 auto;
-      }
-
-      .mealGrid{
-        grid-template-columns:1fr;
-      }
+      .mealHead{ flex-direction:column; }
+      .mealActions{ width:100%; }
+      .mealBtn{ flex:1 1 auto; }
+      .mealGrid{ grid-template-columns:1fr; }
     }
 
     /* === POPUP СКЛАДУ КОМАНДИ === */
     #teamPopup{
       display:none;
       position:fixed;
-      left:0;
-      top:0;
-      width:100%;
-      height:100%;
+      inset:0;
       background:rgba(0,0,0,0.9);
       backdrop-filter:blur(6px);
       z-index:9999;
@@ -437,9 +447,7 @@
       color:#e5e7eb;
     }
 
-    #teamPopupBody{
-      padding:16px;
-    }
+    #teamPopupBody{ padding:16px; }
 
     .team-member{
       display:flex;
@@ -449,9 +457,7 @@
       border-bottom:1px solid #1f2937;
     }
 
-    .team-member:last-child{
-      border-bottom:none;
-    }
+    .team-member:last-child{ border-bottom:none; }
 
     .member-avatar{
       width:50px;
@@ -478,9 +484,7 @@
       font-size:20px;
     }
 
-    .member-info{
-      flex:1;
-    }
+    .member-info{ flex:1; }
 
     .member-name{
       font-weight:800;
@@ -544,8 +548,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script src="assets/js/firebase-init.js?v=20260610-1"></script>
-  <script src="assets/js/participation.js?v=20260610-1"></script>
-  <script src="assets/js/meal_orders.js?v=20260610-1"></script>
+  <script src="assets/js/firebase-init.js?v=20260610-2"></script>
+  <script src="assets/js/participation.js?v=20260610-7"></script>
+  <script src="assets/js/meal_orders.js?v=20260610-7"></script>
 </body>
 </html>

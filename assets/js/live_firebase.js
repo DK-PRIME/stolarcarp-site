@@ -4,6 +4,7 @@
 // ✅ fallback auto-zones from weighings
 // ✅ bottom W1-W4 fish table
 // ✅ amur fish highlighted in bottom table
+// ✅ Final Big Fish Короп / Амур after W4 completed
 // ✅ backward compatible: weights: [4.560] and weights: [{kg:4.560, fishType:"amur"}]
 
 (function () {
@@ -11,15 +12,16 @@
 
   const db = window.scDb;
 
-  const stageEl      = document.getElementById("liveStageName");
-  const zonesWrap    = document.getElementById("zonesContainer");
-  const weighTableEl = document.getElementById("totalTable");
-  const weighInfoEl  = document.getElementById("weighInfo");
-  const updatedEl    = document.getElementById("liveUpdatedAt");
+  const stageEl         = document.getElementById("liveStageName");
+  const zonesWrap       = document.getElementById("zonesContainer");
+  const weighTableEl    = document.getElementById("totalTable");
+  const weighInfoEl     = document.getElementById("weighInfo");
+  const updatedEl       = document.getElementById("liveUpdatedAt");
+  const finalBigFishBox = document.getElementById("finalBigFishBox");
 
-  const loadingEl  = document.getElementById("liveLoading");
-  const contentEl  = document.getElementById("liveContent");
-  const errorEl    = document.getElementById("liveError");
+  const loadingEl = document.getElementById("liveLoading");
+  const contentEl = document.getElementById("liveContent");
+  const errorEl   = document.getElementById("liveError");
 
   const wBtn1 = document.getElementById("wBtn1");
   const wBtn2 = document.getElementById("wBtn2");
@@ -132,7 +134,7 @@
     return `${cnt} / ${kgShort(sum)}`;
   }
 
-  function buildZonesAuto(regRows, weighDocs) {
+  function buildZonesAuto(regRowsArg, weighDocs) {
     const zones = { A: [], B: [], C: [] };
     const byTeam = new Map();
 
@@ -155,7 +157,7 @@
       t.w[no] = normalizeFishArray(d.weights || []);
     });
 
-    (regRows || []).forEach((r) => {
+    (regRowsArg || []).forEach((r) => {
       const zoneLetter = (r.zoneLabel || "")[0]?.toUpperCase();
       if (!["A", "B", "C"].includes(zoneLetter)) return;
 
@@ -420,6 +422,82 @@
     return rows;
   }
 
+  function renderFinalBigFishTables() {
+    if (!finalBigFishBox) return;
+
+    const teamIds = new Set(regRows.map(r => r.teamId));
+
+    if (!teamIds.size) {
+      finalBigFishBox.innerHTML = `
+        <div class="muted">Очікую список команд…</div>
+      `;
+      return;
+    }
+
+    const w4Done = new Set();
+    const bigCarp = [];
+    const bigAmur = [];
+
+    (allWeighDocs || []).forEach(d => {
+      const teamId = String(d.teamId || "");
+      if (!teamIds.has(teamId)) return;
+
+      if (Number(d.weighNo) === 4) {
+        w4Done.add(teamId);
+      }
+
+      const team = regRows.find(r => r.teamId === teamId);
+      const fish = normalizeFishArray(d.weights || []);
+
+      fish.forEach(f => {
+        const row = {
+          teamName: team?.teamName || d.teamName || "—",
+          zoneLabel: team?.zoneLabel || d.zone || "—",
+          kg: Number(f.kg || 0)
+        };
+
+        if (f.fishType === "amur" || f.isAmur === true) {
+          bigAmur.push(row);
+        } else if (f.fishType === "carp") {
+          bigCarp.push(row);
+        }
+      });
+    });
+
+    if (w4Done.size < teamIds.size) {
+      finalBigFishBox.innerHTML = `
+        <div class="muted">
+          Big Fish Короп / Амур зʼявиться після завершення W4.
+          Готово W4: ${w4Done.size}/${teamIds.size}
+        </div>
+      `;
+      return;
+    }
+
+    const carpWinner = bigCarp.sort((a, b) => b.kg - a.kg)[0];
+    const amurWinner = bigAmur.sort((a, b) => b.kg - a.kg)[0];
+
+    finalBigFishBox.innerHTML = `
+      <div class="final-bigfish-line">
+        <strong>Big Fish Короп</strong>
+        <span>
+          ${carpWinner
+            ? `${fmt(carpWinner.zoneLabel)} · ${fmt(carpWinner.teamName)} · ${kgShort(carpWinner.kg)} кг`
+            : "немає даних"}
+        </span>
+      </div>
+
+      <div class="final-bigfish-line final-bigfish-line--amur">
+        <strong>Big Fish Амур</strong>
+        <span>
+          ${amurWinner
+            ? `${fmt(amurWinner.zoneLabel)} · ${fmt(amurWinner.teamName)} · ${kgShort(amurWinner.kg)} кг`
+            : "немає даних"}
+        </span>
+      </div>
+    `;
+  }
+
   function setWeighButtons(activeKey) {
     const map = { W1: wBtn1, W2: wBtn2, W3: wBtn3, W4: wBtn4 };
 
@@ -443,20 +521,16 @@
 
     if (!regRows.length) {
       weighTableEl.innerHTML = `
-        <div class="table-wrap weigh-wrap" style="overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch;">
-          <table class="table table-sm live-weigh-table">
-            <thead>
-              <tr>
-                <th class="sticky-col">Зона</th>
-                <th class="sticky-col-2">Команда</th>
-                <th>🐟1</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="3">Очікую список команд…</td></tr>
-            </tbody>
-          </table>
-        </div>
+        <thead>
+          <tr>
+            <th>Зона</th>
+            <th>Команда</th>
+            <th>🐟1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="3">Очікую список команд…</td></tr>
+        </tbody>
       `;
       return;
     }
@@ -488,26 +562,22 @@
 
       return `
         <tr>
-          <td class="sticky-col">${fmt(r.zoneLabel)}</td>
-          <td class="sticky-col-2 team-col">${fmt(r.teamName)}</td>
+          <td>${fmt(r.zoneLabel)}</td>
+          <td class="team-col">${fmt(r.teamName)}</td>
           ${tds.join("")}
         </tr>
       `;
     }).join("");
 
     weighTableEl.innerHTML = `
-      <div class="table-wrap weigh-wrap" style="overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch;">
-        <table class="table table-sm live-weigh-table">
-          <thead>
-            <tr>
-              <th class="sticky-col">Зона</th>
-              <th class="sticky-col-2">Команда</th>
-              ${fishHeaders}
-            </tr>
-          </thead>
-          <tbody>${bodyHtml}</tbody>
-        </table>
-      </div>
+      <thead>
+        <tr>
+          <th>Зона</th>
+          <th>Команда</th>
+          ${fishHeaders}
+        </tr>
+      </thead>
+      <tbody>${bodyHtml}</tbody>
     `;
   }
 
@@ -554,16 +624,6 @@
   }
 
   function startAllWeighingsSubIfNeeded() {
-    if (!needAutoZones) {
-      if (unsubAllWeigh) {
-        unsubAllWeigh();
-        unsubAllWeigh = null;
-      }
-
-      allWeighDocs = [];
-      return;
-    }
-
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
@@ -582,7 +642,9 @@
         qs.forEach((doc) => arr.push(doc.data() || {}));
         allWeighDocs = arr;
 
-        if (regRows.length) {
+        renderFinalBigFishTables();
+
+        if (needAutoZones && regRows.length) {
           renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), []);
         }
       }, (err) => {
@@ -620,6 +682,7 @@
           const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
 
           regRows = buildRegRowsFromStageTeams(teamsRaw);
+          renderFinalBigFishTables();
           renderWeighDebounced();
 
           const hasStageZones =

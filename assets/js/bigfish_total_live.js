@@ -1,5 +1,8 @@
 // assets/js/bigfish_total_live.js
 // STOLAR CARP • BigFish Total (public)
+// ✅ old weights: [9.800]
+// ✅ new weights: [{ kg: 9.800, fishType: "carp" }]
+// ✅ logic unchanged: eligible only bigFishTotal == true
 
 (function () {
   "use strict";
@@ -10,6 +13,9 @@
   const countEl = document.getElementById("bfCount");
 
   if (!btn || !wrap || !tbody) return;
+
+  const db = window.scDb;
+  if (!db) return;
 
   function setOpen(isOpen) {
     wrap.hidden = !isOpen;
@@ -27,16 +33,42 @@
     if (isOpen) startSubscribe();
   });
 
-  const db = window.scDb;
-  if (!db) return;
+  const fmt = (v) =>
+    v === null || v === undefined || v === "" ? "—" : String(v);
 
-  const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
-  const fmtKg = (n) => (Number.isFinite(n) && n > 0 ? n.toFixed(2) : "—");
+  const fmtKg = (n) =>
+    Number.isFinite(n) && n > 0 ? n.toFixed(2) : "—";
+
+  function fishWeight(val) {
+    if (typeof val === "number" || typeof val === "string") {
+      const n = Number(String(val).replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    if (val && typeof val === "object") {
+      const raw = val.kg ?? val.weight ?? val.value ?? 0;
+      const n = Number(String(raw).replace(",", "."));
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    return 0;
+  }
 
   function readStageFromApp(app) {
-    const compId  = app?.activeCompetitionId || app?.competitionId || "";
-    const stageId = app?.activeStageId || app?.stageId || "";
-    return { compId: String(compId || ""), stageId: String(stageId || "") };
+    const compId =
+      app?.activeCompetitionId ||
+      app?.competitionId ||
+      "";
+
+    const stageId =
+      app?.activeStageId ||
+      app?.stageId ||
+      "";
+
+    return {
+      compId: String(compId || ""),
+      stageId: String(stageId || "")
+    };
   }
 
   function byWeightDesc(a, b) {
@@ -44,8 +76,9 @@
   }
 
   function pickBest(list, excludedIds) {
-    const arr = (Array.isArray(list) ? list : []).filter(x => x && x.weight > 0);
-    arr.sort(byWeightDesc);
+    const arr = (Array.isArray(list) ? list : [])
+      .filter(x => x && x.weight > 0)
+      .sort(byWeightDesc);
 
     for (const c of arr) {
       if (!excludedIds.has(c.fishId)) return c;
@@ -78,6 +111,11 @@
       return;
     }
 
+    if (!allFish.length) {
+      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
+      return;
+    }
+
     const perTeam = new Map();
 
     for (const [teamId, teamName] of eligibleTeamsMap.entries()) {
@@ -100,13 +138,12 @@
       if (f.day === 2) t.d2 = Math.max(t.d2, f.weight);
     }
 
-    const list = Array.from(perTeam.values())
-      .sort((a, b) =>
-        (b.all - a.all) ||
-        (b.d1 - a.d1) ||
-        (b.d2 - a.d2) ||
-        String(a.teamName).localeCompare(String(b.teamName), "uk")
-      );
+    const list = Array.from(perTeam.values()).sort((a, b) =>
+      (b.all - a.all) ||
+      (b.d1 - a.d1) ||
+      (b.d2 - a.d2) ||
+      String(a.teamName).localeCompare(String(b.teamName), "uk")
+    );
 
     const wOverallTeam = winners?.overall?.teamId || "";
     const wDay1Team    = winners?.day1?.teamId || "";
@@ -115,11 +152,6 @@
     const wOverallW = winners?.overall?.weight ?? null;
     const wDay1W    = winners?.day1?.weight ?? null;
     const wDay2W    = winners?.day2?.weight ?? null;
-
-    if (!allFish.length) {
-      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
-      return;
-    }
 
     tbody.innerHTML = list.map(t => {
       const day1Cell = (t.teamId === wDay1Team && wDay1W !== null)
@@ -177,7 +209,7 @@
 
         if (!compId || !stageId) {
           if (countEl) countEl.textContent = "Учасників: 0";
-          tbody.innerHTML = `<tr><td colspan="4">Немає активного етапу (compId/stageId).</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="4">Немає активного етапу.</td></tr>`;
           return;
         }
 
@@ -192,9 +224,8 @@
 
               qs.forEach(doc => {
                 const r = doc.data() || {};
-
                 const teamId = String(r.teamId || "");
-                const teamName = String(r.teamName || "—");
+                const teamName = String(r.teamName || r.team || r.name || "—");
 
                 if (teamId) eligibleTeams.set(teamId, teamName);
               });
@@ -207,6 +238,7 @@
               unsubWeigh = db.collection("weighings")
                 .where("compId", "==", compId)
                 .where("stageId", "==", stageId)
+                .where("status", "==", "submitted")
                 .onSnapshot(
                   (wqs) => {
                     const allFish = [];
@@ -225,25 +257,19 @@
                       const weights = Array.isArray(w.weights) ? w.weights : [];
 
                       weights.forEach((val, idx) => {
-  let weight = 0;
+                        const weight = fishWeight(val);
+                        if (!Number.isFinite(weight) || weight <= 0) return;
 
-  if (typeof val === "number" || typeof val === "string") {
-    weight = Number(val);
-  } else if (val && typeof val === "object") {
-    weight = Number(val.kg ?? val.weight ?? val.value ?? 0);
-  }
-
-  if (!Number.isFinite(weight) || weight <= 0) return;
-
-  allFish.push({
-    fishId: `${d.id}::${idx}`,
-    teamId,
-    teamName,
-    weighNo,
-    day,
-    weight
-  });
-});
+                        allFish.push({
+                          fishId: `${d.id}::${idx}`,
+                          teamId,
+                          teamName,
+                          weighNo,
+                          day,
+                          weight
+                        });
+                      });
+                    });
 
                     const winners = computeWinners(allFish);
                     render(eligibleTeams, allFish, winners);

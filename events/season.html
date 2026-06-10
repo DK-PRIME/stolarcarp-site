@@ -202,22 +202,27 @@
 <script src="archive.js?v=20260610-5"></script>
 
 <script>
-  const burger = document.getElementById("burger");
-  const nav = document.getElementById("nav");
+  document.addEventListener("DOMContentLoaded", () => {
+    const burger = document.getElementById("burger");
+    const nav = document.getElementById("nav");
 
-  if (burger && nav) {
+    if (!burger || !nav) return;
+
     burger.addEventListener("click", () => {
       nav.classList.toggle("active");
+      nav.classList.toggle("nav--open");
+      burger.classList.toggle("active");
       document.body.classList.toggle("menu-open");
     });
 
     nav.addEventListener("click", e => {
       if (e.target.classList.contains("nav__link")) {
-        nav.classList.remove("active");
+        nav.classList.remove("active", "nav--open");
+        burger.classList.remove("active");
         document.body.classList.remove("menu-open");
       }
     });
-  }
+  });
 </script>
 
 </body>

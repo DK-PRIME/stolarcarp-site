@@ -1,10 +1,10 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live (public) — optimized + canonical
-// ✅ no resubscribe if stage not changed
-// ✅ zones from stageResults.zones (FAST)
-// ✅ auto-zones from weighings ONLY if stageResults.zones is empty (fallback)
-// ✅ weighings filtered by status=="submitted"
-// ✅ debounce renders to avoid UI lag
+// ✅ zones from stageResults.zones
+// ✅ fallback auto-zones from weighings
+// ✅ bottom W1-W4 fish table
+// ✅ amur fish highlighted in bottom table
+// ✅ backward compatible: weights: [4.560] and weights: [{kg:4.560, fishType:"amur"}]
 
 (function () {
   "use strict";
@@ -26,7 +26,6 @@
   const wBtn3 = document.getElementById("wBtn3");
   const wBtn4 = document.getElementById("wBtn4");
 
-  // ===== helpers =====
   const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
 
   const fmtTs = (ts) => {
@@ -50,30 +49,72 @@
     return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
+  function getFishKg(f) {
+    if (typeof f === "number" || typeof f === "string") return Number(f);
+    return Number(f?.kg ?? f?.weight ?? f?.value ?? 0);
+  }
+
+  function isAmurFish(f) {
+    if (!f || typeof f !== "object") return false;
+    return f.isAmur === true || f.fishType === "amur" || f.type === "amur";
+  }
+
+  function normalizeFishArray(arr) {
+    if (!Array.isArray(arr)) return [];
+
+    return arr
+      .map((f) => {
+        const kg = getFishKg(f);
+        if (!Number.isFinite(kg) || kg <= 0) return null;
+
+        const isAmur = isAmurFish(f);
+
+        return {
+          kg,
+          fishType: isAmur ? "amur" : "carp",
+          isAmur
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function fishCellHTML(f) {
+    const fish = normalizeFishArray([f])[0];
+    if (!fish) return "—";
+
+    const val = fmtNum(fish.kg);
+    if (!val) return "—";
+
+    if (fish.isAmur) {
+      return `<span class="live-fish-amur">${val}</span>`;
+    }
+
+    return `<span>${val}</span>`;
+  }
+
   function showError(text) {
     if (errorEl) {
       errorEl.style.display = "block";
-      errorEl.textContent   = text;
+      errorEl.textContent = text;
     }
     if (loadingEl) loadingEl.style.display = "none";
     if (contentEl) contentEl.style.display = "grid";
   }
 
   function showContent() {
-    if (errorEl)   errorEl.style.display   = "none";
+    if (errorEl) errorEl.style.display = "none";
     if (loadingEl) loadingEl.style.display = "none";
     if (contentEl) contentEl.style.display = "grid";
   }
 
-  function debounce(fn, ms=80){
+  function debounce(fn, ms = 80) {
     let t = null;
-    return (...args)=>{
-      if(t) clearTimeout(t);
-      t = setTimeout(()=>fn(...args), ms);
+    return (...args) => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
     };
   }
 
-  // ======== AUTO ZONES (fallback from weighings) ========
   function kgShort(x) {
     const n = Number(x || 0);
     if (!isFinite(n)) return "0";
@@ -82,18 +123,19 @@
 
   function wCell(hasDoc, weightsArr) {
     if (!hasDoc) return "-";
-    const arr = Array.isArray(weightsArr) ? weightsArr : [];
+
+    const arr = normalizeFishArray(weightsArr);
     const cnt = arr.length;
-    const sum = arr.reduce((a, b) => a + Number(b || 0), 0);
+    const sum = arr.reduce((a, f) => a + Number(f.kg || 0), 0);
+
     if (cnt === 0) return "0 / 0";
     return `${cnt} / ${kgShort(sum)}`;
   }
 
   function buildZonesAuto(regRows, weighDocs) {
     const zones = { A: [], B: [], C: [] };
-
-    // teamId -> { has:{1..4}, w:{1..4} }
     const byTeam = new Map();
+
     (weighDocs || []).forEach((d) => {
       const teamId = d.teamId || "";
       if (!teamId) return;
@@ -107,9 +149,10 @@
           w: { 1: [], 2: [], 3: [], 4: [] }
         });
       }
+
       const t = byTeam.get(teamId);
       t.has[no] = true;
-      t.w[no] = Array.isArray(d.weights) ? d.weights : [];
+      t.w[no] = normalizeFishArray(d.weights || []);
     });
 
     (regRows || []).forEach((r) => {
@@ -131,31 +174,28 @@
         const arr = t.w[n] || [];
         totalCount += arr.length;
 
-        const sum = arr.reduce((a, b) => a + Number(b || 0), 0);
+        const sum = arr.reduce((a, f) => a + Number(f.kg || 0), 0);
         totalWeight += sum;
 
-        arr.forEach((x) => (bigFish = Math.max(bigFish, Number(x || 0))));
+        arr.forEach((f) => {
+          bigFish = Math.max(bigFish, Number(f.kg || 0));
+        });
       });
 
-      const row = {
+      zones[zoneLetter].push({
         zoneLabel: r.zoneLabel,
         team: r.teamName,
-
         w1: wCell(t.has[1], t.w[1]),
         w2: wCell(t.has[2], t.w[2]),
         w3: wCell(t.has[3], t.w[3]),
         w4: wCell(t.has[4], t.w[4]),
-
         total: totalCount,
         big: bigFish ? kgShort(bigFish) : "—",
         weight: totalWeight ? kgShort(totalWeight) : "—",
-
         _tw: totalWeight,
         _bf: bigFish,
-        _tc: totalCount,
-      };
-
-      zones[zoneLetter].push(row);
+        _tc: totalCount
+      });
     });
 
     ["A", "B", "C"].forEach((z) => {
@@ -170,21 +210,21 @@
     return zones;
   }
 
-  // ======== ZONES RENDER ========
   function fmtW(w) {
     if (w === null || w === undefined || w === "") return "—";
     if (typeof w === "string") return w;
     if (typeof w === "number") return String(w);
 
-    const c  = w.count ?? w.c ?? w.qty ?? "";
+    const c = w.count ?? w.c ?? w.qty ?? "";
     const kg = w.weight ?? w.kg ?? w.w ?? "";
+
     if (c === "" && kg === "") return "—";
     return `${fmt(c)} / ${fmt(kg)}`;
   }
 
   function normZoneItem(x) {
     const zoneRaw = x.zone ?? x.drawZone ?? "";
-    const sector  = x.drawSector ?? x.sector ?? null;
+    const sector = x.drawSector ?? x.sector ?? null;
     const drawKey = x.drawKey || "";
 
     let zoneLabel = x.zoneLabel || "";
@@ -196,15 +236,15 @@
 
     return {
       zoneLabel,
-      team:   x.team ?? x.teamName ?? "—",
-      w1:     x.w1 ?? x.W1 ?? null,
-      w2:     x.w2 ?? x.W2 ?? null,
-      w3:     x.w3 ?? x.W3 ?? null,
-      w4:     x.w4 ?? x.W4 ?? null,
-      total:  x.total ?? x.sum ?? null,
-      big:    x.big ?? x.BIG ?? x.bigFish ?? "—",
+      team: x.team ?? x.teamName ?? "—",
+      w1: x.w1 ?? x.W1 ?? null,
+      w2: x.w2 ?? x.W2 ?? null,
+      w3: x.w3 ?? x.W3 ?? null,
+      w4: x.w4 ?? x.W4 ?? null,
+      total: x.total ?? x.sum ?? null,
+      big: x.big ?? x.BIG ?? x.bigFish ?? "—",
       weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
-      place:  x.place ?? x.p ?? "—"
+      place: x.place ?? x.p ?? "—"
     };
   }
 
@@ -219,14 +259,15 @@
       (useZones.B && useZones.B.length) ||
       (useZones.C && useZones.C.length);
 
-    // fallback view: just list teams if no zones and no weighings yet
     if (!hasZoneData && Array.isArray(teamsRaw) && teamsRaw.length) {
       const fb = { A: [], B: [], C: [] };
+
       teamsRaw.forEach((t) => {
         const drawKey = (t.drawKey || "").toString().toUpperCase();
-        const zone    = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
-        const sector  = t.drawSector || t.sector || (drawKey ? parseInt(drawKey.slice(1),10) : null);
-        if (!["A","B","C"].includes(zone)) return;
+        const zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
+        const sector = t.drawSector || t.sector || (drawKey ? parseInt(drawKey.slice(1), 10) : null);
+
+        if (!["A", "B", "C"].includes(zone)) return;
 
         fb[zone].push({
           teamName: t.teamName || t.team || "—",
@@ -235,18 +276,22 @@
           drawSector: sector,
           drawKey,
           place: "—",
-          w1: null, w2: null, w3: null, w4: null,
+          w1: null,
+          w2: null,
+          w3: null,
+          w4: null,
           total: null,
           big: "—",
           weight: "—"
         });
       });
+
       useZones = fb;
     }
 
     zonesWrap.innerHTML = zoneNames.map((z) => {
       const listRaw = (useZones && useZones[z]) ? useZones[z] : [];
-      const list    = listRaw.map(normZoneItem);
+      const list = listRaw.map(normZoneItem);
 
       if (!list.length) {
         return `
@@ -305,49 +350,59 @@
     }).join("");
   }
 
-  // ======== LIVE WEIGH TABLE (fish list for W1–W4) ========
-  let activeCompId  = "";
+  let activeCompId = "";
   let activeStageId = "";
-  let activeDocId   = "";   // stageResults doc id (activeKey)
+  let activeDocId = "";
 
-  let currentWeighNo  = 1;
+  let currentWeighNo = 1;
   let currentWeighKey = "W1";
 
-  let regRows = [];            // [{zoneLabel, sortKey, teamId, teamName}]
-  let weighByTeam = new Map(); // teamId -> weights[]
+  let regRows = [];
+  let weighByTeam = new Map();
 
   let unsubWeigh = null;
   let unsubAllWeigh = null;
   let unsubStage = null;
-  let unsubSettings = null;
 
-  let allWeighDocs = []; // only when fallback needed
+  let allWeighDocs = [];
   let needAutoZones = false;
 
-  function stopWeighSubs(){
-    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
-    if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
-  }
-  function stopStageSub(){
-    if (unsubStage) { unsubStage(); unsubStage = null; }
+  function stopWeighSubs() {
+    if (unsubWeigh) {
+      unsubWeigh();
+      unsubWeigh = null;
+    }
+
+    if (unsubAllWeigh) {
+      unsubAllWeigh();
+      unsubAllWeigh = null;
+    }
   }
 
-  function parseZoneKey(drawKey, drawZone, drawSector){
+  function stopStageSub() {
+    if (unsubStage) {
+      unsubStage();
+      unsubStage = null;
+    }
+  }
+
+  function parseZoneKey(drawKey, drawZone, drawSector) {
     const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
     const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
     const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
     const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
     const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
+
     return { label, sortKey };
   }
 
-  function buildRegRowsFromStageTeams(teamsRaw){
+  function buildRegRowsFromStageTeams(teamsRaw) {
     const rows = [];
+
     (teamsRaw || []).forEach((t) => {
       const teamId = String(t.teamId || "").trim();
       if (!teamId) return;
 
-      // show only drawn teams
       const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
       if (!hasDraw) return;
 
@@ -361,22 +416,23 @@
       });
     });
 
-    rows.sort((a,b)=>a.sortKey-b.sortKey);
+    rows.sort((a, b) => a.sortKey - b.sortKey);
     return rows;
   }
 
-  function setWeighButtons(activeKey){
-    const map = { W1:wBtn1, W2:wBtn2, W3:wBtn3, W4:wBtn4 };
-    Object.entries(map).forEach(([k,btn])=>{
-      if(!btn) return;
-      btn.classList.toggle("btn--accent", k===activeKey);
-      btn.classList.toggle("btn--ghost",  k!==activeKey);
+  function setWeighButtons(activeKey) {
+    const map = { W1: wBtn1, W2: wBtn2, W3: wBtn3, W4: wBtn4 };
+
+    Object.entries(map).forEach(([k, btn]) => {
+      if (!btn) return;
+      btn.classList.toggle("btn--accent", k === activeKey);
+      btn.classList.toggle("btn--ghost", k !== activeKey);
     });
   }
 
-  function setActiveWeigh(no){
+  function setActiveWeigh(no) {
     const n = Number(no);
-    currentWeighNo  = (n >= 1 && n <= 4) ? n : 1;
+    currentWeighNo = (n >= 1 && n <= 4) ? n : 1;
     currentWeighKey = `W${currentWeighNo}`;
     setWeighButtons(currentWeighKey);
     startWeighingsFor(currentWeighNo);
@@ -407,20 +463,27 @@
 
     const rows = regRows.map((r) => {
       const weights = weighByTeam.get(r.teamId) || [];
-      const nums = weights.map(fmtNum).filter(Boolean);
-      return { zoneLabel: r.zoneLabel, teamName: r.teamName, nums };
+      const fish = normalizeFishArray(weights);
+
+      return {
+        zoneLabel: r.zoneLabel,
+        teamName: r.teamName,
+        fish
+      };
     });
 
-    const maxFish = Math.max(1, ...rows.map((r) => r.nums.length));
+    const maxFish = Math.max(1, ...rows.map((r) => r.fish.length));
+
     const fishHeaders = Array.from({ length: maxFish }, (_, i) =>
       `<th class="fish-th">🐟${i + 1}</th>`
     ).join("");
 
     const bodyHtml = rows.map((r) => {
       const tds = [];
+
       for (let i = 0; i < maxFish; i++) {
-        const v = r.nums[i];
-        tds.push(`<td class="fish-td">${v ? v : "—"}</td>`);
+        const fish = r.fish[i];
+        tds.push(`<td class="fish-td">${fish ? fishCellHTML(fish) : "—"}</td>`);
       }
 
       return `
@@ -455,7 +518,11 @@
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
-    if (unsubWeigh) { unsubWeigh(); unsubWeigh = null; }
+    if (unsubWeigh) {
+      unsubWeigh();
+      unsubWeigh = null;
+    }
+
     weighByTeam = new Map();
 
     unsubWeigh = db
@@ -463,28 +530,36 @@
       .where("compId", "==", activeCompId)
       .where("stageId", "==", activeStageId)
       .where("weighNo", "==", Number(weighNo))
-      .where("status","==","submitted")
+      .where("status", "==", "submitted")
       .onSnapshot((qs) => {
         const map = new Map();
+
         qs.forEach((doc) => {
           const d = doc.data() || {};
           const teamId = d.teamId || "";
-          const weights = Array.isArray(d.weights) ? d.weights : [];
+          const weights = normalizeFishArray(d.weights || []);
+
           if (teamId) map.set(teamId, weights);
         });
+
         weighByTeam = map;
         renderWeighDebounced();
       }, (err) => {
         console.error("weighings snapshot err:", err);
       });
 
-    if (weighInfoEl) weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
+    if (weighInfoEl) {
+      weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
+    }
   }
 
-  // fallback subscription (ONLY if stageResults.zones empty)
-  function startAllWeighingsSubIfNeeded(){
+  function startAllWeighingsSubIfNeeded() {
     if (!needAutoZones) {
-      if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
+      if (unsubAllWeigh) {
+        unsubAllWeigh();
+        unsubAllWeigh = null;
+      }
+
       allWeighDocs = [];
       return;
     }
@@ -492,13 +567,16 @@
     if (!db) return;
     if (!activeCompId || !activeStageId) return;
 
-    if (unsubAllWeigh) { unsubAllWeigh(); unsubAllWeigh = null; }
+    if (unsubAllWeigh) {
+      unsubAllWeigh();
+      unsubAllWeigh = null;
+    }
 
     unsubAllWeigh = db
       .collection("weighings")
       .where("compId", "==", activeCompId)
       .where("stageId", "==", activeStageId)
-      .where("status","==","submitted")
+      .where("status", "==", "submitted")
       .onSnapshot((qs) => {
         const arr = [];
         qs.forEach((doc) => arr.push(doc.data() || {}));
@@ -507,12 +585,11 @@
         if (regRows.length) {
           renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), []);
         }
-      }, (err)=>{
+      }, (err) => {
         console.error("all weighings snapshot err:", err);
       });
   }
 
-  // ======== STAGE RESULTS SUB ========
   function startStageSub(docId) {
     stopStageSub();
 
@@ -540,9 +617,8 @@
           if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
 
           const zonesData = data.zones || { A: [], B: [], C: [] };
-          const teamsRaw  = Array.isArray(data.teams) ? data.teams : [];
+          const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
 
-          // order always from teams
           regRows = buildRegRowsFromStageTeams(teamsRaw);
           renderWeighDebounced();
 
@@ -551,20 +627,19 @@
             (zonesData.B && zonesData.B.length) ||
             (zonesData.C && zonesData.C.length);
 
-          // if zones exist -> FAST
           needAutoZones = !hasStageZones;
 
           if (hasStageZones) {
             renderZonesDebounced(zonesData, teamsRaw);
           } else {
-            // show placeholder until weighings arrive
-            if (allWeighDocs.length) renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
-            else renderZonesDebounced({ A: [], B: [], C: [] }, teamsRaw);
+            if (allWeighDocs.length) {
+              renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
+            } else {
+              renderZonesDebounced({ A: [], B: [], C: [] }, teamsRaw);
+            }
           }
 
-          // sync fallback sub
           startAllWeighingsSubIfNeeded();
-
           showContent();
         } catch (e) {
           console.error("Render error in stageResults snapshot:", e);
@@ -578,9 +653,8 @@
     );
   }
 
-  // ======== settings/app ========
   function stageDocIdFromApp(app) {
-    const key = app?.activeKey;
+    const key = app?.activeKey || app?.activeStageResultsId;
     if (key) return String(key);
 
     const compId =
@@ -594,11 +668,11 @@
       app?.stageId ||
       "stage-1";
 
-    if (compId && stageId) return `${compId}||${stageId}`;
+    if (compId && stageId) return `${compId}__${stageId}`;
     return "";
   }
 
-  function readActiveIdsFromApp(app){
+  function readActiveIdsFromApp(app) {
     const compId =
       app?.activeCompetitionId ||
       app?.activeCompetition ||
@@ -610,19 +684,18 @@
       app?.stageId ||
       "stage-1";
 
-    activeCompId  = String(compId || "");
+    activeCompId = String(compId || "");
     activeStageId = String(stageId || "");
   }
 
-  // ======== INIT ========
   if (!db) {
     showError("Firebase init не завантажився.");
     return;
   }
 
-  let prevStageKey = ""; // compId||stageId
+  let prevStageKey = "";
 
-  unsubSettings = db.collection("settings").doc("app").onSnapshot(
+  db.collection("settings").doc("app").onSnapshot(
     (snap) => {
       try {
         const app = snap.exists ? (snap.data() || {}) : {};
@@ -635,18 +708,13 @@
         if (stageKey !== prevStageKey) {
           prevStageKey = stageKey;
 
-          // reset fallback cache
           allWeighDocs = [];
           needAutoZones = false;
 
-          // stageResults top
           startStageSub(activeDocId);
 
-          // bottom fish table
           stopWeighSubs();
           setActiveWeigh(currentWeighNo);
-
-          // fallback sub стартує тільки якщо stageResults скаже "нема zones"
         }
       } catch (e) {
         console.error("settings/app error:", e);
@@ -659,13 +727,11 @@
     }
   );
 
-  // W buttons
   if (wBtn1) wBtn1.addEventListener("click", () => setActiveWeigh(1));
   if (wBtn2) wBtn2.addEventListener("click", () => setActiveWeigh(2));
   if (wBtn3) wBtn3.addEventListener("click", () => setActiveWeigh(3));
   if (wBtn4) wBtn4.addEventListener("click", () => setActiveWeigh(4));
 
-  // default
   setActiveWeigh(1);
 
 })();

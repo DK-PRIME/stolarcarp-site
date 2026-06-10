@@ -255,7 +255,7 @@
               <h3 style="margin:0;">Зона ${z}</h3>
               <span class="badge">немає даних</span>
             </div>
-            <p class="form__hint">Результати для цієї зони ще не заповнені.</p>
+            <p class="form__hint">...</p>
           </div>
         `;
       }

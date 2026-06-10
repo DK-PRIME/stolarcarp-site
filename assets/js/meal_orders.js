@@ -1,5 +1,9 @@
 // assets/js/meal_orders.js
 // STOLAR CARP • Харчування 2 доби
+// ✅ Харчування закрите за замовчуванням
+// ✅ Відкрити / закрити харчування бачить тільки FOOD_OWNER_UID
+// ✅ Подати / Список бачать всі тільки коли харчування відкрите
+// ✅ Очистити харчування бачить тільки FOOD_OWNER_UID
 
 (function () {
   "use strict";
@@ -8,18 +12,20 @@
   let currentUser = null;
   let userTeamId = "";
   let canClearMeals = false;
+  let mealIsOpen = false;
 
-  const CLEAR_MEALS_UIDS = [
-    "5Dt6fN64c3aWACYV1WacxV2BHDl2",
-    "T1BNuXaDM2f2Tf8KZosgFlAGmTu1"
-  ];
+  const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
 
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
 
   const $ = id => document.getElementById(id);
 
   const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
   }[m]));
 
   const norm = v => String(v ?? "").trim();
@@ -29,8 +35,17 @@
     return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
   }
 
+  function safeId(v) {
+    return String(v || "").replace(/[\/#?\[\]]/g, "_");
+  }
+
   function orderId(compId, stageId, teamId) {
-    return `${compId}__${stageId}__${teamId}`.replace(/[\/#?\[\]]/g, "_");
+    return safeId(`${compId}__${stageId}__${teamId}`);
+  }
+
+  function mealSettingsId() {
+    if (!ctx?.competitionId || !ctx?.stageId) return "";
+    return safeId(`${ctx.competitionId}__${ctx.stageId}`);
   }
 
   function setStatus(text, ok = true) {
@@ -48,9 +63,13 @@
   }
 
   function openPopup(title, html) {
-    $("mealPopupTitle").textContent = title;
-    $("mealPopupBody").innerHTML = html;
-    $("mealPopup").style.display = "flex";
+    const titleEl = $("mealPopupTitle");
+    const bodyEl = $("mealPopupBody");
+    const popupEl = $("mealPopup");
+
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.innerHTML = html;
+    if (popupEl) popupEl.style.display = "flex";
   }
 
   function closePopup() {
@@ -60,12 +79,15 @@
 
   async function waitReady() {
     if (window.scReady) await window.scReady;
-    if (!window.scDb || !window.scAuth) throw new Error("Firebase не готовий");
+    if (!window.scDb || !window.scAuth || !window.firebase) {
+      throw new Error("Firebase не готовий");
+    }
     return { db: window.scDb, auth: window.scAuth, fb: window.firebase };
   }
 
   async function getAuthUser() {
     const { auth } = await waitReady();
+
     if (auth.currentUser) return auth.currentUser;
 
     return new Promise(resolve => {
@@ -90,7 +112,40 @@
     const u = snap.exists ? (snap.data() || {}) : {};
 
     userTeamId = norm(u.teamId || u.currentTeamId || "");
-    canClearMeals = CLEAR_MEALS_UIDS.includes(currentUser.uid);
+    canClearMeals = currentUser.uid === FOOD_OWNER_UID;
+  }
+
+  async function loadMealGate() {
+    const { db } = await waitReady();
+    const id = mealSettingsId();
+
+    if (!id) {
+      mealIsOpen = false;
+      return false;
+    }
+
+    const snap = await db.collection("mealSettings").doc(id).get();
+    const d = snap.exists ? (snap.data() || {}) : {};
+
+    mealIsOpen = d.isOpen === true;
+    return mealIsOpen;
+  }
+
+  async function setMealGate(isOpen) {
+    const { db, fb } = await waitReady();
+    const id = mealSettingsId();
+
+    if (!id) throw new Error("Нема competitionId/stageId");
+
+    await db.collection("mealSettings").doc(id).set({
+      competitionId: ctx.competitionId,
+      stageId: ctx.stageId,
+      isOpen: !!isOpen,
+      updatedAt: fb.firestore.FieldValue.serverTimestamp(),
+      updatedBy: currentUser ? currentUser.uid : ""
+    }, { merge: true });
+
+    mealIsOpen = !!isOpen;
   }
 
   function getMainPaidTeams() {
@@ -187,6 +242,12 @@
   async function openOrder() {
     try {
       await loadUserData();
+      await loadMealGate();
+
+      if (!mealIsOpen && !canClearMeals) {
+        setStatus("Харчування ще закрите.", false);
+        return;
+      }
 
       if (!currentUser) {
         setStatus("Увійди в кабінет, щоб подати заявку.", false);
@@ -204,8 +265,11 @@
 
       openPopup("🍽 Заявка на харчування", orderFormHtml(team, old));
 
-      $("btnCloseMealPopup").onclick = closePopup;
-      $("btnSaveMealOrder").onclick = () => saveOrder(team);
+      const closeBtn = $("btnCloseMealPopup");
+      const saveBtn = $("btnSaveMealOrder");
+
+      if (closeBtn) closeBtn.onclick = closePopup;
+      if (saveBtn) saveBtn.onclick = () => saveOrder(team);
 
     } catch (e) {
       console.error(e);
@@ -267,10 +331,12 @@
     const zOrder = { A: 1, B: 2, C: 3 };
     const za = zOrder[String(a.zone || "").toUpperCase()] || 9;
     const zb = zOrder[String(b.zone || "").toUpperCase()] || 9;
+
     if (za !== zb) return za - zb;
 
     const sa = Number(a.sector || 999);
     const sb = Number(b.sector || 999);
+
     if (sa !== sb) return sa - sb;
 
     return String(a.teamName || "").localeCompare(String(b.teamName || ""), "uk");
@@ -298,7 +364,9 @@
   }
 
   function listHtml(rows) {
-    if (!rows.length) return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
+    if (!rows.length) {
+      return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
+    }
 
     const totals = { d1l:0, d1d:0, d1b:0, d2l:0, d2d:0, d2b:0 };
 
@@ -370,10 +438,19 @@
 
   async function openList() {
     try {
+      await loadUserData();
+      await loadMealGate();
+
+      if (!mealIsOpen && !canClearMeals) {
+        setStatus("Список харчування ще закритий.", false);
+        return;
+      }
+
       openPopup("🍽 Харчування", `<div class="team-loading">Завантаження…</div>`);
 
       const rows = await loadOrders();
-      $("mealPopupBody").innerHTML = listHtml(rows);
+      const body = $("mealPopupBody");
+      if (body) body.innerHTML = listHtml(rows);
 
     } catch (e) {
       console.error(e);
@@ -426,16 +503,105 @@
     }
   }
 
-  async function refreshAdminButtons() {
-    const listBtn = $("btnOpenMealList");
-    const clearBtn = $("btnClearMealOrders");
+  function findMealActionsContainer() {
+    return document.querySelector(".mealActions") ||
+           $("mealActions") ||
+           $("mealBox") ||
+           document.querySelector(".mealBox");
+  }
 
-    if (listBtn) listBtn.hidden = false;
+  function findOrderBtn() {
+    return $("btnOpenMealOrder") ||
+           $("btnMealOrder") ||
+           $("btnMealApply") ||
+           document.querySelector("[data-meal-order]");
+  }
+
+  function findListBtn() {
+    return $("btnOpenMealList") ||
+           $("btnMealList") ||
+           document.querySelector("[data-meal-list]");
+  }
+
+  function findClearBtn() {
+    return $("btnClearMealOrders") ||
+           $("btnClearMeals") ||
+           document.querySelector("[data-meal-clear]");
+  }
+
+  async function refreshAdminButtons() {
+    const orderBtn = findOrderBtn();
+    const listBtn = findListBtn();
+    const clearBtn = findClearBtn();
 
     try {
       await loadUserData();
-      if (clearBtn) clearBtn.hidden = !canClearMeals;
-    } catch {
+      await loadMealGate();
+
+      const isOwner = !!currentUser && currentUser.uid === FOOD_OWNER_UID;
+      const actions = findMealActionsContainer();
+
+      let toggleBtn = $("btnToggleMealGate");
+
+      if (isOwner && !toggleBtn && actions) {
+        toggleBtn = document.createElement("button");
+        toggleBtn.id = "btnToggleMealGate";
+        toggleBtn.type = "button";
+        toggleBtn.className = "mealBtn mealBtn--primary";
+
+        actions.prepend(toggleBtn);
+
+        toggleBtn.onclick = async () => {
+          try {
+            await loadUserData();
+
+            if (!currentUser || currentUser.uid !== FOOD_OWNER_UID) {
+              setStatus("Керування харчуванням доступне тільки відповідальному.", false);
+              return;
+            }
+
+            const next = !mealIsOpen;
+            await setMealGate(next);
+            await refreshAdminButtons();
+
+            setStatus(
+              next ? "✅ Харчування відкрито для всіх." : "✅ Харчування закрито.",
+              true
+            );
+
+          } catch (e) {
+            console.error(e);
+            setStatus("Помилка зміни статусу харчування: " + (e.message || e), false);
+          }
+        };
+      }
+
+      toggleBtn = $("btnToggleMealGate");
+
+      if (toggleBtn) {
+        toggleBtn.hidden = !isOwner;
+        toggleBtn.textContent = mealIsOpen
+          ? "Закрити харчування"
+          : "Відкрити харчування";
+      }
+
+      if (orderBtn) orderBtn.hidden = !mealIsOpen;
+      if (listBtn) listBtn.hidden = !mealIsOpen;
+      if (clearBtn) clearBtn.hidden = !isOwner;
+
+      if (!mealIsOpen && !isOwner) {
+        setStatus("Харчування ще закрите.", true);
+      } else if (mealIsOpen) {
+        setStatus("Харчування відкрите.", true);
+      } else if (isOwner) {
+        setStatus("Харчування закрите. Відкрий, коли потрібно.", true);
+      }
+
+    } catch (e) {
+      console.warn("[Meals] refresh buttons error:", e);
+
+      if (orderBtn) orderBtn.hidden = true;
+      if (listBtn) listBtn.hidden = true;
       if (clearBtn) clearBtn.hidden = true;
     }
   }
@@ -447,6 +613,7 @@
 
   document.addEventListener("click", e => {
     if (e.target.id === "mealPopupClose") closePopup();
+    if (e.target.id === "btnCloseMealPopup") closePopup();
 
     const popup = $("mealPopup");
     const content = $("mealPopupContent");
@@ -461,7 +628,9 @@
     openOrder,
     openList,
     clearOrders,
-    refreshAdminButtons
+    refreshAdminButtons,
+    loadMealGate,
+    setMealGate
   };
 
   if (ctx) setContext(ctx);

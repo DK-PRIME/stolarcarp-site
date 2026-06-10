@@ -922,3 +922,9 @@ body.rules-page{
   border:1px solid rgba(250,204,21,.18);
   background:linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
 }
+
+.live-fish-amur {
+  color: #4ade80;
+  font-weight: 900;
+  text-shadow: 0 0 8px rgba(74, 222, 128, .45);
+}

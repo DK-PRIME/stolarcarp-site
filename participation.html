@@ -138,7 +138,6 @@
       font-size:.85rem;
     }
 
-    /* ===== ХАРЧУВАННЯ ===== */
     .mealBox{
       margin:10px 0 12px;
       padding:14px;
@@ -310,7 +309,6 @@
       margin:14px 0 6px;
     }
 
-    /* ===== КОМПАКТНА ТАБЛИЦЯ ХАРЧУВАННЯ ДЛЯ СКРІНУ ===== */
     .mealScreenTableWrap{
       width:100%;
       overflow:visible;
@@ -352,12 +350,12 @@
     }
 
     .mealScreenTable .m-team{
-  text-align:center;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-size:7px;
-  max-width:70px;
-}
+      text-align:center;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-size:7px;
+      max-width:70px;
+    }
 
     .mealScreenTable th:nth-child(1),
     .mealScreenTable td:nth-child(1){
@@ -370,7 +368,7 @@
     }
 
     .mealScreenTable td:nth-child(2){
-  text-align:center;
+      text-align:center;
     }
 
     .mealScreenTable th:nth-child(n+3),
@@ -392,7 +390,6 @@
       .mealGrid{ grid-template-columns:1fr; }
     }
 
-    /* === POPUP СКЛАДУ КОМАНДИ === */
     #teamPopup{
       display:none;
       position:fixed;
@@ -520,6 +517,47 @@
     <h1 id="pageTitle" class="pageTitle">Змагання</h1>
     <div id="pageSub" class="pageSub"></div>
 
+    <div id="mealBox" class="mealBox">
+      <div class="mealHead">
+        <div>
+          <div class="mealTitle">🍽 Харчування</div>
+          <div id="mealStatus" class="mealStatus"></div>
+        </div>
+
+        <div id="mealActions" class="mealActions">
+          <button
+            id="btnOpenMealOrder"
+            class="mealBtn mealBtn--primary"
+            type="button"
+            hidden
+            onclick="window.scMeals && window.scMeals.openOrder()"
+          >
+            Подати / змінити заявку
+          </button>
+
+          <button
+            id="btnOpenMealList"
+            class="mealBtn"
+            type="button"
+            hidden
+            onclick="window.scMeals && window.scMeals.openList()"
+          >
+            Список заявок
+          </button>
+
+          <button
+            id="btnClearMealOrders"
+            class="mealBtn mealBtn--danger"
+            type="button"
+            hidden
+            onclick="window.scMeals && window.scMeals.clearOrders()"
+          >
+            Очистити харчування
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div id="teamsList" class="list"></div>
     <div id="msg" class="mutedCenter"></div>
   </main>
@@ -554,6 +592,6 @@
 
   <script src="assets/js/firebase-init.js?v=20260610-2"></script>
   <script src="assets/js/participation.js?v=20260610-7"></script>
-  <script src="assets/js/meal_orders.js?v=20260610-7"></script>
+  <script src="assets/js/meal_orders.js?v=20260611-2"></script>
 </body>
 </html>

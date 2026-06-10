@@ -411,12 +411,12 @@
             <tr>
               <th>С</th>
               <th>Команда</th>
-              <th>1О</th>
-              <th>1В</th>
-              <th>1С</th>
-              <th>2О</th>
-              <th>2В</th>
-              <th>2С</th>
+              <th>1дО</th>
+              <th>1дВ</th>
+              <th>1дС</th>
+              <th>2дО</th>
+              <th>2дВ</th>
+              <th>2дС</th>
             </tr>
           </thead>
           <tbody>${body}</tbody>
@@ -463,11 +463,11 @@
       await loadUserData();
 
       if (!canClearMeals) {
-        setStatus("Очищення доступне тільки відповідальному.", false);
+        setStatus("Очищення недоступне.", false);
         return;
       }
 
-      if (!confirm("Точно видалити всі заявки на харчування цього етапу?")) return;
+      if (!confirm("Точно видалити всі заявки?")) return;
 
       const { db } = await waitReady();
 

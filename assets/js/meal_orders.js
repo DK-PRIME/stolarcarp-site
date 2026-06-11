@@ -1,5 +1,5 @@
 // assets/js/meal_orders.js
-// STOLAR CARP • Харчування 2 доби
+// STOLAR CARP • Харчування 2 доби — ФІКС
 
 (function () {
   "use strict";
@@ -9,6 +9,7 @@
   let userTeamId = "";
   let canClearMeals = false;
   let mealIsOpen = false;
+  let initialized = false;
 
   const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
@@ -109,10 +110,14 @@
       return false;
     }
 
-    const snap = await db.collection("mealSettings").doc(id).get();
-    const d = snap.exists ? (snap.data() || {}) : {};
+    try {
+      const snap = await db.collection("mealSettings").doc(id).get();
+      const d = snap.exists ? (snap.data() || {}) : {};
+      mealIsOpen = d.isOpen === true;
+    } catch (e) {
+      mealIsOpen = false;
+    }
 
-    mealIsOpen = d.isOpen === true;
     return mealIsOpen;
   }
 
@@ -142,9 +147,17 @@
 
     const isOwner = !!currentUser && currentUser.uid === FOOD_OWNER_UID;
 
-    if (openWrap) openWrap.hidden = mealIsOpen || !isOwner;
-    if (mealBox) mealBox.hidden = !mealIsOpen;
+    // Відкрити харчування — ТІЛЬКИ якщо закрито І ти власник
+    if (openWrap) {
+      openWrap.hidden = mealIsOpen || !isOwner;
+    }
 
+    // Блок харчування — ТІЛЬКИ якщо відкрито
+    if (mealBox) {
+      mealBox.hidden = !mealIsOpen;
+    }
+
+    // Кнопки всередині блоку
     if (orderBtn) orderBtn.hidden = !mealIsOpen;
     if (listBtn) listBtn.hidden = !mealIsOpen;
     if (clearBtn) clearBtn.hidden = !(mealIsOpen && isOwner);
@@ -245,7 +258,10 @@
       await loadMealGate();
       applyVisibility();
 
-      if (!mealIsOpen) return;
+      if (!mealIsOpen) {
+        setStatus("Харчування закрите.", false);
+        return;
+      }
 
       if (!currentUser) {
         setStatus("Увійди в кабінет, щоб подати заявку.", false);
@@ -428,7 +444,10 @@
       await loadMealGate();
       applyVisibility();
 
-      if (!mealIsOpen) return;
+      if (!mealIsOpen) {
+        setStatus("Харчування закрите.", false);
+        return;
+      }
 
       openPopup("🍽 Харчування", `<div class="team-loading">Завантаження…</div>`);
 
@@ -445,7 +464,10 @@
     try {
       await loadUserData();
 
-      if (!canClearMeals) return;
+      if (!canClearMeals) {
+        setStatus("Немає прав для відкриття харчування.", false);
+        return;
+      }
 
       await setMealGate(true);
       await loadMealGate();
@@ -509,12 +531,6 @@
       await loadMealGate();
       applyVisibility();
 
-      const openBtn = $("btnMealGateOpen") || $("btnOpenMealGate") || $("btnMealOpen") || $("btnMealGate");
-      if (openBtn) {
-        openBtn.hidden = mealIsOpen || !canClearMeals;
-        openBtn.onclick = openMeals;
-      }
-
     } catch (e) {
       console.warn("[Meals] refresh error:", e);
       mealIsOpen = false;
@@ -527,24 +543,24 @@
     refreshAdminButtons();
   }
 
+  // === ОДИН обробник кліків, без дублювання ===
   document.addEventListener("click", e => {
+    // Закриття попапу
     if (e.target.id === "mealPopupClose") closePopup();
     if (e.target.id === "btnCloseMealPopup") closePopup();
 
-    if (
-      e.target.id === "btnMealGateOpen" ||
-      e.target.id === "btnOpenMealGate" ||
-      e.target.id === "btnMealOpen" ||
-      e.target.id === "btnMealGate"
-    ) {
-      openMeals();
-    }
-
+    // Клік поза попапом — закрити
     const popup = $("mealPopup");
     const content = $("mealPopupContent");
-
-    if (popup?.style.display === "flex" && e.target === popup && !content?.contains(e.target)) {
+    if (popup?.style.display === "flex" && e.target === popup) {
       closePopup();
+    }
+
+    // Відкрити харчування — ТІЛЬКИ через id
+    if (e.target.id === "btnMealGateOpen") {
+      e.preventDefault();
+      e.stopPropagation();
+      openMeals();
     }
   });
 

@@ -1,13 +1,10 @@
 // assets/js/draw_admin.js
 // STOLAR CARP • Admin draw (mobile-first cards)
-// ✅ competitions -> stageSelect
-// ✅ loads ALL confirmed registrations once, filters locally
+// ✅ registrations + fallback public_participants
+// ✅ if team deleted from registrations -> save restores it
 // ✅ unique sectors A1..C8
-// ✅ per-row save/clear: drawKey/drawZone/drawSector/bigFishTotal/drawAt
-// ✅ if sector = empty -> removes team from draw
-// ✅ keeps selected stage (localStorage restore)
-// ✅ after save/clear -> sorts A..C + sector
-// ✅ after each save/clear -> updates stageResults/{activeKey} + settings/app.activeKey (LIVE)
+// ✅ per-row save/clear
+// ✅ after each save/clear -> updates stageResults/{activeKey} + settings/app.activeKey
 
 (function () {
   "use strict";
@@ -27,7 +24,7 @@
 
   const SECTORS = (() => {
     const arr = [];
-    ["A", "B", "C"].forEach(z => {
+    ["A", "B", "C"].forEach((z) => {
       for (let i = 1; i <= 8; i++) arr.push(`${z}${i}`);
     });
     return arr;
@@ -78,13 +75,19 @@
       const [compId, stageKeyRaw] = String(v || "").split("||");
       const comp = utils.norm(compId);
       const stage = utils.norm(stageKeyRaw);
-      return { compId: comp, stageKey: stage ? stage : null };
+      return { compId: comp, stageKey: stage || null };
     },
 
     currentStageValue: () => els.stageSelect?.value || "",
 
     getCompIdFromReg: (x) =>
-      x.competitionId || x.compId || x.competition || x.seasonId || x.season || x.eventCompetitionId || "",
+      x.competitionId ||
+      x.compId ||
+      x.competition ||
+      x.seasonId ||
+      x.season ||
+      x.eventCompetitionId ||
+      "",
 
     getStageIdFromReg: (x) => {
       const v = x.stageId || x.stageKey || x.stage || x.eventId || x.eventKey || x.roundId || "";
@@ -112,8 +115,10 @@
 
       const zr = utils.zoneRank(sa.z) - utils.zoneRank(sb.z);
       if (zr) return zr;
+
       const nr = sa.n - sb.n;
       if (nr) return nr;
+
       return (a.teamName || "").localeCompare(b.teamName || "", "uk");
     },
 
@@ -133,10 +138,7 @@
 
     fmtTimeNow: () => {
       const d = new Date();
-      const hh = String(d.getHours()).padStart(2, "0");
-      const mm = String(d.getMinutes()).padStart(2, "0");
-      const ss = String(d.getSeconds()).padStart(2, "0");
-      return `${hh}:${mm}:${ss}`;
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
     }
   };
 
@@ -144,8 +146,9 @@
     requireAdmin: async (user) => {
       if (!user) return false;
       if (user.uid === CONFIG.ADMIN_UID) return true;
+
       const snap = await db.collection(CONFIG.COLLECTIONS.USERS).doc(user.uid).get();
-      const role = (snap.exists ? (snap.data() || {}).role : "") || "";
+      const role = snap.exists ? (snap.data() || {}).role || "" : "";
       return role === "admin";
     }
   };
@@ -158,9 +161,10 @@
 
       els.stageSelect.innerHTML = `<option value="">Завантаження…</option>`;
       state.stageNameByKey = new Map();
-      const items = [];
 
+      const items = [];
       const snap = await db.collection(CONFIG.COLLECTIONS.COMPETITIONS).get();
+
       snap.forEach((docSnap) => {
         const c = docSnap.data() || {};
         const compId = docSnap.id;
@@ -168,7 +172,6 @@
         const brand = c.brand || "STOLAR CARP";
         const year = c.year || c.seasonYear || "";
         const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
-
         const eventsArr = Array.isArray(c.events) ? c.events : null;
 
         if (eventsArr && eventsArr.length) {
@@ -177,12 +180,14 @@
             const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
             const label = `${brand} · ${compTitle} — ${stageTitle}`;
             const value = `${compId}||${key}`;
+
             items.push({ value, label });
             state.stageNameByKey.set(value, label);
           });
         } else {
           const label = `${brand} · ${compTitle}`;
           const value = `${compId}||main`;
+
           items.push({ value, label });
           state.stageNameByKey.set(value, label);
         }
@@ -195,37 +200,136 @@
         items.map((x) => `<option value="${utils.esc(x.value)}">${utils.esc(x.label)}</option>`).join("");
 
       if (keep) {
-        const opts = Array.from(els.stageSelect.options || []);
-        const ok = opts.find((o) => String(o.value) === String(keep));
+        const ok = Array.from(els.stageSelect.options || []).find((o) => String(o.value) === String(keep));
         if (ok) els.stageSelect.value = keep;
       }
     },
 
+    normalizeReg: (id, x, source) => ({
+      _id: id,
+      _source: source,
+      teamId: utils.norm(x.teamId || ""),
+      teamName: x.teamName || x.team || x.name || "",
+      captain: x.captain || x.captainName || "",
+      phone: x.phone || x.captainPhone || "",
+      compId: utils.norm(utils.getCompIdFromReg(x)),
+      stageId: utils.getStageIdFromReg(x),
+      drawKey: utils.norm(x.drawKey || ""),
+      bigFishTotal: !!x.bigFishTotal
+    }),
+
     loadAllConfirmed: async () => {
       utils.setMsg("Завантаження підтверджених заявок…", true);
 
-      const snap = await db
+      const byId = new Map();
+
+      const regSnap = await db
         .collection(CONFIG.COLLECTIONS.REGISTRATIONS)
         .where("status", "==", "confirmed")
         .get();
 
-      state.regsAllConfirmed = [];
-      snap.forEach((d) => {
-        const x = d.data() || {};
-        state.regsAllConfirmed.push({
-          _id: d.id,
-          teamId: utils.norm(x.teamId || ""),
-          teamName: x.teamName || x.team || x.name || "",
-          captain: x.captain || x.captainName || "",
-          phone: x.phone || x.captainPhone || "",
-          compId: utils.norm(utils.getCompIdFromReg(x)),
-          stageId: utils.getStageIdFromReg(x),
-          drawKey: utils.norm(x.drawKey || ""),
-          bigFishTotal: !!x.bigFishTotal
-        });
+      regSnap.forEach((d) => {
+        byId.set(d.id, firestore.normalizeReg(d.id, d.data() || {}, "registrations"));
       });
 
+      // Резерв: команда могла бути стерта з registrations, але залишилась тут.
+      const pubSnap = await db.collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS).get();
+
+      pubSnap.forEach((d) => {
+        if (byId.has(d.id)) return;
+
+        const x = d.data() || {};
+        const status = utils.norm(x.status || "").toLowerCase();
+
+        if (["cancelled", "canceled", "deleted", "rejected"].includes(status)) return;
+
+        byId.set(d.id, firestore.normalizeReg(d.id, x, "public_participants"));
+      });
+
+      state.regsAllConfirmed = Array.from(byId.values());
+
       utils.setMsg("", true);
+    },
+
+    restoreOrSaveRegistration: async ({ docId, reg, compId, stageKey, sectorVal, zone, sectorNum, bigFish, ts, del }) => {
+      const base = {
+        status: "confirmed",
+        competitionId: reg.compId || compId || null,
+        stageId: reg.stageId || stageKey || "main",
+        teamId: reg.teamId || "",
+        teamName: reg.teamName || "",
+        captain: reg.captain || "",
+        phone: reg.phone || "",
+        bigFishTotal: bigFish,
+        drawAt: ts,
+        restoredAt: reg._source === "public_participants" ? ts : undefined
+      };
+
+      Object.keys(base).forEach((k) => {
+        if (base[k] === undefined) delete base[k];
+      });
+
+      if (!sectorVal) {
+        await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).set(
+          {
+            ...base,
+            drawKey: del,
+            drawZone: del,
+            drawSector: del
+          },
+          { merge: true }
+        );
+
+        return;
+      }
+
+      await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).set(
+        {
+          ...base,
+          drawKey: sectorVal,
+          drawZone: zone,
+          drawSector: Number.isFinite(sectorNum) ? sectorNum : null
+        },
+        { merge: true }
+      );
+    },
+
+    publishPublicParticipant: async ({ docId, reg, compId, stageKey, sectorVal, zone, sectorNum, bigFish, ts, del }) => {
+      const base = {
+        status: "confirmed",
+        competitionId: reg.compId || compId || null,
+        stageId: reg.stageId || stageKey || "main",
+        teamId: reg.teamId || "",
+        teamName: reg.teamName || "",
+        captain: reg.captain || "",
+        phone: reg.phone || "",
+        bigFishTotal: bigFish,
+        drawAt: ts
+      };
+
+      if (!sectorVal) {
+        await db.collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS).doc(docId).set(
+          {
+            ...base,
+            drawKey: del,
+            drawZone: del,
+            drawSector: del
+          },
+          { merge: true }
+        );
+
+        return;
+      }
+
+      await db.collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS).doc(docId).set(
+        {
+          ...base,
+          drawKey: sectorVal,
+          drawZone: zone,
+          drawSector: Number.isFinite(sectorNum) ? sectorNum : null
+        },
+        { merge: true }
+      );
     },
 
     publishStageResultsTeams: async () => {
@@ -299,8 +403,10 @@
   const filters = {
     rebuildUsedSectors: () => {
       state.usedSectorSet = new Set();
+
       state.regsFiltered.forEach((r) => {
-        if (utils.norm(r.drawKey)) state.usedSectorSet.add(utils.norm(r.drawKey));
+        const key = utils.norm(r.drawKey);
+        if (key) state.usedSectorSet.add(key);
       });
     },
 
@@ -318,12 +424,15 @@
 
       state.regsFiltered = state.regsAllConfirmed.filter((r) => {
         if (utils.norm(r.compId) !== utils.norm(compId)) return false;
-        if (stageKey && utils.norm(r.stageId) !== utils.norm(stageKey)) return false;
+
+        if (stageKey && utils.norm(r.stageId || "main") !== utils.norm(stageKey)) return false;
         if (!stageKey && r.stageId) return false;
+
         return true;
       });
 
       const q = utils.norm(els.qInput?.value || "").toLowerCase();
+
       if (q) {
         state.regsFiltered = state.regsFiltered.filter((r) => {
           const t = `${r.teamName} ${r.phone} ${r.captain}`.toLowerCase();
@@ -339,7 +448,11 @@
       if (els.countInfo) {
         const totalAll = state.regsAllConfirmed.length;
         const totalSel = state.regsFiltered.length;
-        els.countInfo.textContent = `Для вибраного: ${totalSel} команд (з підтверджених ${totalAll})`;
+        const restored = state.regsFiltered.filter((x) => x._source === "public_participants").length;
+
+        els.countInfo.textContent =
+          `Для вибраного: ${totalSel} команд (з підтверджених/резерву ${totalAll})` +
+          (restored ? ` · до відновлення: ${restored}` : "");
       }
     }
   };
@@ -347,6 +460,7 @@
   const render = {
     sectorOptionsHTML: (cur, docId) => {
       const current = utils.norm(cur);
+
       return `
         <select class="select sectorPick" data-docid="${utils.esc(docId)}">
           <option value="">— Оберіть сектор —</option>
@@ -361,21 +475,31 @@
     },
 
     rowHTML: (r) => `
-      <div class="draw-row" data-docid="${r._id}">
+      <div class="draw-row" data-docid="${utils.esc(r._id)}">
         <div class="draw-team">
           ${utils.esc(r.teamName || "—")}
+          ${
+            r._source === "public_participants"
+              ? `<span class="muted"> · буде відновлено</span>`
+              : ""
+          }
         </div>
+
         ${render.sectorOptionsHTML(r.drawKey, r._id)}
+
         <input
           type="checkbox"
           class="chk bigFishChk"
           ${r.bigFishTotal ? "checked" : ""}
         >
+
         <button
           class="btn-icon saveBtnRow"
           type="button"
           title="Зберегти"
         >💾</button>
+
+        <div class="rowMsg"></div>
       </div>
     `,
 
@@ -393,6 +517,7 @@
     showRowMsg: (wrap, text, ok = true) => {
       const el = wrap.querySelector(".rowMsg");
       if (!el) return;
+
       el.textContent = text || "";
       el.classList.toggle("ok", !!ok);
       el.classList.toggle("err", !ok);
@@ -406,8 +531,12 @@
     setBtnIcon: (wrap, icon) => {
       const btn = wrap.querySelector(".saveBtnRow");
       if (!btn) return;
+
       btn.textContent =
-        icon === "saving" ? "⏳" : icon === "ok" ? "✅" : icon === "err" ? "⚠️" : "💾";
+        icon === "saving" ? "⏳" :
+        icon === "ok" ? "✅" :
+        icon === "err" ? "⚠️" :
+        "💾";
     }
   };
 
@@ -423,151 +552,121 @@
         render.setRowState(wrap, "is-err");
         render.setBtnIcon(wrap, "err");
         render.showRowMsg(wrap, "Нема адмін-доступу", false);
+
         setTimeout(() => {
           render.setRowState(wrap, null);
           render.setBtnIcon(wrap, "save");
         }, 1400);
+
         return;
       }
 
-      utils.saveStageToLS(els.stageSelect?.value || "");
+      const selVal = utils.currentStageValue();
+      const { compId, stageKey } = utils.parseStageValue(selVal);
+
+      if (!compId) {
+        utils.setMsg("Оберіть змагання/етап.", false);
+        return;
+      }
+
+      utils.saveStageToLS(selVal);
 
       const docId = wrap.getAttribute("data-docid");
       const sectorVal = utils.norm(wrap.querySelector(".sectorPick")?.value || "");
       const bigFish = !!wrap.querySelector(".bigFishChk")?.checked;
       const ts = window.firebase.firestore.FieldValue.serverTimestamp();
+      const del = window.firebase.firestore.FieldValue.delete();
 
       if (!docId) return;
 
-      // ✅ NEW: якщо вибрано "— Оберіть сектор —", очищаємо жеребкування команди
-      if (!sectorVal) {
-        try {
-          render.setRowState(wrap, "is-saving");
-          render.setBtnIcon(wrap, "saving");
-          render.showRowMsg(wrap, "Очищення…", true);
+      const reg = state.regsAllConfirmed.find((x) => x._id === docId);
 
-          const del = window.firebase.firestore.FieldValue.delete();
-
-          await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).update({
-            drawKey: del,
-            drawZone: del,
-            drawSector: del,
-            bigFishTotal: bigFish,
-            drawAt: ts
-          });
-
-          await db
-            .collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
-            .doc(docId)
-            .set(
-              {
-                drawKey: del,
-                drawZone: del,
-                drawSector: del,
-                bigFishTotal: bigFish,
-                drawAt: ts
-              },
-              { merge: true }
-            );
-
-          const a = state.regsAllConfirmed.find((x) => x._id === docId);
-          if (a) {
-            a.drawKey = "";
-            a.bigFishTotal = bigFish;
-          }
-
-          render.setRowState(wrap, "is-ok");
-          render.setBtnIcon(wrap, "ok");
-          render.showRowMsg(wrap, `Очищено ${utils.fmtTimeNow()}`, true);
-
-          filters.apply();
-          await firestore.publishStageResultsTeams();
-
-          utils.setMsg("✅ Команду забрано з сектора, Live оновлено", true);
-          setTimeout(() => utils.setMsg("", true), 1200);
-        } catch (err) {
-          console.error(err);
-          render.setRowState(wrap, "is-err");
-          render.setBtnIcon(wrap, "err");
-          render.showRowMsg(wrap, "Помилка очищення", false);
-          utils.setMsg("Помилка очищення жеребкування", false);
-
-          setTimeout(() => {
-            render.setRowState(wrap, null);
-            render.setBtnIcon(wrap, "save");
-          }, 1700);
-        }
-
+      if (!reg) {
+        utils.setMsg("Команду не знайдено в локальному списку.", false);
         return;
       }
 
-      if (state.usedSectorSet.has(sectorVal)) {
+      if (sectorVal && state.usedSectorSet.has(sectorVal)) {
         const other = state.regsFiltered.find(
           (r) => utils.norm(r.drawKey) === sectorVal && r._id !== docId
         );
+
         if (other) {
           render.setRowState(wrap, "is-err");
           render.setBtnIcon(wrap, "err");
           render.showRowMsg(wrap, `Зайнято: ${other.teamName}`, false);
+
           setTimeout(() => {
             render.setRowState(wrap, null);
             render.setBtnIcon(wrap, "save");
           }, 1700);
+
           return;
         }
       }
 
-      const zone = sectorVal[0];
-      const sectorNum = parseInt(sectorVal.slice(1), 10);
+      const zone = sectorVal ? sectorVal[0] : null;
+      const sectorNum = sectorVal ? parseInt(sectorVal.slice(1), 10) : null;
 
       try {
         render.setRowState(wrap, "is-saving");
         render.setBtnIcon(wrap, "saving");
-        render.showRowMsg(wrap, "Збереження…", true);
+        render.showRowMsg(wrap, sectorVal ? "Збереження…" : "Очищення…", true);
 
-        await db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(docId).update({
-          drawKey: sectorVal,
-          drawZone: zone,
-          drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
-          bigFishTotal: bigFish,
-          drawAt: ts
+        await firestore.restoreOrSaveRegistration({
+          docId,
+          reg,
+          compId,
+          stageKey,
+          sectorVal,
+          zone,
+          sectorNum,
+          bigFish,
+          ts,
+          del
         });
 
-        await db
-          .collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
-          .doc(docId)
-          .set(
-            {
-              drawKey: sectorVal,
-              drawZone: zone,
-              drawSector: Number.isFinite(sectorNum) ? sectorNum : null,
-              bigFishTotal: bigFish,
-              drawAt: ts
-            },
-            { merge: true }
-          );
+        await firestore.publishPublicParticipant({
+          docId,
+          reg,
+          compId,
+          stageKey,
+          sectorVal,
+          zone,
+          sectorNum,
+          bigFish,
+          ts,
+          del
+        });
 
-        const a = state.regsAllConfirmed.find((x) => x._id === docId);
-        if (a) {
-          a.drawKey = sectorVal;
-          a.bigFishTotal = bigFish;
-        }
-
-        render.setRowState(wrap, "is-ok");
-        render.setBtnIcon(wrap, "ok");
-        render.showRowMsg(wrap, `Збережено ${utils.fmtTimeNow()}`, true);
+        reg._source = "registrations";
+        reg.compId = reg.compId || compId;
+        reg.stageId = reg.stageId || stageKey || "main";
+        reg.drawKey = sectorVal || "";
+        reg.bigFishTotal = bigFish;
 
         filters.apply();
         await firestore.publishStageResultsTeams();
 
-        utils.setMsg("✅ Live оновлено", true);
-        setTimeout(() => utils.setMsg("", true), 900);
+        render.setRowState(wrap, "is-ok");
+        render.setBtnIcon(wrap, "ok");
+        render.showRowMsg(wrap, sectorVal ? `Збережено ${utils.fmtTimeNow()}` : `Очищено ${utils.fmtTimeNow()}`, true);
+
+        utils.setMsg(
+          sectorVal
+            ? "✅ Збережено. Якщо команда була видалена — її відновлено. Live оновлено."
+            : "✅ Команду забрано з сектора. Live оновлено.",
+          true
+        );
+
+        setTimeout(() => utils.setMsg("", true), 1400);
       } catch (err) {
         console.error(err);
+
         render.setRowState(wrap, "is-err");
         render.setBtnIcon(wrap, "err");
         render.showRowMsg(wrap, "Помилка (Rules/доступ)", false);
-        utils.setMsg("Помилка збереження", false);
+        utils.setMsg("Помилка збереження. Перевір Firestore Rules.", false);
 
         setTimeout(() => {
           render.setRowState(wrap, null);
@@ -592,7 +691,11 @@
     auth.onAuthStateChanged(async (user) => {
       if (!user) {
         utils.setMsg("Увійдіть як адмін.", false);
-        if (els.stageSelect) els.stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
+
+        if (els.stageSelect) {
+          els.stageSelect.innerHTML = `<option value="">Увійдіть як адмін</option>`;
+        }
+
         state.regsAllConfirmed = [];
         state.regsFiltered = [];
         render.list();
@@ -601,6 +704,7 @@
 
       try {
         state.isAdmin = await authModule.requireAdmin(user);
+
         if (!state.isAdmin) {
           utils.setMsg("Доступ заборонено. Цей акаунт не адмін.", false);
           state.regsAllConfirmed = [];
@@ -613,9 +717,9 @@
         await firestore.loadAllConfirmed();
 
         const saved = utils.loadStageFromLS();
+
         if (saved) {
-          const opts = Array.from(els.stageSelect.options || []);
-          const ok = opts.find((o) => String(o.value) === String(saved));
+          const ok = Array.from(els.stageSelect.options || []).find((o) => String(o.value) === String(saved));
           if (ok) els.stageSelect.value = saved;
         }
 

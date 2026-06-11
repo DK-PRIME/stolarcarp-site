@@ -240,65 +240,46 @@
 
   window.addEventListener("popstate", closeTeamPopup);
 
-  function mealBoxHtml() {
-    return `
-      <div class="mealBox" id="mealBox">
-        <div class="mealHead">
-          <div>
-            <div class="mealTitle">🍽 Харчування</div>
-          </div>
-
-          <div class="mealActions">
-            <button class="mealBtn mealBtn--primary" id="btnOpenMealOrder" type="button">
-              Подати / змінити заявку
-            </button>
-
-            <button class="mealBtn" id="btnOpenMealList" type="button">
-              Список заявок
-            </button>
-
-            <button class="mealBtn mealBtn--danger" id="btnClearMealOrders" type="button" hidden>
-              Очистити харчування
-            </button>
-          </div>
-        </div>
-
-        <div class="mealStatus" id="mealStatus"></div>
-      </div>
-    `;
-  }
-
   function attachMealButtons() {
+    const btnOpen = $("btnMealGateOpen");
     const btnOrder = $("btnOpenMealOrder");
     const btnList = $("btnOpenMealList");
     const btnClear = $("btnClearMealOrders");
 
+    if (btnOpen) {
+      btnOpen.onclick = () => {
+        if (window.scMeals && typeof window.scMeals.openMeals === "function") {
+          window.scMeals.openMeals();
+        }
+      };
+    }
+
     if (btnOrder) {
-      btnOrder.addEventListener("click", () => {
+      btnOrder.onclick = () => {
         if (window.scMeals && typeof window.scMeals.openOrder === "function") {
           window.scMeals.openOrder();
         }
-      });
+      };
     }
 
     if (btnList) {
-      btnList.addEventListener("click", () => {
+      btnList.onclick = () => {
         if (window.scMeals && typeof window.scMeals.openList === "function") {
           window.scMeals.openList();
         }
-      });
+      };
     }
 
     if (btnClear) {
-      btnClear.addEventListener("click", () => {
+      btnClear.onclick = () => {
         if (window.scMeals && typeof window.scMeals.clearOrders === "function") {
           window.scMeals.clearOrders();
         }
-      });
+      };
     }
 
-    if (window.scMeals && typeof window.scMeals.refreshAdminButtons === "function") {
-      window.scMeals.refreshAdminButtons();
+    if (window.scMeals && typeof window.scMeals.setContext === "function" && window.scMealContext) {
+      window.scMeals.setContext(window.scMealContext);
     }
   }
 
@@ -331,10 +312,10 @@
 
     if (!rows.length) {
       list.innerHTML = '<div class="mutedCenter">Нема заявок на це змагання</div>';
+      attachMealButtons();
       return;
     }
 
-    list.innerHTML += mealBoxHtml();
     list.innerHTML += main.map((r, i) => rowHtml(i + 1, r, r.teamId)).join("");
 
     if (reserve.length) {
@@ -467,12 +448,13 @@
         teams: rows
       };
 
+      if ($("msg")) $("msg").textContent = "";
+
+      render(rows, maxTeams);
+
       if (window.scMeals && typeof window.scMeals.setContext === "function") {
         window.scMeals.setContext(window.scMealContext);
       }
-
-      if ($("msg")) $("msg").textContent = "";
-      render(rows, maxTeams);
 
     } catch (e) {
       console.error(e);

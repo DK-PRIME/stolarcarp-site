@@ -1,5 +1,5 @@
 // assets/js/meal_orders.js
-// STOLAR CARP • Харчування 2 доби — ФІКС
+// STOLAR CARP • Харчування 2 доби
 
 (function () {
   "use strict";
@@ -7,9 +7,8 @@
   let ctx = window.scMealContext || null;
   let currentUser = null;
   let userTeamId = "";
-  let canClearMeals = false;
+  let canManageMeals = false;
   let mealIsOpen = false;
-  let initialized = false;
 
   const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
   const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
@@ -74,6 +73,7 @@
 
   async function getAuthUser() {
     const { auth } = await waitReady();
+
     if (auth.currentUser) return auth.currentUser;
 
     return new Promise(resolve => {
@@ -86,11 +86,12 @@
 
   async function loadUserData() {
     const { db } = await waitReady();
+
     currentUser = await getAuthUser();
 
     if (!currentUser) {
       userTeamId = "";
-      canClearMeals = false;
+      canManageMeals = false;
       return;
     }
 
@@ -98,7 +99,7 @@
     const u = snap.exists ? (snap.data() || {}) : {};
 
     userTeamId = norm(u.teamId || u.currentTeamId || "");
-    canClearMeals = currentUser.uid === FOOD_OWNER_UID;
+    canManageMeals = currentUser.uid === FOOD_OWNER_UID;
   }
 
   async function loadMealGate() {
@@ -110,14 +111,10 @@
       return false;
     }
 
-    try {
-      const snap = await db.collection("mealSettings").doc(id).get();
-      const d = snap.exists ? (snap.data() || {}) : {};
-      mealIsOpen = d.isOpen === true;
-    } catch (e) {
-      mealIsOpen = false;
-    }
+    const snap = await db.collection("mealSettings").doc(id).get();
+    const d = snap.exists ? (snap.data() || {}) : {};
 
+    mealIsOpen = d.isOpen === true;
     return mealIsOpen;
   }
 
@@ -145,24 +142,14 @@
     const listBtn = $("btnOpenMealList");
     const clearBtn = $("btnClearMealOrders");
 
-    const isOwner = !!currentUser && currentUser.uid === FOOD_OWNER_UID;
+    if (openWrap) openWrap.hidden = mealIsOpen || !canManageMeals;
+    if (mealBox) mealBox.hidden = !mealIsOpen;
 
-    // Відкрити харчування — ТІЛЬКИ якщо закрито І ти власник
-    if (openWrap) {
-      openWrap.hidden = mealIsOpen || !isOwner;
-    }
-
-    // Блок харчування — ТІЛЬКИ якщо відкрито
-    if (mealBox) {
-      mealBox.hidden = !mealIsOpen;
-    }
-
-    // Кнопки всередині блоку
     if (orderBtn) orderBtn.hidden = !mealIsOpen;
     if (listBtn) listBtn.hidden = !mealIsOpen;
-    if (clearBtn) clearBtn.hidden = !(mealIsOpen && isOwner);
+    if (clearBtn) clearBtn.hidden = !(mealIsOpen && canManageMeals);
 
-    if (!mealIsOpen && isOwner) setStatus("");
+    if (!mealIsOpen) setStatus("");
     if (mealIsOpen) setStatus("Харчування відкрите.", true);
   }
 
@@ -258,10 +245,7 @@
       await loadMealGate();
       applyVisibility();
 
-      if (!mealIsOpen) {
-        setStatus("Харчування закрите.", false);
-        return;
-      }
+      if (!mealIsOpen) return;
 
       if (!currentUser) {
         setStatus("Увійди в кабінет, щоб подати заявку.", false);
@@ -337,10 +321,12 @@
     const zOrder = { A: 1, B: 2, C: 3 };
     const za = zOrder[String(a.zone || "").toUpperCase()] || 9;
     const zb = zOrder[String(b.zone || "").toUpperCase()] || 9;
+
     if (za !== zb) return za - zb;
 
     const sa = Number(a.sector || 999);
     const sb = Number(b.sector || 999);
+
     if (sa !== sb) return sa - sb;
 
     return String(a.teamName || "").localeCompare(String(b.teamName || ""), "uk");
@@ -444,10 +430,7 @@
       await loadMealGate();
       applyVisibility();
 
-      if (!mealIsOpen) {
-        setStatus("Харчування закрите.", false);
-        return;
-      }
+      if (!mealIsOpen) return;
 
       openPopup("🍽 Харчування", `<div class="team-loading">Завантаження…</div>`);
 
@@ -464,10 +447,7 @@
     try {
       await loadUserData();
 
-      if (!canClearMeals) {
-        setStatus("Немає прав для відкриття харчування.", false);
-        return;
-      }
+      if (!canManageMeals) return;
 
       await setMealGate(true);
       await loadMealGate();
@@ -483,7 +463,7 @@
     try {
       await loadUserData();
 
-      if (!canClearMeals) {
+      if (!canManageMeals) {
         setStatus("Очищення недоступне.", false);
         return;
       }
@@ -499,10 +479,12 @@
 
       let batch = db.batch();
       let count = 0;
+      let total = 0;
 
       for (const doc of snap.docs) {
         batch.delete(doc.ref);
         count++;
+        total++;
 
         if (count >= 400) {
           await batch.commit();
@@ -519,6 +501,8 @@
       closePopup();
       applyVisibility();
 
+      setStatus(`✅ Заявки видалено: ${total}`, true);
+
     } catch (e) {
       console.error(e);
       setStatus("Помилка очищення: " + (e.message || e), false);
@@ -530,6 +514,11 @@
       await loadUserData();
       await loadMealGate();
       applyVisibility();
+
+      if ($("btnMealGateOpen")) $("btnMealGateOpen").onclick = openMeals;
+      if ($("btnOpenMealOrder")) $("btnOpenMealOrder").onclick = openOrder;
+      if ($("btnOpenMealList")) $("btnOpenMealList").onclick = openList;
+      if ($("btnClearMealOrders")) $("btnClearMealOrders").onclick = clearOrders;
 
     } catch (e) {
       console.warn("[Meals] refresh error:", e);
@@ -543,24 +532,15 @@
     refreshAdminButtons();
   }
 
-  // === ОДИН обробник кліків, без дублювання ===
   document.addEventListener("click", e => {
-    // Закриття попапу
     if (e.target.id === "mealPopupClose") closePopup();
     if (e.target.id === "btnCloseMealPopup") closePopup();
 
-    // Клік поза попапом — закрити
     const popup = $("mealPopup");
     const content = $("mealPopupContent");
-    if (popup?.style.display === "flex" && e.target === popup) {
-      closePopup();
-    }
 
-    // Відкрити харчування — ТІЛЬКИ через id
-    if (e.target.id === "btnMealGateOpen") {
-      e.preventDefault();
-      e.stopPropagation();
-      openMeals();
+    if (popup?.style.display === "flex" && e.target === popup && !content?.contains(e.target)) {
+      closePopup();
     }
   });
 
@@ -576,4 +556,8 @@
   };
 
   if (ctx) setContext(ctx);
+
+  setTimeout(() => {
+    if (window.scMealContext) setContext(window.scMealContext);
+  }, 800);
 })();

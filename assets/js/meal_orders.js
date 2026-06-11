@@ -65,10 +65,28 @@
 
   async function waitReady() {
     if (window.scReady) await window.scReady;
+
     if (!window.scDb || !window.scAuth || !window.firebase) {
       throw new Error("Firebase не готовий");
     }
+
     return { db: window.scDb, auth: window.scAuth, fb: window.firebase };
+  }
+
+  async function waitMealContext(maxMs = 10000) {
+    const started = Date.now();
+
+    while (Date.now() - started < maxMs) {
+      ctx = window.scMealContext || ctx;
+
+      if (ctx && ctx.competitionId && ctx.stageId && Array.isArray(ctx.teams)) {
+        return ctx;
+      }
+
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    throw new Error("Нема competitionId/stageId");
   }
 
   async function getAuthUser() {
@@ -241,6 +259,7 @@
 
   async function openOrder() {
     try {
+      await waitMealContext();
       await loadUserData();
       await loadMealGate();
       applyVisibility();
@@ -274,6 +293,8 @@
 
   async function saveOrder(team) {
     try {
+      await waitMealContext();
+
       const { db, fb } = await waitReady();
 
       const day1 = {
@@ -333,6 +354,8 @@
   }
 
   async function loadOrders() {
+    await waitMealContext();
+
     const { db } = await waitReady();
 
     const snap = await db.collection("mealOrders")
@@ -354,7 +377,9 @@
   }
 
   function listHtml(rows) {
-    if (!rows.length) return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
+    if (!rows.length) {
+      return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
+    }
 
     const totals = { d1l:0, d1d:0, d1b:0, d2l:0, d2d:0, d2b:0 };
 
@@ -426,6 +451,7 @@
 
   async function openList() {
     try {
+      await waitMealContext();
       await loadUserData();
       await loadMealGate();
       applyVisibility();
@@ -445,22 +471,27 @@
 
   async function openMeals() {
     try {
+      await waitMealContext();
       await loadUserData();
 
-      if (!canManageMeals) return;
+      if (!canManageMeals) {
+        alert("Ця кнопка доступна тільки відповідальному.");
+        return;
+      }
 
       await setMealGate(true);
       await loadMealGate();
       applyVisibility();
 
     } catch (e) {
-      console.error(e);
-      setStatus("Помилка відкриття харчування: " + (e.message || e), false);
+      console.error("[Meals] openMeals error:", e);
+      alert("Не вдалося відкрити харчування: " + (e.message || e));
     }
   }
 
   async function clearOrders() {
     try {
+      await waitMealContext();
       await loadUserData();
 
       if (!canManageMeals) {
@@ -511,6 +542,7 @@
 
   async function refreshAdminButtons() {
     try {
+      await waitMealContext();
       await loadUserData();
       await loadMealGate();
       applyVisibility();
@@ -533,6 +565,11 @@
   }
 
   document.addEventListener("click", e => {
+    if (e.target.id === "btnMealGateOpen") openMeals();
+    if (e.target.id === "btnOpenMealOrder") openOrder();
+    if (e.target.id === "btnOpenMealList") openList();
+    if (e.target.id === "btnClearMealOrders") clearOrders();
+
     if (e.target.id === "mealPopupClose") closePopup();
     if (e.target.id === "btnCloseMealPopup") closePopup();
 
@@ -557,7 +594,12 @@
 
   if (ctx) setContext(ctx);
 
-  setTimeout(() => {
-    if (window.scMealContext) setContext(window.scMealContext);
-  }, 800);
+  const boot = setInterval(() => {
+    if (window.scMealContext && window.scMealContext.competitionId && window.scMealContext.stageId) {
+      clearInterval(boot);
+      setContext(window.scMealContext);
+    }
+  }, 200);
+
+  setTimeout(() => clearInterval(boot), 12000);
 })();

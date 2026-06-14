@@ -55,7 +55,6 @@
       text-transform:uppercase;
     }
 
-    /* Головний логотип STOLAR CARP */
     .hero-title{
       position:relative;
       z-index:1;
@@ -64,23 +63,19 @@
       letter-spacing:.06em;
       margin:0 0 36px;
       text-transform:uppercase;
-
       background:linear-gradient(90deg,#ffd700 0%,#ff8c00 40%,#d90429 100%);
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
-
       text-shadow:
         0 1px 0 rgba(255,255,255,0.3),
         0 2px 0 rgba(140,90,0,0.9),
         0 5px 10px rgba(0,0,0,0.85);
-
       opacity:0;
       transform:translateY(14px);
       animation:heroTitleFade 0.9s ease-out forwards;
     }
 
-    /* Підсвітка фону позаду STOLAR CARP */
     .hero-title::before{
       content:"";
       position:absolute;
@@ -88,38 +83,31 @@
       left:50%;
       top:50%;
       transform:translate(-50%,-50%);
-
       width:340px;
       height:110px;
-
       background:
         radial-gradient(circle at 50% 40%,
           rgba(255,215,0,0.28) 0%,
           rgba(255,140,0,0.18) 35%,
           rgba(217,4,41,0.14) 60%,
           transparent 80%);
-
       filter:blur(16px);
       opacity:0;
       pointer-events:none;
       animation:heroGlow 1.1s ease-out forwards 0.1s;
     }
 
-    /* Лінія під STOLAR CARP */
     .hero-title::after{
       content:"";
       position:absolute;
       left:50%;
       transform:translateX(-50%);
       bottom:-14px;
-
       width:240px;
       height:3px;
       border-radius:999px;
-
       background:linear-gradient(90deg,#ffd700 0%,#ff8c00 50%,#d90429 100%);
       box-shadow:0 0 6px rgba(255,180,0,.6);
-
       opacity:0;
       animation:heroLineFade 1.1s ease-out forwards;
     }
@@ -138,6 +126,7 @@
       gap:8px;
       justify-content:center;
     }
+
     .hero-tag{
       padding:4px 12px;
       border-radius:999px;
@@ -154,6 +143,7 @@
       gap:12px;
       justify-content:center;
     }
+
     .btn-lg{
       padding:12px 22px;
       font-size:.98rem;
@@ -165,14 +155,9 @@
       color:#111;
       border:none;
     }
+
     .btn--accent:hover{
       filter:brightness(1.05);
-    }
-
-    .hero-meta{
-      margin-top:22px;
-      font-size:.88rem;
-      color:#9ca3af;
     }
 
     .hero-season-card{
@@ -184,36 +169,32 @@
       box-shadow:0 18px 40px rgba(0,0,0,.8);
       text-align:center;
     }
+
     .hero-season-card h2{
       margin:0 0 10px;
     }
+
     .hero-season-card p{
       margin:0 0 16px;
       color:#e5e7eb;
       font-size:.95rem;
     }
 
-    @media (max-width:640px){
-      .hero-main{padding:60px 0 40px;}
-    }
-
     .hero-kicker-wrap{
-      position: relative;
-      display: inline-block;
+      position:relative;
+      display:inline-block;
     }
 
     .hero-fish-overlay{
-      position: absolute;
-      left: -15px;
-      top: 0%;
-      transform: translateY(-50%);
-      width: 105px;
-      height: 105px;
-      z-index: 10;
-      pointer-events: none;
+      position:absolute;
+      left:-15px;
+      top:0%;
+      transform:translateY(-50%);
+      width:105px;
+      height:105px;
+      z-index:10;
+      pointer-events:none;
     }
-
-    /* ---- НОВІ БЛОКИ ГОЛОВНОЇ ---- */
 
     .info-block{
       max-width:720px;
@@ -231,7 +212,6 @@
     }
 
     .info-list,
-    .stage-list,
     .advantages-list{
       list-style:none;
       padding:0;
@@ -243,21 +223,14 @@
     }
 
     .info-list li,
-    .stage-list li,
     .advantages-list li{
       padding:6px 0;
       border-bottom:1px solid rgba(148,163,184,.18);
     }
 
-    .final-highlight{
-      color:#facc15;
-      font-weight:600;
-    }
-
-    /* Заголовки секцій + бренд */
     .section-title{
       position:relative;
-      display:inline-block;      /* щоб лінія була по ширині тексту */
+      display:inline-block;
       margin:0 0 18px;
       font-size:1.35rem;
       font-weight:700;
@@ -286,7 +259,6 @@
       box-shadow:0 0 6px rgba(255,180,0,.35);
     }
 
-    /* Місія: чистий вертикальний стовпець по лівому краю */
     .mission-cards{
       margin-top:22px;
       display:flex;
@@ -294,26 +266,14 @@
       gap:12px;
     }
 
-    .lake-cards{
-      margin-top:22px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-      justify-content:center;
-    }
-
-    .mission-card,
-    .lake-card{
+    .mission-card{
+      width:100%;
+      margin:0;
       padding:10px 16px;
       border-radius:14px;
       border:1px solid rgba(148,163,184,.35);
       background:rgba(15,23,42,.9);
       font-size:.9rem;
-    }
-
-    .mission-card{
-      width:100%;
-      margin:0;
     }
 
     .call-to-action{
@@ -329,13 +289,6 @@
       padding:60px 0;
     }
 
-    @media (max-width:640px){
-      .info-block{
-        padding:28px 0;
-      }
-    }
-
-    /* КНОПКА "УВІЙТИ" В ХЕДЕРІ */
     .header-login{
       margin-left:auto;
       margin-right:12px;
@@ -348,13 +301,22 @@
       text-decoration:none;
       white-space:nowrap;
     }
+
     .header-login:hover{
       border-color:#facc15;
       color:#facc15;
     }
-    
 
-    /* Анімації */
+    @media (max-width:640px){
+      .hero-main{
+        padding:60px 0 40px;
+      }
+
+      .info-block{
+        padding:28px 0;
+      }
+    }
+
     @keyframes heroTitleFade{
       0%{
         opacity:0;
@@ -389,6 +351,7 @@
     }
   </style>
 </head>
+
 <body class="home-page">
 
 <header class="header">
@@ -411,15 +374,16 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <!-- ОНОВЛЕНА КНОПКА -->
     <a href="/auth.html" class="header-login" id="headerLoginBtn">Увійти</a>
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </header>
+
 <main class="main">
   <section class="section container hero-main">
-
     <div class="hero-kicker-wrap">
       <img src="assets/fish-gold.png" class="hero-fish-overlay" alt="">
       <div class="hero-kicker">
@@ -430,30 +394,23 @@
     <h1 class="hero-title">STOLAR CARP</h1>
 
     <p class="hero-subtitle">
-      STOLAR CARP — це поєднання:
-спортивної боротьби, дружньої атмосфери, драйву, командного духу та поваги до справжніх цінностей карпфішингу.
+      STOLAR CARP — це поєднання спортивної боротьби, дружньої атмосфери, драйву, командного духу та поваги до справжніх цінностей карпфішингу.
     </p>
 
     <div class="hero-tags">
-      <span class="hero-tag">Сезон 2026 · з Етапів + Фінал</span>
+      <span class="hero-tag">Сезон 2026 · 5 етапів + Фінал</span>
       <span class="hero-tag">Зони A · B · C</span>
       <span class="hero-tag">Live-таблиці та рейтинг онлайн</span>
     </div>
 
     <div class="hero-cta">
-      <a class="btn btn--primary btn-lg" href="rules.html">
-        Переглянути регламент
-      </a>
-      <a class="btn btn--accent btn-lg" href="register.html">
-        Змагання
-      </a>
-      <a class="btn btn--danger btn-lg" href="live.html">
-        Live протоколи
-      </a>
+      <a class="btn btn--primary btn-lg" href="rules.html">Переглянути регламент</a>
+      <a class="btn btn--accent btn-lg" href="register.html">Змагання</a>
+      <a class="btn btn--danger btn-lg" href="live.html">Live протоколи</a>
     </div>
 
     <div class="hero-season-card">
-      <h2 class="title-gradient">🏆 Сезон STOLAR CARP </h2>
+      <h2 class="title-gradient">🏆 Сезон STOLAR CARP</h2>
       <p>
         Слідкуй за всіма змаганнями в одному місці.
         Архів, Live результати та підсумковий рейтинг команд.
@@ -462,13 +419,12 @@
         Переглянути сезон
       </a>
     </div>
-
   </section>
 
   <section class="section container info-block">
     <h2 class="section-title">Хто може взяти участь?</h2>
     <p class="info-text">
-      STOLAR CARP відкритий для всіх, хто живе карпфішингом та цінує не лише перемогу, а й шлях до неї. Професійний досвід не є обов’язковим — головне бажання розвиватися, змагатися, поважати природу та суперників .
+      STOLAR CARP відкритий для всіх, хто живе карпфішингом та цінує не лише перемогу, а й шлях до неї. Професійний досвід не є обов’язковим — головне бажання розвиватися, змагатися, поважати природу та суперників.
       До участі запрошуються:
     </p>
 
@@ -485,43 +441,21 @@
     <h2 class="section-title">
       Місія <span class="section-title__brand">STOLAR CARP</span>
     </h2>
+
     <p class="info-text">
-      Місія - забезпечити чесні та прозорі змагання завдяки сучасному підходу до фіксації результатів і чіткій організації роботи суддів.
+      Місія — забезпечити чесні та прозорі змагання завдяки сучасному підходу до фіксації результатів і чіткій організації роботи суддів.
     </p>
 
     <div class="mission-cards">
-      <div class="mission-card">✅ Інноваційна система відкритого Зважування</div>
+      <div class="mission-card">✅ Інноваційна система відкритого зважування</div>
       <div class="mission-card">📊 Сучасний формат та live-таблиці</div>
-      <div class="mission-card">🤝 бережне ставлення до риби та природи</div>
-      <div class="mission-card">🎣 популяризації спортивного карпфішингу</div>
+      <div class="mission-card">🤝 Бережне ставлення до риби та природи</div>
+      <div class="mission-card">🎣 Популяризація спортивного карпфішингу</div>
     </div>
   </section>
 
   <section class="section container info-block">
-    <h2 class="section-title">Структура сезону</h2>
-    <p class="info-text">
-      У сезоні: STalker, 3 таблиці, Осінній короп та турнір STOLAR CARP, який складається з рейтингових етапів. 
-      Команди набирають бали на кожному з них, а за підсумком сезону найкращі потрапляють 
-      у Великий Фінал, де і визначається Чемпіон сезону.
-    </p>
-
-    <ul class="stage-list">
-      <li class="final-highlight">Фінал — битва найкращих команд за титул Чемпіона сезону STOLAR CARP</li>
-    </ul>
-  </section>
-
-  <section class="section container info-block">
-    <h2 class="section-title">Локації сезону</h2>
-    <p class="info-text">
-      Водойми обрані так, щоб поєднати комфортні умови та спортивний інтерес. 
-      Кожна локація має свій характер, що робить сезон різноманітним і непередбачуваним.
-    </p>
-
-    <div class="lake-cards">
-      <div class="lake-card">Лелехівка</div>
-      <div class="lake-card">...</div>
-      <div class="lake-card">...</div>
-    </div>
+    <h2 class="section-title">Локації спортивних водойм</h2>
 
     <a href="lakes.html" class="btn btn--primary" style="margin-top:20px;">
       Переглянути водойми детальніше
@@ -546,13 +480,15 @@
     <h2 class="section-title">
       Готовий до сезону <span class="section-title__brand">STOLAR CARP</span>?
     </h2>
+
     <p class="info-text">
       Зареєструйте команду та приєднуйтесь до сезону STOLAR CARP.
     </p>
 
-    <a href="register.html" class="btn btn--accent btn-lg">Подати заявку на участь</a>
+    <a href="register.html" class="btn btn--accent btn-lg">
+      Подати заявку на участь
+    </a>
   </section>
-
 </main>
 
 <section class="section container highlight">
@@ -570,6 +506,7 @@
         © 2025 STOLAR CARP · Львів
       </span>
     </div>
+
     <div class="footer__links">
       <a href="https://invite.viber.com/?g=...">Viber</a>
       <a href="https://youtube.com/@dk-stolarcarp">YouTube</a>
@@ -589,12 +526,10 @@
 </script>
 
 <script>
-  // Логіка кнопки Увійти / 🏠
   (function(){
     const btn = document.getElementById("headerLoginBtn");
     if(!btn) return;
 
-    // 🏠 показуємо ТІЛЬКИ якщо є кеш команди (учасник/капітан)
     const hasTeamCache = Object.keys(localStorage).some(key =>
       key.startsWith("sc_team_cache_")
     );
@@ -604,7 +539,6 @@
       btn.href = "/cabinet.html";
       btn.title = "Мій кабінет";
     } else {
-      // інакше — це просто вхід для учасників
       btn.textContent = "Увійти";
       btn.href = "/auth.html";
       btn.title = "Увійти";

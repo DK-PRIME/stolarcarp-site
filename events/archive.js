@@ -1,6 +1,7 @@
 // STOLAR CARP — Архів сезону
 // Читає готовий архів: seasonResults/{year}/stages
 // Компактні таблиці зон A/B/C для телефону
+// ✅ stageId типу season-2026_stage-1 показує як "Етап 1"
 
 (async function(){
   "use strict";
@@ -76,9 +77,26 @@
   }
 
   function stageSortValue(id, data){
+    const raw = String(data.stageId || data.stageName || id || "");
+    const m = raw.match(/stage-(\d+)|етап\s*(\d+)|(\d+)/i);
+    return m ? Number(m[1] || m[2] || m[3]) : 999;
+  }
+
+  function stageDisplayName(id, data){
+    const savedName = String(data.stageName || "").trim();
+
+    if (savedName && !savedName.includes("season-")) {
+      return savedName;
+    }
+
     const raw = String(data.stageId || id || "");
-    const m = raw.match(/(\d+)/);
-    return m ? Number(m[1]) : 999;
+    const m = raw.match(/stage-(\d+)|етап\s*(\d+)|(\d+)/i);
+
+    if (m) {
+      return `Етап ${Number(m[1] || m[2] || m[3])}`;
+    }
+
+    return savedName || raw || "Етап";
   }
 
   async function loadStages(){
@@ -114,7 +132,7 @@
       stagesList.innerHTML = stages.map(x => {
         const d = x.data || {};
         const summary = d.summary || {};
-        const name = d.stageName || d.stageId || x.id;
+        const name = stageDisplayName(x.id, d);
 
         return `
           <button class="stage-btn" type="button" data-stage="${esc(x.id)}">
@@ -152,7 +170,7 @@
 
     resultSection.style.display = "block";
     stageTitle.textContent = "Зони A / B / C";
-    stageMeta.textContent = `${data.stageName || stageDocId} · Команд: ${rows.length}`;
+    stageMeta.textContent = `${stageDisplayName(stageDocId, data)} · Команд: ${rows.length}`;
 
     const zones = { A:[], B:[], C:[] };
 

@@ -9,24 +9,19 @@
   <link rel="apple-touch-icon" href="/assets/favicon.png">
   <meta name="theme-color" content="#1a1a1a">
 
-  <!-- ✅ SPEED: швидший старт мережі під Firebase -->
   <link rel="dns-prefetch" href="https://www.gstatic.com">
   <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 
-  <!-- ✅ SPEED: швидше підтягуються стилі -->
   <link rel="preload" href="/assets/css/main.css" as="style">
   <link rel="stylesheet" href="/assets/css/main.css">
 
-  <!-- твій конфіг (бургер/хедер/іконки тощо) -->
   <script defer src="/assets/js/config.js"></script>
 
-  <!-- ✅ SPEED: Firebase завантажується раніше, але НЕ блокує HTML (defer зберігає порядок) -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
-  <!-- init + логіка реєстрації (теж defer, щоб не блокувати рендер) -->
   <script defer src="/assets/js/firebase-init.js"></script>
   <script defer src="/assets/js/register_firebase.js"></script>
 
@@ -85,21 +80,12 @@
 
     .field{display:grid;gap:6px;margin-bottom:12px;}
     .field label{font-size:.9rem;font-weight:600;}
-    #foodQtyField.field--disabled{opacity:.55;}
 
-    .register-page input[type="number"]{
-      background:#0f0f14;border:1px solid #2a2a39;color:#fff;
-      padding:10px 14px;border-radius:12px;font-size:.96rem;
-      width:100%;
-    }
     .register-page input::placeholder{color:#6b7280;}
     .register-page input:focus{
       outline:none;border-color:var(--accent);
       box-shadow:0 0 10px rgba(246,195,76,0.35);
     }
-
-    .radio-row{display:flex;flex-wrap:wrap;gap:16px;}
-    .radio-row label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:.92rem;}
 
     .form-actions{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
     .spinner{
@@ -109,6 +95,7 @@
     }
     .spinner--on{display:inline-block;animation:spin .9s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
+
     .form-msg{margin-top:6px;font-weight:700;font-size:.92rem;}
     .form-msg.ok{color:#43d18a;}
     .form-msg.err{color:#ff6c6c;}
@@ -221,10 +208,10 @@
       font-weight:900;
     }
 
-    .pill-b--stage{   background:rgba(59,130,246,.16);  border-color:rgba(59,130,246,.35);  color:#bfe0ff; }
-    .pill-b--final{   background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b); border-color:transparent; color:#120a00; }
-    .pill-b--oneoff{  background:rgba(168,85,247,.16);  border-color:rgba(168,85,247,.35);  color:#efd6ff; }
-    .pill-b--stalker{ background:rgba(239,68,68,.16);   border-color:rgba(239,68,68,.35);   color:#ffb4b4; }
+    .pill-b--stage{background:rgba(59,130,246,.16);border-color:rgba(59,130,246,.35);color:#bfe0ff;}
+    .pill-b--final{background:linear-gradient(135deg,#f6c34c,#cc6a2b,#7a0f2b);border-color:transparent;color:#120a00;}
+    .pill-b--oneoff{background:rgba(168,85,247,.16);border-color:rgba(168,85,247,.35);color:#efd6ff;}
+    .pill-b--stalker{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.35);color:#ffb4b4;}
 
     .pill-b--open{
       background:linear-gradient(135deg,#22c55e,#16a34a);
@@ -290,7 +277,7 @@
         STOLAR CARP · REGISTRATION
       </div>
       <h1 class="title-gradient"><span>РЕЄСТРАЦІЯ ЗМАГАНЬ STOLAR CARP</span></h1>
-      <p>Оберіть відкрите змагання/етап, налаштуйте харчування — і подайте заявку.</p>
+      <p>Оберіть відкрите змагання/етап і подайте заявку.</p>
       <div class="register-hero__divider"></div>
     </div>
 
@@ -304,7 +291,7 @@
 
         <form id="regForm" class="form" novalidate>
           <input type="text" name="hp" id="hp" autocomplete="off"
-                 style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;"/>
+                 style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;opacity:0;">
 
           <div class="field">
             <label>Оберіть змагання / етап <span style="color:var(--accent);">*</span></label>
@@ -314,24 +301,10 @@
           </div>
 
           <div class="field">
-            <label>Харчування<span style="color:var(--accent);">*</span></label>
-            <div class="radio-row">
-              <label><input type="radio" name="food" value="Так" required> <span>Так</span></label>
-              <label><input type="radio" name="food" value="Ні"> <span>Ні</span></label>
-            </div>
-          </div>
-
-          <div class="field field--disabled" id="foodQtyField">
-            <label for="food_qty">Кількість харчуючих (1–6)</label>
-            <input type="number" id="food_qty" name="food_qty" min="1" max="6" inputmode="numeric"
-                   placeholder="Вкажіть кількість, якщо замовляєте харчування" disabled />
-            <div class="form__hint">Якщо харчування не потрібне — залиште поле порожнім.</div>
-          </div>
-
-          <div class="field">
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
               <input type="checkbox" id="rules" required style="transform:scale(1.25);accent-color:#f6c34c;">
-              <span>Підтверджую, що ознайомлений із
+              <span>
+                Підтверджую, що ознайомлений із
                 <a href="/rules.html" target="_blank" style="color:#f6c34c;text-decoration:underline;">регламентом турніру</a>
               </span>
             </label>
@@ -351,22 +324,22 @@
       </div>
 
       <div class="card register-card card--payment" id="payCard">
-  <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
+        <div class="card-payment-title"><span>₴</span> Оплата внеску</div>
 
-  <p id="payLine">
-    Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
-  </p>
+        <p id="payLine">
+          Сума внеску: <b><span id="payAmount">—</span> <span id="payCurrency">UAH</span></b> на банківську картку:
+        </p>
 
-  <p id="payLabel">Реквізити:</p>
-  <p><span id="cardNum" class="card-number">—</span></p>
+        <p id="payLabel">Реквізити:</p>
+        <p><span id="cardNum" class="card-number">—</span></p>
 
-  <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
-    Скопіювати реквізити
-  </button>
+        <button type="button" id="copyCard" class="btn btn--ghost" style="margin-top:6px;">
+          Скопіювати реквізити
+        </button>
 
-  <p class="card-note" id="payNote">
-    У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
-  </p>
+        <p class="card-note" id="payNote">
+          У коментарі до платежу обовʼязково вкажіть <b>назву команди</b>.
+        </p>
       </div>
 
     </div>

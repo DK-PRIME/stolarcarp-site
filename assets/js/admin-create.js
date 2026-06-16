@@ -1,78 +1,70 @@
 // assets/js/admin-create.js
-// STOLAR CARP • admin-create (Create/Edit competitions)
-//
-// ✅ НІЯКОГО другого логіну: беремо існуючу сесію з admin.html
-// ✅ Перевірка доступу: users/{uid}.role === "admin"
-// ✅ Мінімум читань: lakes (1 раз), competitions (тільки в edit), settings/app (1 раз)
-// ✅ Старт/фініш = datetime-local → зберігаємо Timestamp (UTC)
-// ✅ Тривалість рахуємо в UI автоматично
-// ✅ Реєстрація: auto (−28/−14) або manual (date/date)
-// ✅ Чернетка: localStorage
-// ✅ Make Active завжди робить active тільки після Save (щоб doc існував)
-// ✅ registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
-// ✅ FIX: НЕ чекаємо window.firebase (може не існувати) — чекаємо scAuth/scDb
-// ✅ FIX: activateFormat fallback правильно виставляє activeFormatName
-// ✅ FIX: draft serialize бере фактичний inpFormat.value, не старий activeFormatName
-//
-// ✅ NEW (головне): "СЕЗОН = РІК", а не "подія"
-//    - seasonYear = 2026/2027...
-//    - kind="tour"  => Турнір сезону (етапи+фінал), ID = tournament-2026 (стабільний)
-//    - kind="teams" => Командна подія в сезоні, ID = event-2026-...-abcd
-//    - kind="solo"  => Соло подія в сезоні, ID = event-2026-...-abcd
-//    - Обмеження форматів по kind (3tables НЕ може бути турніром)
+// STOLAR CARP • Create/Edit competitions
+// ✅ create/edit
+// ✅ no overwrite in create mode
+// ✅ role admin check
+// ✅ compatible with register_firebase.js
+// ✅ writes flat + nested Firestore fields
 
-(function(){
+(function () {
   "use strict";
 
-  // bump draft key because structure changed (kind/lakeCustom/etc)
-  const DRAFT_KEY = "sc_admin_create_draft_v2";
+  const DRAFT_KEY = "sc_admin_create_draft_v3";
+  const $ = (id) => document.getElementById(id);
 
-  const $ = (id)=>document.getElementById(id);
+  const setStatus = (t) => {
+    const e = $("createStatus");
+    if (e) e.textContent = t || "";
+  };
 
-  const setStatus = (t)=>{ const e=$("createStatus"); if(e) e.textContent=t; };
-  const setDebug  = (t)=>{ const e=$("createDebug");  if(e) e.textContent=t||""; };
-  const setMsg    = (html)=>{ const e=$("createMsg"); if(e) e.innerHTML = html || ""; };
+  const setDebug = (t) => {
+    const e = $("createDebug");
+    if (e) e.textContent = t || "";
+  };
 
-  function show(el){ el && el.classList.remove("hidden"); }
-  function hide(el){ el && el.classList.add("hidden"); }
+  const setMsg = (html) => {
+    const e = $("createMsg");
+    if (e) e.innerHTML = html || "";
+  };
 
-  function esc(s){
-    return String(s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  const show = (el) => el && el.classList.remove("hidden");
+  const hide = (el) => el && el.classList.add("hidden");
+
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (m) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[m]));
   }
 
-  // ---- Firebase wait (НЕ чекаємо window.firebase!) ----
-  async function waitForFirebase(){
-    for(let i=0;i<140;i++){
-      if(window.scAuth && window.scDb) return;
-      await new Promise(r=>setTimeout(r,100));
+  async function waitForFirebase() {
+    for (let i = 0; i < 140; i++) {
+      if (window.scAuth && window.scDb && window.firebase) return;
+      await new Promise((r) => setTimeout(r, 100));
     }
-    throw new Error("Firebase init не підняв scAuth/scDb. Перевір assets/js/firebase-init.js.");
+    throw new Error("Firebase init не підняв scAuth/scDb.");
   }
 
-  function getFirebaseCompat(){
-    if(window.firebase) return window.firebase;
-    if(typeof firebase !== "undefined") return firebase;
-    return null;
-  }
+  let auth = null;
+  let db = null;
+  let fb = null;
 
-  let auth=null, db=null, fb=null;
-
-  // --- Mode (create/edit)
   const url = new URL(location.href);
-  const mode = (url.searchParams.get("mode") || "create").toLowerCase(); // create|edit
+  const mode = (url.searchParams.get("mode") || "create").toLowerCase();
   const isEditMode = mode === "edit";
 
-  // --- UI refs
   const gate = $("createGate");
-  const app  = $("createApp");
+  const app = $("createApp");
 
   const tabCreate = $("tabCreate");
-  const tabEdit   = $("tabEdit");
+  const tabEdit = $("tabEdit");
   const editPicker = $("editPicker");
   const deleteWrap = $("deleteWrap");
 
-  // Fields (existing)
-  const inpType = $("inpType");     // legacy: season|oneoff (we keep for backward UI)
+  const inpType = $("inpType");
   const inpYear = $("inpYear");
   const inpName = $("inpName");
   const inpFormat = $("inpFormat");
@@ -98,936 +90,773 @@
   const inpPayDetails = $("inpPayDetails");
   const regPreview = $("regPreview");
 
-  // NEW optional fields (won't break if missing)
-  const inpKind = $("inpKind"); // tour|teams|solo (optional but recommended)
-  const inpLakeCustom = $("inpLakeCustom"); // custom lake name (optional)
-
-  // Buttons
   const btnSave = $("btnSave");
   const btnMakeActive = $("btnMakeActive");
   const btnResetDraft = $("btnResetDraft");
   const btnDelete = $("btnDelete");
 
-  // Edit picker
   const selCompetition = $("selCompetition");
   const btnReloadList = $("btnReloadList");
   const editPickerMsg = $("editPickerMsg");
 
-  // ------------------------------------------------------------
-  // ✅ Formats loader (registry + format-*.js)
-  // ------------------------------------------------------------
-  const formatFieldsEl = $("formatFields");
-  let activeFormatName = "";
-  let activeFormat = null;
-
-  function renderFormatSpecificFields(html){
-    if(!formatFieldsEl) return;
-    formatFieldsEl.innerHTML = html || "";
-  }
-
-  function getRegistry(){
-    const sc = window.SC_FORMATS || null;
-    if(!sc) return null;
-    if(typeof sc.get === "function") return sc; // SC_FORMATS.get(name)
-    if(sc.registry && typeof sc.registry.get === "function") return sc.registry; // SC_FORMATS.registry.get(name)
-    return null;
-  }
-
-  function getPreset(name){
-    const reg = getRegistry();
-    const key = String(name || "").toLowerCase();
-    if(!reg || !key) return null;
-    try{
-      return reg.get(key) || null;
-    }catch(_){
+  function getDraft() {
+    try {
+      return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+    } catch {
       return null;
     }
   }
 
-  async function activateFormat(formatName, opts){
-    let requested = String(formatName || "classic").toLowerCase();
-    let preset = getPreset(requested);
-
-    if(!preset){
-      console.warn(`Формат "${requested}" не знайдено, fallback classic`);
-      requested = "classic";
-      preset = getPreset("classic");
-    }
-
-    activeFormatName = requested;
-    activeFormat = preset || null;
-
-    renderFormatSpecificFields("");
-
-    if(activeFormat && typeof activeFormat.init === "function"){
-      activeFormat.init({ render: renderFormatSpecificFields, $, esc });
-    }
-
-    if(opts && opts.deserializeData && activeFormat && typeof activeFormat.deserialize === "function"){
-      try{
-        activeFormat.deserialize(opts.deserializeData, { render: renderFormatSpecificFields, $, esc });
-      }catch(e){
-        console.warn("deserialize error:", e);
-      }
-    }
+  function setDraft(data) {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch {}
   }
 
-  // --- Helpers: Draft
-  function getDraft(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); }catch{ return null; } }
-  function setDraft(data){ try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); }catch{} }
-  function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
+  function clearDraft() {
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {}
+  }
 
-  // --- Helpers: Date/time
-  function parseLocalDateTime(v){
-    const s = (v||"").trim();
-    if(!s) return null;
+  function parseLocalDateTime(v) {
+    const s = String(v || "").trim();
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
-    if(!m) return null;
-    const y = +m[1], mo = +m[2]-1, d = +m[3], h = +m[4], mi = +m[5];
-    const dt = new Date(y, mo, d, h, mi, 0, 0);
-    if(Number.isNaN(dt.getTime())) return null;
-    return dt;
+    if (!m) return null;
+
+    const d = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0, 0);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
 
-  function toDateTimeLocalValue(date){
-    if(!date) return "";
+  function toDateTimeLocalValue(date) {
+    if (!date) return "";
     const yy = date.getFullYear();
-    const mm = String(date.getMonth()+1).padStart(2,"0");
-    const dd = String(date.getDate()).padStart(2,"0");
-    const hh = String(date.getHours()).padStart(2,"0");
-    const mi = String(date.getMinutes()).padStart(2,"0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const dd = String(date.getDate()).padStart(2, "0");
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mi = String(date.getMinutes()).padStart(2, "0");
     return `${yy}-${mm}-${dd}T${hh}:${mi}`;
   }
 
-  function diffMinutes(a,b){
-    if(!a || !b) return null;
-    const ms = b.getTime() - a.getTime();
-    if(!Number.isFinite(ms)) return null;
-    return Math.floor(ms / 60000);
+  function dateOnlyFromInput() {
+    const d = parseLocalDateTime(inpStartAt?.value || "");
+    if (!d) return "";
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
   }
 
-  // --- Registration windows (auto)
-  function normDate(v){
-    const s = (v||"").trim();
-    if(!s) return "";
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
-    return s;
-  }
-
-  function addDays(dateStr, days){
-    const [y,m,d] = dateStr.split("-").map(Number);
-    const dt = new Date(Date.UTC(y, m-1, d, 12, 0, 0));
+  function addDays(dateStr, days) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
     dt.setUTCDate(dt.getUTCDate() + days);
+
     const yy = dt.getUTCFullYear();
-    const mm = String(dt.getUTCMonth()+1).padStart(2,"0");
-    const dd = String(dt.getUTCDate()).padStart(2,"0");
-    return `${yy}-${mm}-${dd}`;
-  }
-  function regOpenFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -28) : ""; }
-  function regCloseFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -14) : ""; }
-
-  function startDateOnly(){
-    const dt = parseLocalDateTime(inpStartAt?.value || "");
-    if(!dt) return "";
-    const yy = dt.getFullYear();
-    const mm = String(dt.getMonth()+1).padStart(2,"0");
-    const dd = String(dt.getDate()).padStart(2,"0");
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getUTCDate()).padStart(2, "0");
     return `${yy}-${mm}-${dd}`;
   }
 
-  // --- Access
-  async function requireAdmin(user){
-    if(!user) return false;
-    try{
+  function autoRegOpen(startDate) {
+    return startDate ? addDays(startDate, -28) : "";
+  }
+
+  function autoRegClose(startDate) {
+    return startDate ? addDays(startDate, -14) : "";
+  }
+
+  function diffMinutes(a, b) {
+    if (!a || !b) return null;
+    return Math.floor((b.getTime() - a.getTime()) / 60000);
+  }
+
+  function normalizeDate(v) {
+    const s = String(v || "").trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  }
+
+  function slugify(s) {
+    return String(s || "competition")
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яіїєґ]+/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 42);
+  }
+
+  function rand4() {
+    return Math.random().toString(36).slice(2, 6);
+  }
+
+  function makeCompId(form) {
+    const year = form.yearStr;
+    const slug = slugify(form.name);
+
+    if (form.type === "season") {
+      return `season-${year}-${slug}-${rand4()}`;
+    }
+
+    return `competition-${year}-${slug}-${rand4()}`;
+  }
+
+  async function requireAdmin(user) {
+    if (!user) return false;
+    try {
       const snap = await db.collection("users").doc(user.uid).get();
-      const role = snap.exists ? ((snap.data()||{}).role || "") : "";
-      return String(role).toLowerCase() === "admin";
-    }catch(_){
+      const role = snap.exists ? String((snap.data() || {}).role || "").toLowerCase() : "";
+      return role === "admin";
+    } catch {
       return false;
     }
   }
 
-  // --- UI: Mode switch
-  function setActiveTab(isEdit){
-    if(tabCreate && tabEdit){
-      tabCreate.classList.toggle("pill--active", !isEdit);
-      tabEdit.classList.toggle("pill--active", isEdit);
-    }
-    if(editPicker) (isEdit ? show : hide)(editPicker);
-    if(deleteWrap) (isEdit ? show : hide)(deleteWrap);
+  function setActiveTab(isEdit) {
+    if (tabCreate) tabCreate.classList.toggle("pill--active", !isEdit);
+    if (tabEdit) tabEdit.classList.toggle("pill--active", isEdit);
+    if (editPicker) (isEdit ? show : hide)(editPicker);
+    if (deleteWrap) (isEdit ? show : hide)(deleteWrap);
   }
 
-  function gotoMode(nextMode){
+  function gotoMode(nextMode) {
     const u = new URL(location.href);
-    if(nextMode === "edit") u.searchParams.set("mode","edit");
+    if (nextMode === "edit") u.searchParams.set("mode", "edit");
     else u.searchParams.delete("mode");
     location.href = u.toString();
   }
 
-  // ------------------------------------------------------------
-  // ✅ Business rules: kind + форматні обмеження
-  // ------------------------------------------------------------
-  const KIND_LABELS = {
-    tour:  "Турнір сезону (етапи + фінал)",
-    teams: "Командні змагання (подія)",
-    solo:  "Соло змагання (подія)"
-  };
+  async function loadLakes() {
+    if (!inpLake) return;
 
-  const TOUR_FORMATS  = ["classic"]; // турнір = тільки classic (за твоїм правилом)
-  const SOLO_FORMATS  = ["stalker-solo"];
-  const TEAMS_FORMATS = ["classic","3tables","stalker-teams","bigfish30","autumn-carp","trophy15"];
+    inpLake.innerHTML = `<option value="">Завантаження водойм…</option>`;
 
-  function inferKindFallback(){
-    // Якщо inpKind не існує — робимо розумний fallback:
-    // - inpType=season => турнір
-    // - інакше за форматом: stalker-solo => solo, інше => teams
-    const t = (inpType?.value || "oneoff").toLowerCase();
-    const fmt = String(inpFormat?.value || "classic").toLowerCase();
-    if(t === "season") return "tour";
-    if(fmt === "stalker-solo") return "solo";
-    return "teams";
-  }
-
-  function getKind(){
-    const k = String(inpKind?.value || "").toLowerCase().trim();
-    if(k === "tour" || k === "teams" || k === "solo") return k;
-    return inferKindFallback();
-  }
-
-  function allowedFormatsForKind(kind){
-    if(kind === "tour") return TOUR_FORMATS.slice();
-    if(kind === "solo") return SOLO_FORMATS.slice();
-    return TEAMS_FORMATS.slice();
-  }
-
-  function enforceFormatForKind(kind){
-    // Якщо вибраний формат не дозволений — переключаємо на перший дозволений
-    const allowed = allowedFormatsForKind(kind);
-    const current = String(inpFormat?.value || "classic").toLowerCase();
-    if(!allowed.includes(current)){
-      const next = allowed[0] || "classic";
-      if(inpFormat) inpFormat.value = next;
-    }
-  }
-
-  function setSeasonVisibility(){
-    // seasonOnly показуємо тільки для kind=tour
-    const kind = getKind();
-    if(seasonOnly){
-      if(kind === "tour") show(seasonOnly);
-      else hide(seasonOnly);
-    }
-  }
-
-  // ------------------------------------------------------------
-  // Lakes
-  // ------------------------------------------------------------
-  async function loadLakes(){
-    if(!inpLake) return;
-    inpLake.innerHTML = `<option value="">Завантаження…</option>`;
-    try{
+    try {
       const snap = await db.collection("lakes").get();
-      const items = snap.docs.map(d=>{
-        const x = d.data() || {};
-        return { id: d.id, name: x.name || d.id };
-      });
-      items.sort((a,b)=> (a.name||"").localeCompare(b.name||"","uk"));
 
-      if(!items.length){
-        inpLake.innerHTML = `<option value="">Нема водойм (lakes)</option>`;
+      const items = snap.docs.map((d) => {
+        const x = d.data() || {};
+        return {
+          id: d.id,
+          name: x.name || d.id
+        };
+      });
+
+      items.sort((a, b) => a.name.localeCompare(b.name, "uk"));
+
+      if (!items.length) {
+        inpLake.innerHTML = `<option value="">Нема водойм у lakes</option>`;
         return;
       }
 
-      inpLake.innerHTML = `<option value="">— вибери водойму —</option>` + items.map(it=>{
-        return `<option value="${esc(it.id)}">${esc(it.name)} (${esc(it.id)})</option>`;
-      }).join("");
-    }catch(e){
-      inpLake.innerHTML = `<option value="">Помилка завантаження lakes</option>`;
+      inpLake.innerHTML =
+        `<option value="">— вибери водойму —</option>` +
+        items.map((x) => `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.id)})</option>`).join("");
+    } catch (e) {
+      inpLake.innerHTML = `<option value="">Помилка завантаження водойм</option>`;
       setDebug(e?.message || String(e));
     }
   }
 
-  function getLakeInput(){
-    // Пріоритет: custom name -> select
-    const custom = (inpLakeCustom?.value || "").trim();
-    const lakeId = (inpLake?.value || "").trim();
+  async function getLakeSnapshot(lakeId) {
+    if (!lakeId) return null;
 
-    if(custom){
-      return {
-        source: "custom",
-        id: `custom:${custom.toLowerCase().slice(0,60).replace(/[^a-z0-9а-яіїєґ\-\s]+/gi,"").trim().replace(/\s+/g,"-") || "lake"}`,
-        name: custom
-      };
-    }
-
-    if(lakeId){
-      return { source:"catalog", id: lakeId, name: "" }; // name буде з lakes або fallback
-    }
-
-    return null;
-  }
-
-  async function getLakeSnapshot(lakeObj){
-    if(!lakeObj) return null;
-
-    if(lakeObj.source === "custom"){
-      return { id: lakeObj.id, name: lakeObj.name, source:"custom" };
-    }
-
-    const lakeId = lakeObj.id;
-    try{
+    try {
       const doc = await db.collection("lakes").doc(lakeId).get();
-      if(!doc.exists) return { id: lakeId, name: lakeId, source:"catalog" };
+      if (!doc.exists) return { id: lakeId, name: lakeId };
+
       const d = doc.data() || {};
-      return { id: lakeId, name: d.name || lakeId, source:"catalog" };
-    }catch(_){
-      return { id: lakeId, name: lakeId, source:"catalog" };
+      return {
+        id: lakeId,
+        name: d.name || lakeId
+      };
+    } catch {
+      return { id: lakeId, name: lakeId };
     }
   }
 
-  // ------------------------------------------------------------
-  // Edit list
-  // ------------------------------------------------------------
-  async function loadCompetitionsList(){
-    if(!selCompetition) return;
+  async function loadCompetitionsList() {
+    if (!selCompetition) return;
+
     selCompetition.innerHTML = `<option value="">Завантаження…</option>`;
-    if(editPickerMsg) editPickerMsg.textContent = "";
+    if (editPickerMsg) editPickerMsg.textContent = "";
 
     let activeId = "";
-    try{
+    try {
       const s = await db.collection("settings").doc("app").get();
-      if(s.exists) activeId = (s.data() || {}).activeCompetitionId || "";
-    }catch(_){}
+      if (s.exists) activeId = String((s.data() || {}).activeCompetitionId || "");
+    } catch {}
 
     const snap = await db.collection("competitions").get();
-    const items = snap.docs.map(doc=>{
+
+    const items = snap.docs.map((doc) => {
       const d = doc.data() || {};
-      const year = d.seasonYear || d.year || 0;
-      const kind = d.kind || ((d.type === "season") ? "tour" : "teams");
-      const name = d.name || doc.id;
       return {
         id: doc.id,
-        year,
-        kind,
-        name,
+        year: Number(d.seasonYear || d.year || 0),
+        type: d.type || "",
+        kind: d.kind || "",
+        name: d.name || doc.id,
         active: doc.id === activeId
       };
     });
 
-    items.sort((a,b)=>
+    items.sort((a, b) =>
       (b.year - a.year) ||
-      (a.kind||"").localeCompare(b.kind||"","uk") ||
-      (a.name||"").localeCompare(b.name||"","uk")
+      String(a.name).localeCompare(String(b.name), "uk")
     );
 
-    if(!items.length){
+    if (!items.length) {
       selCompetition.innerHTML = `<option value="">Нема змагань</option>`;
       return;
     }
 
     selCompetition.innerHTML =
       `<option value="">— вибери змагання —</option>` +
-      items.map(it=>{
-        const k = KIND_LABELS[it.kind] ? it.kind : "teams";
-        const label = `${it.active ? "✅ " : ""}${it.id} — ${it.name} (${it.year}, ${k})`;
-        return `<option value="${esc(it.id)}">${esc(label)}</option>`;
+      items.map((x) => {
+        const label = `${x.active ? "✅ " : ""}${x.id} — ${x.name} (${x.year})`;
+        return `<option value="${esc(x.id)}">${esc(label)}</option>`;
       }).join("");
   }
 
-  // ------------------------------------------------------------
-  // UI updates
-  // ------------------------------------------------------------
-  function updateDurationUI(){
+  function setSeasonVisibility() {
+    const type = inpType?.value || "season";
+    if (seasonOnly) {
+      if (type === "season") show(seasonOnly);
+      else hide(seasonOnly);
+    }
+  }
+
+  function updateDurationUI() {
     const a = parseLocalDateTime(inpStartAt?.value || "");
     const b = parseLocalDateTime(inpFinishAt?.value || "");
-    const mins = diffMinutes(a,b);
+    const mins = diffMinutes(a, b);
 
-    if(!a || !b || mins === null){
-      if(outDuration) outDuration.value = "—";
-      if(outDurationHours) outDurationHours.value = "—";
-      if(outDurationDays) outDurationDays.value = "—";
+    if (!a || !b || mins === null) {
+      if (outDuration) outDuration.value = "—";
+      if (outDurationHours) outDurationHours.value = "—";
+      if (outDurationDays) outDurationDays.value = "—";
       return;
     }
 
-    if(mins <= 0){
-      if(outDuration) outDuration.value = "❌ Фініш має бути після старту";
-      if(outDurationHours) outDurationHours.value = "—";
-      if(outDurationDays) outDurationDays.value = "—";
+    if (mins <= 0) {
+      if (outDuration) outDuration.value = "❌ Фініш має бути після старту";
+      if (outDurationHours) outDurationHours.value = "—";
+      if (outDurationDays) outDurationDays.value = "—";
       return;
     }
 
     const hours = mins / 60;
     const days = hours / 24;
 
-    if(outDuration) outDuration.value = `${Math.round(hours)} год (${days.toFixed(2)} доби)`;
-    if(outDurationHours) outDurationHours.value = hours.toFixed(2);
-    if(outDurationDays) outDurationDays.value = days.toFixed(2);
+    if (outDuration) outDuration.value = `${Math.round(hours)} год (${days.toFixed(2)} доби)`;
+    if (outDurationHours) outDurationHours.value = hours.toFixed(2);
+    if (outDurationDays) outDurationDays.value = days.toFixed(2);
   }
 
-  function updateRegUI(){
-    const mode = (inpRegMode?.value || "auto");
-    const startD = startDateOnly();
+  function getRegistrationBlock() {
+    const mode = inpRegMode?.value || "auto";
+    const startD = dateOnlyFromInput();
 
-    if(mode === "manual"){
-      if(inpRegOpen) inpRegOpen.disabled = false;
-      if(inpRegClose) inpRegClose.disabled = false;
-      if(regPreview){
-        regPreview.innerHTML =
-          `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen?.value)||"—")} → ${esc(normDate(inpRegClose?.value)||"—")})`;
+    if (mode === "manual") {
+      return {
+        mode: "manual",
+        openDate: normalizeDate(inpRegOpen?.value || ""),
+        closeDate: normalizeDate(inpRegClose?.value || "")
+      };
+    }
+
+    return {
+      mode: "auto",
+      openDate: autoRegOpen(startD),
+      closeDate: autoRegClose(startD)
+    };
+  }
+
+  function updateRegUI() {
+    const reg = getRegistrationBlock();
+
+    if (reg.mode === "manual") {
+      if (inpRegOpen) inpRegOpen.disabled = false;
+      if (inpRegClose) inpRegClose.disabled = false;
+      if (regPreview) {
+        regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(reg.openDate || "—")} → ${esc(reg.closeDate || "—")})`;
       }
       return;
     }
 
-    if(inpRegOpen) inpRegOpen.disabled = true;
-    if(inpRegClose) inpRegClose.disabled = true;
+    if (inpRegOpen) inpRegOpen.disabled = true;
+    if (inpRegClose) inpRegClose.disabled = true;
 
-    if(!startD){
-      if(regPreview) regPreview.textContent = "Реєстрація: —";
-      return;
+    if (regPreview) {
+      regPreview.innerHTML = `Реєстрація: <b>${esc(reg.openDate || "—")}</b> → <b>${esc(reg.closeDate || "—")}</b>`;
     }
-    const o = regOpenFromStartDate(startD);
-    const c = regCloseFromStartDate(startD);
-    if(regPreview) regPreview.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b>`;
   }
 
-  function currentFormatKey(){
-    return String((inpFormat && inpFormat.value) ? inpFormat.value : (activeFormatName || "classic")).toLowerCase();
+  function normalizeFormat(v) {
+    const raw = String(v || "classic").trim();
+    const map = {
+      threeTables: "threeTables",
+      stalkerTeams: "stalkerTeams",
+      trophy15: "trophy15",
+      classic: "classic"
+    };
+    return map[raw] || raw || "classic";
   }
 
-  // ------------------------------------------------------------
-  // Form collect/apply/draft
-  // ------------------------------------------------------------
-  function collectForm(){
-    const yearStr = (inpYear?.value || "").trim();
-    const name = (inpName?.value || "").trim();
-    const kind = getKind(); // tour|teams|solo
-
-    // legacy type mapping (for backward compatibility)
-    const type = (kind === "tour") ? "season" : "oneoff";
-
-    const format = String(inpFormat?.value || "classic").toLowerCase();
-    const lakeInput = getLakeInput();
+  function collectForm() {
+    const type = inpType?.value || "season";
+    const yearStr = String(inpYear?.value || "").trim();
+    const name = String(inpName?.value || "").trim();
+    const format = normalizeFormat(inpFormat?.value || "classic");
+    const lakeId = String(inpLake?.value || "").trim();
 
     const startDt = parseLocalDateTime(inpStartAt?.value || "");
     const finishDt = parseLocalDateTime(inpFinishAt?.value || "");
 
-    const stagesCount = (kind === "tour") ? Number(inpStagesCount?.value || 3) : 1;
-    const hasFinal = (kind === "tour") ? ((inpHasFinal?.value || "yes") === "yes") : false;
+    const stagesCount = type === "season" ? Number(inpStagesCount?.value || 3) : 1;
+    const hasFinal = type === "season" ? (inpHasFinal?.value || "yes") === "yes" : false;
 
-    const regMode = (inpRegMode?.value || "auto");
     const payEnabled = (inpPayEnabled?.value || "yes") === "yes";
 
-    const manualOpen = normDate(inpRegOpen?.value || "");
-    const manualClose = normDate(inpRegClose?.value || "");
-
-    const priceRaw = (inpPrice?.value || "").trim();
-    const price = priceRaw ? Number(String(priceRaw).replace(",", ".")) : null;
-    const currency = (inpCurrency?.value || "UAH").trim().toUpperCase();
-    const payDetails = (inpPayDetails?.value || "").trim();
+    const priceRaw = String(inpPrice?.value || "").trim().replace(",", ".");
+    const price = priceRaw ? Number(priceRaw) : null;
 
     return {
+      type,
+      kind: type === "season" ? "tour" : "teams",
+      entryType: "team",
       yearStr,
       seasonYear: /^\d{4}$/.test(yearStr) ? Number(yearStr) : null,
       name,
-      kind,
-      type,
       format,
-      lakeInput,
+      lakeId,
       startDt,
       finishDt,
       stagesCount,
       hasFinal,
-      regMode,
+      registration: getRegistrationBlock(),
       payEnabled,
-      manualOpen,
-      manualClose,
-      price: (price === null || Number.isFinite(price)) ? price : null,
-      currency,
-      payDetails
+      price: price === null || Number.isFinite(price) ? price : NaN,
+      currency: String(inpCurrency?.value || "UAH").trim().toUpperCase(),
+      payDetails: String(inpPayDetails?.value || "").trim()
     };
   }
 
-  function applyForm(data){
-    if(!data) return;
+  function validate(form) {
+    if (!/^\d{4}$/.test(form.yearStr)) throw new Error("Вкажи рік, наприклад 2026.");
+    if (!form.name) throw new Error("Вкажи назву змагання.");
+    if (!form.lakeId) throw new Error("Вибери водойму.");
+    if (!form.startDt) throw new Error("Заповни старт.");
+    if (!form.finishDt) throw new Error("Заповни фініш.");
+    if (form.finishDt <= form.startDt) throw new Error("Фініш має бути після старту.");
 
-    // kind first (if UI exists)
-    const kind = String(data.kind || "").toLowerCase();
-    if(inpKind && (kind === "tour" || kind === "teams" || kind === "solo")){
-      inpKind.value = kind;
-    }else{
-      // legacy mapping if no inpKind or old docs
-      if(inpType) inpType.value = (data.type === "season") ? "season" : "oneoff";
+    if (form.type === "season") {
+      if (!Number.isFinite(form.stagesCount) || form.stagesCount < 2 || form.stagesCount > 8) {
+        throw new Error("Для сезону к-сть етапів має бути 2–8.");
+      }
     }
 
-    if(inpYear) inpYear.value = data.yearStr || String(data.seasonYear || data.year || "");
-    if(inpName) inpName.value = data.name || "";
+    if (form.registration.mode === "manual") {
+      if (!form.registration.openDate || !form.registration.closeDate) {
+        throw new Error("Manual: вкажи відкриття і закриття реєстрації.");
+      }
 
-    if(inpFormat) inpFormat.value = (data.format || "classic");
+      if (form.registration.closeDate < form.registration.openDate) {
+        throw new Error("Дата закриття реєстрації не може бути раніше відкриття.");
+      }
+    }
 
-    // lake
-    if(inpLakeCustom) inpLakeCustom.value = data.lakeCustomName || "";
-    if(inpLake) inpLake.value = data.lakeId || "";
-
-    // schedule
-    if(inpStartAt) inpStartAt.value = data.startAtLocal || "";
-    if(inpFinishAt) inpFinishAt.value = data.finishAtLocal || "";
-
-    // tour-only
-    if(inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
-    if(inpHasFinal) inpHasFinal.value = (data.hasFinal ? "yes" : "no");
-
-    // reg + pay
-    if(inpRegMode) inpRegMode.value = data.regMode || "auto";
-    if(inpPayEnabled) inpPayEnabled.value = (data.payEnabled === false ? "no" : "yes");
-    if(inpRegOpen) inpRegOpen.value = data.manualOpen || "";
-    if(inpRegClose) inpRegClose.value = data.manualClose || "";
-    if(inpPrice) inpPrice.value = (data.price === 0 || data.price) ? String(data.price) : "";
-    if(inpCurrency) inpCurrency.value = (data.currency || "UAH").toUpperCase();
-    if(inpPayDetails) inpPayDetails.value = data.payDetails || "";
+    if (form.payEnabled && Number.isNaN(form.price)) {
+      throw new Error("Внесок має бути числом.");
+    }
   }
 
-  function saveDraftNow(){
-    const d = collectForm();
-    const fmtKey = currentFormatKey();
+  function buildEvents(form) {
+    if (form.type !== "season") return [];
 
-    const draft = {
+    const events = [];
+
+    for (let i = 1; i <= form.stagesCount; i++) {
+      events.push({
+        key: `stage-${i}`,
+        stageId: `stage-${i}`,
+        title: `Етап ${i}`,
+        name: `Етап ${i}`,
+        isFinal: false,
+
+        entryType: "team",
+
+        startAt: fb.firestore.Timestamp.fromDate(form.startDt),
+        finishAt: fb.firestore.Timestamp.fromDate(form.finishDt),
+
+        regMode: form.registration.mode,
+        regOpenDate: form.registration.openDate,
+        regCloseDate: form.registration.closeDate,
+        manualOpen: false,
+
+        payEnabled: !!form.payEnabled,
+        price: form.price === 0 || form.price ? form.price : null,
+        currency: form.currency,
+        payDetails: form.payDetails
+      });
+    }
+
+    if (form.hasFinal) {
+      events.push({
+        key: "final",
+        stageId: "final",
+        title: "Фінал",
+        name: "Фінал",
+        isFinal: true,
+
+        entryType: "team",
+
+        startAt: fb.firestore.Timestamp.fromDate(form.startDt),
+        finishAt: fb.firestore.Timestamp.fromDate(form.finishDt),
+
+        regMode: form.registration.mode,
+        regOpenDate: form.registration.openDate,
+        regCloseDate: form.registration.closeDate,
+        manualOpen: false,
+
+        payEnabled: !!form.payEnabled,
+        price: form.price === 0 || form.price ? form.price : null,
+        currency: form.currency,
+        payDetails: form.payDetails
+      });
+    }
+
+    return events;
+  }
+
+  async function buildCompetitionData(compId, form, existing) {
+    const lake = await getLakeSnapshot(form.lakeId);
+    const mins = diffMinutes(form.startDt, form.finishDt);
+    const durationHours = mins !== null ? Number((mins / 60).toFixed(2)) : null;
+    const now = fb.firestore.FieldValue.serverTimestamp();
+
+    const startTs = fb.firestore.Timestamp.fromDate(form.startDt);
+    const finishTs = fb.firestore.Timestamp.fromDate(form.finishDt);
+
+    const data = {
+      compId,
+      type: form.type,
+      kind: form.kind,
+
+      year: form.seasonYear,
+      seasonYear: form.seasonYear,
+
+      name: form.name,
+      title: form.name,
+      brand: "STOLAR CARP",
+      format: form.format,
+
+      entryType: form.entryType,
+
+      lake: lake ? { id: lake.id, name: lake.name } : null,
+      lakeId: lake?.id || form.lakeId,
+
+      startAt: startTs,
+      endAt: finishTs,
+      finishAt: finishTs,
+
+      schedule: {
+        startAt: startTs,
+        finishAt: finishTs,
+        durationHours
+      },
+
+      regMode: form.registration.mode,
+      regOpenDate: form.registration.openDate,
+      regCloseDate: form.registration.closeDate,
+      manualOpen: false,
+
+      registration: {
+        mode: form.registration.mode,
+        openDate: form.registration.openDate,
+        closeDate: form.registration.closeDate
+      },
+
+      payEnabled: !!form.payEnabled,
+      price: form.price === 0 || form.price ? form.price : null,
+      currency: form.currency,
+      payDetails: form.payDetails,
+
+      payment: {
+        enabled: !!form.payEnabled,
+        price: form.price === 0 || form.price ? form.price : null,
+        currency: form.currency,
+        details: form.payDetails
+      },
+
+      stagesCount: form.type === "season" ? form.stagesCount : 1,
+      hasFinal: form.type === "season" ? !!form.hasFinal : false,
+
+      events: buildEvents(form),
+
+      engine: {
+        baseFormat: form.format
+      },
+
+      updatedAt: now
+    };
+
+    if (!existing) data.createdAt = now;
+
+    return data;
+  }
+
+  async function getUniqueCompId(form) {
+    for (let i = 0; i < 10; i++) {
+      const id = makeCompId(form);
+      const snap = await db.collection("competitions").doc(id).get();
+      if (!snap.exists) return id;
+    }
+
+    throw new Error("Не вдалося створити унікальний ID. Спробуй ще раз.");
+  }
+
+  async function saveCompetition(editingCompId) {
+    const form = collectForm();
+    validate(form);
+
+    const compId = editingCompId || await getUniqueCompId(form);
+    const ref = db.collection("competitions").doc(compId);
+    const snap = await ref.get();
+
+    if (!editingCompId && snap.exists) {
+      throw new Error(`Змагання ${compId} вже існує. Спробуй ще раз.`);
+    }
+
+    const data = await buildCompetitionData(compId, form, snap.exists);
+
+    await ref.set(data, { merge: true });
+
+    saveDraftNow();
+
+    return compId;
+  }
+
+  async function makeActive(compId) {
+    await db.collection("settings").doc("app").set({
+      activeCompetitionId: compId,
+      updatedAt: fb.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  async function deleteCompetition(compId) {
+    const typed = prompt(`УВАГА! Видалення без відновлення.\nВведи точно ID:\n\n${compId}`);
+    if (typed !== compId) throw new Error("Видалення скасовано.");
+
+    try {
+      const s = await db.collection("settings").doc("app").get();
+      const activeId = s.exists ? String((s.data() || {}).activeCompetitionId || "") : "";
+
+      if (activeId === compId) {
+        await db.collection("settings").doc("app").set({
+          activeCompetitionId: "",
+          updatedAt: fb.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
+    } catch {}
+
+    await db.collection("competitions").doc(compId).delete();
+  }
+
+  function applyForm(data) {
+    if (!data) return;
+
+    if (inpType) inpType.value = data.type || "season";
+    if (inpYear) inpYear.value = data.yearStr || data.year || data.seasonYear || "";
+    if (inpName) inpName.value = data.name || "";
+    if (inpFormat) inpFormat.value = data.format || "classic";
+    if (inpLake) inpLake.value = data.lakeId || data.lake?.id || "";
+
+    if (inpStartAt) inpStartAt.value = data.startAtLocal || "";
+    if (inpFinishAt) inpFinishAt.value = data.finishAtLocal || "";
+
+    if (inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
+    if (inpHasFinal) inpHasFinal.value = data.hasFinal === false ? "no" : "yes";
+
+    if (inpRegMode) inpRegMode.value = data.regMode || data.registration?.mode || "auto";
+    if (inpPayEnabled) inpPayEnabled.value = data.payEnabled === false || data.payment?.enabled === false ? "no" : "yes";
+    if (inpRegOpen) inpRegOpen.value = data.manualOpen || data.registration?.openDate || data.regOpenDate || "";
+    if (inpRegClose) inpRegClose.value = data.manualClose || data.registration?.closeDate || data.regCloseDate || "";
+    if (inpPrice) inpPrice.value = data.price === 0 || data.price ? String(data.price) : data.payment?.price || "";
+    if (inpCurrency) inpCurrency.value = data.currency || data.payment?.currency || "UAH";
+    if (inpPayDetails) inpPayDetails.value = data.payDetails || data.payment?.details || "";
+  }
+
+  function saveDraftNow() {
+    const d = collectForm();
+
+    setDraft({
+      type: d.type,
       yearStr: d.yearStr,
       name: d.name,
-      kind: d.kind,
-      type: d.type,
       format: d.format,
-
-      lakeId: d.lakeInput?.source === "catalog" ? d.lakeInput.id : "",
-      lakeCustomName: d.lakeInput?.source === "custom" ? d.lakeInput.name : "",
-
+      lakeId: d.lakeId,
       startAtLocal: inpStartAt?.value || "",
       finishAtLocal: inpFinishAt?.value || "",
-
       stagesCount: d.stagesCount,
       hasFinal: d.hasFinal,
-
-      regMode: d.regMode,
+      regMode: d.registration.mode,
       payEnabled: d.payEnabled,
-      manualOpen: d.manualOpen,
-      manualClose: d.manualClose,
+      manualOpen: d.registration.openDate,
+      manualClose: d.registration.closeDate,
       price: d.price,
       currency: d.currency,
       payDetails: d.payDetails,
-
-      engine: (activeFormat && typeof activeFormat.serialize === "function")
-        ? (activeFormat.serialize({ $, format: fmtKey }) || {})
-        : {},
-
       ts: Date.now()
-    };
-    setDraft(draft);
+    });
   }
 
-  // ------------------------------------------------------------
-  // IDs
-  // ------------------------------------------------------------
-  function rand4(){
-    return Math.random().toString(36).slice(2,6);
-  }
+  async function loadCompetition(compId) {
+    if (!compId) return;
 
-  function slugify(name){
-    return (name||"event")
-      .toLowerCase()
-      .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
-      .replace(/-+/g,"-")
-      .replace(/^-|-$/g,"")
-      .slice(0,40);
-  }
-
-  function compIdFrom(kind, yearStr, name){
-    // Турнір року має бути стабільний 1-в-1
-    if(kind === "tour"){
-      return `tournament-${yearStr}`;
-    }
-
-    const slug = slugify(name);
-    return `event-${yearStr}-${slug || "event"}-${rand4()}`;
-  }
-
-  // ------------------------------------------------------------
-  // Validation
-  // ------------------------------------------------------------
-  function validate(form){
-    if(!/^\d{4}$/.test(form.yearStr)) throw new Error("Вкажи рік (4 цифри), наприклад 2026.");
-    if(!form.name) throw new Error("Вкажи назву змагання.");
-
-    // lake: either selected or custom
-    if(!form.lakeInput) throw new Error("Вкажи водойму: або вибери зі списку, або впиши назву.");
-
-    if(!form.startDt) throw new Error("Заповни старт (дата + година).");
-    if(!form.finishDt) throw new Error("Заповни фініш (дата + година).");
-    if(form.finishDt.getTime() <= form.startDt.getTime()) throw new Error("Фініш має бути після старту.");
-
-    // kind + format restriction
-    const kind = form.kind;
-    const allowed = allowedFormatsForKind(kind);
-    if(!allowed.includes(String(form.format||"").toLowerCase())){
-      const msg =
-        kind === "tour"
-          ? `Турнір сезону може бути тільки у форматі: ${allowed.join(", ")}.`
-          : `Для цього виду доступні формати: ${allowed.join(", ")}.`;
-      throw new Error(msg);
-    }
-
-    if(form.kind === "tour"){
-      const sc = Number(form.stagesCount || 0);
-      if(!Number.isFinite(sc) || sc < 2 || sc > 8) throw new Error("Турнір: к-сть етапів має бути 2–8.");
-    }
-
-    if(form.regMode === "manual"){
-      if(form.manualOpen && !form.manualClose) throw new Error("Manual: заповни дату закриття реєстрації.");
-      if(!form.manualOpen && form.manualClose) throw new Error("Manual: заповни дату відкриття реєстрації.");
-    }
-
-    if(form.payEnabled){
-      if(form.price !== null && !Number.isFinite(form.price)) throw new Error("Внесок має бути числом.");
-    }
-  }
-
-  function computeRegistrationBlock(form){
-    const startD = startDateOnly();
-    if(form.regMode === "manual"){
-      return { mode: "manual", openDate: form.manualOpen || "", closeDate: form.manualClose || "" };
-    }
-    return {
-      mode: "auto",
-      openDate: startD ? regOpenFromStartDate(startD) : "",
-      closeDate: startD ? regCloseFromStartDate(startD) : ""
-    };
-  }
-
-  // ------------------------------------------------------------
-  // Load one competition
-  // ------------------------------------------------------------
-  async function loadCompetition(compId){
-    if(!compId) return;
-
-    setMsg("");
     setStatus("Завантаження…");
-    try{
+    setMsg("");
+
+    try {
       const doc = await db.collection("competitions").doc(compId).get();
-      if(!doc.exists) throw new Error(`Не знайдено competitions/${compId}`);
+      if (!doc.exists) throw new Error(`Не знайдено competitions/${compId}`);
 
       const d = doc.data() || {};
 
-      const startAt = d.schedule?.startAt?.toDate ? d.schedule.startAt.toDate() : null;
-      const finishAt = d.schedule?.finishAt?.toDate ? d.schedule.finishAt.toDate() : null;
+      const startAt = d.schedule?.startAt?.toDate
+        ? d.schedule.startAt.toDate()
+        : d.startAt?.toDate
+          ? d.startAt.toDate()
+          : null;
 
-      const reg = d.registration || {};
-      const pay = d.payment || {};
-
-      const kind = String(d.kind || "").toLowerCase() ||
-        ((d.type === "season") ? "tour" : "teams");
-
-      const lakeId = d.lake?.id || d.lakeId || "";
-      const lakeSource = d.lake?.source || (String(lakeId).startsWith("custom:") ? "custom" : "catalog");
-      const lakeCustomName = (lakeSource === "custom") ? (d.lake?.name || "") : "";
+      const finishAt = d.schedule?.finishAt?.toDate
+        ? d.schedule.finishAt.toDate()
+        : d.finishAt?.toDate
+          ? d.finishAt.toDate()
+          : d.endAt?.toDate
+            ? d.endAt.toDate()
+            : null;
 
       applyForm({
-        type: d.type || ((kind === "tour") ? "season" : "oneoff"),
-        kind,
+        type: d.type || (d.kind === "tour" ? "season" : "oneoff"),
         yearStr: String(d.seasonYear || d.year || ""),
-        seasonYear: d.seasonYear || d.year || null,
         name: d.name || "",
         format: d.format || "classic",
-
-        lakeId: (lakeSource === "catalog") ? lakeId : "",
-        lakeCustomName: lakeCustomName,
-
+        lakeId: d.lake?.id || d.lakeId || "",
         startAtLocal: startAt ? toDateTimeLocalValue(startAt) : "",
         finishAtLocal: finishAt ? toDateTimeLocalValue(finishAt) : "",
-
         stagesCount: d.stagesCount || 3,
         hasFinal: !!d.hasFinal,
-
-        regMode: reg.mode || "auto",
-        payEnabled: pay.enabled !== false,
-        manualOpen: reg.openDate || "",
-        manualClose: reg.closeDate || "",
-
-        price: (pay.price === 0 || pay.price) ? pay.price : null,
-        currency: pay.currency || "UAH",
-        payDetails: pay.details || ""
+        regMode: d.registration?.mode || d.regMode || "auto",
+        payEnabled: d.payment?.enabled ?? d.payEnabled ?? true,
+        manualOpen: d.registration?.openDate || d.regOpenDate || "",
+        manualClose: d.registration?.closeDate || d.regCloseDate || "",
+        price: d.payment?.price ?? d.price ?? null,
+        currency: d.payment?.currency || d.currency || "UAH",
+        payDetails: d.payment?.details || d.payDetails || ""
       });
-
-      // enforce kind restrictions in UI
-      enforceFormatForKind(getKind());
-
-      // activate format + deserialize engine
-      await activateFormat((inpFormat?.value || d.format || "classic"), { deserializeData: (d.engine || {}) });
 
       setSeasonVisibility();
       updateDurationUI();
       updateRegUI();
-      saveDraftNow();
 
       setStatus("Завантажено ✅");
       setDebug("");
-    }catch(e){
+    } catch (e) {
       setStatus("Помилка завантаження ❌");
       setDebug(e?.message || String(e));
     }
   }
 
-  // ------------------------------------------------------------
-  // Save
-  // ------------------------------------------------------------
-  async function saveCompetition(editingCompId){
-    const form = collectForm();
+  function resetForm() {
+    clearDraft();
 
-    // enforce UI before validate (so it doesn't surprise)
-    enforceFormatForKind(form.kind);
+    if (inpType) inpType.value = "season";
+    if (inpYear) inpYear.value = "";
+    if (inpName) inpName.value = "";
+    if (inpFormat) inpFormat.value = "classic";
+    if (inpLake) inpLake.value = "";
+    if (inpStartAt) inpStartAt.value = "";
+    if (inpFinishAt) inpFinishAt.value = "";
+    if (inpStagesCount) inpStagesCount.value = "3";
+    if (inpHasFinal) inpHasFinal.value = "yes";
+    if (inpRegMode) inpRegMode.value = "auto";
+    if (inpPayEnabled) inpPayEnabled.value = "yes";
+    if (inpRegOpen) inpRegOpen.value = "";
+    if (inpRegClose) inpRegClose.value = "";
+    if (inpPrice) inpPrice.value = "";
+    if (inpCurrency) inpCurrency.value = "UAH";
+    if (inpPayDetails) inpPayDetails.value = "";
 
-    // refresh format after possible enforce
-    form.format = String(inpFormat?.value || form.format || "classic").toLowerCase();
-
-    validate(form);
-
-    // format-specific validate/serialize
-    let formatExtra = {};
-    if(activeFormat && typeof activeFormat.validate === "function"){
-      activeFormat.validate({ $, format: String(form.format || "").toLowerCase() });
-    }
-    if(activeFormat && typeof activeFormat.serialize === "function"){
-      formatExtra = activeFormat.serialize({ $, format: String(form.format || "").toLowerCase() }) || {};
-    }
-
-    const compId = editingCompId || compIdFrom(form.kind, form.yearStr, form.name);
-
-    const lakeSnap = await getLakeSnapshot(form.lakeInput);
-    const regBlock = computeRegistrationBlock(form);
-
-    const mins = diffMinutes(form.startDt, form.finishDt);
-    const durationHours = (mins !== null) ? (mins/60) : null;
-
-    const ref = db.collection("competitions").doc(compId);
-    const snap = await ref.get();
-
-    // ✅ RULE: tournament-year is unique
-    if(!editingCompId && form.kind === "tour" && snap.exists){
-      throw new Error(`Турнір сезону ${form.yearStr} вже існує (ID: ${compId}). Перейди в "Редагувати" і відкрий його.`);
-    }
-
-    const data = {
-      compId,
-
-      // legacy but kept
-      type: form.type, // "season" for tour, "oneoff" for events
-      year: Number(form.yearStr), // legacy compatibility
-      seasonYear: Number(form.yearStr), // canonical
-
-      kind: form.kind, // canonical: tour|teams|solo
-      name: form.name,
-      brand: "STOLAR CARP",
-      format: String(form.format || "classic").toLowerCase(),
-
-      // engine (format-specific config)
-      engine: {
-        baseFormat: String(form.format || "classic").toLowerCase(),
-        ...formatExtra
-      },
-
-      lake: lakeSnap ? { id: lakeSnap.id, name: lakeSnap.name, source: lakeSnap.source || "catalog" } : null,
-
-      schedule: {
-        startAt: fb.firestore.Timestamp.fromDate(form.startDt),
-        finishAt: fb.firestore.Timestamp.fromDate(form.finishDt),
-        durationHours: (durationHours !== null) ? Number(durationHours.toFixed(2)) : null
-      },
-
-      // only meaningful for tour
-      stagesCount: form.kind === "tour" ? Number(form.stagesCount) : 1,
-      hasFinal: form.kind === "tour" ? !!form.hasFinal : false,
-
-      registration: {
-        mode: regBlock.mode,
-        openDate: regBlock.openDate || "",
-        closeDate: regBlock.closeDate || ""
-      },
-
-      payment: {
-        enabled: !!form.payEnabled,
-        price: (form.price === 0 || form.price) ? form.price : null,
-        currency: (form.currency || "UAH").toUpperCase(),
-        details: form.payDetails || ""
-      },
-
-      updatedAt: fb.firestore.FieldValue.serverTimestamp()
-    };
-
-    if(!snap.exists){
-      data.createdAt = fb.firestore.FieldValue.serverTimestamp();
-    }
-
-    await ref.set(data, { merge:true });
-
-    saveDraftNow();
-    return compId;
+    setSeasonVisibility();
+    updateDurationUI();
+    updateRegUI();
+    setMsg(`<span class="ok">✅ Чернетку скинуто</span>`);
   }
 
-  // --- Make active
-  async function makeActive(compId){
-    await db.collection("settings").doc("app").set({
-      activeCompetitionId: compId,
-      updatedAt: fb.firestore.FieldValue.serverTimestamp()
-    }, { merge:true });
-  }
+  function bindUI() {
+    if (tabCreate) tabCreate.onclick = () => gotoMode("create");
+    if (tabEdit) tabEdit.onclick = () => gotoMode("edit");
 
-  // --- Delete
-  async function deleteCompetition(compId){
-    const typed = prompt(`УВАГА! Видалення без відновлення.\nВведи точно ID змагання для підтвердження:\n\n${compId}`);
-    if(typed !== compId) throw new Error("Видалення скасовано (ID не співпав).");
-
-    try{
-      const s = await db.collection("settings").doc("app").get();
-      const activeId = s.exists ? ((s.data()||{}).activeCompetitionId || "") : "";
-      if(activeId === compId){
-        await db.collection("settings").doc("app").set({
-          activeCompetitionId: "",
-          updatedAt: fb.firestore.FieldValue.serverTimestamp()
-        }, { merge:true });
-      }
-    }catch(_){}
-
-    await db.collection("competitions").doc(compId).delete();
-  }
-
-  // ------------------------------------------------------------
-  // Bind UI
-  // ------------------------------------------------------------
-  function bindUI(){
-    if(tabCreate) tabCreate.onclick = ()=> gotoMode("create");
-    if(tabEdit) tabEdit.onclick = ()=> gotoMode("edit");
-
-    // If legacy inpType exists, we map it:
-    // season -> kind=tour ; oneoff -> kind based on format (solo/teams)
-    if(inpType){
-      inpType.addEventListener("change", async ()=>{
-        if(inpType.value === "season"){
-          if(inpKind) inpKind.value = "tour";
-        }else{
-          // oneoff
-          if(inpKind){
-            const fmt = String(inpFormat?.value || "classic").toLowerCase();
-            inpKind.value = (fmt === "stalker-solo") ? "solo" : "teams";
-          }
-        }
-        enforceFormatForKind(getKind());
-        await activateFormat(inpFormat?.value || "classic");
+    if (inpType) {
+      inpType.addEventListener("change", () => {
         setSeasonVisibility();
-        updateRegUI();
         saveDraftNow();
       });
     }
 
-    if(inpKind){
-      inpKind.addEventListener("change", async ()=>{
-        enforceFormatForKind(getKind());
-        await activateFormat(inpFormat?.value || "classic");
-        setSeasonVisibility();
-        updateRegUI();
-        saveDraftNow();
-      });
-    }
-
-    if(inpFormat){
-      inpFormat.addEventListener("change", async ()=>{
-        // keep restrictions by kind
-        enforceFormatForKind(getKind());
-        await activateFormat(inpFormat.value);
-        saveDraftNow();
-      });
-    }
-
-    // Inputs
     [
-      inpYear, inpName, inpLake, inpLakeCustom,
+      inpYear, inpName, inpFormat, inpLake,
       inpStartAt, inpFinishAt,
       inpStagesCount, inpHasFinal,
       inpRegMode, inpPayEnabled, inpRegOpen, inpRegClose,
       inpPrice, inpCurrency, inpPayDetails
-    ].forEach(el=>{
-      if(!el) return;
-      el.addEventListener("change", ()=>{
+    ].forEach((el) => {
+      if (!el) return;
+
+      el.addEventListener("change", () => {
         updateDurationUI();
         updateRegUI();
         saveDraftNow();
       });
-      el.addEventListener("input", ()=>{
+
+      el.addEventListener("input", () => {
         updateDurationUI();
         updateRegUI();
         saveDraftNow();
       });
     });
 
-    if(btnResetDraft){
-      btnResetDraft.onclick = async ()=>{
-        clearDraft();
+    if (btnResetDraft) btnResetDraft.onclick = resetForm;
 
-        if(inpKind) inpKind.value = "tour";
-        if(inpType) inpType.value = "season";
-
-        if(inpYear) inpYear.value = "";
-        if(inpName) inpName.value = "";
-        if(inpFormat) inpFormat.value = "classic";
-
-        if(inpLake) inpLake.value = "";
-        if(inpLakeCustom) inpLakeCustom.value = "";
-
-        if(inpStartAt) inpStartAt.value = "";
-        if(inpFinishAt) inpFinishAt.value = "";
-
-        if(inpStagesCount) inpStagesCount.value = "3";
-        if(inpHasFinal) inpHasFinal.value = "yes";
-
-        if(inpRegMode) inpRegMode.value = "auto";
-        if(inpPayEnabled) inpPayEnabled.value = "yes";
-        if(inpRegOpen) inpRegOpen.value = "";
-        if(inpRegClose) inpRegClose.value = "";
-        if(inpPrice) inpPrice.value = "";
-        if(inpCurrency) inpCurrency.value = "UAH";
-        if(inpPayDetails) inpPayDetails.value = "";
-
-        enforceFormatForKind(getKind());
-        await activateFormat(inpFormat?.value || "classic");
-
-        setSeasonVisibility();
-        updateDurationUI();
-        updateRegUI();
-        setMsg(`<span class="ok">✅ Чернетку скинуто</span>`);
-      };
-    }
-
-    if(btnReloadList){
-      btnReloadList.onclick = async ()=>{
-        if(editPickerMsg) editPickerMsg.textContent = "Оновлення…";
+    if (btnReloadList) {
+      btnReloadList.onclick = async () => {
+        if (editPickerMsg) editPickerMsg.textContent = "Оновлення…";
         await loadCompetitionsList();
-        if(editPickerMsg) editPickerMsg.textContent = "";
+        if (editPickerMsg) editPickerMsg.textContent = "";
       };
     }
 
-    if(selCompetition){
-      selCompetition.onchange = async ()=>{
+    if (selCompetition) {
+      selCompetition.onchange = async () => {
         const id = selCompetition.value;
-        if(!id) return;
-        await loadCompetition(id);
+        if (id) await loadCompetition(id);
       };
     }
 
-    if(btnSave){
-      btnSave.onclick = async ()=>{
+    if (btnSave) {
+      btnSave.onclick = async () => {
         setMsg(`<span class="muted">Збереження…</span>`);
-        try{
-          const editingId = (isEditMode && selCompetition && selCompetition.value) ? selCompetition.value : "";
+
+        try {
+          const editingId = isEditMode && selCompetition ? selCompetition.value : "";
           const compId = await saveCompetition(editingId || "");
+
           setMsg(`<span class="ok">✅ Збережено:</span> ${esc(compId)}`);
           setStatus("Збережено ✅");
-        }catch(e){
+
+          if (isEditMode) await loadCompetitionsList();
+        } catch (e) {
           setMsg(`<span class="err">❌</span> ${esc(e?.message || String(e))}`);
           setStatus("Помилка ❌");
           setDebug(e?.message || String(e));
@@ -1035,54 +864,56 @@
       };
     }
 
-    if(btnMakeActive){
-      btnMakeActive.onclick = async ()=>{
-        setMsg(`<span class="muted">Зробити активним…</span>`);
-        try{
-          const editingId = (isEditMode && selCompetition && selCompetition.value) ? selCompetition.value : "";
-          let compId = editingId;
+    if (btnMakeActive) {
+      btnMakeActive.onclick = async () => {
+        setMsg(`<span class="muted">Зберігаю і роблю активним…</span>`);
 
-          if(!compId){
-            compId = await saveCompetition("");
-          }
+        try {
+          const editingId = isEditMode && selCompetition ? selCompetition.value : "";
+          const compId = await saveCompetition(editingId || "");
 
           await makeActive(compId);
+
           setMsg(`<span class="ok">✅ Активне:</span> ${esc(compId)}`);
-        }catch(e){
+          setStatus("Активне змагання оновлено ✅");
+
+          if (isEditMode) await loadCompetitionsList();
+        } catch (e) {
           setMsg(`<span class="err">❌</span> ${esc(e?.message || String(e))}`);
+          setStatus("Помилка ❌");
+          setDebug(e?.message || String(e));
         }
       };
     }
 
-    if(btnDelete){
-      btnDelete.onclick = async ()=>{
-        try{
-          if(!isEditMode) throw new Error("Видалення доступне тільки в режимі редагування.");
+    if (btnDelete) {
+      btnDelete.onclick = async () => {
+        try {
+          if (!isEditMode) throw new Error("Видалення доступне тільки в режимі редагування.");
+
           const compId = selCompetition?.value || "";
-          if(!compId) throw new Error("Вибери змагання для видалення.");
+          if (!compId) throw new Error("Вибери змагання для видалення.");
+
           setMsg(`<span class="muted">Видаляю…</span>`);
           await deleteCompetition(compId);
+
           setMsg(`<span class="ok">✅ Видалено:</span> ${esc(compId)}`);
           await loadCompetitionsList();
           clearDraft();
-        }catch(e){
+        } catch (e) {
           setMsg(`<span class="err">❌</span> ${esc(e?.message || String(e))}`);
         }
       };
     }
   }
 
-  // ------------------------------------------------------------
-  // Init
-  // ------------------------------------------------------------
-  async function init(){
-    try{
+  async function init() {
+    try {
       await waitForFirebase();
       auth = window.scAuth;
-      db   = window.scDb;
-      fb   = getFirebaseCompat();
-      if(!fb || !fb.firestore) throw new Error("Firebase compat (firebase) не доступний. Перевір підключення firebase-*-compat.js.");
-    }catch(e){
+      db = window.scDb;
+      fb = window.firebase;
+    } catch (e) {
       setStatus("Firebase не запустився ❌");
       setDebug(e?.message || String(e));
       show(gate);
@@ -1092,19 +923,18 @@
 
     bindUI();
 
-    auth.onAuthStateChanged(async (user)=>{
-      if(!user){
-        setStatus("Нема сесії (увійди в admin.html)");
-        setDebug("");
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        setStatus("Нема сесії. Увійди через admin.html");
         show(gate);
         hide(app);
         return;
       }
 
       const ok = await requireAdmin(user);
-      if(!ok){
+      if (!ok) {
         setStatus("Доступ заборонено ❌");
-        setDebug("Цей акаунт не має ролі admin (users/{uid}.role).");
+        setDebug("Цей акаунт не має role = admin.");
         show(gate);
         hide(app);
         return;
@@ -1112,43 +942,30 @@
 
       hide(gate);
       show(app);
+
+      setActiveTab(isEditMode);
       setStatus(isEditMode ? "Режим: Редагування" : "Режим: Створення");
       setDebug("");
 
-      setActiveTab(isEditMode);
-
       await loadLakes();
 
-      // default kind mapping (if no inpKind)
-      if(inpType && !inpKind){
-        // nothing to do, fallback works
-      }else{
-        // if inpKind exists and empty -> set default tour
-        if(inpKind && !inpKind.value) inpKind.value = "tour";
-      }
-
-      const draft = getDraft();
-      if(draft && !isEditMode){
-        applyForm(draft);
-
-        // enforce restrictions after apply
-        enforceFormatForKind(getKind());
-
-        await activateFormat((inpFormat?.value || draft.format || "classic"), { deserializeData: (draft.engine || {}) });
-        setStatus("Чернетку відновлено ✅");
-      }else{
-        enforceFormatForKind(getKind());
-        await activateFormat((inpFormat && inpFormat.value) ? inpFormat.value : "classic");
+      if (!isEditMode) {
+        const draft = getDraft();
+        if (draft) {
+          applyForm(draft);
+          setStatus("Чернетку відновлено ✅");
+        }
       }
 
       setSeasonVisibility();
       updateDurationUI();
       updateRegUI();
 
-      if(isEditMode){
+      if (isEditMode) {
         await loadCompetitionsList();
+
         const pre = url.searchParams.get("compId");
-        if(pre){
+        if (pre && selCompetition) {
           selCompetition.value = pre;
           await loadCompetition(pre);
         }
@@ -1156,12 +973,12 @@
     });
   }
 
-  window.addEventListener("error", (e)=>{
+  window.addEventListener("error", (e) => {
     setStatus("Помилка JS ❌");
     setDebug(e?.message || "Помилка");
   });
 
-  window.addEventListener("unhandledrejection", (e)=>{
+  window.addEventListener("unhandledrejection", (e) => {
     setStatus("Помилка Promise ❌");
     setDebug(e?.reason?.message || String(e?.reason || "Promise error"));
   });

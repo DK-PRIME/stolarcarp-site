@@ -5,8 +5,8 @@
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const qs = new URLSearchParams(location.search);
   const ADMIN_MODE =
-  location.pathname.includes("admin.html") ||
-  (qs.get("admin") === "1" && location.pathname.includes("auth-admin.html"));
+    location.pathname.includes("admin.html") ||
+    (qs.get("admin") === "1" && location.pathname.includes("auth-admin.html"));
 
   function setMsg(el, text, type) {
     if (!el) return;
@@ -15,8 +15,8 @@
     if (type) el.classList.add(type);
   }
 
-  function show(el){ if(el) el.style.display = ""; }
-  function hide(el){ if(el) el.style.display = "none"; }
+  function show(el) { if (el) el.style.display = ""; }
+  function hide(el) { if (el) el.style.display = "none"; }
 
   async function waitFirebase(maxMs = 8000) {
     const t0 = Date.now();
@@ -27,7 +27,6 @@
     throw new Error("Firebase не готовий");
   }
 
-  // ====== ПОВІДОМЛЕННЯ ПОМИЛОК (UA) ======
   function friendlyError(err, fallback = "Сталася помилка. Спробуй ще раз.") {
     const code = String(err?.code || "").trim();
     const msg = String(err?.message || "").trim();
@@ -37,7 +36,7 @@
       "auth/invalid-email": "Невірний формат email.",
       "auth/weak-password": "Пароль занадто слабкий. Мінімум 6 символів.",
       "auth/wrong-password": "Невірний пароль.",
-      "auth/user-not-found": "Користувача не знайдено.",
+      "auth/user-not-found": "Користувача з таким email не знайдено.",
       "auth/too-many-requests": "Забагато спроб. Спробуй пізніше.",
       "auth/network-request-failed": "Проблема з інтернетом.",
       "auth/user-disabled": "Акаунт вимкнено.",
@@ -62,7 +61,6 @@
     return out;
   }
 
-  // ====== ВАЛІДАЦІЯ НАЗВИ КОМАНДИ ======
   function normalizeTeamName(name) {
     return String(name || "").trim().replace(/\s+/g, " ");
   }
@@ -72,7 +70,6 @@
     return norm.length >= 3 && /^[a-zA-Zа-яА-ЯіІїЇєЄґҐ0-9\s\-]+$/.test(norm);
   }
 
-  // ====== ПЕРЕВІРКА УНІКАЛЬНОСТІ НАЗВИ ======
   async function isTeamNameTaken(db, name) {
     const norm = normalizeTeamName(name);
     const key = norm.toLowerCase();
@@ -85,7 +82,6 @@
     return !snap.empty;
   }
 
-  // ====== ПОШУК КОМАНДИ ПО JOIN КОДУ ======
   async function findTeamByJoinCode(db, code) {
     const c = String(code || "").trim().toUpperCase();
     if (c.length !== 6) return null;
@@ -97,48 +93,43 @@
 
     if (snap.empty) return null;
     const doc = snap.docs[0];
-    return { teamId: doc.id, ...doc.data() };  // teamId = Firestore Auto-ID
+    return { teamId: doc.id, ...doc.data() };
   }
 
-  // ====== СТВОРЕННЯ КОМАНДИ ======
   async function createTeam(db, name, ownerUid) {
     const normName = normalizeTeamName(name);
     const nameKey = normName.toLowerCase();
 
     const taken = await isTeamNameTaken(db, normName);
-    if (taken) {
-      throw new Error("team_name_taken");
-    }
+    if (taken) throw new Error("team_name_taken");
 
     for (let i = 0; i < 15; i++) {
       const joinCode = genJoinCode(6);
-      
+
       const exists = await db.collection("teams")
         .where("joinCode", "==", joinCode)
         .limit(1)
         .get();
-      
+
       if (!exists.empty) continue;
 
       const now = window.firebase.firestore.FieldValue.serverTimestamp();
 
       const ref = await db.collection("teams").add({
         name: normName,
-        nameKey: nameKey,
-        ownerUid: ownerUid,  // Firebase UID капітана (28 символів)
-        joinCode: joinCode,
+        nameKey,
+        ownerUid,
+        joinCode,
         createdAt: now,
         updatedAt: now
       });
 
-      return { teamId: ref.id, joinCode, name: normName };  // ref.id = Auto-ID (20 символів)
+      return { teamId: ref.id, joinCode, name: normName };
     }
-    
+
     throw new Error("Не вдалося згенерувати код команди");
   }
 
-  // ====== РОБОТА З КОРИСТУВАЧЕМ ======
-  // 🔥 ВИПРАВЛЕНО: ЗАВЖДИ оновлюємо teamId, якщо він переданий!
   async function ensureUserDoc(db, uid, data, forceUpdate = false) {
     const ref = db.collection("users").doc(uid);
     const snap = await ref.get();
@@ -160,32 +151,23 @@
       return;
     }
 
-    // 🔥 ВИПРАВЛЕНО: Якщо forceUpdate = true — оновлюємо teamId навіть якщо він вже є
     const cur = snap.data() || {};
     const patch = {};
-    
+
     if (!cur.fullName && base.fullName) patch.fullName = base.fullName;
     if (!cur.email && base.email) patch.email = base.email;
     if (!cur.phone && base.phone) patch.phone = base.phone;
     if (!cur.city && base.city) patch.city = base.city;
-    
-    // 🔥 КЛЮЧОВЕ ВИПРАВЛЕННЯ:
-    // Якщо forceUpdate = true — завжди оновлюємо teamId
-    // Якщо forceUpdate = false — оновлюємо тільки якщо був null
-    if (forceUpdate || cur.teamId == null) {
-      patch.teamId = base.teamId;
-    }
-    
+    if (forceUpdate || cur.teamId == null) patch.teamId = base.teamId;
     if (!cur.role && base.role) patch.role = base.role;
-    
+
     if (Object.keys(patch).length) {
       patch.updatedAt = now;
       await ref.update(patch);
     }
   }
 
-  // ====== РЕДИРЕКТ ======
-  function goAfterAuth(user){
+  function goAfterAuth(user) {
     if (ADMIN_MODE && user?.uid === ADMIN_UID) {
       location.href = "admin.html";
       return;
@@ -193,12 +175,17 @@
     location.href = "cabinet.html";
   }
 
-  // ====== UI ЕЛЕМЕНТИ ======
   const loggedBox = $("loggedBox");
-  const authBox   = $("authBox");
-  const btnGoCab  = $("goCabinetBtn");
+  const authBox = $("authBox");
+  const btnGoCab = $("goCabinetBtn");
   const btnLogout = $("logoutBtn");
   const loggedMsg = $("loggedMsg");
+
+  const signupForm = $("signupForm");
+  const loginForm = $("loginForm");
+  const signupMsg = $("signupMsg");
+  const loginMsg = $("loginMsg");
+  const resetPassBtn = $("resetPassBtn");
 
   function showLoggedInUI(user) {
     if (loggedMsg) {
@@ -206,16 +193,15 @@
         ? "Ви увійшли як адміністратор."
         : "Ви вже увійшли у свій акаунт.";
     }
-    if (loggedBox) show(loggedBox);
-    if (authBox) hide(authBox);
+    show(loggedBox);
+    hide(authBox);
   }
 
   function showAuthUI() {
-    if (loggedBox) hide(loggedBox);
-    if (authBox) show(authBox);
+    hide(loggedBox);
+    show(authBox);
   }
 
-  // ====== РЕЄСТРАЦІЯ ======
   async function onSignup(e) {
     e.preventDefault();
     setMsg(signupMsg, "", "");
@@ -240,7 +226,6 @@
 
     let teamContext = null;
 
-    // ====== КАПІТАН ======
     if (role === "captain") {
       if (!isValidTeamName(teamNameRaw)) {
         setMsg(signupMsg, "Назва команди: мін. 3 символи (літери, цифри, дефіс).", "err");
@@ -258,24 +243,23 @@
       }
     }
 
-    // ====== УЧАСНИК ======
     if (role === "member") {
       const joinCode = joinCodeRaw.toUpperCase();
-      
+
       if (joinCode.length !== 6) {
         setMsg(signupMsg, "Введи код команди (6 символів).", "err");
         return;
       }
 
       setMsg(signupMsg, "Перевіряю код команди…", "");
-      
+
       const team = await findTeamByJoinCode(db, joinCode);
-      
+
       if (!team) {
         setMsg(signupMsg, "Команду з таким кодом не знайдено. Перевір код.", "err");
         return;
       }
-      
+
       teamContext = team;
     }
 
@@ -283,64 +267,53 @@
     let createdTeamId = null;
 
     try {
-      $("signupBtn") && ($("signupBtn").disabled = true);
+      const signupBtn = $("signupBtn");
+      if (signupBtn) signupBtn.disabled = true;
+
       setMsg(signupMsg, role === "captain" ? "Створюю акаунт і команду…" : "Створюю акаунт…", "");
 
       const cred = await auth.createUserWithEmailAndPassword(email, pass);
       const user = cred.user;
       createdUser = user;
 
-      // ====== КАПІТАН: створюємо команду ======
       if (role === "captain") {
         setMsg(signupMsg, "Створюю команду…", "");
-        
-        try {
-          const team = await createTeam(db, teamNameRaw, user.uid);
-          createdTeamId = team.teamId;
-          
-          console.log("✅ Команда створена:", team.teamId, "для капітана:", user.uid);
-          
-          // 🔥 ВИПРАВЛЕНО: forceUpdate = true, щоб точно записати teamId
-          await ensureUserDoc(db, user.uid, {
-            fullName, email, phone, city,
-            role: "captain",
-            teamId: team.teamId
-          }, true); // ← forceUpdate!
 
-          // 💾 Зберігаємо авторизацію в localStorage
-          localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
-            ts: Date.now(),
-            teamId: team.teamId,
-            name: team.name,
-            role: "captain"
-          }));
+        const team = await createTeam(db, teamNameRaw, user.uid);
+        createdTeamId = team.teamId;
 
-          setMsg(signupMsg, `✅ Команда "${team.name}" створена! Код: ${team.joinCode}`, "ok");
-          setTimeout(() => goAfterAuth(user), 800);
-          
-        } catch (teamErr) {
-          throw teamErr;
-        }
-      }
-
-      // ====== УЧАСНИК: приєднуємо до команди ======
-      else if (role === "member") {
-        const team = teamContext || await findTeamByJoinCode(db, joinCodeRaw);
-        
-        if (!team) {
-          throw new Error("team_not_found");
-        }
-
-        console.log("✅ Учасник приєднується до команди:", team.teamId);
-        
-        // 🔥 ВИПРАВЛЕНО: forceUpdate = true
         await ensureUserDoc(db, user.uid, {
-          fullName, email, phone, city,
+          fullName,
+          email,
+          phone,
+          city,
+          role: "captain",
+          teamId: team.teamId
+        }, true);
+
+        localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
+          ts: Date.now(),
+          teamId: team.teamId,
+          name: team.name,
+          role: "captain"
+        }));
+
+        setMsg(signupMsg, `✅ Команда "${team.name}" створена! Код: ${team.joinCode}`, "ok");
+        setTimeout(() => goAfterAuth(user), 800);
+      } else if (role === "member") {
+        const team = teamContext || await findTeamByJoinCode(db, joinCodeRaw);
+
+        if (!team) throw new Error("team_not_found");
+
+        await ensureUserDoc(db, user.uid, {
+          fullName,
+          email,
+          phone,
+          city,
           role: "member",
           teamId: team.teamId
-        }, true); // ← forceUpdate!
+        }, true);
 
-        // 💾 Зберігаємо авторизацію в localStorage
         localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
           ts: Date.now(),
           teamId: team.teamId,
@@ -351,7 +324,6 @@
         setMsg(signupMsg, `✅ Ти в команді "${team.name}"!`, "ok");
         setTimeout(() => goAfterAuth(user), 500);
       }
-
     } catch (err) {
       console.error("Помилка реєстрації:", err);
 
@@ -368,11 +340,12 @@
       }
 
       setMsg(signupMsg, friendlyError(err, "Помилка реєстрації"), "err");
-      $("signupBtn") && ($("signupBtn").disabled = false);
+
+      const signupBtn = $("signupBtn");
+      if (signupBtn) signupBtn.disabled = false;
     }
   }
 
-  // ====== ВХІД ======
   async function onLogin(e) {
     e.preventDefault();
     setMsg(loginMsg, "", "");
@@ -390,22 +363,22 @@
     }
 
     try {
-      $("loginBtn") && ($("loginBtn").disabled = true);
+      const loginBtn = $("loginBtn");
+      if (loginBtn) loginBtn.disabled = true;
+
       setMsg(loginMsg, "Вхід…", "");
 
       await auth.signInWithEmailAndPassword(email, pass);
       const user = auth.currentUser;
-      
-      // 💿 Після входу тягнемо команду з Firestore
+
       const userDoc = await db.collection("users").doc(user.uid).get();
 
       if (userDoc.exists && userDoc.data().teamId) {
         const teamId = userDoc.data().teamId;
-        
+
         const teamDoc = await db.collection("teams").doc(teamId).get();
         const teamName = teamDoc.exists ? teamDoc.data().name : "Команда";
 
-        // 💾 зберігаємо маркер авторизації
         localStorage.setItem("sc_team_cache_" + user.uid, JSON.stringify({
           ts: Date.now(),
           teamId,
@@ -415,17 +388,50 @@
 
       setMsg(loginMsg, "✅ Успішно!", "ok");
       setTimeout(() => goAfterAuth(user), 300);
-
     } catch (err) {
       console.error(err);
       setMsg(loginMsg, friendlyError(err, "Помилка входу"), "err");
-      $("loginBtn") && ($("loginBtn").disabled = false);
+
+      const loginBtn = $("loginBtn");
+      if (loginBtn) loginBtn.disabled = false;
     }
   }
 
-  // ====== ІНІЦІАЛІЗАЦІЯ ======
+  async function onResetPassword(e) {
+    e.preventDefault();
+    setMsg(loginMsg, "", "");
+
+    await waitFirebase();
+    const auth = window.scAuth;
+
+    const email = ($("loginEmail")?.value || "").trim();
+
+    if (!email) {
+      setMsg(loginMsg, "Введи email у полі входу, щоб відновити пароль.", "err");
+      return;
+    }
+
+    try {
+      if (resetPassBtn) resetPassBtn.disabled = true;
+
+      await auth.sendPasswordResetEmail(email);
+
+      setMsg(
+        loginMsg,
+        "✅ Лист для відновлення пароля відправлено. Перевір пошту та папку «Спам».",
+        "ok"
+      );
+    } catch (err) {
+      console.error("Помилка відновлення пароля:", err);
+      setMsg(loginMsg, friendlyError(err, "Не вдалося відправити лист для відновлення."), "err");
+    } finally {
+      if (resetPassBtn) resetPassBtn.disabled = false;
+    }
+  }
+
   if (signupForm) signupForm.addEventListener("submit", onSignup);
   if (loginForm) loginForm.addEventListener("submit", onLogin);
+  if (resetPassBtn) resetPassBtn.addEventListener("click", onResetPassword);
 
   if (btnGoCab) {
     btnGoCab.addEventListener("click", (e) => {

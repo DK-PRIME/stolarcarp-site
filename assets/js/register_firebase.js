@@ -6,7 +6,7 @@
 // ✅ regMode=manual supports dates too
 // ✅ YYYY-MM-DD dates treated as 12:00 Kyiv
 // ✅ Payment UI split: amount + details + copy
-// ✅ Mobile: no overflow/out-of-screen on select
+// ✅ Mobile card layout fixed
 
 (function () {
   "use strict";
@@ -39,16 +39,13 @@
     return;
   }
 
-  const COMP_CACHE_KEY = "sc_competitions_cache_v3_no_food_hide_finished";
+  const COMP_CACHE_KEY = "sc_competitions_cache_v4_no_food_hide_finished_layout";
   const TEAM_CACHE_PREFIX = "sc_team_cache_";
   const TEAM_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-  // Ховаємо етап після завершення + 24 години запасу.
   const FINISHED_HIDE_GRACE_MS = 24 * 60 * 60 * 1000;
 
   let currentUser = null;
   let profile = null;
-
   let lastItems = [];
   let nearestUpcomingValue = null;
   let activePayCopyText = "";
@@ -145,7 +142,6 @@
   function isFinishedEvent(item) {
     const endAt = toDateMaybe(item?.endAt);
     if (!endAt) return false;
-
     return nowKyiv().getTime() > endAt.getTime() + FINISHED_HIDE_GRACE_MS;
   }
 
@@ -517,7 +513,7 @@
         }
       });
 
-      let visibleItems = visibleItemsOnly(items);
+      const visibleItems = visibleItemsOnly(items);
 
       visibleItems.sort((a, b) => {
         const ad = a.startAt ? a.startAt.getTime() : 0;
@@ -563,7 +559,6 @@
       const open = isOpenWindow(it);
       const value = `${it.compId}||${it.stageKey || ""}`;
       const lamp = statusLamp(it, value);
-
       const typeBadge = it.entryType === "solo" ? "SOLO" : "TEAM";
 
       const titleText =
@@ -571,6 +566,7 @@
         (it.stageTitle ? ` — ${it.stageTitle}` : "");
 
       const dateLine = `${fmtDate(it.startAt)} — ${fmtDate(it.endAt)}`;
+      const statusText = open ? "Реєстрація відкрита ✅" : "Очікується";
 
       const label = document.createElement("label");
       label.className = "event-item" + (open ? "" : " is-closed");
@@ -579,33 +575,57 @@
 
       label.innerHTML = `
         <input type="radio" name="stagePick" value="${escapeHtml(value)}"
-               style="flex:0 0 auto; margin-top:2px;">
+               style="flex:0 0 auto;margin-top:4px;">
 
         <div class="event-content" style="min-width:0;flex:1;">
-          <div class="event-title" style="display:flex;gap:10px;align-items:flex-start;justify-content:space-between;">
-            <div class="text" style="min-width:0;overflow:hidden;">
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <span class="lamp ${lamp}"></span>
-                <span style="font-weight:900;line-height:1.2;word-break:break-word;white-space:normal;">
-                  ${escapeHtml(titleText)}
-                </span>
-              </div>
-
-              <div style="margin-top:6px;color:var(--muted);font-size:12px;white-space:normal;word-break:break-word;">
-                ${escapeHtml(dateLine)}
-              </div>
-
-              <div style="margin-top:6px;color:var(--muted);font-size:12px;white-space:normal;">
-                ${open ? "Реєстрація відкрита ✅" : "Реєстрація ще не відкрита або закрита"}
-              </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+              <span class="lamp ${lamp}" style="flex:0 0 auto;"></span>
+              <span style="font-size:12px;color:var(--muted);font-weight:800;white-space:nowrap;">
+                ${open ? "Відкрито" : "Очікується"}
+              </span>
             </div>
 
             <div class="event-badges" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex:0 0 auto;">
               <span class="pill-b">${escapeHtml(typeBadge)}</span>
               <span class="pill-b ${open ? "pill-b--open" : "pill-b--closed"}">
-                ${open ? "ВІДКРИТО" : "НЕДОСТУПНО"}
+                ${open ? "ВІДКРИТО" : "ОЧІКУЄТЬСЯ"}
               </span>
             </div>
+          </div>
+
+          <div style="
+            font-weight:900;
+            font-size:16px;
+            line-height:1.28;
+            letter-spacing:.02em;
+            color:#f3f4f6;
+            white-space:normal;
+            word-break:normal;
+            overflow-wrap:break-word;
+          ">
+            ${escapeHtml(titleText)}
+          </div>
+
+          <div style="
+            margin-top:7px;
+            color:var(--muted);
+            font-size:13px;
+            line-height:1.35;
+            white-space:normal;
+            word-break:normal;
+          ">
+            ${escapeHtml(dateLine)}
+          </div>
+
+          <div style="
+            margin-top:7px;
+            color:var(--muted);
+            font-size:13px;
+            line-height:1.35;
+            white-space:normal;
+          ">
+            ${escapeHtml(statusText)}
           </div>
         </div>
       `;
@@ -628,7 +648,7 @@
       setPayUIFromSelected(selectedItem || null);
 
       if (selectedItem && !isOpenWindow(selectedItem)) {
-        setMsg("Цей етап зараз недоступний для подачі заявки.", false);
+        setMsg("Цей етап ще очікується. Подати заявку можна буде після відкриття реєстрації.", false);
       } else {
         setMsg("");
       }

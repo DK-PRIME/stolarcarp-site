@@ -7,9 +7,8 @@
 // ✅ Тривалість рахуємо в UI автоматично
 // ✅ Реєстрація: auto (−28/−14) або manual (date/date)
 // ✅ Чернетка: localStorage
-// ✅ FIX: season не перезаписується в create (тільки edit)
-// ✅ FIX: oneoff має унікальний compId (не перетирає інші)
-// ✅ FIX: Make Active завжди робить active тільки після Save (щоб doc існував)
+// ✅ FIX: кожен турнір = окремий документ з унікальним ID
+// ✅ FIX: Make Active завжди робить active тільки після Save (щоб doc існує)
 // ✅ NEW: registry + format-*.js (init/validate/serialize/deserialize), engine в Firestore
 
 (function(){
@@ -38,10 +37,11 @@
   }
 
   let auth=null, db=null, fb=null;
+  let currentSavedCompId = "";
 
   // --- Mode (create/edit)
   const url = new URL(location.href);
-  const mode = (url.searchParams.get("mode") || "create").toLowerCase(); // create|edit
+  const mode = (url.searchParams.get("mode") || "create").toLowerCase();
   const isEditMode = mode === "edit";
 
   // --- UI refs
@@ -105,11 +105,10 @@
   }
 
   function getRegistry(){
-    // підтримуємо і SC_FORMATS.registry, і SC_FORMATS.get
     const sc = window.SC_FORMATS || null;
     if(!sc) return null;
-    if(typeof sc.get === "function") return sc;          // варіант: SC_FORMATS.get(name)
-    if(sc.registry && typeof sc.registry.get === "function") return sc.registry; // варіант: SC_FORMATS.registry.get(name)
+    if(typeof sc.get === "function") return sc;
+    if(sc.registry && typeof sc.registry.get === "function") return sc.registry;
     return null;
   }
 
@@ -126,30 +125,22 @@
 
   async function activateFormat(formatName, opts){
     const requested = String(formatName || "classic").toLowerCase();
-    let preset = getPreset(requested);
+    const preset = getPreset(requested);
 
-    if(!preset){
-      console.warn(`Формат "${requested}" не знайдено, fallback classic`);
-      preset = getPreset("classic");
-    }
-
-    activeFormatName = preset ? (requested || "classic") : "classic";
+    activeFormatName = requested || "classic";
     activeFormat = preset || null;
 
-    // reset UI
     renderFormatSpecificFields("");
 
-    // init
-    if(activeFormat && typeof activeFormat.init === "function"){
-      activeFormat.init({
-        render: renderFormatSpecificFields,
-        $,
-        esc
-      });
+    if(!activeFormat){
+      return;
     }
 
-    // deserialize existing engine
-    if(opts && opts.deserializeData && activeFormat && typeof activeFormat.deserialize === "function"){
+    if(typeof activeFormat.init === "function"){
+      activeFormat.init({ render: renderFormatSpecificFields, $, esc });
+    }
+
+    if(opts && opts.deserializeData && typeof activeFormat.deserialize === "function"){
       try{
         activeFormat.deserialize(opts.deserializeData, { render: renderFormatSpecificFields, $, esc });
       }catch(e){
@@ -164,14 +155,13 @@
   function clearDraft(){ try{ localStorage.removeItem(DRAFT_KEY); }catch{} }
 
   // --- Helpers: Date/time
-  // datetime-local value: "YYYY-MM-DDTHH:mm"
   function parseLocalDateTime(v){
     const s = (v||"").trim();
     if(!s) return null;
     const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
     if(!m) return null;
     const y = +m[1], mo = +m[2]-1, d = +m[3], h = +m[4], mi = +m[5];
-    const dt = new Date(y, mo, d, h, mi, 0, 0); // локальний час браузера
+    const dt = new Date(y, mo, d, h, mi, 0, 0);
     if(Number.isNaN(dt.getTime())) return null;
     return dt;
   }
@@ -184,6 +174,14 @@
     const hh = String(date.getHours()).padStart(2,"0");
     const mi = String(date.getMinutes()).padStart(2,"0");
     return `${yy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+
+  function toDateOnly(date){
+    if(!date) return "";
+    const yy = date.getFullYear();
+    const mm = String(date.getMonth()+1).padStart(2,"0");
+    const dd = String(date.getDate()).padStart(2,"0");
+    return `${yy}-${mm}-${dd}`;
   }
 
   function diffMinutes(a,b){
@@ -201,7 +199,6 @@
     return s;
   }
 
-  // Рахуємо по UTC 12:00, щоб не плавало
   function addDays(dateStr, days){
     const [y,m,d] = dateStr.split("-").map(Number);
     const dt = new Date(Date.UTC(y, m-1, d, 12, 0, 0));
@@ -214,14 +211,10 @@
   function regOpenFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -28) : ""; }
   function regCloseFromStartDate(startDateStr){ return startDateStr ? addDays(startDateStr, -14) : ""; }
 
-  // Беремо дату старту з datetime-local → YYYY-MM-DD (локальна дата)
   function startDateOnly(){
     const dt = parseLocalDateTime(inpStartAt?.value || "");
     if(!dt) return "";
-    const yy = dt.getFullYear();
-    const mm = String(dt.getMonth()+1).padStart(2,"0");
-    const dd = String(dt.getDate()).padStart(2,"0");
-    return `${yy}-${mm}-${dd}`;
+    return toDateOnly(dt);
   }
 
   // --- Access
@@ -359,7 +352,6 @@
       return;
     }
 
-    // auto
     if(inpRegOpen) inpRegOpen.disabled = true;
     if(inpRegClose) inpRegClose.disabled = true;
 
@@ -376,7 +368,7 @@
     const type = (inpType?.value || "season");
     const yearStr = (inpYear?.value || "").trim();
     const name = (inpName?.value || "").trim();
-    const format = (inpFormat?.value || "classic");
+    const format = (inpFormat?.value || "classic").trim() || "classic";
 
     const lakeId = (inpLake?.value || "").trim();
 
@@ -411,7 +403,8 @@
       payEnabled,
       manualOpen,
       manualClose,
-      price: (price === null || Number.isFinite(price)) ? price : null,
+      priceRaw,
+      price,
       currency,
       payDetails
     };
@@ -427,17 +420,14 @@
 
     if(inpLake) inpLake.value = data.lakeId || "";
 
-    // schedule
     if(inpStartAt) inpStartAt.value = data.startAtLocal || "";
     if(inpFinishAt) inpFinishAt.value = data.finishAtLocal || "";
 
-    // season
     if(inpStagesCount) inpStagesCount.value = String(data.stagesCount || 3);
     if(inpHasFinal){
-      inpHasFinal.value = (data.hasFinal ? "yes" : (data.hasFinal === false ? "no" : (data.inpHasFinal || "yes")));
+      inpHasFinal.value = data.hasFinal === false ? "no" : "yes";
     }
 
-    // reg + pay
     if(inpRegMode) inpRegMode.value = data.regMode || "auto";
     if(inpPayEnabled) inpPayEnabled.value = (data.payEnabled === false ? "no" : "yes");
     if(inpRegOpen) inpRegOpen.value = data.manualOpen || "";
@@ -449,6 +439,14 @@
 
   function saveDraftNow(){
     const d = collectForm();
+    let engine = {};
+    try{
+      engine = (activeFormat && typeof activeFormat.serialize === "function")
+        ? (activeFormat.serialize({ $, format: activeFormatName }) || {})
+        : {};
+    }catch(e){
+      console.warn("draft serialize error:", e);
+    }
     const draft = {
       type: d.type,
       yearStr: d.yearStr,
@@ -466,38 +464,41 @@
       price: d.price,
       currency: d.currency,
       payDetails: d.payDetails,
-      // ✅ NEW: format engine draft
-      engine: (activeFormat && typeof activeFormat.serialize === "function")
-        ? (activeFormat.serialize({ $, format: activeFormatName }) || {})
-        : {},
+      engine,
       ts: Date.now()
     };
     setDraft(draft);
   }
 
-  // --- ID generator (FIX: oneoff не перетирає)
+  // --- ID generator
   function rand4(){
     return Math.random().toString(36).slice(2,6);
   }
 
-  function compIdFrom(type, yearStr, name){
-    if(type === "season") return `season-${yearStr}`;
-
-    const slug = (name||"event")
+  function slugify(s){
+    return String(s || "event")
       .toLowerCase()
-      .replace(/[^a-z0-9а-яіїєґ]+/gi,"-")
-      .replace(/-+/g,"-")
-      .replace(/^-|-$/g,"")
-      .slice(0,40);
+      .replace(/[^a-z0-9а-яіїєґ]+/gi, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 50);
+  }
 
-    return `oneoff-${yearStr}-${slug || "event"}-${rand4()}`;
+  function compIdFrom(type, yearStr, name){
+    const slug = slugify(name);
+    const rnd = rand4();
+
+    if(type === "season"){
+      return `season-${yearStr}-${slug || "season"}-${rnd}`;
+    }
+
+    return `oneoff-${yearStr}-${slug || "event"}-${rnd}`;
   }
 
   // --- Validation
   function validate(form){
     if(!/^\d{4}$/.test(form.yearStr)) throw new Error("Вкажи рік (4 цифри), наприклад 2026.");
     if(!form.name) throw new Error("Вкажи назву змагання.");
-    if(!form.lakeId) throw new Error("Вибери водойму.");
 
     if(!form.startDt) throw new Error("Заповни старт (дата + година).");
     if(!form.finishDt) throw new Error("Заповни фініш (дата + година).");
@@ -509,7 +510,9 @@
     }
 
     if(form.payEnabled){
-      if(form.price !== null && !Number.isFinite(form.price)) throw new Error("Внесок має бути числом.");
+      if(form.priceRaw && !Number.isFinite(form.price)){
+        throw new Error("Внесок має бути числом.");
+      }
     }
   }
 
@@ -527,10 +530,10 @@
   }
 
   function computeRegistrationBlock(form){
-    const startD = startDateOnly();
     if(form.regMode === "manual"){
       return { mode: "manual", openDate: form.manualOpen || "", closeDate: form.manualClose || "" };
     }
+    const startD = form.startDt ? toDateOnly(form.startDt) : "";
     return {
       mode: "auto",
       openDate: startD ? regOpenFromStartDate(startD) : "",
@@ -541,6 +544,8 @@
   // ------------------------------------------------------------
   // ✅ BLOCK #2: loadCompetition => activateFormat + deserialize(engine)
   // ------------------------------------------------------------
+  let originalEngine = {};
+
   async function loadCompetition(compId){
     if(!compId) return;
 
@@ -551,6 +556,7 @@
       if(!doc.exists) throw new Error(`Не знайдено competitions/${compId}`);
 
       const d = doc.data() || {};
+      originalEngine = d.engine || {};
 
       const startAt = d.schedule?.startAt?.toDate ? d.schedule.startAt.toDate() : null;
       const finishAt = d.schedule?.finishAt?.toDate ? d.schedule.finishAt.toDate() : null;
@@ -577,13 +583,11 @@
         payDetails: pay.details || ""
       });
 
-      // 🔥 activate format + deserialize engine
       await activateFormat((d.format || "classic"), { deserializeData: (d.engine || {}) });
 
       setSeasonVisibility();
       updateDurationUI();
       updateRegUI();
-      saveDraftNow();
 
       setStatus("Завантажено ✅");
       setDebug("");
@@ -600,7 +604,6 @@
     const form = collectForm();
     validate(form);
 
-    // format-specific validate/serialize
     let formatExtra = {};
     if(activeFormat && typeof activeFormat.validate === "function"){
       activeFormat.validate({ $, format: form.format });
@@ -611,7 +614,7 @@
 
     const compId = editingCompId || compIdFrom(form.type, form.yearStr, form.name);
 
-    const lakeSnap = await getLakeSnapshot(form.lakeId);
+    const lakeSnap = form.lakeId ? await getLakeSnapshot(form.lakeId) : null;
     const regBlock = computeRegistrationBlock(form);
 
     const mins = diffMinutes(form.startDt, form.finishDt);
@@ -620,10 +623,14 @@
     const ref = db.collection("competitions").doc(compId);
     const snap = await ref.get();
 
-    // ✅ FIX: сезон не перезаписувати в create
-    if(!editingCompId && form.type === "season" && snap.exists){
-      throw new Error(`Сезон ${compId} вже існує. Перейди в режим "Редагування" і відкрий його.`);
+    if(!editingCompId && snap.exists){
+      throw new Error(`Змагання ${compId} вже існує. Натисни Save ще раз або зміни назву.`);
     }
+
+    const engine = {
+      baseFormat: form.format || "classic",
+      ...formatExtra
+    };
 
     const data = {
       compId,
@@ -633,13 +640,11 @@
       brand: "STOLAR CARP",
       format: form.format,
 
-      // 🔥 engine (format-specific config)
-      engine: {
-        baseFormat: form.format,
-        ...formatExtra
-      },
+      engine: engine,
 
-      lake: lakeSnap ? { id: lakeSnap.id, name: lakeSnap.name } : { id: form.lakeId, name: form.lakeId },
+      lake: lakeSnap
+        ? { id: lakeSnap.id, name: lakeSnap.name }
+        : (form.lakeId ? { id: form.lakeId, name: form.lakeId } : { id: "", name: "" }),
 
       schedule: {
         startAt: fb.firestore.Timestamp.fromDate(form.startDt),
@@ -678,6 +683,8 @@
 
   // --- Make active
   async function makeActive(compId){
+    const check = await db.collection("competitions").doc(compId).get();
+    if(!check.exists) throw new Error(`Змагання ${compId} не існує. Спочатку збережи його.`);
     await db.collection("settings").doc("app").set({
       activeCompetitionId: compId,
       updatedAt: fb.firestore.FieldValue.serverTimestamp()
@@ -713,9 +720,6 @@
       saveDraftNow();
     });
 
-    // ------------------------------------------------------------
-    // ✅ BLOCK #4: inpFormat change => activateFormat()
-    // ------------------------------------------------------------
     if(inpFormat){
       inpFormat.addEventListener("change", async ()=>{
         await activateFormat(inpFormat.value);
@@ -723,7 +727,6 @@
       });
     }
 
-    // IMPORTANT: inpFormat тут не треба, бо ми окремо ловимо change вище
     [
       inpYear, inpName, inpLake,
       inpStartAt, inpFinishAt,
@@ -747,6 +750,7 @@
     if(btnResetDraft){
       btnResetDraft.onclick = async ()=>{
         clearDraft();
+        currentSavedCompId = "";
         if(inpType) inpType.value = "season";
         if(inpYear) inpYear.value = "";
         if(inpName) inpName.value = "";
@@ -764,6 +768,7 @@
         if(inpCurrency) inpCurrency.value = "UAH";
         if(inpPayDetails) inpPayDetails.value = "";
 
+        renderFormatSpecificFields("");
         await activateFormat("classic");
 
         setSeasonVisibility();
@@ -794,7 +799,8 @@
         setMsg(`<span class="muted">Збереження…</span>`);
         try{
           const editingId = (isEditMode && selCompetition && selCompetition.value) ? selCompetition.value : "";
-          const compId = await saveCompetition(editingId || "");
+          const compId = await saveCompetition(editingId || currentSavedCompId || "");
+          currentSavedCompId = compId;
           setMsg(`<span class="ok">✅ Збережено:</span> ${esc(compId)}`);
           setStatus("Збережено ✅");
         }catch(e){
@@ -805,16 +811,16 @@
       };
     }
 
-    // ✅ FIX: Make Active => спочатку Save (якщо треба), потім active
     if(btnMakeActive){
       btnMakeActive.onclick = async ()=>{
         setMsg(`<span class="muted">Зробити активним…</span>`);
         try{
           const editingId = (isEditMode && selCompetition && selCompetition.value) ? selCompetition.value : "";
-          let compId = editingId;
+          let compId = editingId || currentSavedCompId;
 
           if(!compId){
-            compId = await saveCompetition(""); // гарантуємо, що doc існує
+            compId = await saveCompetition("");
+            currentSavedCompId = compId;
           }
 
           await makeActive(compId);
@@ -890,11 +896,9 @@
       const draft = getDraft();
       if(draft && !isEditMode){
         applyForm(draft);
-        // якщо в чернетці був engine — дамо його в deserialize
         await activateFormat((draft.format || "classic"), { deserializeData: (draft.engine || {}) });
         setStatus("Чернетку відновлено ✅");
       }else{
-        // ініціалізуємо формат з поточного select
         await activateFormat((inpFormat && inpFormat.value) ? inpFormat.value : "classic");
       }
 

@@ -78,7 +78,6 @@
   const btnReloadList = $("btnReloadList");
   const editPickerMsg = $("editPickerMsg");
 
-  // Formats optional
   const formatFieldsEl = $("formatFields");
   let activeFormatName = "";
   let activeFormat = null;
@@ -199,6 +198,16 @@
     return dt ? toDateOnly(dt) : "";
   }
 
+  function registrationStatusFromBlock(regBlock){
+    const today = toDateOnly(new Date());
+    const open = regBlock.openDate || "";
+    const close = regBlock.closeDate || "";
+
+    if(open && today < open) return "pending";
+    if(close && today > close) return "closed";
+    return "open";
+  }
+
   async function requireAdmin(user){
     if(!user) return false;
     try{
@@ -315,7 +324,11 @@
       if(inpRegOpen) inpRegOpen.disabled = false;
       if(inpRegClose) inpRegClose.disabled = false;
       if(regPreview){
-        regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(normDate(inpRegOpen?.value)||"—")} → ${esc(normDate(inpRegClose?.value)||"—")})`;
+        const o = normDate(inpRegOpen?.value) || "—";
+        const c = normDate(inpRegClose?.value) || "—";
+        const status = registrationStatusFromBlock({ openDate:o === "—" ? "" : o, closeDate:c === "—" ? "" : c });
+        const label = status === "open" ? "✅ ВІДКРИТО" : (status === "closed" ? "❌ Закрито" : "⏳ Очікується");
+        regPreview.innerHTML = `Реєстрація: <b>MANUAL</b> (${esc(o)} → ${esc(c)}) <b>${label}</b>`;
       }
       return;
     }
@@ -331,12 +344,11 @@
 
     const o = regOpenFromStartDate(startD);
     const c = regCloseFromStartDate(startD);
-    const today = toDateOnly(new Date());
+    const status = registrationStatusFromBlock({ openDate:o, closeDate:c });
 
-    const isOpen = today >= o && today <= c;
-    const statusHtml = isOpen
+    const statusHtml = status === "open"
       ? `<span style="color:#7CFFB2;">✅ ВІДКРИТО</span>`
-      : (today < o ? `<span style="color:#FFD700;">⏳ Очікується</span>` : `<span style="color:#ff6c6c;">❌ Закрито</span>`);
+      : (status === "pending" ? `<span style="color:#FFD700;">⏳ Очікується</span>` : `<span style="color:#ff6c6c;">❌ Закрито</span>`);
 
     if(regPreview) regPreview.innerHTML = `Реєстрація: <b>${o}</b> → <b>${c}</b> ${statusHtml}`;
   }
@@ -389,7 +401,7 @@
     if(inpHasFinal) inpHasFinal.value = data.hasFinal === false ? "no" : "yes";
 
     if(inpRegMode) inpRegMode.value = data.regMode || "auto";
-    if(inpPayEnabled) inpPayEnabled.value = (data.payEnabled === false ? "no" : "yes");
+    if(inpPayEnabled) inpPayEnabled.value = data.payEnabled === false ? "no" : "yes";
     if(inpRegOpen) inpRegOpen.value = data.manualOpen || "";
     if(inpRegClose) inpRegClose.value = data.manualClose || "";
 
@@ -517,15 +529,27 @@
     const price = (form.price === 0 || form.price) ? form.price : null;
     const currency = (form.currency || "UAH").toUpperCase();
     const details = form.payDetails || "";
+    const enabled = !!form.payEnabled;
 
     return {
-      payEnabled: !!form.payEnabled,
+      payEnabled: enabled,
+      paymentEnabled: enabled,
       price,
+      fee: price,
+      entryFee: price,
+      amount: price,
+      paymentAmount: price,
+      contribution: price,
+      contributionAmount: price,
       currency,
+      paymentCurrency: currency,
       payDetails: details,
       paymentDetails: details,
-      entryFee: price,
-      fee: price
+      paymentText: details,
+      requisites: details,
+      bankDetails: details,
+      card: details,
+      cardNumber: details
     };
   }
 
@@ -546,6 +570,7 @@
     const pay = paymentBlock(form);
     const payLegacy = paymentLegacyFields(form);
     const dateLegacy = dateLegacyFields(form);
+    const status = registrationStatusFromBlock(regBlock);
 
     for(let i=1; i<=count; i++){
       const key = `stage-${i}`;
@@ -557,6 +582,7 @@
         id: key,
         order: i,
         stageOrder: i,
+        index: i,
         title,
         name: title,
         label: title,
@@ -569,11 +595,19 @@
         },
 
         registration: { ...regBlock },
+        regMode: regBlock.mode,
+        regOpen: regBlock.openDate || "",
+        regClose: regBlock.closeDate || "",
+        registrationOpenDate: regBlock.openDate || "",
+        registrationCloseDate: regBlock.closeDate || "",
 
         payment: { ...pay },
         ...payLegacy,
 
-        status: i === 1 ? "open" : "pending"
+        status,
+        registrationStatus: status,
+        isOpen: status === "open",
+        open: status === "open"
       });
     }
 
@@ -586,6 +620,7 @@
         id: "final",
         order,
         stageOrder: order,
+        index: order,
         title: "Фінал",
         name: "Фінал",
         label: "Фінал",
@@ -598,11 +633,19 @@
         },
 
         registration: { ...regBlock },
+        regMode: regBlock.mode,
+        regOpen: regBlock.openDate || "",
+        regClose: regBlock.closeDate || "",
+        registrationOpenDate: regBlock.openDate || "",
+        registrationCloseDate: regBlock.closeDate || "",
 
         payment: { ...pay },
         ...payLegacy,
 
-        status: "pending"
+        status,
+        registrationStatus: status,
+        isOpen: status === "open",
+        open: status === "open"
       });
     }
 
@@ -647,14 +690,21 @@
         stagesCount: d.stagesCount || (Array.isArray(d.events) ? d.events.filter(e=>String(e.key||e.stageId||"").startsWith("stage-")).length : 3),
         hasFinal: d.hasFinal !== false,
 
-        regMode: reg.mode || "auto",
-        payEnabled: (pay.enabled ?? d.payEnabled) !== false,
-        manualOpen: reg.openDate || d.regOpen || "",
-        manualClose: reg.closeDate || d.regClose || "",
+        regMode: reg.mode || d.regMode || "auto",
+        payEnabled: (pay.enabled ?? d.payEnabled ?? d.paymentEnabled) !== false,
+        manualOpen: reg.openDate || d.regOpen || d.registrationOpenDate || "",
+        manualClose: reg.closeDate || d.regClose || d.registrationCloseDate || "",
 
-        price: (pay.price === 0 || pay.price) ? pay.price : ((d.price === 0 || d.price) ? d.price : (d.entryFee || d.fee || null)),
-        currency: pay.currency || d.currency || "UAH",
-        payDetails: pay.details || d.payDetails || d.paymentDetails || ""
+        price:
+          (pay.price === 0 || pay.price) ? pay.price :
+          ((d.price === 0 || d.price) ? d.price :
+          ((d.entryFee === 0 || d.entryFee) ? d.entryFee :
+          ((d.fee === 0 || d.fee) ? d.fee :
+          ((d.paymentAmount === 0 || d.paymentAmount) ? d.paymentAmount :
+          ((d.amount === 0 || d.amount) ? d.amount : null))))),
+
+        currency: pay.currency || d.currency || d.paymentCurrency || "UAH",
+        payDetails: pay.details || d.payDetails || d.paymentDetails || d.paymentText || d.requisites || d.bankDetails || d.card || d.cardNumber || ""
       });
 
       await activateFormat((d.format || "classic"), { deserializeData: (d.engine || {}) });
@@ -686,6 +736,8 @@
     const compId = editingCompId || compIdFrom(form.type, form.yearStr, form.name);
     const lakeSnap = form.lakeId ? await getLakeSnapshot(form.lakeId) : null;
     const regBlock = computeRegistrationBlock(form);
+    const regStatus = registrationStatusFromBlock(regBlock);
+
     const payBlock = paymentBlock(form);
     const payLegacy = paymentLegacyFields(form);
     const dateLegacy = dateLegacyFields(form);
@@ -744,6 +796,11 @@
       registrationOpenDate: regBlock.openDate || "",
       registrationCloseDate: regBlock.closeDate || "",
 
+      status: regStatus,
+      registrationStatus: regStatus,
+      isOpen: regStatus === "open",
+      open: regStatus === "open",
+
       payment: payBlock,
       ...payLegacy,
 
@@ -773,8 +830,15 @@
   }
 
   async function deleteCompetition(compId){
-    const typed = prompt(`УВАГА! Видалення без відновлення.\nВведи ID для підтвердження:\n\n${compId}`);
-    if(typed !== compId) throw new Error("Скасовано.");
+    const typed = prompt(
+      `УВАГА! Видалення без відновлення.\n\n` +
+      `Змагання:\n${compId}\n\n` +
+      `Для підтвердження введи: DELETE`
+    );
+
+    if(String(typed || "").trim().toUpperCase() !== "DELETE"){
+      throw new Error("Видалення скасовано.");
+    }
 
     try{
       const s = await db.collection("settings").doc("app").get();

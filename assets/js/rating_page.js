@@ -7,7 +7,7 @@
 // Якщо команда має тільки 1 результат → додається 8 балів.
 // Сортування: бали ↑, загальна вага всього турніру ↓, Big Fish всього турніру ↓.
 // 1–3 місце рейтингу = головні переможці сезону.
-// 1–3 місце фіналу = окремий бонусний титул фіналу.
+// Big Fish сезону підсвічується помаранчевим кольором.
 
 (function () {
   "use strict";
@@ -21,7 +21,7 @@
   const ABSENT_POINTS = 8;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_best2_with_final_v3";
+  const CACHE_KEY = "sc_rating_cache_best2_with_final_v4_bigfish";
 
   function safeText(v, dash = "—") {
     return v === null || v === undefined || v === "" ? dash : String(v);
@@ -40,6 +40,21 @@
 
   function clean(s) {
     return String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  }
+
+  function injectBigFishStyle() {
+    if (document.getElementById("sc-rating-bigfish-style")) return;
+
+    const style = document.createElement("style");
+    style.id = "sc-rating-bigfish-style";
+    style.textContent = `
+      .col-big.season-bigfish-winner{
+        color:#f59e0b !important;
+        font-weight:900 !important;
+        text-shadow:0 0 6px rgba(245,158,11,.35);
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   function setReadyFlag() {
@@ -187,7 +202,15 @@
 
     tds[4 + STAGES_MAX_IN_HTML].textContent = safeText(item.finalPlace, "–");
     tds[5 + STAGES_MAX_IN_HTML].textContent = safeText(item.weight);
-    tds[6 + STAGES_MAX_IN_HTML].textContent = safeText(item.bigFish);
+
+    const bigCell = tds[6 + STAGES_MAX_IN_HTML];
+    bigCell.classList.remove("season-bigfish-winner");
+
+    if (item.seasonBigFishWinner === true) {
+      bigCell.classList.add("season-bigfish-winner");
+    }
+
+    bigCell.textContent = safeText(item.bigFish);
 
     if (item.qualifiedForFinal === true) tr.classList.add("row-qualified");
     else tr.classList.remove("row-qualified");
@@ -604,6 +627,10 @@
     const currentRows = rankTeams(rawTeams, regularStages, finalStage, archiveMaps);
     const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps);
 
+    const seasonBigFish = currentRows.reduce((max, row) => {
+      return Math.max(max, num(row.displayBigFish));
+    }, 0);
+
     const rows = currentRows.map(row => {
       const prevPlace = previousPlaces.get(row.teamId) || row.place;
       const moveDelta = prevPlace - row.place;
@@ -616,6 +643,7 @@
         finalPlace: row.finalPlace || "–",
         weight: fmtKg(row.displayWeight),
         bigFish: fmtKg(row.displayBigFish),
+        seasonBigFishWinner: seasonBigFish > 0 && num(row.displayBigFish) === seasonBigFish,
         moveDelta,
         qualifiedForFinal: row.place <= TOP_COUNT
       };
@@ -660,6 +688,7 @@
   }
 
   async function loadRating() {
+    injectBigFishStyle();
     hideError();
 
     buildSkeleton(3);

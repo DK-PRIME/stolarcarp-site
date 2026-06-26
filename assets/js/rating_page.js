@@ -1,10 +1,13 @@
 // assets/js/rating_page.js
 // STOLAR CARP • Season Rating page
 // Джерело: seasonRating/{year} + seasonResults/{year}/stages
-// Бал = місце в зоні.
-// Best 2 of 3.
-// Якщо команда має тільки 1 етап → додається 8 балів.
-// Сортування: бали ↑, вага зарахованих етапів ↓, Big Fish ↓.
+// Етапи: бал = місце в зоні.
+// Фінал: бал = загальне місце у фіналі.
+// Рейтинг сезону = 2 кращі результати з Е1 / Е2 / Е3 / Фінал.
+// Якщо команда має тільки 1 результат → додається 8 балів.
+// Сортування: бали ↑, загальна вага всього турніру ↓, Big Fish всього турніру ↓.
+// 1–3 місце рейтингу = головні переможці сезону.
+// 1–3 місце фіналу = окремий бонусний титул фіналу.
 
 (function () {
   "use strict";
@@ -18,7 +21,7 @@
   const ABSENT_POINTS = 8;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_zone_best2_v1";
+  const CACHE_KEY = "sc_rating_cache_best2_with_final_v3";
 
   function safeText(v, dash = "—") {
     return v === null || v === undefined || v === "" ? dash : String(v);
@@ -121,10 +124,7 @@
     const cc = Math.max(3, Number(contendersCount || 0));
 
     for (let i = 0; i < cc; i++) {
-      contTbody.insertAdjacentHTML(
-        "beforeend",
-        rowHTML(TOP_COUNT + i + 1, false)
-      );
+      contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
     }
   }
 
@@ -227,7 +227,14 @@
     return db;
   }
 
+  function isFinalStage(stage) {
+    const raw = clean(`${stage.stageDocId} ${stage.stageId} ${stage.stageName} ${stage.type} ${stage.stageType}`);
+    return stage.isFinal === true || raw.includes("final") || raw.includes("фінал");
+  }
+
   function stageSortValue(stage) {
+    if (isFinalStage(stage)) return 9999;
+
     const raw = String(stage.stageId || stage.stageDocId || stage.id || "");
     const m = raw.match(/(\d+)/);
     return m ? Number(m[1]) : 999;
@@ -239,17 +246,40 @@
     return arr
       .map(s => {
         if (typeof s === "string") {
-          return { stageDocId: s, stageId: s, stageName: s };
+          return {
+            stageDocId: s,
+            stageId: s,
+            stageName: s,
+            isFinal: isFinalStage({ stageDocId: s, stageId: s, stageName: s })
+          };
         }
 
-        return {
+        const stage = {
           stageDocId: String(s.stageDocId || s.id || ""),
           stageId: String(s.stageId || s.stageDocId || s.id || ""),
-          stageName: String(s.stageName || s.stageId || s.stageDocId || s.id || "")
+          stageName: String(s.stageName || s.stageId || s.stageDocId || s.id || ""),
+          type: String(s.type || ""),
+          stageType: String(s.stageType || ""),
+          isFinal: Boolean(s.isFinal)
         };
+
+        stage.isFinal = isFinalStage(stage);
+        return stage;
       })
       .filter(s => s.stageDocId)
       .sort((a, b) => stageSortValue(a) - stageSortValue(b));
+  }
+
+  function splitStages(archivedStages) {
+    const regularStages = [];
+    let finalStage = null;
+
+    archivedStages.forEach(stage => {
+      if (isFinalStage(stage)) finalStage = finalStage || stage;
+      else regularStages.push(stage);
+    });
+
+    return { regularStages, finalStage };
   }
 
   function normalizeStandingRow(r) {
@@ -259,7 +289,7 @@
       zone: String(r.zone || "").toUpperCase().trim(),
       sector: String(r.sector || "").trim(),
 
-      overallPlace: num(r.overallPlace || r.place),
+      overallPlace: num(r.overallPlace || r.finalPlace || r.place),
       zonePlace: num(r.zonePlace),
       points: num(r.points || r.zonePlace),
 
@@ -269,10 +299,23 @@
     };
   }
 
-  function computeZonePlaces(standings) {
+  function computeStageMap(standings) {
     const rows = (Array.isArray(standings) ? standings : []).map(normalizeStandingRow);
     const byTeamId = new Map();
     const byTeamName = new Map();
+
+    const overallRows = rows.slice().sort((a, b) => {
+      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+      if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
+      return String(a.team).localeCompare(String(b.team), "uk");
+    });
+
+    const overallPlaceByKey = new Map();
+
+    overallRows.forEach((r, i) => {
+      const key = r.teamId || clean(r.team);
+      if (key) overallPlaceByKey.set(key, r.overallPlace || (i + 1));
+    });
 
     ["A", "B", "C"].forEach(zone => {
       const zoneRows = rows
@@ -280,13 +323,15 @@
         .sort((a, b) => {
           if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
           if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
-          return b.totalCount - a.totalCount;
+          return String(a.team).localeCompare(String(b.team), "uk");
         });
 
       zoneRows.forEach((r, i) => {
+        const key = r.teamId || clean(r.team);
         const zonePlace = r.zonePlace || (i + 1);
         const fixed = {
           ...r,
+          overallPlace: r.overallPlace || overallPlaceByKey.get(key) || 0,
           zonePlace,
           points: zonePlace
         };
@@ -295,6 +340,20 @@
         if (fixed.team) byTeamName.set(clean(fixed.team), fixed);
       });
     });
+
+    rows
+      .filter(r => !["A", "B", "C"].includes(r.zone))
+      .forEach(r => {
+        const key = r.teamId || clean(r.team);
+        const fixed = {
+          ...r,
+          overallPlace: r.overallPlace || overallPlaceByKey.get(key) || 0,
+          points: r.points || r.zonePlace || 0
+        };
+
+        if (fixed.teamId) byTeamId.set(fixed.teamId, fixed);
+        if (fixed.team) byTeamName.set(clean(fixed.team), fixed);
+      });
 
     return { byTeamId, byTeamName };
   }
@@ -316,7 +375,7 @@
         const d = snap.data() || {};
         const standings = Array.isArray(d.standings) ? d.standings : [];
 
-        result.set(stage.stageDocId, computeZonePlaces(standings));
+        result.set(stage.stageDocId, computeStageMap(standings));
       } catch (e) {
         console.warn("[Rating] Не вдалося прочитати архів етапу:", stage.stageDocId, e);
       }
@@ -338,16 +397,24 @@
   }
 
   function readStageResultFromArchiveOrRating(team, stage, archiveMaps) {
+    const final = isFinalStage(stage);
     const archiveMap = archiveMaps.get(stage.stageDocId);
     const archiveRow = findArchiveRowForTeam(archiveMap, team);
 
     if (archiveRow) {
+      const place = final
+        ? num(archiveRow.overallPlace || archiveRow.finalPlace || archiveRow.place || archiveRow.points)
+        : num(archiveRow.zonePlace || archiveRow.points);
+
+      if (!place) return null;
+
       return {
-        p: archiveRow.zonePlace,
-        pts: archiveRow.zonePlace,
-        totalWeight: archiveRow.totalWeight,
-        bigFish: archiveRow.bigFish,
-        totalCount: archiveRow.totalCount
+        p: place,
+        pts: place,
+        totalWeight: num(archiveRow.totalWeight),
+        bigFish: num(archiveRow.bigFish),
+        totalCount: num(archiveRow.totalCount),
+        isFinal: final
       };
     }
 
@@ -356,24 +423,26 @@
 
     if (!s) return null;
 
-    const zonePlace = num(s.zonePlace || s.points || s.place);
-    const points = num(s.points || s.zonePlace || s.place);
+    const place = final
+      ? num(s.overallPlace || s.finalPlace || s.points || s.place)
+      : num(s.zonePlace || s.points || s.place);
 
-    if (!points) return null;
+    if (!place) return null;
 
     return {
-      p: zonePlace || points,
-      pts: points,
+      p: place,
+      pts: place,
       totalWeight: num(s.totalWeight),
       bigFish: num(s.bigFish),
-      totalCount: num(s.totalCount)
+      totalCount: num(s.totalCount),
+      isFinal: final
     };
   }
 
-  function calculateBestResults(team, archivedStages, archiveMaps) {
+  function calculateBestResults(team, ratingStages, archiveMaps) {
     const played = [];
 
-    archivedStages.forEach(stage => {
+    ratingStages.forEach(stage => {
       const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (result) {
@@ -395,7 +464,7 @@
 
     const counted = sortedPlayed.slice(0, BEST_COUNT);
 
-    if (counted.length < BEST_COUNT && archivedStages.length > 0) {
+    if (counted.length < BEST_COUNT && ratingStages.length > 0) {
       const missing = BEST_COUNT - counted.length;
 
       for (let i = 0; i < missing; i++) {
@@ -417,14 +486,12 @@
     return {
       countedKeys,
       droppedKeys,
-      ratingPoints: counted.reduce((s, x) => s + num(x.pts), 0),
-      ratingWeight: counted.reduce((s, x) => s + num(x.totalWeight), 0),
-      ratingBigFish: counted.reduce((m, x) => Math.max(m, num(x.bigFish)), 0)
+      ratingPoints: counted.reduce((s, x) => s + num(x.pts), 0)
     };
   }
 
-  function makeStageCells(team, archivedStages, bestInfo, archiveMaps) {
-    return archivedStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
+  function makeStageCells(team, regularStages, bestInfo, archiveMaps) {
+    return regularStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
       const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (!result) {
@@ -446,10 +513,10 @@
     });
   }
 
-  function getSeasonDisplayWeight(team, archivedStages, archiveMaps) {
+  function getTournamentWeight(team, tournamentStages, archiveMaps) {
     let w = 0;
 
-    archivedStages.forEach(stage => {
+    tournamentStages.forEach(stage => {
       const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
       if (r) w += num(r.totalWeight);
     });
@@ -457,10 +524,10 @@
     return w || num(team.totalWeight);
   }
 
-  function getSeasonDisplayBigFish(team, archivedStages, archiveMaps) {
+  function getTournamentBigFish(team, tournamentStages, archiveMaps) {
     let bf = 0;
 
-    archivedStages.forEach(stage => {
+    tournamentStages.forEach(stage => {
       const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
       if (r) bf = Math.max(bf, num(r.bigFish));
     });
@@ -468,30 +535,39 @@
     return bf || num(team.bigFish);
   }
 
-  function rankTeams(rawTeams, archivedStages, archiveMaps) {
+  function rankTeams(rawTeams, regularStages, finalStage, archiveMaps) {
+    const ratingStages = finalStage
+      ? regularStages.concat([finalStage])
+      : regularStages.slice();
+
+    const tournamentStages = ratingStages.slice();
+
     const rows = rawTeams.map(team => {
-      const bestInfo = calculateBestResults(team, archivedStages, archiveMaps);
-      const stageCells = makeStageCells(team, archivedStages, bestInfo, archiveMaps);
+      const bestInfo = calculateBestResults(team, ratingStages, archiveMaps);
+      const stageCells = makeStageCells(team, regularStages, bestInfo, archiveMaps);
+
+      const finalResult = finalStage
+        ? readStageResultFromArchiveOrRating(team, finalStage, archiveMaps)
+        : null;
 
       return {
         teamId: String(team.teamId || ""),
         team: team.team || team.teamName || "—",
 
         stages: stageCells,
+        finalPlace: finalResult ? finalResult.p : "–",
 
         ratingPoints: bestInfo.ratingPoints,
-        ratingWeight: bestInfo.ratingWeight,
-        ratingBigFish: bestInfo.ratingBigFish,
 
-        displayWeight: getSeasonDisplayWeight(team, archivedStages, archiveMaps),
-        displayBigFish: getSeasonDisplayBigFish(team, archivedStages, archiveMaps)
+        displayWeight: getTournamentWeight(team, tournamentStages, archiveMaps),
+        displayBigFish: getTournamentBigFish(team, tournamentStages, archiveMaps)
       };
     });
 
     rows.sort((a, b) => {
       if (a.ratingPoints !== b.ratingPoints) return a.ratingPoints - b.ratingPoints;
-      if (b.ratingWeight !== a.ratingWeight) return b.ratingWeight - a.ratingWeight;
-      return b.ratingBigFish - a.ratingBigFish;
+      if (b.displayWeight !== a.displayWeight) return b.displayWeight - a.displayWeight;
+      return b.displayBigFish - a.displayBigFish;
     });
 
     return rows.map((r, i) => ({
@@ -503,8 +579,9 @@
   function calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps) {
     if (archivedStages.length <= 1) return new Map();
 
-    const previousStages = archivedStages.slice(0, -1);
-    const previousRows = rankTeams(rawTeams, previousStages, archiveMaps);
+    const previousArchivedStages = archivedStages.slice(0, -1);
+    const { regularStages, finalStage } = splitStages(previousArchivedStages);
+    const previousRows = rankTeams(rawTeams, regularStages, finalStage, archiveMaps);
 
     const map = new Map();
 
@@ -517,12 +594,14 @@
 
   async function convertRatingToRows(db, rating) {
     const archivedStages = getArchivedStages(rating);
-    const stagesCount = Math.min(archivedStages.length, STAGES_MAX_IN_HTML);
+    const { regularStages, finalStage } = splitStages(archivedStages);
+
+    const stagesCount = Math.min(regularStages.length, STAGES_MAX_IN_HTML);
     const rawTeams = Array.isArray(rating.teams) ? rating.teams.slice() : [];
 
     const archiveMaps = await loadArchiveStageMaps(db, SEASON_YEAR, archivedStages);
 
-    const currentRows = rankTeams(rawTeams, archivedStages, archiveMaps);
+    const currentRows = rankTeams(rawTeams, regularStages, finalStage, archiveMaps);
     const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps);
 
     const rows = currentRows.map(row => {
@@ -534,7 +613,7 @@
         team: row.team,
         stages: row.stages,
         points: row.ratingPoints || "—",
-        finalPlace: "–",
+        finalPlace: row.finalPlace || "–",
         weight: fmtKg(row.displayWeight),
         bigFish: fmtKg(row.displayBigFish),
         moveDelta,

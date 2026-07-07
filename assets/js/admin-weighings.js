@@ -1201,17 +1201,20 @@
       setArchiveMsg("STEP 6 — Позначаю LIVE як архівований…", true);
 
       await stageRef.set({
-        archived: true,
-        isLive: false,
-        isActive: false,
-        archivedAt: ts,
-        archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
-      }, { merge: true });
+  archived: true,
+  isLive: false,
+  isActive: false,
+  archivedAt: ts,
+  archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
+}, { merge: true });
 
-      setArchiveMsg(
-        `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Тепер можна натиснути «Очистити LIVE».`,
-        true
-      );
+setArchiveMsg("STEP 7 — Ховаю етап з кабінетів команд…", true);
+const hiddenCount = await hideStageFromCabinet(compId, stageKey, ts);
+
+setArchiveMsg(
+  `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Приховано в кабінеті: ${hiddenCount}. Тепер можна натиснути «Очистити LIVE».`,
+  true
+);
 
       setMsg("✅ Етап архівовано. Тепер можна очистити LIVE перед наступним етапом.", true);
 

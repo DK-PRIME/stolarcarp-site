@@ -41,14 +41,15 @@
     }
   }
 
-  function norm(v) { return String(v ?? "").trim(); }
+  function norm(v) {
+    return String(v ?? "").trim();
+  }
 
   function isPaidStatus(status) {
     const s = norm(status).toLowerCase();
     return s === "confirmed" || s === "paid";
   }
 
-  // ====== META змагання (назва + назва етапу) ======
   const metaCache = Object.create(null);
 
   async function getCompetitionMeta(compId, stageId) {
@@ -61,13 +62,18 @@
 
     try {
       const cSnap = await db.collection("competitions").doc(compId).get();
+
       if (cSnap.exists) {
         const c = cSnap.data() || {};
         compTitle = c.name || c.title || "";
 
         const events = Array.isArray(c.events) ? c.events : [];
         const st = stageId || "main";
-        const ev = events.find(e => String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim());
+
+        const ev = events.find(e =>
+          String(e?.key || e?.stageId || e?.id || "").trim() === String(st).trim()
+        );
+
         stageTitle =
           (ev && (ev.title || ev.name || ev.label)) ||
           (st && st !== "main" ? st : "");
@@ -80,26 +86,23 @@
   }
 
   function niceTitle(it) {
-  const comp = it.compTitle || "Змагання";
+    let stage = it.stageTitle;
 
-  let stage = it.stageTitle;
+    if (stage && /^stage[-_ ]?\d+$/i.test(stage)) {
+      stage = "";
+    }
 
-  // Якщо stageTitle виглядає як "stage-1" → ігноруємо
-  if (stage && /^stage[-_ ]?\d+$/i.test(stage)) {
-    stage = "";
-  }
+    if (!stage && it.stageId && it.stageId !== "main") {
+      const num = String(it.stageId).match(/\d+/);
+      if (num) stage = `Етап ${num[0]}`;
+    }
 
-  // Якщо все ще нема нормальної назви → формуємо "Етап X"
-  if (!stage && it.stageId && it.stageId !== "main") {
-    const num = String(it.stageId).match(/\d+/);
-    if (num) stage = `Етап ${num[0]}`;
-  }
-
-  return stage ? `${esc(comp)} · ${esc(stage)}` : esc(comp);
+    return stage ? esc(stage) : esc(it.compTitle || "Змагання");
   }
 
   function renderItems(items) {
     let html = "";
+
     items.forEach((it) => {
       const paid = isPaidStatus(it.status);
       const dot = paid ? "#22c55e" : "#ef4444";
@@ -132,14 +135,15 @@
         </div>
       `;
     });
+
     box.innerHTML = html;
   }
 
   async function subscribeParticipation(user) {
     const db = window.scDb;
 
-    // 1) teamId користувача
     const uSnap = await db.collection("users").doc(user.uid).get();
+
     if (!uSnap.exists) {
       showError("Немає профілю користувача");
       return;
@@ -147,13 +151,16 @@
 
     const u = uSnap.data() || {};
     const teamId = u.teamId;
+
     if (!teamId) {
       showMuted("Ви ще не в команді");
       return;
     }
 
-    // 2) Підписка на public_participants (public read) — без permission-denied
-    if (typeof unsub === "function") { unsub(); unsub = null; }
+    if (typeof unsub === "function") {
+      unsub();
+      unsub = null;
+    }
 
     showMuted("Завантаження участі…");
 
@@ -162,53 +169,65 @@
       .where("entryType", "==", "team")
       .onSnapshot(async (qs) => {
         const rows = [];
-        qs.forEach(d => rows.push({ id: d.id, ...(d.data() || {}) }));
+
+        qs.forEach(d => {
+          rows.push({ id: d.id, ...(d.data() || {}) });
+        });
 
         if (!rows.length) {
           showMuted("Команда ще не подавала заявки на змагання");
           return;
         }
 
-        // 3) унікальні по competitionId+stageId (залишаємо "кращий": confirmed перемагає)
         const map = Object.create(null);
+
         rows.forEach(r => {
           const compId = norm(r.competitionId);
           const stageId = norm(r.stageId) || "main";
+
           if (!compId) return;
 
           const k = `${compId}||${stageId}`;
-          if (!map[k]) map[k] = r;
-          else {
+
+          if (!map[k]) {
+            map[k] = r;
+          } else {
             const a = map[k];
             const ap = isPaidStatus(a.status);
             const bp = isPaidStatus(r.status);
+
             if (!ap && bp) map[k] = r;
           }
         });
 
         const uniq = Object.values(map);
 
-        // 4) підтягнемо красиві назви з competitions
         for (const it of uniq) {
           const compId = norm(it.competitionId);
           const stageId = norm(it.stageId) || "main";
           const meta = await getCompetitionMeta(compId, stageId);
 
-          it.compTitle  = meta.compTitle || it.competitionTitle || it.competitionName || "Змагання";
+          it.compTitle = meta.compTitle || it.competitionTitle || it.competitionName || "Змагання";
           it.stageTitle = meta.stageTitle || it.stageName || "";
-          it.teamName   = it.teamName || u.teamName || "";
-          it.updatedAt  = it.updatedAt || it.confirmedAt || it.createdAt || null;
-          it.stageId    = stageId;
+          it.teamName = it.teamName || u.teamName || "";
+          it.updatedAt = it.updatedAt || it.confirmedAt || it.createdAt || null;
+          it.stageId = stageId;
         }
 
-        // 5) сортування: оплачені зверху, далі за датою (новіші зверху)
         uniq.sort((a, b) => {
           const ap = isPaidStatus(a.status);
           const bp = isPaidStatus(b.status);
+
           if (ap !== bp) return ap ? -1 : 1;
 
-          const at = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? +new Date(a.updatedAt) : 0);
-          const bt = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? +new Date(b.updatedAt) : 0);
+          const at = a.updatedAt?.toMillis
+            ? a.updatedAt.toMillis()
+            : (a.updatedAt ? +new Date(a.updatedAt) : 0);
+
+          const bt = b.updatedAt?.toMillis
+            ? b.updatedAt.toMillis()
+            : (b.updatedAt ? +new Date(b.updatedAt) : 0);
+
           return bt - at;
         });
 
@@ -229,6 +248,7 @@
           showMuted("Увійдіть у акаунт");
           return;
         }
+
         try {
           await subscribeParticipation(user);
         } catch (e) {

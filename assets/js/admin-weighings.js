@@ -1018,34 +1018,6 @@
     };
   }
 
-async function hideStageFromCabinet(compId, stageKey, ts) {
-  const snap = await db.collection("public_participants")
-    .where("competitionId", "==", compId)
-    .where("stageId", "==", stageKey)
-    .where("entryType", "==", "team")
-    .get();
-
-  let updated = 0;
-
-  for (let i = 0; i < snap.docs.length; i += 400) {
-    const batch = db.batch();
-    const chunk = snap.docs.slice(i, i + 400);
-
-    chunk.forEach(d => {
-      batch.set(d.ref, {
-        cabinetHidden: true,
-        archivedStage: true,
-        archivedAt: ts
-      }, { merge: true });
-    });
-
-    await batch.commit();
-    updated += chunk.length;
-  }
-
-  return updated;
-}
-  
   async function archiveStage(){
     const { compId, stageKey } = parseStageValue(stageSelect.value);
     const seasonYear = norm(seasonYearInp?.value) || "2026";
@@ -1229,20 +1201,17 @@ async function hideStageFromCabinet(compId, stageKey, ts) {
       setArchiveMsg("STEP 6 — Позначаю LIVE як архівований…", true);
 
       await stageRef.set({
-  archived: true,
-  isLive: false,
-  isActive: false,
-  archivedAt: ts,
-  archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
-}, { merge: true });
+        archived: true,
+        isLive: false,
+        isActive: false,
+        archivedAt: ts,
+        archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
+      }, { merge: true });
 
-setArchiveMsg("STEP 7 — Ховаю етап з кабінетів команд…", true);
-const hiddenCount = await hideStageFromCabinet(compId, stageKey, ts);
-
-setArchiveMsg(
-  `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Приховано в кабінеті: ${hiddenCount}. Тепер можна натиснути «Очистити LIVE».`,
-  true
-);
+      setArchiveMsg(
+        `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Тепер можна натиснути «Очистити LIVE».`,
+        true
+      );
 
       setMsg("✅ Етап архівовано. Тепер можна очистити LIVE перед наступним етапом.", true);
 

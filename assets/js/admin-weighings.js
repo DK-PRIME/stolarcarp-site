@@ -1208,6 +1208,33 @@
         archivedTo: `seasonResults/${seasonYear}/stages/${stageDocId}`
       }, { merge: true });
 
+      async function hideStageFromCabinet(compId, stageKey, ts) {
+  const snap = await db.collection("public_participants")
+    .where("competitionId", "==", compId)
+    .where("stageId", "==", stageKey)
+    .where("entryType", "==", "team")
+    .get();
+
+  let updated = 0;
+
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    const chunk = snap.docs.slice(i, i + 400);
+
+    chunk.forEach(d => {
+      batch.set(d.ref, {
+        cabinetHidden: true,
+        archivedStage: true,
+        archivedAt: ts
+      }, { merge: true });
+    });
+
+    await batch.commit();
+    updated += chunk.length;
+  }
+
+  return updated;
+}
       setArchiveMsg(
         `✅ Архів готовий. Етап: ${standings.length} команд. Рейтинг: ${ratingInfo.teamsCount} команд / ${ratingInfo.stagesCount} етапів. Тепер можна натиснути «Очистити LIVE».`,
         true

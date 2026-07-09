@@ -3,69 +3,140 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>STOLAR CARP • Харчування для кухні</title>
+  <title>STOLAR CARP • Кухня</title>
 
   <style>
+    :root{
+      --accent:#f6c34c;
+      --dark:#111827;
+      --bg:#f3f4f6;
+      --line:#d1d5db;
+      --muted:#6b7280;
+    }
+
     body{
       margin:0;
       padding:16px;
       font-family:Arial,sans-serif;
-      background:#f3f4f6;
+      background:var(--bg);
       color:#111827;
     }
 
     .wrap{
-      max-width:1100px;
+      max-width:1300px;
       margin:0 auto;
       background:#fff;
-      border-radius:14px;
+      border-radius:16px;
       padding:16px;
       box-shadow:0 10px 30px rgba(0,0,0,.12);
     }
 
+    .top{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:12px;
+    }
+
     h1{
-      margin:0 0 12px;
+      margin:0;
       font-size:24px;
     }
 
-    .actions{
+    .hint{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:4px;
+    }
+
+    .actions,
+    .prices{
       display:flex;
       gap:8px;
       flex-wrap:wrap;
-      margin-bottom:14px;
+      margin:12px 0;
     }
 
     button{
       border:0;
       border-radius:10px;
       padding:10px 14px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
-      background:#f6c34c;
+      background:var(--accent);
       color:#111827;
+    }
+
+    .field label{
+      display:block;
+      font-size:12px;
+      font-weight:800;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+
+    .field input{
+      width:120px;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      font-weight:900;
+      font-size:16px;
     }
 
     .status{
       margin:10px 0;
-      font-weight:700;
+      font-weight:900;
+    }
+
+    .summary{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(150px,1fr));
+      gap:10px;
+      margin:12px 0;
+    }
+
+    .card{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+    }
+
+    .card b{
+      display:block;
+      font-size:22px;
+      margin-top:4px;
+    }
+
+    .table-scroll{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:14px;
     }
 
     table{
       width:100%;
+      min-width:1100px;
       border-collapse:collapse;
       font-size:14px;
     }
 
     th,td{
-      border:1px solid #d1d5db;
+      border-bottom:1px solid var(--line);
+      border-right:1px solid var(--line);
       padding:8px;
       text-align:center;
       vertical-align:top;
     }
 
     th{
-      background:#111827;
-      color:#f6c34c;
+      background:var(--dark);
+      color:var(--accent);
+      position:sticky;
+      top:0;
+      z-index:2;
     }
 
     td.team,
@@ -73,14 +144,37 @@
       text-align:left;
     }
 
+    td.team{
+      font-weight:900;
+    }
+
+    td.money{
+      background:#fffbeb;
+      font-weight:900;
+      white-space:nowrap;
+    }
+
     td.note{
       min-width:220px;
-      font-weight:600;
+      font-weight:700;
     }
 
     tfoot td{
-      background:#f6c34c;
+      background:var(--accent);
       font-weight:900;
+    }
+
+    .empty{
+      padding:18px;
+      color:var(--muted);
+      font-weight:800;
+    }
+
+    @media(max-width:700px){
+      body{padding:8px;}
+      .wrap{padding:12px;}
+      .summary{grid-template-columns:repeat(2,minmax(140px,1fr));}
+      h1{font-size:20px;}
     }
 
     @media print{
@@ -94,8 +188,13 @@
         border-radius:0;
       }
 
-      .actions{
+      .actions,
+      .prices{
         display:none;
+      }
+
+      th{
+        position:static;
       }
     }
   </style>
@@ -103,29 +202,60 @@
 
 <body>
   <div class="wrap">
-    <h1>🍽 Харчування для кухні</h1>
+    <div class="top">
+      <div>
+        <h1>🍽 STOLAR CARP • Кухня</h1>
+        <div class="hint">Порції, суми, сектор/зона та примітки команд</div>
+      </div>
 
-    <div class="actions">
-      <button onclick="window.print()">Друк / PDF</button>
-      <button id="btnCopy">Скопіювати текст</button>
-      <button id="btnShare">Поділитися</button>
+      <div class="actions">
+        <button id="btnRefresh" type="button">Оновити</button>
+        <button onclick="window.print()" type="button">Друк / PDF</button>
+        <button id="btnCopy" type="button">Скопіювати</button>
+        <button id="btnShare" type="button">Поділитися</button>
+      </div>
+    </div>
+
+    <div class="prices">
+      <div class="field">
+        <label>Обід, грн</label>
+        <input id="priceLunch" type="number" min="0" step="1" value="0">
+      </div>
+
+      <div class="field">
+        <label>Вечеря, грн</label>
+        <input id="priceDinner" type="number" min="0" step="1" value="0">
+      </div>
+
+      <div class="field">
+        <label>Сніданок, грн</label>
+        <input id="priceBreakfast" type="number" min="0" step="1" value="0">
+      </div>
+
+      <div class="field">
+        <label>&nbsp;</label>
+        <button id="btnSavePrices" type="button">Зберегти ціни</button>
+      </div>
     </div>
 
     <div class="status" id="status">Завантаження…</div>
 
+    <div class="summary" id="summary"></div>
+
     <div id="tableWrap"></div>
   </div>
 
-  <!-- Підключи тут ті самі Firebase-скрипти, що й на основній сторінці -->
   <script src="assets/js/firebase-init.js"></script>
 
   <script>
     (function(){
       "use strict";
 
-      const PAID_STATUSES = ["submitted"];
+      const ORDER_STATUSES = ["submitted"];
+      const PRICE_KEY = "sc_meal_kitchen_prices_v2";
 
       const $ = id => document.getElementById(id);
+      let lastRows = [];
 
       function esc(s){
         return String(s ?? "").replace(/[&<>"']/g, m => ({
@@ -142,8 +272,35 @@
         return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
       }
 
+      function money(v){
+        return `${num(v)} грн`;
+      }
+
       function getParam(name){
         return new URLSearchParams(location.search).get(name) || "";
+      }
+
+      function prices(){
+        return {
+          lunch: num($("priceLunch")?.value),
+          dinner: num($("priceDinner")?.value),
+          breakfast: num($("priceBreakfast")?.value)
+        };
+      }
+
+      function savePrices(){
+        localStorage.setItem(PRICE_KEY, JSON.stringify(prices()));
+        renderAll(lastRows);
+        $("status").textContent = "✅ Ціни збережено.";
+      }
+
+      function loadPrices(){
+        try {
+          const saved = JSON.parse(localStorage.getItem(PRICE_KEY) || "{}");
+          if ($("priceLunch")) $("priceLunch").value = num(saved.lunch);
+          if ($("priceDinner")) $("priceDinner").value = num(saved.dinner);
+          if ($("priceBreakfast")) $("priceBreakfast").value = num(saved.breakfast);
+        } catch(e){}
       }
 
       function totalOrder(o){
@@ -155,6 +312,18 @@
           num(o?.day2?.dinner) +
           num(o?.day2?.breakfast)
         );
+      }
+
+      function orderMoney(r){
+        const p = prices();
+        const d1 = r.day1 || {};
+        const d2 = r.day2 || {};
+
+        const lunch = num(d1.lunch) + num(d2.lunch);
+        const dinner = num(d1.dinner) + num(d2.dinner);
+        const breakfast = num(d1.breakfast) + num(d2.breakfast);
+
+        return (lunch * p.lunch) + (dinner * p.dinner) + (breakfast * p.breakfast);
       }
 
       function sortOrders(a,b){
@@ -202,10 +371,8 @@
 
         snap.forEach(doc => {
           const d = doc.data() || {};
-
-          if (!PAID_STATUSES.includes(String(d.status || ""))) return;
+          if (!ORDER_STATUSES.includes(String(d.status || ""))) return;
           if (totalOrder(d) <= 0) return;
-
           rows.push(d);
         });
 
@@ -213,19 +380,52 @@
         return rows;
       }
 
+      function renderSummary(rows){
+        let teams = rows.length;
+        let portions = 0;
+        let totalMoney = 0;
+        let notes = 0;
+
+        let lunch = 0;
+        let dinner = 0;
+        let breakfast = 0;
+
+        rows.forEach(r => {
+          const d1 = r.day1 || {};
+          const d2 = r.day2 || {};
+
+          lunch += num(d1.lunch) + num(d2.lunch);
+          dinner += num(d1.dinner) + num(d2.dinner);
+          breakfast += num(d1.breakfast) + num(d2.breakfast);
+
+          portions += totalOrder(r);
+          totalMoney += orderMoney(r);
+
+          if (String(r.note || "").trim()) notes++;
+        });
+
+        $("summary").innerHTML = `
+          <div class="card">Команд <b>${teams}</b></div>
+          <div class="card">Обідів <b>${lunch}</b></div>
+          <div class="card">Вечерь <b>${dinner}</b></div>
+          <div class="card">Сніданків <b>${breakfast}</b></div>
+          <div class="card">Порцій всього <b>${portions}</b></div>
+          <div class="card">Сума всього <b>${money(totalMoney)}</b></div>
+          <div class="card">Приміток <b>${notes}</b></div>
+        `;
+      }
+
       function renderTable(rows){
         if (!rows.length) {
-          $("tableWrap").innerHTML = "<p>Заявок на харчування ще немає.</p>";
+          $("tableWrap").innerHTML = "<div class='empty'>Заявок на харчування ще немає.</div>";
           return;
         }
 
         const totals = {
-          d1l:0,
-          d1d:0,
-          d1b:0,
-          d2l:0,
-          d2d:0,
-          d2b:0
+          d1l:0,d1d:0,d1b:0,
+          d2l:0,d2d:0,d2b:0,
+          portions:0,
+          money:0
         };
 
         const body = rows.map(r => {
@@ -239,12 +439,17 @@
           const d2d = num(d2.dinner);
           const d2b = num(d2.breakfast);
 
+          const portions = d1l + d1d + d1b + d2l + d2d + d2b;
+          const rowMoney = orderMoney(r);
+
           totals.d1l += d1l;
           totals.d1d += d1d;
           totals.d1b += d1b;
           totals.d2l += d2l;
           totals.d2d += d2d;
           totals.d2b += d2b;
+          totals.portions += portions;
+          totals.money += rowMoney;
 
           const sector = r.drawKey || ((r.zone || "") + (r.sector || "")) || "—";
 
@@ -258,41 +463,56 @@
               <td>${d2l || ""}</td>
               <td>${d2d || ""}</td>
               <td>${d2b || ""}</td>
+              <td><b>${portions}</b></td>
+              <td class="money">${money(rowMoney)}</td>
               <td class="note">${esc(r.note || "")}</td>
             </tr>
           `;
         }).join("");
 
         $("tableWrap").innerHTML = `
-          <table id="mealTable">
-            <thead>
-              <tr>
-                <th>Сектор</th>
-                <th>Команда</th>
-                <th>1О</th>
-                <th>1В</th>
-                <th>1С</th>
-                <th>2О</th>
-                <th>2В</th>
-                <th>2С</th>
-                <th>Примітка</th>
-              </tr>
-            </thead>
-            <tbody>${body}</tbody>
-            <tfoot>
-              <tr>
-                <td colspan="2">Разом</td>
-                <td>${totals.d1l}</td>
-                <td>${totals.d1d}</td>
-                <td>${totals.d1b}</td>
-                <td>${totals.d2l}</td>
-                <td>${totals.d2d}</td>
-                <td>${totals.d2b}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
+          <div class="table-scroll">
+            <table id="mealTable">
+              <thead>
+                <tr>
+                  <th>Сектор</th>
+                  <th>Команда</th>
+                  <th>1О</th>
+                  <th>1В</th>
+                  <th>1С</th>
+                  <th>2О</th>
+                  <th>2В</th>
+                  <th>2С</th>
+                  <th>Порцій</th>
+                  <th>Сума</th>
+                  <th>Примітка</th>
+                </tr>
+              </thead>
+
+              <tbody>${body}</tbody>
+
+              <tfoot>
+                <tr>
+                  <td colspan="2">Разом</td>
+                  <td>${totals.d1l}</td>
+                  <td>${totals.d1d}</td>
+                  <td>${totals.d1b}</td>
+                  <td>${totals.d2l}</td>
+                  <td>${totals.d2d}</td>
+                  <td>${totals.d2b}</td>
+                  <td>${totals.portions}</td>
+                  <td>${money(totals.money)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         `;
+      }
+
+      function renderAll(rows){
+        renderSummary(rows);
+        renderTable(rows);
       }
 
       function tableToText(){
@@ -305,12 +525,15 @@
 
       async function copyText(){
         const text = tableToText();
+        if (!text) return alert("Нема що копіювати.");
+
         await navigator.clipboard.writeText(text);
         $("status").textContent = "✅ Список скопійовано.";
       }
 
       async function shareText(){
         const text = tableToText();
+        if (!text) return alert("Нема що відправляти.");
 
         if (navigator.share) {
           await navigator.share({
@@ -323,22 +546,40 @@
         }
       }
 
-      async function init(){
+      async function refresh(){
         try {
-          const rows = await loadOrders();
-          renderTable(rows);
-          $("status").textContent = `✅ Заявок: ${rows.length}`;
+          $("status").textContent = "Завантаження…";
 
-          $("btnCopy").onclick = copyText;
-          $("btnShare").onclick = shareText;
+          lastRows = await loadOrders();
+          renderAll(lastRows);
 
+          const now = new Date().toLocaleTimeString("uk-UA", {
+            hour:"2-digit",
+            minute:"2-digit",
+            second:"2-digit"
+          });
+
+          $("status").textContent = `✅ Заявок: ${lastRows.length}. Оновлено: ${now}`;
         } catch(e) {
           console.error(e);
           $("status").textContent = "❌ " + (e.message || e);
         }
       }
 
-      init();
+      loadPrices();
+
+      $("btnRefresh").onclick = refresh;
+      $("btnCopy").onclick = copyText;
+      $("btnShare").onclick = shareText;
+      $("btnSavePrices").onclick = savePrices;
+
+      $("priceLunch").oninput = () => renderAll(lastRows);
+      $("priceDinner").oninput = () => renderAll(lastRows);
+      $("priceBreakfast").oninput = () => renderAll(lastRows);
+
+      refresh();
+
+      setInterval(refresh, 30000);
     })();
   </script>
 </body>

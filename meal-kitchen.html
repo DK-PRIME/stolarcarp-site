@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>STOLAR CARP • Харчування для кухні</title>
+
+  <style>
+    body{
+      margin:0;
+      padding:16px;
+      font-family:Arial,sans-serif;
+      background:#f3f4f6;
+      color:#111827;
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      background:#fff;
+      border-radius:14px;
+      padding:16px;
+      box-shadow:0 10px 30px rgba(0,0,0,.12);
+    }
+
+    h1{
+      margin:0 0 12px;
+      font-size:24px;
+    }
+
+    .actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    button{
+      border:0;
+      border-radius:10px;
+      padding:10px 14px;
+      font-weight:700;
+      cursor:pointer;
+      background:#f6c34c;
+      color:#111827;
+    }
+
+    .status{
+      margin:10px 0;
+      font-weight:700;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:14px;
+    }
+
+    th,td{
+      border:1px solid #d1d5db;
+      padding:8px;
+      text-align:center;
+      vertical-align:top;
+    }
+
+    th{
+      background:#111827;
+      color:#f6c34c;
+    }
+
+    td.team,
+    td.note{
+      text-align:left;
+    }
+
+    td.note{
+      min-width:220px;
+      font-weight:600;
+    }
+
+    tfoot td{
+      background:#f6c34c;
+      font-weight:900;
+    }
+
+    @media print{
+      body{
+        background:#fff;
+        padding:0;
+      }
+
+      .wrap{
+        box-shadow:none;
+        border-radius:0;
+      }
+
+      .actions{
+        display:none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>🍽 Харчування для кухні</h1>
+
+    <div class="actions">
+      <button onclick="window.print()">Друк / PDF</button>
+      <button id="btnCopy">Скопіювати текст</button>
+      <button id="btnShare">Поділитися</button>
+    </div>
+
+    <div class="status" id="status">Завантаження…</div>
+
+    <div id="tableWrap"></div>
+  </div>
+
+  <!-- Підключи тут ті самі Firebase-скрипти, що й на основній сторінці -->
+  <script src="assets/js/firebase-init.js"></script>
+
+  <script>
+    (function(){
+      "use strict";
+
+      const PAID_STATUSES = ["submitted"];
+
+      const $ = id => document.getElementById(id);
+
+      function esc(s){
+        return String(s ?? "").replace(/[&<>"']/g, m => ({
+          "&":"&amp;",
+          "<":"&lt;",
+          ">":"&gt;",
+          '"':"&quot;",
+          "'":"&#39;"
+        }[m]));
+      }
+
+      function num(v){
+        const n = Number(v);
+        return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+      }
+
+      function getParam(name){
+        return new URLSearchParams(location.search).get(name) || "";
+      }
+
+      function totalOrder(o){
+        return (
+          num(o?.day1?.lunch) +
+          num(o?.day1?.dinner) +
+          num(o?.day1?.breakfast) +
+          num(o?.day2?.lunch) +
+          num(o?.day2?.dinner) +
+          num(o?.day2?.breakfast)
+        );
+      }
+
+      function sortOrders(a,b){
+        const zOrder = { A:1, B:2, C:3 };
+
+        const za = zOrder[String(a.zone || "").toUpperCase()] || 9;
+        const zb = zOrder[String(b.zone || "").toUpperCase()] || 9;
+
+        if (za !== zb) return za - zb;
+
+        const sa = Number(a.sector || 999);
+        const sb = Number(b.sector || 999);
+
+        if (sa !== sb) return sa - sb;
+
+        return String(a.teamName || "").localeCompare(String(b.teamName || ""), "uk");
+      }
+
+      async function waitReady(){
+        if (window.scReady) await window.scReady;
+
+        if (!window.scDb || !window.firebase) {
+          throw new Error("Firebase не готовий");
+        }
+
+        return { db: window.scDb };
+      }
+
+      async function loadOrders(){
+        const competitionId = getParam("competitionId") || getParam("compId");
+        const stageId = getParam("stageId") || getParam("stage");
+
+        if (!competitionId || !stageId) {
+          throw new Error("Нема competitionId або stageId в адресі");
+        }
+
+        const { db } = await waitReady();
+
+        const snap = await db.collection("mealOrders")
+          .where("competitionId", "==", competitionId)
+          .where("stageId", "==", stageId)
+          .get();
+
+        const rows = [];
+
+        snap.forEach(doc => {
+          const d = doc.data() || {};
+
+          if (!PAID_STATUSES.includes(String(d.status || ""))) return;
+          if (totalOrder(d) <= 0) return;
+
+          rows.push(d);
+        });
+
+        rows.sort(sortOrders);
+        return rows;
+      }
+
+      function renderTable(rows){
+        if (!rows.length) {
+          $("tableWrap").innerHTML = "<p>Заявок на харчування ще немає.</p>";
+          return;
+        }
+
+        const totals = {
+          d1l:0,
+          d1d:0,
+          d1b:0,
+          d2l:0,
+          d2d:0,
+          d2b:0
+        };
+
+        const body = rows.map(r => {
+          const d1 = r.day1 || {};
+          const d2 = r.day2 || {};
+
+          const d1l = num(d1.lunch);
+          const d1d = num(d1.dinner);
+          const d1b = num(d1.breakfast);
+          const d2l = num(d2.lunch);
+          const d2d = num(d2.dinner);
+          const d2b = num(d2.breakfast);
+
+          totals.d1l += d1l;
+          totals.d1d += d1d;
+          totals.d1b += d1b;
+          totals.d2l += d2l;
+          totals.d2d += d2d;
+          totals.d2b += d2b;
+
+          const sector = r.drawKey || ((r.zone || "") + (r.sector || "")) || "—";
+
+          return `
+            <tr>
+              <td>${esc(sector)}</td>
+              <td class="team">${esc(r.teamName || "—")}</td>
+              <td>${d1l || ""}</td>
+              <td>${d1d || ""}</td>
+              <td>${d1b || ""}</td>
+              <td>${d2l || ""}</td>
+              <td>${d2d || ""}</td>
+              <td>${d2b || ""}</td>
+              <td class="note">${esc(r.note || "")}</td>
+            </tr>
+          `;
+        }).join("");
+
+        $("tableWrap").innerHTML = `
+          <table id="mealTable">
+            <thead>
+              <tr>
+                <th>Сектор</th>
+                <th>Команда</th>
+                <th>1О</th>
+                <th>1В</th>
+                <th>1С</th>
+                <th>2О</th>
+                <th>2В</th>
+                <th>2С</th>
+                <th>Примітка</th>
+              </tr>
+            </thead>
+            <tbody>${body}</tbody>
+            <tfoot>
+              <tr>
+                <td colspan="2">Разом</td>
+                <td>${totals.d1l}</td>
+                <td>${totals.d1d}</td>
+                <td>${totals.d1b}</td>
+                <td>${totals.d2l}</td>
+                <td>${totals.d2d}</td>
+                <td>${totals.d2b}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        `;
+      }
+
+      function tableToText(){
+        const rows = [...document.querySelectorAll("#mealTable tr")];
+
+        return rows.map(tr =>
+          [...tr.children].map(td => td.innerText.trim()).join(" | ")
+        ).join("\n");
+      }
+
+      async function copyText(){
+        const text = tableToText();
+        await navigator.clipboard.writeText(text);
+        $("status").textContent = "✅ Список скопійовано.";
+      }
+
+      async function shareText(){
+        const text = tableToText();
+
+        if (navigator.share) {
+          await navigator.share({
+            title: "Харчування STOLAR CARP",
+            text
+          });
+        } else {
+          await navigator.clipboard.writeText(text);
+          alert("Список скопійовано. Встав у Viber / Telegram.");
+        }
+      }
+
+      async function init(){
+        try {
+          const rows = await loadOrders();
+          renderTable(rows);
+          $("status").textContent = `✅ Заявок: ${rows.length}`;
+
+          $("btnCopy").onclick = copyText;
+          $("btnShare").onclick = shareText;
+
+        } catch(e) {
+          console.error(e);
+          $("status").textContent = "❌ " + (e.message || e);
+        }
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>

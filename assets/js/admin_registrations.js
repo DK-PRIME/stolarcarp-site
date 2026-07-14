@@ -1,9 +1,11 @@
 // assets/js/admin_registrations.js
 // STOLAR CARP • Admin registrations
-// ✅ confirm / cancel / delete
-// ✅ restore from registrations_deleted
+// ✅ confirm / cancel / delete / restore
 // ✅ mirror public_participants
-// ✅ filter deleted applications
+// ✅ grouped by competition (active / finished accordion)
+// ✅ clean card layout (ID hidden in details)
+// ✅ no inline styles, no emoji
+// ✅ CSS injected automatically
 
 (function () {
   "use strict";
@@ -21,6 +23,278 @@
   };
 
   const GRACE_MS = CONFIG.GRACE_HOURS_AFTER_FINISH * 60 * 60 * 1000;
+
+  const CSS_ID = "sc-admin-registrations-styles";
+
+  const CSS = `
+/* ─── Registrations ────────────────────────────────────────────── */
+
+.reg-section-header {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  padding: 20px 0 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 12px;
+}
+
+/* ─── Competition group ────────────────────────────────────────── */
+
+.comp-group {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.comp-group__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.comp-group__header:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.comp-group__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.06);
+  font-size: 11px;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.comp-group__header.is-collapsed .comp-group__arrow {
+  transform: rotate(0deg);
+}
+
+.comp-group__header:not(.is-collapsed) .comp-group__arrow {
+  transform: rotate(90deg);
+}
+
+.comp-group__title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comp-group__badges {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.comp-group__badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.comp-group__badge--pending {
+  background: rgba(255,204,0,.12);
+  color: #ffcc00;
+}
+
+.comp-group__badge--confirmed {
+  background: rgba(124,255,178,.10);
+  color: #7CFFB2;
+}
+
+.comp-group__badge--cancelled {
+  background: rgba(255,108,108,.10);
+  color: #ff6c6c;
+}
+
+.comp-group__count {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  padding: 3px 0;
+}
+
+.comp-group__body {
+  padding: 0 12px 12px;
+}
+
+.comp-group__body.is-collapsed {
+  display: none;
+}
+
+/* ─── Registration card ────────────────────────────────────────── */
+
+.reg-card {
+  padding: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.reg-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+}
+
+.reg-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.reg-card__info {
+  min-width: 0;
+  flex: 1;
+}
+
+.reg-card__title {
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.3;
+  color: #fff;
+}
+
+.reg-card__meta {
+  margin-top: 5px;
+  font-size: 13px;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.reg-card__meta b {
+  color: #ddd;
+}
+
+.reg-card__dates {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #666;
+}
+
+.reg-card__deleted-info {
+  margin-top: 8px;
+  color: #ff6c6c;
+  font-size: 12px;
+}
+
+.reg-card__details {
+  margin-top: 10px;
+}
+
+.reg-card__details summary {
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: inline-block;
+  border-bottom: 1px dashed rgba(255,255,255,0.15);
+}
+
+.reg-card__details-content {
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 6px;
+  font-size: 11px;
+  color: #777;
+  line-height: 1.8;
+}
+
+.reg-card__details-content code {
+  color: #999;
+}
+
+.reg-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+/* ─── Badges ───────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge--confirmed {
+  background: rgba(124,255,178,.12);
+  border-color: rgba(124,255,178,.35);
+  color: #7CFFB2;
+}
+
+.badge--pending {
+  background: rgba(255,204,0,.10);
+  border-color: rgba(255,204,0,.35);
+  color: #ffcc00;
+}
+
+.badge--cancelled {
+  background: rgba(255,108,108,.10);
+  border-color: rgba(255,108,108,.35);
+  color: #ff6c6c;
+}
+
+.badge--deleted {
+  background: rgba(255,108,108,.13);
+  border-color: rgba(255,108,108,.5);
+  color: #ff6c6c;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────── */
+
+.btn--sm {
+  font-size: 12px;
+  padding: 6px 14px;
+}
+
+/* ─── Empty state ──────────────────────────────────────────────── */
+
+.reg-empty {
+  padding: 40px 0;
+  text-align: center;
+}
+`;
+
+  function injectStyles() {
+    if (document.getElementById(CSS_ID)) return;
+    const style = document.createElement("style");
+    style.id = CSS_ID;
+    style.textContent = CSS;
+    document.head.appendChild(style);
+  }
 
   const state = {
     currentUser: null,
@@ -50,6 +324,8 @@
     return;
   }
 
+  injectStyles();
+
   if (els.statusFilter && !els.statusFilter.querySelector('option[value="deleted"]')) {
     const opt = document.createElement("option");
     opt.value = "deleted";
@@ -70,6 +346,15 @@
       try {
         const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
         return d ? d.toLocaleString("uk-UA") : "—";
+      } catch {
+        return "—";
+      }
+    },
+
+    fmtDateShort: (ts) => {
+      try {
+        const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
+        return d ? d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
       } catch {
         return "—";
       }
@@ -125,6 +410,13 @@
       return state.stageNameByKey.get(key) || key;
     },
 
+    isFinished: (r) => {
+      const key = utils.getStageKey(r);
+      const endAt = state.stageEndAtByKey.get(key) || null;
+      if (!endAt) return false;
+      return utils.now().getTime() > endAt.getTime();
+    },
+
     isFinishedAndExpired: (r) => {
       if (r._deleted) return false;
       const key = utils.getStageKey(r);
@@ -159,7 +451,7 @@
       if (r._deleted) {
         return {
           label: "Видалено",
-          style: "background:rgba(255,108,108,.13);border-color:rgba(255,108,108,.5);"
+          cls: "badge--deleted"
         };
       }
 
@@ -170,12 +462,12 @@
         s === "cancelled" ? "Скасовано" :
         s;
 
-      const style =
-        s === "confirmed" ? "background:rgba(124,255,178,.12);border-color:rgba(124,255,178,.35);" :
-        s === "pending_payment" ? "background:rgba(255,204,0,.10);border-color:rgba(255,204,0,.35);" :
-        "background:rgba(255,108,108,.10);border-color:rgba(255,108,108,.35);";
+      const cls =
+        s === "confirmed" ? "badge--confirmed" :
+        s === "pending_payment" ? "badge--pending" :
+        "badge--cancelled";
 
-      return { label, style };
+      return { label, cls };
     }
   };
 
@@ -255,75 +547,221 @@
     });
   }
 
+  // ─── Grouping logic ─────────────────────────────────────────────
+
+  function groupByCompetition(regs) {
+    const groups = new Map();
+
+    regs.forEach((r) => {
+      const key = utils.getStageKey(r);
+      const label = utils.getStageLabel(r);
+      const isFinished = utils.isFinished(r);
+
+      if (!groups.has(key)) {
+        groups.set(key, { key, label, isFinished, regs: [] });
+      }
+      groups.get(key).regs.push(r);
+    });
+
+    return groups;
+  }
+
+  // ─── Render helpers ─────────────────────────────────────────────
+
+  function createSectionHeader(title) {
+    const h = document.createElement("div");
+    h.className = "reg-section-header";
+    h.textContent = title;
+    return h;
+  }
+
+  function createCompGroup(g, isOpenDefault = true) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "comp-group";
+
+    const pendingCount = g.regs.filter(r => r.status === "pending_payment" && !r._deleted).length;
+    const confirmedCount = g.regs.filter(r => r.status === "confirmed" && !r._deleted).length;
+    const cancelledCount = g.regs.filter(r => r.status === "cancelled" && !r._deleted).length;
+
+    const header = document.createElement("button");
+    header.className = "comp-group__header";
+    header.type = "button";
+    header.innerHTML = `
+      <span class="comp-group__arrow">▶</span>
+      <span class="comp-group__title">${utils.escapeHtml(g.label)}</span>
+      <span class="comp-group__badges">
+        ${pendingCount ? `<span class="comp-group__badge comp-group__badge--pending">${pendingCount} очікує</span>` : ""}
+        ${confirmedCount ? `<span class="comp-group__badge comp-group__badge--confirmed">${confirmedCount} підтверджено</span>` : ""}
+        ${cancelledCount ? `<span class="comp-group__badge comp-group__badge--cancelled">${cancelledCount} скасовано</span>` : ""}
+        <span class="comp-group__count">${g.regs.length} заявок</span>
+      </span>
+    `;
+
+    const body = document.createElement("div");
+    body.className = "comp-group__body";
+    if (!isOpenDefault) body.classList.add("is-collapsed");
+
+    const sortedRegs = [...g.regs].sort((a, b) => {
+      const stA = a.status || "";
+      const stB = b.status || "";
+      if (stA === "pending_payment" && stB !== "pending_payment") return -1;
+      if (stB === "pending_payment" && stA !== "pending_payment") return -1;
+      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt || 0);
+      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt || 0);
+      return dateB - dateA;
+    });
+
+    sortedRegs.forEach((r) => {
+      body.appendChild(render.card(r));
+    });
+
+    header.addEventListener("click", () => {
+      body.classList.toggle("is-collapsed");
+      header.classList.toggle("is-collapsed");
+    });
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(body);
+    return wrapper;
+  }
+
+  // ─── Card sub-renderers ─────────────────────────────────────────
+
+  function renderCardHeader(r, titleMain, applicantName) {
+    const { label: statusLabel, cls: badgeCls } = utils.badgeForStatus(r);
+
+    const header = document.createElement("div");
+    header.className = "reg-card__header";
+
+    const info = document.createElement("div");
+    info.className = "reg-card__info";
+
+    const title = document.createElement("div");
+    title.className = "reg-card__title";
+    title.textContent = titleMain;
+
+    const meta = document.createElement("div");
+    meta.className = "reg-card__meta";
+    meta.innerHTML = `
+      ${r.entryType === "solo" ? "SOLO" : "Команда"}
+      · Заявник: <b>${utils.escapeHtml(applicantName)}</b>
+      · ${utils.escapeHtml(r.phone || "—")}
+    `;
+
+    const dates = document.createElement("div");
+    dates.className = "reg-card__dates";
+    dates.innerHTML = `
+      Подано: ${utils.escapeHtml(utils.fmtDateShort(r.createdAt))}
+      ${r.confirmedAt ? `· Підтверджено: ${utils.escapeHtml(utils.fmtDateShort(r.confirmedAt))}` : ""}
+    `;
+
+    info.appendChild(title);
+    info.appendChild(meta);
+    info.appendChild(dates);
+
+    const badge = document.createElement("span");
+    badge.className = `badge ${badgeCls}`;
+    badge.textContent = statusLabel;
+
+    header.appendChild(info);
+    header.appendChild(badge);
+    return header;
+  }
+
+  function renderCardDetails(r) {
+    const details = document.createElement("details");
+    details.className = "reg-card__details";
+
+    const summary = document.createElement("summary");
+    summary.textContent = "Службова інформація";
+
+    const content = document.createElement("div");
+    content.className = "reg-card__details-content";
+    content.innerHTML = `
+      ID заявки: <code>${utils.escapeHtml(r._id || "—")}</code><br>
+      UID користувача: <code>${utils.escapeHtml(r.uid || "—")}</code><br>
+      Змагання: <code>${utils.escapeHtml(r.competitionId || "—")}</code><br>
+      Етап: <code>${utils.escapeHtml(r.stageId || "—")}</code><br>
+      ${r.originalRegId ? `Оригінал: <code>${utils.escapeHtml(r.originalRegId)}</code><br>` : ""}
+      ${r.cancelledAt ? `Скасовано: ${utils.escapeHtml(utils.fmtTs(r.cancelledAt))}<br>` : ""}
+      ${r.restoredAt ? `Відновлено: ${utils.escapeHtml(utils.fmtTs(r.restoredAt))}<br>` : ""}
+    `;
+
+    details.appendChild(summary);
+    details.appendChild(content);
+    return details;
+  }
+
+  function renderCardButtons(r, titleMain) {
+    const wrap = document.createElement("div");
+    wrap.className = "reg-card__actions";
+
+    if (r._deleted) {
+      const btn = document.createElement("button");
+      btn.className = "btn btn--primary btn--sm";
+      btn.dataset.act = "restore";
+      btn.textContent = "↩ Відновити";
+      wrap.appendChild(btn);
+      return wrap;
+    }
+
+    const btnConfirm = document.createElement("button");
+    btnConfirm.className = "btn btn--primary btn--sm";
+    btnConfirm.dataset.act = "confirm";
+    btnConfirm.textContent = "Підтвердити";
+    if (String(r.status) === "confirmed") btnConfirm.disabled = true;
+
+    const btnCancel = document.createElement("button");
+    btnCancel.className = "btn btn--ghost btn--sm";
+    btnCancel.dataset.act = "cancel";
+    btnCancel.textContent = "Скасувати";
+    if (String(r.status) === "cancelled") btnCancel.disabled = true;
+
+    const btnDelete = document.createElement("button");
+    btnDelete.className = "btn btn--danger btn--sm";
+    btnDelete.dataset.act = "delete";
+    btnDelete.textContent = "Видалити";
+
+    wrap.appendChild(btnConfirm);
+    wrap.appendChild(btnCancel);
+    wrap.appendChild(btnDelete);
+    return wrap;
+  }
+
+  function renderDeletedInfo(r) {
+    if (!r._deleted) return null;
+    const div = document.createElement("div");
+    div.className = "reg-card__deleted-info";
+    div.innerHTML = `Видалено: <b>${utils.escapeHtml(utils.fmtTs(r.deletedAt))}</b>`;
+    return div;
+  }
+
+  // ─── Main render ────────────────────────────────────────────────
+
   const render = {
     card: (r) => {
-      const { label: statusLabel, style: badgeStyle } = utils.badgeForStatus(r);
-
-      const titleMain =
-        r.teamName ? r.teamName :
-        (r.participantName ? r.participantName : "Без назви");
-
-      const subLine =
-        r.entryType === "solo"
-          ? `SOLO · ${utils.escapeHtml(utils.getStageLabel(r))}`
-          : utils.escapeHtml(utils.getStageLabel(r));
+      const titleMain = r.teamName ? r.teamName : (r.participantName ? r.participantName : "Без назви");
+      const applicantName = r.entryType === "solo"
+        ? (r.participantName || r.captain || "—")
+        : (r.captain || "—");
 
       const card = document.createElement("div");
-      card.className = "card";
-      card.style.padding = "14px";
+      card.className = "card reg-card";
 
-      const deletedInfo = r._deleted
-        ? `<br>Видалено: <b>${utils.escapeHtml(utils.fmtTs(r.deletedAt))}</b>`
-        : "";
+      card.appendChild(renderCardHeader(r, titleMain, applicantName));
 
-      const actionsHtml = r._deleted
-        ? `
-          <button class="btn btn--primary" data-act="restore">↩ Відновити заявку</button>
-        `
-        : `
-          <button class="btn btn--primary" data-act="confirm" ${String(r.status) === "confirmed" ? "disabled" : ""}>Підтвердити оплату</button>
-          <button class="btn btn--ghost" data-act="cancel" ${String(r.status) === "cancelled" ? "disabled" : ""}>Скасувати</button>
-          <button class="btn btn--danger" data-act="delete">Видалити заявку</button>
-        `;
+      const deletedInfo = renderDeletedInfo(r);
+      if (deletedInfo) card.appendChild(deletedInfo);
 
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
-          <div style="min-width:0;">
-            <div style="font-weight:900;font-size:16px;line-height:1.25;">
-              ${utils.escapeHtml(titleMain)}
-            </div>
-            <div class="form__hint" style="margin-top:4px;">
-              ${subLine}
-            </div>
-          </div>
+      card.appendChild(renderCardDetails(r));
 
-          <span class="badge" style="${badgeStyle}">
-            ${utils.escapeHtml(statusLabel)}
-          </span>
-        </div>
+      const buttons = renderCardButtons(r, titleMain);
+      card.appendChild(buttons);
 
-        <div class="form__hint" style="margin-top:10px;">
-          ${r.entryType === "solo"
-            ? `Учасник: <b>${utils.escapeHtml(r.participantName || r.captain || "—")}</b><br>`
-            : `Капітан: <b>${utils.escapeHtml(r.captain || "—")}</b><br>`
-          }
-          Телефон: <b>${utils.escapeHtml(r.phone || "—")}</b><br>
-          Подано: <b>${utils.escapeHtml(utils.fmtTs(r.createdAt))}</b>
-          ${r.confirmedAt ? `<br>Підтверджено: <b>${utils.escapeHtml(utils.fmtTs(r.confirmedAt))}</b>` : ""}
-          ${r.cancelledAt ? `<br>Скасовано: <b>${utils.escapeHtml(utils.fmtTs(r.cancelledAt))}</b>` : ""}
-          ${deletedInfo}
-          <br>ID: <span style="opacity:.7;">${utils.escapeHtml(r._id || "—")}</span>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-          ${actionsHtml}
-        </div>
-      `;
-
-      const btnConfirm = card.querySelector('[data-act="confirm"]');
-      const btnCancel = card.querySelector('[data-act="cancel"]');
-      const btnDelete = card.querySelector('[data-act="delete"]');
-      const btnRestore = card.querySelector('[data-act="restore"]');
+      const btnConfirm = buttons.querySelector('[data-act="confirm"]');
+      const btnCancel = buttons.querySelector('[data-act="cancel"]');
+      const btnDelete = buttons.querySelector('[data-act="delete"]');
+      const btnRestore = buttons.querySelector('[data-act="restore"]');
 
       btnRestore?.addEventListener("click", async () => {
         if (!state.isAdminByRules) {
@@ -487,15 +925,54 @@
       els.list.innerHTML = "";
 
       if (!regs.length) {
-        els.list.innerHTML = `<div class="form__hint">Нема заявок по цьому фільтру.</div>`;
+        els.list.innerHTML = `<div class="form__hint reg-empty">Нема заявок по цьому фільтру.</div>`;
         return;
       }
 
-      regs.forEach((r) => {
-        els.list.appendChild(render.card(r));
+      const sf = String(els.statusFilter?.value || "all").toLowerCase();
+      if (sf === "deleted") {
+        regs.forEach((r) => {
+          els.list.appendChild(render.card(r));
+        });
+        return;
+      }
+
+      const groups = groupByCompetition(regs);
+
+      const activeGroups = [];
+      const finishedGroups = [];
+
+      groups.forEach((g) => {
+        if (g.isFinished) finishedGroups.push(g);
+        else activeGroups.push(g);
       });
+
+      const sortGroups = (arr) => arr.sort((a, b) => {
+        const oa = state.stageOrderByKey.get(a.key) || 0;
+        const ob = state.stageOrderByKey.get(b.key) || 0;
+        return oa - ob;
+      });
+
+      sortGroups(activeGroups);
+      sortGroups(finishedGroups);
+
+      if (activeGroups.length) {
+        els.list.appendChild(createSectionHeader("Активні змагання"));
+        activeGroups.forEach((g) => {
+          els.list.appendChild(createCompGroup(g, true));
+        });
+      }
+
+      if (finishedGroups.length) {
+        els.list.appendChild(createSectionHeader("Завершені змагання"));
+        finishedGroups.forEach((g) => {
+          els.list.appendChild(createCompGroup(g, false));
+        });
+      }
     }
   };
+
+  // ─── Filters ────────────────────────────────────────────────────
 
   const filters = {
     apply: () => {
@@ -511,27 +988,27 @@
 
           const st = String(r.status || "").toLowerCase();
 
+          if (sf === "all") return true;
           if (sf === "confirmed") return st === "confirmed";
-          if (sf === "all") return st !== "confirmed";
+          if (sf === "pending") return st === "pending_payment";
+          if (sf === "cancelled") return st === "cancelled";
           return st === sf;
         })
         .filter((r) => utils.matchQuery(r, q));
 
-      filtered.sort((a, b) => {
-        const orderA = utils.getStageOrder(a);
-        const orderB = utils.getStageOrder(b);
-
-        if (orderA !== orderB) return orderA - orderB;
-
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt || 0);
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt || 0);
-
-        return dateB - dateA;
-      });
+      if (sf === "deleted") {
+        filtered.sort((a, b) => {
+          const da = a.deletedAt?.toDate ? a.deletedAt.toDate() : (a.deletedAt || 0);
+          const db_ = b.deletedAt?.toDate ? b.deletedAt.toDate() : (b.deletedAt || 0);
+          return db_ - da;
+        });
+      }
 
       render.list(filtered);
     }
   };
+
+  // ─── Watchers ───────────────────────────────────────────────────
 
   const watchers = {
     registrations: () => {

@@ -7,6 +7,7 @@
 // ✅ bigCarp = найбільший короп
 // ✅ bigAmur = найбільший амур
 // ✅ backward compatible зі старими weights: [4.560, 7.100]
+// ✅ У зважуваннях показує тільки активний етап із settings/app
 
 (function(){
   "use strict";
@@ -221,54 +222,64 @@
   async function loadStages(){
     if (!stageSelect) return;
 
-    stageSelect.innerHTML = `<option value="">— Завантаження… —</option>`;
-
-    const items = [];
-    const seen = new Set();
+    stageSelect.innerHTML = `<option value="">— Завантаження активного етапу… —</option>`;
 
     try {
-      const snap = await db.collection("competitions").get();
+      const appSnap = await db.collection("settings").doc("app").get();
+      const app = appSnap.exists ? (appSnap.data() || {}) : {};
 
-      snap.forEach(docSnap => {
-        const c = docSnap.data() || {};
-        const compId = docSnap.id;
-        const brand = c.brand || "STOLAR CARP";
-        const year = c.year || c.seasonYear || "";
-        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
-        const events = Array.isArray(c.events) ? c.events : [];
+      const activeCompetitionId = norm(app.activeCompetitionId);
+      const activeStageId = norm(app.activeStageId);
 
-        if (events.length) {
-          events.forEach((ev, idx) => {
-            const key = eventKey(ev, idx);
-            const stageTitle = eventTitle(ev, idx);
-            const value = `${compId}||${key}`;
-            const label = `${brand} · ${compTitle} — ${stageTitle}`;
+      if (!activeCompetitionId || !activeStageId) {
+        stageSelect.innerHTML = `<option value="">— Немає активного етапу —</option>`;
+        setMsg("Немає активного етапу для зважування.", false);
 
-            if (!seen.has(value)) {
-              seen.add(value);
-              items.push({ value, label });
-            }
-          });
-        } else {
-          const value = `${compId}||main`;
-          const label = `${brand} · ${compTitle} (Основний етап)`;
+        if (zonesWrap) zonesWrap.innerHTML = "";
+        if (archiveSection) archiveSection.style.display = "none";
+        currentTeams = [];
+        return;
+      }
 
-          if (!seen.has(value)) {
-            seen.add(value);
-            items.push({ value, label });
-          }
+      const compSnap = await db.collection("competitions").doc(activeCompetitionId).get();
+
+      if (!compSnap.exists) {
+        stageSelect.innerHTML = `<option value="">— Турнір не знайдено —</option>`;
+        setMsg("Активний турнір не знайдено в competitions.", false);
+
+        if (zonesWrap) zonesWrap.innerHTML = "";
+        if (archiveSection) archiveSection.style.display = "none";
+        currentTeams = [];
+        return;
+      }
+
+      const c = compSnap.data() || {};
+      const brand = c.brand || "STOLAR CARP";
+      const year = c.year || c.seasonYear || "";
+      const compTitle = c.name || c.title || (year ? `Season ${year}` : activeCompetitionId);
+      const events = Array.isArray(c.events) ? c.events : [];
+
+      let activeStageTitle = norm(app.activeStageTitle) || activeStageId;
+
+      events.forEach((ev, idx) => {
+        const key = eventKey(ev, idx);
+        if (key === activeStageId) {
+          activeStageTitle = eventTitle(ev, idx);
         }
       });
 
-      items.sort((a, b) => a.label.localeCompare(b.label, "uk"));
+      const value = `${activeCompetitionId}||${activeStageId}`;
+      const label = `${brand} · ${compTitle} — ${activeStageTitle}`;
 
-      stageSelect.innerHTML =
-        `<option value="">— Обери етап —</option>` +
-        items.map(x => `<option value="${esc(x.value)}">${esc(x.label)}</option>`).join("");
+      stageSelect.innerHTML = `<option value="${esc(value)}" selected>${esc(label)}</option>`;
+      stageSelect.value = value;
+
+      setMsg(`✅ Активний етап для зважування: ${activeStageTitle}`, true);
 
     } catch(e) {
       console.error(e);
-      setMsg("Помилка завантаження етапів: " + e.message, false);
+      stageSelect.innerHTML = `<option value="">— Помилка —</option>`;
+      setMsg("Помилка завантаження активного етапу: " + e.message, false);
     }
   }
 
@@ -723,7 +734,7 @@
     const wKey = wSelect.value;
 
     if (!compId || !stageKey) {
-      setMsg("Обери етап зі списку.", false);
+      setMsg("Немає активного етапу для зважування.", false);
       return;
     }
 
@@ -1332,6 +1343,8 @@ STACK: ${e.stack || "—"}`,
 
       const activated = await activateNextStage(compId, stageKey, stageDocId);
 
+      await loadStages();
+
       if (zonesWrap) zonesWrap.innerHTML = "";
       if (archiveSection) archiveSection.style.display = "none";
 
@@ -1343,7 +1356,7 @@ STACK: ${e.stack || "—"}`,
           true
         );
 
-        setMsg(`✅ LIVE очищено. Автоматично активовано наступний етап: ${activated.stageKey}`, true);
+        setMsg(`✅ LIVE очищено. Автоматично активовано наступний етап: ${activated.title}`, true);
       } else {
         setArchiveMsg(
           `✅ LIVE очищено. Видалено weighings: ${deletedWeighings}, teams: ${deletedTeams}. Наступний етап не знайдено.`,
@@ -1387,16 +1400,13 @@ STACK: ${e.stack || "—"}`,
 
       await loadStages();
 
-      setMsg("Обери етап та W → натисни «Завантажити таблиці».", true);
-
       const btnReloadStages = $("btnReloadStages");
       const btnLoadTables = $("btnLoadTables");
 
       if (btnReloadStages) {
         btnReloadStages.onclick = async () => {
-          setMsg("Оновлюю список…", true);
+          setMsg("Оновлюю активний етап…", true);
           await loadStages();
-          setMsg("✅ Список оновлено.", true);
         };
       }
 

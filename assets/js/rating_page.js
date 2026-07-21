@@ -463,48 +463,41 @@
   }
 
   function calculateBestResults(team, ratingStages, archiveMaps) {
-    const played = [];
+    const allStagePoints = [];
 
     ratingStages.forEach(stage => {
       const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (result) {
-        played.push({
+        allStagePoints.push({
           stageDocId: stage.stageDocId,
-          ...result
+          ...result,
+          isNoShow: false
         });
-      }
-    });
-
-    const sortedPlayed = played.slice().sort((a, b) => {
-      if (a.pts !== b.pts) return a.pts - b.pts;
-      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
-      return b.bigFish - a.bigFish;
-    });
-
-    const countedKeys = new Set();
-    const droppedKeys = new Set();
-
-    const counted = sortedPlayed.slice(0, BEST_COUNT);
-
-    if (counted.length < BEST_COUNT && ratingStages.length > 0) {
-      const missing = BEST_COUNT - counted.length;
-
-      for (let i = 0; i < missing; i++) {
-        counted.push({
-          stageDocId: `__absent_${i}`,
+      } else {
+        allStagePoints.push({
+          stageDocId: stage.stageDocId,
           p: "–",
           pts: ABSENT_POINTS,
           totalWeight: 0,
           bigFish: 0,
           totalCount: 0,
-          noShowPenalty: true
+          isNoShow: true
         });
       }
-    }
+    });
 
-    counted.forEach(x => countedKeys.add(x.stageDocId));
-    sortedPlayed.slice(BEST_COUNT).forEach(x => droppedKeys.add(x.stageDocId));
+    const sorted = allStagePoints.slice().sort((a, b) => {
+      if (a.pts !== b.pts) return a.pts - b.pts;
+      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
+      return b.bigFish - a.bigFish;
+    });
+
+    const counted = sorted.slice(0, BEST_COUNT);
+    const dropped = sorted.slice(BEST_COUNT);
+
+    const countedKeys = new Set(counted.map(x => x.stageDocId));
+    const droppedKeys = new Set(dropped.map(x => x.stageDocId));
 
     return {
       countedKeys,
@@ -518,11 +511,13 @@
       const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
 
       if (!result) {
+        const isCounted = bestInfo.countedKeys.has(stage.stageDocId);
         return {
           p: "–",
-          pts: "–",
+          pts: ABSENT_POINTS,
           noShow: true,
-          counted: false
+          counted: isCounted,
+          dropped: !isCounted && bestInfo.droppedKeys.has(stage.stageDocId)
         };
       }
 

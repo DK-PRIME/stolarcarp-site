@@ -270,9 +270,32 @@
     return `${count} / ${kgShort(sum)}`;
   }
 
-    /* ============================================================
-     THREE TABLES — COMPACT ZONE TABLES
+      /* ============================================================
+     THREE TABLES — COMPACT LIVE STYLE
      ============================================================ */
+
+  let classicZonesSection = null;
+
+  function getClassicZonesSection() {
+    if (classicZonesSection) {
+      return classicZonesSection;
+    }
+
+    if (!zonesWrap) {
+      return null;
+    }
+
+    /*
+     * Знаходимо повну картку стандартних зон A / B / C.
+     * У форматі 3tables вона буде прихована.
+     */
+    classicZonesSection =
+      zonesWrap.closest(".card") ||
+      zonesWrap.parentElement ||
+      zonesWrap;
+
+    return classicZonesSection;
+  }
 
   function injectThreeTablesStyles() {
     const styleId = "sc-live-three-tables-styles";
@@ -304,138 +327,179 @@
         margin-bottom: 14px;
       }
 
+      .three-tables-heading__text {
+        min-width: 0;
+      }
+
       .three-tables-heading h2 {
         margin: 0;
-        font-size: 1.1rem;
+        font-size: clamp(1.35rem, 4vw, 1.8rem);
+        line-height: 1.15;
       }
 
-      .three-zone-card {
+      .three-tables-heading p {
+        margin: 5px 0 0;
+        color: var(--muted, #999);
+        font-size: .76rem;
+      }
+
+      .three-tables-section .live-zone {
+        width: 100%;
         min-width: 0;
-        margin-bottom: 16px;
-        padding: 14px;
-        border: 1px solid rgba(255, 255, 255, .08);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, .02);
+        margin-bottom: 14px;
+        overflow: hidden;
       }
 
-      .three-zone-card:last-child {
+      .three-tables-section .live-zone:last-child {
         margin-bottom: 0;
       }
 
-      .three-zone-title {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 12px;
-      }
-
-      .three-zone-title h3 {
-        margin: 0;
-        font-size: 1rem;
-      }
-
-      .three-table-wrap {
+      .three-tables-section .table-wrap {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
-        border-radius: 10px;
+        overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        scrollbar-color:
+          rgba(246,195,76,.55)
+          rgba(255,255,255,.06);
       }
 
-      .three-zone-table {
+      .three-tables-section .table-wrap::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .three-tables-section .table-wrap::-webkit-scrollbar-track {
+        background: rgba(255,255,255,.05);
+      }
+
+      .three-tables-section .table-wrap::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          #f6c34c,
+          #ef6a32
+        );
+      }
+
+      /*
+       * Такий самий дрібний стиль, як у стандартній таблиці Live.
+       */
+      .three-tables-section .three-live-table {
         width: 100%;
-        min-width: 1260px;
+        min-width: 930px;
         border-collapse: collapse;
-        table-layout: auto;
       }
 
-      .three-zone-table th,
-      .three-zone-table td {
-        padding: 7px 6px;
-        border-bottom: 1px solid rgba(255, 255, 255, .07);
+      .three-tables-section .three-live-table th,
+      .three-tables-section .three-live-table td {
+        padding: 5px 5px;
         text-align: center;
         vertical-align: middle;
         white-space: nowrap;
-        font-size: .73rem;
+        font-size: .68rem;
+        line-height: 1.15;
       }
 
-      .three-zone-table th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background: #11121a;
-        color: var(--muted, #aaa);
-        font-size: .65rem;
+      .three-tables-section .three-live-table th {
+        font-size: .61rem;
         font-weight: 800;
-        letter-spacing: .02em;
+        color: var(--muted, #aaa);
         text-transform: uppercase;
       }
 
-      .three-zone-table tbody tr:hover {
-        background: rgba(255, 255, 255, .025);
-      }
-
-      .three-zone-table .three-sector {
-        min-width: 55px;
-        font-weight: 800;
-      }
-
-      .three-zone-table .three-team {
-        min-width: 165px;
-        max-width: 220px;
+      .three-tables-section .three-live-table .team-col {
+        min-width: 125px;
+        max-width: 170px;
         text-align: left;
         white-space: normal;
         overflow-wrap: anywhere;
+        font-weight: 700;
+      }
+
+      .three-tables-section .three-live-table .three-sector {
+        min-width: 44px;
         font-weight: 800;
       }
 
-      .three-zone-table .three-weight {
-        min-width: 76px;
+      .three-tables-section .three-live-table .three-weight {
+        min-width: 58px;
         font-weight: 800;
       }
 
-      .three-zone-table .three-place {
-        min-width: 48px;
+      .three-tables-section .three-live-table .three-fish {
+        min-width: 49px;
+      }
+
+      .three-tables-section .three-live-table .three-place {
+        min-width: 43px;
         font-weight: 900;
         color: var(--accent, #f6c34c);
       }
 
-      .three-zone-table .three-fish {
-        min-width: 61px;
-      }
-
-      .three-zone-table .three-points {
-        min-width: 55px;
+      .three-tables-section .three-live-table .three-points {
+        min-width: 44px;
         font-weight: 900;
       }
 
-      .three-zone-table .three-final-place {
-        min-width: 64px;
+      .three-tables-section .three-live-table .three-final-place {
+        min-width: 48px;
+        font-size: .78rem;
+        font-weight: 900;
         color: #7cffb2;
-        font-size: .9rem;
-        font-weight: 900;
       }
 
-      .three-group-total {
-        background: rgba(59, 130, 246, .05);
+      .three-tables-section .three-group-total {
+        background: rgba(59,130,246,.055);
       }
 
-      .three-group-five {
-        background: rgba(246, 195, 76, .045);
+      .three-tables-section .three-group-five {
+        background: rgba(246,195,76,.045);
       }
 
-      .three-group-big {
-        background: rgba(239, 68, 68, .045);
+      .three-tables-section .three-group-big {
+        background: rgba(239,68,68,.045);
       }
 
-      .three-empty {
-        padding: 16px;
-        color: var(--muted, #aaa);
+      .three-tables-section tr.three-final-first td {
+        border-top-color: rgba(246,195,76,.45);
+        border-bottom-color: rgba(246,195,76,.28);
+      }
+
+      .three-tables-section
+      tr.three-final-first
+      .three-final-place {
+        color: #ffd451;
+      }
+
+      .three-tables-section
+      tr.three-final-second
+      .three-final-place {
+        color: #e4e7ef;
+      }
+
+      .three-tables-section
+      tr.three-final-third
+      .three-final-place {
+        color: #dc9567;
+      }
+
+      .three-scroll-hint {
+        margin: 6px 0 8px;
+        color: var(--muted, #999);
+        font-size: .67rem;
         text-align: center;
       }
 
-      @media (max-width: 760px) {
+      .three-empty {
+        padding: 16px 10px;
+        color: var(--muted, #999);
+        text-align: center;
+        font-size: .8rem;
+      }
+
+      @media (max-width: 520px) {
         .three-tables-section {
           margin-top: 14px;
         }
@@ -445,31 +509,31 @@
           flex-direction: column;
         }
 
-        .three-zone-card {
-          padding: 10px;
+        .three-tables-section .three-live-table {
+          min-width: 880px;
         }
 
-        .three-zone-table {
-          min-width: 1120px;
+        .three-tables-section .three-live-table th,
+        .three-tables-section .three-live-table td {
+          padding: 4px 4px;
+          font-size: .63rem;
         }
 
-        .three-zone-table th,
-        .three-zone-table td {
-          padding: 6px 5px;
-          font-size: .68rem;
+        .three-tables-section .three-live-table th {
+          font-size: .56rem;
         }
 
-        .three-zone-table th {
-          font-size: .6rem;
+        .three-tables-section .three-live-table .team-col {
+          min-width: 110px;
+          max-width: 145px;
         }
 
-        .three-zone-table .three-team {
-          min-width: 145px;
-          max-width: 180px;
+        .three-tables-section .three-live-table .three-weight {
+          min-width: 54px;
         }
 
-        .three-zone-table .three-fish {
-          min-width: 55px;
+        .three-tables-section .three-live-table .three-fish {
+          min-width: 46px;
         }
       }
     `;
@@ -493,12 +557,21 @@
     threeTablesSection =
       document.createElement("section");
 
-    threeTablesSection.id = "threeTablesSection";
-    threeTablesSection.className = "three-tables-section";
+    threeTablesSection.id =
+      "threeTablesSection";
+
+    threeTablesSection.className =
+      "three-tables-section";
 
     threeTablesSection.innerHTML = `
       <div class="three-tables-heading">
-        <h2>Результати — три таблиці</h2>
+        <div class="three-tables-heading__text">
+          <h2>Результати — три таблиці</h2>
+
+          <p>
+            Загальна вага · 5 великих без Big Fish · Big Fish
+          </p>
+        </div>
 
         <span class="badge badge--warn">
           Підсумок за зонами
@@ -513,34 +586,51 @@
     `;
 
     threeTablesContainer =
-      threeTablesSection.querySelector("#threeTablesContainer");
+      threeTablesSection.querySelector(
+        "#threeTablesContainer"
+      );
 
-    const anchor =
-      zonesWrap?.parentElement ||
-      zonesWrap ||
-      contentEl;
+    const classicSection =
+      getClassicZonesSection();
 
-    if (anchor?.parentElement) {
-      anchor.parentElement.insertBefore(
+    if (classicSection?.parentElement) {
+      classicSection.parentElement.insertBefore(
         threeTablesSection,
-        anchor.nextSibling
+        classicSection.nextSibling
       );
     } else if (contentEl) {
-      contentEl.appendChild(threeTablesSection);
+      contentEl.appendChild(
+        threeTablesSection
+      );
     } else {
-      document.body.appendChild(threeTablesSection);
+      document.body.appendChild(
+        threeTablesSection
+      );
     }
   }
 
   function applyFormatVisibility() {
     ensureThreeTablesUI();
 
+    const classicSection =
+      getClassicZonesSection();
+
     if (isThreeTablesFormat()) {
-      threeTablesSection?.classList.add("is-visible");
+      threeTablesSection?.classList.add(
+        "is-visible"
+      );
 
       /*
-       * Стандартні зони залишаються зверху,
-       * а компактні три таблиці додаються нижче.
+       * Стандартні зони ховаємо, бо вони дублюють
+       * результат формату 3tables.
+       */
+      if (classicSection) {
+        classicSection.style.display = "none";
+      }
+
+      /*
+       * Класичний фінальний Big Fish Короп / Амур
+       * для цього формату не показуємо.
        */
       if (finalBigFishBox) {
         finalBigFishBox.style.display = "none";
@@ -549,7 +639,13 @@
       return;
     }
 
-    threeTablesSection?.classList.remove("is-visible");
+    threeTablesSection?.classList.remove(
+      "is-visible"
+    );
+
+    if (classicSection) {
+      classicSection.style.display = "";
+    }
 
     if (threeTablesContainer) {
       threeTablesContainer.innerHTML = "";
@@ -561,15 +657,17 @@
   }
 
   function fishValueAt(row, index) {
-    const fish = Array.isArray(row?.top5Fish)
-      ? row.top5Fish
-      : [];
+    const fish =
+      Array.isArray(row?.top5Fish)
+        ? row.top5Fish
+        : [];
 
     const value = fish[index];
 
     if (
       value === null ||
       value === undefined ||
+      !Number.isFinite(Number(value)) ||
       Number(value) <= 0
     ) {
       return "—";
@@ -578,158 +676,343 @@
     return kgShort(value);
   }
 
-  function renderCompactZoneTable(zoneName, zoneResult) {
-    const rows = Array.isArray(zoneResult?.finalTable)
-      ? zoneResult.finalTable
-      : [];
+  function valueOrDash(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "—";
+    }
+
+    return value;
+  }
+
+  function weightOrDash(value) {
+    const number = Number(value);
+
+    if (
+      !Number.isFinite(number) ||
+      number <= 0
+    ) {
+      return "—";
+    }
+
+    return kgShort(number);
+  }
+
+  function finalPlaceClass(place) {
+    const number = Number(place);
+
+    if (number === 1) {
+      return "three-final-first";
+    }
+
+    if (number === 2) {
+      return "three-final-second";
+    }
+
+    if (number === 3) {
+      return "three-final-third";
+    }
+
+    return "";
+  }
+
+  function renderCompactZoneTable(
+    zoneName,
+    zoneResult
+  ) {
+    const rows =
+      Array.isArray(zoneResult?.finalTable)
+        ? [...zoneResult.finalTable]
+        : [];
 
     if (!rows.length) {
       return `
-        <section class="three-zone-card">
-          <div class="three-zone-title">
-            <h3>Зона ${esc(zoneName)}</h3>
+        <div class="live-zone card">
+          <div class="live-zone-title">
+            <h3 style="margin:0;">
+              Зона ${esc(zoneName)}
+            </h3>
 
             <span class="badge">
               немає команд
             </span>
           </div>
 
-          <div class="three-empty">
-            У цій зоні ще немає команд.
-          </div>
-        </section>
+          <p class="form__hint">...</p>
+        </div>
       `;
     }
 
     /*
-     * Рядки показуємо за фінальним місцем.
-     * Усі три окремі місця вже записані в кожній команді.
+     * Команди показуємо за підсумковим місцем.
      */
-    const sortedRows = [...rows].sort((a, b) => {
-      return Number(a.finalPlace || 9999) -
+    rows.sort((a, b) => {
+      const placeA =
+        Number(a.finalPlace || 9999);
+
+      const placeB =
         Number(b.finalPlace || 9999);
+
+      return placeA - placeB;
     });
 
-    const rowsHtml = sortedRows.map(row => `
-      <tr>
-        <td class="three-sector">
-          ${esc(row.zoneLabel || row.sector || "—")}
-        </td>
+    const rowsHtml = rows.map(row => {
+      const rowClass =
+        finalPlaceClass(row.finalPlace);
 
-        <td class="three-team">
-          ${esc(row.teamName || "—")}
-        </td>
+      return `
+        <tr class="${rowClass}">
+          <td class="three-sector">
+            ${esc(
+              row.zoneLabel ||
+              row.sector ||
+              "—"
+            )}
+          </td>
 
-        <td class="three-weight three-group-total">
-          ${esc(kgShort(row.totalWeight))}
-        </td>
+          <td class="team-col">
+            ${esc(row.teamName || "—")}
+          </td>
 
-        <td class="three-place three-group-total">
-          ${esc(row.totalPlace || "—")}
-        </td>
+          <td
+            class="
+              three-weight
+              three-group-total
+            "
+          >
+            ${esc(
+              weightOrDash(
+                row.totalWeight
+              )
+            )}
+          </td>
 
-        <td class="three-fish three-group-five">
-          ${esc(fishValueAt(row, 0))}
-        </td>
+          <td
+            class="
+              three-place
+              three-group-total
+            "
+          >
+            ${esc(
+              valueOrDash(
+                row.totalPlace
+              )
+            )}
+          </td>
 
-        <td class="three-fish three-group-five">
-          ${esc(fishValueAt(row, 1))}
-        </td>
+          <td class="three-fish three-group-five">
+            ${esc(fishValueAt(row, 0))}
+          </td>
 
-        <td class="three-fish three-group-five">
-          ${esc(fishValueAt(row, 2))}
-        </td>
+          <td class="three-fish three-group-five">
+            ${esc(fishValueAt(row, 1))}
+          </td>
 
-        <td class="three-fish three-group-five">
-          ${esc(fishValueAt(row, 3))}
-        </td>
+          <td class="three-fish three-group-five">
+            ${esc(fishValueAt(row, 2))}
+          </td>
 
-        <td class="three-fish three-group-five">
-          ${esc(fishValueAt(row, 4))}
-        </td>
+          <td class="three-fish three-group-five">
+            ${esc(fishValueAt(row, 3))}
+          </td>
 
-        <td class="three-weight three-group-five">
-          ${esc(kgShort(row.top5Weight))}
-        </td>
+          <td class="three-fish three-group-five">
+            ${esc(fishValueAt(row, 4))}
+          </td>
 
-        <td class="three-place three-group-five">
-          ${esc(row.top5Place || "—")}
-        </td>
+          <td
+            class="
+              three-weight
+              three-group-five
+            "
+          >
+            ${esc(
+              weightOrDash(
+                row.top5Weight
+              )
+            )}
+          </td>
 
-        <td class="three-weight three-group-big">
-          ${esc(kgShort(row.bigFish))}
-        </td>
+          <td
+            class="
+              three-place
+              three-group-five
+            "
+          >
+            ${esc(
+              valueOrDash(
+                row.top5Place
+              )
+            )}
+          </td>
 
-        <td class="three-place three-group-big">
-          ${esc(row.bigFishPlace || "—")}
-        </td>
+          <td
+            class="
+              three-weight
+              three-group-big
+            "
+          >
+            ${esc(
+              weightOrDash(
+                row.bigFish
+              )
+            )}
+          </td>
 
-        <td class="three-points">
-          ${esc(row.pointsSum || "—")}
-        </td>
+          <td
+            class="
+              three-place
+              three-group-big
+            "
+          >
+            ${esc(
+              valueOrDash(
+                row.bigFishPlace
+              )
+            )}
+          </td>
 
-        <td class="three-final-place">
-          ${esc(row.finalPlace || "—")}
-        </td>
-      </tr>
-    `).join("");
+          <td class="three-points">
+            ${esc(
+              valueOrDash(
+                row.pointsSum
+              )
+            )}
+          </td>
+
+          <td class="three-final-place">
+            ${esc(
+              valueOrDash(
+                row.finalPlace
+              )
+            )}
+          </td>
+        </tr>
+      `;
+    }).join("");
 
     return `
-      <section class="three-zone-card">
-        <div class="three-zone-title">
-          <h3>Зона ${esc(zoneName)}</h3>
+      <div class="live-zone card">
+        <div class="live-zone-title">
+          <h3 style="margin:0;">
+            Зона ${esc(zoneName)}
+          </h3>
 
           <span class="badge badge--warn">
-            команд: ${esc(zoneResult.teamsCount || rows.length)}
+            команд:
+            ${esc(
+              zoneResult?.teamsCount ||
+              rows.length
+            )}
           </span>
         </div>
 
-        <div class="three-table-wrap">
-          <table class="three-zone-table">
+        <div class="three-scroll-hint">
+          ← таблицю можна гортати →
+        </div>
+
+        <div
+          class="table-wrap"
+          style="
+            overflow-x:auto;
+            max-width:100%;
+            -webkit-overflow-scrolling:touch;
+          "
+        >
+          <table
+            class="
+              table
+              table-sm
+              three-live-table
+            "
+          >
             <thead>
               <tr>
-                <th rowspan="2">Зона</th>
-                <th rowspan="2">Команда</th>
+                <th rowspan="2">
+                  Зона
+                </th>
+
+                <th rowspan="2">
+                  Команда
+                </th>
 
                 <th
                   colspan="2"
                   class="three-group-total"
                 >
-                  Загальна вага
+                  Загальна
                 </th>
 
                 <th
                   colspan="7"
                   class="three-group-five"
                 >
-                  5 великих без Big Fish
+                  5 великих
                 </th>
 
                 <th
                   colspan="2"
                   class="three-group-big"
                 >
-                  Big Fish
+                  BIG
                 </th>
 
-                <th rowspan="2">Бали</th>
-                <th rowspan="2">Місце</th>
+                <th rowspan="2">
+                  Бали
+                </th>
+
+                <th rowspan="2">
+                  Місце
+                </th>
               </tr>
 
               <tr>
-                <th class="three-group-total">Вага</th>
-                <th class="three-group-total">Місце</th>
+                <th class="three-group-total">
+                  Вага
+                </th>
 
-                <th class="three-group-five">1</th>
-                <th class="three-group-five">2</th>
-                <th class="three-group-five">3</th>
-                <th class="three-group-five">4</th>
-                <th class="three-group-five">5</th>
-                <th class="three-group-five">Вага</th>
-                <th class="three-group-five">Місце</th>
+                <th class="three-group-total">
+                  М
+                </th>
 
-                <th class="three-group-big">Вага</th>
-                <th class="three-group-big">Місце</th>
+                <th class="three-group-five">
+                  1
+                </th>
+
+                <th class="three-group-five">
+                  2
+                </th>
+
+                <th class="three-group-five">
+                  3
+                </th>
+
+                <th class="three-group-five">
+                  4
+                </th>
+
+                <th class="three-group-five">
+                  5
+                </th>
+
+                <th class="three-group-five">
+                  Сума
+                </th>
+
+                <th class="three-group-five">
+                  М
+                </th>
+
+                <th class="three-group-big">
+                  Вага
+                </th>
+
+                <th class="three-group-big">
+                  М
+                </th>
               </tr>
             </thead>
 
@@ -738,7 +1021,7 @@
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
     `;
   }
 
@@ -753,27 +1036,31 @@
 
     if (
       !window.SCThreeTables ||
-      typeof window.SCThreeTables.build !== "function"
+      typeof window.SCThreeTables.build !==
+        "function"
     ) {
       threeTablesContainer.innerHTML = `
         <div class="three-empty">
-          Не завантажено файл live-3tables.js.
+          Не завантажено файл
+          live-3tables.js.
         </div>
       `;
 
       console.error(
         "SCThreeTables.build не знайдено. " +
-        "Підключи live-3tables.js перед live_firebase.js."
+        "Підключи live-3tables.js " +
+        "перед live_firebase.js."
       );
 
       return;
     }
 
     try {
-      const result = window.SCThreeTables.build(
-        regRows,
-        allWeighDocs
-      );
+      const result =
+        window.SCThreeTables.build(
+          regRows,
+          allWeighDocs
+        );
 
       threeTablesContainer.innerHTML = [
         renderCompactZoneTable(
@@ -807,6 +1094,7 @@
 
   const renderThreeTablesDebounced =
     debounce(renderThreeTables, 70);
+
 
 
   /* ============================================================

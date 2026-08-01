@@ -419,9 +419,13 @@
       }
 
       .three-tables-section .three-live-table .three-sector {
-        min-width: 44px;
-        font-weight: 800;
-      }
+  width: 29px;
+  min-width: 29px;
+  max-width: 29px;
+  padding-left: 1px;
+  padding-right: 1px;
+  font-weight: 800;
+}
 
       .three-tables-section .three-live-table .three-weight {
         min-width: 58px;

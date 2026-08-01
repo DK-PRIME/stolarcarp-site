@@ -1,13 +1,10 @@
 <!doctype html>
+
 <html lang="uk">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP • Адмінка</title>
-
-  <link rel="stylesheet" href="assets/css/main.css">
-
-  <style>
+  <title>STOLAR CARP • Адмінка</title>  <link rel="stylesheet" href="assets/css/main.css">  <style>
     /* ============================================
        БАЗОВІ НАЛАШТУВАННЯ
        ============================================ */
@@ -56,21 +53,24 @@
       overflow: visible;
     }
 
-    /* ✅ КНОПКА ВИХОДУ В ХЕДЕРІ */
-    .header-logout{
+    /* ============================================
+       КНОПКА ВИХОДУ В ХЕДЕРІ
+       ============================================ */
+    .header-logout {
       margin-left: auto;
       margin-right: 12px;
       padding: 6px 14px;
       border-radius: 999px;
-      border: 1px solid rgba(148,163,184,.6);
-      background: rgba(15,23,42,.9);
+      border: 1px solid rgba(148, 163, 184, .6);
+      background: rgba(15, 23, 42, .9);
       color: #e5e7eb;
       font-size: .85rem;
       text-decoration: none;
       white-space: nowrap;
       cursor: pointer;
     }
-    .header-logout:hover{
+
+    .header-logout:hover {
       border-color: #facc15;
       color: #facc15;
     }
@@ -175,7 +175,7 @@
       font-size: 1.6rem;
       font-weight: 900;
       letter-spacing: .04em;
-      margin: 6px 0 6px;
+      margin: 6px 0;
     }
 
     .login-sub {
@@ -225,7 +225,7 @@
     }
 
     /* ============================================
-       МІНІ-ФОРМИ (збережено для сумісності)
+       МІНІ-ФОРМИ
        ============================================ */
     .mini-form {
       margin-top: 12px;
@@ -265,7 +265,7 @@
     }
 
     /* ============================================
-       КАРТКИ ПЕРЕМОЖЦІВ (збережено для сумісності)
+       КАРТКИ ПЕРЕМОЖЦІВ
        ============================================ */
     .win-card {
       padding: 12px;
@@ -316,132 +316,175 @@
     .note b {
       color: #e5e7eb;
     }
-  </style>
-</head>
-
-<body>
-
-  <!-- ============================================
+  </style></head><body>  <!-- ============================================
        ХЕДЕР
-       ============================================ -->
-  <header class="header">
+       ============================================ -->  <header class="header">
     <div class="container header__row">
       <a class="logo" href="index.html">
         <span class="logo__mark">SC</span>
         <span class="logo__text">STOLAR CARP</span>
-      </a>
+      </a>  <nav class="nav">
+    <a href="live.html" class="nav__link">Live</a>
+    <a href="rating.html" class="nav__link">Рейтинг</a>
+    <a href="auth.html" class="nav__link">Акаунт</a>
+  </nav>
 
-      <nav class="nav">
-        <a href="live.html" class="nav__link">Live</a>
-        <a href="rating.html" class="nav__link">Рейтинг</a>
-        <a href="auth.html" class="nav__link">Акаунт</a>
-      </nav>
+  <button
+    class="header-logout"
+    id="btnAdminLogout"
+    type="button"
+    title="Вийти з адмінки"
+  >
+    Вийти
+  </button>
+</div>
 
-      <!-- ✅ ВИХІД (праворуч вгорі) -->
-      <button class="header-logout" id="btnAdminLogout" type="button" title="Вийти з адмінки">
-        Вийти
-      </button>
-    </div>
-  </header>
-
-  <!-- ============================================
+  </header>  <!-- ============================================
        ГОЛОВНИЙ КОНТЕНТ
-       ============================================ -->
-  <main class="main">
-    <section class="section container admin-wrap">
+       ============================================ -->  <main class="main">
+    <section class="section container admin-wrap">  <!-- Шапка статусу -->
+  <div class="admin-top">
+    <div
+      class="title-gradient"
+      style="font-size:1.2rem; font-weight:900;"
+    >
+      Адмінка STOLAR CARP
+    </div>
 
-      <!-- Шапка статусу -->
-      <div class="admin-top">
-        <div class="title-gradient" style="font-size:1.2rem; font-weight:900;">
-          Адмінка STOLAR CARP
-        </div>
-        <div class="muted" id="adminStatus">Запуск…</div>
-        <div class="muted" id="adminDebug" style="margin-top:6px;"></div>
-      </div>
+    <div class="muted" id="adminStatus">
+      Запуск…
+    </div>
 
-      <!-- Форма входу -->
-      <div id="adminLogin" class="admin-card hidden">
-        <div class="login-card">
+    <div
+      class="muted"
+      id="adminDebug"
+      style="margin-top:6px;"
+    ></div>
+  </div>
 
-          <!-- Таби -->
-          <div class="login-tabs">
-            <div class="pill pill--active">Вхід</div>
-          </div>
+  <!-- Форма входу -->
+  <div id="adminLogin" class="admin-card hidden">
+    <div class="login-card">
 
-          <!-- Заголовок -->
-          <div class="login-title">Вхід адміністратора</div>
-          <div class="login-sub">Вхід тільки для адміністратора (email/пароль).</div>
-
-          <!-- Поля -->
-          <div class="field">
-            <label for="admEmail">Email</label>
-            <input
-              id="admEmail"
-              type="email"
-              placeholder="Email адміністратора"
-              autocomplete="username"
-            >
-          </div>
-
-          <div class="field">
-            <label for="admPass">Пароль</label>
-            <input
-              id="admPass"
-              type="password"
-              placeholder="Пароль адміністратора"
-              autocomplete="current-password"
-            >
-          </div>
-
-          <!-- Кнопки -->
-          <div class="login-actions">
-            <button class="btn btn--accent" id="btnAdminLogin">
-              Увійти
-            </button>
-          </div>
-
-          <!-- Повідомлення -->
-          <div class="muted" id="adminLoginMsg" style="margin-top:10px;"></div>
+      <div class="login-tabs">
+        <div class="pill pill--active">
+          Вхід
         </div>
       </div>
 
-      <!-- Головне меню (після входу) -->
-      <div id="adminApp" class="hidden">
-        <div class="admin-card">
-          <div class="stack">
-            <a class="btn btn--primary" href="admin-create.html">
-              1) Створити змагання
-            </a>
-            <a class="btn btn--primary" href="admin-registrations.html">
-              3) Реєстрація команд
-            </a>
-            <a class="btn btn--accent" href="admin-draw.html">
-              4) Жеребкування
-            </a>
-            <a class="btn btn--danger" href="admin-weigh.html">
-              5) Зважування (адмін)
-            </a>
-            <a class="btn btn--primary" href="admin-accounts.html">
-              6) Акаунт STOLAR CARP
-            </a>
-            <a class="btn btn--accent" href="judge_qr_admin.html">
-              📱 QR-доступ для суддів
-            </a>
-          </div>
-        </div>
+      <div class="login-title">
+        Вхід адміністратора
       </div>
 
-    </section>
-  </main>
+      <div class="login-sub">
+        Вхід тільки для адміністратора (email/пароль).
+      </div>
 
-  <!-- ============================================
+      <div class="field">
+        <label for="admEmail">
+          Email
+        </label>
+
+        <input
+          id="admEmail"
+          type="email"
+          placeholder="Email адміністратора"
+          autocomplete="username"
+        >
+      </div>
+
+      <div class="field">
+        <label for="admPass">
+          Пароль
+        </label>
+
+        <input
+          id="admPass"
+          type="password"
+          placeholder="Пароль адміністратора"
+          autocomplete="current-password"
+        >
+      </div>
+
+      <div class="login-actions">
+        <button
+          class="btn btn--accent"
+          id="btnAdminLogin"
+          type="button"
+        >
+          Увійти
+        </button>
+      </div>
+
+      <div
+        class="muted"
+        id="adminLoginMsg"
+        style="margin-top:10px;"
+      ></div>
+    </div>
+  </div>
+
+  <!-- Головне меню після входу -->
+  <div id="adminApp" class="hidden">
+    <div class="admin-card">
+      <div class="stack">
+
+        <a
+          class="btn btn--primary"
+          href="admin-create.html?type=season"
+        >
+          1) Створити сезон STOLAR CARP
+        </a>
+
+        <a
+          class="btn btn--accent"
+          href="admin-create.html?type=oneoff"
+        >
+          2) Створити одиночне змагання
+        </a>
+
+        <a
+          class="btn btn--primary"
+          href="admin-registrations.html"
+        >
+          3) Реєстрація команд
+        </a>
+
+        <a
+          class="btn btn--accent"
+          href="admin-draw.html"
+        >
+          4) Жеребкування
+        </a>
+
+        <a
+          class="btn btn--danger"
+          href="admin-weigh.html"
+        >
+          5) Зважування (адмін)
+        </a>
+
+        <a
+          class="btn btn--primary"
+          href="admin-accounts.html"
+        >
+          6) Акаунт STOLAR CARP
+        </a>
+
+        <a
+          class="btn btn--accent"
+          href="judge_qr_admin.html"
+        >
+          📱 QR-доступ для суддів
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+</section>
+
+  </main>  <!-- ============================================
        СКРИПТИ
-       ============================================ -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script src="assets/js/firebase-init.js"></script>
-  <script src="assets/js/admin.js?v=20260212"></script>
-
-</body>
+       ============================================ -->  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>  <script src="assets/js/firebase-init.js"></script>  <script src="assets/js/admin.js?v=20260801"></script></body>
 </html>

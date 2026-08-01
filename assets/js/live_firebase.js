@@ -270,21 +270,18 @@
     return `${count} / ${kgShort(sum)}`;
   }
 
-  /* ============================================================
-     THREE TABLES — UI
+    /* ============================================================
+     THREE TABLES — COMPACT ZONE TABLES
      ============================================================ */
 
   function injectThreeTablesStyles() {
-    const styleId =
-      "sc-live-three-tables-styles";
+    const styleId = "sc-live-three-tables-styles";
 
     if (document.getElementById(styleId)) {
       return;
     }
 
-    const style =
-      document.createElement("style");
-
+    const style = document.createElement("style");
     style.id = styleId;
 
     style.textContent = `
@@ -309,18 +306,23 @@
 
       .three-tables-heading h2 {
         margin: 0;
-        font-size: 1.15rem;
+        font-size: 1.1rem;
       }
 
-      .three-zone-result {
-        margin-bottom: 18px;
+      .three-zone-card {
+        min-width: 0;
+        margin-bottom: 16px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, .08);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .02);
       }
 
-      .three-zone-result:last-child {
+      .three-zone-card:last-child {
         margin-bottom: 0;
       }
 
-      .three-zone-header {
+      .three-zone-title {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -328,125 +330,146 @@
         margin-bottom: 12px;
       }
 
-      .three-zone-header h3 {
+      .three-zone-title h3 {
         margin: 0;
+        font-size: 1rem;
       }
 
-      .three-result-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-
-      .three-result-card {
-        min-width: 0;
-        padding: 12px;
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 12px;
-        background: rgba(255,255,255,.025);
-      }
-
-      .three-result-card h4 {
-        margin: 0 0 9px;
-        font-size: .88rem;
-        text-transform: uppercase;
-        letter-spacing: .05em;
-      }
-
-      .three-table-scroll {
+      .three-table-wrap {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
+        border-radius: 10px;
         -webkit-overflow-scrolling: touch;
       }
 
-      .three-table {
+      .three-zone-table {
         width: 100%;
-        min-width: 410px;
+        min-width: 1260px;
         border-collapse: collapse;
+        table-layout: auto;
       }
 
-      .three-table--final {
-        min-width: 780px;
-      }
-
-      .three-table th,
-      .three-table td {
-        padding: 8px 7px;
-        border-bottom: 1px solid rgba(255,255,255,.07);
+      .three-zone-table th,
+      .three-zone-table td {
+        padding: 7px 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, .07);
         text-align: center;
+        vertical-align: middle;
         white-space: nowrap;
-        font-size: .78rem;
+        font-size: .73rem;
       }
 
-      .three-table th {
+      .three-zone-table th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #11121a;
         color: var(--muted, #aaa);
-        font-size: .7rem;
+        font-size: .65rem;
+        font-weight: 800;
+        letter-spacing: .02em;
         text-transform: uppercase;
       }
 
-      .three-table td.three-team {
-        max-width: 190px;
+      .three-zone-table tbody tr:hover {
+        background: rgba(255, 255, 255, .025);
+      }
+
+      .three-zone-table .three-sector {
+        min-width: 55px;
+        font-weight: 800;
+      }
+
+      .three-zone-table .three-team {
+        min-width: 165px;
+        max-width: 220px;
         text-align: left;
         white-space: normal;
         overflow-wrap: anywhere;
-        font-weight: 700;
+        font-weight: 800;
       }
 
-      .three-table td.three-final-place {
-        font-size: 1rem;
+      .three-zone-table .three-weight {
+        min-width: 76px;
+        font-weight: 800;
+      }
+
+      .three-zone-table .three-place {
+        min-width: 48px;
         font-weight: 900;
         color: var(--accent, #f6c34c);
       }
 
-      .three-top5-fish {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 4px;
-        min-width: 170px;
+      .three-zone-table .three-fish {
+        min-width: 61px;
       }
 
-      .three-fish-pill {
-        display: inline-flex;
-        padding: 3px 6px;
-        border: 1px solid rgba(255,255,255,.1);
-        border-radius: 999px;
-        background: rgba(255,255,255,.04);
-        font-size: .7rem;
+      .three-zone-table .three-points {
+        min-width: 55px;
+        font-weight: 900;
+      }
+
+      .three-zone-table .three-final-place {
+        min-width: 64px;
+        color: #7cffb2;
+        font-size: .9rem;
+        font-weight: 900;
+      }
+
+      .three-group-total {
+        background: rgba(59, 130, 246, .05);
+      }
+
+      .three-group-five {
+        background: rgba(246, 195, 76, .045);
+      }
+
+      .three-group-big {
+        background: rgba(239, 68, 68, .045);
       }
 
       .three-empty {
-        padding: 12px;
+        padding: 16px;
         color: var(--muted, #aaa);
         text-align: center;
       }
 
-      @media (max-width: 900px) {
-        .three-result-grid {
-          grid-template-columns: 1fr;
+      @media (max-width: 760px) {
+        .three-tables-section {
+          margin-top: 14px;
         }
 
-        .three-result-card {
-          padding: 10px;
-        }
-      }
-
-      @media (max-width: 520px) {
         .three-tables-heading {
           align-items: flex-start;
           flex-direction: column;
         }
 
-        .three-table th,
-        .three-table td {
-          padding: 7px 6px;
-          font-size: .72rem;
+        .three-zone-card {
+          padding: 10px;
         }
 
-        .three-table th {
-          font-size: .64rem;
+        .three-zone-table {
+          min-width: 1120px;
+        }
+
+        .three-zone-table th,
+        .three-zone-table td {
+          padding: 6px 5px;
+          font-size: .68rem;
+        }
+
+        .three-zone-table th {
+          font-size: .6rem;
+        }
+
+        .three-zone-table .three-team {
+          min-width: 145px;
+          max-width: 180px;
+        }
+
+        .three-zone-table .three-fish {
+          min-width: 55px;
         }
       }
     `;
@@ -458,56 +481,40 @@
     injectThreeTablesStyles();
 
     threeTablesSection =
-      document.getElementById(
-        "threeTablesSection"
-      );
+      document.getElementById("threeTablesSection");
 
     threeTablesContainer =
-      document.getElementById(
-        "threeTablesContainer"
-      );
+      document.getElementById("threeTablesContainer");
 
-    if (
-      threeTablesSection &&
-      threeTablesContainer
-    ) {
+    if (threeTablesSection && threeTablesContainer) {
       return;
     }
 
     threeTablesSection =
       document.createElement("section");
 
-    threeTablesSection.id =
-      "threeTablesSection";
-
-    threeTablesSection.className =
-      "three-tables-section card";
+    threeTablesSection.id = "threeTablesSection";
+    threeTablesSection.className = "three-tables-section";
 
     threeTablesSection.innerHTML = `
       <div class="three-tables-heading">
-        <h2>Три таблиці</h2>
+        <h2>Результати — три таблиці</h2>
+
         <span class="badge badge--warn">
-          Одиночне змагання
+          Підсумок за зонами
         </span>
       </div>
 
       <div id="threeTablesContainer">
         <div class="three-empty">
-          Очікую дані…
+          Очікую команди та зважування…
         </div>
       </div>
     `;
 
     threeTablesContainer =
-      threeTablesSection.querySelector(
-        "#threeTablesContainer"
-      );
+      threeTablesSection.querySelector("#threeTablesContainer");
 
-    /*
-     * Ставимо блок після зон.
-     * Якщо zonesContainer має батьківський блок —
-     * вставляємо після нього.
-     */
     const anchor =
       zonesWrap?.parentElement ||
       zonesWrap ||
@@ -519,13 +526,9 @@
         anchor.nextSibling
       );
     } else if (contentEl) {
-      contentEl.appendChild(
-        threeTablesSection
-      );
+      contentEl.appendChild(threeTablesSection);
     } else {
-      document.body.appendChild(
-        threeTablesSection
-      );
+      document.body.appendChild(threeTablesSection);
     }
   }
 
@@ -533,264 +536,209 @@
     ensureThreeTablesUI();
 
     if (isThreeTablesFormat()) {
-      threeTablesSection?.classList.add(
-        "is-visible"
-      );
+      threeTablesSection?.classList.add("is-visible");
 
       /*
-       * У форматі 3tables окремий фінальний
-       * Короп/Амур не потрібен, бо є власний Big Fish.
+       * Стандартні зони залишаються зверху,
+       * а компактні три таблиці додаються нижче.
        */
       if (finalBigFishBox) {
-        finalBigFishBox.style.display =
-          "none";
-      }
-    } else {
-      threeTablesSection?.classList.remove(
-        "is-visible"
-      );
-
-      if (threeTablesContainer) {
-        threeTablesContainer.innerHTML = "";
+        finalBigFishBox.style.display = "none";
       }
 
-      if (finalBigFishBox) {
-        finalBigFishBox.style.display = "";
-      }
+      return;
+    }
+
+    threeTablesSection?.classList.remove("is-visible");
+
+    if (threeTablesContainer) {
+      threeTablesContainer.innerHTML = "";
+    }
+
+    if (finalBigFishBox) {
+      finalBigFishBox.style.display = "";
     }
   }
 
-  function renderTop5Pills(fishArr) {
-    const fish = Array.isArray(fishArr)
-      ? fishArr
+  function fishValueAt(row, index) {
+    const fish = Array.isArray(row?.top5Fish)
+      ? row.top5Fish
       : [];
 
-    if (!fish.length) {
-      return `<span>—</span>`;
+    const value = fish[index];
+
+    if (
+      value === null ||
+      value === undefined ||
+      Number(value) <= 0
+    ) {
+      return "—";
     }
 
+    return kgShort(value);
+  }
+
+  function renderCompactZoneTable(zoneName, zoneResult) {
+    const rows = Array.isArray(zoneResult?.finalTable)
+      ? zoneResult.finalTable
+      : [];
+
+    if (!rows.length) {
+      return `
+        <section class="three-zone-card">
+          <div class="three-zone-title">
+            <h3>Зона ${esc(zoneName)}</h3>
+
+            <span class="badge">
+              немає команд
+            </span>
+          </div>
+
+          <div class="three-empty">
+            У цій зоні ще немає команд.
+          </div>
+        </section>
+      `;
+    }
+
+    /*
+     * Рядки показуємо за фінальним місцем.
+     * Усі три окремі місця вже записані в кожній команді.
+     */
+    const sortedRows = [...rows].sort((a, b) => {
+      return Number(a.finalPlace || 9999) -
+        Number(b.finalPlace || 9999);
+    });
+
+    const rowsHtml = sortedRows.map(row => `
+      <tr>
+        <td class="three-sector">
+          ${esc(row.zoneLabel || row.sector || "—")}
+        </td>
+
+        <td class="three-team">
+          ${esc(row.teamName || "—")}
+        </td>
+
+        <td class="three-weight three-group-total">
+          ${esc(kgShort(row.totalWeight))}
+        </td>
+
+        <td class="three-place three-group-total">
+          ${esc(row.totalPlace || "—")}
+        </td>
+
+        <td class="three-fish three-group-five">
+          ${esc(fishValueAt(row, 0))}
+        </td>
+
+        <td class="three-fish three-group-five">
+          ${esc(fishValueAt(row, 1))}
+        </td>
+
+        <td class="three-fish three-group-five">
+          ${esc(fishValueAt(row, 2))}
+        </td>
+
+        <td class="three-fish three-group-five">
+          ${esc(fishValueAt(row, 3))}
+        </td>
+
+        <td class="three-fish three-group-five">
+          ${esc(fishValueAt(row, 4))}
+        </td>
+
+        <td class="three-weight three-group-five">
+          ${esc(kgShort(row.top5Weight))}
+        </td>
+
+        <td class="three-place three-group-five">
+          ${esc(row.top5Place || "—")}
+        </td>
+
+        <td class="three-weight three-group-big">
+          ${esc(kgShort(row.bigFish))}
+        </td>
+
+        <td class="three-place three-group-big">
+          ${esc(row.bigFishPlace || "—")}
+        </td>
+
+        <td class="three-points">
+          ${esc(row.pointsSum || "—")}
+        </td>
+
+        <td class="three-final-place">
+          ${esc(row.finalPlace || "—")}
+        </td>
+      </tr>
+    `).join("");
+
     return `
-      <div class="three-top5-fish">
-        ${fish.map((kg, index) => `
-          <span class="three-fish-pill">
-            ${index + 1}: ${esc(kgShort(kg))}
+      <section class="three-zone-card">
+        <div class="three-zone-title">
+          <h3>Зона ${esc(zoneName)}</h3>
+
+          <span class="badge badge--warn">
+            команд: ${esc(zoneResult.teamsCount || rows.length)}
           </span>
-        `).join("")}
-      </div>
-    `;
-  }
-
-  function renderThreeCriterionTable(
-    title,
-    rows,
-    type
-  ) {
-    const list = Array.isArray(rows)
-      ? rows
-      : [];
-
-    if (!list.length) {
-      return `
-        <div class="three-result-card">
-          <h4>${esc(title)}</h4>
-          <div class="three-empty">
-            Немає команд
-          </div>
         </div>
-      `;
-    }
 
-    let head = "";
-    let body = "";
-
-    if (type === "total") {
-      head = `
-        <tr>
-          <th>Місце</th>
-          <th>Сектор</th>
-          <th>Команда</th>
-          <th>Риб</th>
-          <th>Вага</th>
-          <th>Бал</th>
-        </tr>
-      `;
-
-      body = list.map(row => `
-        <tr>
-          <td>${esc(row.totalPlace)}</td>
-          <td>${esc(row.zoneLabel)}</td>
-          <td class="three-team">
-            ${esc(row.teamName)}
-          </td>
-          <td>${esc(row.fishCount)}</td>
-          <td>${esc(kgShort(row.totalWeight))}</td>
-          <td>${esc(row.totalPoints)}</td>
-        </tr>
-      `).join("");
-    }
-
-    if (type === "top5") {
-      head = `
-        <tr>
-          <th>Місце</th>
-          <th>Сектор</th>
-          <th>Команда</th>
-          <th>5 риб</th>
-          <th>К-сть</th>
-          <th>Вага</th>
-          <th>Бал</th>
-        </tr>
-      `;
-
-      body = list.map(row => `
-        <tr>
-          <td>${esc(row.top5Place)}</td>
-          <td>${esc(row.zoneLabel)}</td>
-          <td class="three-team">
-            ${esc(row.teamName)}
-          </td>
-          <td>
-            ${renderTop5Pills(row.top5Fish)}
-          </td>
-          <td>${esc(row.top5Count)}</td>
-          <td>${esc(kgShort(row.top5Weight))}</td>
-          <td>${esc(row.top5Points)}</td>
-        </tr>
-      `).join("");
-    }
-
-    if (type === "bigfish") {
-      head = `
-        <tr>
-          <th>Місце</th>
-          <th>Сектор</th>
-          <th>Команда</th>
-          <th>Big Fish</th>
-          <th>Бал</th>
-        </tr>
-      `;
-
-      body = list.map(row => `
-        <tr>
-          <td>${esc(row.bigFishPlace)}</td>
-          <td>${esc(row.zoneLabel)}</td>
-          <td class="three-team">
-            ${esc(row.teamName)}
-          </td>
-          <td>${esc(kgShort(row.bigFish))}</td>
-          <td>${esc(row.bigFishPoints)}</td>
-        </tr>
-      `).join("");
-    }
-
-    return `
-      <div class="three-result-card">
-        <h4>${esc(title)}</h4>
-
-        <div class="three-table-scroll">
-          <table class="three-table">
-            <thead>${head}</thead>
-            <tbody>${body}</tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderThreeFinalTable(rows) {
-    const list = Array.isArray(rows)
-      ? rows
-      : [];
-
-    if (!list.length) {
-      return `
-        <div class="three-result-card">
-          <h4>Підсумок</h4>
-          <div class="three-empty">
-            Немає команд
-          </div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="three-result-card">
-        <h4>Підсумкова таблиця</h4>
-
-        <div class="three-table-scroll">
-          <table class="three-table three-table--final">
+        <div class="three-table-wrap">
+          <table class="three-zone-table">
             <thead>
               <tr>
-                <th>Місце</th>
-                <th>Сектор</th>
-                <th>Команда</th>
+                <th rowspan="2">Зона</th>
+                <th rowspan="2">Команда</th>
 
-                <th>Загальна вага</th>
-                <th>Бал</th>
+                <th
+                  colspan="2"
+                  class="three-group-total"
+                >
+                  Загальна вага
+                </th>
 
-                <th>5 великих</th>
-                <th>Вага 5</th>
-                <th>Бал</th>
+                <th
+                  colspan="7"
+                  class="three-group-five"
+                >
+                  5 великих без Big Fish
+                </th>
 
-                <th>Big Fish</th>
-                <th>Бал</th>
+                <th
+                  colspan="2"
+                  class="three-group-big"
+                >
+                  Big Fish
+                </th>
 
-                <th>Сума балів</th>
+                <th rowspan="2">Бали</th>
+                <th rowspan="2">Місце</th>
+              </tr>
+
+              <tr>
+                <th class="three-group-total">Вага</th>
+                <th class="three-group-total">Місце</th>
+
+                <th class="three-group-five">1</th>
+                <th class="three-group-five">2</th>
+                <th class="three-group-five">3</th>
+                <th class="three-group-five">4</th>
+                <th class="three-group-five">5</th>
+                <th class="three-group-five">Вага</th>
+                <th class="three-group-five">Місце</th>
+
+                <th class="three-group-big">Вага</th>
+                <th class="three-group-big">Місце</th>
               </tr>
             </thead>
 
             <tbody>
-              ${list.map(row => `
-                <tr>
-                  <td class="three-final-place">
-                    ${esc(row.finalPlace)}
-                  </td>
-
-                  <td>${esc(row.zoneLabel)}</td>
-
-                  <td class="three-team">
-                    ${esc(row.teamName)}
-                  </td>
-
-                  <td>
-                    ${esc(kgShort(row.totalWeight))}
-                  </td>
-
-                  <td>
-                    ${esc(row.totalPoints)}
-                  </td>
-
-                  <td>
-                    ${renderTop5Pills(row.top5Fish)}
-                  </td>
-
-                  <td>
-                    ${esc(kgShort(row.top5Weight))}
-                  </td>
-
-                  <td>
-                    ${esc(row.top5Points)}
-                  </td>
-
-                  <td>
-                    ${esc(kgShort(row.bigFish))}
-                  </td>
-
-                  <td>
-                    ${esc(row.bigFishPoints)}
-                  </td>
-
-                  <td>
-                    <strong>
-                      ${esc(row.pointsSum)}
-                    </strong>
-                  </td>
-                </tr>
-              `).join("")}
+              ${rowsHtml}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     `;
   }
 
@@ -805,13 +753,11 @@
 
     if (
       !window.SCThreeTables ||
-      typeof window.SCThreeTables.build !==
-        "function"
+      typeof window.SCThreeTables.build !== "function"
     ) {
       threeTablesContainer.innerHTML = `
         <div class="three-empty">
-          Не завантажено
-          assets/js/live-3tables.js
+          Не завантажено файл live-3tables.js.
         </div>
       `;
 
@@ -824,83 +770,27 @@
     }
 
     try {
-      /*
-       * Спочатку рахуємо весь результат.
-       * Лише після завершення будуємо HTML.
-       */
-      const result =
-        window.SCThreeTables.build(
-          regRows,
-          allWeighDocs
-        );
+      const result = window.SCThreeTables.build(
+        regRows,
+        allWeighDocs
+      );
 
-      const zoneNames = ["A", "B", "C"];
+      threeTablesContainer.innerHTML = [
+        renderCompactZoneTable(
+          "A",
+          result?.zones?.A
+        ),
 
-      const html = zoneNames
-        .map(zoneName => {
-          const zone =
-            result?.zones?.[zoneName];
+        renderCompactZoneTable(
+          "B",
+          result?.zones?.B
+        ),
 
-          if (
-            !zone ||
-            !zone.teamsCount
-          ) {
-            return `
-              <section class="three-zone-result">
-                <div class="three-zone-header">
-                  <h3>Зона ${zoneName}</h3>
-                  <span class="badge">
-                    немає команд
-                  </span>
-                </div>
-              </section>
-            `;
-          }
-
-          return `
-            <section class="three-zone-result">
-              <div class="three-zone-header">
-                <h3>Зона ${zoneName}</h3>
-
-                <span class="badge badge--warn">
-                  команд: ${esc(zone.teamsCount)}
-                </span>
-              </div>
-
-              <div class="three-result-grid">
-                ${renderThreeCriterionTable(
-                  "Загальна вага",
-                  zone.totalTable,
-                  "total"
-                )}
-
-                ${renderThreeCriterionTable(
-                  "5 великих",
-                  zone.top5Table,
-                  "top5"
-                )}
-
-                ${renderThreeCriterionTable(
-                  "Big Fish",
-                  zone.bigFishTable,
-                  "bigfish"
-                )}
-              </div>
-
-              ${renderThreeFinalTable(
-                zone.finalTable
-              )}
-            </section>
-          `;
-        })
-        .join("");
-
-      threeTablesContainer.innerHTML =
-        html || `
-          <div class="three-empty">
-            Очікую команди та зважування…
-          </div>
-        `;
+        renderCompactZoneTable(
+          "C",
+          result?.zones?.C
+        )
+      ].join("");
     } catch (error) {
       console.error(
         "renderThreeTables error:",
@@ -909,7 +799,7 @@
 
       threeTablesContainer.innerHTML = `
         <div class="three-empty">
-          Помилка розрахунку трьох таблиць.
+          Помилка розрахунку таблиць.
         </div>
       `;
     }
@@ -917,6 +807,7 @@
 
   const renderThreeTablesDebounced =
     debounce(renderThreeTables, 70);
+
 
   /* ============================================================
      CLASSIC ZONES

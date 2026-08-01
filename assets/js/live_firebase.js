@@ -440,7 +440,7 @@
       }
 
       .three-tables-section .live-zone:last-child {
-        margin-bottom: 0;
+        margin-bottom: 18;
       }
 
       .three-tables-section .live-zone-title {

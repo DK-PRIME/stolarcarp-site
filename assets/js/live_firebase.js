@@ -388,7 +388,7 @@
        */
       .three-tables-section .three-live-table {
         width: 100%;
-        min-width: 930px;
+        min-width: 500px;
         border-collapse: collapse;
       }
 

@@ -440,7 +440,7 @@
       }
 
       .three-tables-section .live-zone:last-child {
-        margin-bottom: 18;
+        margin-bottom: 0;
       }
 
       .three-tables-section .live-zone-title {
@@ -495,10 +495,10 @@
        * Пропорції колонок.
        *
        * Зона:             5%
-       * Команда:         20%
-       * Загальна вага:    8%
+       * Команда:         18%
+       * Загальна вага:    9%
        * Загальне місце:   4%
-       * Риби 1–5:       5.6% кожна
+       * Риби 1–5:       5.8% кожна
        * Сума п'яти:       8%
        * Місце п'яти:      4%
        * Big Fish:         8%
@@ -512,11 +512,11 @@
       }
 
       .three-col-team {
-        width: 20%;
+        width: 18%;
       }
 
       .three-col-total-weight {
-        width: 8%;
+        width: 9%;
       }
 
       .three-col-total-place {
@@ -524,7 +524,7 @@
       }
 
       .three-col-fish {
-        width: 5.6%;
+        width: 5.8%;
       }
 
       .three-col-five-sum {

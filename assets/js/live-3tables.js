@@ -1,16 +1,45 @@
 // assets/js/live-3tables.js
-// STOLAR CARP • Розрахунок формату "3 таблиці"
-// Таблиця 1: загальна вага всіх риб
-// Таблиця 2: 5 найбільших риб БЕЗ Big Fish
-// Таблиця 3: Big Fish — одна найбільша риба
-// Місця визначаються окремо в кожній зоні A / B / C
+// STOLAR CARP • Формат "3 таблиці"
+//
+// 1. Загальна вага — сума всіх риб команди
+// 2. П'ять великих — 5 найбільших риб без Big Fish
+// 3. Big Fish — одна найбільша риба
+//
+// Усі місця та бали визначаються окремо
+// в зонах A / B / C.
+//
+// Цей модуль нічого не записує у Firebase.
+// Він отримує команди + weighings і повертає готовий результат для Live.
 
 (function () {
   "use strict";
 
+  const VALID_ZONES = ["A", "B", "C"];
+
   function num(value) {
-    const n = Number(String(value ?? "").replace(",", "."));
-    return Number.isFinite(n) ? n : 0;
+    const parsed = Number(
+      String(value ?? "")
+        .trim()
+        .replace(",", ".")
+    );
+
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function roundWeight(value) {
+    return Math.round((num(value) + Number.EPSILON) * 1000) / 1000;
+  }
+
+  function compareNumberDesc(a, b) {
+    return num(b) - num(a);
+  }
+
+  function compareText(a, b) {
+    return String(a || "").localeCompare(
+      String(b || ""),
+      "uk",
+      { sensitivity: "base" }
+    );
   }
 
   function fishKg(fish) {
@@ -18,180 +47,553 @@
       return num(fish);
     }
 
-    return num(fish?.kg ?? fish?.weight ?? fish?.value);
+    return num(
+      fish?.kg ??
+      fish?.weight ??
+      fish?.value
+    );
+  }
+
+  function normalizeFishItem(fish) {
+    const kg = roundWeight(fishKg(fish));
+
+    if (kg <= 0) return null;
+
+    const isAmur =
+      fish &&
+      typeof fish === "object" &&
+      (
+        fish.isAmur === true ||
+        fish.fishType === "amur" ||
+        fish.type === "amur"
+      );
+
+    return {
+      kg,
+      fishType: isAmur ? "amur" : "carp",
+      isAmur
+    };
   }
 
   function normalizeFishArray(arr) {
     if (!Array.isArray(arr)) return [];
 
     return arr
-      .map(fish => {
-        const kg = fishKg(fish);
-        return kg > 0 ? kg : null;
-      })
-      .filter(kg => kg !== null);
+      .map(normalizeFishItem)
+      .filter(Boolean);
   }
 
   function getZone(row) {
-    const drawKey = String(row?.drawKey || "").toUpperCase();
+    const drawKey = String(row?.drawKey || "")
+      .trim()
+      .toUpperCase();
 
-    return String(
+    const zoneLabel = String(row?.zoneLabel || "")
+      .trim()
+      .toUpperCase();
+
+    const zone = String(
       row?.zone ||
       row?.drawZone ||
-      row?.zoneLabel?.[0] ||
+      zoneLabel[0] ||
       drawKey[0] ||
       ""
-    ).toUpperCase();
+    )
+      .trim()
+      .toUpperCase();
+
+    return VALID_ZONES.includes(zone) ? zone : "";
+  }
+
+  function getSector(row) {
+    const drawKey = String(row?.drawKey || "")
+      .trim()
+      .toUpperCase();
+
+    const fromDrawKey = drawKey
+      ? drawKey.slice(1)
+      : "";
+
+    return String(
+      row?.sector ??
+      row?.drawSector ??
+      fromDrawKey ??
+      ""
+    ).trim();
+  }
+
+  function getZoneLabel(row) {
+    const existing = String(
+      row?.zoneLabel ||
+      row?.drawKey ||
+      ""
+    )
+      .trim()
+      .toUpperCase();
+
+    if (existing) return existing;
+
+    const zone = getZone(row);
+    const sector = getSector(row);
+
+    return zone
+      ? `${zone}${sector}`
+      : sector || "—";
+  }
+
+  function getTeamId(row) {
+    return String(
+      row?.teamId ||
+      row?.uid ||
+      row?.id ||
+      ""
+    ).trim();
+  }
+
+  function getTeamName(row) {
+    return String(
+      row?.teamName ||
+      row?.team ||
+      row?.name ||
+      "Команда"
+    ).trim();
   }
 
   function collectTeams(regRows, weighingDocs) {
     const teams = new Map();
 
+    /*
+     * Спочатку створюємо повний список команд.
+     * Навіть команда без жодної риби повинна бути в таблиці.
+     */
     (regRows || []).forEach(row => {
-      const teamId = String(row?.teamId || "").trim();
+      const teamId = getTeamId(row);
       if (!teamId) return;
 
       teams.set(teamId, {
         teamId,
-        teamName: String(row?.teamName || row?.team || "Команда"),
+        teamName: getTeamName(row),
         zone: getZone(row),
-        zoneLabel: String(
-          row?.zoneLabel ||
-          row?.drawKey ||
-          `${getZone(row)}${row?.sector || row?.drawSector || ""}`
-        ),
+        sector: getSector(row),
+        zoneLabel: getZoneLabel(row),
         fish: []
       });
     });
 
+    /*
+     * Потім додаємо всі риби з усіх W1–W4.
+     */
     (weighingDocs || []).forEach(doc => {
-      const teamId = String(doc?.teamId || "").trim();
+      const teamId = getTeamId(doc);
       if (!teamId) return;
 
       if (!teams.has(teamId)) {
         teams.set(teamId, {
           teamId,
-          teamName: String(doc?.teamName || doc?.team || "Команда"),
+          teamName: getTeamName(doc),
           zone: getZone(doc),
-          zoneLabel: String(
-            doc?.drawKey ||
-            `${getZone(doc)}${doc?.sector || ""}`
-          ),
+          sector: getSector(doc),
+          zoneLabel: getZoneLabel(doc),
           fish: []
         });
       }
 
       const team = teams.get(teamId);
-      team.fish.push(...normalizeFishArray(doc?.weights || doc?.fish || []));
+
+      /*
+       * Основне поле — weights.
+       * fish залишено як fallback для сумісності.
+       */
+      const fish = normalizeFishArray(
+        doc?.weights ||
+        doc?.fish ||
+        []
+      );
+
+      team.fish.push(...fish);
+
+      /*
+       * Якщо в реєстрації ще не було зони або назви,
+       * беремо їх зі зважування.
+       */
+      if (!team.zone) {
+        team.zone = getZone(doc);
+      }
+
+      if (
+        !team.zoneLabel ||
+        team.zoneLabel === "—"
+      ) {
+        team.zoneLabel = getZoneLabel(doc);
+      }
+
+      if (
+        !team.teamName ||
+        team.teamName === "Команда"
+      ) {
+        team.teamName = getTeamName(doc);
+      }
     });
 
     return Array.from(teams.values());
   }
 
   function calculateTeam(team) {
-    const sortedFish = [...team.fish].sort((a, b) => b - a);
+    const sortedFish = [...team.fish]
+      .sort((a, b) => compareNumberDesc(a.kg, b.kg));
 
-    // Найбільша риба виключається з таблиці "5 великих"
-    const bigFish = sortedFish[0] || 0;
-    const top5Fish = sortedFish.slice(1, 6);
+    /*
+     * Перша, найбільша риба — тільки Big Fish.
+     * У таблицю "5 великих" вона не входить.
+     */
+    const bigFishItem = sortedFish[0] || null;
+    const bigFish = bigFishItem
+      ? roundWeight(bigFishItem.kg)
+      : 0;
 
-    const totalWeight = sortedFish.reduce((sum, kg) => sum + kg, 0);
-    const top5Weight = top5Fish.reduce((sum, kg) => sum + kg, 0);
+    /*
+     * Наступні максимум 5 риб після Big Fish.
+     */
+    const top5FishItems = sortedFish.slice(1, 6);
+
+    const top5Fish = top5FishItems.map(fish =>
+      roundWeight(fish.kg)
+    );
+
+    const allFish = sortedFish.map(fish =>
+      roundWeight(fish.kg)
+    );
+
+    const totalWeight = roundWeight(
+      allFish.reduce(
+        (sum, kg) => sum + kg,
+        0
+      )
+    );
+
+    const top5Weight = roundWeight(
+      top5Fish.reduce(
+        (sum, kg) => sum + kg,
+        0
+      )
+    );
+
+    const top5LargestFish = top5Fish[0] || 0;
 
     return {
-      ...team,
+      teamId: team.teamId,
+      teamName: team.teamName,
+      zone: team.zone,
+      sector: team.sector,
+      zoneLabel: team.zoneLabel,
 
-      fishCount: sortedFish.length,
-      allFish: sortedFish,
+      fishCount: allFish.length,
+      allFish,
 
       totalWeight,
 
       bigFish,
+      bigFishType: bigFishItem?.fishType || "",
 
       top5Fish,
       top5Count: top5Fish.length,
       top5Weight,
+      top5LargestFish,
 
       totalPlace: 0,
-      top5Place: 0,
-      bigFishPlace: 0,
-
       totalPoints: 0,
+
+      top5Place: 0,
+      top5Points: 0,
+
+      bigFishPlace: 0,
+      bigFishPoints: 0,
+
+      pointsSum: 0,
       finalPlace: 0,
 
-      // Використовується лише при повній рівності балів
-      tieWeight: totalWeight + top5Weight + bigFish
+      /*
+       * Останній тайбрейк, погоджений для випадку,
+       * коли сума балів команд однакова.
+       *
+       * Загальна вага вже включає всю рибу.
+       * Додаткове додавання top5 і Big Fish тут
+       * є свідомим коефіцієнтом тайбрейку.
+       */
+      tieWeight: roundWeight(
+        totalWeight +
+        top5Weight +
+        bigFish
+      )
     };
   }
 
-  function assignPlaces(rows, valueKey, placeKey) {
-    const sorted = [...rows].sort((a, b) => {
-      const diff = num(b[valueKey]) - num(a[valueKey]);
-      if (diff !== 0) return diff;
+  /*
+   * ТАБЛИЦЯ 1 — ЗАГАЛЬНА ВАГА
+   *
+   * 1. Більша загальна вага.
+   * 2. Більша кількість риб.
+   * 3. Більший Big Fish.
+   */
+  function compareTotalTable(a, b) {
+    let diff = compareNumberDesc(
+      a.totalWeight,
+      b.totalWeight
+    );
+    if (diff !== 0) return diff;
 
-      // Стабільний порядок при однаковій вазі
-      return String(a.teamName).localeCompare(String(b.teamName), "uk");
-    });
+    diff = compareNumberDesc(
+      a.fishCount,
+      b.fishCount
+    );
+    if (diff !== 0) return diff;
 
-    sorted.forEach((row, index) => {
-      row[placeKey] = index + 1;
-    });
+    diff = compareNumberDesc(
+      a.bigFish,
+      b.bigFish
+    );
+    if (diff !== 0) return diff;
+
+    return compareText(a.teamName, b.teamName);
   }
 
-  function calculateZone(zoneRows) {
-    assignPlaces(zoneRows, "totalWeight", "totalPlace");
-    assignPlaces(zoneRows, "top5Weight", "top5Place");
-    assignPlaces(zoneRows, "bigFish", "bigFishPlace");
+  /*
+   * ТАБЛИЦЯ 2 — П'ЯТЬ ВЕЛИКИХ
+   *
+   * 1. Більша сума п'яти великих.
+   * 2. Більша кількість закритих риб.
+   * 3. Більша риба серед цієї п'ятірки.
+   * 4. Більший Big Fish команди.
+   */
+  function compareTop5Table(a, b) {
+    let diff = compareNumberDesc(
+      a.top5Weight,
+      b.top5Weight
+    );
+    if (diff !== 0) return diff;
 
-    zoneRows.forEach(row => {
-      row.totalPoints =
-        row.totalPlace +
-        row.top5Place +
-        row.bigFishPlace;
+    diff = compareNumberDesc(
+      a.top5Count,
+      b.top5Count
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.top5LargestFish,
+      b.top5LargestFish
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.bigFish,
+      b.bigFish
+    );
+    if (diff !== 0) return diff;
+
+    return compareText(a.teamName, b.teamName);
+  }
+
+  /*
+   * ТАБЛИЦЯ 3 — BIG FISH
+   *
+   * 1. Більший Big Fish.
+   * 2. Більша загальна вага.
+   * 3. Більша кількість риб.
+   */
+  function compareBigFishTable(a, b) {
+    let diff = compareNumberDesc(
+      a.bigFish,
+      b.bigFish
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.totalWeight,
+      b.totalWeight
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.fishCount,
+      b.fishCount
+    );
+    if (diff !== 0) return diff;
+
+    return compareText(a.teamName, b.teamName);
+  }
+
+  function assignUniquePlaces(
+    rows,
+    comparator,
+    placeKey,
+    pointsKey
+  ) {
+    const sorted = [...rows].sort(comparator);
+
+    sorted.forEach((row, index) => {
+      const place = index + 1;
+
+      row[placeKey] = place;
+      row[pointsKey] = place;
     });
 
-    zoneRows.sort((a, b) => {
-      // 1. Менша сума балів — вище місце
-      if (a.totalPoints !== b.totalPoints) {
-        return a.totalPoints - b.totalPoints;
-      }
+    return sorted;
+  }
 
-      // 2. При рівних балах — сумарна вага трьох показників
-      if (b.tieWeight !== a.tieWeight) {
-        return b.tieWeight - a.tieWeight;
-      }
+  function compareFinalTable(a, b) {
+    /*
+     * 1. Менша сума місць/балів.
+     */
+    if (a.pointsSum !== b.pointsSum) {
+      return a.pointsSum - b.pointsSum;
+    }
 
-      // 3. Остаточний стабільний порядок
-      return String(a.teamName).localeCompare(String(b.teamName), "uk");
+    /*
+     * 2. При однакових балах — погоджена
+     * сумарна вага трьох показників.
+     */
+    let diff = compareNumberDesc(
+      a.tieWeight,
+      b.tieWeight
+    );
+    if (diff !== 0) return diff;
+
+    /*
+     * 3. Додаткові технічні тайбрейки.
+     * Вони потрібні, щоб місця завжди були унікальні.
+     */
+    diff = compareNumberDesc(
+      a.totalWeight,
+      b.totalWeight
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.top5Weight,
+      b.top5Weight
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.bigFish,
+      b.bigFish
+    );
+    if (diff !== 0) return diff;
+
+    diff = compareNumberDesc(
+      a.fishCount,
+      b.fishCount
+    );
+    if (diff !== 0) return diff;
+
+    return compareText(a.teamName, b.teamName);
+  }
+
+  function calculateZone(zone, zoneRows) {
+    const rows = zoneRows.map(row => ({
+      ...row
+    }));
+
+    const totalTable = assignUniquePlaces(
+      rows,
+      compareTotalTable,
+      "totalPlace",
+      "totalPoints"
+    );
+
+    const top5Table = assignUniquePlaces(
+      rows,
+      compareTop5Table,
+      "top5Place",
+      "top5Points"
+    );
+
+    const bigFishTable = assignUniquePlaces(
+      rows,
+      compareBigFishTable,
+      "bigFishPlace",
+      "bigFishPoints"
+    );
+
+    rows.forEach(row => {
+      row.pointsSum =
+        num(row.totalPoints) +
+        num(row.top5Points) +
+        num(row.bigFishPoints);
     });
 
-    zoneRows.forEach((row, index) => {
-      row.finalPlace = index + 1;
-    });
+    const finalTable = [...rows]
+      .sort(compareFinalTable)
+      .map((row, index) => {
+        row.finalPlace = index + 1;
+        return row;
+      });
 
-    return zoneRows;
+    return {
+      zone,
+      teamsCount: rows.length,
+
+      /*
+       * Готові окремі таблиці.
+       */
+      totalTable,
+      top5Table,
+      bigFishTable,
+
+      /*
+       * Готовий фінальний підсумок.
+       */
+      finalTable
+    };
   }
 
   function buildThreeTables(regRows, weighingDocs) {
-    const teams = collectTeams(regRows, weighingDocs).map(calculateTeam);
+    const calculatedTeams = collectTeams(
+      regRows,
+      weighingDocs
+    ).map(calculateTeam);
 
-    const zones = {
+    const zoneRows = {
       A: [],
       B: [],
       C: []
     };
 
-    teams.forEach(team => {
-      if (zones[team.zone]) {
-        zones[team.zone].push(team);
+    calculatedTeams.forEach(team => {
+      if (!VALID_ZONES.includes(team.zone)) {
+        return;
       }
+
+      zoneRows[team.zone].push(team);
     });
 
-    Object.keys(zones).forEach(zone => {
-      zones[zone] = calculateZone(zones[zone]);
-    });
+    const zones = {
+      A: calculateZone("A", zoneRows.A),
+      B: calculateZone("B", zoneRows.B),
+      C: calculateZone("C", zoneRows.C)
+    };
 
-    return zones;
+    return {
+      format: "3tables",
+      generatedAt: new Date(),
+
+      teamsCount:
+        zones.A.teamsCount +
+        zones.B.teamsCount +
+        zones.C.teamsCount,
+
+      zones,
+
+      /*
+       * Зручний спільний список усіх команд.
+       * Він не визначає переможців між зонами.
+       */
+      teams: [
+        ...zones.A.finalTable,
+        ...zones.B.finalTable,
+        ...zones.C.finalTable
+      ]
+    };
   }
 
   window.SCThreeTables = {

@@ -1,11 +1,13 @@
 // assets/js/live_firebase.js
-// STOLAR CARP • Live (public) — optimized + canonical
-// ✅ zones from stageResults.zones
-// ✅ fallback auto-zones from weighings
-// ✅ bottom W1-W4 fish table
-// ✅ amur fish highlighted in bottom table
-// ✅ Final Big Fish Короп / Амур after W4 completed
-// ✅ backward compatible: weights: [4.560] and weights: [{kg:4.560, fishType:"amur"}]
+// STOLAR CARP • Live public
+//
+// За замовчуванням: CLASSIC
+// Якщо competitions/{compId}.format === "3tables":
+//   - чинний Live залишається;
+//   - нижче додаються 3 таблиці + підсумок.
+//
+// Потрібне підключення:
+// live-3tables.js ПЕРЕД live_firebase.js
 
 (function () {
   "use strict";
@@ -28,13 +30,46 @@
   const wBtn3 = document.getElementById("wBtn3");
   const wBtn4 = document.getElementById("wBtn4");
 
-  const fmt = (v) => (v === null || v === undefined || v === "" ? "—" : String(v));
+  const FORMAT_CLASSIC = "classic";
+  const FORMAT_3TABLES = "3tables";
 
-  const fmtTs = (ts) => {
+  let activeFormat = FORMAT_CLASSIC;
+
+  let threeTablesSection = null;
+  let threeTablesContainer = null;
+
+  const fmt = (value) => {
+    return value === null ||
+      value === undefined ||
+      value === ""
+      ? "—"
+      : String(value);
+  };
+
+  function esc(value) {
+    return String(value ?? "").replace(
+      /[&<>"']/g,
+      char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]
+    );
+  }
+
+  function fmtTs(ts) {
     try {
-      const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-      if (!d) return "—";
-      return d.toLocaleString("uk-UA", {
+      const date = ts?.toDate
+        ? ts.toDate()
+        : ts instanceof Date
+          ? ts
+          : null;
+
+      if (!date) return "—";
+
+      return date.toLocaleString("uk-UA", {
         hour: "2-digit",
         minute: "2-digit",
         day: "2-digit",
@@ -43,55 +78,131 @@
     } catch {
       return "—";
     }
-  };
-
-  function fmtNum(x) {
-    const n = Number(x);
-    if (!isFinite(n)) return null;
-    return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
-  function getFishKg(f) {
-    if (typeof f === "number" || typeof f === "string") return Number(f);
-    return Number(f?.kg ?? f?.weight ?? f?.value ?? 0);
+  function fmtNum(value) {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+      return null;
+    }
+
+    return number
+      .toFixed(3)
+      .replace(/\.?0+$/, "");
   }
 
-  function isAmurFish(f) {
-    if (!f || typeof f !== "object") return false;
-    return f.isAmur === true || f.fishType === "amur" || f.type === "amur";
+  function kgShort(value) {
+    const number = Number(value || 0);
+
+    if (!Number.isFinite(number)) {
+      return "0";
+    }
+
+    return number
+      .toFixed(3)
+      .replace(/\.?0+$/, "");
+  }
+
+  function normalizeFormat(value) {
+    const raw = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/_/g, "-");
+
+    if (
+      raw === "3tables" ||
+      raw === "3-tables" ||
+      raw === "threetables" ||
+      raw === "three-tables" ||
+      raw === "three_table" ||
+      raw === "3table"
+    ) {
+      return FORMAT_3TABLES;
+    }
+
+    return FORMAT_CLASSIC;
+  }
+
+  function isThreeTablesFormat() {
+    return activeFormat === FORMAT_3TABLES;
+  }
+
+  function getFishKg(fish) {
+    if (
+      typeof fish === "number" ||
+      typeof fish === "string"
+    ) {
+      return Number(fish);
+    }
+
+    return Number(
+      fish?.kg ??
+      fish?.weight ??
+      fish?.value ??
+      0
+    );
+  }
+
+  function isAmurFish(fish) {
+    if (!fish || typeof fish !== "object") {
+      return false;
+    }
+
+    return (
+      fish.isAmur === true ||
+      fish.fishType === "amur" ||
+      fish.type === "amur"
+    );
   }
 
   function normalizeFishArray(arr) {
     if (!Array.isArray(arr)) return [];
 
     return arr
-      .map((f) => {
-        const kg = getFishKg(f);
-        if (!Number.isFinite(kg) || kg <= 0) return null;
+      .map(fish => {
+        const kg = getFishKg(fish);
 
-        const isAmur = isAmurFish(f);
+        if (
+          !Number.isFinite(kg) ||
+          kg <= 0
+        ) {
+          return null;
+        }
+
+        const isAmur = isAmurFish(fish);
 
         return {
           kg,
-          fishType: isAmur ? "amur" : "carp",
+          fishType: isAmur
+            ? "amur"
+            : "carp",
           isAmur
         };
       })
       .filter(Boolean);
   }
 
-  function fishCellHTML(f) {
-    const fish = normalizeFishArray([f])[0];
-    if (!fish) return "—";
+  function fishCellHTML(fish) {
+    const normalized =
+      normalizeFishArray([fish])[0];
 
-    const val = fmtNum(fish.kg);
-    if (!val) return "—";
+    if (!normalized) return "—";
 
-    if (fish.isAmur) {
-      return `<span class="live-fish-amur">${val}</span>`;
+    const value = fmtNum(normalized.kg);
+
+    if (!value) return "—";
+
+    if (normalized.isAmur) {
+      return `
+        <span class="live-fish-amur">
+          ${esc(value)}
+        </span>
+      `;
     }
 
-    return `<span>${val}</span>`;
+    return `<span>${esc(value)}</span>`;
   }
 
   function showError(text) {
@@ -99,184 +210,1108 @@
       errorEl.style.display = "block";
       errorEl.textContent = text;
     }
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
+
+    if (loadingEl) {
+      loadingEl.style.display = "none";
+    }
+
+    if (contentEl) {
+      contentEl.style.display = "grid";
+    }
   }
 
   function showContent() {
-    if (errorEl) errorEl.style.display = "none";
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
+    if (errorEl) {
+      errorEl.style.display = "none";
+    }
+
+    if (loadingEl) {
+      loadingEl.style.display = "none";
+    }
+
+    if (contentEl) {
+      contentEl.style.display = "grid";
+    }
   }
 
   function debounce(fn, ms = 80) {
-    let t = null;
-    return (...args) => {
-      if (t) clearTimeout(t);
-      t = setTimeout(() => fn(...args), ms);
-    };
-  }
+    let timer = null;
 
-  function kgShort(x) {
-    const n = Number(x || 0);
-    if (!isFinite(n)) return "0";
-    return n.toFixed(2).replace(/\.?0+$/, "");
+    return (...args) => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+
+      timer = setTimeout(
+        () => fn(...args),
+        ms
+      );
+    };
   }
 
   function wCell(hasDoc, weightsArr) {
     if (!hasDoc) return "-";
 
-    const arr = normalizeFishArray(weightsArr);
-    const cnt = arr.length;
-    const sum = arr.reduce((a, f) => a + Number(f.kg || 0), 0);
+    const arr =
+      normalizeFishArray(weightsArr);
 
-    if (cnt === 0) return "0 / 0";
-    return `${cnt} / ${kgShort(sum)}`;
+    const count = arr.length;
+
+    const sum = arr.reduce(
+      (total, fish) =>
+        total + Number(fish.kg || 0),
+      0
+    );
+
+    if (count === 0) {
+      return "0 / 0";
+    }
+
+    return `${count} / ${kgShort(sum)}`;
   }
 
-  function buildZonesAuto(regRowsArg, weighDocs) {
-    const zones = { A: [], B: [], C: [] };
+  /* ============================================================
+     THREE TABLES — UI
+     ============================================================ */
+
+  function injectThreeTablesStyles() {
+    const styleId =
+      "sc-live-three-tables-styles";
+
+    if (document.getElementById(styleId)) {
+      return;
+    }
+
+    const style =
+      document.createElement("style");
+
+    style.id = styleId;
+
+    style.textContent = `
+      .three-tables-section {
+        display: none;
+        width: 100%;
+        min-width: 0;
+        margin-top: 18px;
+      }
+
+      .three-tables-section.is-visible {
+        display: block;
+      }
+
+      .three-tables-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .three-tables-heading h2 {
+        margin: 0;
+        font-size: 1.15rem;
+      }
+
+      .three-zone-result {
+        margin-bottom: 18px;
+      }
+
+      .three-zone-result:last-child {
+        margin-bottom: 0;
+      }
+
+      .three-zone-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .three-zone-header h3 {
+        margin: 0;
+      }
+
+      .three-result-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .three-result-card {
+        min-width: 0;
+        padding: 12px;
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px;
+        background: rgba(255,255,255,.025);
+      }
+
+      .three-result-card h4 {
+        margin: 0 0 9px;
+        font-size: .88rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+      }
+
+      .three-table-scroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .three-table {
+        width: 100%;
+        min-width: 410px;
+        border-collapse: collapse;
+      }
+
+      .three-table--final {
+        min-width: 780px;
+      }
+
+      .three-table th,
+      .three-table td {
+        padding: 8px 7px;
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        text-align: center;
+        white-space: nowrap;
+        font-size: .78rem;
+      }
+
+      .three-table th {
+        color: var(--muted, #aaa);
+        font-size: .7rem;
+        text-transform: uppercase;
+      }
+
+      .three-table td.three-team {
+        max-width: 190px;
+        text-align: left;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        font-weight: 700;
+      }
+
+      .three-table td.three-final-place {
+        font-size: 1rem;
+        font-weight: 900;
+        color: var(--accent, #f6c34c);
+      }
+
+      .three-top5-fish {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        min-width: 170px;
+      }
+
+      .three-fish-pill {
+        display: inline-flex;
+        padding: 3px 6px;
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 999px;
+        background: rgba(255,255,255,.04);
+        font-size: .7rem;
+      }
+
+      .three-empty {
+        padding: 12px;
+        color: var(--muted, #aaa);
+        text-align: center;
+      }
+
+      @media (max-width: 900px) {
+        .three-result-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .three-result-card {
+          padding: 10px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .three-tables-heading {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .three-table th,
+        .three-table td {
+          padding: 7px 6px;
+          font-size: .72rem;
+        }
+
+        .three-table th {
+          font-size: .64rem;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  function ensureThreeTablesUI() {
+    injectThreeTablesStyles();
+
+    threeTablesSection =
+      document.getElementById(
+        "threeTablesSection"
+      );
+
+    threeTablesContainer =
+      document.getElementById(
+        "threeTablesContainer"
+      );
+
+    if (
+      threeTablesSection &&
+      threeTablesContainer
+    ) {
+      return;
+    }
+
+    threeTablesSection =
+      document.createElement("section");
+
+    threeTablesSection.id =
+      "threeTablesSection";
+
+    threeTablesSection.className =
+      "three-tables-section card";
+
+    threeTablesSection.innerHTML = `
+      <div class="three-tables-heading">
+        <h2>Три таблиці</h2>
+        <span class="badge badge--warn">
+          Одиночне змагання
+        </span>
+      </div>
+
+      <div id="threeTablesContainer">
+        <div class="three-empty">
+          Очікую дані…
+        </div>
+      </div>
+    `;
+
+    threeTablesContainer =
+      threeTablesSection.querySelector(
+        "#threeTablesContainer"
+      );
+
+    /*
+     * Ставимо блок після зон.
+     * Якщо zonesContainer має батьківський блок —
+     * вставляємо після нього.
+     */
+    const anchor =
+      zonesWrap?.parentElement ||
+      zonesWrap ||
+      contentEl;
+
+    if (anchor?.parentElement) {
+      anchor.parentElement.insertBefore(
+        threeTablesSection,
+        anchor.nextSibling
+      );
+    } else if (contentEl) {
+      contentEl.appendChild(
+        threeTablesSection
+      );
+    } else {
+      document.body.appendChild(
+        threeTablesSection
+      );
+    }
+  }
+
+  function applyFormatVisibility() {
+    ensureThreeTablesUI();
+
+    if (isThreeTablesFormat()) {
+      threeTablesSection?.classList.add(
+        "is-visible"
+      );
+
+      /*
+       * У форматі 3tables окремий фінальний
+       * Короп/Амур не потрібен, бо є власний Big Fish.
+       */
+      if (finalBigFishBox) {
+        finalBigFishBox.style.display =
+          "none";
+      }
+    } else {
+      threeTablesSection?.classList.remove(
+        "is-visible"
+      );
+
+      if (threeTablesContainer) {
+        threeTablesContainer.innerHTML = "";
+      }
+
+      if (finalBigFishBox) {
+        finalBigFishBox.style.display = "";
+      }
+    }
+  }
+
+  function renderTop5Pills(fishArr) {
+    const fish = Array.isArray(fishArr)
+      ? fishArr
+      : [];
+
+    if (!fish.length) {
+      return `<span>—</span>`;
+    }
+
+    return `
+      <div class="three-top5-fish">
+        ${fish.map((kg, index) => `
+          <span class="three-fish-pill">
+            ${index + 1}: ${esc(kgShort(kg))}
+          </span>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderThreeCriterionTable(
+    title,
+    rows,
+    type
+  ) {
+    const list = Array.isArray(rows)
+      ? rows
+      : [];
+
+    if (!list.length) {
+      return `
+        <div class="three-result-card">
+          <h4>${esc(title)}</h4>
+          <div class="three-empty">
+            Немає команд
+          </div>
+        </div>
+      `;
+    }
+
+    let head = "";
+    let body = "";
+
+    if (type === "total") {
+      head = `
+        <tr>
+          <th>Місце</th>
+          <th>Сектор</th>
+          <th>Команда</th>
+          <th>Риб</th>
+          <th>Вага</th>
+          <th>Бал</th>
+        </tr>
+      `;
+
+      body = list.map(row => `
+        <tr>
+          <td>${esc(row.totalPlace)}</td>
+          <td>${esc(row.zoneLabel)}</td>
+          <td class="three-team">
+            ${esc(row.teamName)}
+          </td>
+          <td>${esc(row.fishCount)}</td>
+          <td>${esc(kgShort(row.totalWeight))}</td>
+          <td>${esc(row.totalPoints)}</td>
+        </tr>
+      `).join("");
+    }
+
+    if (type === "top5") {
+      head = `
+        <tr>
+          <th>Місце</th>
+          <th>Сектор</th>
+          <th>Команда</th>
+          <th>5 риб</th>
+          <th>К-сть</th>
+          <th>Вага</th>
+          <th>Бал</th>
+        </tr>
+      `;
+
+      body = list.map(row => `
+        <tr>
+          <td>${esc(row.top5Place)}</td>
+          <td>${esc(row.zoneLabel)}</td>
+          <td class="three-team">
+            ${esc(row.teamName)}
+          </td>
+          <td>
+            ${renderTop5Pills(row.top5Fish)}
+          </td>
+          <td>${esc(row.top5Count)}</td>
+          <td>${esc(kgShort(row.top5Weight))}</td>
+          <td>${esc(row.top5Points)}</td>
+        </tr>
+      `).join("");
+    }
+
+    if (type === "bigfish") {
+      head = `
+        <tr>
+          <th>Місце</th>
+          <th>Сектор</th>
+          <th>Команда</th>
+          <th>Big Fish</th>
+          <th>Бал</th>
+        </tr>
+      `;
+
+      body = list.map(row => `
+        <tr>
+          <td>${esc(row.bigFishPlace)}</td>
+          <td>${esc(row.zoneLabel)}</td>
+          <td class="three-team">
+            ${esc(row.teamName)}
+          </td>
+          <td>${esc(kgShort(row.bigFish))}</td>
+          <td>${esc(row.bigFishPoints)}</td>
+        </tr>
+      `).join("");
+    }
+
+    return `
+      <div class="three-result-card">
+        <h4>${esc(title)}</h4>
+
+        <div class="three-table-scroll">
+          <table class="three-table">
+            <thead>${head}</thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderThreeFinalTable(rows) {
+    const list = Array.isArray(rows)
+      ? rows
+      : [];
+
+    if (!list.length) {
+      return `
+        <div class="three-result-card">
+          <h4>Підсумок</h4>
+          <div class="three-empty">
+            Немає команд
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="three-result-card">
+        <h4>Підсумкова таблиця</h4>
+
+        <div class="three-table-scroll">
+          <table class="three-table three-table--final">
+            <thead>
+              <tr>
+                <th>Місце</th>
+                <th>Сектор</th>
+                <th>Команда</th>
+
+                <th>Загальна вага</th>
+                <th>Бал</th>
+
+                <th>5 великих</th>
+                <th>Вага 5</th>
+                <th>Бал</th>
+
+                <th>Big Fish</th>
+                <th>Бал</th>
+
+                <th>Сума балів</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${list.map(row => `
+                <tr>
+                  <td class="three-final-place">
+                    ${esc(row.finalPlace)}
+                  </td>
+
+                  <td>${esc(row.zoneLabel)}</td>
+
+                  <td class="three-team">
+                    ${esc(row.teamName)}
+                  </td>
+
+                  <td>
+                    ${esc(kgShort(row.totalWeight))}
+                  </td>
+
+                  <td>
+                    ${esc(row.totalPoints)}
+                  </td>
+
+                  <td>
+                    ${renderTop5Pills(row.top5Fish)}
+                  </td>
+
+                  <td>
+                    ${esc(kgShort(row.top5Weight))}
+                  </td>
+
+                  <td>
+                    ${esc(row.top5Points)}
+                  </td>
+
+                  <td>
+                    ${esc(kgShort(row.bigFish))}
+                  </td>
+
+                  <td>
+                    ${esc(row.bigFishPoints)}
+                  </td>
+
+                  <td>
+                    <strong>
+                      ${esc(row.pointsSum)}
+                    </strong>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderThreeTables() {
+    applyFormatVisibility();
+
+    if (!isThreeTablesFormat()) {
+      return;
+    }
+
+    ensureThreeTablesUI();
+
+    if (
+      !window.SCThreeTables ||
+      typeof window.SCThreeTables.build !==
+        "function"
+    ) {
+      threeTablesContainer.innerHTML = `
+        <div class="three-empty">
+          Не завантажено
+          assets/js/live-3tables.js
+        </div>
+      `;
+
+      console.error(
+        "SCThreeTables.build не знайдено. " +
+        "Підключи live-3tables.js перед live_firebase.js."
+      );
+
+      return;
+    }
+
+    try {
+      /*
+       * Спочатку рахуємо весь результат.
+       * Лише після завершення будуємо HTML.
+       */
+      const result =
+        window.SCThreeTables.build(
+          regRows,
+          allWeighDocs
+        );
+
+      const zoneNames = ["A", "B", "C"];
+
+      const html = zoneNames
+        .map(zoneName => {
+          const zone =
+            result?.zones?.[zoneName];
+
+          if (
+            !zone ||
+            !zone.teamsCount
+          ) {
+            return `
+              <section class="three-zone-result">
+                <div class="three-zone-header">
+                  <h3>Зона ${zoneName}</h3>
+                  <span class="badge">
+                    немає команд
+                  </span>
+                </div>
+              </section>
+            `;
+          }
+
+          return `
+            <section class="three-zone-result">
+              <div class="three-zone-header">
+                <h3>Зона ${zoneName}</h3>
+
+                <span class="badge badge--warn">
+                  команд: ${esc(zone.teamsCount)}
+                </span>
+              </div>
+
+              <div class="three-result-grid">
+                ${renderThreeCriterionTable(
+                  "Загальна вага",
+                  zone.totalTable,
+                  "total"
+                )}
+
+                ${renderThreeCriterionTable(
+                  "5 великих",
+                  zone.top5Table,
+                  "top5"
+                )}
+
+                ${renderThreeCriterionTable(
+                  "Big Fish",
+                  zone.bigFishTable,
+                  "bigfish"
+                )}
+              </div>
+
+              ${renderThreeFinalTable(
+                zone.finalTable
+              )}
+            </section>
+          `;
+        })
+        .join("");
+
+      threeTablesContainer.innerHTML =
+        html || `
+          <div class="three-empty">
+            Очікую команди та зважування…
+          </div>
+        `;
+    } catch (error) {
+      console.error(
+        "renderThreeTables error:",
+        error
+      );
+
+      threeTablesContainer.innerHTML = `
+        <div class="three-empty">
+          Помилка розрахунку трьох таблиць.
+        </div>
+      `;
+    }
+  }
+
+  const renderThreeTablesDebounced =
+    debounce(renderThreeTables, 70);
+
+  /* ============================================================
+     CLASSIC ZONES
+     ============================================================ */
+
+  function buildZonesAuto(
+    regRowsArg,
+    weighDocs
+  ) {
+    const zones = {
+      A: [],
+      B: [],
+      C: []
+    };
+
     const byTeam = new Map();
 
-    (weighDocs || []).forEach((d) => {
-      const teamId = d.teamId || "";
+    (weighDocs || []).forEach(doc => {
+      const teamId =
+        doc.teamId || "";
+
       if (!teamId) return;
 
-      const no = Number(d.weighNo);
-      if (!(no >= 1 && no <= 4)) return;
+      const weighNo =
+        Number(doc.weighNo);
+
+      if (
+        weighNo < 1 ||
+        weighNo > 4
+      ) {
+        return;
+      }
 
       if (!byTeam.has(teamId)) {
         byTeam.set(teamId, {
-          has: { 1: false, 2: false, 3: false, 4: false },
-          w: { 1: [], 2: [], 3: [], 4: [] }
+          has: {
+            1: false,
+            2: false,
+            3: false,
+            4: false
+          },
+
+          w: {
+            1: [],
+            2: [],
+            3: [],
+            4: []
+          }
         });
       }
 
-      const t = byTeam.get(teamId);
-      t.has[no] = true;
-      t.w[no] = normalizeFishArray(d.weights || []);
+      const team =
+        byTeam.get(teamId);
+
+      team.has[weighNo] = true;
+
+      team.w[weighNo] =
+        normalizeFishArray(
+          doc.weights || []
+        );
     });
 
-    (regRowsArg || []).forEach((r) => {
-      const zoneLetter = (r.zoneLabel || "")[0]?.toUpperCase();
-      if (!["A", "B", "C"].includes(zoneLetter)) return;
+    (regRowsArg || []).forEach(row => {
+      const zoneLetter =
+        String(row.zoneLabel || "")[0]
+          ?.toUpperCase();
 
-      const t = byTeam.get(r.teamId) || {
-        has: { 1: false, 2: false, 3: false, 4: false },
-        w: { 1: [], 2: [], 3: [], 4: [] }
-      };
+      if (
+        !["A", "B", "C"].includes(
+          zoneLetter
+        )
+      ) {
+        return;
+      }
+
+      const team =
+        byTeam.get(row.teamId) || {
+          has: {
+            1: false,
+            2: false,
+            3: false,
+            4: false
+          },
+
+          w: {
+            1: [],
+            2: [],
+            3: [],
+            4: []
+          }
+        };
 
       let totalCount = 0;
       let totalWeight = 0;
       let bigFish = 0;
 
-      [1, 2, 3, 4].forEach((n) => {
-        if (!t.has[n]) return;
+      [1, 2, 3, 4].forEach(number => {
+        if (!team.has[number]) return;
 
-        const arr = t.w[n] || [];
+        const arr =
+          team.w[number] || [];
+
         totalCount += arr.length;
 
-        const sum = arr.reduce((a, f) => a + Number(f.kg || 0), 0);
+        const sum = arr.reduce(
+          (total, fish) =>
+            total +
+            Number(fish.kg || 0),
+          0
+        );
+
         totalWeight += sum;
 
-        arr.forEach((f) => {
-          bigFish = Math.max(bigFish, Number(f.kg || 0));
+        arr.forEach(fish => {
+          bigFish = Math.max(
+            bigFish,
+            Number(fish.kg || 0)
+          );
         });
       });
 
       zones[zoneLetter].push({
-        zoneLabel: r.zoneLabel,
-        team: r.teamName,
-        w1: wCell(t.has[1], t.w[1]),
-        w2: wCell(t.has[2], t.w[2]),
-        w3: wCell(t.has[3], t.w[3]),
-        w4: wCell(t.has[4], t.w[4]),
+        zoneLabel: row.zoneLabel,
+        team: row.teamName,
+
+        w1: wCell(
+          team.has[1],
+          team.w[1]
+        ),
+
+        w2: wCell(
+          team.has[2],
+          team.w[2]
+        ),
+
+        w3: wCell(
+          team.has[3],
+          team.w[3]
+        ),
+
+        w4: wCell(
+          team.has[4],
+          team.w[4]
+        ),
+
         total: totalCount,
-        big: bigFish ? kgShort(bigFish) : "—",
-        weight: totalWeight ? kgShort(totalWeight) : "—",
+
+        big: bigFish
+          ? kgShort(bigFish)
+          : "—",
+
+        weight: totalWeight
+          ? kgShort(totalWeight)
+          : "—",
+
         _tw: totalWeight,
         _bf: bigFish,
         _tc: totalCount
       });
     });
 
-    ["A", "B", "C"].forEach((z) => {
-      zones[z].sort((a, b) => {
-        if (b._tw !== a._tw) return b._tw - a._tw;
-        if (b._bf !== a._bf) return b._bf - a._bf;
+    ["A", "B", "C"].forEach(zone => {
+      zones[zone].sort((a, b) => {
+        if (b._tw !== a._tw) {
+          return b._tw - a._tw;
+        }
+
+        if (b._bf !== a._bf) {
+          return b._bf - a._bf;
+        }
+
         return b._tc - a._tc;
       });
-      zones[z].forEach((r, i) => (r.place = i + 1));
+
+      zones[zone].forEach(
+        (row, index) => {
+          row.place = index + 1;
+        }
+      );
     });
 
     return zones;
   }
 
-  function fmtW(w) {
-    if (w === null || w === undefined || w === "") return "—";
-    if (typeof w === "string") return w;
-    if (typeof w === "number") return String(w);
+  function fmtW(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return "—";
+    }
 
-    const c = w.count ?? w.c ?? w.qty ?? "";
-    const kg = w.weight ?? w.kg ?? w.w ?? "";
+    if (typeof value === "string") {
+      return value;
+    }
 
-    if (c === "" && kg === "") return "—";
-    return `${fmt(c)} / ${fmt(kg)}`;
+    if (typeof value === "number") {
+      return String(value);
+    }
+
+    const count =
+      value.count ??
+      value.c ??
+      value.qty ??
+      "";
+
+    const kg =
+      value.weight ??
+      value.kg ??
+      value.w ??
+      "";
+
+    if (
+      count === "" &&
+      kg === ""
+    ) {
+      return "—";
+    }
+
+    return `${fmt(count)} / ${fmt(kg)}`;
   }
 
-  function normZoneItem(x) {
-    const zoneRaw = x.zone ?? x.drawZone ?? "";
-    const sector = x.drawSector ?? x.sector ?? null;
-    const drawKey = x.drawKey || "";
+  function normZoneItem(item) {
+    const zoneRaw =
+      item.zone ??
+      item.drawZone ??
+      "";
 
-    let zoneLabel = x.zoneLabel || "";
+    const sector =
+      item.drawSector ??
+      item.sector ??
+      null;
+
+    const drawKey =
+      item.drawKey || "";
+
+    let zoneLabel =
+      item.zoneLabel || "";
+
     if (!zoneLabel) {
-      if (drawKey) zoneLabel = String(drawKey);
-      else if (zoneRaw && sector) zoneLabel = `${zoneRaw}${sector}`;
-      else zoneLabel = zoneRaw || "—";
+      if (drawKey) {
+        zoneLabel =
+          String(drawKey);
+      } else if (
+        zoneRaw &&
+        sector
+      ) {
+        zoneLabel =
+          `${zoneRaw}${sector}`;
+      } else {
+        zoneLabel =
+          zoneRaw || "—";
+      }
     }
 
     return {
       zoneLabel,
-      team: x.team ?? x.teamName ?? "—",
-      w1: x.w1 ?? x.W1 ?? null,
-      w2: x.w2 ?? x.W2 ?? null,
-      w3: x.w3 ?? x.W3 ?? null,
-      w4: x.w4 ?? x.W4 ?? null,
-      total: x.total ?? x.sum ?? null,
-      big: x.big ?? x.BIG ?? x.bigFish ?? "—",
-      weight: x.weight ?? x.totalWeight ?? (x.total?.weight ?? "") ?? "—",
-      place: x.place ?? x.p ?? "—"
+
+      team:
+        item.team ??
+        item.teamName ??
+        "—",
+
+      w1:
+        item.w1 ??
+        item.W1 ??
+        null,
+
+      w2:
+        item.w2 ??
+        item.W2 ??
+        null,
+
+      w3:
+        item.w3 ??
+        item.W3 ??
+        null,
+
+      w4:
+        item.w4 ??
+        item.W4 ??
+        null,
+
+      total:
+        item.total ??
+        item.sum ??
+        null,
+
+      big:
+        item.big ??
+        item.BIG ??
+        item.bigFish ??
+        "—",
+
+      weight:
+        item.weight ??
+        item.totalWeight ??
+        item.total?.weight ??
+        "—",
+
+      place:
+        item.place ??
+        item.p ??
+        "—"
     };
   }
 
-  function renderZones(zonesData, teamsRaw) {
+  function renderZones(
+    zonesData,
+    teamsRaw
+  ) {
     if (!zonesWrap) return;
 
-    const zoneNames = ["A", "B", "C"];
-    let useZones = zonesData || {};
+    const zoneNames = [
+      "A",
+      "B",
+      "C"
+    ];
+
+    let useZones =
+      zonesData || {};
 
     const hasZoneData =
-      (useZones.A && useZones.A.length) ||
-      (useZones.B && useZones.B.length) ||
-      (useZones.C && useZones.C.length);
+      (
+        useZones.A &&
+        useZones.A.length
+      ) ||
+      (
+        useZones.B &&
+        useZones.B.length
+      ) ||
+      (
+        useZones.C &&
+        useZones.C.length
+      );
 
-    if (!hasZoneData && Array.isArray(teamsRaw) && teamsRaw.length) {
-      const fb = { A: [], B: [], C: [] };
+    if (
+      !hasZoneData &&
+      Array.isArray(teamsRaw) &&
+      teamsRaw.length
+    ) {
+      const fallback = {
+        A: [],
+        B: [],
+        C: []
+      };
 
-      teamsRaw.forEach((t) => {
-        const drawKey = (t.drawKey || "").toString().toUpperCase();
-        const zone = (t.drawZone || t.zone || (drawKey ? drawKey[0] : "") || "").toUpperCase();
-        const sector = t.drawSector || t.sector || (drawKey ? parseInt(drawKey.slice(1), 10) : null);
+      teamsRaw.forEach(team => {
+        const drawKey =
+          String(team.drawKey || "")
+            .toUpperCase();
 
-        if (!["A", "B", "C"].includes(zone)) return;
+        const zone = String(
+          team.drawZone ||
+          team.zone ||
+          (
+            drawKey
+              ? drawKey[0]
+              : ""
+          ) ||
+          ""
+        ).toUpperCase();
 
-        fb[zone].push({
-          teamName: t.teamName || t.team || "—",
+        const sector =
+          team.drawSector ||
+          team.sector ||
+          (
+            drawKey
+              ? parseInt(
+                  drawKey.slice(1),
+                  10
+                )
+              : null
+          );
+
+        if (
+          !["A", "B", "C"].includes(
+            zone
+          )
+        ) {
+          return;
+        }
+
+        fallback[zone].push({
+          teamName:
+            team.teamName ||
+            team.team ||
+            "—",
+
           zone,
           drawZone: zone,
           drawSector: sector,
           drawKey,
+
           place: "—",
           w1: null,
           w2: null,
@@ -288,69 +1323,104 @@
         });
       });
 
-      useZones = fb;
+      useZones = fallback;
     }
 
-    zonesWrap.innerHTML = zoneNames.map((z) => {
-      const listRaw = (useZones && useZones[z]) ? useZones[z] : [];
-      const list = listRaw.map(normZoneItem);
+    zonesWrap.innerHTML =
+      zoneNames.map(zone => {
+        const rawList =
+          useZones?.[zone] || [];
 
-      if (!list.length) {
+        const list =
+          rawList.map(normZoneItem);
+
+        if (!list.length) {
+          return `
+            <div class="live-zone card">
+              <div class="live-zone-title">
+                <h3 style="margin:0;">
+                  Зона ${zone}
+                </h3>
+
+                <span class="badge">
+                  немає даних
+                </span>
+              </div>
+
+              <p class="form__hint">...</p>
+            </div>
+          `;
+        }
+
+        const rowsHtml =
+          list.map(row => `
+            <tr>
+              <td>${esc(fmt(row.zoneLabel))}</td>
+
+              <td class="team-col">
+                ${esc(fmt(row.team))}
+              </td>
+
+              <td>${esc(fmtW(row.w1))}</td>
+              <td>${esc(fmtW(row.w2))}</td>
+              <td>${esc(fmtW(row.w3))}</td>
+              <td>${esc(fmtW(row.w4))}</td>
+              <td>${esc(fmtW(row.total))}</td>
+              <td>${esc(fmt(row.big))}</td>
+              <td>${esc(fmt(row.weight))}</td>
+              <td>${esc(fmt(row.place))}</td>
+            </tr>
+          `).join("");
+
         return `
           <div class="live-zone card">
             <div class="live-zone-title">
-              <h3 style="margin:0;">Зона ${z}</h3>
-              <span class="badge">немає даних</span>
+              <h3 style="margin:0;">
+                Зона ${zone}
+              </h3>
+
+              <span class="badge badge--warn">
+                команд: ${list.length}
+              </span>
             </div>
-            <p class="form__hint">...</p>
+
+            <div
+              class="table-wrap"
+              style="
+                overflow-x:auto;
+                max-width:100%;
+                -webkit-overflow-scrolling:touch;
+              "
+            >
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Зона</th>
+                    <th>Команда</th>
+                    <th>W1</th>
+                    <th>W2</th>
+                    <th>W3</th>
+                    <th>W4</th>
+                    <th>Разом</th>
+                    <th>BIG</th>
+                    <th>Вага</th>
+                    <th>Місце</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
           </div>
         `;
-      }
-
-      const rowsHtml = list.map((row) => `
-        <tr>
-          <td>${fmt(row.zoneLabel)}</td>
-          <td class="team-col">${fmt(row.team)}</td>
-          <td>${fmtW(row.w1)}</td>
-          <td>${fmtW(row.w2)}</td>
-          <td>${fmtW(row.w3)}</td>
-          <td>${fmtW(row.w4)}</td>
-          <td>${fmtW(row.total)}</td>
-          <td>${fmt(row.big)}</td>
-          <td>${fmt(row.weight)}</td>
-          <td>${fmt(row.place)}</td>
-        </tr>
-      `).join("");
-
-      return `
-        <div class="live-zone card">
-          <div class="live-zone-title">
-            <h3 style="margin:0;">Зона ${z}</h3>
-            <span class="badge badge--warn">команд: ${list.length}</span>
-          </div>
-          <div class="table-wrap" style="overflow-x:auto; max-width:100%; -webkit-overflow-scrolling:touch;">
-            <table class="table table-sm">
-              <thead>
-                <tr>
-                  <th>Зона</th>
-                  <th>Команда</th>
-                  <th>W1</th>
-                  <th>W2</th>
-                  <th>W3</th>
-                  <th>W4</th>
-                  <th>Разом</th>
-                  <th>BIG</th>
-                  <th>Вага</th>
-                  <th>Місце</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }).join("");
+      }).join("");
   }
+
+  /* ============================================================
+     STATE
+     ============================================================ */
 
   let activeCompId = "";
   let activeStageId = "";
@@ -362,12 +1432,20 @@
   let regRows = [];
   let weighByTeam = new Map();
 
+  let allWeighDocs = [];
+  let needAutoZones = false;
+
+  let currentStageTeamsRaw = [];
+  let currentStageZonesData = {
+    A: [],
+    B: [],
+    C: []
+  };
+
   let unsubWeigh = null;
   let unsubAllWeigh = null;
   let unsubStage = null;
-
-  let allWeighDocs = [];
-  let needAutoZones = false;
+  let unsubCompetition = null;
 
   function stopWeighSubs() {
     if (unsubWeigh) {
@@ -388,49 +1466,152 @@
     }
   }
 
-  function parseZoneKey(drawKey, drawZone, drawSector) {
-    const z = (drawZone || (drawKey ? String(drawKey)[0] : "") || "").toUpperCase();
-    const n = Number(drawSector || (drawKey ? parseInt(String(drawKey).slice(1), 10) : 0) || 0);
-    const label = drawKey ? String(drawKey).toUpperCase() : (z && n ? `${z}${n}` : (z || "—"));
-    const zoneOrder = z === "A" ? 1 : z === "B" ? 2 : z === "C" ? 3 : 9;
-    const sortKey = zoneOrder * 100 + (isFinite(n) ? n : 99);
-
-    return { label, sortKey };
+  function stopCompetitionSub() {
+    if (unsubCompetition) {
+      unsubCompetition();
+      unsubCompetition = null;
+    }
   }
 
-  function buildRegRowsFromStageTeams(teamsRaw) {
+  function parseZoneKey(
+    drawKey,
+    drawZone,
+    drawSector
+  ) {
+    const zone = String(
+      drawZone ||
+      (
+        drawKey
+          ? String(drawKey)[0]
+          : ""
+      ) ||
+      ""
+    ).toUpperCase();
+
+    const sector = Number(
+      drawSector ||
+      (
+        drawKey
+          ? parseInt(
+              String(drawKey).slice(1),
+              10
+            )
+          : 0
+      ) ||
+      0
+    );
+
+    const label = drawKey
+      ? String(drawKey).toUpperCase()
+      : zone && sector
+        ? `${zone}${sector}`
+        : zone || "—";
+
+    const zoneOrder =
+      zone === "A"
+        ? 1
+        : zone === "B"
+          ? 2
+          : zone === "C"
+            ? 3
+            : 9;
+
+    const sortKey =
+      zoneOrder * 100 +
+      (
+        Number.isFinite(sector)
+          ? sector
+          : 99
+      );
+
+    return {
+      label,
+      sortKey,
+      zone,
+      sector
+    };
+  }
+
+  function buildRegRowsFromStageTeams(
+    teamsRaw
+  ) {
     const rows = [];
 
-    (teamsRaw || []).forEach((t) => {
-      const teamId = String(t.teamId || "").trim();
+    (teamsRaw || []).forEach(team => {
+      const teamId =
+        String(team.teamId || "")
+          .trim();
+
       if (!teamId) return;
 
-      const hasDraw = !!(t.drawKey || t.drawZone || t.drawSector);
+      const hasDraw = Boolean(
+        team.drawKey ||
+        team.drawZone ||
+        team.drawSector ||
+        team.zone ||
+        team.sector
+      );
+
       if (!hasDraw) return;
 
-      const z = parseZoneKey(t.drawKey, t.drawZone, t.drawSector);
+      const parsed =
+        parseZoneKey(
+          team.drawKey,
+          team.drawZone || team.zone,
+          team.drawSector || team.sector
+        );
 
       rows.push({
-        zoneLabel: z.label,
-        sortKey: z.sortKey,
+        zoneLabel: parsed.label,
+        sortKey: parsed.sortKey,
+        zone: parsed.zone,
+        sector: parsed.sector,
+        drawKey: parsed.label,
+
         teamId,
-        teamName: t.teamName || t.team || "—"
+
+        teamName:
+          team.teamName ||
+          team.team ||
+          "—"
       });
     });
 
-    rows.sort((a, b) => a.sortKey - b.sortKey);
+    rows.sort(
+      (a, b) =>
+        a.sortKey - b.sortKey
+    );
+
     return rows;
   }
+
+  /* ============================================================
+     FINAL BIG FISH CLASSIC
+     ============================================================ */
 
   function renderFinalBigFishTables() {
     if (!finalBigFishBox) return;
 
-    const teamIds = new Set(regRows.map(r => r.teamId));
+    if (isThreeTablesFormat()) {
+      finalBigFishBox.style.display =
+        "none";
+
+      return;
+    }
+
+    finalBigFishBox.style.display = "";
+
+    const teamIds = new Set(
+      regRows.map(row => row.teamId)
+    );
 
     if (!teamIds.size) {
       finalBigFishBox.innerHTML = `
-        <div class="muted">Очікую список команд…</div>
+        <div class="muted">
+          Очікую список команд…
+        </div>
       `;
+
       return;
     }
 
@@ -438,82 +1619,164 @@
     const bigCarp = [];
     const bigAmur = [];
 
-    (allWeighDocs || []).forEach(d => {
-      const teamId = String(d.teamId || "");
-      if (!teamIds.has(teamId)) return;
+    (allWeighDocs || []).forEach(doc => {
+      const teamId =
+        String(doc.teamId || "");
 
-      if (Number(d.weighNo) === 4) {
+      if (!teamIds.has(teamId)) {
+        return;
+      }
+
+      if (Number(doc.weighNo) === 4) {
         w4Done.add(teamId);
       }
 
-      const team = regRows.find(r => r.teamId === teamId);
-      const fish = normalizeFishArray(d.weights || []);
+      const team =
+        regRows.find(
+          row => row.teamId === teamId
+        );
 
-      fish.forEach(f => {
+      const fish =
+        normalizeFishArray(
+          doc.weights || []
+        );
+
+      fish.forEach(item => {
         const row = {
-          teamName: team?.teamName || d.teamName || "—",
-          zoneLabel: team?.zoneLabel || d.zone || "—",
-          kg: Number(f.kg || 0)
+          teamName:
+            team?.teamName ||
+            doc.teamName ||
+            "—",
+
+          zoneLabel:
+            team?.zoneLabel ||
+            doc.zone ||
+            "—",
+
+          kg:
+            Number(item.kg || 0)
         };
 
-        if (f.fishType === "amur" || f.isAmur === true) {
+        if (
+          item.fishType === "amur" ||
+          item.isAmur === true
+        ) {
           bigAmur.push(row);
-        } else if (f.fishType === "carp") {
+        } else {
           bigCarp.push(row);
         }
       });
     });
 
-    if (w4Done.size < teamIds.size) {
+    if (
+      w4Done.size <
+      teamIds.size
+    ) {
       finalBigFishBox.innerHTML = `
         <div class="muted">
-          Big Fish Короп / Амур зʼявиться після завершення W4.
-          Готово W4: ${w4Done.size}/${teamIds.size}
+          Big Fish Короп / Амур зʼявиться
+          після завершення W4.
+          Готово W4:
+          ${w4Done.size}/${teamIds.size}
         </div>
       `;
+
       return;
     }
 
-    const carpWinner = bigCarp.sort((a, b) => b.kg - a.kg)[0];
-    const amurWinner = bigAmur.sort((a, b) => b.kg - a.kg)[0];
+    const carpWinner =
+      bigCarp.sort(
+        (a, b) => b.kg - a.kg
+      )[0];
+
+    const amurWinner =
+      bigAmur.sort(
+        (a, b) => b.kg - a.kg
+      )[0];
 
     finalBigFishBox.innerHTML = `
       <div class="final-bigfish-line">
         <strong>Big Fish Короп</strong>
+
         <span>
-          ${carpWinner
-            ? `${fmt(carpWinner.zoneLabel)} · ${fmt(carpWinner.teamName)} · ${kgShort(carpWinner.kg)} кг`
-            : "немає даних"}
+          ${
+            carpWinner
+              ? `${esc(fmt(carpWinner.zoneLabel))} · ` +
+                `${esc(fmt(carpWinner.teamName))} · ` +
+                `${esc(kgShort(carpWinner.kg))} кг`
+              : "немає даних"
+          }
         </span>
       </div>
 
-      <div class="final-bigfish-line final-bigfish-line--amur">
+      <div
+        class="
+          final-bigfish-line
+          final-bigfish-line--amur
+        "
+      >
         <strong>Big Fish Амур</strong>
+
         <span>
-          ${amurWinner
-            ? `${fmt(amurWinner.zoneLabel)} · ${fmt(amurWinner.teamName)} · ${kgShort(amurWinner.kg)} кг`
-            : "немає даних"}
+          ${
+            amurWinner
+              ? `${esc(fmt(amurWinner.zoneLabel))} · ` +
+                `${esc(fmt(amurWinner.teamName))} · ` +
+                `${esc(kgShort(amurWinner.kg))} кг`
+              : "немає даних"
+          }
         </span>
       </div>
     `;
   }
 
-  function setWeighButtons(activeKey) {
-    const map = { W1: wBtn1, W2: wBtn2, W3: wBtn3, W4: wBtn4 };
+  /* ============================================================
+     W1-W4
+     ============================================================ */
 
-    Object.entries(map).forEach(([k, btn]) => {
-      if (!btn) return;
-      btn.classList.toggle("btn--accent", k === activeKey);
-      btn.classList.toggle("btn--ghost", k !== activeKey);
-    });
+  function setWeighButtons(activeKey) {
+    const map = {
+      W1: wBtn1,
+      W2: wBtn2,
+      W3: wBtn3,
+      W4: wBtn4
+    };
+
+    Object.entries(map).forEach(
+      ([key, button]) => {
+        if (!button) return;
+
+        button.classList.toggle(
+          "btn--accent",
+          key === activeKey
+        );
+
+        button.classList.toggle(
+          "btn--ghost",
+          key !== activeKey
+        );
+      }
+    );
   }
 
-  function setActiveWeigh(no) {
-    const n = Number(no);
-    currentWeighNo = (n >= 1 && n <= 4) ? n : 1;
-    currentWeighKey = `W${currentWeighNo}`;
-    setWeighButtons(currentWeighKey);
-    startWeighingsFor(currentWeighNo);
+  function setActiveWeigh(number) {
+    const parsed = Number(number);
+
+    currentWeighNo =
+      parsed >= 1 && parsed <= 4
+        ? parsed
+        : 1;
+
+    currentWeighKey =
+      `W${currentWeighNo}`;
+
+    setWeighButtons(
+      currentWeighKey
+    );
+
+    startWeighingsFor(
+      currentWeighNo
+    );
   }
 
   function renderWeighTable() {
@@ -528,46 +1791,83 @@
             <th>🐟1</th>
           </tr>
         </thead>
+
         <tbody>
-          <tr><td colspan="3">Очікую список команд…</td></tr>
+          <tr>
+            <td colspan="3">
+              Очікую список команд…
+            </td>
+          </tr>
         </tbody>
       `;
+
       return;
     }
 
-    const rows = regRows.map((r) => {
-      const weights = weighByTeam.get(r.teamId) || [];
-      const fish = normalizeFishArray(weights);
+    const rows = regRows.map(row => {
+      const weights =
+        weighByTeam.get(row.teamId) ||
+        [];
+
+      const fish =
+        normalizeFishArray(weights);
 
       return {
-        zoneLabel: r.zoneLabel,
-        teamName: r.teamName,
+        zoneLabel: row.zoneLabel,
+        teamName: row.teamName,
         fish
       };
     });
 
-    const maxFish = Math.max(1, ...rows.map((r) => r.fish.length));
+    const maxFish = Math.max(
+      1,
+      ...rows.map(row => row.fish.length)
+    );
 
-    const fishHeaders = Array.from({ length: maxFish }, (_, i) =>
-      `<th class="fish-th">🐟${i + 1}</th>`
-    ).join("");
+    const fishHeaders =
+      Array.from(
+        { length: maxFish },
+        (_, index) =>
+          `<th class="fish-th">🐟${index + 1}</th>`
+      ).join("");
 
-    const bodyHtml = rows.map((r) => {
-      const tds = [];
+    const bodyHtml =
+      rows.map(row => {
+        const cells = [];
 
-      for (let i = 0; i < maxFish; i++) {
-        const fish = r.fish[i];
-        tds.push(`<td class="fish-td">${fish ? fishCellHTML(fish) : "—"}</td>`);
-      }
+        for (
+          let index = 0;
+          index < maxFish;
+          index++
+        ) {
+          const fish =
+            row.fish[index];
 
-      return `
-        <tr>
-          <td>${fmt(r.zoneLabel)}</td>
-          <td class="team-col">${fmt(r.teamName)}</td>
-          ${tds.join("")}
-        </tr>
-      `;
-    }).join("");
+          cells.push(`
+            <td class="fish-td">
+              ${
+                fish
+                  ? fishCellHTML(fish)
+                  : "—"
+              }
+            </td>
+          `);
+        }
+
+        return `
+          <tr>
+            <td>
+              ${esc(fmt(row.zoneLabel))}
+            </td>
+
+            <td class="team-col">
+              ${esc(fmt(row.teamName))}
+            </td>
+
+            ${cells.join("")}
+          </tr>
+        `;
+      }).join("");
 
     weighTableEl.innerHTML = `
       <thead>
@@ -577,16 +1877,30 @@
           ${fishHeaders}
         </tr>
       </thead>
-      <tbody>${bodyHtml}</tbody>
+
+      <tbody>
+        ${bodyHtml}
+      </tbody>
     `;
   }
 
-  const renderZonesDebounced = debounce(renderZones, 70);
-  const renderWeighDebounced = debounce(renderWeighTable, 40);
+  const renderZonesDebounced =
+    debounce(renderZones, 70);
 
-  function startWeighingsFor(weighNo) {
+  const renderWeighDebounced =
+    debounce(renderWeighTable, 40);
+
+  function startWeighingsFor(
+    weighNo
+  ) {
     if (!db) return;
-    if (!activeCompId || !activeStageId) return;
+
+    if (
+      !activeCompId ||
+      !activeStageId
+    ) {
+      return;
+    }
 
     if (unsubWeigh) {
       unsubWeigh();
@@ -597,35 +1911,82 @@
 
     unsubWeigh = db
       .collection("weighings")
-      .where("compId", "==", activeCompId)
-      .where("stageId", "==", activeStageId)
-      .where("weighNo", "==", Number(weighNo))
-      .where("status", "==", "submitted")
-      .onSnapshot((qs) => {
-        const map = new Map();
+      .where(
+        "compId",
+        "==",
+        activeCompId
+      )
+      .where(
+        "stageId",
+        "==",
+        activeStageId
+      )
+      .where(
+        "weighNo",
+        "==",
+        Number(weighNo)
+      )
+      .where(
+        "status",
+        "==",
+        "submitted"
+      )
+      .onSnapshot(
+        snapshot => {
+          const map = new Map();
 
-        qs.forEach((doc) => {
-          const d = doc.data() || {};
-          const teamId = d.teamId || "";
-          const weights = normalizeFishArray(d.weights || []);
+          snapshot.forEach(docSnap => {
+            const data =
+              docSnap.data() || {};
 
-          if (teamId) map.set(teamId, weights);
-        });
+            const teamId =
+              data.teamId || "";
 
-        weighByTeam = map;
-        renderWeighDebounced();
-      }, (err) => {
-        console.error("weighings snapshot err:", err);
-      });
+            const weights =
+              normalizeFishArray(
+                data.weights || []
+              );
+
+            if (teamId) {
+              map.set(
+                teamId,
+                weights
+              );
+            }
+          });
+
+          weighByTeam = map;
+
+          renderWeighDebounced();
+        },
+        error => {
+          console.error(
+            "weighings snapshot error:",
+            error
+          );
+        }
+      );
 
     if (weighInfoEl) {
-      weighInfoEl.textContent = `${currentWeighKey} — список риб по секторам`;
+      weighInfoEl.textContent =
+        `${currentWeighKey} — ` +
+        `список риб по секторах`;
     }
   }
 
+  /* ============================================================
+     ALL WEIGHINGS
+     ============================================================ */
+
   function startAllWeighingsSubIfNeeded() {
     if (!db) return;
-    if (!activeCompId || !activeStageId) return;
+
+    if (
+      !activeCompId ||
+      !activeStageId
+    ) {
+      return;
+    }
 
     if (unsubAllWeigh) {
       unsubAllWeigh();
@@ -634,91 +1995,401 @@
 
     unsubAllWeigh = db
       .collection("weighings")
-      .where("compId", "==", activeCompId)
-      .where("stageId", "==", activeStageId)
-      .where("status", "==", "submitted")
-      .onSnapshot((qs) => {
-        const arr = [];
-        qs.forEach((doc) => arr.push(doc.data() || {}));
-        allWeighDocs = arr;
+      .where(
+        "compId",
+        "==",
+        activeCompId
+      )
+      .where(
+        "stageId",
+        "==",
+        activeStageId
+      )
+      .where(
+        "status",
+        "==",
+        "submitted"
+      )
+      .onSnapshot(
+        snapshot => {
+          const docs = [];
 
-        renderFinalBigFishTables();
+          snapshot.forEach(docSnap => {
+            docs.push({
+              _id: docSnap.id,
+              ...(docSnap.data() || {})
+            });
+          });
 
-        if (needAutoZones && regRows.length) {
-          renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), []);
+          allWeighDocs = docs;
+
+          renderFinalBigFishTables();
+
+          if (
+            needAutoZones &&
+            regRows.length
+          ) {
+            renderZonesDebounced(
+              buildZonesAuto(
+                regRows,
+                allWeighDocs
+              ),
+              []
+            );
+          }
+
+          /*
+           * Для 3tables:
+           * спочатку повний розрахунок,
+           * після цього готовий render.
+           */
+          renderThreeTablesDebounced();
+        },
+        error => {
+          console.error(
+            "all weighings snapshot error:",
+            error
+          );
         }
-      }, (err) => {
-        console.error("all weighings snapshot err:", err);
-      });
+      );
   }
+
+  /* ============================================================
+     STAGE RESULTS
+     ============================================================ */
 
   function startStageSub(docId) {
     stopStageSub();
 
     if (!docId) {
-      showError("Нема активного етапу (settings/app).");
+      showError(
+        "Нема активного етапу (settings/app)."
+      );
+
       return;
     }
 
-    unsubStage = db.collection("stageResults").doc(docId).onSnapshot(
-      (snap) => {
-        try {
-          if (!snap.exists) {
-            if (stageEl) stageEl.textContent = docId;
-            if (updatedEl) updatedEl.textContent = "";
-            showContent();
-            return;
-          }
+    unsubStage = db
+      .collection("stageResults")
+      .doc(docId)
+      .onSnapshot(
+        snapshot => {
+          try {
+            if (!snapshot.exists) {
+              if (stageEl) {
+                stageEl.textContent = docId;
+              }
 
-          const data = snap.data() || {};
+              if (updatedEl) {
+                updatedEl.textContent = "";
+              }
 
-          const stageName = data.stageName || data.stage || data.title || docId;
-          if (stageEl) stageEl.textContent = stageName;
+              regRows = [];
+              currentStageTeamsRaw = [];
+              currentStageZonesData = {
+                A: [],
+                B: [],
+                C: []
+              };
 
-          const updatedAt = data.updatedAt || data.updated || data.ts || null;
-          if (updatedEl) updatedEl.textContent = `Оновлено: ${fmtTs(updatedAt)}`;
+              renderWeighDebounced();
+              renderThreeTablesDebounced();
 
-          const zonesData = data.zones || { A: [], B: [], C: [] };
-          const teamsRaw = Array.isArray(data.teams) ? data.teams : [];
-
-          regRows = buildRegRowsFromStageTeams(teamsRaw);
-          renderFinalBigFishTables();
-          renderWeighDebounced();
-
-          const hasStageZones =
-            (zonesData.A && zonesData.A.length) ||
-            (zonesData.B && zonesData.B.length) ||
-            (zonesData.C && zonesData.C.length);
-
-          needAutoZones = !hasStageZones;
-
-          if (hasStageZones) {
-            renderZonesDebounced(zonesData, teamsRaw);
-          } else {
-            if (allWeighDocs.length) {
-              renderZonesDebounced(buildZonesAuto(regRows, allWeighDocs), teamsRaw);
-            } else {
-              renderZonesDebounced({ A: [], B: [], C: [] }, teamsRaw);
+              showContent();
+              return;
             }
-          }
 
-          startAllWeighingsSubIfNeeded();
-          showContent();
-        } catch (e) {
-          console.error("Render error in stageResults snapshot:", e);
-          showError("Помилка відображення даних Live.");
+            const data =
+              snapshot.data() || {};
+
+            const stageName =
+              data.stageName ||
+              data.stage ||
+              data.title ||
+              docId;
+
+            if (stageEl) {
+              stageEl.textContent =
+                stageName;
+            }
+
+            const updatedAt =
+              data.updatedAt ||
+              data.updated ||
+              data.ts ||
+              null;
+
+            if (updatedEl) {
+              updatedEl.textContent =
+                `Оновлено: ${fmtTs(updatedAt)}`;
+            }
+
+            const zonesData =
+              data.zones || {
+                A: [],
+                B: [],
+                C: []
+              };
+
+            const teamsRaw =
+              Array.isArray(data.teams)
+                ? data.teams
+                : [];
+
+            currentStageTeamsRaw =
+              teamsRaw;
+
+            currentStageZonesData =
+              zonesData;
+
+            regRows =
+              buildRegRowsFromStageTeams(
+                teamsRaw
+              );
+
+            renderFinalBigFishTables();
+            renderWeighDebounced();
+            renderThreeTablesDebounced();
+
+            const hasStageZones =
+              (
+                zonesData.A &&
+                zonesData.A.length
+              ) ||
+              (
+                zonesData.B &&
+                zonesData.B.length
+              ) ||
+              (
+                zonesData.C &&
+                zonesData.C.length
+              );
+
+            needAutoZones =
+              !hasStageZones;
+
+            if (hasStageZones) {
+              renderZonesDebounced(
+                zonesData,
+                teamsRaw
+              );
+            } else if (
+              allWeighDocs.length
+            ) {
+              renderZonesDebounced(
+                buildZonesAuto(
+                  regRows,
+                  allWeighDocs
+                ),
+                teamsRaw
+              );
+            } else {
+              renderZonesDebounced(
+                {
+                  A: [],
+                  B: [],
+                  C: []
+                },
+                teamsRaw
+              );
+            }
+
+            startAllWeighingsSubIfNeeded();
+            showContent();
+          } catch (error) {
+            console.error(
+              "stageResults render error:",
+              error
+            );
+
+            showError(
+              "Помилка відображення даних Live."
+            );
+          }
+        },
+        error => {
+          console.error(
+            "stageResults snapshot error:",
+            error
+          );
+
+          showError(
+            "Помилка читання Live (stageResults)."
+          );
         }
-      },
-      (err) => {
-        console.error(err);
-        showError("Помилка читання Live (stageResults).");
-      }
-    );
+      );
   }
 
+  /* ============================================================
+     COMPETITION FORMAT
+     ============================================================ */
+
+  function getEventFromCompetition(
+    competition
+  ) {
+    const events =
+      Array.isArray(competition?.events)
+        ? competition.events
+        : [];
+
+    if (!activeStageId) {
+      return null;
+    }
+
+    return events.find(event => {
+      const key = String(
+        event?.key ||
+        event?.stageId ||
+        event?.id ||
+        ""
+      );
+
+      return key === activeStageId;
+    }) || null;
+  }
+
+  function resolveCompetitionFormat(
+    competition
+  ) {
+    const event =
+      getEventFromCompetition(
+        competition
+      );
+
+    const rawFormat =
+      event?.format ||
+      event?.engine?.baseFormat ||
+      competition?.format ||
+      competition?.engine?.baseFormat ||
+      FORMAT_CLASSIC;
+
+    return normalizeFormat(rawFormat);
+  }
+
+  function startCompetitionSub(
+    compId
+  ) {
+    stopCompetitionSub();
+
+    if (!compId) {
+      activeFormat =
+        FORMAT_CLASSIC;
+
+      applyFormatVisibility();
+      renderFinalBigFishTables();
+
+      return;
+    }
+
+    unsubCompetition = db
+      .collection("competitions")
+      .doc(compId)
+      .onSnapshot(
+        snapshot => {
+          try {
+            const competition =
+              snapshot.exists
+                ? snapshot.data() || {}
+                : {};
+
+            const nextFormat =
+              resolveCompetitionFormat(
+                competition
+              );
+
+            const formatChanged =
+              nextFormat !== activeFormat;
+
+            activeFormat =
+              nextFormat;
+
+            applyFormatVisibility();
+
+            /*
+             * Якщо формат змінився:
+             * повторно перемальовуємо потрібні блоки.
+             */
+            if (formatChanged) {
+              console.info(
+                "Live format:",
+                activeFormat
+              );
+            }
+
+            renderFinalBigFishTables();
+            renderThreeTablesDebounced();
+
+            /*
+             * Classic-зони та W1-W4 лишаються
+             * доступними за замовчуванням.
+             */
+            renderWeighDebounced();
+
+            if (
+              needAutoZones &&
+              regRows.length
+            ) {
+              renderZonesDebounced(
+                buildZonesAuto(
+                  regRows,
+                  allWeighDocs
+                ),
+                []
+              );
+            } else {
+              renderZonesDebounced(
+                currentStageZonesData,
+                currentStageTeamsRaw
+              );
+            }
+          } catch (error) {
+            console.error(
+              "competition format error:",
+              error
+            );
+
+            /*
+             * При будь-якій помилці —
+             * безпечний fallback на classic.
+             */
+            activeFormat =
+              FORMAT_CLASSIC;
+
+            applyFormatVisibility();
+            renderFinalBigFishTables();
+          }
+        },
+        error => {
+          console.error(
+            "competition snapshot error:",
+            error
+          );
+
+          /*
+           * Якщо competitions читати не вдалося,
+           * Live не ламаємо — використовуємо classic.
+           */
+          activeFormat =
+            FORMAT_CLASSIC;
+
+          applyFormatVisibility();
+          renderFinalBigFishTables();
+        }
+      );
+  }
+
+  /* ============================================================
+     SETTINGS / APP
+     ============================================================ */
+
   function stageDocIdFromApp(app) {
-    const key = app?.activeKey || app?.activeStageResultsId;
-    if (key) return String(key);
+    const explicitKey =
+      app?.activeKey ||
+      app?.activeStageResultsId;
+
+    if (explicitKey) {
+      return String(explicitKey);
+    }
 
     const compId =
       app?.activeCompetitionId ||
@@ -731,7 +2402,10 @@
       app?.stageId ||
       "stage-1";
 
-    if (compId && stageId) return `${compId}__${stageId}`;
+    if (compId && stageId) {
+      return `${compId}__${stageId}`;
+    }
+
     return "";
   }
 
@@ -747,53 +2421,137 @@
       app?.stageId ||
       "stage-1";
 
-    activeCompId = String(compId || "");
-    activeStageId = String(stageId || "");
+    activeCompId =
+      String(compId || "");
+
+    activeStageId =
+      String(stageId || "");
   }
 
   if (!db) {
-    showError("Firebase init не завантажився.");
+    showError(
+      "Firebase init не завантажився."
+    );
+
     return;
   }
 
+  ensureThreeTablesUI();
+  applyFormatVisibility();
+
   let prevStageKey = "";
 
-  db.collection("settings").doc("app").onSnapshot(
-    (snap) => {
-      try {
-        const app = snap.exists ? (snap.data() || {}) : {};
+  db.collection("settings")
+    .doc("app")
+    .onSnapshot(
+      snapshot => {
+        try {
+          const app =
+            snapshot.exists
+              ? snapshot.data() || {}
+              : {};
 
-        readActiveIdsFromApp(app);
-        activeDocId = stageDocIdFromApp(app);
+          readActiveIdsFromApp(app);
 
-        const stageKey = `${activeCompId}||${activeStageId}`;
+          activeDocId =
+            stageDocIdFromApp(app);
 
-        if (stageKey !== prevStageKey) {
-          prevStageKey = stageKey;
+          const stageKey =
+            `${activeCompId}||${activeStageId}`;
 
-          allWeighDocs = [];
-          needAutoZones = false;
+          if (
+            stageKey !== prevStageKey
+          ) {
+            prevStageKey =
+              stageKey;
 
-          startStageSub(activeDocId);
+            allWeighDocs = [];
+            weighByTeam = new Map();
+            regRows = [];
 
-          stopWeighSubs();
-          setActiveWeigh(currentWeighNo);
+            currentStageTeamsRaw = [];
+            currentStageZonesData = {
+              A: [],
+              B: [],
+              C: []
+            };
+
+            needAutoZones = false;
+
+            /*
+             * Безпечний початковий режим.
+             * Після читання competitions
+             * формат буде уточнений.
+             */
+            activeFormat =
+              FORMAT_CLASSIC;
+
+            applyFormatVisibility();
+
+            stopWeighSubs();
+
+            startCompetitionSub(
+              activeCompId
+            );
+
+            startStageSub(
+              activeDocId
+            );
+
+            setActiveWeigh(
+              currentWeighNo
+            );
+          }
+        } catch (error) {
+          console.error(
+            "settings/app error:",
+            error
+          );
+
+          showError(
+            "Помилка читання settings/app."
+          );
         }
-      } catch (e) {
-        console.error("settings/app error:", e);
-        showError("Помилка читання settings/app.");
-      }
-    },
-    (err) => {
-      console.error(err);
-      showError("Помилка читання settings/app.");
-    }
-  );
+      },
+      error => {
+        console.error(
+          "settings/app snapshot error:",
+          error
+        );
 
-  if (wBtn1) wBtn1.addEventListener("click", () => setActiveWeigh(1));
-  if (wBtn2) wBtn2.addEventListener("click", () => setActiveWeigh(2));
-  if (wBtn3) wBtn3.addEventListener("click", () => setActiveWeigh(3));
-  if (wBtn4) wBtn4.addEventListener("click", () => setActiveWeigh(4));
+        showError(
+          "Помилка читання settings/app."
+        );
+      }
+    );
+
+  if (wBtn1) {
+    wBtn1.addEventListener(
+      "click",
+      () => setActiveWeigh(1)
+    );
+  }
+
+  if (wBtn2) {
+    wBtn2.addEventListener(
+      "click",
+      () => setActiveWeigh(2)
+    );
+  }
+
+  if (wBtn3) {
+    wBtn3.addEventListener(
+      "click",
+      () => setActiveWeigh(3)
+    );
+  }
+
+  if (wBtn4) {
+    wBtn4.addEventListener(
+      "click",
+      () => setActiveWeigh(4)
+    );
+  }
 
   setActiveWeigh(1);
 

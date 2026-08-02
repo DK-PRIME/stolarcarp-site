@@ -396,12 +396,13 @@
     style.id = styleId;
 
     style.textContent = `
-      .three-tables-section {
-        display: none;
-        width: 100%;
-        min-width: 0;
-        margin-top: 18px;
-      }
+     .three-tables-section {
+     display: none;
+     width: 100%;
+     min-width: 0;
+     margin-top: 18px;
+     margin-bottom: 22px;
+     }
 
       .three-tables-section.is-visible {
         display: block;
@@ -435,7 +436,7 @@
         width: 100%;
         min-width: 0;
         box-sizing: border-box;
-        margin-bottom: 12px;
+        margin-bottom: 9px;
         overflow: hidden;
       }
 

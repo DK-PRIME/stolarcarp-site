@@ -3,35 +3,33 @@
 //
 // ТАБЛИЦЯ 1 — ЗАГАЛЬНА ВАГА
 // - більша загальна вага = краще місце;
-// - команда без риби отримує ОСТАННЄ місце зони.
+// - якщо вага однакова — команди ділять місця;
+//   приклад: 5 і 6 місце -> по 5.5 бала;
+// - команда без риби йде в самий кінець.
 //
 // ТАБЛИЦЯ 2 — 5 ВЕЛИКИХ
 // - Big Fish НЕ входить у п'ятірку;
-// - після Big Fish беруться наступні 5 найбільших риб;
-// - результат у цій таблиці зараховується ТІЛЬКИ,
-//   якщо команда закрила всі 5 риб;
-// - незакрита п'ятірка отримує ОСТАННЄ місце зони.
+// - після Big Fish беруться максимум наступні 5 найбільших риб;
+// - НЕ ПОТРІБНО чекати, поки команда закриє всі 5 риб;
+// - якщо є хоча б одна риба в цій таблиці,
+//   її поточна вага вже бере участь у рейтингу;
+// - більша поточна вага = краще місце;
+// - однакова вага = спільне середнє місце;
+// - немає жодної риби в "5 великих" = останні місця.
 //
 // ТАБЛИЦЯ 3 — BIG FISH
-// - більша найбільша риба = краще місце;
-// - команда без риби отримує ОСТАННЄ місце зони.
+// - більший Big Fish = краще місце;
+// - однаковий Big Fish = спільне середнє місце;
+// - немає Big Fish = останні місця.
 //
-// Приклад:
-// якщо в зоні 7 команд:
-// - немає загальної ваги -> 7 балів;
-// - не закрито 5 великих -> 7 балів;
-// - немає Big Fish -> 7 балів.
-//
-// Фінальний результат:
-// totalPlace + top5Place + bigFishPlace.
-// Менша сума = краще підсумкове місце.
+// ФІНАЛ:
+// totalPoints + top5Points + bigFishPoints
+// Менша сума = краще місце.
 //
 // Усі розрахунки виконуються ОКРЕМО
 // для зон A / B / C.
 //
 // Модуль нічого не записує у Firebase.
-// Отримує regRows + weighingDocs
-// і повертає готовий результат для Live.
 
 (function () {
   "use strict";
@@ -61,6 +59,14 @@
       Math.round(
         (num(value) + Number.EPSILON) * 1000
       ) / 1000
+    );
+  }
+
+  function roundPoints(value) {
+    return (
+      Math.round(
+        (num(value) + Number.EPSILON) * 100
+      ) / 100
     );
   }
 
@@ -119,9 +125,12 @@
 
     return {
       kg,
-      fishType: isAmur
-        ? "amur"
-        : "carp",
+
+      fishType:
+        isAmur
+          ? "amur"
+          : "carp",
+
       isAmur
     };
   }
@@ -202,8 +211,11 @@
       return existing;
     }
 
-    const zone = getZone(row);
-    const sector = getSector(row);
+    const zone =
+      getZone(row);
+
+    const sector =
+      getSector(row);
 
     return zone
       ? `${zone}${sector}`
@@ -230,7 +242,7 @@
 
   /*
    * ============================================================
-   * COLLECT TEAMS + WEIGHINGS
+   * COLLECT TEAMS
    * ============================================================
    */
 
@@ -241,13 +253,11 @@
     const teams = new Map();
 
     /*
-     * Спочатку беремо всі команди із жеребкування.
-     *
-     * Команда залишається у Live навіть тоді,
-     * коли ще не має жодної риби.
+     * Спочатку створюємо всі команди.
      */
     (regRows || []).forEach((row) => {
-      const teamId = getTeamId(row);
+      const teamId =
+        getTeamId(row);
 
       if (!teamId) {
         return;
@@ -255,73 +265,89 @@
 
       teams.set(teamId, {
         teamId,
-        teamName: getTeamName(row),
 
-        zone: getZone(row),
-        sector: getSector(row),
-        zoneLabel: getZoneLabel(row),
+        teamName:
+          getTeamName(row),
+
+        zone:
+          getZone(row),
+
+        sector:
+          getSector(row),
+
+        zoneLabel:
+          getZoneLabel(row),
 
         fish: []
       });
     });
 
     /*
-     * Додаємо всі submitted-зважування W1–W4.
+     * Додаємо всі риби з submitted weighing.
      */
-    (weighingDocs || []).forEach((doc) => {
-      const teamId = getTeamId(doc);
+    (weighingDocs || []).forEach(
+      (doc) => {
+        const teamId =
+          getTeamId(doc);
 
-      if (!teamId) {
-        return;
+        if (!teamId) {
+          return;
+        }
+
+        if (!teams.has(teamId)) {
+          teams.set(teamId, {
+            teamId,
+
+            teamName:
+              getTeamName(doc),
+
+            zone:
+              getZone(doc),
+
+            sector:
+              getSector(doc),
+
+            zoneLabel:
+              getZoneLabel(doc),
+
+            fish: []
+          });
+        }
+
+        const team =
+          teams.get(teamId);
+
+        const fish =
+          normalizeFishArray(
+            doc?.weights ||
+            doc?.fish ||
+            []
+          );
+
+        team.fish.push(...fish);
+
+        if (!team.zone) {
+          team.zone =
+            getZone(doc);
+        }
+
+        if (
+          !team.zoneLabel ||
+          team.zoneLabel === "—"
+        ) {
+          team.zoneLabel =
+            getZoneLabel(doc);
+        }
+
+        if (
+          !team.teamName ||
+          team.teamName === "Команда"
+        ) {
+          team.teamName =
+            getTeamName(doc);
+        }
       }
-
-      if (!teams.has(teamId)) {
-        teams.set(teamId, {
-          teamId,
-          teamName: getTeamName(doc),
-
-          zone: getZone(doc),
-          sector: getSector(doc),
-          zoneLabel: getZoneLabel(doc),
-
-          fish: []
-        });
-      }
-
-      const team = teams.get(teamId);
-
-      const fish = normalizeFishArray(
-        doc?.weights ||
-        doc?.fish ||
-        []
-      );
-
-      team.fish.push(...fish);
-
-      /*
-       * Fallback на дані weighing,
-       * якщо їх не було в registration/stageResults.
-       */
-      if (!team.zone) {
-        team.zone = getZone(doc);
-      }
-
-      if (
-        !team.zoneLabel ||
-        team.zoneLabel === "—"
-      ) {
-        team.zoneLabel =
-          getZoneLabel(doc);
-      }
-
-      if (
-        !team.teamName ||
-        team.teamName === "Команда"
-      ) {
-        team.teamName =
-          getTeamName(doc);
-      }
-    });
+    );
 
     return Array.from(
       teams.values()
@@ -330,82 +356,66 @@
 
   /*
    * ============================================================
-   * CALCULATE ONE TEAM
+   * CALCULATE TEAM
    * ============================================================
    */
 
   function calculateTeam(team) {
     /*
-     * Усі риби від найбільшої до найменшої.
+     * Від найбільшої риби
+     * до найменшої.
      */
-    const sortedFish = [...team.fish]
-      .sort((a, b) =>
-        compareNumberDesc(
-          a.kg,
-          b.kg
-        )
+    const sortedFish =
+      [...team.fish].sort(
+        (a, b) =>
+          compareNumberDesc(
+            a.kg,
+            b.kg
+          )
       );
 
     /*
      * BIG FISH
      *
      * Найбільша риба команди.
-     * Вона НЕ входить у 5 великих.
      */
     const bigFishItem =
       sortedFish[0] || null;
 
-    const bigFish = bigFishItem
-      ? roundWeight(bigFishItem.kg)
-      : 0;
+    const bigFish =
+      bigFishItem
+        ? roundWeight(
+            bigFishItem.kg
+          )
+        : 0;
 
     /*
      * 5 ВЕЛИКИХ
      *
-     * Після вилучення Big Fish
-     * беремо максимум наступні 5 риб.
+     * Big Fish забираємо.
+     * Беремо наступні максимум 5 риб.
+     *
+     * ВАЖЛИВО:
+     * навіть якщо є тільки 1, 2, 3 або 4,
+     * їх поточна вага бере участь у рейтингу.
      */
     const top5FishItems =
       sortedFish.slice(1, 6);
 
     const top5Fish =
-      top5FishItems.map((fish) =>
-        roundWeight(fish.kg)
+      top5FishItems.map(
+        (fish) =>
+          roundWeight(fish.kg)
       );
 
     /*
-     * Усі риби.
+     * Всі риби.
      */
     const allFish =
-      sortedFish.map((fish) =>
-        roundWeight(fish.kg)
+      sortedFish.map(
+        (fish) =>
+          roundWeight(fish.kg)
       );
-
-    /*
-     * Загальна вага.
-     */
-    const totalWeight =
-      roundWeight(
-        allFish.reduce(
-          (sum, kg) => sum + kg,
-          0
-        )
-      );
-
-    /*
-     * Сума 5 великих
-     * БЕЗ Big Fish.
-     */
-    const top5Weight =
-      roundWeight(
-        top5Fish.reduce(
-          (sum, kg) => sum + kg,
-          0
-        )
-      );
-
-    const top5LargestFish =
-      top5Fish[0] || 0;
 
     const fishCount =
       allFish.length;
@@ -414,69 +424,80 @@
       top5Fish.length;
 
     /*
-     * ЧИ Є РЕЗУЛЬТАТ У КОЖНІЙ ТАБЛИЦІ
+     * Загальна вага.
      */
-
-    const hasTotalResult =
-      totalWeight > 0 &&
-      fishCount > 0;
+    const totalWeight =
+      roundWeight(
+        allFish.reduce(
+          (sum, kg) =>
+            sum + kg,
+          0
+        )
+      );
 
     /*
-     * П'ять великих вважаються ЗАКРИТИМИ
-     * тільки коли є всі п'ять риб
-     * після вилучення Big Fish.
-     *
-     * Тобто фактично команді потрібно
-     * мінімум 6 залікових риб:
-     * 1 Big Fish + 5 великих.
+     * Поточна вага 5 великих.
      */
+    const top5Weight =
+      roundWeight(
+        top5Fish.reduce(
+          (sum, kg) =>
+            sum + kg,
+          0
+        )
+      );
+
+    const top5LargestFish =
+      top5Fish[0] || 0;
+
+    /*
+     * Результат існує,
+     * якщо є реальна вага.
+     */
+    const hasTotalResult =
+      totalWeight > 0;
+
     const hasTop5Result =
-      top5Count === 5 &&
       top5Weight > 0;
 
     const hasBigFishResult =
       bigFish > 0;
 
     return {
-      teamId: team.teamId,
-      teamName: team.teamName,
+      teamId:
+        team.teamId,
 
-      zone: team.zone,
-      sector: team.sector,
-      zoneLabel: team.zoneLabel,
+      teamName:
+        team.teamName,
 
-      /*
-       * Риби.
-       */
+      zone:
+        team.zone,
+
+      sector:
+        team.sector,
+
+      zoneLabel:
+        team.zoneLabel,
+
       fishCount,
       allFish,
 
-      /*
-       * Загальна вага.
-       */
       totalWeight,
       hasTotalResult,
 
-      /*
-       * Big Fish.
-       */
       bigFish,
+
       bigFishType:
         bigFishItem?.fishType || "",
+
       hasBigFishResult,
 
-      /*
-       * 5 великих.
-       */
       top5Fish,
       top5Count,
       top5Weight,
       top5LargestFish,
       hasTop5Result,
 
-      /*
-       * Місця / бали.
-       */
       totalPlace: 0,
       totalPoints: 0,
 
@@ -490,52 +511,53 @@
       finalPlace: 0,
 
       /*
-       * Тайбрейк фінального результату.
+       * Використовується тільки
+       * для фінального тайбрейку.
        */
-      tieWeight: roundWeight(
-        totalWeight +
-        top5Weight +
-        bigFish
-      )
+      tieWeight:
+        roundWeight(
+          totalWeight +
+          top5Weight +
+          bigFish
+        )
     };
   }
 
   /*
    * ============================================================
-   * TABLE 1 — TOTAL WEIGHT
+   * COMPARATORS
    * ============================================================
-   *
-   * Тільки команди з реальною вагою
-   * беруть участь у нормальному ранжуванні.
-   *
-   * 1. Більша загальна вага.
-   * 2. Більша кількість риб.
-   * 3. Більший Big Fish.
    */
 
+  /*
+   * ЗАГАЛЬНА ВАГА
+   *
+   * Основний критерій — ВАГА.
+   */
   function compareTotalTable(a, b) {
-    let diff = compareNumberDesc(
-      a.totalWeight,
-      b.totalWeight
-    );
+    let diff =
+      compareNumberDesc(
+        a.totalWeight,
+        b.totalWeight
+      );
 
     if (diff !== 0) {
       return diff;
     }
 
-    diff = compareNumberDesc(
-      a.fishCount,
-      b.fishCount
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    diff = compareNumberDesc(
-      a.bigFish,
-      b.bigFish
-    );
+    /*
+     * Далі — тільки стабільне
+     * сортування для відображення.
+     *
+     * На бали це НЕ впливає,
+     * бо однакова вага буде
+     * вважатись нічиєю.
+     */
+    diff =
+      compareNumberDesc(
+        a.fishCount,
+        b.fishCount
+      );
 
     if (diff !== 0) {
       return diff;
@@ -548,51 +570,27 @@
   }
 
   /*
-   * ============================================================
-   * TABLE 2 — TOP 5
-   * ============================================================
+   * 5 ВЕЛИКИХ
    *
-   * Сюди потрапляє ТІЛЬКИ
-   * повністю закрита п'ятірка.
-   *
-   * 1. Більша сума 5 риб.
-   * 2. Більша риба серед цієї п'ятірки.
-   * 3. Більший Big Fish.
-   * 4. Більша загальна вага.
+   * Основний критерій —
+   * поточна сума риб у цій таблиці.
    */
-
   function compareTop5Table(a, b) {
-    let diff = compareNumberDesc(
-      a.top5Weight,
-      b.top5Weight
-    );
+    let diff =
+      compareNumberDesc(
+        a.top5Weight,
+        b.top5Weight
+      );
 
     if (diff !== 0) {
       return diff;
     }
 
-    diff = compareNumberDesc(
-      a.top5LargestFish,
-      b.top5LargestFish
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    diff = compareNumberDesc(
-      a.bigFish,
-      b.bigFish
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    diff = compareNumberDesc(
-      a.totalWeight,
-      b.totalWeight
-    );
+    diff =
+      compareNumberDesc(
+        a.top5LargestFish,
+        b.top5LargestFish
+      );
 
     if (diff !== 0) {
       return diff;
@@ -605,38 +603,17 @@
   }
 
   /*
-   * ============================================================
-   * TABLE 3 — BIG FISH
-   * ============================================================
+   * BIG FISH
    *
-   * 1. Більший Big Fish.
-   * 2. Більша загальна вага.
-   * 3. Більша кількість риб.
+   * Основний критерій —
+   * вага найбільшої риби.
    */
-
   function compareBigFishTable(a, b) {
-    let diff = compareNumberDesc(
-      a.bigFish,
-      b.bigFish
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    diff = compareNumberDesc(
-      a.totalWeight,
-      b.totalWeight
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    diff = compareNumberDesc(
-      a.fishCount,
-      b.fishCount
-    );
+    let diff =
+      compareNumberDesc(
+        a.bigFish,
+        b.bigFish
+      );
 
     if (diff !== 0) {
       return diff;
@@ -650,72 +627,177 @@
 
   /*
    * ============================================================
-   * ASSIGN PLACES WITH LAST-PLACE PENALTY
+   * SHARED PLACES
    * ============================================================
    *
-   * ОСНОВНА ЗМІНА.
+   * Якщо однаковий результат займає
+   * декілька позицій — команди ділять
+   * середнє арифметичне цих місць.
    *
-   * qualified:
-   * команди, які мають валідний результат.
+   * Приклад:
    *
-   * unqualified:
-   * команди без результату / з незакритою таблицею.
+   * 1 місце
+   * 2 місце
+   * 3 місце
+   * 4 місце
    *
-   * qualified:
-   * 1, 2, 3, ...
+   * дві однакові команди займають
+   * позиції 5 і 6:
    *
-   * unqualified:
-   * ВСІ отримують teamsCount.
+   * (5 + 6) / 2 = 5.5
    *
-   * При 7 командах:
-   * 1,2,3,4,5,7,7
-   *
-   * а НЕ:
-   * 1,2,3,4,5,6,7
+   * обидві отримують 5.5 бала.
    */
 
-  function assignPlacesWithLastPenalty({
+  function assignSharedPlaces({
     rows,
     comparator,
     qualifies,
+    valueGetter,
     placeKey,
-    pointsKey,
-    lastPlace
+    pointsKey
   }) {
-    const qualified = rows
-      .filter(qualifies)
-      .sort(comparator);
+    const qualified =
+      rows
+        .filter(qualifies)
+        .sort(comparator);
 
-    const unqualified = rows
-      .filter((row) => !qualifies(row))
-      .sort((a, b) => {
-        return compareText(
-          a.teamName,
-          b.teamName
+    const unqualified =
+      rows
+        .filter(
+          (row) =>
+            !qualifies(row)
+        )
+        .sort(
+          (a, b) =>
+            compareText(
+              a.teamName,
+              b.teamName
+            )
         );
-      });
 
     /*
-     * Тільки валідні результати:
-     * 1, 2, 3...
+     * ----------------------------------------------------------
+     * ВАЛІДНІ РЕЗУЛЬТАТИ
+     * ----------------------------------------------------------
      */
-    qualified.forEach(
-      (row, index) => {
-        const place = index + 1;
 
-        row[placeKey] = place;
-        row[pointsKey] = place;
+    let index = 0;
+
+    while (
+      index < qualified.length
+    ) {
+      const currentValue =
+        roundWeight(
+          valueGetter(
+            qualified[index]
+          )
+        );
+
+      let endIndex =
+        index;
+
+      /*
+       * Шукаємо всі команди
+       * з абсолютно однаковою вагою.
+       */
+      while (
+        endIndex + 1 <
+          qualified.length &&
+        roundWeight(
+          valueGetter(
+            qualified[
+              endIndex + 1
+            ]
+          )
+        ) === currentValue
+      ) {
+        endIndex++;
       }
-    );
+
+      /*
+       * Реальні позиції:
+       *
+       * index 0 -> місце 1
+       * index 1 -> місце 2
+       */
+      const firstPlace =
+        index + 1;
+
+      const lastPlace =
+        endIndex + 1;
+
+      /*
+       * Середнє місце.
+       */
+      const sharedPlace =
+        roundPoints(
+          (
+            firstPlace +
+            lastPlace
+          ) / 2
+        );
+
+      for (
+        let i = index;
+        i <= endIndex;
+        i++
+      ) {
+        qualified[i][placeKey] =
+          sharedPlace;
+
+        qualified[i][pointsKey] =
+          sharedPlace;
+      }
+
+      index =
+        endIndex + 1;
+    }
 
     /*
-     * Усі без результату:
-     * останнє місце зони.
+     * ----------------------------------------------------------
+     * БЕЗ РЕЗУЛЬТАТУ
+     * ----------------------------------------------------------
+     *
+     * Вони займають усі місця,
+     * які залишилися внизу таблиці,
+     * і також ділять їх між собою.
+     *
+     * Наприклад:
+     *
+     * 6 команд.
+     * 4 мають результат.
+     * 2 без результату.
+     *
+     * Вони займають 5 і 6 місця:
+     * (5 + 6) / 2 = 5.5.
      */
-    unqualified.forEach((row) => {
-      row[placeKey] = lastPlace;
-      row[pointsKey] = lastPlace;
-    });
+
+    if (unqualified.length) {
+      const firstEmptyPlace =
+        qualified.length + 1;
+
+      const lastEmptyPlace =
+        rows.length;
+
+      const sharedEmptyPlace =
+        roundPoints(
+          (
+            firstEmptyPlace +
+            lastEmptyPlace
+          ) / 2
+        );
+
+      unqualified.forEach(
+        (row) => {
+          row[placeKey] =
+            sharedEmptyPlace;
+
+          row[pointsKey] =
+            sharedEmptyPlace;
+        }
+      );
+    }
 
     return [
       ...qualified,
@@ -732,9 +814,12 @@
   function compareFinalTable(a, b) {
     /*
      * 1.
-     * Менша сума трьох місць.
+     * Менша сума балів.
      */
-    if (a.pointsSum !== b.pointsSum) {
+    if (
+      a.pointsSum !==
+      b.pointsSum
+    ) {
       return (
         a.pointsSum -
         b.pointsSum
@@ -743,14 +828,14 @@
 
     /*
      * 2.
-     * При рівних балах —
-     * більша сукупна вага
-     * трьох показників.
+     * При рівній сумі балів —
+     * більша загальна вага.
      */
-    let diff = compareNumberDesc(
-      a.tieWeight,
-      b.tieWeight
-    );
+    let diff =
+      compareNumberDesc(
+        a.totalWeight,
+        b.totalWeight
+      );
 
     if (diff !== 0) {
       return diff;
@@ -758,12 +843,13 @@
 
     /*
      * 3.
-     * Більша загальна вага.
+     * Більша вага 5 великих.
      */
-    diff = compareNumberDesc(
-      a.totalWeight,
-      b.totalWeight
-    );
+    diff =
+      compareNumberDesc(
+        a.top5Weight,
+        b.top5Weight
+      );
 
     if (diff !== 0) {
       return diff;
@@ -771,46 +857,18 @@
 
     /*
      * 4.
-     * Більша сума 5 великих.
-     */
-    diff = compareNumberDesc(
-      a.top5Weight,
-      b.top5Weight
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    /*
-     * 5.
      * Більший Big Fish.
      */
-    diff = compareNumberDesc(
-      a.bigFish,
-      b.bigFish
-    );
+    diff =
+      compareNumberDesc(
+        a.bigFish,
+        b.bigFish
+      );
 
     if (diff !== 0) {
       return diff;
     }
 
-    /*
-     * 6.
-     * Більше риб.
-     */
-    diff = compareNumberDesc(
-      a.fishCount,
-      b.fishCount
-    );
-
-    if (diff !== 0) {
-      return diff;
-    }
-
-    /*
-     * Технічний стабільний тайбрейк.
-     */
     return compareText(
       a.teamName,
       b.teamName
@@ -819,7 +877,7 @@
 
   /*
    * ============================================================
-   * CALCULATE ONE ZONE
+   * CALCULATE ZONE
    * ============================================================
    */
 
@@ -827,35 +885,24 @@
     zone,
     zoneRows
   ) {
-    /*
-     * Робимо окремі row objects,
-     * щоб не мутувати зовнішній масив.
-     */
-    const rows = zoneRows.map(
-      (row) => ({
-        ...row
-      })
-    );
+    const rows =
+      zoneRows.map(
+        (row) => ({
+          ...row
+        })
+      );
 
     const teamsCount =
       rows.length;
 
     /*
-     * Якщо в зоні 7 команд —
-     * lastPlace = 7.
-     */
-    const lastPlace =
-      Math.max(teamsCount, 1);
-
-    /*
      * ----------------------------------------------------------
-     * ТАБЛИЦЯ 1
-     * ЗАГАЛЬНА ВАГА
+     * TABLE 1 — TOTAL
      * ----------------------------------------------------------
      */
 
     const totalTable =
-      assignPlacesWithLastPenalty({
+      assignSharedPlaces({
         rows,
 
         comparator:
@@ -864,30 +911,32 @@
         qualifies: (row) =>
           row.hasTotalResult === true,
 
+        valueGetter: (row) =>
+          row.totalWeight,
+
         placeKey:
           "totalPlace",
 
         pointsKey:
-          "totalPoints",
-
-        lastPlace
+          "totalPoints"
       });
 
     /*
      * ----------------------------------------------------------
-     * ТАБЛИЦЯ 2
-     * 5 ВЕЛИКИХ
+     * TABLE 2 — TOP 5
      * ----------------------------------------------------------
      *
-     * НЕЗАКРИТА П'ЯТІРКА
-     * не отримує 2,3,4,5...
+     * ВАЖЛИВО:
      *
-     * Вона одразу отримує
-     * останнє місце зони.
+     * тепер НЕ треба top5Count === 5.
+     *
+     * Якщо є хоча б якась вага
+     * після вилучення Big Fish —
+     * команда вже ранжується.
      */
 
     const top5Table =
-      assignPlacesWithLastPenalty({
+      assignSharedPlaces({
         rows,
 
         comparator:
@@ -896,24 +945,24 @@
         qualifies: (row) =>
           row.hasTop5Result === true,
 
+        valueGetter: (row) =>
+          row.top5Weight,
+
         placeKey:
           "top5Place",
 
         pointsKey:
-          "top5Points",
-
-        lastPlace
+          "top5Points"
       });
 
     /*
      * ----------------------------------------------------------
-     * ТАБЛИЦЯ 3
-     * BIG FISH
+     * TABLE 3 — BIG FISH
      * ----------------------------------------------------------
      */
 
     const bigFishTable =
-      assignPlacesWithLastPenalty({
+      assignSharedPlaces({
         rows,
 
         comparator:
@@ -922,47 +971,62 @@
         qualifies: (row) =>
           row.hasBigFishResult === true,
 
+        valueGetter: (row) =>
+          row.bigFish,
+
         placeKey:
           "bigFishPlace",
 
         pointsKey:
-          "bigFishPoints",
-
-        lastPlace
+          "bigFishPoints"
       });
 
     /*
      * ----------------------------------------------------------
-     * СУМА БАЛІВ
+     * POINTS SUM
      * ----------------------------------------------------------
      */
 
-    rows.forEach((row) => {
-      row.pointsSum =
-        num(row.totalPoints) +
-        num(row.top5Points) +
-        num(row.bigFishPoints);
-    });
+    rows.forEach(
+      (row) => {
+        row.pointsSum =
+          roundPoints(
+            num(
+              row.totalPoints
+            ) +
+            num(
+              row.top5Points
+            ) +
+            num(
+              row.bigFishPoints
+            )
+          );
+      }
+    );
 
     /*
      * ----------------------------------------------------------
-     * ПІДСУМКОВА ТАБЛИЦЯ
+     * FINAL
      * ----------------------------------------------------------
      */
 
-    const finalTable = [...rows]
-      .sort(compareFinalTable)
-      .map((row, index) => {
-        row.finalPlace =
-          index + 1;
+    const finalTable =
+      [...rows]
+        .sort(
+          compareFinalTable
+        )
+        .map(
+          (row, index) => {
+            row.finalPlace =
+              index + 1;
 
-        return row;
-      });
+            return row;
+          }
+        );
 
     return {
       zone,
       teamsCount,
-      lastPlace,
 
       totalTable,
       top5Table,
@@ -974,7 +1038,7 @@
 
   /*
    * ============================================================
-   * BUILD ALL THREE ZONES
+   * BUILD
    * ============================================================
    */
 
@@ -986,7 +1050,9 @@
       collectTeams(
         regRows,
         weighingDocs
-      ).map(calculateTeam);
+      ).map(
+        calculateTeam
+      );
 
     const zoneRows = {
       A: [],
@@ -1028,7 +1094,8 @@
     };
 
     return {
-      format: "3tables",
+      format:
+        "3tables",
 
       generatedAt:
         new Date(),
@@ -1040,11 +1107,6 @@
 
       zones,
 
-      /*
-       * Спільний список для зручності.
-       * Місця тут НЕ порівнюються
-       * між різними зонами.
-       */
       teams: [
         ...zones.A.finalTable,
         ...zones.B.finalTable,

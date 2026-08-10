@@ -1,42 +1,48 @@
 // assets/js/season_rating.js
 // STOLAR CARP • Підсумковий рейтинг команд сезону
 //
-// ЛОГІКА:
+// =========================================================
+// ЛОГІКА
+// =========================================================
 //
-// 1. ВИХІД У ФІНАЛ:
-//    • визначаємо TOP-18 тільки за відбірковими етапами;
+// 1. ВИХІД У ФІНАЛ
+//    • TOP-18 тільки за відбірковими етапами;
 //    • 2 найкращі результати;
-//    • пропущений відбірковий етап = 8 балів;
+//    • пропущений етап = 8 балів;
 //    • менше балів — краще;
 //    • при рівності: більша вага;
 //    • потім більший Big Fish.
 //
-// 2. РЕЙТИНГ КОМАНД СЕЗОНУ:
-//    • у таблиці тільки 18 фіналістів;
-//    • враховуються ВСІ відбіркові етапи;
+// 2. РЕЙТИНГ СЕЗОНУ
+//    • тільки 18 фіналістів;
+//    • усі відбіркові етапи;
 //    • + Фінал;
 //    • відбірковий етап: бал = місце в зоні;
-//    • Фінал: бал = загальне місце у Фіналі;
+//    • Фінал: бал = загальне місце;
 //    • менше балів — краще;
 //    • при рівності: більша загальна вага;
 //    • потім більший Big Fish.
 //
-// 3. ПРИЗЕРИ СЕЗОНУ:
-//    • 1 / 2 / 3 місце автоматично беруться
-//      з підсумкового рейтингу 18 фіналістів.
+// 3. ПРИЗЕРИ
+//    • 1 / 2 / 3 місце автоматично.
 //
-// 4. BIG FISH СЕЗОНУ:
-//    • шукається СЕРЕД УСІХ КОМАНД,
-//      які брали участь хоча б в одному архівованому етапі;
-//    • команда НЕ зобов'язана входити у TOP-18;
-//    • враховуються відбіркові етапи + Фінал.
+// 4. BIG FISH СЕЗОНУ
+//    • серед ВСІХ учасників сезону;
+//    • не тільки TOP-18;
+//    • враховуються всі відбіркові етапи + Фінал.
 //
-// Джерела:
-// seasonRating/{year}
-// seasonResults/{year}/stages
+// 5. АРХІВАЦІЯ СЕЗОНУ
+//    • кнопка показується ТІЛЬКИ адміну;
+//    • записує фінальний snapshot у:
+//        seasonArchives/{year}
+//    • seasonResults/{year}/stages НЕ видаляє;
+//    • після успішної архівації очищає:
+//        seasonRating/{year}
+//    • усе виконується одним Firestore batch:
+//      або архів + очищення виконані разом,
+//      або не виконується нічого.
 //
-// HTML:
-// season_rating.html
+// =========================================================
 
 (function () {
   "use strict";
@@ -48,31 +54,40 @@
   // =========================================================
 
   const TOP_COUNT = 18;
-
   const BEST_COUNT_FOR_FINAL = 2;
 
-  // Штраф за пропущений відбірковий етап
   const ABSENT_REGULAR_POINTS = 8;
-
-  // Якщо Фінал уже є, але фіналіст не має результату
   const ABSENT_FINAL_POINTS = TOP_COUNT + 1; // 19
 
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
+  const params = new URLSearchParams(window.location.search);
 
   const SEASON_YEAR =
     params.get("year") || "2026";
+
+  const NEXT_SEASON_YEAR =
+    String(Number(SEASON_YEAR) + 1);
+
+  // =========================================================
+  // RUNTIME STATE
+  // =========================================================
+
+  let currentDb = null;
+
+  let currentRatingSource = null;
+
+  let currentPayload = null;
+
+  let currentUser = null;
+
+  let currentUserIsAdmin = false;
+
+  let archiveInProgress = false;
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  function safeText(
-    value,
-    dash = "—"
-  ) {
+  function safeText(value, dash = "—") {
     return (
       value === null ||
       value === undefined ||
@@ -188,7 +203,7 @@
   }
 
   // =========================================================
-  // FIRESTORE
+  // FIREBASE READY
   // =========================================================
 
   async function waitReady() {
@@ -205,7 +220,149 @@
       );
     }
 
+    currentDb = db;
+
     return db;
+  }
+
+  // =========================================================
+  // AUTH / ADMIN
+  // =========================================================
+
+  async function checkAdmin(user, db) {
+    if (!user) {
+      return false;
+    }
+
+    /*
+     * Варіант 1:
+     * можна встановити десь у своєму firebase-init/config:
+     *
+     * window.scIsAdmin = true
+     */
+    if (window.scIsAdmin === true) {
+      return true;
+    }
+
+    /*
+     * Варіант 2:
+     * custom claims Firebase Auth:
+     *
+     * admin: true
+     * role: "admin"
+     */
+    try {
+      const token =
+        await user.getIdTokenResult();
+
+      if (
+        token?.claims?.admin === true ||
+        token?.claims?.role === "admin"
+      ) {
+        return true;
+      }
+    } catch (error) {
+      console.warn(
+        "[Season Rating] claims check:",
+        error
+      );
+    }
+
+    /*
+     * Варіант 3:
+     * users/{uid}
+     *
+     * підтримуємо:
+     * isAdmin: true
+     * admin: true
+     * role: "admin"
+     */
+    try {
+      const snap =
+        await db
+          .collection("users")
+          .doc(user.uid)
+          .get();
+
+      if (snap.exists) {
+        const data =
+          snap.data() || {};
+
+        if (
+          data.isAdmin === true ||
+          data.admin === true ||
+          clean(data.role) === "admin"
+        ) {
+          return true;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        "[Season Rating] users admin check:",
+        error
+      );
+    }
+
+    /*
+     * Варіант 4:
+     * якщо в config.js заданий email.
+     *
+     * window.SC_ADMIN_EMAIL = "..."
+     */
+    try {
+      const configuredEmail =
+        clean(
+          window.SC_ADMIN_EMAIL ||
+          window.scAdminEmail ||
+          ""
+        );
+
+      const userEmail =
+        clean(
+          user.email || ""
+        );
+
+      if (
+        configuredEmail &&
+        userEmail &&
+        configuredEmail === userEmail
+      ) {
+        return true;
+      }
+    } catch {}
+
+    return false;
+  }
+
+  async function initAdminAccess(db) {
+    /*
+     * Навіть якщо firebase auth відсутній —
+     * сторінка рейтингу продовжує працювати.
+     */
+    if (
+      typeof firebase === "undefined" ||
+      !firebase.auth
+    ) {
+      return;
+    }
+
+    firebase
+      .auth()
+      .onAuthStateChanged(
+        async user => {
+
+          currentUser =
+            user || null;
+
+          currentUserIsAdmin =
+            await checkAdmin(
+              currentUser,
+              db
+            );
+
+          renderAdminArchivePanel();
+        }
+      );
   }
 
   // =========================================================
@@ -243,7 +400,6 @@
     const raw =
       String(value || "");
 
-    // season-2026_stage-1
     let match =
       raw.match(
         /stage[-_\s]*(\d+)/i
@@ -255,7 +411,6 @@
       );
     }
 
-    // "Етап 1"
     match =
       raw.match(
         /етап\s*(\d+)/i
@@ -267,7 +422,6 @@
       );
     }
 
-    // E1 / Е1
     match =
       raw.match(
         /(?:^|[^a-zа-яіїєґ0-9])[eе]\s*(\d+)/i
@@ -279,7 +433,6 @@
       );
     }
 
-    // fallback
     const numbers =
       raw.match(/\d+/g);
 
@@ -287,10 +440,6 @@
       return null;
     }
 
-    /*
-     * Якщо є season-2026 і ще інший номер,
-     * беремо останнє число.
-     */
     return Number(
       numbers[
         numbers.length - 1
@@ -299,9 +448,7 @@
   }
 
   function stageSortValue(stage) {
-    if (
-      isFinalStage(stage)
-    ) {
+    if (isFinalStage(stage)) {
       return 999999;
     }
 
@@ -311,18 +458,14 @@
       stage?.stageName
     ];
 
-    for (
-      const value of values
-    ) {
+    for (const value of values) {
       const number =
         extractStageNumber(
           value
         );
 
       if (
-        Number.isFinite(
-          number
-        )
+        Number.isFinite(number)
       ) {
         return number;
       }
@@ -341,18 +484,14 @@
       stage?.stageName
     ];
 
-    for (
-      const value of values
-    ) {
+    for (const value of values) {
       const number =
         extractStageNumber(
           value
         );
 
       if (
-        Number.isFinite(
-          number
-        )
+        Number.isFinite(number)
       ) {
         return number;
       }
@@ -367,29 +506,16 @@
       "string"
     ) {
       const fixed = {
-        stageDocId:
-          stage,
-
-        stageId:
-          stage,
-
-        stageName:
-          stage,
-
-        type:
-          "",
-
-        stageType:
-          "",
-
-        isFinal:
-          false
+        stageDocId: stage,
+        stageId: stage,
+        stageName: stage,
+        type: "",
+        stageType: "",
+        isFinal: false
       };
 
       fixed.isFinal =
-        isFinalStage(
-          fixed
-        );
+        isFinalStage(fixed);
 
       return fixed;
     }
@@ -438,9 +564,7 @@
     };
 
     fixed.isFinal =
-      isFinalStage(
-        fixed
-      );
+      isFinalStage(fixed);
 
     return fixed;
   }
@@ -455,9 +579,7 @@
 
     const stages =
       source
-        .map(
-          normalizeStage
-        )
+        .map(normalizeStage)
         .filter(
           stage =>
             stage.stageDocId
@@ -488,7 +610,7 @@
   }
 
   // =========================================================
-  // STANDINGS NORMALIZE
+  // NORMALIZE STANDING
   // =========================================================
 
   function normalizeStandingRow(row) {
@@ -556,20 +678,15 @@
   // STAGE MAP
   // =========================================================
 
-  function computeStageMap(
-    standings
-  ) {
+  function computeStageMap(standings) {
     const rows =
       (
-        Array.isArray(
-          standings
-        )
+        Array.isArray(standings)
           ? standings
           : []
-      )
-        .map(
-          normalizeStandingRow
-        );
+      ).map(
+        normalizeStandingRow
+      );
 
     const byTeamId =
       new Map();
@@ -577,10 +694,6 @@
     const byTeamName =
       new Map();
 
-    /*
-     * Загальне місце.
-     * Особливо використовується у Фіналі.
-     */
     const overallRows =
       rows
         .slice()
@@ -620,9 +733,7 @@
             return String(
               a.team
             ).localeCompare(
-              String(
-                b.team
-              ),
+              String(b.team),
               "uk"
             );
           }
@@ -636,9 +747,7 @@
 
         const key =
           row.teamId ||
-          clean(
-            row.team
-          );
+          clean(row.team);
 
         if (!key) {
           return;
@@ -652,121 +761,99 @@
       }
     );
 
-    /*
-     * Місця у зонах.
-     */
     ["A", "B", "C"]
-      .forEach(
-        zone => {
+      .forEach(zone => {
 
-          const zoneRows =
-            rows
-              .filter(
-                row =>
-                  row.zone ===
-                  zone
-              )
-              .sort(
-                (a, b) => {
+        const zoneRows =
+          rows
+            .filter(
+              row =>
+                row.zone === zone
+            )
+            .sort(
+              (a, b) => {
 
-                  if (
-                    b.totalWeight !==
+                if (
+                  b.totalWeight !==
+                  a.totalWeight
+                ) {
+                  return (
+                    b.totalWeight -
                     a.totalWeight
-                  ) {
-                    return (
-                      b.totalWeight -
-                      a.totalWeight
-                    );
-                  }
-
-                  if (
-                    b.bigFish !==
-                    a.bigFish
-                  ) {
-                    return (
-                      b.bigFish -
-                      a.bigFish
-                    );
-                  }
-
-                  if (
-                    b.totalCount !==
-                    a.totalCount
-                  ) {
-                    return (
-                      b.totalCount -
-                      a.totalCount
-                    );
-                  }
-
-                  return String(
-                    a.team
-                  ).localeCompare(
-                    String(
-                      b.team
-                    ),
-                    "uk"
                   );
                 }
-              );
 
-          zoneRows.forEach(
-            (row, index) => {
+                if (
+                  b.bigFish !==
+                  a.bigFish
+                ) {
+                  return (
+                    b.bigFish -
+                    a.bigFish
+                  );
+                }
 
-              const key =
-                row.teamId ||
-                clean(
-                  row.team
+                if (
+                  b.totalCount !==
+                  a.totalCount
+                ) {
+                  return (
+                    b.totalCount -
+                    a.totalCount
+                  );
+                }
+
+                return String(
+                  a.team
+                ).localeCompare(
+                  String(b.team),
+                  "uk"
                 );
+              }
+            );
 
-              const zonePlace =
-                row.zonePlace ||
-                index + 1;
+        zoneRows.forEach(
+          (row, index) => {
 
-              const fixed = {
-                ...row,
+            const key =
+              row.teamId ||
+              clean(row.team);
 
+            const zonePlace =
+              row.zonePlace ||
+              index + 1;
+
+            const fixed = {
+              ...row,
+
+              zonePlace,
+
+              points:
                 zonePlace,
 
-                points:
-                  zonePlace,
+              overallPlace:
+                row.overallPlace ||
+                overallPlaceMap.get(key) ||
+                0
+            };
 
-                overallPlace:
-                  row.overallPlace ||
-                  overallPlaceMap.get(
-                    key
-                  ) ||
-                  0
-              };
-
-              if (
-                fixed.teamId
-              ) {
-                byTeamId.set(
-                  fixed.teamId,
-                  fixed
-                );
-              }
-
-              if (
-                fixed.team
-              ) {
-                byTeamName.set(
-                  clean(
-                    fixed.team
-                  ),
-                  fixed
-                );
-              }
+            if (fixed.teamId) {
+              byTeamId.set(
+                fixed.teamId,
+                fixed
+              );
             }
-          );
-        }
-      );
 
-    /*
-     * Рядки без зон A/B/C.
-     * Наприклад, Фінал.
-     */
+            if (fixed.team) {
+              byTeamName.set(
+                clean(fixed.team),
+                fixed
+              );
+            }
+          }
+        );
+      });
+
     rows
       .filter(
         row =>
@@ -774,63 +861,44 @@
             "A",
             "B",
             "C"
-          ].includes(
-            row.zone
-          )
+          ].includes(row.zone)
       )
-      .forEach(
-        row => {
+      .forEach(row => {
 
-          const key =
-            row.teamId ||
-            clean(
-              row.team
-            );
+        const key =
+          row.teamId ||
+          clean(row.team);
 
-          const fixed = {
-            ...row,
+        const fixed = {
+          ...row,
 
-            overallPlace:
-              row.overallPlace ||
-              overallPlaceMap.get(
-                key
-              ) ||
-              0,
+          overallPlace:
+            row.overallPlace ||
+            overallPlaceMap.get(key) ||
+            0,
 
-            points:
-              row.points ||
-              row.zonePlace ||
-              row.overallPlace ||
-              0
-          };
+          points:
+            row.points ||
+            row.zonePlace ||
+            row.overallPlace ||
+            0
+        };
 
-          if (
-            fixed.teamId
-          ) {
-            byTeamId.set(
-              fixed.teamId,
-              fixed
-            );
-          }
-
-          if (
-            fixed.team
-          ) {
-            byTeamName.set(
-              clean(
-                fixed.team
-              ),
-              fixed
-            );
-          }
+        if (fixed.teamId) {
+          byTeamId.set(
+            fixed.teamId,
+            fixed
+          );
         }
-      );
 
-    /*
-     * rows залишаємо навмисно.
-     * Саме з них беремо ВСІХ учасників
-     * для Big Fish сезону.
-     */
+        if (fixed.team) {
+          byTeamName.set(
+            clean(fixed.team),
+            fixed
+          );
+        }
+      });
+
     return {
       rows,
       byTeamId,
@@ -839,7 +907,7 @@
   }
 
   // =========================================================
-  // LOAD ARCHIVED STAGES
+  // LOAD STAGES
   // =========================================================
 
   async function loadStageMaps(
@@ -854,7 +922,6 @@
         async stage => {
 
           try {
-
             const snap =
               await db
                 .collection(
@@ -871,9 +938,7 @@
                 )
                 .get();
 
-            if (
-              !snap.exists
-            ) {
+            if (!snap.exists) {
               console.warn(
                 "[Season Rating] Етап не знайдено:",
                 stage.stageDocId
@@ -883,8 +948,7 @@
             }
 
             const data =
-              snap.data() ||
-              {};
+              snap.data() || {};
 
             const standings =
               Array.isArray(
@@ -900,9 +964,7 @@
               )
             );
 
-          } catch (
-            error
-          ) {
+          } catch (error) {
 
             console.warn(
               "[Season Rating] Не вдалося прочитати етап:",
@@ -934,8 +996,7 @@
 
     const teamId =
       String(
-        team.teamId ||
-        ""
+        team.teamId || ""
       ).trim();
 
     const teamName =
@@ -947,28 +1008,20 @@
 
     if (
       teamId &&
-      stageMap.byTeamId.has(
-        teamId
-      )
+      stageMap.byTeamId.has(teamId)
     ) {
       return stageMap
         .byTeamId
-        .get(
-          teamId
-        );
+        .get(teamId);
     }
 
     if (
       teamName &&
-      stageMap.byTeamName.has(
-        teamName
-      )
+      stageMap.byTeamName.has(teamName)
     ) {
       return stageMap
         .byTeamName
-        .get(
-          teamName
-        );
+        .get(teamName);
     }
 
     return null;
@@ -988,9 +1041,7 @@
     }
 
     const final =
-      isFinalStage(
-        stage
-      );
+      isFinalStage(stage);
 
     const stageMap =
       stageMaps.get(
@@ -1003,13 +1054,7 @@
         team
       );
 
-    /*
-     * Основне джерело:
-     * seasonResults
-     */
-    if (
-      archiveRow
-    ) {
+    if (archiveRow) {
 
       const place =
         final
@@ -1025,17 +1070,13 @@
               archiveRow.place
             );
 
-      if (
-        !place
-      ) {
+      if (!place) {
         return null;
       }
 
       return {
         place,
-
-        points:
-          place,
+        points: place,
 
         totalWeight:
           num(
@@ -1057,12 +1098,10 @@
     }
 
     /*
-     * Fallback:
-     * seasonRating/{year}.teams[].stages
+     * Fallback із seasonRating.
      */
     const stagesObject =
-      team.stages ||
-      {};
+      team.stages || {};
 
     const data =
       stagesObject[
@@ -1073,9 +1112,7 @@
       ] ||
       null;
 
-    if (
-      !data
-    ) {
+    if (!data) {
       return null;
     }
 
@@ -1093,17 +1130,13 @@
             data.place
           );
 
-    if (
-      !place
-    ) {
+    if (!place) {
       return null;
     }
 
     return {
       place,
-
-      points:
-        place,
+      points: place,
 
       totalWeight:
         num(
@@ -1125,7 +1158,7 @@
   }
 
   // =========================================================
-  // QUALIFICATION — 2 BEST
+  // QUALIFICATION
   // =========================================================
 
   function calculateQualification(
@@ -1144,9 +1177,7 @@
               stageMaps
             );
 
-          if (
-            result
-          ) {
+          if (result) {
             return {
               stageDocId:
                 stage.stageDocId,
@@ -1169,11 +1200,8 @@
             points:
               ABSENT_REGULAR_POINTS,
 
-            totalWeight:
-              0,
-
-            bigFish:
-              0
+            totalWeight: 0,
+            bigFish: 0
           };
         }
       );
@@ -1217,9 +1245,7 @@
     return best.reduce(
       (sum, result) =>
         sum +
-        num(
-          result.points
-        ),
+        num(result.points),
       0
     );
   }
@@ -1241,9 +1267,7 @@
             stageMaps
           );
 
-        if (
-          result
-        ) {
+        if (result) {
           weight +=
             num(
               result.totalWeight
@@ -1272,9 +1296,7 @@
             stageMaps
           );
 
-        if (
-          result
-        ) {
+        if (result) {
           bigFish =
             Math.max(
               bigFish,
@@ -1290,7 +1312,7 @@
   }
 
   // =========================================================
-  // FIXED TOP-18 FINALISTS
+  // TOP-18
   // =========================================================
 
   function getFinalists(
@@ -1386,8 +1408,7 @@
   }
 
   // =========================================================
-  // ALL SEASON PARTICIPANTS
-  // Для Big Fish сезону
+  // ALL PARTICIPANTS
   // =========================================================
 
   function collectAllSeasonParticipants(
@@ -1420,14 +1441,12 @@
             const participant = {
               teamId:
                 String(
-                  row.teamId ||
-                  ""
+                  row.teamId || ""
                 ).trim(),
 
               team:
                 String(
-                  row.team ||
-                  "—"
+                  row.team || "—"
                 ).trim()
             };
 
@@ -1436,16 +1455,12 @@
                 participant
               );
 
-            if (
-              !key
-            ) {
+            if (!key) {
               return;
             }
 
             if (
-              !participants.has(
-                key
-              )
+              !participants.has(key)
             ) {
               participants.set(
                 key,
@@ -1463,7 +1478,7 @@
   }
 
   // =========================================================
-  // SEASON REGULAR CELLS
+  // REGULAR CELLS
   // =========================================================
 
   function buildRegularCells(
@@ -1481,18 +1496,12 @@
             stageMaps
           );
 
-        if (
-          !result
-        ) {
+        if (!result) {
           return {
-            place:
-              "—",
-
+            place: "—",
             points:
               ABSENT_REGULAR_POINTS,
-
-            absent:
-              true
+            absent: true
           };
         }
 
@@ -1511,7 +1520,7 @@
   }
 
   // =========================================================
-  // TOTAL WEIGHT + BIG FISH
+  // SEASON STATS
   // =========================================================
 
   function calculateSeasonStats(
@@ -1520,14 +1529,9 @@
     finalStage,
     stageMaps
   ) {
-    let totalWeight =
-      0;
-
-    let biggestFish =
-      0;
-
-    let biggestFishStage =
-      "";
+    let totalWeight = 0;
+    let biggestFish = 0;
+    let biggestFishStage = "";
 
     regularStages.forEach(
       (stage, index) => {
@@ -1539,9 +1543,7 @@
             stageMaps
           );
 
-        if (
-          !result
-        ) {
+        if (!result) {
           return;
         }
 
@@ -1551,9 +1553,7 @@
           );
 
         if (
-          num(
-            result.bigFish
-          ) >
+          num(result.bigFish) >
           biggestFish
         ) {
           biggestFish =
@@ -1572,9 +1572,7 @@
       }
     );
 
-    if (
-      finalStage
-    ) {
+    if (finalStage) {
 
       const finalResult =
         readStageResult(
@@ -1583,9 +1581,7 @@
           stageMaps
         );
 
-      if (
-        finalResult
-      ) {
+      if (finalResult) {
 
         totalWeight +=
           num(
@@ -1593,9 +1589,7 @@
           );
 
         if (
-          num(
-            finalResult.bigFish
-          ) >
+          num(finalResult.bigFish) >
           biggestFish
         ) {
           biggestFish =
@@ -1627,9 +1621,7 @@
     stageMaps
   ) {
     const finalArchived =
-      Boolean(
-        finalStage
-      );
+      Boolean(finalStage);
 
     const rows =
       finalists.map(
@@ -1646,9 +1638,7 @@
             regularCells.reduce(
               (sum, item) =>
                 sum +
-                num(
-                  item.points
-                ),
+                num(item.points),
               0
             );
 
@@ -1658,9 +1648,7 @@
           let finalPoints =
             0;
 
-          if (
-            finalStage
-          ) {
+          if (finalStage) {
 
             const finalResult =
               readStageResult(
@@ -1669,9 +1657,7 @@
                 stageMaps
               );
 
-            if (
-              finalResult
-            ) {
+            if (finalResult) {
 
               finalPlace =
                 finalResult.place;
@@ -1700,8 +1686,7 @@
           return {
             teamId:
               String(
-                team.teamId ||
-                ""
+                team.teamId || ""
               ),
 
             team:
@@ -1735,7 +1720,6 @@
     rows.sort(
       (a, b) => {
 
-        // 1. Менше балів
         if (
           a.seasonPoints !==
           b.seasonPoints
@@ -1746,7 +1730,6 @@
           );
         }
 
-        // 2. Більша вага
         if (
           b.totalWeight !==
           a.totalWeight
@@ -1757,7 +1740,6 @@
           );
         }
 
-        // 3. Більший Big Fish
         if (
           b.bigFish !==
           a.bigFish
@@ -1771,9 +1753,7 @@
         return String(
           a.team
         ).localeCompare(
-          String(
-            b.team
-          ),
+          String(b.team),
           "uk"
         );
       }
@@ -1782,7 +1762,6 @@
     return rows.map(
       (row, index) => ({
         ...row,
-
         place:
           index + 1
       })
@@ -1813,8 +1792,7 @@
         return {
           teamId:
             String(
-              team.teamId ||
-              ""
+              team.teamId || ""
             ),
 
           team:
@@ -1833,7 +1811,7 @@
   }
 
   // =========================================================
-  // DYNAMIC HEADER
+  // HEADER
   // =========================================================
 
   function buildHeader(
@@ -1842,9 +1820,7 @@
     const head =
       $("seasonFinalHead");
 
-    if (
-      !head
-    ) {
+    if (!head) {
       return;
     }
 
@@ -1862,9 +1838,7 @@
         "th.col-final"
       );
 
-    if (
-      !finalHeader
-    ) {
+    if (!finalHeader) {
       return;
     }
 
@@ -1900,7 +1874,7 @@
   }
 
   // =========================================================
-  // RENDER TABLE
+  // TABLE
   // =========================================================
 
   function renderTable(
@@ -1910,21 +1884,16 @@
     const tbody =
       $("seasonFinalRows");
 
-    if (
-      !tbody
-    ) {
+    if (!tbody) {
       return;
     }
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
 
       tbody.innerHTML = `
         <tr>
           <td colspan="${
-            regularStages.length +
-            6
+            regularStages.length + 6
           }">
             Немає команд для рейтингу.
           </td>
@@ -1957,6 +1926,7 @@
                         ? "stage-noshow"
                         : ""
                     }">
+
                       <div class="stage-cell">
 
                         <span class="stage-place">
@@ -1982,6 +1952,7 @@
                         </span>
 
                       </div>
+
                     </td>
                   `
                 )
@@ -2053,9 +2024,7 @@
   // PODIUM
   // =========================================================
 
-  function renderPodium(
-    rows
-  ) {
+  function renderPodium(rows) {
     for (
       let place = 1;
       place <= 3;
@@ -2077,18 +2046,14 @@
           `seasonWinner${place}Points`
         );
 
-      if (
-        teamEl
-      ) {
+      if (teamEl) {
         teamEl.textContent =
           row
             ? row.team
             : "—";
       }
 
-      if (
-        pointsEl
-      ) {
+      if (pointsEl) {
         pointsEl.textContent =
           row
             ? `${
@@ -2104,7 +2069,53 @@
   }
 
   // =========================================================
-  // BIG FISH — УСІ УЧАСНИКИ СЕЗОНУ
+  // GET BIG FISH WINNERS
+  // =========================================================
+
+  function getBigFishWinners(
+    allParticipantsStats
+  ) {
+    const teams =
+      Array.isArray(
+        allParticipantsStats
+      )
+        ? allParticipantsStats
+        : [];
+
+    const maxBigFish =
+      teams.reduce(
+        (max, row) =>
+          Math.max(
+            max,
+            num(row.bigFish)
+          ),
+        0
+      );
+
+    if (
+      maxBigFish <= 0
+    ) {
+      return {
+        weight: 0,
+        winners: []
+      };
+    }
+
+    return {
+      weight:
+        maxBigFish,
+
+      winners:
+        teams.filter(
+          row =>
+            num(row.bigFish) ===
+            maxBigFish
+        )
+    };
+  }
+
+  // =========================================================
+  // BIG FISH
   // =========================================================
 
   function renderSeasonBigFish(
@@ -2119,46 +2130,32 @@
     const weightEl =
       $("seasonBigFishWeight");
 
-    const teams =
-      Array.isArray(
+    const result =
+      getBigFishWinners(
         allParticipantsStats
-      )
-        ? allParticipantsStats
-        : [];
+      );
 
     const maxBigFish =
-      teams.reduce(
-        (max, row) =>
-          Math.max(
-            max,
-            num(
-              row.bigFish
-            )
-          ),
-        0
-      );
+      result.weight;
+
+    const winners =
+      result.winners;
 
     if (
       maxBigFish <= 0
     ) {
 
-      if (
-        teamEl
-      ) {
+      if (teamEl) {
         teamEl.textContent =
           "—";
       }
 
-      if (
-        metaEl
-      ) {
+      if (metaEl) {
         metaEl.textContent =
           "Дані відсутні";
       }
 
-      if (
-        weightEl
-      ) {
+      if (weightEl) {
         weightEl.textContent =
           "—";
       }
@@ -2166,37 +2163,17 @@
       return;
     }
 
-    /*
-     * Big Fish може належати будь-якій команді:
-     * 1 місце, 20 місце, 27 місце —
-     * це не має значення.
-     */
-    const winners =
-      teams.filter(
-        row =>
-          num(
-            row.bigFish
-          ) ===
-          maxBigFish
-      );
-
-    if (
-      teamEl
-    ) {
+    if (teamEl) {
       teamEl.textContent =
         winners
           .map(
             row =>
               row.team
           )
-          .join(
-            " / "
-          );
+          .join(" / ");
     }
 
-    if (
-      metaEl
-    ) {
+    if (metaEl) {
 
       const stageNames =
         [
@@ -2206,37 +2183,23 @@
                 row =>
                   row.bigFishStage
               )
-              .filter(
-                Boolean
-              )
+              .filter(Boolean)
           )
         ];
 
       metaEl.textContent =
         stageNames.length
-          ? stageNames.join(
-              " / "
-            )
+          ? stageNames.join(" / ")
           : `Сезон ${SEASON_YEAR}`;
     }
 
-    if (
-      weightEl
-    ) {
+    if (weightEl) {
       weightEl.textContent =
         `${fmtKg(
           maxBigFish
         )} кг`;
     }
 
-    /*
-     * Якщо власник Big Fish входить у TOP-18,
-     * підсвічуємо його значення у таблиці.
-     *
-     * Якщо Big Fish належить команді за межами TOP-18,
-     * у таблиці нічого помаранчевого не буде,
-     * але нижній блок покаже правильного переможця.
-     */
     document
       .querySelectorAll(
         "#seasonFinalRows td.col-big"
@@ -2252,15 +2215,14 @@
 
           cell.classList.toggle(
             "season-bigfish-winner",
-            value ===
-              maxBigFish
+            value === maxBigFish
           );
         }
       );
   }
 
   // =========================================================
-  // TITLE
+  // TITLES
   // =========================================================
 
   function updateTitles() {
@@ -2270,16 +2232,12 @@
     const title =
       $("seasonRatingTitle");
 
-    if (
-      kicker
-    ) {
+    if (kicker) {
       kicker.textContent =
         `СЕЗОН ${SEASON_YEAR}`;
     }
 
-    if (
-      title
-    ) {
+    if (title) {
       title.textContent =
         "Рейтинг команд сезону";
     }
@@ -2309,11 +2267,6 @@
         ? rating.teams.slice()
         : [];
 
-    /*
-     * Читаємо всі архівовані етапи:
-     * Е1 / Е2 / Е3 / ...
-     * + Фінал.
-     */
     const stagesToLoad =
       finalStage
         ? [
@@ -2330,10 +2283,7 @@
         stagesToLoad
       );
 
-    // =====================================================
-    // 1. ФІКСУЄМО TOP-18
-    // =====================================================
-
+    // TOP-18
     const finalists =
       getFinalists(
         rawTeams,
@@ -2341,10 +2291,7 @@
         stageMaps
       );
 
-    // =====================================================
-    // 2. РЕЙТИНГ СЕЗОНУ — ТІЛЬКИ TOP-18
-    // =====================================================
-
+    // рейтинг сезону
     const rows =
       buildSeasonRanking(
         finalists,
@@ -2353,22 +2300,13 @@
         stageMaps
       );
 
-    // =====================================================
-    // 3. BIG FISH — ВСІ УЧАСНИКИ СЕЗОНУ
-    // =====================================================
-
+    // усі учасники для Big Fish
     const allParticipants =
       collectAllSeasonParticipants(
         allStages,
         stageMaps
       );
 
-    /*
-     * Додатковий fallback:
-     * якщо якась команда є в seasonRating,
-     * але її з якоїсь причини не знайшли
-     * у standings, не втрачаємо її.
-     */
     const participantsMap =
       new Map();
 
@@ -2376,13 +2314,9 @@
       team => {
 
         const key =
-          teamKey(
-            team
-          );
+          teamKey(team);
 
-        if (
-          key
-        ) {
+        if (key) {
           participantsMap.set(
             key,
             team
@@ -2395,15 +2329,11 @@
       team => {
 
         const key =
-          teamKey(
-            team
-          );
+          teamKey(team);
 
         if (
           key &&
-          !participantsMap.has(
-            key
-          )
+          !participantsMap.has(key)
         ) {
           participantsMap.set(
             key,
@@ -2429,18 +2359,20 @@
     return {
       regularStages,
       finalStage,
+      allStages,
       rows,
       allParticipantsStats
     };
   }
 
   // =========================================================
-  // RENDER PAYLOAD
+  // RENDER
   // =========================================================
 
-  function renderPayload(
-    payload
-  ) {
+  function renderPayload(payload) {
+    currentPayload =
+      payload;
+
     const regularStages =
       Array.isArray(
         payload.regularStages
@@ -2475,20 +2407,15 @@
       rows
     );
 
-    /*
-     * ВАЖЛИВО:
-     * сюди передаємо НЕ rows TOP-18,
-     * а статистику ВСІХ учасників.
-     */
     renderSeasonBigFish(
       allParticipantsStats
     );
 
     updateTitles();
 
-    if (
-      !rows.length
-    ) {
+    renderAdminArchivePanel();
+
+    if (!rows.length) {
 
       showError(
         "⚠️ Немає команд для підсумкового рейтингу."
@@ -2503,6 +2430,941 @@
   }
 
   // =========================================================
+  // ADMIN PANEL CSS
+  // =========================================================
+
+  function injectAdminArchiveStyles() {
+    if (
+      document.getElementById(
+        "seasonArchiveAdminStyles"
+      )
+    ) {
+      return;
+    }
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+    style.id =
+      "seasonArchiveAdminStyles";
+
+    style.textContent = `
+      .season-archive-admin{
+        margin-top:28px;
+        padding:18px;
+        border-radius:18px;
+        border:1px solid rgba(245,158,11,.42);
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(245,158,11,.12),
+            transparent 45%
+          ),
+          #0b0d14;
+        box-shadow:
+          0 16px 36px rgba(0,0,0,.42);
+      }
+
+      .season-archive-admin__title{
+        font-size:1.05rem;
+        font-weight:950;
+        color:#fbbf24;
+      }
+
+      .season-archive-admin__text{
+        margin-top:8px;
+        color:#cbd5e1;
+        font-size:.86rem;
+        line-height:1.55;
+      }
+
+      .season-archive-admin__warning{
+        margin-top:10px;
+        color:#fca5a5;
+        font-size:.8rem;
+        line-height:1.5;
+      }
+
+      .season-archive-admin__button{
+        width:100%;
+        margin-top:14px;
+        padding:14px 16px;
+
+        border:1px solid rgba(251,191,36,.55);
+        border-radius:14px;
+
+        background:
+          linear-gradient(
+            90deg,
+            #facc15,
+            #f97316
+          );
+
+        color:#111827;
+
+        font-size:.95rem;
+        font-weight:950;
+
+        cursor:pointer;
+
+        box-shadow:
+          0 14px 30px rgba(249,115,22,.22);
+      }
+
+      .season-archive-admin__button:disabled{
+        cursor:wait;
+        opacity:.55;
+      }
+
+      .season-archive-admin__status{
+        display:none;
+        margin-top:12px;
+        padding:11px 12px;
+        border-radius:12px;
+        background:rgba(15,23,42,.75);
+        border:1px solid rgba(148,163,184,.16);
+        color:#cbd5e1;
+        font-size:.82rem;
+        line-height:1.45;
+      }
+
+      .season-archive-admin__status.is-success{
+        display:block;
+        color:#86efac;
+        border-color:rgba(34,197,94,.35);
+        background:rgba(34,197,94,.08);
+      }
+
+      .season-archive-admin__status.is-error{
+        display:block;
+        color:#fca5a5;
+        border-color:rgba(239,68,68,.35);
+        background:rgba(239,68,68,.08);
+      }
+
+      .season-archive-admin__status.is-working{
+        display:block;
+        color:#fde68a;
+        border-color:rgba(250,204,21,.30);
+        background:rgba(250,204,21,.06);
+      }
+    `;
+
+    document.head.appendChild(
+      style
+    );
+  }
+
+  // =========================================================
+  // ADMIN PANEL
+  // =========================================================
+
+  function renderAdminArchivePanel() {
+    injectAdminArchiveStyles();
+
+    let panel =
+      $("seasonArchiveAdmin");
+
+    /*
+     * НЕ адмін:
+     * панелі взагалі немає в DOM.
+     */
+    if (!currentUserIsAdmin) {
+      if (panel) {
+        panel.remove();
+      }
+
+      return;
+    }
+
+    /*
+     * Адмін є, але ще немає контенту сторінки.
+     */
+    const content =
+      document.querySelector(
+        ".season-rating-content"
+      );
+
+    if (!content) {
+      return;
+    }
+
+    if (!panel) {
+
+      panel =
+        document.createElement(
+          "section"
+        );
+
+      panel.id =
+        "seasonArchiveAdmin";
+
+      panel.className =
+        "season-archive-admin";
+
+      panel.innerHTML = `
+        <div class="season-archive-admin__title">
+          🔐 Завершення сезону
+        </div>
+
+        <div class="season-archive-admin__text">
+          Кнопка доступна тільки адміністратору.
+          Вона збере фінальний рейтинг сезону ${esc(SEASON_YEAR)},
+          призерів та Big Fish і збереже snapshot у
+          <b>seasonArchives/${esc(SEASON_YEAR)}</b>.
+        </div>
+
+        <div class="season-archive-admin__warning">
+          Після успішного запису архіву поточний
+          <b>seasonRating/${esc(SEASON_YEAR)}</b>
+          буде очищено.
+          Архівовані етапи
+          <b>seasonResults/${esc(SEASON_YEAR)}/stages</b>
+          залишаться без змін.
+        </div>
+
+        <button
+          id="archiveSeasonButton"
+          class="season-archive-admin__button"
+          type="button"
+        >
+          🏆 Архівувати та завершити сезон ${esc(SEASON_YEAR)}
+        </button>
+
+        <div
+          id="seasonArchiveStatus"
+          class="season-archive-admin__status"
+        ></div>
+      `;
+
+      content.appendChild(
+        panel
+      );
+
+      const button =
+        $("archiveSeasonButton");
+
+      if (button) {
+        button.addEventListener(
+          "click",
+          archiveCurrentSeason
+        );
+      }
+    }
+  }
+
+  function setArchiveStatus(
+    message,
+    type = ""
+  ) {
+    const box =
+      $("seasonArchiveStatus");
+
+    if (!box) {
+      return;
+    }
+
+    box.className =
+      "season-archive-admin__status";
+
+    if (type) {
+      box.classList.add(
+        `is-${type}`
+      );
+    }
+
+    box.textContent =
+      message;
+  }
+
+  // =========================================================
+  // SERIALIZE STAGES FOR ARCHIVE
+  // =========================================================
+
+  function makeArchiveStages(
+    payload
+  ) {
+    const stages =
+      [];
+
+    const regular =
+      Array.isArray(
+        payload?.regularStages
+      )
+        ? payload.regularStages
+        : [];
+
+    regular.forEach(
+      (stage, index) => {
+
+        stages.push({
+          type: "qualification",
+
+          number:
+            stageDisplayNumber(
+              stage,
+              index
+            ),
+
+          stageDocId:
+            String(
+              stage.stageDocId ||
+              ""
+            ),
+
+          stageId:
+            String(
+              stage.stageId ||
+              ""
+            ),
+
+          stageName:
+            String(
+              stage.stageName ||
+              `Етап ${
+                index + 1
+              }`
+            )
+        });
+      }
+    );
+
+    if (
+      payload?.finalStage
+    ) {
+      stages.push({
+        type: "final",
+
+        number: null,
+
+        stageDocId:
+          String(
+            payload.finalStage.stageDocId ||
+            ""
+          ),
+
+        stageId:
+          String(
+            payload.finalStage.stageId ||
+            ""
+          ),
+
+        stageName:
+          String(
+            payload.finalStage.stageName ||
+            "Фінал"
+          )
+      });
+    }
+
+    return stages;
+  }
+
+  // =========================================================
+  // ARCHIVE PAYLOAD
+  // =========================================================
+
+  function buildArchiveDocument() {
+    if (!currentPayload) {
+      throw new Error(
+        "Рейтинг сезону ще не сформований."
+      );
+    }
+
+    const rows =
+      Array.isArray(
+        currentPayload.rows
+      )
+        ? currentPayload.rows
+        : [];
+
+    if (!rows.length) {
+      throw new Error(
+        "Немає команд для архівації."
+      );
+    }
+
+    const bigFishResult =
+      getBigFishWinners(
+        currentPayload
+          .allParticipantsStats
+      );
+
+    const podium =
+      rows
+        .slice(0, 3)
+        .map(
+          row => ({
+            place:
+              row.place,
+
+            teamId:
+              String(
+                row.teamId || ""
+              ),
+
+            team:
+              row.team,
+
+            points:
+              num(
+                row.seasonPoints
+              ),
+
+            totalWeight:
+              num(
+                row.totalWeight
+              ),
+
+            bigFish:
+              num(
+                row.bigFish
+              )
+          })
+        );
+
+    const ranking =
+      rows.map(
+        row => ({
+          place:
+            row.place,
+
+          teamId:
+            String(
+              row.teamId || ""
+            ),
+
+          team:
+            row.team,
+
+          stages:
+            row.regularCells
+              .map(
+                (cell, index) => ({
+                  stage:
+                    index + 1,
+
+                  place:
+                    cell.place,
+
+                  points:
+                    num(
+                      cell.points
+                    ),
+
+                  absent:
+                    cell.absent === true
+                })
+              ),
+
+          finalPlace:
+            row.finalPlace,
+
+          finalPoints:
+            num(
+              row.finalPoints
+            ),
+
+          seasonPoints:
+            num(
+              row.seasonPoints
+            ),
+
+          totalWeight:
+            num(
+              row.totalWeight
+            ),
+
+          bigFish:
+            num(
+              row.bigFish
+            ),
+
+          bigFishStage:
+            row.bigFishStage || ""
+        })
+      );
+
+    const allBigFishParticipants =
+      (
+        Array.isArray(
+          currentPayload
+            .allParticipantsStats
+        )
+          ? currentPayload
+              .allParticipantsStats
+          : []
+      ).map(
+        row => ({
+          teamId:
+            String(
+              row.teamId || ""
+            ),
+
+          team:
+            row.team,
+
+          bigFish:
+            num(
+              row.bigFish
+            ),
+
+          bigFishStage:
+            row.bigFishStage || ""
+        })
+      );
+
+    return {
+      seasonYear:
+        SEASON_YEAR,
+
+      status:
+        "archived",
+
+      archiveVersion:
+        1,
+
+      finalistsCount:
+        ranking.length,
+
+      qualificationRule: {
+        bestResults:
+          BEST_COUNT_FOR_FINAL,
+
+        absentPoints:
+          ABSENT_REGULAR_POINTS,
+
+        topCount:
+          TOP_COUNT
+      },
+
+      seasonRule: {
+        regularStages:
+          "all",
+
+        final:
+          true,
+
+        sort:
+          [
+            "points_asc",
+            "weight_desc",
+            "bigFish_desc"
+          ]
+      },
+
+      stages:
+        makeArchiveStages(
+          currentPayload
+        ),
+
+      ranking,
+
+      podium,
+
+      bigFish: {
+        weight:
+          num(
+            bigFishResult.weight
+          ),
+
+        winners:
+          bigFishResult
+            .winners
+            .map(
+              row => ({
+                teamId:
+                  String(
+                    row.teamId || ""
+                  ),
+
+                team:
+                  row.team,
+
+                stage:
+                  row.bigFishStage ||
+                  ""
+              })
+            )
+      },
+
+      allParticipantsBigFish:
+        allBigFishParticipants,
+
+      source: {
+        seasonRating:
+          `seasonRating/${SEASON_YEAR}`,
+
+        seasonResults:
+          `seasonResults/${SEASON_YEAR}/stages`
+      },
+
+      archivedBy: {
+        uid:
+          currentUser?.uid ||
+          "",
+
+        email:
+          currentUser?.email ||
+          ""
+      },
+
+      archivedAt:
+        firebase.firestore
+          .FieldValue
+          .serverTimestamp()
+    };
+  }
+
+  // =========================================================
+  // CLEAR LOCAL RATING CACHE
+  // =========================================================
+
+  function clearRatingCaches() {
+    try {
+      const keys =
+        [];
+
+      for (
+        let i = 0;
+        i < localStorage.length;
+        i++
+      ) {
+        const key =
+          localStorage.key(i);
+
+        if (
+          key &&
+          (
+            key.startsWith(
+              "sc_rating_cache"
+            ) ||
+            key.startsWith(
+              "sc_season_rating"
+            )
+          )
+        ) {
+          keys.push(key);
+        }
+      }
+
+      keys.forEach(
+        key =>
+          localStorage.removeItem(
+            key
+          )
+      );
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        "[Season Archive] cache:",
+        error
+      );
+    }
+  }
+
+  // =========================================================
+  // ARCHIVE SEASON
+  // =========================================================
+
+  async function archiveCurrentSeason() {
+    if (
+      archiveInProgress
+    ) {
+      return;
+    }
+
+    if (
+      !currentUserIsAdmin
+    ) {
+      alert(
+        "Ця дія доступна тільки адміністратору."
+      );
+
+      return;
+    }
+
+    if (
+      !currentDb
+    ) {
+      alert(
+        "Firestore ще не готовий."
+      );
+
+      return;
+    }
+
+    if (
+      !currentPayload ||
+      !currentPayload.rows?.length
+    ) {
+      alert(
+        "Немає готового рейтингу для архівації."
+      );
+
+      return;
+    }
+
+    /*
+     * Я навмисно НЕ забороняю архівацію
+     * без фіналу програмно.
+     *
+     * Але попереджаю дуже явно.
+     */
+    if (
+      !currentPayload.finalStage
+    ) {
+      const noFinalConfirm =
+        confirm(
+          `У сезоні ${SEASON_YEAR} Фінал ще не знайдено серед архівованих етапів.\n\n` +
+          `Якщо продовжити зараз, сезон буде заархівований БЕЗ Фіналу.\n\n` +
+          `Продовжити?`
+        );
+
+      if (!noFinalConfirm) {
+        return;
+      }
+    }
+
+    const confirmed =
+      confirm(
+        `ЗАВЕРШИТИ СЕЗОН ${SEASON_YEAR}?\n\n` +
+        `Буде виконано:\n\n` +
+        `1. Створено seasonArchives/${SEASON_YEAR}\n` +
+        `2. Збережено рейтинг 18 фіналістів\n` +
+        `3. Збережено 1 / 2 / 3 місце\n` +
+        `4. Збережено Big Fish серед ВСІХ учасників\n` +
+        `5. Архів етапів seasonResults/${SEASON_YEAR}/stages НЕ видаляється\n` +
+        `6. Поточний seasonRating/${SEASON_YEAR} буде очищено\n\n` +
+        `Продовжити?`
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    /*
+     * Додаткова страховка.
+     */
+    const finalConfirm =
+      confirm(
+        `ОСТАННЄ ПІДТВЕРДЖЕННЯ.\n\n` +
+        `Після цього "Вихід у фінал" та поточний ` +
+        `"Рейтинг команд сезону" за ${SEASON_YEAR} очистяться.\n\n` +
+        `Архів сезону залишиться збережений.\n\n` +
+        `Архівувати сезон ${SEASON_YEAR}?`
+      );
+
+    if (!finalConfirm) {
+      return;
+    }
+
+    const button =
+      $("archiveSeasonButton");
+
+    archiveInProgress =
+      true;
+
+    if (button) {
+      button.disabled =
+        true;
+
+      button.textContent =
+        "⏳ Архівуємо сезон…";
+    }
+
+    setArchiveStatus(
+      "Формуємо архів і перевіряємо дані…",
+      "working"
+    );
+
+    try {
+
+      // =====================================================
+      // 1. BUILD SNAPSHOT
+      // =====================================================
+
+      const archiveDocument =
+        buildArchiveDocument();
+
+      const archiveRef =
+        currentDb
+          .collection(
+            "seasonArchives"
+          )
+          .doc(
+            SEASON_YEAR
+          );
+
+      const ratingRef =
+        currentDb
+          .collection(
+            "seasonRating"
+          )
+          .doc(
+            SEASON_YEAR
+          );
+
+      // =====================================================
+      // 2. CHECK EXISTING ARCHIVE
+      // =====================================================
+
+      const existing =
+        await archiveRef.get();
+
+      if (
+        existing.exists
+      ) {
+        const overwrite =
+          confirm(
+            `Архів сезону ${SEASON_YEAR} уже існує.\n\n` +
+            `Перезаписати його новими даними?`
+          );
+
+        if (!overwrite) {
+          throw new Error(
+            "Архівацію скасовано: архів уже існує."
+          );
+        }
+      }
+
+      setArchiveStatus(
+        "Записуємо фінальний рейтинг у Firestore…",
+        "working"
+      );
+
+      // =====================================================
+      // 3. ATOMIC BATCH
+      //
+      // АБО:
+      //   архів записався + рейтинг очистився
+      //
+      // АБО:
+      //   не змінилося нічого
+      // =====================================================
+
+      const batch =
+        currentDb.batch();
+
+      batch.set(
+        archiveRef,
+        archiveDocument,
+        {
+          merge: false
+        }
+      );
+
+      /*
+       * ВАЖЛИВО:
+       *
+       * Не видаляємо документ повністю.
+       * Залишаємо службову інформацію,
+       * що сезон завершений і де його архів.
+       *
+       * Але teams + archivedStages стають порожні —
+       * тому "Вихід у фінал" і поточний рейтинг очищаються.
+       */
+      batch.set(
+        ratingRef,
+        {
+          seasonYear:
+            SEASON_YEAR,
+
+          archived:
+            true,
+
+          archivedTo:
+            `seasonArchives/${SEASON_YEAR}`,
+
+          archivedAt:
+            firebase.firestore
+              .FieldValue
+              .serverTimestamp(),
+
+          nextSeasonYear:
+            NEXT_SEASON_YEAR,
+
+          archivedStages:
+            [],
+
+          teams:
+            [],
+
+          source:
+            "season-closed"
+        },
+        {
+          merge: false
+        }
+      );
+
+      await batch.commit();
+
+      // =====================================================
+      // 4. CLEAR BROWSER CACHE
+      // =====================================================
+
+      clearRatingCaches();
+
+      // =====================================================
+      // DONE
+      // =====================================================
+
+      setArchiveStatus(
+        `✅ Сезон ${SEASON_YEAR} успішно заархівовано. ` +
+        `Архів: seasonArchives/${SEASON_YEAR}. ` +
+        `Поточний рейтинг очищено.`,
+        "success"
+      );
+
+      if (button) {
+        button.textContent =
+          `✅ Сезон ${SEASON_YEAR} заархівовано`;
+      }
+
+      alert(
+        `Готово.\n\n` +
+        `Сезон ${SEASON_YEAR} збережено в:\n` +
+        `seasonArchives/${SEASON_YEAR}\n\n` +
+        `Вихід у фінал і поточний рейтинг сезону очищено.\n\n` +
+        `Архівовані етапи ${SEASON_YEAR} залишились на місці.`
+      );
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        "[Season Archive] error:",
+        error
+      );
+
+      setArchiveStatus(
+        `❌ ${safeText(
+          error.message ||
+          error
+        )}`,
+        "error"
+      );
+
+      if (button) {
+        button.disabled =
+          false;
+
+        button.textContent =
+          `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
+      }
+
+      archiveInProgress =
+        false;
+    }
+  }
+
+  // =========================================================
   // LOAD
   // =========================================================
 
@@ -2513,6 +3375,11 @@
 
       const db =
         await waitReady();
+
+      /*
+       * Запускаємо перевірку адміна.
+       */
+      initAdminAccess(db);
 
       db
         .collection(
@@ -2525,9 +3392,13 @@
 
           async snap => {
 
-            if (
-              !snap.exists
-            ) {
+            if (!snap.exists) {
+
+              currentRatingSource =
+                null;
+
+              currentPayload =
+                null;
 
               showError(
                 `⚠️ Немає документа seasonRating/${SEASON_YEAR}`
@@ -2541,8 +3412,64 @@
             try {
 
               const rating =
-                snap.data() ||
-                {};
+                snap.data() || {};
+
+              currentRatingSource =
+                rating;
+
+              /*
+               * Якщо сезон уже заархівований
+               * і поточний рейтинг очищений.
+               */
+              if (
+                rating.archived === true &&
+                (
+                  !Array.isArray(
+                    rating.teams
+                  ) ||
+                  !rating.teams.length
+                )
+              ) {
+
+                currentPayload = {
+                  regularStages: [],
+                  finalStage: null,
+                  allStages: [],
+                  rows: [],
+                  allParticipantsStats: []
+                };
+
+                buildHeader([]);
+
+                renderTable(
+                  [],
+                  []
+                );
+
+                renderPodium(
+                  []
+                );
+
+                renderSeasonBigFish(
+                  []
+                );
+
+                updateTitles();
+
+                showError(
+                  `✅ Сезон ${esc(SEASON_YEAR)} завершений та заархівований. ` +
+                  `Архів: ${esc(
+                    rating.archivedTo ||
+                    `seasonArchives/${SEASON_YEAR}`
+                  )}`
+                );
+
+                renderAdminArchivePanel();
+
+                setReady();
+
+                return;
+              }
 
               const payload =
                 await buildPayload(
@@ -2613,7 +3540,7 @@
   }
 
   // =========================================================
-  // REFRESH
+  // PUBLIC REFRESH
   // =========================================================
 
   window.refreshSeasonRating =

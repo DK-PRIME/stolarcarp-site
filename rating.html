@@ -50,12 +50,11 @@
       padding:14px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
-      background:
-        linear-gradient(
-          90deg,
-          rgba(250,204,21,.08),
-          rgba(17,24,39,.25)
-        );
+      background:linear-gradient(
+        90deg,
+        rgba(250,204,21,.08),
+        rgba(17,24,39,.25)
+      );
       color:#e5e7eb;
       box-shadow:0 14px 30px rgba(0,0,0,.55);
     }
@@ -192,13 +191,7 @@
     .season-table-wrapper{
       margin-top:6px;
       border-radius:14px;
-
-      /*
-        Горизонтальний scroll потрібен,
-        якщо етапів стане багато.
-      */
-      overflow-x:auto;
-      overflow-y:hidden;
+      overflow:hidden;
 
       background:
         radial-gradient(
@@ -212,37 +205,28 @@
 
       width:108%;
       margin-left:-4%;
-
-      -webkit-overflow-scrolling:touch;
     }
 
     .table--season{
       width:100%;
-      min-width:760px;
+      table-layout:fixed;
       border-collapse:collapse;
       font-size:.7rem;
       background:var(--panel2);
-
-      /*
-        Не використовуємо table-layout:fixed,
-        бо кількість етапів тепер динамічна.
-      */
-      table-layout:auto;
     }
 
     .table--season thead{
-      background:
-        linear-gradient(
-          90deg,
-          #181920,
-          #111827
-        );
+      background:linear-gradient(
+        90deg,
+        #181920,
+        #111827
+      );
     }
 
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:5px 4px;
+      padding:4px 2px;
       text-align:center;
       font-weight:600;
       opacity:.95;
@@ -275,7 +259,7 @@
     }
 
     .table--season tbody td{
-      padding:4px 4px;
+      padding:3px 2px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
@@ -292,46 +276,34 @@
     }
 
     /* =========================
-       DYNAMIC COLUMN WIDTHS
+       WIDTHS — як у старій таблиці
        ========================= */
-
     .col-place{
-      min-width:52px;
-      width:52px;
+      width:8%;
     }
 
     .col-move{
-      min-width:50px;
-      width:50px;
+      width:6%;
     }
 
     .col-team{
-      min-width:145px;
-      width:190px;
+      width:19%;
     }
 
-    /*
-      Кожен динамічний етап має
-      свою мінімальну ширину.
-    */
     .col-stage{
-      min-width:62px;
-      width:62px;
+      width:8%;
     }
 
     .col-points{
-      min-width:58px;
-      width:58px;
+      width:7%;
     }
 
     .col-weight{
-      min-width:72px;
-      width:72px;
+      width:8%;
     }
 
     .col-big{
-      min-width:70px;
-      width:70px;
+      width:7%;
     }
 
     .col-place .place-num{
@@ -401,24 +373,14 @@
       color:#9ca3af;
     }
 
-    /*
-      Якщо етап увійшов у 2 найкращі.
-    */
     .stage-counted{
       background:rgba(34,197,94,.055);
     }
 
-    /*
-      Результат є, але не увійшов
-      у 2 найкращі.
-    */
     .stage-dropped{
       opacity:.55;
     }
 
-    /*
-      Неявка / відсутність результату.
-    */
     .stage-noshow{
       opacity:.55;
     }
@@ -427,9 +389,7 @@
        QUALIFIED TOP 18
        ========================= */
     .table--main tbody tr.row-qualified td.col-place{
-      box-shadow:
-        inset 3px 0 0
-        var(--accent-gold-soft);
+      box-shadow:inset 3px 0 0 var(--accent-gold-soft);
     }
 
     .table--main tbody tr.row-qualified .place-num{
@@ -492,46 +452,11 @@
 
       .table--season thead th,
       .table--season tbody td{
-        padding:3px 3px;
+        padding:3px 1px;
       }
 
       .table--season thead th{
         font-size:.55rem;
-      }
-
-      .col-place{
-        min-width:44px;
-        width:44px;
-      }
-
-      .col-move{
-        min-width:45px;
-        width:45px;
-      }
-
-      .col-team{
-        min-width:120px;
-        width:140px;
-      }
-
-      .col-stage{
-        min-width:55px;
-        width:55px;
-      }
-
-      .col-points{
-        min-width:52px;
-        width:52px;
-      }
-
-      .col-weight{
-        min-width:64px;
-        width:64px;
-      }
-
-      .col-big{
-        min-width:64px;
-        width:64px;
       }
 
       .col-place .place-num{
@@ -589,9 +514,6 @@
 
   <section class="container section">
 
-    <!-- =========================
-         HEADER
-         ========================= -->
     <div class="season-rating-head">
 
       <div
@@ -622,7 +544,6 @@
           <summary>Детальніше</summary>
 
           <div class="details-body">
-
             <p
               class="lead rating-desc"
               style="margin:0;"
@@ -632,10 +553,9 @@
               та заархівовані відбіркові етапи сезону.
               <br><br>
 
-              Кількість етапів не зафіксована в HTML:
-              якщо створено 3 етапи — таблиця покаже Е1, Е2, Е3;
-              якщо створено 5 — покаже Е1–Е5;
-              якщо створено більше — вони також будуть додані автоматично.
+              Кількість етапів визначається автоматично:
+              скільки етапів створено та заархівовано,
+              стільки колонок буде показано в таблиці.
               <br><br>
 
               Для виходу у Фінал рейтинг формується за сумою
@@ -644,8 +564,8 @@
               Менша сума балів означає вище місце.
               <br><br>
 
-              Якщо команда не має результату потрібного етапу,
-              система використовує встановлені штрафні бали
+              Якщо команда не має результату етапу,
+              система використовує штрафні бали
               відповідно до логіки рейтингу.
               <br><br>
 
@@ -661,10 +581,7 @@
 
               Фінальний етап у цій таблиці
               <strong>не враховується</strong>.
-              Він буде використовуватися окремо
-              в підсумковому рейтингу команд сезону.
             </p>
-
           </div>
         </details>
 
@@ -675,15 +592,12 @@
         id="ratingError"
       ></div>
 
-      <!-- Loader -->
       <div
         class="rating-loader"
         role="status"
         aria-live="polite"
       >
-
         <div class="rating-loader__row">
-
           <span
             class="rating-loader__dot"
             aria-hidden="true"
@@ -692,21 +606,16 @@
           <div class="rating-loader__title">
             Завантаження рейтингу…
           </div>
-
         </div>
 
         <div class="rating-loader__sub">
           Підтягуємо етапи та список команд.
           Таблиця сформується автоматично.
         </div>
-
       </div>
 
     </div>
 
-    <!-- =========================
-         TABLES
-         ========================= -->
     <div class="season-tables">
 
       <div class="card card--season">
@@ -715,14 +624,9 @@
           Вихід у фінал
         </h3>
 
-        <!-- =====================
-             TOP 18
-             ===================== -->
         <div class="season-table-wrapper">
 
-          <table
-            class="table table--season table--main"
-          >
+          <table class="table table--season table--main">
 
             <thead>
               <tr id="seasonTopHead">
@@ -740,14 +644,8 @@
                 </th>
 
                 <!--
-                  ДИНАМІЧНІ ЕТАПИ
-
-                  JS вставить сюди:
-                  Е1
-                  Е2
-                  Е3
-                  Е4
-                  ...
+                  JS автоматично вставляє:
+                  Е1, Е2, Е3, Е4...
                 -->
 
                 <th class="col-points">
@@ -771,12 +669,8 @@
 
         </div>
 
-        <!-- =====================
-             BELOW TOP 18
-             ===================== -->
         <h4 class="subhead">
           Претенденти на участь у Фіналі сезону
-
           <span>
             — команди, що знаходяться нижче 18-го місця
           </span>
@@ -784,9 +678,7 @@
 
         <div class="season-table-wrapper">
 
-          <table
-            class="table table--season table--contenders"
-          >
+          <table class="table table--season table--contenders">
 
             <thead>
               <tr id="seasonContendersHead">
@@ -804,8 +696,8 @@
                 </th>
 
                 <!--
-                  ДИНАМІЧНІ ЕТАПИ
-                  JS вставить потрібну кількість
+                  JS автоматично вставляє:
+                  Е1, Е2, Е3, Е4...
                 -->
 
                 <th class="col-points">
@@ -832,25 +724,11 @@
       </div>
 
       <p class="rating-note">
-        Рейтинг виходу у Фінал визначається так:
-        <br>
-
-        <b>1)</b>
-        менша сума двох найкращих результатів — вище місце;
-        <br>
-
-        <b>2)</b>
-        при однакових балах — вище команда
-        з більшою загальною вагою;
-        <br>
-
-        <b>3)</b>
-        якщо вага однакова — вище команда
-        з більшим Big Fish;
-        <br>
-
-        <b>4)</b>
-        перші 18 команд отримують право участі у Фіналі.
+        Рейтинг виходу у Фінал визначається так:<br>
+        <b>1)</b> менша сума двох найкращих результатів — вище місце;<br>
+        <b>2)</b> при однакових балах — вище команда з більшою загальною вагою;<br>
+        <b>3)</b> якщо вага однакова — вище команда з більшим Big Fish;<br>
+        <b>4)</b> перші 18 команд отримують право участі у Фіналі.
       </p>
 
     </div>
@@ -860,7 +738,6 @@
 </main>
 
 <footer class="footer">
-
   <div class="container footer__row">
 
     <div>
@@ -886,7 +763,6 @@
     </div>
 
   </div>
-
 </footer>
 
 </body>

@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="uk" data-season-rating-ready="0">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Рейтинг команд сезону — STOLAR CARP</title>
+
+  <link rel="stylesheet" href="assets/css/main.css" />
+
+  <!-- Firebase -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <!-- App -->
+  <script defer src="assets/js/firebase-init.js"></script>
+  <script defer src="assets/js/config.js"></script>
+
+  <!-- Окремий JS цієї сторінки -->
+  <script defer src="assets/js/season_rating.js"></script>
+
+  <style>
+    :root{
+      --line:rgba(255,255,255,.08);
+
+      --gold:#fbbf24;
+      --gold2:#facc15;
+
+      --silver:#cbd5e1;
+      --bronze:#d97706;
+
+      --green:#22c55e;
+      --blue:#38bdf8;
+
+      --panel:#0b0d14;
+      --panel2:#05060a;
+    }
+
+    /* =====================================================
+       READY
+       ===================================================== */
+
+    html[data-season-rating-ready="0"] .season-rating-content{
+      display:none !important;
+    }
+
+    html[data-season-rating-ready="1"] .season-rating-loader{
+      display:none !important;
+    }
+
+    /* =====================================================
+       LOADER
+       ===================================================== */
+
+    .season-rating-loader{
+      margin-top:14px;
+      padding:14px;
+
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+
+      background:
+        linear-gradient(
+          90deg,
+          rgba(250,204,21,.08),
+          rgba(17,24,39,.25)
+        );
+
+      color:#e5e7eb;
+
+      box-shadow:
+        0 14px 30px rgba(0,0,0,.55);
+    }
+
+    .season-rating-loader__row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .season-rating-loader__dot{
+      width:10px;
+      height:10px;
+
+      border-radius:999px;
+
+      background:var(--gold2);
+
+      box-shadow:
+        0 0 0 6px rgba(250,204,21,.08);
+
+      animation:
+        seasonPulse 1.1s infinite ease-in-out;
+    }
+
+    @keyframes seasonPulse{
+      0%,100%{
+        transform:scale(1);
+        opacity:.85;
+      }
+
+      50%{
+        transform:scale(1.25);
+        opacity:1;
+      }
+    }
+
+    .season-rating-loader__title{
+      font-weight:900;
+    }
+
+    .season-rating-loader__sub{
+      margin-top:6px;
+      opacity:.75;
+      line-height:1.45;
+    }
+
+    /* =====================================================
+       HERO
+       ===================================================== */
+
+    .season-rating-head{
+      margin-bottom:24px;
+      padding:24px 22px;
+
+      border-radius:20px;
+      border:1px solid rgba(255,255,255,.10);
+
+      background:
+        radial-gradient(
+          circle at top left,
+          rgba(250,204,21,.18) 0,
+          transparent 38%
+        ),
+        radial-gradient(
+          circle at bottom right,
+          #111827 0,
+          #050609 55%
+        );
+
+      box-shadow:
+        0 18px 40px rgba(0,0,0,.7);
+    }
+
+    .season-rating-head .kicker{
+      margin-bottom:4px;
+
+      font-size:.78rem;
+      letter-spacing:.18em;
+
+      text-transform:uppercase;
+      opacity:.8;
+    }
+
+    .season-rating-head .page-title{
+      margin:0;
+    }
+
+    .season-rating-desc{
+      max-width:900px;
+
+      margin-top:10px;
+
+      font-size:1rem;
+      line-height:1.7;
+
+      opacity:.9;
+    }
+
+    /* =====================================================
+       BACK BUTTON
+       ===================================================== */
+
+    .back-to-qualification{
+      display:inline-flex;
+
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+
+      margin:0 0 20px;
+
+      padding:11px 16px;
+
+      border-radius:14px;
+
+      border:
+        1px solid rgba(255,255,255,.12);
+
+      background:
+        rgba(255,255,255,.045);
+
+      color:#e5e7eb;
+
+      text-decoration:none;
+      font-weight:800;
+    }
+
+    .back-to-qualification:hover{
+      border-color:
+        rgba(250,204,21,.35);
+    }
+
+    /* =====================================================
+       ERROR
+       ===================================================== */
+
+    .season-rating-error{
+      display:none;
+
+      margin-top:14px;
+      padding:14px;
+
+      border-radius:14px;
+
+      border:
+        1px solid rgba(239,68,68,.35);
+
+      background:
+        rgba(239,68,68,.10);
+
+      color:#ffb4b4;
+    }
+
+    /* =====================================================
+       TABLE
+       ===================================================== */
+
+    .season-rating-card{
+      margin-top:20px;
+
+      padding:0;
+
+      border:none;
+      background:transparent;
+      box-shadow:none;
+    }
+
+    .season-rating-card h2{
+      margin:
+        0 0 10px;
+    }
+
+    .season-rating-table-wrapper{
+      margin-top:6px;
+
+      width:108%;
+      margin-left:-4%;
+
+      border-radius:14px;
+      overflow:hidden;
+
+      border:
+        1px solid rgba(255,255,255,.09);
+
+      background:
+        radial-gradient(
+          circle at top,
+          var(--panel) 0,
+          var(--panel2) 55%
+        );
+
+      box-shadow:
+        0 14px 30px rgba(0,0,0,.75);
+    }
+
+    .table--season-final{
+      width:100%;
+
+      table-layout:fixed;
+
+      border-collapse:collapse;
+
+      font-size:.7rem;
+
+      background:
+        var(--panel2);
+    }
+
+    .table--season-final thead{
+      background:
+        linear-gradient(
+          90deg,
+          #181920,
+          #111827
+        );
+    }
+
+    .table--season-final thead th{
+      padding:4px 2px;
+
+      border-bottom:
+        1px solid var(--line);
+
+      border-right:
+        1px solid rgba(255,255,255,.04);
+
+      text-align:center;
+
+      font-size:.6rem;
+      font-weight:600;
+      line-height:1.25;
+
+      color:#e5e7eb;
+
+      text-transform:uppercase;
+      letter-spacing:.04em;
+
+      white-space:normal;
+      overflow:hidden;
+    }
+
+    .table--season-final thead th:first-child{
+      text-align:left;
+    }
+
+    .table--season-final tbody tr{
+      height:40px;
+
+      background:
+        var(--panel);
+    }
+
+    .table--season-final tbody tr:nth-child(odd){
+      background:#10121b;
+    }
+
+    .table--season-final tbody td{
+      padding:3px 2px;
+
+      border-bottom:
+        1px solid rgba(255,255,255,.04);
+
+      border-right:
+        1px solid rgba(255,255,255,.02);
+
+      box-sizing:border-box;
+
+      text-align:center;
+
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+
+      font-size:.7rem;
+
+      color:#e5e7eb;
+    }
+
+    .table--season-final tbody td.col-team{
+      text-align:left;
+    }
+
+    /* =====================================================
+       WIDTHS
+       ===================================================== */
+
+    .col-place{
+      width:8%;
+    }
+
+    .col-team{
+      width:21%;
+    }
+
+    .col-stage{
+      width:8%;
+    }
+
+    .col-final{
+      width:8%;
+    }
+
+    .col-points{
+      width:7%;
+    }
+
+    .col-weight{
+      width:8%;
+    }
+
+    .col-big{
+      width:7%;
+    }
+
+    /* =====================================================
+       STAGE
+       ===================================================== */
+
+    .stage-cell{
+      display:flex;
+
+      align-items:center;
+      justify-content:center;
+
+      gap:2px;
+
+      font-size:.68rem;
+      line-height:1;
+    }
+
+    .stage-place{
+      font-weight:600;
+    }
+
+    .stage-slash{
+      opacity:.65;
+    }
+
+    .stage-points{
+      font-size:.64rem;
+
+      color:#9ca3af;
+    }
+
+    /* =====================================================
+       FINAL
+       ===================================================== */
+
+    .final-place{
+      font-weight:900;
+
+      color:#e5e7eb;
+    }
+
+    /* =====================================================
+       POINTS / BIG
+       ===================================================== */
+
+    .col-points b{
+      color:var(--gold);
+
+      letter-spacing:.02em;
+    }
+
+    .col-big{
+      color:var(--blue);
+    }
+
+    .season-bigfish-winner{
+      color:#f59e0b !important;
+
+      font-weight:900 !important;
+
+      text-shadow:
+        0 0 6px rgba(245,158,11,.35);
+    }
+
+    /* =====================================================
+       TOP 3 ROWS
+       ===================================================== */
+
+    .season-rank-1 td.col-place{
+      box-shadow:
+        inset 4px 0 0 #facc15;
+    }
+
+    .season-rank-2 td.col-place{
+      box-shadow:
+        inset 4px 0 0 #cbd5e1;
+    }
+
+    .season-rank-3 td.col-place{
+      box-shadow:
+        inset 4px 0 0 #d97706;
+    }
+
+    .season-rank-1 .place-num{
+      color:#facc15;
+      font-weight:950;
+    }
+
+    .season-rank-2 .place-num{
+      color:#e5e7eb;
+      font-weight:950;
+    }
+
+    .season-rank-3 .place-num{
+      color:#fb923c;
+      font-weight:950;
+    }
+
+    .place-num{
+      display:block;
+
+      padding-left:5px;
+
+      font-size:.9rem;
+      font-weight:700;
+      line-height:1;
+    }
+
+    /* =====================================================
+       PODIUM
+       ===================================================== */
+
+    .season-podium{
+      margin-top:28px;
+    }
+
+    .season-podium h2{
+      margin-bottom:14px;
+    }
+
+    .podium-grid{
+      display:grid;
+
+      grid-template-columns:
+        repeat(3,1fr);
+
+      gap:12px;
+    }
+
+    .podium-card{
+      min-height:125px;
+
+      padding:16px;
+
+      border-radius:18px;
+
+      border:
+        1px solid rgba(255,255,255,.12);
+
+      background:
+        linear-gradient(
+          180deg,
+          rgba(255,255,255,.05),
+          rgba(255,255,255,.02)
+        );
+
+      text-align:center;
+
+      box-shadow:
+        0 14px 30px rgba(0,0,0,.35);
+    }
+
+    .podium-card--1{
+      border-color:
+        rgba(250,204,21,.50);
+    }
+
+    .podium-card--2{
+      border-color:
+        rgba(203,213,225,.35);
+    }
+
+    .podium-card--3{
+      border-color:
+        rgba(217,119,6,.45);
+    }
+
+    .podium-medal{
+      font-size:2rem;
+      line-height:1;
+    }
+
+    .podium-place{
+      margin-top:8px;
+
+      font-weight:900;
+      font-size:.9rem;
+
+      opacity:.7;
+    }
+
+    .podium-team{
+      margin-top:8px;
+
+      font-size:1.05rem;
+      font-weight:950;
+
+      color:#f8fafc;
+    }
+
+    .podium-points{
+      margin-top:5px;
+
+      font-size:.85rem;
+
+      color:#cbd5e1;
+    }
+
+    /* =====================================================
+       BIG FISH BLOCK
+       ===================================================== */
+
+    .season-bigfish-card{
+      margin-top:18px;
+
+      padding:18px;
+
+      border-radius:18px;
+
+      border:
+        1px solid rgba(245,158,11,.40);
+
+      background:
+        radial-gradient(
+          circle at top left,
+          rgba(245,158,11,.16),
+          transparent 45%
+        ),
+        #0b0d14;
+
+      box-shadow:
+        0 14px 30px rgba(0,0,0,.38);
+    }
+
+    .season-bigfish-title{
+      font-size:1.05rem;
+      font-weight:950;
+
+      color:#f59e0b;
+    }
+
+    .season-bigfish-content{
+      margin-top:10px;
+
+      display:flex;
+
+      align-items:center;
+      justify-content:space-between;
+
+      gap:14px;
+    }
+
+    .season-bigfish-team{
+      font-size:1.1rem;
+      font-weight:950;
+
+      color:#f8fafc;
+    }
+
+    .season-bigfish-weight{
+      flex:0 0 auto;
+
+      font-size:1.35rem;
+      font-weight:950;
+
+      color:#f59e0b;
+    }
+
+    .season-bigfish-meta{
+      margin-top:5px;
+
+      font-size:.82rem;
+
+      color:#94a3b8;
+    }
+
+    /* =====================================================
+       NOTE
+       ===================================================== */
+
+    .season-rating-note{
+      margin-top:10px;
+
+      font-size:.8rem;
+      line-height:1.55;
+
+      opacity:.72;
+    }
+
+    /* =====================================================
+       MOBILE
+       ===================================================== */
+
+    @media(max-width:640px){
+
+      .season-rating-head{
+        padding:18px 16px;
+      }
+
+      .podium-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media(max-width:480px){
+
+      .table--season-final{
+        font-size:.55rem;
+      }
+
+      .table--season-final thead th,
+      .table--season-final tbody td{
+        padding:3px 1px;
+      }
+
+      .table--season-final thead th{
+        font-size:.55rem;
+      }
+
+      .place-num{
+        font-size:.78rem;
+      }
+
+      .stage-cell{
+        font-size:.64rem;
+      }
+
+      .stage-points{
+        font-size:.6rem;
+      }
+
+      .season-bigfish-content{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="container header__row">
+
+    <a
+      class="logo"
+      href="index.html"
+      aria-label="STOLAR CARP"
+    >
+      <span class="logo__mark">
+        SC
+      </span>
+
+      <span class="logo__text">
+        STOLAR CARP
+      </span>
+    </a>
+
+    <nav
+      class="nav"
+      id="nav"
+    >
+      <a href="/index.html" class="nav__link">
+        Головна
+      </a>
+
+      <a href="/rules.html" class="nav__link">
+        Регламент
+      </a>
+
+      <a href="/formats.html" class="nav__link">
+        Формат змагань
+      </a>
+
+      <a href="/register.html" class="nav__link">
+        Реєстрація
+      </a>
+
+      <a href="/live.html" class="nav__link">
+        Live
+      </a>
+
+      <a href="/rating.html" class="nav__link nav__link--active">
+        Рейтинг
+      </a>
+
+      <a href="/lakes.html" class="nav__link">
+        Водойми
+      </a>
+
+      <a href="/sponsors.html" class="nav__link">
+        Спонсори
+      </a>
+
+      <a href="/events/index.html" class="nav__link">
+        Архів
+      </a>
+
+      <a href="/cabinet.html" class="nav__link">
+        Мій кабінет
+      </a>
+    </nav>
+
+    <button
+      class="burger"
+      id="burger"
+      type="button"
+      aria-label="Відкрити меню"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+  </div>
+</header>
+
+<main class="main">
+
+  <section class="container section">
+
+    <!-- ===================================================
+         HERO
+         =================================================== -->
+
+    <div class="season-rating-head">
+
+      <div
+        class="kicker title-gradient"
+        id="seasonRatingKicker"
+      >
+        СЕЗОН
+      </div>
+
+      <h1
+        class="page-title title-gradient"
+        id="seasonRatingTitle"
+      >
+        Рейтинг команд сезону
+      </h1>
+
+      <p class="lead season-rating-desc">
+        Підсумковий рейтинг 18 команд-фіналістів STOLAR CARP.
+        У рейтингу враховуються результати всіх відбіркових
+        етапів та Фіналу сезону.
+      </p>
+
+      <div
+        class="season-rating-error"
+        id="seasonRatingError"
+      ></div>
+
+      <div
+        class="season-rating-loader"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="season-rating-loader__row">
+
+          <span
+            class="season-rating-loader__dot"
+            aria-hidden="true"
+          ></span>
+
+          <div class="season-rating-loader__title">
+            Завантаження рейтингу сезону…
+          </div>
+
+        </div>
+
+        <div class="season-rating-loader__sub">
+          Завантажуємо 18 фіналістів,
+          результати етапів та Фіналу.
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- BACK -->
+
+    <a
+      class="back-to-qualification"
+      href="rating.html"
+    >
+      ← Вихід у фінал
+    </a>
+
+    <!-- ===================================================
+         CONTENT
+         =================================================== -->
+
+    <div class="season-rating-content">
+
+      <div class="season-rating-card">
+
+        <h2>
+          🏆 Рейтинг команд сезону
+        </h2>
+
+        <div class="season-rating-table-wrapper">
+
+          <table
+            class="table table--season-final"
+          >
+
+            <thead>
+
+              <tr id="seasonFinalHead">
+
+                <th class="col-place">
+                  Місце
+                </th>
+
+                <th class="col-team">
+                  Команда
+                </th>
+
+                <!--
+                  season_rating.js
+                  вставить сюди
+                  Е1 / Е2 / Е3 / Е4...
+                -->
+
+                <th class="col-final">
+                  Фінал
+                </th>
+
+                <th class="col-points">
+                  Бали
+                </th>
+
+                <th class="col-weight">
+                  Вага
+                </th>
+
+                <th class="col-big">
+                  Big Fish
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="seasonFinalRows">
+            </tbody>
+
+          </table>
+
+        </div>
+
+        <p class="season-rating-note">
+          Підсумкове місце сезону визначається так:<br>
+          <b>1)</b> менша сума балів усіх етапів та Фіналу — вище місце;<br>
+          <b>2)</b> при однакових балах — більша загальна вага;<br>
+          <b>3)</b> якщо вага однакова — більший Big Fish сезону.
+        </p>
+
+      </div>
+
+      <!-- =================================================
+           ПРИЗЕРИ
+           ================================================= -->
+
+      <section class="season-podium">
+
+        <h2>
+          🏆 Призери сезону
+        </h2>
+
+        <div class="podium-grid">
+
+          <article class="podium-card podium-card--1">
+
+            <div class="podium-medal">
+              🥇
+            </div>
+
+            <div class="podium-place">
+              1 місце
+            </div>
+
+            <div
+              class="podium-team"
+              id="seasonWinner1Team"
+            >
+              —
+            </div>
+
+            <div
+              class="podium-points"
+              id="seasonWinner1Points"
+            >
+              —
+            </div>
+
+          </article>
+
+          <article class="podium-card podium-card--2">
+
+            <div class="podium-medal">
+              🥈
+            </div>
+
+            <div class="podium-place">
+              2 місце
+            </div>
+
+            <div
+              class="podium-team"
+              id="seasonWinner2Team"
+            >
+              —
+            </div>
+
+            <div
+              class="podium-points"
+              id="seasonWinner2Points"
+            >
+              —
+            </div>
+
+          </article>
+
+          <article class="podium-card podium-card--3">
+
+            <div class="podium-medal">
+              🥉
+            </div>
+
+            <div class="podium-place">
+              3 місце
+            </div>
+
+            <div
+              class="podium-team"
+              id="seasonWinner3Team"
+            >
+              —
+            </div>
+
+            <div
+              class="podium-points"
+              id="seasonWinner3Points"
+            >
+              —
+            </div>
+
+          </article>
+
+        </div>
+
+      </section>
+
+      <!-- =================================================
+           BIG FISH
+           ================================================= -->
+
+      <section class="season-bigfish-card">
+
+        <div class="season-bigfish-title">
+          🎣 Big Fish сезону
+        </div>
+
+        <div class="season-bigfish-content">
+
+          <div>
+
+            <div
+              class="season-bigfish-team"
+              id="seasonBigFishTeam"
+            >
+              —
+            </div>
+
+            <div
+              class="season-bigfish-meta"
+              id="seasonBigFishMeta"
+            >
+              —
+            </div>
+
+          </div>
+
+          <div
+            class="season-bigfish-weight"
+            id="seasonBigFishWeight"
+          >
+            —
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </section>
+
+</main>
+
+<footer class="footer">
+
+  <div class="container footer__row">
+
+    <div>
+      © 2025 STOLAR CARP · Львів
+    </div>
+
+    <div class="footer__links">
+
+      <a
+        href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+        rel="noopener"
+      >
+        Viber
+      </a>
+
+      <a
+        href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+        rel="noopener"
+      >
+        YouTube
+      </a>
+
+    </div>
+
+  </div>
+
+</footer>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+
+    const burger =
+      document.getElementById("burger");
+
+    const nav =
+      document.getElementById("nav");
+
+    if (!burger || !nav) {
+      return;
+    }
+
+    burger.addEventListener(
+      "click",
+      () => {
+
+        nav.classList.toggle(
+          "active"
+        );
+
+        nav.classList.toggle(
+          "nav--open"
+        );
+
+        burger.classList.toggle(
+          "active"
+        );
+
+        document.body.classList.toggle(
+          "menu-open"
+        );
+      }
+    );
+
+    nav.addEventListener(
+      "click",
+      e => {
+
+        if (
+          e.target.classList.contains(
+            "nav__link"
+          )
+        ) {
+
+          nav.classList.remove(
+            "active",
+            "nav--open"
+          );
+
+          burger.classList.remove(
+            "active"
+          );
+
+          document.body.classList.remove(
+            "menu-open"
+          );
+        }
+      }
+    );
+  });
+</script>
+
+</body>
+</html>

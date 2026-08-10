@@ -3,26 +3,37 @@
 //
 // ЛОГІКА:
 //
-// 1. Спочатку визначаємо 18 фіналістів:
-//    • тільки відбіркові етапи;
+// 1. ВИХІД У ФІНАЛ:
+//    • визначаємо TOP-18 тільки за відбірковими етапами;
 //    • 2 найкращі результати;
-//    • пропущений етап = 8 балів;
-//    • бали ↑, вага ↓, Big Fish ↓.
+//    • пропущений відбірковий етап = 8 балів;
+//    • менше балів — краще;
+//    • при рівності: більша вага;
+//    • потім більший Big Fish.
 //
-// 2. У сезонний рейтинг допускаються ТІЛЬКИ ці TOP-18.
-//
-// 3. Рейтинг сезону:
+// 2. РЕЙТИНГ КОМАНД СЕЗОНУ:
+//    • у таблиці тільки 18 фіналістів;
 //    • враховуються ВСІ відбіркові етапи;
-//    • + результат Фіналу;
+//    • + Фінал;
 //    • відбірковий етап: бал = місце в зоні;
 //    • Фінал: бал = загальне місце у Фіналі;
-//    • менше балів = краще;
-//    • при рівності: загальна вага ↓;
-//    • потім Big Fish ↓.
+//    • менше балів — краще;
+//    • при рівності: більша загальна вага;
+//    • потім більший Big Fish.
 //
-// 4. Автоматично:
-//    • 1 / 2 / 3 місце сезону;
-//    • Big Fish сезону.
+// 3. ПРИЗЕРИ СЕЗОНУ:
+//    • 1 / 2 / 3 місце автоматично беруться
+//      з підсумкового рейтингу 18 фіналістів.
+//
+// 4. BIG FISH СЕЗОНУ:
+//    • шукається СЕРЕД УСІХ КОМАНД,
+//      які брали участь хоча б в одному архівованому етапі;
+//    • команда НЕ зобов'язана входити у TOP-18;
+//    • враховуються відбіркові етапи + Фінал.
+//
+// Джерела:
+// seasonRating/{year}
+// seasonResults/{year}/stages
 //
 // HTML:
 // season_rating.html
@@ -40,26 +51,12 @@
 
   const BEST_COUNT_FOR_FINAL = 2;
 
-  // Штраф за пропущений ВІДБІРКОВИЙ етап
+  // Штраф за пропущений відбірковий етап
   const ABSENT_REGULAR_POINTS = 8;
 
-  /*
-   * Якщо Фінал уже заархівований,
-   * але команда-фіналіст не має результату Фіналу,
-   * ставимо місце після всіх 18 фіналістів.
-   *
-   * Якщо за твоїм регламентом має бути інше —
-   * змінюється тільки ця константа.
-   */
+  // Якщо Фінал уже є, але фіналіст не має результату
   const ABSENT_FINAL_POINTS = TOP_COUNT + 1; // 19
 
-  /*
-   * Можна відкривати:
-   * season_rating.html
-   *
-   * або:
-   * season_rating.html?year=2026
-   */
   const params =
     new URLSearchParams(
       window.location.search
@@ -126,6 +123,28 @@
       );
   }
 
+  function teamKey(team) {
+    const id =
+      String(
+        team?.teamId || ""
+      ).trim();
+
+    if (id) {
+      return `id:${id}`;
+    }
+
+    const name =
+      clean(
+        team?.team ||
+        team?.teamName ||
+        ""
+      );
+
+    return name
+      ? `name:${name}`
+      : "";
+  }
+
   // =========================================================
   // PAGE STATE
   // =========================================================
@@ -142,20 +161,30 @@
     const box =
       $("seasonRatingError");
 
-    if (!box) return;
+    if (!box) {
+      return;
+    }
 
-    box.style.display = "block";
-    box.innerHTML = message;
+    box.style.display =
+      "block";
+
+    box.innerHTML =
+      message;
   }
 
   function hideError() {
     const box =
       $("seasonRatingError");
 
-    if (!box) return;
+    if (!box) {
+      return;
+    }
 
-    box.style.display = "none";
-    box.innerHTML = "";
+    box.style.display =
+      "none";
+
+    box.innerHTML =
+      "";
   }
 
   // =========================================================
@@ -167,7 +196,8 @@
       await window.scReady;
     }
 
-    const db = window.scDb;
+    const db =
+      window.scDb;
 
     if (!db) {
       throw new Error(
@@ -187,19 +217,20 @@
       return false;
     }
 
-    const raw = clean(
-      `${
-        stage.stageDocId || ""
-      } ${
-        stage.stageId || ""
-      } ${
-        stage.stageName || ""
-      } ${
-        stage.type || ""
-      } ${
-        stage.stageType || ""
-      }`
-    );
+    const raw =
+      clean(
+        `${
+          stage.stageDocId || ""
+        } ${
+          stage.stageId || ""
+        } ${
+          stage.stageName || ""
+        } ${
+          stage.type || ""
+        } ${
+          stage.stageType || ""
+        }`
+      );
 
     return (
       stage.isFinal === true ||
@@ -208,25 +239,96 @@
     );
   }
 
+  function extractStageNumber(value) {
+    const raw =
+      String(value || "");
+
+    // season-2026_stage-1
+    let match =
+      raw.match(
+        /stage[-_\s]*(\d+)/i
+      );
+
+    if (match) {
+      return Number(
+        match[1]
+      );
+    }
+
+    // "Етап 1"
+    match =
+      raw.match(
+        /етап\s*(\d+)/i
+      );
+
+    if (match) {
+      return Number(
+        match[1]
+      );
+    }
+
+    // E1 / Е1
+    match =
+      raw.match(
+        /(?:^|[^a-zа-яіїєґ0-9])[eе]\s*(\d+)/i
+      );
+
+    if (match) {
+      return Number(
+        match[1]
+      );
+    }
+
+    // fallback
+    const numbers =
+      raw.match(/\d+/g);
+
+    if (!numbers?.length) {
+      return null;
+    }
+
+    /*
+     * Якщо є season-2026 і ще інший номер,
+     * беремо останнє число.
+     */
+    return Number(
+      numbers[
+        numbers.length - 1
+      ]
+    );
+  }
+
   function stageSortValue(stage) {
-    if (isFinalStage(stage)) {
+    if (
+      isFinalStage(stage)
+    ) {
       return 999999;
     }
 
-    const raw = String(
-      stage.stageId ||
-      stage.stageDocId ||
-      stage.id ||
-      stage.stageName ||
-      ""
-    );
+    const values = [
+      stage?.stageId,
+      stage?.stageDocId,
+      stage?.stageName
+    ];
 
-    const match =
-      raw.match(/(\d+)/);
+    for (
+      const value of values
+    ) {
+      const number =
+        extractStageNumber(
+          value
+        );
 
-    return match
-      ? Number(match[1])
-      : 9999;
+      if (
+        Number.isFinite(
+          number
+        )
+      ) {
+        return number;
+      }
+    }
+
+    return 9999;
   }
 
   function stageDisplayNumber(
@@ -234,22 +336,25 @@
     index
   ) {
     const values = [
-      stage.stageId,
-      stage.stageDocId,
-      stage.stageName
+      stage?.stageId,
+      stage?.stageDocId,
+      stage?.stageName
     ];
 
     for (
       const value of values
     ) {
-      const match =
-        String(value || "")
-          .match(/(\d+)/);
-
-      if (match) {
-        return Number(
-          match[1]
+      const number =
+        extractStageNumber(
+          value
         );
+
+      if (
+        Number.isFinite(
+          number
+        )
+      ) {
+        return number;
       }
     }
 
@@ -258,19 +363,33 @@
 
   function normalizeStage(stage) {
     if (
-      typeof stage === "string"
+      typeof stage ===
+      "string"
     ) {
       const fixed = {
-        stageDocId: stage,
-        stageId: stage,
-        stageName: stage,
-        type: "",
-        stageType: "",
-        isFinal: false
+        stageDocId:
+          stage,
+
+        stageId:
+          stage,
+
+        stageName:
+          stage,
+
+        type:
+          "",
+
+        stageType:
+          "",
+
+        isFinal:
+          false
       };
 
       fixed.isFinal =
-        isFinalStage(fixed);
+        isFinalStage(
+          fixed
+        );
 
       return fixed;
     }
@@ -302,12 +421,14 @@
 
       type:
         String(
-          stage?.type || ""
+          stage?.type ||
+          ""
         ),
 
       stageType:
         String(
-          stage?.stageType || ""
+          stage?.stageType ||
+          ""
         ),
 
       isFinal:
@@ -317,7 +438,9 @@
     };
 
     fixed.isFinal =
-      isFinalStage(fixed);
+      isFinalStage(
+        fixed
+      );
 
     return fixed;
   }
@@ -332,7 +455,9 @@
 
     const stages =
       source
-        .map(normalizeStage)
+        .map(
+          normalizeStage
+        )
         .filter(
           stage =>
             stage.stageDocId
@@ -357,7 +482,8 @@
 
     return {
       regularStages,
-      finalStage
+      finalStage,
+      allStages: stages
     };
   }
 
@@ -369,59 +495,59 @@
     return {
       teamId:
         String(
-          row.teamId || ""
+          row?.teamId || ""
         ).trim(),
 
       team:
         String(
-          row.team ||
-          row.teamName ||
+          row?.team ||
+          row?.teamName ||
           "—"
         ).trim(),
 
       zone:
         String(
-          row.zone || ""
+          row?.zone || ""
         )
           .toUpperCase()
           .trim(),
 
       sector:
         String(
-          row.sector || ""
+          row?.sector || ""
         ).trim(),
 
       overallPlace:
         num(
-          row.overallPlace ||
-          row.finalPlace ||
-          row.place
+          row?.overallPlace ||
+          row?.finalPlace ||
+          row?.place
         ),
 
       zonePlace:
         num(
-          row.zonePlace
+          row?.zonePlace
         ),
 
       points:
         num(
-          row.points ||
-          row.zonePlace
+          row?.points ||
+          row?.zonePlace
         ),
 
       totalWeight:
         num(
-          row.totalWeight
+          row?.totalWeight
         ),
 
       bigFish:
         num(
-          row.bigFish
+          row?.bigFish
         ),
 
       totalCount:
         num(
-          row.totalCount
+          row?.totalCount
         )
     };
   }
@@ -435,12 +561,15 @@
   ) {
     const rows =
       (
-        Array.isArray(standings)
+        Array.isArray(
+          standings
+        )
           ? standings
           : []
-      ).map(
-        normalizeStandingRow
-      );
+      )
+        .map(
+          normalizeStandingRow
+        );
 
     const byTeamId =
       new Map();
@@ -450,8 +579,7 @@
 
     /*
      * Загальне місце.
-     *
-     * Особливо потрібне для Фіналу.
+     * Особливо використовується у Фіналі.
      */
     const overallRows =
       rows
@@ -492,7 +620,9 @@
             return String(
               a.team
             ).localeCompare(
-              String(b.team),
+              String(
+                b.team
+              ),
               "uk"
             );
           }
@@ -506,9 +636,13 @@
 
         const key =
           row.teamId ||
-          clean(row.team);
+          clean(
+            row.team
+          );
 
-        if (!key) return;
+        if (!key) {
+          return;
+        }
 
         overallPlaceMap.set(
           key,
@@ -519,163 +653,186 @@
     );
 
     /*
-     * Місця в зонах.
+     * Місця у зонах.
      */
     ["A", "B", "C"]
-      .forEach(zone => {
+      .forEach(
+        zone => {
 
-        const zoneRows =
-          rows
-            .filter(
-              row =>
-                row.zone === zone
-            )
-            .sort(
-              (a, b) => {
+          const zoneRows =
+            rows
+              .filter(
+                row =>
+                  row.zone ===
+                  zone
+              )
+              .sort(
+                (a, b) => {
 
-                if (
-                  b.totalWeight !==
-                  a.totalWeight
-                ) {
-                  return (
-                    b.totalWeight -
+                  if (
+                    b.totalWeight !==
                     a.totalWeight
-                  );
-                }
+                  ) {
+                    return (
+                      b.totalWeight -
+                      a.totalWeight
+                    );
+                  }
 
-                if (
-                  b.bigFish !==
-                  a.bigFish
-                ) {
-                  return (
-                    b.bigFish -
+                  if (
+                    b.bigFish !==
                     a.bigFish
-                  );
-                }
+                  ) {
+                    return (
+                      b.bigFish -
+                      a.bigFish
+                    );
+                  }
 
-                if (
-                  b.totalCount !==
-                  a.totalCount
-                ) {
-                  return (
-                    b.totalCount -
+                  if (
+                    b.totalCount !==
                     a.totalCount
+                  ) {
+                    return (
+                      b.totalCount -
+                      a.totalCount
+                    );
+                  }
+
+                  return String(
+                    a.team
+                  ).localeCompare(
+                    String(
+                      b.team
+                    ),
+                    "uk"
                   );
                 }
+              );
 
-                return String(
-                  a.team
-                ).localeCompare(
-                  String(b.team),
-                  "uk"
+          zoneRows.forEach(
+            (row, index) => {
+
+              const key =
+                row.teamId ||
+                clean(
+                  row.team
                 );
-              }
-            );
 
-        zoneRows.forEach(
-          (row, index) => {
+              const zonePlace =
+                row.zonePlace ||
+                index + 1;
 
-            const key =
-              row.teamId ||
-              clean(row.team);
+              const fixed = {
+                ...row,
 
-            const zonePlace =
-              row.zonePlace ||
-              index + 1;
-
-            const fixed = {
-              ...row,
-
-              zonePlace,
-
-              points:
                 zonePlace,
 
-              overallPlace:
-                row.overallPlace ||
-                overallPlaceMap.get(
-                  key
-                ) ||
-                0
-            };
+                points:
+                  zonePlace,
 
-            if (
-              fixed.teamId
-            ) {
-              byTeamId.set(
-                fixed.teamId,
-                fixed
-              );
-            }
+                overallPlace:
+                  row.overallPlace ||
+                  overallPlaceMap.get(
+                    key
+                  ) ||
+                  0
+              };
 
-            if (
-              fixed.team
-            ) {
-              byTeamName.set(
-                clean(
-                  fixed.team
-                ),
-                fixed
-              );
+              if (
+                fixed.teamId
+              ) {
+                byTeamId.set(
+                  fixed.teamId,
+                  fixed
+                );
+              }
+
+              if (
+                fixed.team
+              ) {
+                byTeamName.set(
+                  clean(
+                    fixed.team
+                  ),
+                  fixed
+                );
+              }
             }
-          }
-        );
-      });
+          );
+        }
+      );
 
     /*
-     * Рядки без A/B/C.
+     * Рядки без зон A/B/C.
+     * Наприклад, Фінал.
      */
     rows
       .filter(
         row =>
-          !["A", "B", "C"]
-            .includes(row.zone)
+          ![
+            "A",
+            "B",
+            "C"
+          ].includes(
+            row.zone
+          )
       )
-      .forEach(row => {
+      .forEach(
+        row => {
 
-        const key =
-          row.teamId ||
-          clean(row.team);
-
-        const fixed = {
-          ...row,
-
-          overallPlace:
-            row.overallPlace ||
-            overallPlaceMap.get(
-              key
-            ) ||
-            0,
-
-          points:
-            row.points ||
-            row.zonePlace ||
-            row.overallPlace ||
-            0
-        };
-
-        if (
-          fixed.teamId
-        ) {
-          byTeamId.set(
-            fixed.teamId,
-            fixed
-          );
-        }
-
-        if (
-          fixed.team
-        ) {
-          byTeamName.set(
+          const key =
+            row.teamId ||
             clean(
-              fixed.team
-            ),
-            fixed
-          );
-        }
-      });
+              row.team
+            );
 
+          const fixed = {
+            ...row,
+
+            overallPlace:
+              row.overallPlace ||
+              overallPlaceMap.get(
+                key
+              ) ||
+              0,
+
+            points:
+              row.points ||
+              row.zonePlace ||
+              row.overallPlace ||
+              0
+          };
+
+          if (
+            fixed.teamId
+          ) {
+            byTeamId.set(
+              fixed.teamId,
+              fixed
+            );
+          }
+
+          if (
+            fixed.team
+          ) {
+            byTeamName.set(
+              clean(
+                fixed.team
+              ),
+              fixed
+            );
+          }
+        }
+      );
+
+    /*
+     * rows залишаємо навмисно.
+     * Саме з них беремо ВСІХ учасників
+     * для Big Fish сезону.
+     */
     return {
+      rows,
       byTeamId,
       byTeamName
     };
@@ -697,6 +854,7 @@
         async stage => {
 
           try {
+
             const snap =
               await db
                 .collection(
@@ -713,25 +871,38 @@
                 )
                 .get();
 
-            if (!snap.exists) {
+            if (
+              !snap.exists
+            ) {
+              console.warn(
+                "[Season Rating] Етап не знайдено:",
+                stage.stageDocId
+              );
+
               return;
             }
 
             const data =
-              snap.data() || {};
+              snap.data() ||
+              {};
+
+            const standings =
+              Array.isArray(
+                data.standings
+              )
+                ? data.standings
+                : [];
 
             maps.set(
               stage.stageDocId,
               computeStageMap(
-                Array.isArray(
-                  data.standings
-                )
-                  ? data.standings
-                  : []
+                standings
               )
             );
 
-          } catch (error) {
+          } catch (
+            error
+          ) {
 
             console.warn(
               "[Season Rating] Не вдалося прочитати етап:",
@@ -763,7 +934,8 @@
 
     const teamId =
       String(
-        team.teamId || ""
+        team.teamId ||
+        ""
       ).trim();
 
     const teamName =
@@ -781,7 +953,9 @@
     ) {
       return stageMap
         .byTeamId
-        .get(teamId);
+        .get(
+          teamId
+        );
     }
 
     if (
@@ -792,7 +966,9 @@
     ) {
       return stageMap
         .byTeamName
-        .get(teamName);
+        .get(
+          teamName
+        );
     }
 
     return null;
@@ -812,7 +988,9 @@
     }
 
     const final =
-      isFinalStage(stage);
+      isFinalStage(
+        stage
+      );
 
     const stageMap =
       stageMaps.get(
@@ -825,27 +1003,39 @@
         team
       );
 
-    if (archiveRow) {
+    /*
+     * Основне джерело:
+     * seasonResults
+     */
+    if (
+      archiveRow
+    ) {
 
       const place =
         final
           ? num(
               archiveRow.overallPlace ||
               archiveRow.finalPlace ||
-              archiveRow.place
+              archiveRow.place ||
+              archiveRow.points
             )
           : num(
               archiveRow.zonePlace ||
-              archiveRow.points
+              archiveRow.points ||
+              archiveRow.place
             );
 
-      if (!place) {
+      if (
+        !place
+      ) {
         return null;
       }
 
       return {
         place,
-        points: place,
+
+        points:
+          place,
 
         totalWeight:
           num(
@@ -871,7 +1061,8 @@
      * seasonRating/{year}.teams[].stages
      */
     const stagesObject =
-      team.stages || {};
+      team.stages ||
+      {};
 
     const data =
       stagesObject[
@@ -882,7 +1073,9 @@
       ] ||
       null;
 
-    if (!data) {
+    if (
+      !data
+    ) {
       return null;
     }
 
@@ -900,13 +1093,17 @@
             data.place
           );
 
-    if (!place) {
+    if (
+      !place
+    ) {
       return null;
     }
 
     return {
       place,
-      points: place,
+
+      points:
+        place,
 
       totalWeight:
         num(
@@ -947,7 +1144,9 @@
               stageMaps
             );
 
-          if (result) {
+          if (
+            result
+          ) {
             return {
               stageDocId:
                 stage.stageDocId,
@@ -970,8 +1169,11 @@
             points:
               ABSENT_REGULAR_POINTS,
 
-            totalWeight: 0,
-            bigFish: 0
+            totalWeight:
+              0,
+
+            bigFish:
+              0
           };
         }
       );
@@ -1039,7 +1241,9 @@
             stageMaps
           );
 
-        if (result) {
+        if (
+          result
+        ) {
           weight +=
             num(
               result.totalWeight
@@ -1068,7 +1272,9 @@
             stageMaps
           );
 
-        if (result) {
+        if (
+          result
+        ) {
           bigFish =
             Math.max(
               bigFish,
@@ -1180,6 +1386,83 @@
   }
 
   // =========================================================
+  // ALL SEASON PARTICIPANTS
+  // Для Big Fish сезону
+  // =========================================================
+
+  function collectAllSeasonParticipants(
+    stages,
+    stageMaps
+  ) {
+    const participants =
+      new Map();
+
+    stages.forEach(
+      stage => {
+
+        const stageMap =
+          stageMaps.get(
+            stage.stageDocId
+          );
+
+        if (
+          !stageMap ||
+          !Array.isArray(
+            stageMap.rows
+          )
+        ) {
+          return;
+        }
+
+        stageMap.rows.forEach(
+          row => {
+
+            const participant = {
+              teamId:
+                String(
+                  row.teamId ||
+                  ""
+                ).trim(),
+
+              team:
+                String(
+                  row.team ||
+                  "—"
+                ).trim()
+            };
+
+            const key =
+              teamKey(
+                participant
+              );
+
+            if (
+              !key
+            ) {
+              return;
+            }
+
+            if (
+              !participants.has(
+                key
+              )
+            ) {
+              participants.set(
+                key,
+                participant
+              );
+            }
+          }
+        );
+      }
+    );
+
+    return [
+      ...participants.values()
+    ];
+  }
+
+  // =========================================================
   // SEASON REGULAR CELLS
   // =========================================================
 
@@ -1198,13 +1481,18 @@
             stageMaps
           );
 
-        if (!result) {
+        if (
+          !result
+        ) {
           return {
-            place: "—",
+            place:
+              "—",
+
             points:
               ABSENT_REGULAR_POINTS,
 
-            absent: true
+            absent:
+              true
           };
         }
 
@@ -1215,7 +1503,8 @@
           points:
             result.points,
 
-          absent: false
+          absent:
+            false
         };
       }
     );
@@ -1231,8 +1520,11 @@
     finalStage,
     stageMaps
   ) {
-    let totalWeight = 0;
-    let biggestFish = 0;
+    let totalWeight =
+      0;
+
+    let biggestFish =
+      0;
 
     let biggestFishStage =
       "";
@@ -1247,7 +1539,9 @@
             stageMaps
           );
 
-        if (!result) {
+        if (
+          !result
+        ) {
           return;
         }
 
@@ -1278,7 +1572,9 @@
       }
     );
 
-    if (finalStage) {
+    if (
+      finalStage
+    ) {
 
       const finalResult =
         readStageResult(
@@ -1287,7 +1583,9 @@
           stageMaps
         );
 
-      if (finalResult) {
+      if (
+        finalResult
+      ) {
 
         totalWeight +=
           num(
@@ -1329,7 +1627,9 @@
     stageMaps
   ) {
     const finalArchived =
-      Boolean(finalStage);
+      Boolean(
+        finalStage
+      );
 
     const rows =
       finalists.map(
@@ -1358,7 +1658,9 @@
           let finalPoints =
             0;
 
-          if (finalStage) {
+          if (
+            finalStage
+          ) {
 
             const finalResult =
               readStageResult(
@@ -1367,7 +1669,9 @@
                 stageMaps
               );
 
-            if (finalResult) {
+            if (
+              finalResult
+            ) {
 
               finalPlace =
                 finalResult.place;
@@ -1377,10 +1681,6 @@
 
             } else {
 
-              /*
-               * Фінал вже є,
-               * але результату команди немає.
-               */
               finalPlace =
                 "—";
 
@@ -1400,7 +1700,8 @@
           return {
             teamId:
               String(
-                team.teamId || ""
+                team.teamId ||
+                ""
               ),
 
             team:
@@ -1470,7 +1771,9 @@
         return String(
           a.team
         ).localeCompare(
-          String(b.team),
+          String(
+            b.team
+          ),
           "uk"
         );
       }
@@ -1479,9 +1782,53 @@
     return rows.map(
       (row, index) => ({
         ...row,
+
         place:
           index + 1
       })
+    );
+  }
+
+  // =========================================================
+  // ALL PARTICIPANTS BIG FISH STATS
+  // =========================================================
+
+  function buildAllParticipantsStats(
+    participants,
+    regularStages,
+    finalStage,
+    stageMaps
+  ) {
+    return participants.map(
+      team => {
+
+        const stats =
+          calculateSeasonStats(
+            team,
+            regularStages,
+            finalStage,
+            stageMaps
+          );
+
+        return {
+          teamId:
+            String(
+              team.teamId ||
+              ""
+            ),
+
+          team:
+            team.team ||
+            team.teamName ||
+            "—",
+
+          bigFish:
+            stats.biggestFish,
+
+          bigFishStage:
+            stats.biggestFishStage
+        };
+      }
     );
   }
 
@@ -1495,14 +1842,12 @@
     const head =
       $("seasonFinalHead");
 
-    if (!head) {
+    if (
+      !head
+    ) {
       return;
     }
 
-    /*
-     * Видаляємо старі
-     * динамічні Е1/Е2/...
-     */
     head
       .querySelectorAll(
         "th.col-stage"
@@ -1517,7 +1862,9 @@
         "th.col-final"
       );
 
-    if (!finalHeader) {
+    if (
+      !finalHeader
+    ) {
       return;
     }
 
@@ -1563,16 +1910,21 @@
     const tbody =
       $("seasonFinalRows");
 
-    if (!tbody) {
+    if (
+      !tbody
+    ) {
       return;
     }
 
-    if (!rows.length) {
+    if (
+      !rows.length
+    ) {
 
       tbody.innerHTML = `
         <tr>
           <td colspan="${
-            regularStages.length + 6
+            regularStages.length +
+            6
           }">
             Немає команд для рейтингу.
           </td>
@@ -1584,112 +1936,116 @@
 
     tbody.innerHTML =
       rows
-        .map(row => {
+        .map(
+          row => {
 
-          const rankClass =
-            row.place === 1
-              ? "season-rank-1"
-              : row.place === 2
-                ? "season-rank-2"
-                : row.place === 3
-                  ? "season-rank-3"
-                  : "";
+            const rankClass =
+              row.place === 1
+                ? "season-rank-1"
+                : row.place === 2
+                  ? "season-rank-2"
+                  : row.place === 3
+                    ? "season-rank-3"
+                    : "";
 
-          const stageHtml =
-            row.regularCells
-              .map(cell => `
-                <td class="col-stage ${
-                  cell.absent
-                    ? "stage-noshow"
-                    : ""
-                }">
-                  <div class="stage-cell">
+            const stageHtml =
+              row.regularCells
+                .map(
+                  cell => `
+                    <td class="col-stage ${
+                      cell.absent
+                        ? "stage-noshow"
+                        : ""
+                    }">
+                      <div class="stage-cell">
 
-                    <span class="stage-place">
-                      ${esc(
-                        safeText(
-                          cell.place,
-                          "—"
-                        )
-                      )}
-                    </span>
+                        <span class="stage-place">
+                          ${esc(
+                            safeText(
+                              cell.place,
+                              "—"
+                            )
+                          )}
+                        </span>
 
-                    <span class="stage-slash">
-                      /
-                    </span>
+                        <span class="stage-slash">
+                          /
+                        </span>
 
-                    <span class="stage-points">
-                      ${esc(
-                        safeText(
-                          cell.points,
-                          "—"
-                        )
-                      )}
-                    </span>
+                        <span class="stage-points">
+                          ${esc(
+                            safeText(
+                              cell.points,
+                              "—"
+                            )
+                          )}
+                        </span>
 
-                  </div>
+                      </div>
+                    </td>
+                  `
+                )
+                .join("");
+
+            return `
+              <tr class="${rankClass}">
+
+                <td class="col-place">
+                  <span class="place-num">
+                    ${row.place}
+                  </span>
                 </td>
-              `)
-              .join("");
 
-          return `
-            <tr class="${rankClass}">
+                <td
+                  class="col-team"
+                  title="${esc(row.team)}"
+                >
+                  ${esc(row.team)}
+                </td>
 
-              <td class="col-place">
-                <span class="place-num">
-                  ${row.place}
-                </span>
-              </td>
+                ${stageHtml}
 
-              <td
-                class="col-team"
-                title="${esc(row.team)}"
-              >
-                ${esc(row.team)}
-              </td>
+                <td class="col-final">
+                  <span class="final-place">
+                    ${esc(
+                      safeText(
+                        row.finalPlace
+                      )
+                    )}
+                  </span>
+                </td>
 
-              ${stageHtml}
+                <td class="col-points">
+                  <b>
+                    ${esc(
+                      row.seasonPoints
+                    )}
+                  </b>
+                </td>
 
-              <td class="col-final">
-                <span class="final-place">
+                <td class="col-weight">
                   ${esc(
-                    safeText(
-                      row.finalPlace
+                    fmtKg(
+                      row.totalWeight
                     )
                   )}
-                </span>
-              </td>
+                </td>
 
-              <td class="col-points">
-                <b>
+                <td
+                  class="col-big"
+                  data-season-big="${row.bigFish}"
+                >
                   ${esc(
-                    row.seasonPoints
+                    fmtKg(
+                      row.bigFish
+                    )
                   )}
-                </b>
-              </td>
+                </td>
 
-              <td class="col-weight">
-                ${esc(
-                  fmtKg(
-                    row.totalWeight
-                  )
-                )}
-              </td>
-
-              <td
-                class="col-big"
-                data-season-big="${row.bigFish}"
-              >
-                ${esc(
-                  fmtKg(
-                    row.bigFish
-                  )
-                )}
-              </td>
-
-            </tr>
-          `;
-        })
+              </tr>
+            `;
+          }
+        )
         .join("");
   }
 
@@ -1697,12 +2053,15 @@
   // PODIUM
   // =========================================================
 
-  function renderPodium(rows) {
+  function renderPodium(
+    rows
+  ) {
     for (
       let place = 1;
       place <= 3;
       place++
     ) {
+
       const row =
         rows[
           place - 1
@@ -1718,30 +2077,38 @@
           `seasonWinner${place}Points`
         );
 
-      if (teamEl) {
+      if (
+        teamEl
+      ) {
         teamEl.textContent =
           row
             ? row.team
             : "—";
       }
 
-      if (pointsEl) {
+      if (
+        pointsEl
+      ) {
         pointsEl.textContent =
           row
-            ? `${row.seasonPoints} бал. · ${fmtKg(
-                row.totalWeight
-              )} кг`
+            ? `${
+                row.seasonPoints
+              } бал. · ${
+                fmtKg(
+                  row.totalWeight
+                )
+              } кг`
             : "—";
       }
     }
   }
 
   // =========================================================
-  // BIG FISH
+  // BIG FISH — УСІ УЧАСНИКИ СЕЗОНУ
   // =========================================================
 
   function renderSeasonBigFish(
-    rows
+    allParticipantsStats
   ) {
     const teamEl =
       $("seasonBigFishTeam");
@@ -1752,8 +2119,15 @@
     const weightEl =
       $("seasonBigFishWeight");
 
+    const teams =
+      Array.isArray(
+        allParticipantsStats
+      )
+        ? allParticipantsStats
+        : [];
+
     const maxBigFish =
-      rows.reduce(
+      teams.reduce(
         (max, row) =>
           Math.max(
             max,
@@ -1767,17 +2141,24 @@
     if (
       maxBigFish <= 0
     ) {
-      if (teamEl) {
+
+      if (
+        teamEl
+      ) {
         teamEl.textContent =
           "—";
       }
 
-      if (metaEl) {
+      if (
+        metaEl
+      ) {
         metaEl.textContent =
           "Дані відсутні";
       }
 
-      if (weightEl) {
+      if (
+        weightEl
+      ) {
         weightEl.textContent =
           "—";
       }
@@ -1786,12 +2167,12 @@
     }
 
     /*
-     * Якщо колись дві команди
-     * матимуть однаковий Big Fish,
-     * тут покажемо всі назви.
+     * Big Fish може належати будь-якій команді:
+     * 1 місце, 20 місце, 27 місце —
+     * це не має значення.
      */
     const winners =
-      rows.filter(
+      teams.filter(
         row =>
           num(
             row.bigFish
@@ -1799,17 +2180,23 @@
           maxBigFish
       );
 
-    if (teamEl) {
+    if (
+      teamEl
+    ) {
       teamEl.textContent =
         winners
           .map(
             row =>
               row.team
           )
-          .join(" / ");
+          .join(
+            " / "
+          );
     }
 
-    if (metaEl) {
+    if (
+      metaEl
+    ) {
 
       const stageNames =
         [
@@ -1819,17 +2206,23 @@
                 row =>
                   row.bigFishStage
               )
-              .filter(Boolean)
+              .filter(
+                Boolean
+              )
           )
         ];
 
       metaEl.textContent =
         stageNames.length
-          ? stageNames.join(" / ")
+          ? stageNames.join(
+              " / "
+            )
           : `Сезон ${SEASON_YEAR}`;
     }
 
-    if (weightEl) {
+    if (
+      weightEl
+    ) {
       weightEl.textContent =
         `${fmtKg(
           maxBigFish
@@ -1837,27 +2230,33 @@
     }
 
     /*
-     * Підсвічуємо Big Fish
-     * і в основній таблиці.
+     * Якщо власник Big Fish входить у TOP-18,
+     * підсвічуємо його значення у таблиці.
+     *
+     * Якщо Big Fish належить команді за межами TOP-18,
+     * у таблиці нічого помаранчевого не буде,
+     * але нижній блок покаже правильного переможця.
      */
     document
       .querySelectorAll(
         "#seasonFinalRows td.col-big"
       )
-      .forEach(cell => {
+      .forEach(
+        cell => {
 
-        const value =
-          num(
-            cell.dataset
-              .seasonBig
+          const value =
+            num(
+              cell.dataset
+                .seasonBig
+            );
+
+          cell.classList.toggle(
+            "season-bigfish-winner",
+            value ===
+              maxBigFish
           );
-
-        cell.classList.toggle(
-          "season-bigfish-winner",
-          value ===
-            maxBigFish
-        );
-      });
+        }
+      );
   }
 
   // =========================================================
@@ -1871,19 +2270,23 @@
     const title =
       $("seasonRatingTitle");
 
-    if (kicker) {
+    if (
+      kicker
+    ) {
       kicker.textContent =
         `СЕЗОН ${SEASON_YEAR}`;
     }
 
-    if (title) {
+    if (
+      title
+    ) {
       title.textContent =
         "Рейтинг команд сезону";
     }
   }
 
   // =========================================================
-  // CONVERT
+  // BUILD PAYLOAD
   // =========================================================
 
   async function buildPayload(
@@ -1892,9 +2295,12 @@
   ) {
     const {
       regularStages,
-      finalStage
+      finalStage,
+      allStages
     } =
-      getStages(rating);
+      getStages(
+        rating
+      );
 
     const rawTeams =
       Array.isArray(
@@ -1904,8 +2310,9 @@
         : [];
 
     /*
-     * Читаємо всі відбіркові етапи
-     * + Фінал, якщо він уже є.
+     * Читаємо всі архівовані етапи:
+     * Е1 / Е2 / Е3 / ...
+     * + Фінал.
      */
     const stagesToLoad =
       finalStage
@@ -1923,11 +2330,10 @@
         stagesToLoad
       );
 
-    /*
-     * КРОК 1:
-     * фіксуємо склад TOP-18
-     * за рейтингом виходу у Фінал.
-     */
+    // =====================================================
+    // 1. ФІКСУЄМО TOP-18
+    // =====================================================
+
     const finalists =
       getFinalists(
         rawTeams,
@@ -1935,11 +2341,10 @@
         stageMaps
       );
 
-    /*
-     * КРОК 2:
-     * тільки ці 18 беруть участь
-     * у підсумковому рейтингу.
-     */
+    // =====================================================
+    // 2. РЕЙТИНГ СЕЗОНУ — ТІЛЬКИ TOP-18
+    // =====================================================
+
     const rows =
       buildSeasonRanking(
         finalists,
@@ -1948,10 +2353,84 @@
         stageMaps
       );
 
+    // =====================================================
+    // 3. BIG FISH — ВСІ УЧАСНИКИ СЕЗОНУ
+    // =====================================================
+
+    const allParticipants =
+      collectAllSeasonParticipants(
+        allStages,
+        stageMaps
+      );
+
+    /*
+     * Додатковий fallback:
+     * якщо якась команда є в seasonRating,
+     * але її з якоїсь причини не знайшли
+     * у standings, не втрачаємо її.
+     */
+    const participantsMap =
+      new Map();
+
+    allParticipants.forEach(
+      team => {
+
+        const key =
+          teamKey(
+            team
+          );
+
+        if (
+          key
+        ) {
+          participantsMap.set(
+            key,
+            team
+          );
+        }
+      }
+    );
+
+    rawTeams.forEach(
+      team => {
+
+        const key =
+          teamKey(
+            team
+          );
+
+        if (
+          key &&
+          !participantsMap.has(
+            key
+          )
+        ) {
+          participantsMap.set(
+            key,
+            team
+          );
+        }
+      }
+    );
+
+    const finalAllParticipants =
+      [
+        ...participantsMap.values()
+      ];
+
+    const allParticipantsStats =
+      buildAllParticipantsStats(
+        finalAllParticipants,
+        regularStages,
+        finalStage,
+        stageMaps
+      );
+
     return {
       regularStages,
       finalStage,
-      rows
+      rows,
+      allParticipantsStats
     };
   }
 
@@ -1976,6 +2455,13 @@
         ? payload.rows
         : [];
 
+    const allParticipantsStats =
+      Array.isArray(
+        payload.allParticipantsStats
+      )
+        ? payload.allParticipantsStats
+        : [];
+
     buildHeader(
       regularStages
     );
@@ -1989,13 +2475,20 @@
       rows
     );
 
+    /*
+     * ВАЖЛИВО:
+     * сюди передаємо НЕ rows TOP-18,
+     * а статистику ВСІХ учасників.
+     */
     renderSeasonBigFish(
-      rows
+      allParticipantsStats
     );
 
     updateTitles();
 
-    if (!rows.length) {
+    if (
+      !rows.length
+    ) {
 
       showError(
         "⚠️ Немає команд для підсумкового рейтингу."
@@ -2048,7 +2541,8 @@
             try {
 
               const rating =
-                snap.data() || {};
+                snap.data() ||
+                {};
 
               const payload =
                 await buildPayload(
@@ -2098,7 +2592,9 @@
           }
         );
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
 
       console.error(
         "[Season Rating] load error:",

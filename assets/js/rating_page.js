@@ -1,88 +1,183 @@
 // assets/js/rating_page.js
-// STOLAR CARP • Season Rating page
-// Джерело: seasonRating/{year} + seasonResults/{year}/stages
-// Етапи: бал = місце в зоні.
-// Фінал: бал = загальне місце у фіналі.
-// Рейтинг сезону = 2 кращі результати з Е1 / Е2 / Е3 / Фінал.
-// Якщо команда має тільки 1 результат → додається 8 балів.
-// Сортування: бали ↑, загальна вага всього турніру ↓, Big Fish всього турніру ↓.
-// 1–3 місце рейтингу = головні переможці сезону.
-// Big Fish сезону підсвічується помаранчевим кольором.
+// STOLAR CARP • Вихід у фінал
+//
+// Джерело:
+// seasonRating/{year}
+// seasonResults/{year}/stages
+//
+// ЛОГІКА:
+// • показуються всі заархівовані ВІДБІРКОВІ етапи;
+// • кількість колонок етапів динамічна;
+// • Фінал тут повністю виключений;
+// • бал за етап = місце команди у своїй зоні;
+// • у рейтинг ідуть 2 найкращі результати;
+// • відсутній результат на вже проведеному етапі = 8 балів;
+// • сортування:
+//      1) сума 2 кращих балів ↑
+//      2) загальна вага всіх відбіркових етапів ↓
+//      3) Big Fish всіх відбіркових етапів ↓
+// • TOP 18 = вихід у фінал.
 
 (function () {
   "use strict";
 
   const $ = (id) => document.getElementById(id);
 
+  // =========================================================
+  // НАЛАШТУВАННЯ
+  // =========================================================
+
   const TOP_COUNT = 18;
-  const STAGES_MAX_IN_HTML = 5;
   const SEASON_YEAR = "2026";
+
+  // Два найкращі результати
   const BEST_COUNT = 2;
+
+  // Неявка / відсутність результату
   const ABSENT_POINTS = 8;
 
   const CACHE_TTL_MS = 5 * 60 * 1000;
-  const CACHE_KEY = "sc_rating_cache_best2_with_final_v4_bigfish";
+
+  // Новий кеш без старої логіки фіналу
+  const CACHE_KEY =
+    "sc_final_qualification_dynamic_stages_v2";
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
 
   function safeText(v, dash = "—") {
-    return v === null || v === undefined || v === "" ? dash : String(v);
+    return (
+      v === null ||
+      v === undefined ||
+      v === ""
+    )
+      ? dash
+      : String(v);
   }
 
   function num(v) {
     const n = Number(v);
-    return Number.isFinite(n) ? n : 0;
+
+    return Number.isFinite(n)
+      ? n
+      : 0;
   }
 
   function fmtKg(v) {
     const n = num(v);
-    if (n <= 0) return "—";
-    return n.toFixed(2).replace(/\.?0+$/, "");
+
+    if (n <= 0) {
+      return "—";
+    }
+
+    return n
+      .toFixed(2)
+      .replace(/\.?0+$/, "");
   }
 
   function clean(s) {
-    return String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    return String(s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, " ");
   }
 
-  function injectBigFishStyle() {
-    if (document.getElementById("sc-rating-bigfish-style")) return;
-
-    const style = document.createElement("style");
-    style.id = "sc-rating-bigfish-style";
-    style.textContent = `
-      .col-big.season-bigfish-winner{
-        color:#f59e0b !important;
-        font-weight:900 !important;
-        text-shadow:0 0 6px rgba(245,158,11,.35);
-      }
-    `;
-    document.head.appendChild(style);
-  }
+  // =========================================================
+  // READY / ERROR
+  // =========================================================
 
   function setReadyFlag() {
-    document.documentElement.setAttribute("data-rating-ready", "1");
+    document.documentElement.setAttribute(
+      "data-rating-ready",
+      "1"
+    );
   }
 
   function showError(msgHtml) {
     const box = $("ratingError");
+
     if (!box) return;
+
     box.style.display = "block";
     box.innerHTML = msgHtml;
   }
 
   function hideError() {
     const box = $("ratingError");
+
     if (!box) return;
+
     box.style.display = "none";
     box.innerHTML = "";
   }
 
+  // =========================================================
+  // BIG FISH STYLE
+  // =========================================================
+
+  function injectBigFishStyle() {
+    if (
+      document.getElementById(
+        "sc-rating-bigfish-style"
+      )
+    ) {
+      return;
+    }
+
+    const style =
+      document.createElement("style");
+
+    style.id =
+      "sc-rating-bigfish-style";
+
+    style.textContent = `
+      .col-big.season-bigfish-winner{
+        color:#f59e0b !important;
+        font-weight:900 !important;
+        text-shadow:
+          0 0 6px
+          rgba(245,158,11,.35);
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
+
+  // =========================================================
+  // CACHE
+  // =========================================================
+
   function cacheGet() {
     try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return null;
-      const obj = JSON.parse(raw);
-      if (!obj || !obj.ts) return null;
-      if (Date.now() - obj.ts > CACHE_TTL_MS) return null;
+      const raw =
+        localStorage.getItem(
+          CACHE_KEY
+        );
+
+      if (!raw) {
+        return null;
+      }
+
+      const obj =
+        JSON.parse(raw);
+
+      if (
+        !obj ||
+        !obj.ts
+      ) {
+        return null;
+      }
+
+      if (
+        Date.now() - obj.ts >
+        CACHE_TTL_MS
+      ) {
+        return null;
+      }
+
       return obj.payload || null;
+
     } catch {
       return null;
     }
@@ -90,644 +185,1956 @@
 
   function cacheSet(payload) {
     try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), payload }));
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({
+          ts: Date.now(),
+          payload
+        })
+      );
     } catch {}
   }
 
   function cacheClear() {
     try {
-      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(
+        CACHE_KEY
+      );
     } catch {}
   }
 
-  function rowHTML(place, qualified) {
-    return `
-      <tr class="${qualified ? "row-qualified" : ""}">
-        <td class="col-place"><span class="place-num">${place}</span></td>
-        <td class="col-move"><span class="move move--same">–</span></td>
-        <td class="col-team">-</td>
-
-        ${new Array(STAGES_MAX_IN_HTML).fill(0).map(() => `
-          <td class="col-stage">
-            <div class="stage-cell">
-              <span class="stage-place">–</span>
-              <span class="stage-slash">/</span>
-              <span class="stage-points">–</span>
-            </div>
-          </td>
-        `).join("")}
-
-        <td class="col-points"><b>-</b></td>
-        <td class="col-final">–</td>
-        <td class="col-weight">-</td>
-        <td class="col-big">-</td>
-      </tr>
-    `;
-  }
-
-  function buildSkeleton(contendersCount = 3) {
-    const topTbody = $("season-top");
-    const contTbody = $("season-contenders");
-    if (!topTbody || !contTbody) return;
-
-    topTbody.innerHTML = "";
-    for (let i = 1; i <= TOP_COUNT; i++) {
-      topTbody.insertAdjacentHTML("beforeend", rowHTML(i, true));
-    }
-
-    contTbody.innerHTML = "";
-    const cc = Math.max(3, Number(contendersCount || 0));
-
-    for (let i = 0; i < cc; i++) {
-      contTbody.insertAdjacentHTML("beforeend", rowHTML(TOP_COUNT + i + 1, false));
-    }
-  }
-
-  function setMove(el, moveDelta) {
-    if (!el) return;
-
-    el.classList.remove("move--up", "move--down", "move--same");
-
-    const d = Number(moveDelta || 0);
-
-    if (d > 0) {
-      el.classList.add("move--up");
-      el.textContent = `▲${d}`;
-    } else if (d < 0) {
-      el.classList.add("move--down");
-      el.textContent = `▼${Math.abs(d)}`;
-    } else {
-      el.classList.add("move--same");
-      el.textContent = "–";
-    }
-  }
-
-  function renderRow(tr, item) {
-    if (!tr || !item) return;
-
-    const tds = tr.querySelectorAll("td");
-    if (!tds || tds.length < 3 + STAGES_MAX_IN_HTML + 4) return;
-
-    const pl = tr.querySelector(".place-num");
-    if (pl) pl.textContent = safeText(item.place);
-
-    setMove(tds[1].querySelector(".move"), item.moveDelta);
-
-    tds[2].textContent = safeText(item.team);
-
-    const stages = Array.isArray(item.stages) ? item.stages : [];
-
-    for (let i = 0; i < STAGES_MAX_IN_HTML; i++) {
-      const cell = tds[3 + i];
-      const placeEl = cell.querySelector(".stage-place");
-      const ptsEl = cell.querySelector(".stage-points");
-      const s = stages[i] || {};
-
-      if (placeEl) placeEl.textContent = safeText(s.p, "–");
-      if (ptsEl) ptsEl.textContent = safeText(s.pts, "–");
-
-      cell.classList.remove("stage-counted", "stage-dropped", "stage-noshow");
-
-      if (s.noShow === true) {
-        cell.classList.add("stage-noshow");
-      } else if (s.counted === true) {
-        cell.classList.add("stage-counted");
-      } else if (s.counted === false) {
-        cell.classList.add("stage-dropped");
-      }
-    }
-
-    const b = tds[3 + STAGES_MAX_IN_HTML].querySelector("b");
-    if (b) b.textContent = safeText(item.points);
-
-    tds[4 + STAGES_MAX_IN_HTML].textContent = safeText(item.finalPlace, "–");
-    tds[5 + STAGES_MAX_IN_HTML].textContent = safeText(item.weight);
-
-    const bigCell = tds[6 + STAGES_MAX_IN_HTML];
-    bigCell.classList.remove("season-bigfish-winner");
-
-    if (item.seasonBigFishWinner === true) {
-      bigCell.classList.add("season-bigfish-winner");
-    }
-
-    bigCell.textContent = safeText(item.bigFish);
-
-    if (item.qualifiedForFinal === true) tr.classList.add("row-qualified");
-    else tr.classList.remove("row-qualified");
-  }
-
-  function applyStageVisibility(stagesCount) {
-    const count = Math.max(0, Math.min(STAGES_MAX_IN_HTML, Number(stagesCount || 0)));
-
-    document.querySelectorAll(".table--season").forEach((table) => {
-      const ths = table.querySelectorAll("thead th.col-stage");
-
-      ths.forEach((th, i) => {
-        const stageNo = i + 1;
-        th.style.display = stageNo <= count ? "" : "none";
-        if (stageNo <= count) th.innerHTML = `Е${stageNo}<br>м / б`;
-      });
-    });
-
-    document.querySelectorAll(".table--season tbody tr").forEach((tr) => {
-      const tds = tr.querySelectorAll("td.col-stage");
-
-      tds.forEach((td, i) => {
-        const stageNo = i + 1;
-        td.style.display = stageNo <= count ? "" : "none";
-      });
-    });
-
-    document.body.setAttribute("data-stages", String(count));
-  }
+  // =========================================================
+  // FIRESTORE READY
+  // =========================================================
 
   async function waitReady() {
-    if (window.scReady) await window.scReady;
+    if (window.scReady) {
+      await window.scReady;
+    }
 
     const db = window.scDb;
-    if (!db) throw new Error("Firestore не ініціалізований.");
+
+    if (!db) {
+      throw new Error(
+        "Firestore не ініціалізований."
+      );
+    }
 
     return db;
   }
 
+  // =========================================================
+  // FINAL DETECTOR
+  // =========================================================
+
   function isFinalStage(stage) {
-    const raw = clean(`${stage.stageDocId} ${stage.stageId} ${stage.stageName} ${stage.type} ${stage.stageType}`);
-    return stage.isFinal === true || raw.includes("final") || raw.includes("фінал");
+    if (!stage) {
+      return false;
+    }
+
+    const raw = clean(
+      `${
+        stage.stageDocId || ""
+      } ${
+        stage.stageId || ""
+      } ${
+        stage.stageName || ""
+      } ${
+        stage.type || ""
+      } ${
+        stage.stageType || ""
+      }`
+    );
+
+    return (
+      stage.isFinal === true ||
+      raw.includes("final") ||
+      raw.includes("фінал")
+    );
   }
+
+  // =========================================================
+  // СОРТУВАННЯ ЕТАПІВ
+  // =========================================================
 
   function stageSortValue(stage) {
-    if (isFinalStage(stage)) return 9999;
+    const raw = String(
+      stage.stageId ||
+      stage.stageDocId ||
+      stage.id ||
+      ""
+    );
 
-    const raw = String(stage.stageId || stage.stageDocId || stage.id || "");
-    const m = raw.match(/(\d+)/);
-    return m ? Number(m[1]) : 999;
+    const match =
+      raw.match(/(\d+)/);
+
+    return match
+      ? Number(match[1])
+      : 9999;
   }
 
-  function getArchivedStages(rating) {
-    const arr = Array.isArray(rating.archivedStages) ? rating.archivedStages : [];
+  // =========================================================
+  // НАЗВА КОЛОНКИ ЕТАПУ
+  // =========================================================
+
+  function stageDisplayNumber(
+    stage,
+    index
+  ) {
+    const values = [
+      stage.stageId,
+      stage.stageDocId,
+      stage.stageName
+    ];
+
+    for (const value of values) {
+      const match =
+        String(value || "")
+          .match(/(\d+)/);
+
+      if (match) {
+        return Number(match[1]);
+      }
+    }
+
+    return index + 1;
+  }
+
+  // =========================================================
+  // ЧИТАЄМО ТІЛЬКИ ВІДБІРКОВІ ЕТАПИ
+  // =========================================================
+
+  function getRegularArchivedStages(
+    rating
+  ) {
+    const arr =
+      Array.isArray(
+        rating.archivedStages
+      )
+        ? rating.archivedStages
+        : [];
 
     return arr
       .map(s => {
+
         if (typeof s === "string") {
-          return {
+          const stage = {
             stageDocId: s,
             stageId: s,
             stageName: s,
-            isFinal: isFinalStage({ stageDocId: s, stageId: s, stageName: s })
+            type: "",
+            stageType: "",
+            isFinal: false
           };
+
+          stage.isFinal =
+            isFinalStage(stage);
+
+          return stage;
         }
 
         const stage = {
-          stageDocId: String(s.stageDocId || s.id || ""),
-          stageId: String(s.stageId || s.stageDocId || s.id || ""),
-          stageName: String(s.stageName || s.stageId || s.stageDocId || s.id || ""),
-          type: String(s.type || ""),
-          stageType: String(s.stageType || ""),
-          isFinal: Boolean(s.isFinal)
+          stageDocId:
+            String(
+              s.stageDocId ||
+              s.id ||
+              ""
+            ),
+
+          stageId:
+            String(
+              s.stageId ||
+              s.stageDocId ||
+              s.id ||
+              ""
+            ),
+
+          stageName:
+            String(
+              s.stageName ||
+              s.stageId ||
+              s.stageDocId ||
+              s.id ||
+              ""
+            ),
+
+          type:
+            String(
+              s.type || ""
+            ),
+
+          stageType:
+            String(
+              s.stageType || ""
+            ),
+
+          isFinal:
+            Boolean(
+              s.isFinal
+            )
         };
 
-        stage.isFinal = isFinalStage(stage);
+        stage.isFinal =
+          isFinalStage(stage);
+
         return stage;
       })
-      .filter(s => s.stageDocId)
-      .sort((a, b) => stageSortValue(a) - stageSortValue(b));
+
+      // Без порожніх ID
+      .filter(stage =>
+        stage.stageDocId
+      )
+
+      // ГОЛОВНЕ:
+      // Фінал тут повністю прибираємо
+      .filter(stage =>
+        !isFinalStage(stage)
+      )
+
+      // Е1 → Е2 → Е3 → ...
+      .sort(
+        (a, b) =>
+          stageSortValue(a) -
+          stageSortValue(b)
+      );
   }
 
-  function splitStages(archivedStages) {
-    const regularStages = [];
-    let finalStage = null;
+  // =========================================================
+  // ДИНАМІЧНА ШАПКА ТАБЛИЦІ
+  // =========================================================
 
-    archivedStages.forEach(stage => {
-      if (isFinalStage(stage)) finalStage = finalStage || stage;
-      else regularStages.push(stage);
+  function buildStageHeaders(
+    regularStages
+  ) {
+    const heads = [
+      $("seasonTopHead"),
+      $("seasonContendersHead")
+    ].filter(Boolean);
+
+    heads.forEach(head => {
+
+      // При повторному render
+      // видаляємо попередні
+      // динамічні заголовки.
+      head
+        .querySelectorAll(
+          "th.col-stage"
+        )
+        .forEach(el =>
+          el.remove()
+        );
+
+      const pointsTh =
+        head.querySelector(
+          "th.col-points"
+        );
+
+      if (!pointsTh) {
+        return;
+      }
+
+      regularStages.forEach(
+        (stage, index) => {
+
+          const stageNo =
+            stageDisplayNumber(
+              stage,
+              index
+            );
+
+          const th =
+            document.createElement(
+              "th"
+            );
+
+          th.className =
+            "col-stage";
+
+          th.dataset.stageDocId =
+            stage.stageDocId;
+
+          th.innerHTML =
+            `Е${stageNo}<br>м / б`;
+
+          head.insertBefore(
+            th,
+            pointsTh
+          );
+        }
+      );
     });
 
-    return { regularStages, finalStage };
+    document.body.setAttribute(
+      "data-stages",
+      String(
+        regularStages.length
+      )
+    );
   }
+
+  // =========================================================
+  // HTML РЯДКА
+  // =========================================================
+
+  function rowHTML(
+    place,
+    qualified,
+    stagesCount
+  ) {
+    const stagesHtml =
+      Array.from({
+        length: stagesCount
+      })
+        .map(() => `
+          <td class="col-stage">
+            <div class="stage-cell">
+
+              <span class="stage-place">
+                –
+              </span>
+
+              <span class="stage-slash">
+                /
+              </span>
+
+              <span class="stage-points">
+                –
+              </span>
+
+            </div>
+          </td>
+        `)
+        .join("");
+
+    return `
+      <tr class="${
+        qualified
+          ? "row-qualified"
+          : ""
+      }">
+
+        <td class="col-place">
+          <span class="place-num">
+            ${place}
+          </span>
+        </td>
+
+        <td class="col-move">
+          <span class="move move--same">
+            –
+          </span>
+        </td>
+
+        <td class="col-team">
+          -
+        </td>
+
+        ${stagesHtml}
+
+        <td class="col-points">
+          <b>-</b>
+        </td>
+
+        <td class="col-weight">
+          -
+        </td>
+
+        <td class="col-big">
+          -
+        </td>
+
+      </tr>
+    `;
+  }
+
+  // =========================================================
+  // SKELETON
+  // =========================================================
+
+  function buildSkeleton(
+    stagesCount,
+    contendersCount = 3
+  ) {
+    const topTbody =
+      $("season-top");
+
+    const contTbody =
+      $("season-contenders");
+
+    if (
+      !topTbody ||
+      !contTbody
+    ) {
+      return;
+    }
+
+    topTbody.innerHTML = "";
+
+    for (
+      let i = 1;
+      i <= TOP_COUNT;
+      i++
+    ) {
+      topTbody.insertAdjacentHTML(
+        "beforeend",
+        rowHTML(
+          i,
+          true,
+          stagesCount
+        )
+      );
+    }
+
+    contTbody.innerHTML = "";
+
+    const cc =
+      Math.max(
+        3,
+        Number(
+          contendersCount || 0
+        )
+      );
+
+    for (
+      let i = 0;
+      i < cc;
+      i++
+    ) {
+      contTbody.insertAdjacentHTML(
+        "beforeend",
+        rowHTML(
+          TOP_COUNT + i + 1,
+          false,
+          stagesCount
+        )
+      );
+    }
+  }
+
+  // =========================================================
+  // РУХ У РЕЙТИНГУ
+  // =========================================================
+
+  function setMove(
+    el,
+    moveDelta
+  ) {
+    if (!el) return;
+
+    el.classList.remove(
+      "move--up",
+      "move--down",
+      "move--same"
+    );
+
+    const d =
+      Number(
+        moveDelta || 0
+      );
+
+    if (d > 0) {
+
+      el.classList.add(
+        "move--up"
+      );
+
+      el.textContent =
+        `▲${d}`;
+
+    } else if (d < 0) {
+
+      el.classList.add(
+        "move--down"
+      );
+
+      el.textContent =
+        `▼${Math.abs(d)}`;
+
+    } else {
+
+      el.classList.add(
+        "move--same"
+      );
+
+      el.textContent =
+        "–";
+    }
+  }
+
+  // =========================================================
+  // РЕНДЕР РЯДКА
+  // =========================================================
+
+  function renderRow(
+    tr,
+    item
+  ) {
+    if (
+      !tr ||
+      !item
+    ) {
+      return;
+    }
+
+    const placeEl =
+      tr.querySelector(
+        ".place-num"
+      );
+
+    if (placeEl) {
+      placeEl.textContent =
+        safeText(
+          item.place
+        );
+    }
+
+    const moveEl =
+      tr.querySelector(
+        ".move"
+      );
+
+    setMove(
+      moveEl,
+      item.moveDelta
+    );
+
+    const teamCell =
+      tr.querySelector(
+        "td.col-team"
+      );
+
+    if (teamCell) {
+      teamCell.textContent =
+        safeText(
+          item.team
+        );
+    }
+
+    // -------------------------
+    // ЕТАПИ
+    // -------------------------
+
+    const stages =
+      Array.isArray(
+        item.stages
+      )
+        ? item.stages
+        : [];
+
+    const stageCells =
+      tr.querySelectorAll(
+        "td.col-stage"
+      );
+
+    stageCells.forEach(
+      (cell, index) => {
+
+        const stage =
+          stages[index] || {};
+
+        const stagePlaceEl =
+          cell.querySelector(
+            ".stage-place"
+          );
+
+        const stagePointsEl =
+          cell.querySelector(
+            ".stage-points"
+          );
+
+        if (stagePlaceEl) {
+          stagePlaceEl.textContent =
+            safeText(
+              stage.p,
+              "–"
+            );
+        }
+
+        if (stagePointsEl) {
+          stagePointsEl.textContent =
+            safeText(
+              stage.pts,
+              "–"
+            );
+        }
+
+        cell.classList.remove(
+          "stage-counted",
+          "stage-dropped",
+          "stage-noshow"
+        );
+
+        if (
+          stage.noShow === true
+        ) {
+          cell.classList.add(
+            "stage-noshow"
+          );
+
+        } else if (
+          stage.counted === true
+        ) {
+          cell.classList.add(
+            "stage-counted"
+          );
+
+        } else if (
+          stage.dropped === true ||
+          stage.counted === false
+        ) {
+          cell.classList.add(
+            "stage-dropped"
+          );
+        }
+      }
+    );
+
+    // -------------------------
+    // БАЛИ
+    // -------------------------
+
+    const pointsEl =
+      tr.querySelector(
+        ".col-points b"
+      );
+
+    if (pointsEl) {
+      pointsEl.textContent =
+        safeText(
+          item.points
+        );
+    }
+
+    // -------------------------
+    // ВАГА
+    // -------------------------
+
+    const weightEl =
+      tr.querySelector(
+        "td.col-weight"
+      );
+
+    if (weightEl) {
+      weightEl.textContent =
+        safeText(
+          item.weight
+        );
+    }
+
+    // -------------------------
+    // BIG FISH
+    // -------------------------
+
+    const bigCell =
+      tr.querySelector(
+        "td.col-big"
+      );
+
+    if (bigCell) {
+
+      bigCell.classList.remove(
+        "season-bigfish-winner"
+      );
+
+      if (
+        item.seasonBigFishWinner ===
+        true
+      ) {
+        bigCell.classList.add(
+          "season-bigfish-winner"
+        );
+      }
+
+      bigCell.textContent =
+        safeText(
+          item.bigFish
+        );
+    }
+
+    // -------------------------
+    // TOP 18
+    // -------------------------
+
+    if (
+      item.qualifiedForFinal ===
+      true
+    ) {
+      tr.classList.add(
+        "row-qualified"
+      );
+
+    } else {
+      tr.classList.remove(
+        "row-qualified"
+      );
+    }
+  }
+
+  // =========================================================
+  // NORMALIZE STANDINGS
+  // =========================================================
 
   function normalizeStandingRow(r) {
     return {
-      teamId: String(r.teamId || "").trim(),
-      team: String(r.team || r.teamName || "—").trim(),
-      zone: String(r.zone || "").toUpperCase().trim(),
-      sector: String(r.sector || "").trim(),
+      teamId:
+        String(
+          r.teamId || ""
+        ).trim(),
 
-      overallPlace: num(r.overallPlace || r.finalPlace || r.place),
-      zonePlace: num(r.zonePlace),
-      points: num(r.points || r.zonePlace),
+      team:
+        String(
+          r.team ||
+          r.teamName ||
+          "—"
+        ).trim(),
 
-      totalWeight: num(r.totalWeight),
-      bigFish: num(r.bigFish),
-      totalCount: num(r.totalCount)
+      zone:
+        String(
+          r.zone || ""
+        )
+          .toUpperCase()
+          .trim(),
+
+      sector:
+        String(
+          r.sector || ""
+        ).trim(),
+
+      overallPlace:
+        num(
+          r.overallPlace ||
+          r.finalPlace ||
+          r.place
+        ),
+
+      zonePlace:
+        num(
+          r.zonePlace
+        ),
+
+      points:
+        num(
+          r.points ||
+          r.zonePlace
+        ),
+
+      totalWeight:
+        num(
+          r.totalWeight
+        ),
+
+      bigFish:
+        num(
+          r.bigFish
+        ),
+
+      totalCount:
+        num(
+          r.totalCount
+        )
     };
   }
 
-  function computeStageMap(standings) {
-    const rows = (Array.isArray(standings) ? standings : []).map(normalizeStandingRow);
-    const byTeamId = new Map();
-    const byTeamName = new Map();
+  // =========================================================
+  // STAGE MAP
+  // =========================================================
 
-    const overallRows = rows.slice().sort((a, b) => {
-      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
-      if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
-      return String(a.team).localeCompare(String(b.team), "uk");
-    });
+  function computeStageMap(
+    standings
+  ) {
+    const rows =
+      (
+        Array.isArray(
+          standings
+        )
+          ? standings
+          : []
+      ).map(
+        normalizeStandingRow
+      );
 
-    const overallPlaceByKey = new Map();
+    const byTeamId =
+      new Map();
 
-    overallRows.forEach((r, i) => {
-      const key = r.teamId || clean(r.team);
-      if (key) overallPlaceByKey.set(key, r.overallPlace || (i + 1));
-    });
+    const byTeamName =
+      new Map();
 
-    ["A", "B", "C"].forEach(zone => {
-      const zoneRows = rows
-        .filter(r => r.zone === zone)
-        .sort((a, b) => {
-          if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
-          if (b.bigFish !== a.bigFish) return b.bigFish - a.bigFish;
-          return String(a.team).localeCompare(String(b.team), "uk");
-        });
+    // -------------------------
+    // ЗОНИ A/B/C
+    // -------------------------
 
-      zoneRows.forEach((r, i) => {
-        const key = r.teamId || clean(r.team);
-        const zonePlace = r.zonePlace || (i + 1);
-        const fixed = {
-          ...r,
-          overallPlace: r.overallPlace || overallPlaceByKey.get(key) || 0,
-          zonePlace,
-          points: zonePlace
-        };
+    ["A", "B", "C"].forEach(
+      zone => {
 
-        if (fixed.teamId) byTeamId.set(fixed.teamId, fixed);
-        if (fixed.team) byTeamName.set(clean(fixed.team), fixed);
-      });
-    });
+        const zoneRows =
+          rows
+            .filter(
+              r =>
+                r.zone === zone
+            )
+            .sort(
+              (a, b) => {
+
+                if (
+                  b.totalWeight !==
+                  a.totalWeight
+                ) {
+                  return (
+                    b.totalWeight -
+                    a.totalWeight
+                  );
+                }
+
+                if (
+                  b.bigFish !==
+                  a.bigFish
+                ) {
+                  return (
+                    b.bigFish -
+                    a.bigFish
+                  );
+                }
+
+                return String(
+                  a.team
+                ).localeCompare(
+                  String(b.team),
+                  "uk"
+                );
+              }
+            );
+
+        zoneRows.forEach(
+          (r, index) => {
+
+            const zonePlace =
+              r.zonePlace ||
+              index + 1;
+
+            const fixed = {
+              ...r,
+              zonePlace,
+              points: zonePlace
+            };
+
+            if (
+              fixed.teamId
+            ) {
+              byTeamId.set(
+                fixed.teamId,
+                fixed
+              );
+            }
+
+            if (
+              fixed.team
+            ) {
+              byTeamName.set(
+                clean(
+                  fixed.team
+                ),
+                fixed
+              );
+            }
+          }
+        );
+      }
+    );
+
+    // -------------------------
+    // Якщо зони немає
+    // -------------------------
 
     rows
-      .filter(r => !["A", "B", "C"].includes(r.zone))
+      .filter(
+        r =>
+          !["A", "B", "C"]
+            .includes(r.zone)
+      )
       .forEach(r => {
-        const key = r.teamId || clean(r.team);
+
         const fixed = {
           ...r,
-          overallPlace: r.overallPlace || overallPlaceByKey.get(key) || 0,
-          points: r.points || r.zonePlace || 0
+
+          points:
+            r.points ||
+            r.zonePlace ||
+            r.overallPlace ||
+            0
         };
 
-        if (fixed.teamId) byTeamId.set(fixed.teamId, fixed);
-        if (fixed.team) byTeamName.set(clean(fixed.team), fixed);
+        if (
+          fixed.teamId
+        ) {
+          byTeamId.set(
+            fixed.teamId,
+            fixed
+          );
+        }
+
+        if (
+          fixed.team
+        ) {
+          byTeamName.set(
+            clean(
+              fixed.team
+            ),
+            fixed
+          );
+        }
       });
 
-    return { byTeamId, byTeamName };
+    return {
+      byTeamId,
+      byTeamName
+    };
   }
 
-  async function loadArchiveStageMaps(db, seasonYear, archivedStages) {
-    const result = new Map();
+  // =========================================================
+  // ЗАВАНТАЖЕННЯ АРХІВУ ЕТАПІВ
+  // =========================================================
 
-    await Promise.all(archivedStages.map(async stage => {
-      try {
-        const snap = await db
-          .collection("seasonResults")
-          .doc(seasonYear)
-          .collection("stages")
-          .doc(stage.stageDocId)
-          .get();
+  async function loadArchiveStageMaps(
+    db,
+    seasonYear,
+    regularStages
+  ) {
+    const result =
+      new Map();
 
-        if (!snap.exists) return;
+    await Promise.all(
+      regularStages.map(
+        async stage => {
 
-        const d = snap.data() || {};
-        const standings = Array.isArray(d.standings) ? d.standings : [];
+          try {
 
-        result.set(stage.stageDocId, computeStageMap(standings));
-      } catch (e) {
-        console.warn("[Rating] Не вдалося прочитати архів етапу:", stage.stageDocId, e);
-      }
-    }));
+            const snap =
+              await db
+                .collection(
+                  "seasonResults"
+                )
+                .doc(
+                  seasonYear
+                )
+                .collection(
+                  "stages"
+                )
+                .doc(
+                  stage.stageDocId
+                )
+                .get();
+
+            if (
+              !snap.exists
+            ) {
+              return;
+            }
+
+            const data =
+              snap.data() || {};
+
+            const standings =
+              Array.isArray(
+                data.standings
+              )
+                ? data.standings
+                : [];
+
+            result.set(
+              stage.stageDocId,
+              computeStageMap(
+                standings
+              )
+            );
+
+          } catch (e) {
+
+            console.warn(
+              "[Final qualification] Не вдалося прочитати етап:",
+              stage.stageDocId,
+              e
+            );
+          }
+        }
+      )
+    );
 
     return result;
   }
 
-  function findArchiveRowForTeam(stageMap, team) {
-    if (!stageMap || !team) return null;
+  // =========================================================
+  // ЗНАХОДИМО КОМАНДУ
+  // =========================================================
 
-    const teamId = String(team.teamId || "").trim();
-    const teamName = clean(team.team || team.teamName || "");
+  function findArchiveRowForTeam(
+    stageMap,
+    team
+  ) {
+    if (
+      !stageMap ||
+      !team
+    ) {
+      return null;
+    }
 
-    if (teamId && stageMap.byTeamId.has(teamId)) return stageMap.byTeamId.get(teamId);
-    if (teamName && stageMap.byTeamName.has(teamName)) return stageMap.byTeamName.get(teamName);
+    const teamId =
+      String(
+        team.teamId || ""
+      ).trim();
+
+    const teamName =
+      clean(
+        team.team ||
+        team.teamName ||
+        ""
+      );
+
+    if (
+      teamId &&
+      stageMap.byTeamId.has(
+        teamId
+      )
+    ) {
+      return stageMap
+        .byTeamId
+        .get(teamId);
+    }
+
+    if (
+      teamName &&
+      stageMap.byTeamName.has(
+        teamName
+      )
+    ) {
+      return stageMap
+        .byTeamName
+        .get(teamName);
+    }
 
     return null;
   }
 
-  function readStageResultFromArchiveOrRating(team, stage, archiveMaps) {
-    const final = isFinalStage(stage);
-    const archiveMap = archiveMaps.get(stage.stageDocId);
-    const archiveRow = findArchiveRowForTeam(archiveMap, team);
+  // =========================================================
+  // РЕЗУЛЬТАТ ВІДБІРКОВОГО ЕТАПУ
+  // =========================================================
+
+  function readRegularStageResult(
+    team,
+    stage,
+    archiveMaps
+  ) {
+    // Додатковий захист:
+    // фінал сюди не потрапить.
+    if (
+      isFinalStage(stage)
+    ) {
+      return null;
+    }
+
+    const archiveMap =
+      archiveMaps.get(
+        stage.stageDocId
+      );
+
+    const archiveRow =
+      findArchiveRowForTeam(
+        archiveMap,
+        team
+      );
 
     if (archiveRow) {
-      const place = final
-        ? num(archiveRow.overallPlace || archiveRow.finalPlace || archiveRow.place || archiveRow.points)
-        : num(archiveRow.zonePlace || archiveRow.points);
 
-      if (!place) return null;
+      const place =
+        num(
+          archiveRow.zonePlace ||
+          archiveRow.points
+        );
+
+      if (!place) {
+        return null;
+      }
 
       return {
         p: place,
         pts: place,
-        totalWeight: num(archiveRow.totalWeight),
-        bigFish: num(archiveRow.bigFish),
-        totalCount: num(archiveRow.totalCount),
-        isFinal: final
+
+        totalWeight:
+          num(
+            archiveRow.totalWeight
+          ),
+
+        bigFish:
+          num(
+            archiveRow.bigFish
+          ),
+
+        totalCount:
+          num(
+            archiveRow.totalCount
+          )
       };
     }
 
-    const stagesObj = team.stages || {};
-    const s = stagesObj[stage.stageDocId] || stagesObj[stage.stageId] || null;
+    // -------------------------
+    // fallback із seasonRating
+    // -------------------------
 
-    if (!s) return null;
+    const stagesObj =
+      team.stages || {};
 
-    const place = final
-      ? num(s.overallPlace || s.finalPlace || s.points || s.place)
-      : num(s.zonePlace || s.points || s.place);
+    const stageData =
+      stagesObj[
+        stage.stageDocId
+      ] ||
+      stagesObj[
+        stage.stageId
+      ] ||
+      null;
 
-    if (!place) return null;
+    if (!stageData) {
+      return null;
+    }
+
+    const place =
+      num(
+        stageData.zonePlace ||
+        stageData.points ||
+        stageData.place
+      );
+
+    if (!place) {
+      return null;
+    }
 
     return {
       p: place,
       pts: place,
-      totalWeight: num(s.totalWeight),
-      bigFish: num(s.bigFish),
-      totalCount: num(s.totalCount),
-      isFinal: final
+
+      totalWeight:
+        num(
+          stageData.totalWeight
+        ),
+
+      bigFish:
+        num(
+          stageData.bigFish
+        ),
+
+      totalCount:
+        num(
+          stageData.totalCount
+        )
     };
   }
 
-  function calculateBestResults(team, ratingStages, archiveMaps) {
-    const allStagePoints = [];
+  // =========================================================
+  // 2 НАЙКРАЩІ РЕЗУЛЬТАТИ
+  // =========================================================
 
-    ratingStages.forEach(stage => {
-      const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
+  function calculateBestResults(
+    team,
+    regularStages,
+    archiveMaps
+  ) {
+    const allResults = [];
 
-      if (result) {
-        allStagePoints.push({
-          stageDocId: stage.stageDocId,
-          ...result,
-          isNoShow: false
-        });
-      } else {
-        allStagePoints.push({
-          stageDocId: stage.stageDocId,
-          p: "–",
-          pts: ABSENT_POINTS,
-          totalWeight: 0,
-          bigFish: 0,
-          totalCount: 0,
-          isNoShow: true
-        });
+    regularStages.forEach(
+      stage => {
+
+        const result =
+          readRegularStageResult(
+            team,
+            stage,
+            archiveMaps
+          );
+
+        if (result) {
+
+          allResults.push({
+            stageDocId:
+              stage.stageDocId,
+
+            ...result,
+
+            isNoShow:
+              false
+          });
+
+        } else {
+
+          allResults.push({
+            stageDocId:
+              stage.stageDocId,
+
+            p: "–",
+            pts: ABSENT_POINTS,
+
+            totalWeight: 0,
+            bigFish: 0,
+            totalCount: 0,
+
+            isNoShow:
+              true
+          });
+        }
       }
-    });
+    );
 
-    const sorted = allStagePoints.slice().sort((a, b) => {
-      if (a.pts !== b.pts) return a.pts - b.pts;
-      if (b.totalWeight !== a.totalWeight) return b.totalWeight - a.totalWeight;
-      return b.bigFish - a.bigFish;
-    });
+    // Менше балів = краще.
+    // Якщо однаково:
+    // вага, потім Big Fish.
+    const sorted =
+      allResults
+        .slice()
+        .sort(
+          (a, b) => {
 
-    const counted = sorted.slice(0, BEST_COUNT);
-    const dropped = sorted.slice(BEST_COUNT);
+            if (
+              a.pts !==
+              b.pts
+            ) {
+              return (
+                a.pts -
+                b.pts
+              );
+            }
 
-    const countedKeys = new Set(counted.map(x => x.stageDocId));
-    const droppedKeys = new Set(dropped.map(x => x.stageDocId));
+            if (
+              b.totalWeight !==
+              a.totalWeight
+            ) {
+              return (
+                b.totalWeight -
+                a.totalWeight
+              );
+            }
+
+            return (
+              b.bigFish -
+              a.bigFish
+            );
+          }
+        );
+
+    const counted =
+      sorted.slice(
+        0,
+        BEST_COUNT
+      );
+
+    const dropped =
+      sorted.slice(
+        BEST_COUNT
+      );
+
+    const countedKeys =
+      new Set(
+        counted.map(
+          x =>
+            x.stageDocId
+        )
+      );
+
+    const droppedKeys =
+      new Set(
+        dropped.map(
+          x =>
+            x.stageDocId
+        )
+      );
+
+    const ratingPoints =
+      counted.reduce(
+        (sum, x) =>
+          sum +
+          num(x.pts),
+        0
+      );
 
     return {
       countedKeys,
       droppedKeys,
-      ratingPoints: counted.reduce((s, x) => s + num(x.pts), 0)
+      ratingPoints
     };
   }
 
-  function makeStageCells(team, regularStages, bestInfo, archiveMaps) {
-    return regularStages.slice(0, STAGES_MAX_IN_HTML).map(stage => {
-      const result = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
+  // =========================================================
+  // КЛІТИНКИ ЕТАПІВ
+  // =========================================================
 
-      if (!result) {
-        const isCounted = bestInfo.countedKeys.has(stage.stageDocId);
+  function makeStageCells(
+    team,
+    regularStages,
+    bestInfo,
+    archiveMaps
+  ) {
+    return regularStages.map(
+      stage => {
+
+        const result =
+          readRegularStageResult(
+            team,
+            stage,
+            archiveMaps
+          );
+
+        const counted =
+          bestInfo
+            .countedKeys
+            .has(
+              stage.stageDocId
+            );
+
+        const dropped =
+          bestInfo
+            .droppedKeys
+            .has(
+              stage.stageDocId
+            );
+
+        if (!result) {
+
+          return {
+            p: "–",
+            pts: ABSENT_POINTS,
+
+            noShow: true,
+            counted,
+            dropped
+          };
+        }
+
         return {
-          p: "–",
-          pts: ABSENT_POINTS,
-          noShow: true,
-          counted: isCounted,
-          dropped: !isCounted && bestInfo.droppedKeys.has(stage.stageDocId)
+          p: result.p,
+          pts: result.pts,
+
+          noShow: false,
+          counted,
+          dropped
         };
       }
-
-      return {
-        p: result.p,
-        pts: result.pts,
-        counted: bestInfo.countedKeys.has(stage.stageDocId),
-        noShow: false,
-        dropped: bestInfo.droppedKeys.has(stage.stageDocId)
-      };
-    });
+    );
   }
 
-  function getTournamentWeight(team, tournamentStages, archiveMaps) {
-    let w = 0;
+  // =========================================================
+  // ЗАГАЛЬНА ВАГА ВСІХ ВІДБІРКОВИХ ЕТАПІВ
+  // =========================================================
 
-    tournamentStages.forEach(stage => {
-      const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
-      if (r) w += num(r.totalWeight);
-    });
+  function getTournamentWeight(
+    team,
+    regularStages,
+    archiveMaps
+  ) {
+    let weight = 0;
 
-    return w || num(team.totalWeight);
+    regularStages.forEach(
+      stage => {
+
+        const result =
+          readRegularStageResult(
+            team,
+            stage,
+            archiveMaps
+          );
+
+        if (result) {
+          weight +=
+            num(
+              result.totalWeight
+            );
+        }
+      }
+    );
+
+    return weight;
   }
 
-  function getTournamentBigFish(team, tournamentStages, archiveMaps) {
-    let bf = 0;
+  // =========================================================
+  // BIG FISH ВСІХ ВІДБІРКОВИХ ЕТАПІВ
+  // =========================================================
 
-    tournamentStages.forEach(stage => {
-      const r = readStageResultFromArchiveOrRating(team, stage, archiveMaps);
-      if (r) bf = Math.max(bf, num(r.bigFish));
-    });
+  function getTournamentBigFish(
+    team,
+    regularStages,
+    archiveMaps
+  ) {
+    let bigFish = 0;
 
-    return bf || num(team.bigFish);
+    regularStages.forEach(
+      stage => {
+
+        const result =
+          readRegularStageResult(
+            team,
+            stage,
+            archiveMaps
+          );
+
+        if (result) {
+          bigFish =
+            Math.max(
+              bigFish,
+              num(
+                result.bigFish
+              )
+            );
+        }
+      }
+    );
+
+    return bigFish;
   }
 
-  function rankTeams(rawTeams, regularStages, finalStage, archiveMaps) {
-    const ratingStages = finalStage
-      ? regularStages.concat([finalStage])
-      : regularStages.slice();
+  // =========================================================
+  // РАНЖУВАННЯ КОМАНД
+  // =========================================================
 
-    const tournamentStages = ratingStages.slice();
+  function rankTeams(
+    rawTeams,
+    regularStages,
+    archiveMaps
+  ) {
+    const rows =
+      rawTeams.map(
+        team => {
 
-    const rows = rawTeams.map(team => {
-      const bestInfo = calculateBestResults(team, ratingStages, archiveMaps);
-      const stageCells = makeStageCells(team, regularStages, bestInfo, archiveMaps);
+          const bestInfo =
+            calculateBestResults(
+              team,
+              regularStages,
+              archiveMaps
+            );
 
-      const finalResult = finalStage
-        ? readStageResultFromArchiveOrRating(team, finalStage, archiveMaps)
-        : null;
+          const stageCells =
+            makeStageCells(
+              team,
+              regularStages,
+              bestInfo,
+              archiveMaps
+            );
 
-      return {
-        teamId: String(team.teamId || ""),
-        team: team.team || team.teamName || "—",
+          return {
+            teamId:
+              String(
+                team.teamId ||
+                ""
+              ),
 
-        stages: stageCells,
-        finalPlace: finalResult ? finalResult.p : "–",
+            team:
+              team.team ||
+              team.teamName ||
+              "—",
 
-        ratingPoints: bestInfo.ratingPoints,
+            stages:
+              stageCells,
 
-        displayWeight: getTournamentWeight(team, tournamentStages, archiveMaps),
-        displayBigFish: getTournamentBigFish(team, tournamentStages, archiveMaps)
-      };
-    });
+            ratingPoints:
+              bestInfo.ratingPoints,
 
-    rows.sort((a, b) => {
-      if (a.ratingPoints !== b.ratingPoints) return a.ratingPoints - b.ratingPoints;
-      if (b.displayWeight !== a.displayWeight) return b.displayWeight - a.displayWeight;
-      return b.displayBigFish - a.displayBigFish;
-    });
+            displayWeight:
+              getTournamentWeight(
+                team,
+                regularStages,
+                archiveMaps
+              ),
 
-    return rows.map((r, i) => ({
-      ...r,
-      place: i + 1
-    }));
+            displayBigFish:
+              getTournamentBigFish(
+                team,
+                regularStages,
+                archiveMaps
+              )
+          };
+        }
+      );
+
+    rows.sort(
+      (a, b) => {
+
+        // 1. Бали
+        if (
+          a.ratingPoints !==
+          b.ratingPoints
+        ) {
+          return (
+            a.ratingPoints -
+            b.ratingPoints
+          );
+        }
+
+        // 2. Вага
+        if (
+          b.displayWeight !==
+          a.displayWeight
+        ) {
+          return (
+            b.displayWeight -
+            a.displayWeight
+          );
+        }
+
+        // 3. Big Fish
+        if (
+          b.displayBigFish !==
+          a.displayBigFish
+        ) {
+          return (
+            b.displayBigFish -
+            a.displayBigFish
+          );
+        }
+
+        // 4. Стабільність
+        return String(
+          a.team
+        ).localeCompare(
+          String(b.team),
+          "uk"
+        );
+      }
+    );
+
+    return rows.map(
+      (row, index) => ({
+        ...row,
+        place: index + 1
+      })
+    );
   }
 
-  function calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps) {
-    if (archivedStages.length <= 1) return new Map();
+  // =========================================================
+  // ПОПЕРЕДНЄ МІСЦЕ
+  // =========================================================
 
-    const previousArchivedStages = archivedStages.slice(0, -1);
-    const { regularStages, finalStage } = splitStages(previousArchivedStages);
-    const previousRows = rankTeams(rawTeams, regularStages, finalStage, archiveMaps);
+  function calculatePreviousPlaces(
+    rawTeams,
+    regularStages,
+    archiveMaps
+  ) {
+    if (
+      regularStages.length <= 1
+    ) {
+      return new Map();
+    }
 
-    const map = new Map();
+    // Прибираємо останній
+    // заархівований етап.
+    const previousStages =
+      regularStages.slice(
+        0,
+        -1
+      );
 
-    previousRows.forEach(r => {
-      if (r.teamId) map.set(r.teamId, r.place);
-    });
+    const previousRows =
+      rankTeams(
+        rawTeams,
+        previousStages,
+        archiveMaps
+      );
+
+    const map =
+      new Map();
+
+    previousRows.forEach(
+      row => {
+
+        if (
+          row.teamId
+        ) {
+          map.set(
+            row.teamId,
+            row.place
+          );
+        }
+      }
+    );
 
     return map;
   }
 
-  async function convertRatingToRows(db, rating) {
-    const archivedStages = getArchivedStages(rating);
-    const { regularStages, finalStage } = splitStages(archivedStages);
+  // =========================================================
+  // FIRESTORE → PAYLOAD
+  // =========================================================
 
-    const stagesCount = Math.min(regularStages.length, STAGES_MAX_IN_HTML);
-    const rawTeams = Array.isArray(rating.teams) ? rating.teams.slice() : [];
+  async function convertRatingToRows(
+    db,
+    rating
+  ) {
+    // ТІЛЬКИ звичайні етапи.
+    // Фінал тут уже відкинутий.
+    const regularStages =
+      getRegularArchivedStages(
+        rating
+      );
 
-    const archiveMaps = await loadArchiveStageMaps(db, SEASON_YEAR, archivedStages);
+    const rawTeams =
+      Array.isArray(
+        rating.teams
+      )
+        ? rating.teams.slice()
+        : [];
 
-    const currentRows = rankTeams(rawTeams, regularStages, finalStage, archiveMaps);
-    const previousPlaces = calculatePreviousPlaces(rawTeams, archivedStages, archiveMaps);
+    const archiveMaps =
+      await loadArchiveStageMaps(
+        db,
+        SEASON_YEAR,
+        regularStages
+      );
 
-    const seasonBigFish = currentRows.reduce((max, row) => {
-      return Math.max(max, num(row.displayBigFish));
-    }, 0);
+    const currentRows =
+      rankTeams(
+        rawTeams,
+        regularStages,
+        archiveMaps
+      );
 
-    const rows = currentRows.map(row => {
-      const prevPlace = previousPlaces.get(row.teamId) || row.place;
-      const moveDelta = prevPlace - row.place;
+    const previousPlaces =
+      calculatePreviousPlaces(
+        rawTeams,
+        regularStages,
+        archiveMaps
+      );
 
-      return {
-        place: row.place,
-        team: row.team,
-        stages: row.stages,
-        points: row.ratingPoints || "—",
-        finalPlace: row.finalPlace || "–",
-        weight: fmtKg(row.displayWeight),
-        bigFish: fmtKg(row.displayBigFish),
-        seasonBigFishWinner: seasonBigFish > 0 && num(row.displayBigFish) === seasonBigFish,
-        moveDelta,
-        qualifiedForFinal: row.place <= TOP_COUNT
-      };
-    });
+    const seasonBigFish =
+      currentRows.reduce(
+        (max, row) =>
+          Math.max(
+            max,
+            num(
+              row.displayBigFish
+            )
+          ),
+        0
+      );
 
-    return { stagesCount, rows };
+    const rows =
+      currentRows.map(
+        row => {
+
+          const prevPlace =
+            previousPlaces.get(
+              row.teamId
+            ) ||
+            row.place;
+
+          const moveDelta =
+            prevPlace -
+            row.place;
+
+          return {
+            place:
+              row.place,
+
+            team:
+              row.team,
+
+            stages:
+              row.stages,
+
+            points:
+              row.ratingPoints ||
+              "—",
+
+            weight:
+              fmtKg(
+                row.displayWeight
+              ),
+
+            bigFish:
+              fmtKg(
+                row.displayBigFish
+              ),
+
+            seasonBigFishWinner:
+              seasonBigFish > 0 &&
+              num(
+                row.displayBigFish
+              ) ===
+              seasonBigFish,
+
+            moveDelta,
+
+            qualifiedForFinal:
+              row.place <=
+              TOP_COUNT
+          };
+        }
+      );
+
+    /*
+      regularStages теж кладемо
+      в payload.
+
+      Це потрібно для
+      динамічної шапки:
+      Е1 / Е2 / Е3 / Е4...
+    */
+    return {
+      regularStages,
+      rows
+    };
   }
 
-  function renderRatingPayload(payload, offline = false) {
-    const rows = Array.isArray(payload.rows) ? payload.rows : [];
-    const stagesCount = Number(payload.stagesCount || 0);
+  // =========================================================
+  // RENDER PAYLOAD
+  // =========================================================
 
-    const contendersCount = Math.max(3, rows.length - TOP_COUNT);
+  function renderRatingPayload(
+    payload,
+    offline = false
+  ) {
+    const rows =
+      Array.isArray(
+        payload.rows
+      )
+        ? payload.rows
+        : [];
 
-    buildSkeleton(contendersCount);
-    applyStageVisibility(stagesCount);
+    const regularStages =
+      Array.isArray(
+        payload.regularStages
+      )
+        ? payload.regularStages
+        : [];
 
-    const topRows = $("season-top") ? $("season-top").querySelectorAll("tr") : [];
-    const contRows = $("season-contenders") ? $("season-contenders").querySelectorAll("tr") : [];
+    const contendersCount =
+      Math.max(
+        3,
+        rows.length -
+        TOP_COUNT
+      );
 
-    rows.forEach((item, index) => {
-      if (index < TOP_COUNT) {
-        if (topRows[index]) renderRow(topRows[index], item);
-      } else {
-        const ci = index - TOP_COUNT;
-        if (contRows[ci]) {
-          renderRow(contRows[ci], { ...item, qualifiedForFinal: false });
+    // -------------------------
+    // 1. ШАПКА Е1 / Е2 / Е3...
+    // -------------------------
+
+    buildStageHeaders(
+      regularStages
+    );
+
+    // -------------------------
+    // 2. РЯДКИ
+    // -------------------------
+
+    buildSkeleton(
+      regularStages.length,
+      contendersCount
+    );
+
+    const topRows =
+      $("season-top")
+        ? $("season-top")
+            .querySelectorAll(
+              "tr"
+            )
+        : [];
+
+    const contRows =
+      $("season-contenders")
+        ? $("season-contenders")
+            .querySelectorAll(
+              "tr"
+            )
+        : [];
+
+    rows.forEach(
+      (item, index) => {
+
+        if (
+          index <
+          TOP_COUNT
+        ) {
+
+          if (
+            topRows[index]
+          ) {
+            renderRow(
+              topRows[index],
+              item
+            );
+          }
+
+        } else {
+
+          const contenderIndex =
+            index -
+            TOP_COUNT;
+
+          if (
+            contRows[
+              contenderIndex
+            ]
+          ) {
+
+            renderRow(
+              contRows[
+                contenderIndex
+              ],
+              {
+                ...item,
+                qualifiedForFinal:
+                  false
+              }
+            );
+          }
         }
       }
-    });
+    );
 
-    if ($("seasonTitle")) $("seasonTitle").textContent = "Рейтинг STOLAR CARP";
-    if ($("seasonKicker")) $("seasonKicker").textContent = `СЕЗОН ${SEASON_YEAR}`;
+    // -------------------------
+    // TITLES
+    // -------------------------
 
-    if (!rows.length && !offline) {
-      showError("⚠️ Немає даних рейтингу. Спочатку потрібно архівувати хоча б один етап.");
-    } else if (!offline) {
+    if (
+      $("seasonTitle")
+    ) {
+      $("seasonTitle")
+        .textContent =
+        "Вихід у фінал STOLAR CARP";
+    }
+
+    if (
+      $("seasonKicker")
+    ) {
+      $("seasonKicker")
+        .textContent =
+        `СЕЗОН ${SEASON_YEAR}`;
+    }
+
+    // -------------------------
+    // ERROR
+    // -------------------------
+
+    if (
+      !rows.length &&
+      !offline
+    ) {
+      showError(
+        "⚠️ Немає даних відбору. Спочатку потрібно архівувати хоча б один етап."
+      );
+
+    } else if (
+      !offline
+    ) {
       hideError();
     }
 
     setReadyFlag();
   }
 
+  // =========================================================
+  // LOAD
+  // =========================================================
+
   async function loadRating() {
     injectBigFishStyle();
     hideError();
 
-    buildSkeleton(3);
-    setReadyFlag();
+    /*
+      НЕ створюємо тут 5 колонок,
+      як робив старий JS.
 
-    const cached = cacheGet();
+      Чекаємо дані Firestore,
+      дізнаємося реальну кількість
+      етапів і тільки тоді
+      будуємо таблицю.
+    */
+
+    const cached =
+      cacheGet();
 
     if (cached) {
+
       try {
-        renderRatingPayload(cached, true);
+        renderRatingPayload(
+          cached,
+          true
+        );
+
       } catch (e) {
-        console.warn("[Rating] cache render error:", e);
+
+        console.warn(
+          "[Final qualification] cache render error:",
+          e
+        );
       }
     }
 
     try {
-      const db = await waitReady();
 
-      db.collection("seasonRating")
-        .doc(SEASON_YEAR)
+      const db =
+        await waitReady();
+
+      db
+        .collection(
+          "seasonRating"
+        )
+        .doc(
+          SEASON_YEAR
+        )
         .onSnapshot(
-          async (snap) => {
-            if (!snap.exists) {
-              showError(`⚠️ Немає документа seasonRating/${SEASON_YEAR}`);
+
+          async snap => {
+
+            if (
+              !snap.exists
+            ) {
+              showError(
+                `⚠️ Немає документа seasonRating/${SEASON_YEAR}`
+              );
+
               setReadyFlag();
+
               return;
             }
 
-            const rating = snap.data() || {};
-            const payload = await convertRatingToRows(db, rating);
+            const rating =
+              snap.data() || {};
 
-            cacheSet(payload);
-            renderRatingPayload(payload, false);
+            const payload =
+              await convertRatingToRows(
+                db,
+                rating
+              );
+
+            cacheSet(
+              payload
+            );
+
+            renderRatingPayload(
+              payload,
+              false
+            );
           },
-          (err) => {
-            console.error("[Rating] onSnapshot error:", err);
 
-            const c = cacheGet();
+          err => {
 
-            if (c) {
-              renderRatingPayload(c, true);
-              showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
+            console.error(
+              "[Final qualification] onSnapshot error:",
+              err
+            );
+
+            const cachedData =
+              cacheGet();
+
+            if (cachedData) {
+
+              renderRatingPayload(
+                cachedData,
+                true
+              );
+
+              showError(
+                "⚠️ Офлайн-режим. Показано кеш рейтингу."
+              );
+
             } else {
-              showError(`⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(err.message)}`);
+
+              showError(
+                `⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(
+                  err.message
+                )}`
+              );
             }
 
             setReadyFlag();
@@ -735,24 +2142,53 @@
         );
 
     } catch (e) {
-      const c = cacheGet();
 
-      if (c) {
-        renderRatingPayload(c, true);
-        showError("⚠️ Офлайн-режим. Показано кеш рейтингу.");
+      const cachedData =
+        cacheGet();
+
+      if (cachedData) {
+
+        renderRatingPayload(
+          cachedData,
+          true
+        );
+
+        showError(
+          "⚠️ Офлайн-режим. Показано кеш рейтингу."
+        );
+
       } else {
-        showError(`⚠️ Помилка завантаження рейтингу: ${safeText(e.message || e)}`);
-      }
 
-      setReadyFlag();
+        showError(
+          `⚠️ Помилка завантаження рейтингу: ${safeText(
+            e.message || e
+          )}`
+        );
+
+        setReadyFlag();
+      }
     }
   }
 
-  window.refreshRating = async function () {
-    cacheClear();
-    showError("⏳ Оновлення рейтингу...");
-    await loadRating();
-  };
+  // =========================================================
+  // MANUAL REFRESH
+  // =========================================================
 
-  document.addEventListener("DOMContentLoaded", loadRating);
+  window.refreshRating =
+    function () {
+
+      cacheClear();
+
+      window.location.reload();
+    };
+
+  // =========================================================
+  // START
+  // =========================================================
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    loadRating
+  );
+
 })();

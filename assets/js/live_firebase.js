@@ -10,9 +10,9 @@
 // - стандартний Live залишається;
 // - нижче додається компактна таблиця:
 //   Зона | Команда |
-//   Загальна вага + місце |
-//   5 великих: 1–5 + сума + місце |
-//   Big Fish + місце |
+//   1 ТАБЛИЦЯ — Загальна вага + місце |
+//   2 ТАБЛИЦЯ — 5 великих: 1–5 + сума + місце |
+//   3 ТАБЛИЦЯ — Big Fish + місце |
 //   Бали | Підсумкове місце.
 //
 // Потрібно:
@@ -396,13 +396,13 @@
     style.id = styleId;
 
     style.textContent = `
-     .three-tables-section {
-     display: none;
-     width: 100%;
-     min-width: 0;
-     margin-top: 18px;
-     margin-bottom: 22px;
-     }
+      .three-tables-section {
+        display: none;
+        width: 100%;
+        min-width: 0;
+        margin-top: 18px;
+        margin-bottom: 22px;
+      }
 
       .three-tables-section.is-visible {
         display: block;
@@ -494,20 +494,7 @@
 
       /*
        * Пропорції колонок.
-       *
-       * Зона:             5%
-       * Команда:         18%
-       * Загальна вага:    9%
-       * Загальне місце:   4%
-       * Риби 1–5:       5.8% кожна
-       * Сума п'яти:       8%
-       * Місце п'яти:      4%
-       * Big Fish:         8%
-       * Місце Big:        4%
-       * Бали:             6%
-       * Підсумкове:       5%
        */
-
       .three-col-zone {
         width: 5%;
       }
@@ -575,9 +562,6 @@
         color: var(--accent, #f6c34c);
       }
 
-      /*
-       * Значення на кшталт 10.45 у колонках риб.
-       */
       .three-live-table .three-fish-cell {
         padding-left: 1px;
         padding-right: 1px;
@@ -595,6 +579,12 @@
         color: #7cffb2;
       }
 
+      /*
+       * ========================================================
+       * КОЛЬОРИ ГРУП
+       * ========================================================
+       */
+
       .three-group-total {
         background: rgba(59,130,246,.055);
       }
@@ -606,6 +596,67 @@
       .three-group-big {
         background: rgba(239,68,68,.045);
       }
+
+      /*
+       * ========================================================
+       * НОВА ШАПКА — 1 / 2 / 3 ТАБЛИЦЯ
+       * ========================================================
+       */
+
+      .three-live-table .three-table-group {
+        padding: 6px 2px 5px;
+        text-align: center;
+        vertical-align: middle;
+        border-bottom: 1px solid rgba(255,255,255,.14);
+      }
+
+      .three-live-table .three-table-number {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--accent, #f6c34c);
+        font-size: clamp(6.5px, 1.25vw, 9px);
+        line-height: 1;
+        font-weight: 950;
+        letter-spacing: .04em;
+        white-space: nowrap;
+      }
+
+      .three-live-table .three-table-name {
+        display: block;
+        color: #e8e8ec;
+        font-size: clamp(6px, 1.2vw, 9px);
+        line-height: 1.08;
+        font-weight: 900;
+        white-space: normal;
+      }
+
+      .three-live-table .three-table-group--total {
+        background: rgba(59,130,246,.10);
+        border-left: 2px solid rgba(59,130,246,.48);
+      }
+
+      .three-live-table .three-table-group--five {
+        background: rgba(246,195,76,.09);
+        border-left: 2px solid rgba(246,195,76,.48);
+      }
+
+      .three-live-table .three-table-group--big {
+        background: rgba(239,68,68,.09);
+        border-left: 2px solid rgba(239,68,68,.48);
+      }
+
+      .three-live-table .three-table-subtitle {
+        font-weight: 900;
+      }
+
+      .three-live-table .three-summary-head {
+        font-weight: 950;
+        vertical-align: middle;
+      }
+
+      /*
+       * Підсумкові місця.
+       */
 
       .three-final-first td {
         border-top: 1px solid rgba(246,195,76,.4);
@@ -672,6 +723,21 @@
         .three-live-table .three-final-cell {
           font-size: clamp(7px, 2vw, 9px);
         }
+
+        .three-live-table .three-table-group {
+          padding: 4px 1px 3px;
+        }
+
+        .three-live-table .three-table-number {
+          margin-bottom: 2px;
+          font-size: 5.8px;
+          letter-spacing: 0;
+        }
+
+        .three-live-table .three-table-name {
+          font-size: 5.6px;
+          line-height: 1.05;
+        }
       }
 
       @media (max-width: 380px) {
@@ -690,6 +756,14 @@
 
         .three-live-table .three-team-cell {
           font-size: 6.3px;
+        }
+
+        .three-live-table .three-table-number {
+          font-size: 5.4px;
+        }
+
+        .three-live-table .three-table-name {
+          font-size: 5.2px;
         }
       }
     `;
@@ -723,7 +797,9 @@
           <h2>Результати — три таблиці</h2>
 
           <p>
-            Загальна вага · 5 великих без Big Fish · Big Fish
+            1 таблиця — загальна вага ·
+            2 таблиця — 5 великих без Big Fish ·
+            3 таблиця — Big Fish
           </p>
         </div>
 
@@ -1009,6 +1085,7 @@
 
         <div class="three-table-wrap">
           <table class="table table-sm three-live-table">
+
             <colgroup>
               <col class="three-col-zone">
               <col class="three-col-team">
@@ -1033,81 +1110,204 @@
             </colgroup>
 
             <thead>
+
+              <!--
+                ==================================================
+                ВЕРХНІ НАЗВИ ТРЬОХ ТАБЛИЦЬ
+                ==================================================
+              -->
               <tr>
-                <th rowspan="2">
+
+                <th
+                  rowspan="3"
+                  class="three-summary-head"
+                >
                   Зона
                 </th>
 
-                <th rowspan="2">
+                <th
+                  rowspan="3"
+                  class="three-summary-head"
+                >
                   Команда
                 </th>
 
+
+                <!-- 1 ТАБЛИЦЯ -->
                 <th
                   colspan="2"
-                  class="three-group-total"
+                  class="
+                    three-table-group
+                    three-table-group--total
+                  "
                 >
-                  Загальна
+                  <span class="three-table-number">
+                    1 ТАБЛИЦЯ
+                  </span>
+
+                  <span class="three-table-name">
+                    ЗАГАЛЬНА ВАГА
+                  </span>
                 </th>
 
+
+                <!-- 2 ТАБЛИЦЯ -->
                 <th
                   colspan="7"
-                  class="three-group-five"
+                  class="
+                    three-table-group
+                    three-table-group--five
+                  "
                 >
-                  5 великих
+                  <span class="three-table-number">
+                    2 ТАБЛИЦЯ
+                  </span>
+
+                  <span class="three-table-name">
+                    5 ВЕЛИКИХ РИБ
+                  </span>
                 </th>
 
+
+                <!-- 3 ТАБЛИЦЯ -->
                 <th
                   colspan="2"
-                  class="three-group-big"
+                  class="
+                    three-table-group
+                    three-table-group--big
+                  "
                 >
-                  BIG
+                  <span class="three-table-number">
+                    3 ТАБЛИЦЯ
+                  </span>
+
+                  <span class="three-table-name">
+                    BIG FISH
+                  </span>
                 </th>
 
-                <th rowspan="2">
+
+                <th
+                  rowspan="3"
+                  class="three-summary-head"
+                >
                   Бали
                 </th>
 
-                <th rowspan="2">
+                <th
+                  rowspan="3"
+                  class="three-summary-head"
+                >
                   М
                 </th>
+
               </tr>
 
+
+              <!--
+                ==================================================
+                ПІДЗАГОЛОВКИ
+                ==================================================
+              -->
               <tr>
-                <th class="three-group-total">
+
+                <!-- 1 таблиця -->
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-total
+                    three-table-subtitle
+                  "
+                >
                   Вага
                 </th>
 
-                <th class="three-group-total">
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-total
+                    three-table-subtitle
+                  "
+                >
                   М
                 </th>
 
+
+                <!-- 2 таблиця -->
+                <th
+                  colspan="5"
+                  class="
+                    three-group-five
+                    three-table-subtitle
+                  "
+                >
+                  Риби
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-five
+                    three-table-subtitle
+                  "
+                >
+                  Вага
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-five
+                    three-table-subtitle
+                  "
+                >
+                  М
+                </th>
+
+
+                <!-- 3 таблиця -->
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-big
+                    three-table-subtitle
+                  "
+                >
+                  Вага
+                </th>
+
+                <th
+                  rowspan="2"
+                  class="
+                    three-group-big
+                    three-table-subtitle
+                  "
+                >
+                  М
+                </th>
+
+              </tr>
+
+
+              <!--
+                ==================================================
+                РИБИ 1–5
+                ==================================================
+              -->
+              <tr>
                 <th class="three-group-five">1</th>
                 <th class="three-group-five">2</th>
                 <th class="three-group-five">3</th>
                 <th class="three-group-five">4</th>
                 <th class="three-group-five">5</th>
-
-                <th class="three-group-five">
-                  Вага
-                </th>
-
-                <th class="three-group-five">
-                  М
-                </th>
-
-                <th class="three-group-big">
-                  Вага
-                </th>
-
-                <th class="three-group-big">
-                  М
-                </th>
               </tr>
+
             </thead>
 
             <tbody>
               ${rowsHtml}
             </tbody>
+
           </table>
         </div>
       </div>
@@ -2400,10 +2600,6 @@
             error
           );
 
-          /*
-           * Якщо немає доступу до competitions,
-           * Live не падає, а працює як classic.
-           */
           activeFormat = FORMAT_CLASSIC;
 
           applyFormatVisibility();

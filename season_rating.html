@@ -17,8 +17,19 @@
   <script defer src="assets/js/firebase-init.js"></script>
   <script defer src="assets/js/config.js"></script>
 
-  <!-- Окремий JS цієї сторінки -->
-  <script defer src="assets/js/season_rating.js"></script>
+  <!-- Рейтинг команд сезону -->
+  <script
+    defer
+    src="assets/js/season_rating.js?v=20260810-2"
+    onerror="
+      document.documentElement.setAttribute('data-season-rating-ready','1');
+      const box=document.getElementById('seasonRatingError');
+      if(box){
+        box.style.display='block';
+        box.textContent='⚠️ Не вдалося завантажити assets/js/season_rating.js';
+      }
+    "
+  ></script>
 
   <style>
     :root{
@@ -221,6 +232,8 @@
         rgba(239,68,68,.10);
 
       color:#ffb4b4;
+
+      line-height:1.5;
     }
 
     /* =====================================================
@@ -238,8 +251,7 @@
     }
 
     .season-rating-card h2{
-      margin:
-        0 0 10px;
+      margin:0 0 10px;
     }
 
     .season-rating-table-wrapper{
@@ -326,6 +338,10 @@
       background:#10121b;
     }
 
+    .table--season-final tbody tr:hover{
+      background:#191b27;
+    }
+
     .table--season-final tbody td{
       padding:3px 2px;
 
@@ -402,6 +418,7 @@
 
     .stage-place{
       font-weight:600;
+      color:#e5e7eb;
     }
 
     .stage-slash{
@@ -410,8 +427,11 @@
 
     .stage-points{
       font-size:.64rem;
-
       color:#9ca3af;
+    }
+
+    .stage-noshow{
+      opacity:.55;
     }
 
     /* =====================================================
@@ -420,7 +440,6 @@
 
     .final-place{
       font-weight:900;
-
       color:#e5e7eb;
     }
 
@@ -430,7 +449,6 @@
 
     .col-points b{
       color:var(--gold);
-
       letter-spacing:.02em;
     }
 
@@ -892,8 +910,7 @@
                 </th>
 
                 <!--
-                  season_rating.js
-                  вставить сюди
+                  season_rating.js автоматично вставить:
                   Е1 / Е2 / Е3 / Е4...
                 -->
 
@@ -926,9 +943,9 @@
 
         <p class="season-rating-note">
           Підсумкове місце сезону визначається так:<br>
-          <b>1)</b> менша сума балів усіх етапів та Фіналу — вище місце;<br>
-          <b>2)</b> при однакових балах — більша загальна вага;<br>
-          <b>3)</b> якщо вага однакова — більший Big Fish сезону.
+          <b>1)</b> менша сума балів усіх відбіркових етапів та Фіналу — вище місце;<br>
+          <b>2)</b> при однакових балах — вище команда з більшою загальною вагою;<br>
+          <b>3)</b> якщо вага однакова — вище команда з більшим Big Fish сезону.
         </p>
 
       </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Рейтинг сезону — STOLAR CARP</title>
+  <title>Вихід у фінал — STOLAR CARP</title>
 
   <link rel="stylesheet" href="assets/css/main.css" />
 
@@ -30,42 +30,73 @@
       --panel2:#05060a;
     }
 
-    .hint{opacity:.75}
+    .hint{
+      opacity:.75;
+    }
 
     /* =========================
-       ✅ NO-FLICKER (ідеально)
-       - Поки rating не готовий: показуємо ЛОАДЕР, а таблиці повністю ховаємо.
-       - Після data-rating-ready="1": таблиці з’являються одразу правильно.
+       NO FLICKER
        ========================= */
-    html[data-rating-ready="0"] .season-tables { display:none !important; }
-    html[data-rating-ready="1"] .rating-loader { display:none !important; }
+    html[data-rating-ready="0"] .season-tables{
+      display:none !important;
+    }
+
+    html[data-rating-ready="1"] .rating-loader{
+      display:none !important;
+    }
 
     .rating-loader{
       margin-top:14px;
-      padding:14px 14px;
+      padding:14px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(90deg, rgba(250,204,21,.08), rgba(17,24,39,.25));
+      background:
+        linear-gradient(
+          90deg,
+          rgba(250,204,21,.08),
+          rgba(17,24,39,.25)
+        );
       color:#e5e7eb;
       box-shadow:0 14px 30px rgba(0,0,0,.55);
     }
+
     .rating-loader__row{
       display:flex;
       align-items:center;
       gap:10px;
     }
+
     .rating-loader__dot{
-      width:10px;height:10px;border-radius:999px;
+      width:10px;
+      height:10px;
+      border-radius:999px;
       background:var(--accent-gold-soft);
       box-shadow:0 0 0 6px rgba(250,204,21,.08);
       animation:pulse 1.1s infinite ease-in-out;
     }
+
     @keyframes pulse{
-      0%,100%{ transform:scale(1); opacity:.85 }
-      50%{ transform:scale(1.25); opacity:1 }
+      0%,100%{
+        transform:scale(1);
+        opacity:.85;
+      }
+
+      50%{
+        transform:scale(1.25);
+        opacity:1;
+      }
     }
-    .rating-loader__title{ font-weight:800; letter-spacing:.02em; }
-    .rating-loader__sub{ opacity:.8; margin-top:6px; line-height:1.45; }
+
+    .rating-loader__title{
+      font-weight:800;
+      letter-spacing:.02em;
+    }
+
+    .rating-loader__sub{
+      opacity:.8;
+      margin-top:6px;
+      line-height:1.45;
+    }
 
     /* =========================
        HERO
@@ -74,12 +105,21 @@
       margin-bottom:24px;
       padding:24px 22px;
       background:
-        radial-gradient(circle at top left,rgba(250,204,21,.18) 0,transparent 38%),
-        radial-gradient(circle at bottom right,#111827 0,#050609 55%);
+        radial-gradient(
+          circle at top left,
+          rgba(250,204,21,.18) 0,
+          transparent 38%
+        ),
+        radial-gradient(
+          circle at bottom right,
+          #111827 0,
+          #050609 55%
+        );
       border-radius:20px;
       border:1px solid rgba(255,255,255,.10);
       box-shadow:0 18px 40px rgba(0,0,0,.7);
     }
+
     .season-rating-head .kicker{
       letter-spacing:.18em;
       text-transform:uppercase;
@@ -87,7 +127,11 @@
       font-size:.78rem;
       margin-bottom:4px;
     }
-    .season-rating-head .page-title{ margin:0; }
+
+    .season-rating-head .page-title{
+      margin:0;
+    }
+
     .rating-desc{
       max-width:900px;
       margin-top:10px;
@@ -96,7 +140,9 @@
       opacity:.9;
     }
 
-    /* details */
+    /* =========================
+       DETAILS
+       ========================= */
     .rating-desc-wrap details{
       margin-top:10px;
       border:1px solid rgba(255,255,255,.12);
@@ -104,6 +150,7 @@
       border-radius:14px;
       padding:10px 12px;
     }
+
     .rating-desc-wrap summary{
       cursor:pointer;
       font-weight:900;
@@ -112,11 +159,19 @@
       list-style:none;
       opacity:.95;
     }
-    .rating-desc-wrap summary::-webkit-details-marker{display:none;}
-    .rating-desc-wrap .details-body{ margin-top:10px; }
+
+    .rating-desc-wrap summary::-webkit-details-marker{
+      display:none;
+    }
+
+    .rating-desc-wrap .details-body{
+      margin-top:10px;
+    }
 
     @media (max-width:640px){
-      .season-rating-head{ padding:18px 16px; }
+      .season-rating-head{
+        padding:18px 16px;
+      }
     }
 
     /* =========================
@@ -129,34 +184,65 @@
       border:none;
       box-shadow:none;
     }
-    .card--season h3{ margin:0 0 10px; }
+
+    .card--season h3{
+      margin:0 0 10px;
+    }
 
     .season-table-wrapper{
       margin-top:6px;
       border-radius:14px;
-      overflow:hidden;
-      background:radial-gradient(circle at top,var(--panel) 0,var(--panel2) 55%);
+
+      /*
+        Горизонтальний scroll потрібен,
+        якщо етапів стане багато.
+      */
+      overflow-x:auto;
+      overflow-y:hidden;
+
+      background:
+        radial-gradient(
+          circle at top,
+          var(--panel) 0,
+          var(--panel2) 55%
+        );
+
       border:1px solid rgba(255,255,255,.09);
       box-shadow:0 14px 30px rgba(0,0,0,.75);
 
       width:108%;
       margin-left:-4%;
+
+      -webkit-overflow-scrolling:touch;
     }
 
     .table--season{
       width:100%;
-      table-layout:fixed;
+      min-width:760px;
       border-collapse:collapse;
       font-size:.7rem;
       background:var(--panel2);
+
+      /*
+        Не використовуємо table-layout:fixed,
+        бо кількість етапів тепер динамічна.
+      */
+      table-layout:auto;
     }
+
     .table--season thead{
-      background:linear-gradient(90deg,#181920,#111827);
+      background:
+        linear-gradient(
+          90deg,
+          #181920,
+          #111827
+        );
     }
+
     .table--season thead th{
       border-bottom:1px solid var(--line);
       border-right:1px solid rgba(255,255,255,.04);
-      padding:4px 2px;
+      padding:5px 4px;
       text-align:center;
       font-weight:600;
       opacity:.95;
@@ -169,17 +255,27 @@
       letter-spacing:.04em;
       color:#e5e7eb;
     }
-    .table--season thead th:first-child{ text-align:left; }
+
+    .table--season thead th:first-child{
+      text-align:left;
+    }
 
     .table--season tbody tr{
       background:var(--panel);
       transition:background .15s ease;
       height:40px;
     }
-    .table--season tbody tr:nth-child(odd){ background:#10121b; }
-    .table--season tbody tr:hover{ background:#191b27; }
+
+    .table--season tbody tr:nth-child(odd){
+      background:#10121b;
+    }
+
+    .table--season tbody tr:hover{
+      background:#191b27;
+    }
+
     .table--season tbody td{
-      padding:3px 2px;
+      padding:4px 4px;
       border-bottom:1px solid rgba(255,255,255,.04);
       border-right:1px solid rgba(255,255,255,.02);
       text-align:center;
@@ -190,17 +286,53 @@
       font-size:.7rem;
       color:#e5e7eb;
     }
-    .table--season tbody td.col-team{ text-align:left; }
 
-    /* widths */
-    .col-place  { width:8%; }
-    .col-move   { width:6%; }
-    .col-team   { width:19%; }
-    .col-stage  { width:8%; }
-    .col-points { width:7%; }
-    .col-final  { width:8%; }
-    .col-weight { width:8%; }
-    .col-big    { width:7%; }
+    .table--season tbody td.col-team{
+      text-align:left;
+    }
+
+    /* =========================
+       DYNAMIC COLUMN WIDTHS
+       ========================= */
+
+    .col-place{
+      min-width:52px;
+      width:52px;
+    }
+
+    .col-move{
+      min-width:50px;
+      width:50px;
+    }
+
+    .col-team{
+      min-width:145px;
+      width:190px;
+    }
+
+    /*
+      Кожен динамічний етап має
+      свою мінімальну ширину.
+    */
+    .col-stage{
+      min-width:62px;
+      width:62px;
+    }
+
+    .col-points{
+      min-width:58px;
+      width:58px;
+    }
+
+    .col-weight{
+      min-width:72px;
+      width:72px;
+    }
+
+    .col-big{
+      min-width:70px;
+      width:70px;
+    }
 
     .col-place .place-num{
       display:block;
@@ -210,6 +342,9 @@
       padding-left:5px;
     }
 
+    /* =========================
+       MOVE
+       ========================= */
     .move{
       font-size:.6rem;
       display:inline-flex;
@@ -222,10 +357,25 @@
       opacity:.9;
       background:rgba(15,23,42,.7);
     }
-    .move--up{color:var(--accent-green);border-color:rgba(34,197,94,.55)}
-    .move--down{color:var(--accent-red);border-color:rgba(239,68,68,.55)}
-    .move--same{color:#e5e7eb;border-style:dashed}
 
+    .move--up{
+      color:var(--accent-green);
+      border-color:rgba(34,197,94,.55);
+    }
+
+    .move--down{
+      color:var(--accent-red);
+      border-color:rgba(239,68,68,.55);
+    }
+
+    .move--same{
+      color:#e5e7eb;
+      border-style:dashed;
+    }
+
+    /* =========================
+       STAGE CELL
+       ========================= */
     .stage-cell{
       display:flex;
       flex-direction:row;
@@ -235,24 +385,72 @@
       font-size:.68rem;
       line-height:1;
     }
-    .stage-place{ font-weight:600; color:#e5e7eb; }
-    .stage-slash{ opacity:.7; }
-    .stage-points{ font-size:.64rem; opacity:.85; color:#9ca3af; }
 
-    .table--main tbody tr.row-qualified td.col-place{
-      box-shadow:inset 3px 0 0 var(--accent-gold-soft);
+    .stage-place{
+      font-weight:600;
+      color:#e5e7eb;
     }
+
+    .stage-slash{
+      opacity:.7;
+    }
+
+    .stage-points{
+      font-size:.64rem;
+      opacity:.85;
+      color:#9ca3af;
+    }
+
+    /*
+      Якщо етап увійшов у 2 найкращі.
+    */
+    .stage-counted{
+      background:rgba(34,197,94,.055);
+    }
+
+    /*
+      Результат є, але не увійшов
+      у 2 найкращі.
+    */
+    .stage-dropped{
+      opacity:.55;
+    }
+
+    /*
+      Неявка / відсутність результату.
+    */
+    .stage-noshow{
+      opacity:.55;
+    }
+
+    /* =========================
+       QUALIFIED TOP 18
+       ========================= */
+    .table--main tbody tr.row-qualified td.col-place{
+      box-shadow:
+        inset 3px 0 0
+        var(--accent-gold-soft);
+    }
+
     .table--main tbody tr.row-qualified .place-num{
       color:var(--accent-gold-soft);
     }
 
-    .col-points b{ color:var(--accent-gold); letter-spacing:.02em; }
-    .col-big{ color:var(--accent-blue); font-weight:500; }
+    .col-points b{
+      color:var(--accent-gold);
+      letter-spacing:.02em;
+    }
+
+    .col-big{
+      color:var(--accent-blue);
+      font-weight:500;
+    }
 
     .rating-note{
       margin-top:8px;
       font-size:.8rem;
       opacity:.75;
+      line-height:1.55;
     }
 
     .subhead{
@@ -260,38 +458,102 @@
       font-weight:600;
       font-size:.95rem;
     }
+
     .subhead span{
       opacity:.7;
       font-size:.8rem;
       font-weight:400;
     }
 
+    /* =========================
+       ERROR
+       ========================= */
     .rating-error{
       margin-top:14px;
-      padding:14px 14px;
+      padding:14px;
       border-radius:14px;
       border:1px solid rgba(239,68,68,.35);
       background:rgba(239,68,68,.10);
       color:#ffb4b4;
       display:none;
     }
-    .rating-error b{ color:#ffd1d1; }
 
+    .rating-error b{
+      color:#ffd1d1;
+    }
+
+    /* =========================
+       MOBILE
+       ========================= */
     @media (max-width:480px){
-      .table--season{ font-size:.55rem; }
+      .table--season{
+        font-size:.55rem;
+      }
+
       .table--season thead th,
-      .table--season tbody td{ padding:3px 1px; }
-      .table--season thead th{ font-size:.55rem; }
-      .col-place .place-num{font-size:.78rem;}
-      .stage-cell{font-size:.64rem;}
-      .stage-points{font-size:.6rem;}
+      .table--season tbody td{
+        padding:3px 3px;
+      }
+
+      .table--season thead th{
+        font-size:.55rem;
+      }
+
+      .col-place{
+        min-width:44px;
+        width:44px;
+      }
+
+      .col-move{
+        min-width:45px;
+        width:45px;
+      }
+
+      .col-team{
+        min-width:120px;
+        width:140px;
+      }
+
+      .col-stage{
+        min-width:55px;
+        width:55px;
+      }
+
+      .col-points{
+        min-width:52px;
+        width:52px;
+      }
+
+      .col-weight{
+        min-width:64px;
+        width:64px;
+      }
+
+      .col-big{
+        min-width:64px;
+        width:64px;
+      }
+
+      .col-place .place-num{
+        font-size:.78rem;
+      }
+
+      .stage-cell{
+        font-size:.64rem;
+      }
+
+      .stage-points{
+        font-size:.6rem;
+      }
     }
   </style>
 </head>
 
 <body>
+
 <header class="header">
   <div class="container header__row">
+
     <a class="logo" href="index.html" aria-label="STOLAR CARP">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
@@ -310,136 +572,321 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger" aria-label="Відкрити меню">
-      <span></span><span></span><span></span>
+    <button
+      class="burger"
+      id="burger"
+      aria-label="Відкрити меню"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
+
   </div>
 </header>
 
 <main class="main">
+
   <section class="container section">
 
+    <!-- =========================
+         HEADER
+         ========================= -->
     <div class="season-rating-head">
-      <div class="kicker title-gradient" id="seasonKicker">СЕЗОН</div>
-      <h1 class="page-title title-gradient" id="seasonTitle">Рейтинг сезону STOLAR CARP</h1>
+
+      <div
+        class="kicker title-gradient"
+        id="seasonKicker"
+      >
+        СЕЗОН
+      </div>
+
+      <h1
+        class="page-title title-gradient"
+        id="seasonTitle"
+      >
+        Вихід у фінал STOLAR CARP
+      </h1>
 
       <div class="rating-desc-wrap">
-        <p class="lead rating-desc" style="margin-bottom:8px;">
-          Рейтинг сезону STOLAR CARP — це офіційна підсумкова таблиця результатів команд за всі етапи сезону.
+
+        <p
+          class="lead rating-desc"
+          style="margin-bottom:8px;"
+        >
+          Рейтинг відбору STOLAR CARP показує поточне положення команд
+          у боротьбі за вихід до Фіналу сезону.
         </p>
 
         <details>
-  <summary>Детальніше</summary>
-  <div class="details-body">
-    <p class="lead rating-desc" style="margin:0;">
-      Сезон STOLAR CARP складається з трьох відбіркових етапів (Е1, Е2, Е3) та Фіналу.
-      <br><br>
+          <summary>Детальніше</summary>
 
-      <strong>Відбір до Фіналу.</strong> Після завершення трьох відбіркових етапів формується рейтинг команд за сумою <strong>двох найкращих результатів</strong> серед Е1, Е2 та Е3 (менше балів — краще). Якщо команда взяла участь лише в одному етапі, до рейтингу автоматично додаються <strong>8 штрафних балів</strong> за пропущений результат. Саме за цим рейтингом <strong>18 найкращих команд</strong> отримують право участі у Фіналі STOLAR CARP.
-      <br><br>
+          <div class="details-body">
 
-      <strong>Чемпіонат сезону.</strong> Після завершення Фіналу формується підсумковий рейтинг сезону, який враховує <strong>усі виступи команди</strong> протягом сезону, включно з результатом Фіналу. Саме за цим рейтингом визначаються <strong>чемпіони сезону STOLAR CARP (1–3 місце)</strong>.
-      <br><br>
+            <p
+              class="lead rating-desc"
+              style="margin:0;"
+            >
+              <strong>Відбір до Фіналу.</strong>
+              У таблиці автоматично відображаються всі проведені
+              та заархівовані відбіркові етапи сезону.
+              <br><br>
 
-      За кожен етап команда отримує кількість балів, що відповідає зайнятому місцю (менше балів — краще). При рівності балів перевагу має команда з більшою сумарною вагою вилову за весь сезон. Якщо і цей показник однаковий — вищу позицію займає команда з найбільшим <strong>Big Fish</strong> сезону.
-      <br><br>
+              Кількість етапів не зафіксована в HTML:
+              якщо створено 3 етапи — таблиця покаже Е1, Е2, Е3;
+              якщо створено 5 — покаже Е1–Е5;
+              якщо створено більше — вони також будуть додані автоматично.
+              <br><br>
 
-      Окремо нагороджується команда, яка впіймала <strong>Big Fish сезону</strong>.
-    </p>
-  </div>
-</details>
-      <div class="rating-error" id="ratingError"></div>
+              Для виходу у Фінал рейтинг формується за сумою
+              <strong>двох найкращих результатів</strong>
+              команди серед усіх доступних відбіркових етапів.
+              Менша сума балів означає вище місце.
+              <br><br>
 
-      <!-- ✅ Loader замість "порожньої" таблиці -->
-      <div class="rating-loader" role="status" aria-live="polite">
-        <div class="rating-loader__row">
-          <span class="rating-loader__dot" aria-hidden="true"></span>
-          <div class="rating-loader__title">Завантаження рейтингу сезону…</div>
-        </div>
-        <div class="rating-loader__sub">
-          Підтягуємо етапи та список команд. Таблиця зʼявиться одразу в правильному вигляді.
-        </div>
+              Якщо команда не має результату потрібного етапу,
+              система використовує встановлені штрафні бали
+              відповідно до логіки рейтингу.
+              <br><br>
+
+              <strong>18 найкращих команд</strong>
+              отримують право участі у Фіналі STOLAR CARP.
+              <br><br>
+
+              При однаковій сумі рейтингових балів вище розташовується
+              команда з більшою загальною вагою вилову.
+              Якщо і загальна вага однакова — перевагу отримує команда
+              з більшим <strong>Big Fish</strong>.
+              <br><br>
+
+              Фінальний етап у цій таблиці
+              <strong>не враховується</strong>.
+              Він буде використовуватися окремо
+              в підсумковому рейтингу команд сезону.
+            </p>
+
+          </div>
+        </details>
+
       </div>
+
+      <div
+        class="rating-error"
+        id="ratingError"
+      ></div>
+
+      <!-- Loader -->
+      <div
+        class="rating-loader"
+        role="status"
+        aria-live="polite"
+      >
+
+        <div class="rating-loader__row">
+
+          <span
+            class="rating-loader__dot"
+            aria-hidden="true"
+          ></span>
+
+          <div class="rating-loader__title">
+            Завантаження рейтингу…
+          </div>
+
+        </div>
+
+        <div class="rating-loader__sub">
+          Підтягуємо етапи та список команд.
+          Таблиця сформується автоматично.
+        </div>
+
+      </div>
+
     </div>
 
-    <!-- ✅ Таблиці (показуються тільки коли data-rating-ready="1") -->
+    <!-- =========================
+         TABLES
+         ========================= -->
     <div class="season-tables">
+
       <div class="card card--season">
-        <h3>Рейтинг команд сезону</h3>
 
+        <h3>
+          Вихід у фінал
+        </h3>
+
+        <!-- =====================
+             TOP 18
+             ===================== -->
         <div class="season-table-wrapper">
-          <table class="table table--season table--main">
+
+          <table
+            class="table table--season table--main"
+          >
+
             <thead>
-              <tr>
-                <th class="col-place">Місце</th>
-                <th class="col-move">▲▼</th>
-                <th class="col-team">Команда</th>
+              <tr id="seasonTopHead">
 
-                <th class="col-stage">Е1<br>м / б</th>
-                <th class="col-stage">Е2<br>м / б</th>
-                <th class="col-stage">Е3<br>м / б</th>
-                <th class="col-stage">Е4<br>м / б</th>
-                <th class="col-stage">Е5<br>м / б</th>
+                <th class="col-place">
+                  Місце
+                </th>
 
-                <th class="col-points">Бали</th>
-                <th class="col-final">Фінал</th>
-                <th class="col-weight">Вага</th>
-                <th class="col-big">Big Fish</th>
+                <th class="col-move">
+                  ▲▼
+                </th>
+
+                <th class="col-team">
+                  Команда
+                </th>
+
+                <!--
+                  ДИНАМІЧНІ ЕТАПИ
+
+                  JS вставить сюди:
+                  Е1
+                  Е2
+                  Е3
+                  Е4
+                  ...
+                -->
+
+                <th class="col-points">
+                  Бали
+                </th>
+
+                <th class="col-weight">
+                  Вага
+                </th>
+
+                <th class="col-big">
+                  Big Fish
+                </th>
+
               </tr>
             </thead>
+
             <tbody id="season-top"></tbody>
+
           </table>
+
         </div>
 
+        <!-- =====================
+             BELOW TOP 18
+             ===================== -->
         <h4 class="subhead">
           Претенденти на участь у Фіналі сезону
-          <span>— команди, що знаходяться нижче 18-го місця</span>
+
+          <span>
+            — команди, що знаходяться нижче 18-го місця
+          </span>
         </h4>
 
         <div class="season-table-wrapper">
-          <table class="table table--season table--contenders">
+
+          <table
+            class="table table--season table--contenders"
+          >
+
             <thead>
-              <tr>
-                <th class="col-place">Місце</th>
-                <th class="col-move">▲▼</th>
-                <th class="col-team">Команда</th>
+              <tr id="seasonContendersHead">
 
-                <th class="col-stage">Е1<br>м / б</th>
-                <th class="col-stage">Е2<br>м / б</th>
-                <th class="col-stage">Е3<br>м / б</th>
-                <th class="col-stage">Е4<br>м / б</th>
-                <th class="col-stage">Е5<br>м / б</th>
+                <th class="col-place">
+                  Місце
+                </th>
 
-                <th class="col-points">Бали</th>
-                <th class="col-final">Фінал</th>
-                <th class="col-weight">Вага</th>
-                <th class="col-big">Big Fish</th>
+                <th class="col-move">
+                  ▲▼
+                </th>
+
+                <th class="col-team">
+                  Команда
+                </th>
+
+                <!--
+                  ДИНАМІЧНІ ЕТАПИ
+                  JS вставить потрібну кількість
+                -->
+
+                <th class="col-points">
+                  Бали
+                </th>
+
+                <th class="col-weight">
+                  Вага
+                </th>
+
+                <th class="col-big">
+                  Big Fish
+                </th>
+
               </tr>
             </thead>
+
             <tbody id="season-contenders"></tbody>
+
           </table>
+
         </div>
+
       </div>
 
       <p class="rating-note">
-        Підсумкове місце сезону визначається так:<br />
-        <b>1)</b> менша сума балів сезону — краще місце;<br />
-        <b>2)</b> якщо бали однакові — вище команда з більшою загальною вагою;<br />
-        <b>3)</b> якщо вага теж однакова — вище команда з більшим Big Fish.
+        Рейтинг виходу у Фінал визначається так:
+        <br>
+
+        <b>1)</b>
+        менша сума двох найкращих результатів — вище місце;
+        <br>
+
+        <b>2)</b>
+        при однакових балах — вище команда
+        з більшою загальною вагою;
+        <br>
+
+        <b>3)</b>
+        якщо вага однакова — вище команда
+        з більшим Big Fish;
+        <br>
+
+        <b>4)</b>
+        перші 18 команд отримують право участі у Фіналі.
       </p>
+
     </div>
 
   </section>
+
 </main>
 
 <footer class="footer">
+
   <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh" rel="noopener">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9" rel="noopener">YouTube</a>
+
+    <div>
+      © 2025 STOLAR CARP · Львів
     </div>
+
+    <div class="footer__links">
+
+      <a
+        href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+        rel="noopener"
+      >
+        Viber
+      </a>
+
+      <a
+        href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+        rel="noopener"
+      >
+        YouTube
+      </a>
+
+    </div>
+
   </div>
+
 </footer>
 
 </body>

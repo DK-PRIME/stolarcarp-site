@@ -30,12 +30,10 @@
       --panel2:#05060a;
     }
 
-    .hint{
-      opacity:.75;
-    }
+    .hint{opacity:.75}
 
     /* =========================
-       NO FLICKER
+       NO-FLICKER
        ========================= */
     html[data-rating-ready="0"] .season-tables{
       display:none !important;
@@ -47,7 +45,7 @@
 
     .rating-loader{
       margin-top:14px;
-      padding:14px;
+      padding:14px 14px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
       background:linear-gradient(
@@ -79,7 +77,6 @@
         transform:scale(1);
         opacity:.85;
       }
-
       50%{
         transform:scale(1.25);
         opacity:1;
@@ -174,7 +171,60 @@
     }
 
     /* =========================
+       BUTTON TO SEASON RATING
+       ========================= */
+    .season-rating-link-wrap{
+      margin:18px 0 22px;
+    }
+
+    .season-rating-link{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+
+      padding:14px 16px;
+      border-radius:14px;
+
+      border:1px solid rgba(250,204,21,.28);
+      background:
+        linear-gradient(
+          90deg,
+          rgba(250,204,21,.10),
+          rgba(17,24,39,.22)
+        );
+
+      color:#f8fafc;
+      text-decoration:none;
+      font-weight:900;
+      letter-spacing:.02em;
+
+      box-shadow:0 10px 24px rgba(0,0,0,.35);
+
+      transition:
+        transform .15s ease,
+        border-color .15s ease,
+        background .15s ease;
+    }
+
+    .season-rating-link:hover{
+      border-color:rgba(250,204,21,.55);
+      background:
+        linear-gradient(
+          90deg,
+          rgba(250,204,21,.16),
+          rgba(17,24,39,.28)
+        );
+    }
+
+    .season-rating-link:active{
+      transform:translateY(1px);
+    }
+
+    /* =========================
        TABLES
+       СТАРИЙ ВИГЛЯД
        ========================= */
     .card--season{
       margin-top:20px;
@@ -276,35 +326,15 @@
     }
 
     /* =========================
-       WIDTHS — як у старій таблиці
+       СТАРІ ПРОПОРЦІЇ КОЛОНОК
        ========================= */
-    .col-place{
-      width:8%;
-    }
-
-    .col-move{
-      width:6%;
-    }
-
-    .col-team{
-      width:19%;
-    }
-
-    .col-stage{
-      width:8%;
-    }
-
-    .col-points{
-      width:7%;
-    }
-
-    .col-weight{
-      width:8%;
-    }
-
-    .col-big{
-      width:7%;
-    }
+    .col-place  { width:8%; }
+    .col-move   { width:6%; }
+    .col-team   { width:19%; }
+    .col-stage  { width:8%; }
+    .col-points { width:7%; }
+    .col-weight { width:8%; }
+    .col-big    { width:7%; }
 
     .col-place .place-num{
       display:block;
@@ -386,7 +416,7 @@
     }
 
     /* =========================
-       QUALIFIED TOP 18
+       TOP 18
        ========================= */
     .table--main tbody tr.row-qualified td.col-place{
       box-shadow:inset 3px 0 0 var(--accent-gold-soft);
@@ -430,7 +460,7 @@
        ========================= */
     .rating-error{
       margin-top:14px;
-      padding:14px;
+      padding:14px 14px;
       border-radius:14px;
       border:1px solid rgba(239,68,68,.35);
       background:rgba(239,68,68,.10);
@@ -443,7 +473,7 @@
     }
 
     /* =========================
-       MOBILE
+       MOBILE — як було
        ========================= */
     @media (max-width:480px){
       .table--season{
@@ -514,6 +544,7 @@
 
   <section class="container section">
 
+    <!-- HERO -->
     <div class="season-rating-head">
 
       <div
@@ -610,55 +641,49 @@
 
         <div class="rating-loader__sub">
           Підтягуємо етапи та список команд.
-          Таблиця сформується автоматично.
+          Таблиця зʼявиться одразу у правильному вигляді.
         </div>
       </div>
 
     </div>
 
+    <!-- КНОПКА НА ПІДСУМКОВИЙ РЕЙТИНГ -->
+    <div class="season-rating-link-wrap">
+      <a
+        class="season-rating-link"
+        href="season_rating.html"
+      >
+        🏆 Рейтинг команд сезону
+      </a>
+    </div>
+
+    <!-- TABLES -->
     <div class="season-tables">
 
       <div class="card card--season">
 
-        <h3>
-          Вихід у фінал
-        </h3>
+        <h3>Вихід у фінал</h3>
 
+        <!-- TOP 18 -->
         <div class="season-table-wrapper">
-
           <table class="table table--season table--main">
 
             <thead>
               <tr id="seasonTopHead">
 
-                <th class="col-place">
-                  Місце
-                </th>
-
-                <th class="col-move">
-                  ▲▼
-                </th>
-
-                <th class="col-team">
-                  Команда
-                </th>
+                <th class="col-place">Місце</th>
+                <th class="col-move">▲▼</th>
+                <th class="col-team">Команда</th>
 
                 <!--
-                  JS автоматично вставляє:
+                  СЮДИ rating_page.js
+                  ДИНАМІЧНО ВСТАВЛЯЄ:
                   Е1, Е2, Е3, Е4...
                 -->
 
-                <th class="col-points">
-                  Бали
-                </th>
-
-                <th class="col-weight">
-                  Вага
-                </th>
-
-                <th class="col-big">
-                  Big Fish
-                </th>
+                <th class="col-points">Бали</th>
+                <th class="col-weight">Вага</th>
+                <th class="col-big">Big Fish</th>
 
               </tr>
             </thead>
@@ -666,9 +691,9 @@
             <tbody id="season-top"></tbody>
 
           </table>
-
         </div>
 
+        <!-- НИЖЧЕ ТОП 18 -->
         <h4 class="subhead">
           Претенденти на участь у Фіналі сезону
           <span>
@@ -677,40 +702,24 @@
         </h4>
 
         <div class="season-table-wrapper">
-
           <table class="table table--season table--contenders">
 
             <thead>
               <tr id="seasonContendersHead">
 
-                <th class="col-place">
-                  Місце
-                </th>
-
-                <th class="col-move">
-                  ▲▼
-                </th>
-
-                <th class="col-team">
-                  Команда
-                </th>
+                <th class="col-place">Місце</th>
+                <th class="col-move">▲▼</th>
+                <th class="col-team">Команда</th>
 
                 <!--
-                  JS автоматично вставляє:
+                  СЮДИ rating_page.js
+                  ДИНАМІЧНО ВСТАВЛЯЄ:
                   Е1, Е2, Е3, Е4...
                 -->
 
-                <th class="col-points">
-                  Бали
-                </th>
-
-                <th class="col-weight">
-                  Вага
-                </th>
-
-                <th class="col-big">
-                  Big Fish
-                </th>
+                <th class="col-points">Бали</th>
+                <th class="col-weight">Вага</th>
+                <th class="col-big">Big Fish</th>
 
               </tr>
             </thead>
@@ -718,7 +727,6 @@
             <tbody id="season-contenders"></tbody>
 
           </table>
-
         </div>
 
       </div>

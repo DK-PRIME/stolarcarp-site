@@ -4,7 +4,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>STOLAR CARP • Адмінка</title>  <link rel="stylesheet" href="assets/css/main.css">  <style>
+
+  <title>STOLAR CARP • Адмінка</title>
+
+  <link rel="stylesheet" href="assets/css/main.css">
+
+  <style>
     /* ============================================
        БАЗОВІ НАЛАШТУВАННЯ
        ============================================ */
@@ -316,175 +321,283 @@
     .note b {
       color: #e5e7eb;
     }
-  </style></head><body>  <!-- ============================================
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================
        ХЕДЕР
-       ============================================ -->  <header class="header">
+       ============================================ -->
+  <header class="header">
     <div class="container header__row">
+
       <a class="logo" href="index.html">
         <span class="logo__mark">SC</span>
         <span class="logo__text">STOLAR CARP</span>
-      </a>  <nav class="nav">
-    <a href="live.html" class="nav__link">Live</a>
-    <a href="rating.html" class="nav__link">Рейтинг</a>
-    <a href="auth.html" class="nav__link">Акаунт</a>
-  </nav>
+      </a>
 
-  <button
-    class="header-logout"
-    id="btnAdminLogout"
-    type="button"
-    title="Вийти з адмінки"
-  >
-    Вийти
-  </button>
-</div>
+      <nav class="nav">
+        <a href="live.html" class="nav__link">Live</a>
+        <a href="rating.html" class="nav__link">Рейтинг</a>
+        <a href="auth.html" class="nav__link">Акаунт</a>
+      </nav>
 
-  </header>  <!-- ============================================
+      <button
+        class="header-logout"
+        id="btnAdminLogout"
+        type="button"
+        title="Вийти з адмінки"
+      >
+        Вийти
+      </button>
+
+    </div>
+  </header>
+
+  <!-- ============================================
        ГОЛОВНИЙ КОНТЕНТ
-       ============================================ -->  <main class="main">
-    <section class="section container admin-wrap">  <!-- Шапка статусу -->
-  <div class="admin-top">
-    <div
-      class="title-gradient"
-      style="font-size:1.2rem; font-weight:900;"
-    >
-      Адмінка STOLAR CARP
-    </div>
+       ============================================ -->
+  <main class="main">
+    <section class="section container admin-wrap">
 
-    <div class="muted" id="adminStatus">
-      Запуск…
-    </div>
+      <!-- Шапка статусу -->
+      <div class="admin-top">
 
-    <div
-      class="muted"
-      id="adminDebug"
-      style="margin-top:6px;"
-    ></div>
-  </div>
+        <div
+          class="title-gradient"
+          style="font-size:1.2rem; font-weight:900;"
+        >
+          Адмінка STOLAR CARP
+        </div>
 
-  <!-- Форма входу -->
-  <div id="adminLogin" class="admin-card hidden">
-    <div class="login-card">
+        <div class="muted" id="adminStatus">
+          Запуск…
+        </div>
 
-      <div class="login-tabs">
-        <div class="pill pill--active">
-          Вхід
+        <div
+          class="muted"
+          id="adminDebug"
+          style="margin-top:6px;"
+        ></div>
+
+      </div>
+
+      <!-- Форма входу -->
+      <div id="adminLogin" class="admin-card hidden">
+        <div class="login-card">
+
+          <div class="login-tabs">
+            <div class="pill pill--active">
+              Вхід
+            </div>
+          </div>
+
+          <div class="login-title">
+            Вхід адміністратора
+          </div>
+
+          <div class="login-sub">
+            Вхід тільки для адміністратора (email/пароль).
+          </div>
+
+          <div class="field">
+            <label for="admEmail">
+              Email
+            </label>
+
+            <input
+              id="admEmail"
+              type="email"
+              placeholder="Email адміністратора"
+              autocomplete="username"
+            >
+          </div>
+
+          <div class="field">
+            <label for="admPass">
+              Пароль
+            </label>
+
+            <input
+              id="admPass"
+              type="password"
+              placeholder="Пароль адміністратора"
+              autocomplete="current-password"
+            >
+          </div>
+
+          <div class="login-actions">
+            <button
+              class="btn btn--accent"
+              id="btnAdminLogin"
+              type="button"
+            >
+              Увійти
+            </button>
+          </div>
+
+          <div
+            class="muted"
+            id="adminLoginMsg"
+            style="margin-top:10px;"
+          ></div>
+
         </div>
       </div>
 
-      <div class="login-title">
-        Вхід адміністратора
+      <!-- Головне меню після входу -->
+      <div id="adminApp" class="hidden">
+        <div class="admin-card">
+          <div class="stack">
+
+            <a
+              class="btn btn--primary"
+              href="admin-create.html?type=season"
+            >
+              1) Створити сезон STOLAR CARP
+            </a>
+
+            <a
+              class="btn btn--accent"
+              href="admin-create.html?type=oneoff"
+            >
+              2) Створити одиночне змагання
+            </a>
+
+            <a
+              class="btn btn--primary"
+              href="admin-registrations.html"
+            >
+              3) Реєстрація команд
+            </a>
+
+            <a
+              class="btn btn--accent"
+              href="admin-draw.html"
+            >
+              4) Жеребкування
+            </a>
+
+            <a
+              class="btn btn--danger"
+              href="admin-weigh.html"
+            >
+              5) Зважування (адмін)
+            </a>
+
+            <a
+              class="btn btn--primary"
+              href="admin-accounts.html"
+            >
+              6) Акаунт STOLAR CARP
+            </a>
+
+            <a
+              class="btn btn--accent"
+              href="judge_qr_admin.html"
+            >
+              📱 QR-доступ для суддів
+            </a>
+
+          </div>
+        </div>
       </div>
 
-      <div class="login-sub">
-        Вхід тільки для адміністратора (email/пароль).
-      </div>
+    </section>
+  </main>
 
-      <div class="field">
-        <label for="admEmail">
-          Email
-        </label>
+  <!-- ============================================
+       FIREBASE
+       ============================================ -->
 
-        <input
-          id="admEmail"
-          type="email"
-          placeholder="Email адміністратора"
-          autocomplete="username"
-        >
-      </div>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-      <div class="field">
-        <label for="admPass">
-          Пароль
-        </label>
+  <script src="assets/js/firebase-init.js"></script>
 
-        <input
-          id="admPass"
-          type="password"
-          placeholder="Пароль адміністратора"
-          autocomplete="current-password"
-        >
-      </div>
+  <!-- Основна логіка адмінки -->
+  <script src="assets/js/admin.js?v=20260801"></script>
 
-      <div class="login-actions">
-        <button
-          class="btn btn--accent"
-          id="btnAdminLogin"
-          type="button"
-        >
-          Увійти
-        </button>
-      </div>
 
-      <div
-        class="muted"
-        id="adminLoginMsg"
-        style="margin-top:10px;"
-      ></div>
-    </div>
-  </div>
+  <!-- ======================================================
+       ТИМЧАСОВИЙ ОДНОРАЗОВИЙ РЕМОНТ РЕЙТИНГУ 2026
 
-  <!-- Головне меню після входу -->
-  <div id="adminApp" class="hidden">
-    <div class="admin-card">
-      <div class="stack">
+       Після успішного ремонту ЦЕЙ БЛОК ТРЕБА ВИДАЛИТИ.
+       ====================================================== -->
+  <script>
+    (function () {
+      "use strict";
 
-        <a
-          class="btn btn--primary"
-          href="admin-create.html?type=season"
-        >
-          1) Створити сезон STOLAR CARP
-        </a>
+      let repairLoaded = false;
 
-        <a
-          class="btn btn--accent"
-          href="admin-create.html?type=oneoff"
-        >
-          2) Створити одиночне змагання
-        </a>
+      function loadRepairScript() {
+        if (repairLoaded) return;
 
-        <a
-          class="btn btn--primary"
-          href="admin-registrations.html"
-        >
-          3) Реєстрація команд
-        </a>
+        repairLoaded = true;
 
-        <a
-          class="btn btn--accent"
-          href="admin-draw.html"
-        >
-          4) Жеребкування
-        </a>
+        console.log("🔧 Завантажую repair-season-rating.js...");
 
-        <a
-          class="btn btn--danger"
-          href="admin-weigh.html"
-        >
-          5) Зважування (адмін)
-        </a>
+        const script = document.createElement("script");
 
-        <a
-          class="btn btn--primary"
-          href="admin-accounts.html"
-        >
-          6) Акаунт STOLAR CARP
-        </a>
+        script.src =
+          "assets/js/repair-season-rating.js?v=20260812-1";
 
-        <a
-          class="btn btn--accent"
-          href="judge_qr_admin.html"
-        >
-          📱 QR-доступ для суддів
-        </a>
+        script.onload = function () {
+          console.log(
+            "✅ repair-season-rating.js завантажено."
+          );
+        };
 
-      </div>
-    </div>
-  </div>
+        script.onerror = function () {
+          console.error(
+            "❌ Не вдалося завантажити repair-season-rating.js"
+          );
 
-</section>
+          alert(
+            "❌ Не вдалося завантажити файл ремонту рейтингу."
+          );
+        };
 
-  </main>  <!-- ============================================
-       СКРИПТИ
-       ============================================ -->  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>  <script src="assets/js/firebase-init.js"></script>  <script src="assets/js/admin.js?v=20260801"></script></body>
+        document.body.appendChild(script);
+      }
+
+      function waitForFirebase() {
+        if (!window.scAuth || !window.scDb) {
+          setTimeout(waitForFirebase, 100);
+          return;
+        }
+
+        /*
+         * Чекаємо саме Firebase Auth.
+         *
+         * Якщо сторінка відкрилася без входу —
+         * нічого не запускаємо.
+         *
+         * Коли адмін увійде —
+         * onAuthStateChanged спрацює ще раз,
+         * і тоді ремонтний JS завантажиться.
+         */
+        window.scAuth.onAuthStateChanged(function (user) {
+          if (!user) {
+            console.log(
+              "⏳ Ремонт рейтингу чекає входу адміністратора..."
+            );
+            return;
+          }
+
+          console.log(
+            "✅ Користувач авторизований. Запускаю ремонт рейтингу."
+          );
+
+          loadRepairScript();
+        });
+      }
+
+      waitForFirebase();
+    })();
+  </script>
+
+</body>
 </html>

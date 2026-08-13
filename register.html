@@ -31,6 +31,9 @@
   <!-- Реєстрація -->
   <script defer src="/assets/js/register_firebase.js?v=20260802-2"></script>
 
+  <!-- Відмова від участі у Фіналі -->
+  <script defer src="/assets/js/final_decline.js?v=20260813-1"></script>
+
   <style>
     body.register-page {
       background: var(--bg);
@@ -418,7 +421,12 @@
     }
 
     .pill-b--final {
-      background: linear-gradient(135deg, #f6c34c, #cc6a2b, #7a0f2b);
+      background: linear-gradient(
+        135deg,
+        #f6c34c,
+        #cc6a2b,
+        #7a0f2b
+      );
       border-color: transparent;
       color: #120a00;
     }
@@ -436,7 +444,11 @@
     }
 
     .pill-b--open {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
+      background: linear-gradient(
+        135deg,
+        #22c55e,
+        #16a34a
+      );
       border-color: transparent;
       color: #04110a;
     }
@@ -690,7 +702,10 @@
         </div>
 
         <!-- ОПЛАТА -->
-        <aside class="card register-card card--payment" id="payCard">
+        <aside
+          class="card register-card card--payment"
+          id="payCard"
+        >
           <div class="card-payment-title">
             <span>₴</span>
             Оплата внеску
@@ -704,13 +719,20 @@
             </b>
           </p>
 
-          <p id="payLabel">Реквізити:</p>
+          <p id="payLabel">
+            Реквізити:
+          </p>
 
-          <!-- Новий видимий блок -->
-          <div id="payDetails" class="payment-details">—</div>
+          <div
+            id="payDetails"
+            class="payment-details"
+          >—</div>
 
-          <!-- Старий ID залишено для повної сумісності -->
-          <span id="cardNum" aria-hidden="true">—</span>
+          <!-- Старий ID залишено для сумісності -->
+          <span
+            id="cardNum"
+            aria-hidden="true"
+          >—</span>
 
           <button
             type="button"
@@ -721,7 +743,10 @@
             Скопіювати реквізити
           </button>
 
-          <p class="card-note" id="payNote">
+          <p
+            class="card-note"
+            id="payNote"
+          >
             У коментарі до платежу обовʼязково вкажіть
             <b>назву команди</b>.
           </p>
@@ -737,7 +762,9 @@
 
   <footer class="footer">
     <div class="container footer__row">
-      <div>© 2026 STOLAR CARP · Львів</div>
+      <div>
+        © 2026 STOLAR CARP · Львів
+      </div>
 
       <div class="footer__links">
         <a

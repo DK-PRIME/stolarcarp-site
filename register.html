@@ -1,763 +1,1612 @@
-<!doctype html>
-<html lang="uk">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+// assets/js/final_decline.js
+// STOLAR CARP • Відмова від участі у Фіналі
+//
+// =========================================================
+// ПРИЗНАЧЕННЯ
+// =========================================================
+//
+// Відповідальність цього файла:
+//
+// 1. Визначити поточного користувача.
+// 2. Визначити його teamId.
+// 3. Знайти фінальну кваліфікацію команди.
+// 4. Показати кнопку відмови ТІЛЬКИ для status = invited.
+// 5. Безпечно виконати:
+//
+//      invited -> declined
+//
+// 6. Записати:
+//
+//      declinedAt
+//      declinedByUid
+//      updatedAt
+//      qualifiedForFinal = false
+//
+// 7. Повідомити інші JS-модулі про зміну.
+//
+// =========================================================
+// FIRESTORE
+// =========================================================
+//
+// finalQualifications/{year}/teams/{teamId}
+//
+// Приклад:
+//
+// finalQualifications/2026/teams/TEAM_ID
+//
+// =========================================================
+// ВАЖЛИВО
+// =========================================================
+//
+// Цей файл:
+//
+// • НЕ рахує рейтинг;
+// • НЕ визначає TOP-18;
+// • НЕ переводить reserve -> invited;
+// • НЕ змінює rank;
+// • НЕ змінює competitionId;
+// • НЕ змінює stageId.
+//
+// За перерахунок фіналістів відповідає:
+//
+// assets/js/final_qualification.js
+//
+// =========================================================
 
-  <title>Реєстрація змагань — STOLAR CARP</title>
+(function () {
+  "use strict";
 
-  <link rel="icon" type="image/png" href="/assets/favicon.png">
-  <link rel="apple-touch-icon" href="/assets/favicon.png">
-  <meta name="theme-color" content="#1a1a1a">
+  const LOG =
+    "[STOLAR CARP final_decline]";
 
-  <link rel="dns-prefetch" href="https://www.gstatic.com">
-  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  // =========================================================
+  // CONFIG
+  // =========================================================
 
-  <link rel="preload" href="/assets/css/main.css" as="style">
-  <link rel="stylesheet" href="/assets/css/main.css">
+  const QUALIFICATIONS_COLLECTION =
+    "finalQualifications";
 
-  <!-- Конфігурація -->
-  <script defer src="/assets/js/config.js?v=20260802-1"></script>
+  const USERS_COLLECTION =
+    "users";
 
-  <!-- Firebase -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+  const DECLINABLE_STATUS =
+    "invited";
 
-  <!-- Ініціалізація Firebase -->
-  <script defer src="/assets/js/firebase-init.js?v=20260802-1"></script>
+  // =========================================================
+  // FIREBASE
+  // =========================================================
 
-  <!-- Реєстрація -->
-  <script defer src="/assets/js/register_firebase.js?v=20260802-2"></script>
+  let auth = null;
+  let db = null;
+  let fb = null;
 
-  <style>
-    body.register-page {
-      background: var(--bg);
-      overflow-x: hidden;
+  // =========================================================
+  // STATE
+  // =========================================================
+
+  let currentUser = null;
+
+  let currentTeamId = "";
+
+  /*
+   * Поточна qualification:
+   *
+   * {
+   *   year,
+   *   teamId,
+   *   ref,
+   *   data
+   * }
+   */
+  let activeQualification = null;
+
+  /*
+   * Listener конкретного
+   * qualification документа.
+   */
+  let unsubscribeQualification =
+    null;
+
+  /*
+   * Захист від подвійного
+   * натискання кнопки.
+   */
+  let declining = false;
+
+  /*
+   * Захист від старих
+   * асинхронних refresh().
+   */
+  let refreshRequestId = 0;
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
+
+  function normalize(value) {
+    return String(
+      value ?? ""
+    ).trim();
+  }
+
+  function clean(value) {
+    return normalize(
+      value
+    ).toLowerCase();
+  }
+
+  function sleep(ms) {
+    return new Promise(
+      resolve => {
+        setTimeout(
+          resolve,
+          ms
+        );
+      }
+    );
+  }
+
+  function isValidYear(value) {
+    return /^\d{4}$/.test(
+      normalize(value)
+    );
+  }
+
+  function serverTimestamp() {
+    return fb
+      .firestore
+      .FieldValue
+      .serverTimestamp();
+  }
+
+  // =========================================================
+  // FIREBASE READY
+  // =========================================================
+
+  async function waitFirebase(
+    maxMs = 15000
+  ) {
+    const startedAt =
+      Date.now();
+
+    while (
+      Date.now() -
+        startedAt <
+      maxMs
+    ) {
+      if (
+        window.scAuth &&
+        window.scDb &&
+        window.firebase
+      ) {
+        return;
+      }
+
+      await sleep(100);
     }
 
-    .section--narrow {
-      max-width: 1100px;
-      margin: 0 auto;
-    }
+    throw new Error(
+      "Firebase не готовий."
+    );
+  }
 
-    /* ============================================
-       HERO
-       ============================================ */
+  // =========================================================
+  // UI CREATE
+  // =========================================================
 
-    .register-hero {
-      margin-top: 14px;
-      margin-bottom: 22px;
-      padding: 18px 16px 16px;
-      border-radius: 16px;
-      background: linear-gradient(145deg, #14141d, #08080d);
-      border: 1px solid #262636;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .register-hero__kicker {
-      margin-bottom: 6px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--muted);
-      font-size: .72rem;
-      text-transform: uppercase;
-      letter-spacing: .18em;
-    }
-
-    .register-hero__kicker-tag {
-      width: 22px;
-      height: 22px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 auto;
-      border-radius: 999px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      box-shadow: 0 0 8px rgba(0, 0, 0, .7);
-      color: #000;
-      font-size: .75rem;
-      font-weight: 800;
-    }
-
-    .register-hero h1 {
-      margin: 0 0 8px;
-      font-size: clamp(22px, 3.4vw, 28px);
-      font-weight: 900;
-      line-height: 1.15;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-
-    .register-hero .title-gradient {
-      background: linear-gradient(
-        90deg,
-        #f6c34c 0%,
-        #cc6a2b 40%,
-        #7a0f2b 100%
+  function getOrCreateBox() {
+    let box =
+      document.getElementById(
+        "finalDeclineBox"
       );
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
+
+    if (box) {
+      return box;
     }
 
-    .register-hero p {
-      max-width: 720px;
-      margin: 0;
-      color: var(--muted);
-      font-size: .92rem;
-    }
-
-    .register-hero__divider {
-      width: 120px;
-      height: 2px;
-      margin-top: 10px;
-      border-radius: 999px;
-      background: linear-gradient(
-        90deg,
-        #f6c34c 0%,
-        #cc6a2b 50%,
-        #7a0f2b 100%
+    const eventOptions =
+      document.getElementById(
+        "eventOptions"
       );
-      box-shadow: 0 0 10px rgba(246, 195, 76, .5);
-    }
 
-    /* ============================================
-       ОСНОВНА СІТКА
-       ============================================ */
-
-    .register-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 1.1fr);
-      gap: 18px;
-      align-items: flex-start;
-    }
-
-    .register-form-card h2 {
-      margin: 0 0 6px;
-      font-size: 1.05rem;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-
-    .form__hint {
-      color: var(--muted);
-      font-size: .8rem;
-      line-height: 1.45;
-    }
-
-    .field {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-
-    .field > label {
-      font-size: .9rem;
-      font-weight: 600;
-    }
-
-    .register-page input::placeholder {
-      color: #6b7280;
-    }
-
-    .register-page input:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 10px rgba(246, 195, 76, .35);
-    }
-
-    .profile-summary {
-      margin-bottom: 10px;
-      color: var(--muted);
-      font-size: .85rem;
-      line-height: 1.5;
-    }
-
-    .profile-summary b {
-      color: #e5e7eb;
-    }
-
-    /* ============================================
-       КНОПКА ТА СПІНЕР
-       ============================================ */
-
-    .form-actions {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .spinner {
-      width: 18px;
-      height: 18px;
-      display: none;
-      border: 3px solid rgba(255, 255, 255, .2);
-      border-top-color: #fff;
-      border-radius: 50%;
-    }
-
-    .spinner--on {
-      display: inline-block;
-      animation: spin .9s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    .form-msg {
-      min-height: 22px;
-      margin-top: 8px;
-      font-size: .92rem;
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    .form-msg.ok {
-      color: #43d18a;
-    }
-
-    .form-msg.err {
-      color: #ff6c6c;
-    }
-
-    /* ============================================
-       КАРТКА ОПЛАТИ
-       ============================================ */
-
-    .card--payment {
-      background: #05060c;
-      border: 1px solid #262636;
-      box-shadow: var(--shadow);
-    }
-
-    .card-payment-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      color: #e5e7eb;
-      font-size: .84rem;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-    }
-
-    .card-payment-title span {
-      width: 20px;
-      height: 20px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: #000;
-      font-size: .9rem;
-      font-weight: 900;
-    }
-
-    .payment-details {
-      width: 100%;
-      margin: 6px 0;
-      padding: 12px;
-      box-sizing: border-box;
-      border: 1px solid #33384a;
-      border-radius: 12px;
-      background: #020308;
-      color: #e5e7eb;
-      font-size: .92rem;
-      font-weight: 700;
-      line-height: 1.5;
-      letter-spacing: .02em;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    .card-note {
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: .8rem;
-      line-height: 1.45;
-    }
-
-    /* Залишено для сумісності зі старим JS */
-    #cardNum {
-      display: none !important;
-    }
-
-    /* ============================================
-       СПИСОК ЗМАГАНЬ
-       ============================================ */
-
-    .event-options {
-      max-width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      padding: 10px;
-      box-sizing: border-box;
-      overflow: hidden;
-      border: 1px solid rgba(148, 163, 184, .18);
-      border-radius: 16px;
-      background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, .03),
-        rgba(255, 255, 255, .015)
+    const form =
+      document.getElementById(
+        "regForm"
       );
+
+    /*
+     * Якщо це не сторінка
+     * реєстрації — нічого
+     * не створюємо.
+     */
+    if (
+      !eventOptions &&
+      !form
+    ) {
+      return null;
     }
 
-    .event-item {
-      position: relative;
-      width: 100%;
-      max-width: 100%;
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 12px;
-      box-sizing: border-box;
-      overflow: hidden;
-      border: 1px solid rgba(148, 163, 184, .22);
-      border-radius: 14px;
-      background: linear-gradient(
-        180deg,
-        rgba(255, 255, 255, .04),
-        rgba(255, 255, 255, .02)
+    box =
+      document.createElement(
+        "div"
       );
-      box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
-      transition:
-        transform .12s ease,
-        border-color .2s ease,
-        box-shadow .2s ease;
-    }
 
-    .event-item:hover {
-      transform: translateY(-1px);
-      border-color: rgba(246, 195, 76, .55);
-      box-shadow: 0 14px 34px rgba(0, 0, 0, .45);
-    }
+    box.id =
+      "finalDeclineBox";
 
-    .event-item input[type="radio"] {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 auto;
-      margin-top: 2px;
-      accent-color: var(--accent);
-    }
+    box.style.display =
+      "none";
 
-    .event-item input[type="radio"]:disabled {
-      cursor: not-allowed;
-    }
+    box.style.marginTop =
+      "16px";
 
-    .event-content {
-      min-width: 0;
-      flex: 1;
-    }
+    box.style.padding =
+      "14px";
 
-    .event-title {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      font-weight: 900;
-      line-height: 1.2;
-      letter-spacing: .02em;
-    }
+    box.style.borderRadius =
+      "14px";
 
-    .event-title .text {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    box.style.border =
+      "1px solid rgba(239,68,68,.35)";
 
-    .event-meta {
-      margin-top: 6px;
-      overflow: hidden;
-      color: var(--muted);
-      font-size: 12px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+    box.style.background =
+      "rgba(127,29,29,.12)";
 
-    .event-badges {
-      display: flex;
-      flex: 0 0 auto;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 6px;
-    }
+    box.innerHTML = `
 
-    /* ============================================
-       БЕЙДЖІ
-       ============================================ */
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          justify-content:space-between;
+          gap:10px;
+          margin-bottom:8px;
+        "
+      >
 
-    .pill-b {
-      padding: 5px 10px;
-      border: 1px solid rgba(148, 163, 184, .25);
-      border-radius: 999px;
-      background: rgba(2, 6, 23, .55);
-      color: #e5e7eb;
-      font-size: 11px;
-      font-weight: 900;
-      white-space: nowrap;
-    }
+        <div
+          style="
+            font-weight:900;
+            font-size:15px;
+            color:#f3f4f6;
+          "
+        >
+          Участь у Фіналі
+        </div>
 
-    .pill-b--stage {
-      background: rgba(59, 130, 246, .16);
-      border-color: rgba(59, 130, 246, .35);
-      color: #bfe0ff;
-    }
+        <span
+          style="
+            padding:4px 8px;
+            border-radius:999px;
+            border:1px solid rgba(239,68,68,.35);
+            color:#fecaca;
+            font-size:11px;
+            font-weight:900;
+            white-space:nowrap;
+          "
+        >
+          FINAL
+        </span>
 
-    .pill-b--final {
-      background: linear-gradient(135deg, #f6c34c, #cc6a2b, #7a0f2b);
-      border-color: transparent;
-      color: #120a00;
-    }
+      </div>
 
-    .pill-b--oneoff {
-      background: rgba(168, 85, 247, .16);
-      border-color: rgba(168, 85, 247, .35);
-      color: #efd6ff;
-    }
-
-    .pill-b--stalker {
-      background: rgba(239, 68, 68, .16);
-      border-color: rgba(239, 68, 68, .35);
-      color: #ffb4b4;
-    }
-
-    .pill-b--open {
-      background: linear-gradient(135deg, #22c55e, #16a34a);
-      border-color: transparent;
-      color: #04110a;
-    }
-
-    .pill-b--closed {
-      background: rgba(239, 68, 68, .15);
-      border-color: rgba(239, 68, 68, .35);
-      color: #ffb4b4;
-    }
-
-    .pill-b--active {
-      background: rgba(246, 195, 76, .16);
-      border-color: rgba(246, 195, 76, .35);
-      color: #ffe7a6;
-    }
-
-    .event-item.is-closed {
-      opacity: .62;
-      filter: saturate(.9);
-    }
-
-    .event-item.is-closed:hover {
-      transform: none;
-      box-shadow: 0 10px 26px rgba(0, 0, 0, .35);
-    }
-
-    /* ============================================
-       АДАПТИВНІСТЬ
-       ============================================ */
-
-    @media (max-width: 860px) {
-      .register-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 520px) {
-      .register-hero {
-        padding: 16px 14px;
-      }
-
-      .card {
-        padding: 16px;
-      }
-
-      .event-options {
-        padding: 8px;
-      }
-
-      .event-item {
-        padding: 12px 10px;
-      }
-
-      .event-title .text {
-        max-width: 220px;
-      }
-
-      .form-actions .btn {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .payment-details {
-        font-size: .86rem;
-      }
-    }
-  </style>
-</head>
-
-<body class="register-page">
-
-  <!-- ============================================
-       ХЕДЕР
-       ============================================ -->
-
-  <header class="header">
-    <div class="container header__row">
-      <a class="logo" href="/index.html">
-        <span class="logo__mark">SC</span>
-        <span class="logo__text">STOLAR CARP</span>
-      </a>
-
-      <nav class="nav" id="nav">
-        <a href="/index.html" class="nav__link">Головна</a>
-        <a href="/rules.html" class="nav__link">Регламент</a>
-        <a href="/formats.html" class="nav__link">Формат змагань</a>
-        <a href="/register.html" class="nav__link nav__link--active">Реєстрація</a>
-        <a href="/live.html" class="nav__link">Live</a>
-        <a href="/rating.html" class="nav__link">Рейтинг</a>
-        <a href="/lakes.html" class="nav__link">Водойми</a>
-        <a href="/sponsors.html" class="nav__link">Спонсори</a>
-        <a href="/events/index.html" class="nav__link">Архів</a>
-        <a href="#" class="nav__link" id="goCabinet">Мій кабінет</a>
-      </nav>
+      <div
+        id="finalDeclineText"
+        style="
+          font-size:13px;
+          line-height:1.5;
+          color:#9ca3af;
+          margin-bottom:12px;
+        "
+      ></div>
 
       <button
-        class="burger"
-        id="burger"
+        id="btnFinalDecline"
         type="button"
-        aria-label="Відкрити меню"
-        aria-controls="nav"
-        aria-expanded="false"
+        style="
+          width:100%;
+          padding:11px 14px;
+          border:1px solid rgba(239,68,68,.65);
+          border-radius:12px;
+          background:rgba(127,29,29,.35);
+          color:#fecaca;
+          font-weight:900;
+          cursor:pointer;
+          transition:
+            opacity .15s ease,
+            transform .15s ease;
+        "
       >
-        <span></span>
-        <span></span>
-        <span></span>
+        Відмовитися від Фіналу
       </button>
-    </div>
-  </header>
 
-  <!-- ============================================
-       ОСНОВНИЙ КОНТЕНТ
-       ============================================ -->
+      <div
+        id="finalDeclineMsg"
+        style="
+          display:none;
+          margin-top:10px;
+          padding:9px 10px;
+          border-radius:10px;
+          font-size:13px;
+          line-height:1.4;
+        "
+      ></div>
 
-  <main class="main">
-    <section class="container section section--narrow">
+    `;
 
-      <div class="register-hero">
-        <div class="register-hero__kicker">
-          <span class="register-hero__kicker-tag">SC</span>
-          STOLAR CARP · REGISTRATION
-        </div>
+    /*
+     * Вставляємо одразу
+     * після списку етапів.
+     */
+    if (
+      eventOptions &&
+      eventOptions.parentNode
+    ) {
+      eventOptions
+        .insertAdjacentElement(
+          "afterend",
+          box
+        );
 
-        <h1 class="title-gradient">
-          <span>Реєстрація змагань STOLAR CARP</span>
-        </h1>
+    } else if (form) {
+      form.appendChild(
+        box
+      );
+    }
 
-        <p>
-          Оберіть відкрите змагання або етап і подайте заявку.
-        </p>
+    const button =
+      box.querySelector(
+        "#btnFinalDecline"
+      );
 
-        <div class="register-hero__divider"></div>
-      </div>
+    if (button) {
+      button.addEventListener(
+        "click",
+        handleDecline
+      );
+    }
 
-      <div class="register-layout">
+    return box;
+  }
 
-        <!-- ФОРМА -->
-        <div class="card register-form-card">
-          <h2>Форма реєстрації</h2>
+  // =========================================================
+  // UI STATE
+  // =========================================================
 
-          <p class="form__hint">
-            Поля з позначкою
-            <span style="color:var(--accent);">*</span>
-            є обовʼязковими.
-          </p>
+  function hideBox(
+    clearActive = true
+  ) {
+    const box =
+      document.getElementById(
+        "finalDeclineBox"
+      );
 
-          <div id="profileSummary" class="profile-summary">
-            Профіль: завантаження...
-          </div>
+    if (box) {
+      box.style.display =
+        "none";
+    }
 
-          <form id="regForm" class="form" novalidate>
+    if (clearActive) {
+      activeQualification =
+        null;
+    }
+  }
 
-            <!-- Honeypot проти ботів -->
-            <input
-              type="text"
-              name="hp"
-              id="hp"
-              autocomplete="off"
-              tabindex="-1"
-              aria-hidden="true"
-              style="
-                position:absolute;
-                left:-9999px;
-                top:-9999px;
-                width:0;
-                height:0;
-                opacity:0;
-              "
-            >
+  function showBox(
+    qualification
+  ) {
+    if (!qualification) {
+      hideBox();
+      return;
+    }
 
-            <div class="field">
-              <label>
-                Оберіть змагання / етап
-                <span style="color:var(--accent);">*</span>
-              </label>
+    const data =
+      qualification.data ||
+      {};
 
-              <div id="eventOptions" class="event-options">
-                <p class="form__hint">
-                  Завантаження списку...
-                </p>
-              </div>
-            </div>
+    const status =
+      clean(
+        data.status
+      );
 
-            <div class="field">
-              <label
-                for="rules"
-                style="
-                  display:flex;
-                  align-items:flex-start;
-                  gap:10px;
-                  cursor:pointer;
-                "
-              >
-                <input
-                  type="checkbox"
-                  id="rules"
-                  required
-                  style="
-                    margin-top:3px;
-                    transform:scale(1.25);
-                    accent-color:#f6c34c;
-                  "
-                >
+    /*
+     * Кнопка існує тільки
+     * для invited.
+     */
+    if (
+      status !==
+      DECLINABLE_STATUS
+    ) {
+      hideBox();
+      return;
+    }
 
-                <span>
-                  Підтверджую, що ознайомлений із
-                  <a
-                    href="/rules.html"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style="
-                      color:#f6c34c;
-                      text-decoration:underline;
-                    "
-                  >
-                    регламентом турніру
-                  </a>
-                </span>
-              </label>
-            </div>
+    const box =
+      getOrCreateBox();
 
-            <div class="form-actions">
-              <button
-                type="submit"
-                id="submitBtn"
-                class="btn btn--primary"
-                disabled
-              >
-                Подати заявку
-              </button>
+    if (!box) {
+      return;
+    }
 
-              <div
-                id="spinner"
-                class="spinner"
-                aria-hidden="true"
-              ></div>
-            </div>
+    const text =
+      box.querySelector(
+        "#finalDeclineText"
+      );
 
-            <div
-              id="msg"
-              class="form-msg"
-              role="status"
-              aria-live="polite"
-            ></div>
+    const msg =
+      box.querySelector(
+        "#finalDeclineMsg"
+      );
 
-            <p class="form__hint" style="margin-top:6px;">
-              Якщо оплата активна, участь підтверджується
-              адміністратором після перевірки внеску.
-            </p>
-          </form>
-        </div>
+    const button =
+      box.querySelector(
+        "#btnFinalDecline"
+      );
 
-        <!-- ОПЛАТА -->
-        <aside class="card register-card card--payment" id="payCard">
-          <div class="card-payment-title">
-            <span>₴</span>
-            Оплата внеску
-          </div>
+    const rank =
+      Number(
+        data.rank ||
+        0
+      );
 
-          <p id="payLine">
-            Сума внеску:
-            <b>
-              <span id="payAmount">—</span>
-              <span id="payCurrency">UAH</span>
-            </b>
-          </p>
+    const year =
+      normalize(
+        qualification.year
+      );
 
-          <p id="payLabel">Реквізити:</p>
+    if (text) {
+      let value =
+        "Ваша команда отримала право участі у Фіналі.";
 
-          <!-- Новий видимий блок -->
-          <div id="payDetails" class="payment-details">—</div>
+      if (rank > 0) {
+        value +=
+          ` Місце у рейтингу — №${rank}.`;
+      }
 
-          <!-- Старий ID залишено для повної сумісності -->
-          <span id="cardNum" aria-hidden="true">—</span>
+      if (year) {
+        value +=
+          ` Сезон ${year}.`;
+      }
 
-          <button
-            type="button"
-            id="copyCard"
-            class="btn btn--ghost"
-            style="margin-top:6px;"
-          >
-            Скопіювати реквізити
-          </button>
+      value +=
+        " Якщо команда не братиме участі, ви можете відмовитися та звільнити місце для наступної команди з резерву.";
 
-          <p class="card-note" id="payNote">
-            У коментарі до платежу обовʼязково вкажіть
-            <b>назву команди</b>.
-          </p>
-        </aside>
+      text.textContent =
+        value;
+    }
 
-      </div>
-    </section>
-  </main>
+    if (msg) {
+      msg.textContent =
+        "";
 
-  <!-- ============================================
-       ФУТЕР
-       ============================================ -->
+      msg.style.display =
+        "none";
+    }
 
-  <footer class="footer">
-    <div class="container footer__row">
-      <div>© 2026 STOLAR CARP · Львів</div>
+    if (button) {
+      button.disabled =
+        false;
 
-      <div class="footer__links">
-        <a
-          href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Viber
-        </a>
+      button.style.opacity =
+        "1";
 
-        <a
-          href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          YouTube
-        </a>
-      </div>
-    </div>
-  </footer>
+      button.style.cursor =
+        "pointer";
 
-</body>
-</html>
+      button.textContent =
+        "Відмовитися від Фіналу";
+    }
+
+    box.style.display =
+      "block";
+  }
+
+  function setBoxMessage(
+    text,
+    ok = false
+  ) {
+    const msg =
+      document.getElementById(
+        "finalDeclineMsg"
+      );
+
+    if (!msg) {
+      return;
+    }
+
+    const value =
+      normalize(text);
+
+    if (!value) {
+      msg.textContent =
+        "";
+
+      msg.style.display =
+        "none";
+
+      return;
+    }
+
+    msg.textContent =
+      value;
+
+    msg.style.display =
+      "block";
+
+    if (ok) {
+      msg.style.color =
+        "#86efac";
+
+      msg.style.background =
+        "rgba(22,101,52,.18)";
+
+      msg.style.border =
+        "1px solid rgba(34,197,94,.25)";
+
+    } else {
+      msg.style.color =
+        "#fca5a5";
+
+      msg.style.background =
+        "rgba(127,29,29,.18)";
+
+      msg.style.border =
+        "1px solid rgba(239,68,68,.25)";
+    }
+  }
+
+  function setButtonLoading(
+    value
+  ) {
+    const button =
+      document.getElementById(
+        "btnFinalDecline"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const loading =
+      Boolean(value);
+
+    button.disabled =
+      loading;
+
+    button.style.opacity =
+      loading
+        ? ".6"
+        : "1";
+
+    button.style.cursor =
+      loading
+        ? "wait"
+        : "pointer";
+
+    button.textContent =
+      loading
+        ? "Зберігаю…"
+        : "Відмовитися від Фіналу";
+  }
+
+  // =========================================================
+  // PROFILE
+  // =========================================================
+
+  async function loadTeamId(
+    user
+  ) {
+    if (!user?.uid) {
+      return "";
+    }
+
+    const snapshot =
+      await db
+        .collection(
+          USERS_COLLECTION
+        )
+        .doc(
+          user.uid
+        )
+        .get();
+
+    if (!snapshot.exists) {
+      return "";
+    }
+
+    const data =
+      snapshot.data() ||
+      {};
+
+    return normalize(
+      data.teamId
+    );
+  }
+
+  // =========================================================
+  // QUALIFICATION VALIDATION
+  // =========================================================
+
+  function qualificationMatchesTeam(
+    data,
+    teamId
+  ) {
+    const storedTeamId =
+      normalize(
+        data?.teamId
+      );
+
+    /*
+     * Старі записи могли
+     * не мати teamId всередині,
+     * бо teamId уже є ID документа.
+     */
+    if (!storedTeamId) {
+      return true;
+    }
+
+    return (
+      storedTeamId ===
+      teamId
+    );
+  }
+
+  function qualificationMatchesYear(
+    data,
+    year
+  ) {
+    const storedYear =
+      normalize(
+        data?.seasonYear
+      );
+
+    /*
+     * Аналогічно:
+     * старий запис може
+     * не мати seasonYear.
+     */
+    if (!storedYear) {
+      return true;
+    }
+
+    return (
+      storedYear ===
+      year
+    );
+  }
+
+  // =========================================================
+  // FIND INVITED QUALIFICATION
+  // =========================================================
+
+  async function findInvitedQualification(
+    teamId
+  ) {
+    if (!teamId) {
+      return null;
+    }
+
+    /*
+     * Беремо список сезонів:
+     *
+     * finalQualifications/2026
+     * finalQualifications/2027
+     * ...
+     */
+    const seasonsSnapshot =
+      await db
+        .collection(
+          QUALIFICATIONS_COLLECTION
+        )
+        .get();
+
+    const years =
+      seasonsSnapshot.docs
+        .map(
+          doc =>
+            normalize(
+              doc.id
+            )
+        )
+        .filter(
+          isValidYear
+        )
+        .sort(
+          (a, b) =>
+            Number(b) -
+            Number(a)
+        );
+
+    /*
+     * Новіший сезон
+     * перевіряється першим.
+     */
+    for (
+      const year of years
+    ) {
+      const ref =
+        db
+          .collection(
+            QUALIFICATIONS_COLLECTION
+          )
+          .doc(year)
+          .collection("teams")
+          .doc(teamId);
+
+      try {
+        const snapshot =
+          await ref.get();
+
+        if (!snapshot.exists) {
+          continue;
+        }
+
+        const data =
+          snapshot.data() ||
+          {};
+
+        if (
+          !qualificationMatchesTeam(
+            data,
+            teamId
+          )
+        ) {
+          console.warn(
+            LOG,
+            year,
+            "teamId mismatch:",
+            teamId,
+            data.teamId
+          );
+
+          continue;
+        }
+
+        if (
+          !qualificationMatchesYear(
+            data,
+            year
+          )
+        ) {
+          console.warn(
+            LOG,
+            year,
+            "seasonYear mismatch:",
+            data.seasonYear
+          );
+
+          continue;
+        }
+
+        const status =
+          clean(
+            data.status
+          );
+
+        /*
+         * Нам потрібен тільки
+         * активний invitation.
+         */
+        if (
+          status !==
+          DECLINABLE_STATUS
+        ) {
+          continue;
+        }
+
+        return {
+          year,
+
+          teamId,
+
+          ref,
+
+          data: {
+            ...data,
+            status
+          }
+        };
+
+      } catch (error) {
+        console.warn(
+          LOG,
+          year,
+          "qualification read:",
+          error
+        );
+      }
+    }
+
+    return null;
+  }
+
+  // =========================================================
+  // LISTENER
+  // =========================================================
+
+  function clearQualificationListener() {
+    if (
+      typeof
+        unsubscribeQualification ===
+      "function"
+    ) {
+      try {
+        unsubscribeQualification();
+      } catch {}
+    }
+
+    unsubscribeQualification =
+      null;
+  }
+
+  function subscribeActiveQualification(
+    qualification
+  ) {
+    clearQualificationListener();
+
+    if (
+      !qualification?.ref
+    ) {
+      return;
+    }
+
+    const expectedYear =
+      qualification.year;
+
+    const expectedTeamId =
+      qualification.teamId;
+
+    unsubscribeQualification =
+      qualification.ref
+        .onSnapshot(
+          snapshot => {
+            /*
+             * Документ видалено.
+             */
+            if (!snapshot.exists) {
+              hideBox();
+              return;
+            }
+
+            const data =
+              snapshot.data() ||
+              {};
+
+            /*
+             * Захист від
+             * невідповідності.
+             */
+            if (
+              !qualificationMatchesTeam(
+                data,
+                expectedTeamId
+              ) ||
+              !qualificationMatchesYear(
+                data,
+                expectedYear
+              )
+            ) {
+              console.warn(
+                LOG,
+                "active qualification mismatch"
+              );
+
+              hideBox();
+
+              return;
+            }
+
+            const status =
+              clean(
+                data.status
+              );
+
+            /*
+             * Як тільки status
+             * перестає бути invited,
+             * кнопку прибираємо.
+             */
+            if (
+              status !==
+              DECLINABLE_STATUS
+            ) {
+              hideBox();
+
+              /*
+               * Повідомляємо
+               * register_firebase.js.
+               */
+              dispatchQualificationChanged({
+                seasonYear:
+                  expectedYear,
+
+                teamId:
+                  expectedTeamId,
+
+                status
+              });
+
+              return;
+            }
+
+            activeQualification = {
+              ...qualification,
+
+              data: {
+                ...data,
+                status
+              }
+            };
+
+            showBox(
+              activeQualification
+            );
+          },
+
+          error => {
+            console.error(
+              LOG,
+              "qualification listener:",
+              error
+            );
+          }
+        );
+  }
+
+  // =========================================================
+  // EVENT FOR OTHER MODULES
+  // =========================================================
+
+  function dispatchQualificationChanged(
+    detail
+  ) {
+    try {
+      window.dispatchEvent(
+        new CustomEvent(
+          "sc:finalQualificationChanged",
+          {
+            detail:
+              detail || {}
+          }
+        )
+      );
+
+    } catch (error) {
+      console.warn(
+        LOG,
+        "dispatch event:",
+        error
+      );
+    }
+  }
+
+  // =========================================================
+  // REFRESH
+  // =========================================================
+
+  async function refresh() {
+    const requestId =
+      ++refreshRequestId;
+
+    clearQualificationListener();
+
+    hideBox();
+
+    if (
+      !currentUser ||
+      !currentTeamId
+    ) {
+      return;
+    }
+
+    try {
+      const qualification =
+        await findInvitedQualification(
+          currentTeamId
+        );
+
+      /*
+       * Поки Firestore відповідав,
+       * auth міг уже змінитися.
+       */
+      if (
+        requestId !==
+        refreshRequestId
+      ) {
+        return;
+      }
+
+      if (
+        !qualification
+      ) {
+        return;
+      }
+
+      /*
+       * Перевіряємо, що команда
+       * все ще та сама.
+       */
+      if (
+        qualification.teamId !==
+        currentTeamId
+      ) {
+        return;
+      }
+
+      activeQualification =
+        qualification;
+
+      showBox(
+        qualification
+      );
+
+      subscribeActiveQualification(
+        qualification
+      );
+
+    } catch (error) {
+      console.error(
+        LOG,
+        "refresh:",
+        error
+      );
+    }
+  }
+
+  // =========================================================
+  // DECLINE
+  // =========================================================
+
+  async function handleDecline() {
+    if (declining) {
+      return;
+    }
+
+    /*
+     * Робимо локальну копію.
+     *
+     * Це важливо:
+     * listener може змінити
+     * activeQualification під час
+     * виконання транзакції.
+     */
+    const qualification =
+      activeQualification;
+
+    if (
+      !currentUser?.uid ||
+      !currentTeamId ||
+      !qualification?.ref
+    ) {
+      setBoxMessage(
+        "Не вдалося визначити фінальну кваліфікацію."
+      );
+
+      return;
+    }
+
+    if (
+      qualification.teamId !==
+      currentTeamId
+    ) {
+      setBoxMessage(
+        "Кваліфікація належить іншій команді."
+      );
+
+      return;
+    }
+
+    const expectedYear =
+      normalize(
+        qualification.year
+      );
+
+    if (
+      !isValidYear(
+        expectedYear
+      )
+    ) {
+      setBoxMessage(
+        "Не вдалося визначити сезон Фіналу."
+      );
+
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Ви дійсно хочете відмовитися від участі у Фіналі?\n\nПісля відмови ваше місце може перейти наступній команді з резерву.\n\nЦю дію не слід виконувати випадково."
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    declining = true;
+
+    setButtonLoading(true);
+
+    setBoxMessage("");
+
+    try {
+      const qualificationRef =
+        qualification.ref;
+
+      const uid =
+        currentUser.uid;
+
+      /*
+       * Транзакція:
+       *
+       * ще раз читаємо документ
+       * безпосередньо перед update.
+       */
+      await db.runTransaction(
+        async transaction => {
+          const snapshot =
+            await transaction.get(
+              qualificationRef
+            );
+
+          if (!snapshot.exists) {
+            throw new Error(
+              "Фінальну кваліфікацію не знайдено."
+            );
+          }
+
+          const data =
+            snapshot.data() ||
+            {};
+
+          const status =
+            clean(
+              data.status
+            );
+
+          // ===============================================
+          // TEAM CHECK
+          // ===============================================
+
+          if (
+            !qualificationMatchesTeam(
+              data,
+              currentTeamId
+            )
+          ) {
+            throw new Error(
+              "Ця фінальна кваліфікація належить іншій команді."
+            );
+          }
+
+          // ===============================================
+          // YEAR CHECK
+          // ===============================================
+
+          if (
+            !qualificationMatchesYear(
+              data,
+              expectedYear
+            )
+          ) {
+            throw new Error(
+              "Фінальна кваліфікація належить іншому сезону."
+            );
+          }
+
+          // ===============================================
+          // STATUS CHECK
+          // ===============================================
+
+          if (
+            status !==
+            DECLINABLE_STATUS
+          ) {
+            if (
+              status ===
+              "declined"
+            ) {
+              throw new Error(
+                "Команда вже відмовилася від участі у Фіналі."
+              );
+            }
+
+            if (
+              status ===
+              "confirmed"
+            ) {
+              throw new Error(
+                "Участь у Фіналі вже підтверджена. Відмова через цю кнопку недоступна."
+              );
+            }
+
+            if (
+              status ===
+              "reserve"
+            ) {
+              throw new Error(
+                "Команда перебуває у резерві та не має активного запрошення."
+              );
+            }
+
+            throw new Error(
+              "Відмова від участі зараз недоступна."
+            );
+          }
+
+          // ===============================================
+          // UPDATE
+          // ===============================================
+
+          /*
+           * НЕ чіпаємо:
+           *
+           * rank
+           * ratingPoints
+           * totalWeight
+           * bigFish
+           * competitionId
+           * stageId
+           * seasonYear
+           * teamId
+           * teamName
+           *
+           * Вони належать
+           * qualification manager.
+           */
+          transaction.update(
+            qualificationRef,
+            {
+              status:
+                "declined",
+
+              qualifiedForFinal:
+                false,
+
+              declinedAt:
+                serverTimestamp(),
+
+              declinedByUid:
+                uid,
+
+              updatedAt:
+                serverTimestamp()
+            }
+          );
+        }
+      );
+
+      /*
+       * Транзакція успішна.
+       */
+      console.info(
+        LOG,
+        "team declined final:",
+        {
+          seasonYear:
+            expectedYear,
+
+          teamId:
+            currentTeamId,
+
+          uid:
+            currentUser.uid
+        }
+      );
+
+      /*
+       * Listener може вже
+       * приховати box.
+       *
+       * Тому повідомляємо
+       * також глобально.
+       */
+      dispatchQualificationChanged({
+        seasonYear:
+          expectedYear,
+
+        teamId:
+          currentTeamId,
+
+        status:
+          "declined"
+      });
+
+      /*
+       * Якщо register_firebase.js
+       * має public refresh API —
+       * використовуємо його.
+       *
+       * Якщо немає —
+       * нічого не ламається.
+       */
+      try {
+        if (
+          window
+            .SC_REGISTRATION &&
+          typeof window
+            .SC_REGISTRATION
+            .refresh ===
+            "function"
+        ) {
+          await window
+            .SC_REGISTRATION
+            .refresh();
+        }
+      } catch (error) {
+        console.warn(
+          LOG,
+          "registration refresh:",
+          error
+        );
+      }
+
+      /*
+       * Прибираємо кнопку.
+       */
+      hideBox();
+
+    } catch (error) {
+      console.error(
+        LOG,
+        "decline:",
+        error
+      );
+
+      const code =
+        clean(
+          error?.code
+        );
+
+      const message =
+        normalize(
+          error?.message
+        );
+
+      if (
+        code.includes(
+          "permission"
+        ) ||
+        code.includes(
+          "denied"
+        )
+      ) {
+        setBoxMessage(
+          "Firestore не дозволив відмову. Потрібно додати правило для finalQualifications."
+        );
+
+      } else {
+        setBoxMessage(
+          message ||
+          "Не вдалося виконати відмову."
+        );
+      }
+
+      setButtonLoading(false);
+
+    } finally {
+      declining = false;
+    }
+  }
+
+  // =========================================================
+  // AUTH
+  // =========================================================
+
+  function subscribeAuth() {
+    auth.onAuthStateChanged(
+      async user => {
+        /*
+         * Скасовуємо логічно
+         * всі попередні refresh.
+         */
+        ++refreshRequestId;
+
+        clearQualificationListener();
+
+        hideBox();
+
+        currentUser =
+          user || null;
+
+        currentTeamId =
+          "";
+
+        declining =
+          false;
+
+        if (!user) {
+          console.info(
+            LOG,
+            "no user"
+          );
+
+          return;
+        }
+
+        try {
+          const teamId =
+            await loadTeamId(
+              user
+            );
+
+          /*
+           * Поки читали users/{uid},
+           * користувач міг вийти
+           * або змінитися.
+           */
+          if (
+            !auth.currentUser ||
+            auth.currentUser.uid !==
+              user.uid
+          ) {
+            return;
+          }
+
+          currentTeamId =
+            teamId;
+
+          if (!currentTeamId) {
+            console.info(
+              LOG,
+              "user has no team"
+            );
+
+            return;
+          }
+
+          await refresh();
+
+        } catch (error) {
+          console.error(
+            LOG,
+            "auth/profile:",
+            error
+          );
+        }
+      }
+    );
+  }
+
+  // =========================================================
+  // PUBLIC API
+  // =========================================================
+
+  window.SC_FINAL_DECLINE = {
+
+    /*
+     * Можна вручну:
+     *
+     * await SC_FINAL_DECLINE.refresh()
+     */
+    refresh,
+
+    /*
+     * Debug:
+     *
+     * SC_FINAL_DECLINE.getState()
+     */
+    getState() {
+      return {
+        uid:
+          currentUser
+            ? currentUser.uid
+            : null,
+
+        teamId:
+          currentTeamId ||
+          null,
+
+        declining,
+
+        qualification:
+          activeQualification
+            ? {
+                seasonYear:
+                  activeQualification.year,
+
+                teamId:
+                  activeQualification.teamId,
+
+                status:
+                  clean(
+                    activeQualification
+                      .data
+                      ?.status
+                  ) ||
+                  null,
+
+                rank:
+                  Number(
+                    activeQualification
+                      .data
+                      ?.rank ||
+                    0
+                  ),
+
+                competitionId:
+                  normalize(
+                    activeQualification
+                      .data
+                      ?.competitionId
+                  ) ||
+                  null,
+
+                stageId:
+                  normalize(
+                    activeQualification
+                      .data
+                      ?.stageId
+                  ) ||
+                  null
+              }
+            : null
+      };
+    },
+
+    /*
+     * Для debug.
+     *
+     * Сам decline напряму
+     * навмисно НЕ експортуємо.
+     *
+     * Користувач має пройти
+     * через кнопку + confirm.
+     */
+    version:
+      "1.0.0"
+  };
+
+  // =========================================================
+  // INIT
+  // =========================================================
+
+  async function init() {
+    try {
+      await waitFirebase();
+
+      auth =
+        window.scAuth;
+
+      db =
+        window.scDb;
+
+      fb =
+        window.firebase;
+
+      if (
+        !auth ||
+        !db ||
+        !fb
+      ) {
+        throw new Error(
+          "Firebase init відсутній."
+        );
+      }
+
+      /*
+       * Створюємо контейнер UI.
+       */
+      getOrCreateBox();
+
+      /*
+       * Запускаємо auth.
+       */
+      subscribeAuth();
+
+      console.info(
+        LOG,
+        "ready"
+      );
+
+    } catch (error) {
+      console.error(
+        LOG,
+        "init error:",
+        error
+      );
+    }
+  }
+
+  init();
+
+})();

@@ -2,13 +2,10 @@
 // STOLAR CARP • Автоматичне формування фіналістів
 //
 // =========================================================
-// ПРИЗНАЧЕННЯ
+// FIRESTORE STRUCTURE
 // =========================================================
 //
-// Скрипт автоматично підтримує фінальну кваліфікацію
-// ОКРЕМО ДЛЯ КОЖНОГО СЕЗОНУ.
-//
-// Firestore:
+// ОСНОВНА СЕЗОННА СТРУКТУРА:
 //
 // finalQualifications/{year}
 // finalQualifications/{year}/teams/{teamId}
@@ -19,32 +16,50 @@
 // finalQualifications/2027/teams/TEAM_ID
 // finalQualifications/2028/teams/TEAM_ID
 //
+// Кожен сезон фізично відокремлений.
+//
+// =========================================================
+// COMPATIBILITY MIRROR
+// =========================================================
+//
+// register_firebase.js зараз перевіряє:
+//
+// finalInvites/{competitionId}__{stageId}__{teamId}
+//
+// Тому цей JS також автоматично підтримує finalInvites.
+//
+// finalQualifications = основне джерело кваліфікації.
+// finalInvites        = технічний mirror для реєстрації.
+//
 // =========================================================
 // ЛОГІКА
 // =========================================================
 //
-// • читає seasonRating/{year};
-// • бере рейтинг команд;
-// • перші 18 активних команд -> invited;
-// • нижчі -> reserve;
-// • declined пропускається;
-// • якщо хтось із TOP-18 declined:
-//      наступна команда автоматично стає invited;
-// • confirmed зберігається;
-// • declined зберігається;
-// • rank оновлюється;
-// • сезони НЕ змішуються;
-// • 2026 / 2027 / 2028 / ... окремі;
+// • автоматично знаходить seasonRating/2026, /2027, /2028...
+// • фінал НЕ бере участі в рейтингових балах;
+// • рейтинг:
+//      1. два найкращі результати;
+//      2. менше балів = краще;
+//      3. більша загальна вага;
+//      4. більший Big Fish;
+// • перші 18 доступних команд -> invited;
+// • решта -> reserve;
+// • declined ніколи автоматично не повертається;
+// • confirmed ніколи автоматично не скидається;
+// • declined НЕ займає місце у TOP-18;
+// • confirmed займає місце;
+// • якщо finalist declined -> наступний reserve стає invited;
+// • кожен сезон повністю відокремлений.
 //
 // =========================================================
 // ВАЖЛИВО
 // =========================================================
 //
-// Скрипт виконує WRITE у Firestore.
-// Тому запускаємо його тільки під ADMIN.
+// WRITE виконується тільки під ADMIN UID.
 //
-// Якщо користувач не admin —
-// скрипт нічого не записує.
+// Цей browser JS працює тільки тоді,
+// коли сторінка, де він підключений,
+// реально відкрита під admin-сесією.
 //
 // =========================================================
 
@@ -59,13 +74,14 @@
   // =========================================================
 
   const TOP_COUNT = 18;
-
   const BEST_COUNT = 2;
-
   const ABSENT_POINTS = 8;
 
   const QUALIFICATIONS_COLLECTION =
     "finalQualifications";
+
+  const FINAL_INVITES_COLLECTION =
+    "finalInvites";
 
   const RATING_COLLECTION =
     "seasonRating";
@@ -79,9 +95,10 @@
   const ADMIN_UID =
     "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
-  // Не використовуємо batch на 500 операцій.
-  // Залишаємо запас.
   const BATCH_LIMIT = 400;
+
+  const COMPETITIONS_CACHE_MS =
+    60 * 1000;
 
   // =========================================================
   // FIREBASE STATE
@@ -95,31 +112,14 @@
 
   let unsubscribeRatings = null;
 
-  /*
-   * По одному listener на:
-   *
-   * finalQualifications/{year}/teams
-   */
   const qualificationListeners =
     new Map();
 
-  /*
-   * Захист від одночасного sync одного року.
-   */
   const syncStateByYear =
     new Map();
 
-  /*
-   * Кеш competition info.
-   */
-  let competitionsCache =
-    null;
-
-  let competitionsCacheAt =
-    0;
-
-  const COMPETITIONS_CACHE_MS =
-    60 * 1000;
+  let competitionsCache = null;
+  let competitionsCacheAt = 0;
 
   // =========================================================
   // HELPERS
@@ -176,6 +176,18 @@
     );
   }
 
+  function buildInviteId(
+    competitionId,
+    stageId,
+    teamId
+  ) {
+    return (
+      `${normalize(competitionId)}__` +
+      `${normalize(stageId) || "final"}__` +
+      `${normalize(teamId)}`
+    );
+  }
+
   // =========================================================
   // FIREBASE READY
   // =========================================================
@@ -187,8 +199,7 @@
       Date.now();
 
     while (
-      Date.now() -
-        startedAt <
+      Date.now() - startedAt <
       maxMs
     ) {
       if (
@@ -243,7 +254,7 @@
   }
 
   // =========================================================
-  // REGULAR ARCHIVED STAGES
+  // ARCHIVED REGULAR STAGES
   // =========================================================
 
   function stageSortValue(stage) {
@@ -255,14 +266,10 @@
       );
 
     const match =
-      raw.match(
-        /(\d+)/
-      );
+      raw.match(/(\d+)/);
 
     return match
-      ? Number(
-          match[1]
-        )
+      ? Number(match[1])
       : 999999;
   }
 
@@ -283,22 +290,33 @@
           typeof item ===
           "string"
         ) {
-          return {
+          const stage = {
             stageDocId:
-              item,
+              normalize(item),
 
             stageId:
-              item,
+              normalize(item),
 
             stageName:
-              item,
+              normalize(item),
+
+            type:
+              "",
+
+            stageType:
+              "",
 
             isFinal:
               false
           };
+
+          stage.isFinal =
+            isFinalStage(stage);
+
+          return stage;
         }
 
-        return {
+        const stage = {
           stageDocId:
             normalize(
               item?.stageDocId ||
@@ -318,7 +336,8 @@
               item?.title ||
               item?.name ||
               item?.stageId ||
-              item?.stageDocId
+              item?.stageDocId ||
+              item?.id
             ),
 
           type:
@@ -335,17 +354,27 @@
             item?.isFinal ===
             true
         };
+
+        stage.isFinal =
+          isFinalStage(stage);
+
+        return stage;
       })
-      .filter(stage =>
-        Boolean(
-          stage.stageDocId
-        )
+
+      .filter(
+        stage =>
+          Boolean(
+            stage.stageDocId
+          )
       )
-      .filter(stage =>
-        !isFinalStage(
-          stage
-        )
+
+      .filter(
+        stage =>
+          !isFinalStage(
+            stage
+          )
       )
+
       .sort(
         (a, b) =>
           stageSortValue(a) -
@@ -354,12 +383,10 @@
   }
 
   // =========================================================
-  // NORMALIZE ARCHIVED STANDING
+  // NORMALIZE STANDING
   // =========================================================
 
-  function normalizeStandingRow(
-    row
-  ) {
+  function normalizeStandingRow(row) {
     return {
       teamId:
         normalize(
@@ -525,9 +552,6 @@
       );
     });
 
-    /*
-     * Дані без A/B/C.
-     */
     rows
       .filter(
         row =>
@@ -594,7 +618,6 @@
         async stage => {
 
           try {
-
             const snapshot =
               await db
                 .collection(
@@ -635,7 +658,6 @@
           } catch (
             error
           ) {
-
             console.warn(
               LOG,
               seasonYear,
@@ -708,9 +730,7 @@
     archiveMaps
   ) {
     if (
-      isFinalStage(
-        stage
-      )
+      isFinalStage(stage)
     ) {
       return null;
     }
@@ -726,9 +746,7 @@
         team
       );
 
-    if (
-      archiveRow
-    ) {
+    if (archiveRow) {
       const place =
         num(
           archiveRow.zonePlace ||
@@ -741,6 +759,7 @@
 
       return {
         place,
+
         points:
           place,
 
@@ -756,10 +775,6 @@
       };
     }
 
-    /*
-     * Fallback:
-     * seasonRating.teams[].stages
-     */
     const stages =
       team?.stages ||
       {};
@@ -807,7 +822,7 @@
   }
 
   // =========================================================
-  // BEST RESULTS
+  // TEAM RATING
   // =========================================================
 
   function calculateTeamRating(
@@ -826,9 +841,7 @@
               archiveMaps
             );
 
-          if (
-            result
-          ) {
+          if (result) {
             return {
               stageDocId:
                 stage.stageDocId,
@@ -860,9 +873,6 @@
         }
       );
 
-    /*
-     * Менше points = краще.
-     */
     const sorted =
       results
         .slice()
@@ -871,7 +881,7 @@
 
             if (
               a.points !==
-              b.points
+                b.points
             ) {
               return (
                 a.points -
@@ -881,7 +891,7 @@
 
             if (
               b.totalWeight !==
-              a.totalWeight
+                a.totalWeight
             ) {
               return (
                 b.totalWeight -
@@ -912,11 +922,8 @@
         0
       );
 
-    let totalWeight =
-      0;
-
-    let bigFish =
-      0;
+    let totalWeight = 0;
+    let bigFish = 0;
 
     regularStages.forEach(
       stage => {
@@ -928,22 +935,22 @@
             archiveMaps
           );
 
-        if (
-          result
-        ) {
-          totalWeight +=
-            num(
-              result.totalWeight
-            );
-
-          bigFish =
-            Math.max(
-              bigFish,
-              num(
-                result.bigFish
-              )
-            );
+        if (!result) {
+          return;
         }
+
+        totalWeight +=
+          num(
+            result.totalWeight
+          );
+
+        bigFish =
+          Math.max(
+            bigFish,
+            num(
+              result.bigFish
+            )
+          );
       }
     );
 
@@ -952,6 +959,52 @@
       totalWeight,
       bigFish
     };
+  }
+
+  // =========================================================
+  // TEAM ACTIVE FILTER
+  // =========================================================
+
+  function isActiveRatingTeam(
+    team
+  ) {
+    if (!team) {
+      return false;
+    }
+
+    /*
+     * Якщо поля active немає —
+     * команда вважається активною.
+     *
+     * Якщо явно:
+     * active:false
+     * disabled:true
+     * deleted:true
+     *
+     * тоді не беремо.
+     */
+    if (
+      team.active ===
+      false
+    ) {
+      return false;
+    }
+
+    if (
+      team.disabled ===
+      true
+    ) {
+      return false;
+    }
+
+    if (
+      team.deleted ===
+      true
+    ) {
+      return false;
+    }
+
+    return true;
   }
 
   // =========================================================
@@ -967,25 +1020,31 @@
         rating
       );
 
-    const teams =
-      Array.isArray(
-        rating?.teams
-      )
-        ? rating.teams
-            .slice()
-        : [];
-
     if (
       !regularStages.length
     ) {
       return [];
     }
 
+    const teams =
+      Array.isArray(
+        rating?.teams
+      )
+        ? rating.teams
+            .filter(
+              isActiveRatingTeam
+            )
+            .slice()
+        : [];
+
     const archiveMaps =
       await loadArchiveStageMaps(
         seasonYear,
         regularStages
       );
+
+    const uniqueTeamIds =
+      new Set();
 
     const ranked =
       teams
@@ -1002,11 +1061,6 @@
               team?.teamName
             );
 
-          /*
-           * teamId обов'язковий,
-           * бо registration працює
-           * саме через teamId.
-           */
           if (!teamId) {
             console.warn(
               LOG,
@@ -1017,6 +1071,29 @@
 
             return null;
           }
+
+          /*
+           * Не дозволяємо одному teamId
+           * випадково бути двічі.
+           */
+          if (
+            uniqueTeamIds.has(
+              teamId
+            )
+          ) {
+            console.warn(
+              LOG,
+              seasonYear,
+              "duplicate teamId пропущено:",
+              teamId
+            );
+
+            return null;
+          }
+
+          uniqueTeamIds.add(
+            teamId
+          );
 
           const ratingInfo =
             calculateTeamRating(
@@ -1047,9 +1124,6 @@
     ranked.sort(
       (a, b) => {
 
-        /*
-         * 1. Менше балів.
-         */
         if (
           a.ratingPoints !==
           b.ratingPoints
@@ -1060,9 +1134,6 @@
           );
         }
 
-        /*
-         * 2. Більша вага.
-         */
         if (
           b.totalWeight !==
           a.totalWeight
@@ -1073,9 +1144,6 @@
           );
         }
 
-        /*
-         * 3. Більший Big Fish.
-         */
         if (
           b.bigFish !==
           a.bigFish
@@ -1086,9 +1154,6 @@
           );
         }
 
-        /*
-         * 4. Стабільний fallback.
-         */
         return String(
           a.teamName
         ).localeCompare(
@@ -1114,7 +1179,7 @@
   }
 
   // =========================================================
-  // COMPETITION / FINAL DISCOVERY
+  // FINAL COMPETITION DISCOVERY
   // =========================================================
 
   function getFinalEvent(
@@ -1206,10 +1271,11 @@
     seasonYear,
     rating
   ) {
-    /*
-     * Найкращий варіант:
-     * competitionId уже є в seasonRating.
-     */
+    const year =
+      String(
+        seasonYear
+      );
+
     const ratingCompetitionId =
       normalize(
         rating?.finalCompetitionId ||
@@ -1219,6 +1285,10 @@
     const competitions =
       await loadCompetitions();
 
+    /*
+     * 1. Якщо seasonRating явно
+     * вказує competition.
+     */
     if (
       ratingCompetitionId
     ) {
@@ -1235,9 +1305,7 @@
             found.data
           );
 
-        if (
-          finalEvent
-        ) {
+        if (finalEvent) {
           return {
             competitionId:
               found.id,
@@ -1255,32 +1323,39 @@
     }
 
     /*
-     * Автоматичний пошук
-     * competition відповідного року.
+     * 2. Автоматично шукаємо
+     * season competition цього року.
      */
     const candidates =
       competitions.filter(
         item => {
 
-          const year =
+          const competitionYear =
             normalize(
               item.data?.year ||
               item.data?.seasonYear
             );
 
           if (
-            year !==
-            String(
-              seasonYear
-            )
+            competitionYear !==
+            year
           ) {
             return false;
           }
 
-          if (
+          const type =
             normalize(
               item.data?.type
-            ).toLowerCase() !==
+            ).toLowerCase();
+
+          /*
+           * Якщо type не заданий,
+           * але є year + final,
+           * теж допускаємо.
+           */
+          if (
+            type &&
+            type !==
               "season"
           ) {
             return false;
@@ -1320,10 +1395,6 @@
       };
     }
 
-    /*
-     * Якщо кілька сезонних competitions
-     * одного року — не вгадуємо.
-     */
     if (
       candidates.length >
       1
@@ -1331,7 +1402,7 @@
       console.error(
         LOG,
         seasonYear,
-        "знайдено кілька competitions з final:",
+        "знайдено кілька season competitions з final:",
         candidates.map(
           item =>
             item.id
@@ -1341,17 +1412,53 @@
       return null;
     }
 
+    /*
+     * 3. Безпечний fallback:
+     * competition id season-{year}.
+     */
+    const fallbackId =
+      `season-${year}`;
+
+    const fallback =
+      competitions.find(
+        item =>
+          item.id ===
+          fallbackId
+      );
+
+    if (fallback) {
+      const finalEvent =
+        getFinalEvent(
+          fallback.data
+        );
+
+      if (finalEvent) {
+        return {
+          competitionId:
+            fallback.id,
+
+          finalStageId:
+            normalize(
+              finalEvent.stageId ||
+              finalEvent.key ||
+              finalEvent.id
+            ) ||
+            "final"
+        };
+      }
+    }
+
     console.warn(
       LOG,
       seasonYear,
-      "не знайдено season competition з final."
+      "не знайдено competition із фінальним етапом."
     );
 
     return null;
   }
 
   // =========================================================
-  // READ CURRENT QUALIFICATIONS
+  // EXISTING QUALIFICATIONS
   // =========================================================
 
   async function readExistingQualifications(
@@ -1395,7 +1502,7 @@
   }
 
   // =========================================================
-  // CALCULATE STATUS
+  // STATUS CALCULATION
   // =========================================================
 
   function buildDesiredRows(
@@ -1403,115 +1510,115 @@
     ranking,
     existing
   ) {
-    /*
-     * confirmed також займає
-     * місце у фінальній 18-ці.
-     *
-     * invited також займає.
-     *
-     * declined — НЕ займає.
-     */
-    let occupied =
-      0;
+    let occupied = 0;
 
-    const rows =
-      [];
+    const rows = [];
 
-    ranking.forEach(team => {
+    ranking.forEach(
+      team => {
 
-      const old =
-        existing.get(
-          team.teamId
-        ) ||
-        null;
+        const old =
+          existing.get(
+            team.teamId
+          ) ||
+          null;
 
-      const oldStatus =
-        clean(
-          old?.status
-        );
+        const oldStatus =
+          clean(
+            old?.status
+          );
 
-      let status =
-        "reserve";
-
-      /*
-       * Відмова назавжди зберігається.
-       */
-      if (
-        oldStatus ===
-        "declined"
-      ) {
-        status =
-          "declined";
-      }
-
-      /*
-       * Підтверджена участь
-       * теж зберігається.
-       */
-      else if (
-        oldStatus ===
-        "confirmed"
-      ) {
-        status =
-          "confirmed";
-
-        occupied++;
-      }
-
-      /*
-       * Ще є місце у 18.
-       */
-      else if (
-        occupied <
-        TOP_COUNT
-      ) {
-        status =
-          "invited";
-
-        occupied++;
-      }
-
-      /*
-       * Місця закінчилися.
-       */
-      else {
-        status =
+        let status =
           "reserve";
+
+        /*
+         * DECLINED:
+         * не повертаємо автоматично.
+         * Місце у TOP-18 не займає.
+         */
+        if (
+          oldStatus ===
+          "declined"
+        ) {
+          status =
+            "declined";
+        }
+
+        /*
+         * CONFIRMED:
+         * не скидаємо.
+         * Місце займає.
+         */
+        else if (
+          oldStatus ===
+          "confirmed"
+        ) {
+          status =
+            "confirmed";
+
+          occupied += 1;
+        }
+
+        /*
+         * Є вільне місце.
+         */
+        else if (
+          occupied <
+          TOP_COUNT
+        ) {
+          status =
+            "invited";
+
+          occupied += 1;
+        }
+
+        /*
+         * Далі резерв.
+         */
+        else {
+          status =
+            "reserve";
+        }
+
+        rows.push({
+          /*
+           * STRING.
+           *
+           * Не Number(2026).
+           */
+          seasonYear:
+            String(
+              seasonYear
+            ),
+
+          teamId:
+            team.teamId,
+
+          teamName:
+            team.teamName,
+
+          rank:
+            team.rank,
+
+          ratingPoints:
+            team.ratingPoints,
+
+          totalWeight:
+            team.totalWeight,
+
+          bigFish:
+            team.bigFish,
+
+          status,
+
+          qualifiedForFinal:
+            status ===
+              "invited" ||
+            status ===
+              "confirmed"
+        });
       }
-
-      rows.push({
-        seasonYear:
-          Number(
-            seasonYear
-          ),
-
-        teamId:
-          team.teamId,
-
-        teamName:
-          team.teamName,
-
-        rank:
-          team.rank,
-
-        ratingPoints:
-          team.ratingPoints,
-
-        totalWeight:
-          team.totalWeight,
-
-        bigFish:
-          team.bigFish,
-
-        status,
-
-        qualifiedForFinal:
-          status ===
-            "invited" ||
-          status ===
-            "confirmed"
-      });
-    });
+    );
 
     return rows;
   }
@@ -1572,7 +1679,7 @@
   }
 
   // =========================================================
-  // WRITE BATCHES
+  // BATCH
   // =========================================================
 
   async function commitOperations(
@@ -1613,7 +1720,8 @@
               operation.data,
               {
                 merge:
-                  true
+                  operation.merge !==
+                  false
               }
             );
           }
@@ -1634,13 +1742,70 @@
   }
 
   // =========================================================
-  // SYNC YEAR
+  // FINAL INVITE MIRROR
+  // =========================================================
+
+  function buildInviteMirrorData(
+    row,
+    finalInfo
+  ) {
+    return {
+      seasonYear:
+        String(
+          row.seasonYear
+        ),
+
+      competitionId:
+        finalInfo.competitionId,
+
+      stageId:
+        finalInfo.finalStageId,
+
+      teamId:
+        row.teamId,
+
+      teamName:
+        row.teamName,
+
+      rank:
+        row.rank,
+
+      ratingPoints:
+        row.ratingPoints,
+
+      totalWeight:
+        row.totalWeight,
+
+      bigFish:
+        row.bigFish,
+
+      status:
+        row.status,
+
+      qualifiedForFinal:
+        row.qualifiedForFinal,
+
+      source:
+        "final_qualification",
+
+      updatedAt:
+        serverTimestamp()
+    };
+  }
+
+  // =========================================================
+  // SYNC ONE SEASON
   // =========================================================
 
   async function syncSeason(
     seasonYear,
     rating
   ) {
+    const year =
+      String(
+        seasonYear
+      );
+
     if (
       !currentUser ||
       !isAdminUser(
@@ -1652,13 +1817,13 @@
 
     if (
       !isValidYear(
-        seasonYear
+        year
       )
     ) {
       console.warn(
         LOG,
         "некоректний seasonYear:",
-        seasonYear
+        year
       );
 
       return;
@@ -1666,7 +1831,7 @@
 
     const state =
       syncStateByYear.get(
-        seasonYear
+        year
       ) || {
         running:
           false,
@@ -1675,10 +1840,6 @@
           false
       };
 
-    /*
-     * Уже sync.
-     * Просто ставимо повторний запуск.
-     */
     if (
       state.running
     ) {
@@ -1686,7 +1847,7 @@
         true;
 
       syncStateByYear.set(
-        seasonYear,
+        year,
         state
       );
 
@@ -1700,20 +1861,19 @@
       false;
 
     syncStateByYear.set(
-      seasonYear,
+      year,
       state
     );
 
     try {
-
       console.info(
         LOG,
-        `sync ${seasonYear}...`
+        `sync ${year}...`
       );
 
       const ranking =
         await buildSeasonRanking(
-          seasonYear,
+          year,
           rating
         );
 
@@ -1722,8 +1882,8 @@
       ) {
         console.warn(
           LOG,
-          seasonYear,
-          "рейтинг порожній."
+          year,
+          "рейтинг порожній або ще немає заархівованих відбіркових етапів."
         );
 
         return;
@@ -1731,16 +1891,14 @@
 
       const finalInfo =
         await resolveFinalCompetition(
-          seasonYear,
+          year,
           rating
         );
 
-      if (
-        !finalInfo
-      ) {
+      if (!finalInfo) {
         console.warn(
           LOG,
-          seasonYear,
+          year,
           "final competition не визначено. Запис не виконується."
         );
 
@@ -1749,12 +1907,12 @@
 
       const existing =
         await readExistingQualifications(
-          seasonYear
+          year
         );
 
       const desiredRows =
         buildDesiredRows(
-          seasonYear,
+          year,
           ranking,
           existing
         );
@@ -1765,18 +1923,17 @@
             QUALIFICATIONS_COLLECTION
           )
           .doc(
-            seasonYear
+            year
           );
 
-      /*
-       * META документа сезону.
-       */
+      // =====================================================
+      // META SEASON DOCUMENT
+      // =====================================================
+
       await seasonRef.set(
         {
           seasonYear:
-            Number(
-              seasonYear
-            ),
+            year,
 
           competitionId:
             finalInfo.competitionId,
@@ -1790,6 +1947,29 @@
           teamsCount:
             desiredRows.length,
 
+          activeCount:
+            desiredRows.filter(
+              row =>
+                row.status ===
+                  "invited" ||
+                row.status ===
+                  "confirmed"
+            ).length,
+
+          reserveCount:
+            desiredRows.filter(
+              row =>
+                row.status ===
+                "reserve"
+            ).length,
+
+          declinedCount:
+            desiredRows.filter(
+              row =>
+                row.status ===
+                "declined"
+            ).length,
+
           updatedAt:
             serverTimestamp()
         },
@@ -1799,8 +1979,7 @@
         }
       );
 
-      const operations =
-        [];
+      const operations = [];
 
       const rankingTeamIds =
         new Set();
@@ -1835,19 +2014,11 @@
               serverTimestamp()
           };
 
-          /*
-           * createdAt тільки
-           * для нового документа.
-           */
           if (!old) {
             next.createdAt =
               serverTimestamp();
           }
 
-          /*
-           * Коли команда вперше
-           * отримала invited.
-           */
           if (
             row.status ===
               "invited" &&
@@ -1858,10 +2029,6 @@
               serverTimestamp();
           }
 
-          /*
-           * Коли команда переходить
-           * у reserve.
-           */
           if (
             row.status ===
               "reserve" &&
@@ -1871,6 +2038,10 @@
             next.reservedAt =
               serverTimestamp();
           }
+
+          // ===================================================
+          // MAIN YEAR-SCOPED RECORD
+          // ===================================================
 
           if (
             needsUpdate(
@@ -1892,23 +2063,56 @@
                   ),
 
               data:
-                next
+                next,
+
+              merge:
+                true
             });
           }
+
+          // ===================================================
+          // REGISTER_FIREBASE COMPATIBILITY MIRROR
+          // ===================================================
+
+          const inviteId =
+            buildInviteId(
+              finalInfo.competitionId,
+              finalInfo.finalStageId,
+              row.teamId
+            );
+
+          const inviteRef =
+            db
+              .collection(
+                FINAL_INVITES_COLLECTION
+              )
+              .doc(
+                inviteId
+              );
+
+          operations.push({
+            type:
+              "set",
+
+            ref:
+              inviteRef,
+
+            data:
+              buildInviteMirrorData(
+                row,
+                finalInfo
+              ),
+
+            merge:
+              true
+          });
         }
       );
 
-      /*
-       * Старі команди, яких уже немає
-       * у seasonRating цього року.
-       *
-       * Не видаляємо confirmed /
-       * declined автоматично.
-       *
-       * Інші документи можна прибрати,
-       * щоб база не накопичувала сміття
-       * всередині конкретного сезону.
-       */
+      // =====================================================
+      // CLEAN OLD QUALIFICATION TEAM DOCS
+      // =====================================================
+
       existing.forEach(
         (
           old,
@@ -1928,6 +2132,10 @@
               old.status
             );
 
+          /*
+           * Історичні confirmed /
+           * declined не видаляємо.
+           */
           if (
             status ===
               "confirmed" ||
@@ -1950,6 +2158,46 @@
                   teamId
                 )
           });
+
+          /*
+           * Також прибираємо
+           * технічний finalInvites mirror
+           * саме цього сезону.
+           */
+          const competitionId =
+            normalize(
+              old.competitionId ||
+              finalInfo.competitionId
+            );
+
+          const stageId =
+            normalize(
+              old.stageId ||
+              finalInfo.finalStageId
+            ) ||
+            "final";
+
+          if (
+            competitionId
+          ) {
+            operations.push({
+              type:
+                "delete",
+
+              ref:
+                db
+                  .collection(
+                    FINAL_INVITES_COLLECTION
+                  )
+                  .doc(
+                    buildInviteId(
+                      competitionId,
+                      stageId,
+                      teamId
+                    )
+                  )
+            });
+          }
         }
       );
 
@@ -1970,19 +2218,19 @@
         desiredRows.filter(
           row =>
             row.status ===
-            "reserve"
+              "reserve"
         ).length;
 
       const declinedCount =
         desiredRows.filter(
           row =>
             row.status ===
-            "declined"
+              "declined"
         ).length;
 
       console.info(
         LOG,
-        `${seasonYear} synchronized`,
+        `${year} synchronized`,
         {
           competitionId:
             finalInfo.competitionId,
@@ -1990,13 +2238,16 @@
           stageId:
             finalInfo.finalStageId,
 
+          total:
+            desiredRows.length,
+
           activeCount,
 
           reserveCount,
 
           declinedCount,
 
-          writes:
+          operations:
             operations.length
         }
       );
@@ -2004,18 +2255,16 @@
     } catch (
       error
     ) {
-
       console.error(
         LOG,
-        `sync ${seasonYear} error:`,
+        `sync ${year} error:`,
         error
       );
 
     } finally {
-
       const latest =
         syncStateByYear.get(
-          seasonYear
+          year
         );
 
       if (!latest) {
@@ -2033,15 +2282,10 @@
         false;
 
       syncStateByYear.set(
-        seasonYear,
+        year,
         latest
       );
 
-      /*
-       * Якщо поки ми писали
-       * прийшов новий snapshot —
-       * запускаємо ще раз.
-       */
       if (
         rerun &&
         currentUser &&
@@ -2050,14 +2294,13 @@
         )
       ) {
         try {
-
           const fresh =
             await db
               .collection(
                 RATING_COLLECTION
               )
               .doc(
-                seasonYear
+                year
               )
               .get();
 
@@ -2065,7 +2308,7 @@
             fresh.exists
           ) {
             await syncSeason(
-              seasonYear,
+              year,
               fresh.data() ||
                 {}
             );
@@ -2074,10 +2317,9 @@
         } catch (
           error
         ) {
-
           console.error(
             LOG,
-            seasonYear,
+            year,
             "rerun error:",
             error
           );
@@ -2093,28 +2335,29 @@
   function subscribeQualificationYear(
     seasonYear
   ) {
+    const year =
+      String(
+        seasonYear
+      );
+
     if (
       qualificationListeners.has(
-        seasonYear
+        year
       )
     ) {
       return;
     }
 
-    /*
-     * Слухаємо статуси команд.
-     *
-     * Якщо хтось став declined,
-     * автоматично запускаємо sync,
-     * і наступний reserve стане invited.
-     */
+    let initialized =
+      false;
+
     const unsubscribe =
       db
         .collection(
           QUALIFICATIONS_COLLECTION
         )
         .doc(
-          seasonYear
+          year
         )
         .collection(
           "teams"
@@ -2122,10 +2365,17 @@
         .onSnapshot(
           async snapshot => {
 
-            if (
-              snapshot.empty &&
-              !currentUser
-            ) {
+            /*
+             * Перший snapshot виникає
+             * просто через підписку.
+             *
+             * Основний sync у цей момент
+             * і так запускається з seasonRating.
+             */
+            if (!initialized) {
+              initialized =
+                true;
+
               return;
             }
 
@@ -2138,15 +2388,35 @@
               return;
             }
 
-            try {
+            /*
+             * Реагуємо тільки якщо
+             * реально змінились документи.
+             */
+            const meaningfulChange =
+              snapshot
+                .docChanges()
+                .some(
+                  change =>
+                    change.type ===
+                      "modified" ||
+                    change.type ===
+                      "added" ||
+                    change.type ===
+                      "removed"
+                );
 
+            if (!meaningfulChange) {
+              return;
+            }
+
+            try {
               const ratingSnap =
                 await db
                   .collection(
                     RATING_COLLECTION
                   )
                   .doc(
-                    seasonYear
+                    year
                   )
                   .get();
 
@@ -2157,7 +2427,7 @@
               }
 
               await syncSeason(
-                seasonYear,
+                year,
                 ratingSnap.data() ||
                   {}
               );
@@ -2165,20 +2435,18 @@
             } catch (
               error
             ) {
-
               console.error(
                 LOG,
-                seasonYear,
+                year,
                 "qualification listener:",
                 error
               );
             }
           },
           error => {
-
             console.error(
               LOG,
-              seasonYear,
+              year,
               "qualification snapshot error:",
               error
             );
@@ -2186,13 +2454,13 @@
         );
 
     qualificationListeners.set(
-      seasonYear,
+      year,
       unsubscribe
     );
   }
 
   // =========================================================
-  // UNSUBSCRIBE
+  // STOP
   // =========================================================
 
   function clearQualificationListeners() {
@@ -2228,7 +2496,7 @@
   }
 
   // =========================================================
-  // SEASON RATING LISTENER
+  // SEASON RATINGS LISTENER
   // =========================================================
 
   function subscribeRatings() {
@@ -2248,15 +2516,13 @@
           snapshot => {
 
             /*
-             * Тут немає 2026 hardcode.
-             *
-             * Який document з'явився:
+             * НІЯКОГО hardcode 2026.
              *
              * seasonRating/2026
              * seasonRating/2027
              * seasonRating/2028
-             *
-             * той і обробляється.
+             * seasonRating/2029
+             * ...
              */
             snapshot.docs.forEach(
               doc => {
@@ -2287,7 +2553,6 @@
             );
           },
           error => {
-
             console.error(
               LOG,
               "seasonRating listener:",
@@ -2301,14 +2566,6 @@
   // DEBUG API
   // =========================================================
 
-  /*
-   * Можна вручну викликати в console:
-   *
-   * await SC_FINAL_QUALIFICATION.sync("2026")
-   *
-   * Це не потрібно для звичайної роботи,
-   * просто debug.
-   */
   window.SC_FINAL_QUALIFICATION = {
 
     async sync(
@@ -2376,7 +2633,6 @@
 
   async function init() {
     try {
-
       await waitFirebase();
 
       auth =
@@ -2397,9 +2653,7 @@
 
           stop();
 
-          if (
-            !user
-          ) {
+          if (!user) {
             console.info(
               LOG,
               "no user — disabled"
@@ -2415,7 +2669,7 @@
           ) {
             console.info(
               LOG,
-              "non-admin — read/write manager disabled"
+              "non-admin — qualification manager disabled"
             );
 
             return;
@@ -2433,7 +2687,6 @@
     } catch (
       error
     ) {
-
       console.error(
         LOG,
         "init error:",

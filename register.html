@@ -5,24 +5,24 @@
 // ПРИЗНАЧЕННЯ
 // =========================================================
 //
-// Відповідальність цього файла:
+// Цей файл:
 //
-// 1. Визначити поточного користувача.
-// 2. Визначити його teamId.
-// 3. Знайти фінальну кваліфікацію команди.
-// 4. Показати кнопку відмови ТІЛЬКИ для status = invited.
-// 5. Безпечно виконати:
+// 1. Визначає поточного користувача.
+// 2. Визначає його teamId.
+// 3. Шукає ЙОГО документ фінальної кваліфікації.
+// 4. Показує кнопку тільки для status = invited.
+// 5. Виконує:
 //
 //      invited -> declined
 //
-// 6. Записати:
+// 6. Записує:
 //
+//      qualifiedForFinal = false
 //      declinedAt
 //      declinedByUid
 //      updatedAt
-//      qualifiedForFinal = false
 //
-// 7. Повідомити інші JS-модулі про зміну.
+// 7. Повідомляє інші JS-модулі про зміну.
 //
 // =========================================================
 // FIRESTORE
@@ -30,12 +30,20 @@
 //
 // finalQualifications/{year}/teams/{teamId}
 //
-// Приклад:
+// ВАЖЛИВО:
 //
-// finalQualifications/2026/teams/TEAM_ID
+// Цей файл НЕ робить:
+//
+// db.collection("finalQualifications").get()
+//
+// тобто НЕ виконує LIST кореневої колекції.
+//
+// Він читає тільки конкретні документи:
+//
+// finalQualifications/{year}/teams/{teamId}
 //
 // =========================================================
-// ВАЖЛИВО
+// ВІДПОВІДАЛЬНІСТЬ
 // =========================================================
 //
 // Цей файл:
@@ -44,10 +52,11 @@
 // • НЕ визначає TOP-18;
 // • НЕ переводить reserve -> invited;
 // • НЕ змінює rank;
+// • НЕ змінює ratingPoints;
 // • НЕ змінює competitionId;
 // • НЕ змінює stageId.
 //
-// За перерахунок фіналістів відповідає:
+// Перерахунок фіналістів залишається відповідальністю:
 //
 // assets/js/final_qualification.js
 //
@@ -72,6 +81,19 @@
   const DECLINABLE_STATUS =
     "invited";
 
+  /*
+   * Скільки сусідніх календарних
+   * років можна безпечно перевірити.
+   *
+   * Це НЕ list query.
+   *
+   * Для кожного року читається тільки:
+   *
+   * finalQualifications/{year}/teams/{teamId}
+   */
+  const YEAR_LOOKBACK = 2;
+  const YEAR_LOOKAHEAD = 2;
+
   // =========================================================
   // FIREBASE
   // =========================================================
@@ -85,12 +107,9 @@
   // =========================================================
 
   let currentUser = null;
-
   let currentTeamId = "";
 
   /*
-   * Поточна qualification:
-   *
    * {
    *   year,
    *   teamId,
@@ -100,22 +119,12 @@
    */
   let activeQualification = null;
 
-  /*
-   * Listener конкретного
-   * qualification документа.
-   */
-  let unsubscribeQualification =
-    null;
+  let unsubscribeQualification = null;
 
-  /*
-   * Захист від подвійного
-   * натискання кнопки.
-   */
   let declining = false;
 
   /*
-   * Захист від старих
-   * асинхронних refresh().
+   * Захист від старих async refresh().
    */
   let refreshRequestId = 0;
 
@@ -136,14 +145,9 @@
   }
 
   function sleep(ms) {
-    return new Promise(
-      resolve => {
-        setTimeout(
-          resolve,
-          ms
-        );
-      }
-    );
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
   }
 
   function isValidYear(value) {
@@ -159,6 +163,20 @@
       .serverTimestamp();
   }
 
+  function addYear(
+    target,
+    value
+  ) {
+    const year =
+      normalize(value);
+
+    if (
+      isValidYear(year)
+    ) {
+      target.add(year);
+    }
+  }
+
   // =========================================================
   // FIREBASE READY
   // =========================================================
@@ -170,8 +188,7 @@
       Date.now();
 
     while (
-      Date.now() -
-        startedAt <
+      Date.now() - startedAt <
       maxMs
     ) {
       if (
@@ -188,6 +205,211 @@
     throw new Error(
       "Firebase не готовий."
     );
+  }
+
+  // =========================================================
+  // SEASON YEAR
+  // =========================================================
+
+  /*
+   * Формуємо невеликий список
+   * можливих сезонів БЕЗ читання
+   * списку finalQualifications.
+   *
+   * Спочатку додаємо роки,
+   * які сторінка може вже знати.
+   *
+   * Потім календарний рік
+   * та сусідні роки.
+   */
+  function getCandidateYears() {
+    const years =
+      new Set();
+
+    // -----------------------------------------
+    // 1. Явні глобальні значення
+    // -----------------------------------------
+
+    addYear(
+      years,
+      window.SC_SEASON_YEAR
+    );
+
+    addYear(
+      years,
+      window.seasonYear
+    );
+
+    addYear(
+      years,
+      window.currentSeasonYear
+    );
+
+    addYear(
+      years,
+      window.CURRENT_SEASON_YEAR
+    );
+
+    // -----------------------------------------
+    // 2. Можливі state/API інших модулів
+    // -----------------------------------------
+
+    try {
+      const state =
+        window.SC_REGISTRATION &&
+        typeof window.SC_REGISTRATION.getState ===
+          "function"
+          ? window.SC_REGISTRATION.getState()
+          : null;
+
+      if (state) {
+        addYear(
+          years,
+          state.seasonYear
+        );
+
+        addYear(
+          years,
+          state.year
+        );
+      }
+
+    } catch (error) {
+      console.warn(
+        LOG,
+        "SC_REGISTRATION.getState:",
+        error
+      );
+    }
+
+    try {
+      const state =
+        window.SC_FINAL_QUALIFICATION &&
+        typeof window.SC_FINAL_QUALIFICATION.getState ===
+          "function"
+          ? window.SC_FINAL_QUALIFICATION.getState()
+          : null;
+
+      if (state) {
+        addYear(
+          years,
+          state.seasonYear
+        );
+
+        addYear(
+          years,
+          state.year
+        );
+      }
+
+    } catch (error) {
+      console.warn(
+        LOG,
+        "SC_FINAL_QUALIFICATION.getState:",
+        error
+      );
+    }
+
+    // -----------------------------------------
+    // 3. DOM
+    // -----------------------------------------
+
+    const possibleElements = [
+      document.getElementById(
+        "seasonYear"
+      ),
+      document.getElementById(
+        "year"
+      ),
+      document.querySelector(
+        "[data-season-year]"
+      )
+    ];
+
+    for (
+      const element of
+      possibleElements
+    ) {
+      if (!element) {
+        continue;
+      }
+
+      addYear(
+        years,
+        element.value
+      );
+
+      addYear(
+        years,
+        element.dataset
+          ?.seasonYear
+      );
+
+      /*
+       * textContent використовуємо
+       * тільки якщо там рівно YYYY.
+       */
+      const text =
+        normalize(
+          element.textContent
+        );
+
+      if (
+        isValidYear(text)
+      ) {
+        addYear(
+          years,
+          text
+        );
+      }
+    }
+
+    // -----------------------------------------
+    // 4. Календарний рік
+    // -----------------------------------------
+
+    const currentYear =
+      new Date().getFullYear();
+
+    addYear(
+      years,
+      currentYear
+    );
+
+    for (
+      let offset = 1;
+      offset <= YEAR_LOOKBACK;
+      offset += 1
+    ) {
+      addYear(
+        years,
+        currentYear - offset
+      );
+    }
+
+    for (
+      let offset = 1;
+      offset <= YEAR_LOOKAHEAD;
+      offset += 1
+    ) {
+      addYear(
+        years,
+        currentYear + offset
+      );
+    }
+
+    /*
+     * Найновіший сезон
+     * перевіряємо першим.
+     */
+    return Array
+      .from(years)
+      .filter(isValidYear)
+      .sort(
+        (a, b) =>
+          Number(b) -
+          Number(a)
+      );
   }
 
   // =========================================================
@@ -216,8 +438,7 @@
 
     /*
      * Якщо це не сторінка
-     * реєстрації — нічого
-     * не створюємо.
+     * реєстрації — UI не створюємо.
      */
     if (
       !eventOptions &&
@@ -253,7 +474,6 @@
       "rgba(127,29,29,.12)";
 
     box.innerHTML = `
-
       <div
         style="
           display:flex;
@@ -263,7 +483,6 @@
           margin-bottom:8px;
         "
       >
-
         <div
           style="
             font-weight:900;
@@ -287,7 +506,6 @@
         >
           FINAL
         </span>
-
       </div>
 
       <div
@@ -331,13 +549,8 @@
           line-height:1.4;
         "
       ></div>
-
     `;
 
-    /*
-     * Вставляємо одразу
-     * після списку етапів.
-     */
     if (
       eventOptions &&
       eventOptions.parentNode
@@ -349,9 +562,7 @@
         );
 
     } else if (form) {
-      form.appendChild(
-        box
-      );
+      form.appendChild(box);
     }
 
     const button =
@@ -409,10 +620,6 @@
         data.status
       );
 
-    /*
-     * Кнопка існує тільки
-     * для invited.
-     */
     if (
       status !==
       DECLINABLE_STATUS
@@ -445,8 +652,7 @@
 
     const rank =
       Number(
-        data.rank ||
-        0
+        data.rank || 0
       );
 
     const year =
@@ -476,9 +682,7 @@
     }
 
     if (msg) {
-      msg.textContent =
-        "";
-
+      msg.textContent = "";
       msg.style.display =
         "none";
     }
@@ -518,12 +722,9 @@
       normalize(text);
 
     if (!value) {
-      msg.textContent =
-        "";
-
+      msg.textContent = "";
       msg.style.display =
         "none";
-
       return;
     }
 
@@ -605,9 +806,7 @@
         .collection(
           USERS_COLLECTION
         )
-        .doc(
-          user.uid
-        )
+        .doc(user.uid)
         .get();
 
     if (!snapshot.exists) {
@@ -624,7 +823,7 @@
   }
 
   // =========================================================
-  // QUALIFICATION VALIDATION
+  // VALIDATION
   // =========================================================
 
   function qualificationMatchesTeam(
@@ -637,9 +836,9 @@
       );
 
     /*
-     * Старі записи могли
-     * не мати teamId всередині,
-     * бо teamId уже є ID документа.
+     * teamId може бути відсутній
+     * у старих документах,
+     * оскільки teamId вже є ID документа.
      */
     if (!storedTeamId) {
       return true;
@@ -661,9 +860,8 @@
       );
 
     /*
-     * Аналогічно:
-     * старий запис може
-     * не мати seasonYear.
+     * seasonYear може бути
+     * відсутній у старих документах.
      */
     if (!storedYear) {
       return true;
@@ -687,40 +885,28 @@
     }
 
     /*
-     * Беремо список сезонів:
+     * ВАЖЛИВО:
      *
-     * finalQualifications/2026
-     * finalQualifications/2027
-     * ...
+     * Тут НЕМАЄ:
+     *
+     * db.collection(
+     *   "finalQualifications"
+     * ).get()
+     *
+     * Тобто звичайному користувачу
+     * НЕ потрібен list-доступ
+     * до finalQualifications.
      */
-    const seasonsSnapshot =
-      await db
-        .collection(
-          QUALIFICATIONS_COLLECTION
-        )
-        .get();
 
     const years =
-      seasonsSnapshot.docs
-        .map(
-          doc =>
-            normalize(
-              doc.id
-            )
-        )
-        .filter(
-          isValidYear
-        )
-        .sort(
-          (a, b) =>
-            Number(b) -
-            Number(a)
-        );
+      getCandidateYears();
 
-    /*
-     * Новіший сезон
-     * перевіряється першим.
-     */
+    console.info(
+      LOG,
+      "checking seasons:",
+      years
+    );
+
     for (
       const year of years
     ) {
@@ -783,10 +969,6 @@
             data.status
           );
 
-        /*
-         * Нам потрібен тільки
-         * активний invitation.
-         */
         if (
           status !==
           DECLINABLE_STATUS
@@ -796,9 +978,7 @@
 
         return {
           year,
-
           teamId,
-
           ref,
 
           data: {
@@ -808,10 +988,38 @@
         };
 
       } catch (error) {
+        const code =
+          clean(
+            error?.code
+          );
+
+        /*
+         * Відсутність доступу до
+         * конкретного сезону не повинна
+         * ламати перевірку інших років.
+         */
+        if (
+          code.includes(
+            "permission"
+          ) ||
+          code.includes(
+            "denied"
+          )
+        ) {
+          console.warn(
+            LOG,
+            "qualification permission:",
+            year,
+            error
+          );
+
+          continue;
+        }
+
         console.warn(
           LOG,
-          year,
           "qualification read:",
+          year,
           error
         );
       }
@@ -832,7 +1040,13 @@
     ) {
       try {
         unsubscribeQualification();
-      } catch {}
+      } catch (error) {
+        console.warn(
+          LOG,
+          "unsubscribe:",
+          error
+        );
+      }
     }
 
     unsubscribeQualification =
@@ -860,11 +1074,20 @@
       qualification.ref
         .onSnapshot(
           snapshot => {
-            /*
-             * Документ видалено.
-             */
             if (!snapshot.exists) {
               hideBox();
+
+              dispatchQualificationChanged({
+                seasonYear:
+                  expectedYear,
+
+                teamId:
+                  expectedTeamId,
+
+                status:
+                  "missing"
+              });
+
               return;
             }
 
@@ -872,10 +1095,6 @@
               snapshot.data() ||
               {};
 
-            /*
-             * Захист від
-             * невідповідності.
-             */
             if (
               !qualificationMatchesTeam(
                 data,
@@ -892,7 +1111,6 @@
               );
 
               hideBox();
-
               return;
             }
 
@@ -901,21 +1119,12 @@
                 data.status
               );
 
-            /*
-             * Як тільки status
-             * перестає бути invited,
-             * кнопку прибираємо.
-             */
             if (
               status !==
               DECLINABLE_STATUS
             ) {
               hideBox();
 
-              /*
-               * Повідомляємо
-               * register_firebase.js.
-               */
               dispatchQualificationChanged({
                 seasonYear:
                   expectedYear,
@@ -989,25 +1198,30 @@
       ++refreshRequestId;
 
     clearQualificationListener();
-
     hideBox();
 
     if (
-      !currentUser ||
+      !currentUser?.uid ||
       !currentTeamId
     ) {
       return;
     }
 
+    const expectedUid =
+      currentUser.uid;
+
+    const expectedTeamId =
+      currentTeamId;
+
     try {
       const qualification =
         await findInvitedQualification(
-          currentTeamId
+          expectedTeamId
         );
 
       /*
-       * Поки Firestore відповідав,
-       * auth міг уже змінитися.
+       * Старий refresh уже
+       * не має права змінювати UI.
        */
       if (
         requestId !==
@@ -1016,20 +1230,26 @@
         return;
       }
 
+      /*
+       * Auth міг змінитися,
+       * поки працював Firestore.
+       */
       if (
-        !qualification
+        !currentUser ||
+        currentUser.uid !==
+          expectedUid
       ) {
         return;
       }
 
-      /*
-       * Перевіряємо, що команда
-       * все ще та сама.
-       */
       if (
-        qualification.teamId !==
-        currentTeamId
+        currentTeamId !==
+        expectedTeamId
       ) {
+        return;
+      }
+
+      if (!qualification) {
         return;
       }
 
@@ -1063,19 +1283,22 @@
     }
 
     /*
-     * Робимо локальну копію.
-     *
-     * Це важливо:
-     * listener може змінити
-     * activeQualification під час
-     * виконання транзакції.
+     * Локальна копія потрібна,
+     * тому що listener може
+     * змінити activeQualification.
      */
     const qualification =
       activeQualification;
 
+    const user =
+      currentUser;
+
+    const teamId =
+      currentTeamId;
+
     if (
-      !currentUser?.uid ||
-      !currentTeamId ||
+      !user?.uid ||
+      !teamId ||
       !qualification?.ref
     ) {
       setBoxMessage(
@@ -1087,7 +1310,7 @@
 
     if (
       qualification.teamId !==
-      currentTeamId
+      teamId
     ) {
       setBoxMessage(
         "Кваліфікація належить іншій команді."
@@ -1115,7 +1338,7 @@
 
     const confirmed =
       window.confirm(
-        "Ви дійсно хочете відмовитися від участі у Фіналі?\n\nПісля відмови ваше місце може перейти наступній команді з резерву.\n\nЦю дію не слід виконувати випадково."
+        "Ви дійсно хочете відмовитися від участі у Фіналі?\n\nПісля відмови ваше місце може перейти наступній команді з резерву."
       );
 
     if (!confirmed) {
@@ -1125,7 +1348,6 @@
     declining = true;
 
     setButtonLoading(true);
-
     setBoxMessage("");
 
     try {
@@ -1133,14 +1355,8 @@
         qualification.ref;
 
       const uid =
-        currentUser.uid;
+        user.uid;
 
-      /*
-       * Транзакція:
-       *
-       * ще раз читаємо документ
-       * безпосередньо перед update.
-       */
       await db.runTransaction(
         async transaction => {
           const snapshot =
@@ -1164,13 +1380,36 @@
             );
 
           // ===============================================
+          // USER/AUTH CHECK
+          // ===============================================
+
+          if (
+            !auth.currentUser ||
+            auth.currentUser.uid !==
+              uid
+          ) {
+            throw new Error(
+              "Сесія користувача змінилася. Оновіть сторінку."
+            );
+          }
+
+          if (
+            currentTeamId !==
+            teamId
+          ) {
+            throw new Error(
+              "Команда користувача змінилася. Оновіть сторінку."
+            );
+          }
+
+          // ===============================================
           // TEAM CHECK
           // ===============================================
 
           if (
             !qualificationMatchesTeam(
               data,
-              currentTeamId
+              teamId
             )
           ) {
             throw new Error(
@@ -1238,7 +1477,10 @@
           // ===============================================
 
           /*
-           * НЕ чіпаємо:
+           * ЗМІНЮЄМО ТІЛЬКИ
+           * поля відмови.
+           *
+           * НЕ змінюємо:
            *
            * rank
            * ratingPoints
@@ -1249,9 +1491,6 @@
            * seasonYear
            * teamId
            * teamName
-           *
-           * Вони належать
-           * qualification manager.
            */
           transaction.update(
             qualificationRef,
@@ -1275,9 +1514,6 @@
         }
       );
 
-      /*
-       * Транзакція успішна.
-       */
       console.info(
         LOG,
         "team declined final:",
@@ -1285,27 +1521,20 @@
           seasonYear:
             expectedYear,
 
-          teamId:
-            currentTeamId,
+          teamId,
 
-          uid:
-            currentUser.uid
+          uid
         }
       );
 
       /*
-       * Listener може вже
-       * приховати box.
-       *
-       * Тому повідомляємо
-       * також глобально.
+       * Сповіщаємо інші модулі.
        */
       dispatchQualificationChanged({
         seasonYear:
           expectedYear,
 
-        teamId:
-          currentTeamId,
+        teamId,
 
         status:
           "declined"
@@ -1313,16 +1542,15 @@
 
       /*
        * Якщо register_firebase.js
-       * має public refresh API —
-       * використовуємо його.
+       * має refresh API —
+       * попросимо його оновитися.
        *
-       * Якщо немає —
-       * нічого не ламається.
+       * Якщо API немає —
+       * помилки не буде.
        */
       try {
         if (
-          window
-            .SC_REGISTRATION &&
+          window.SC_REGISTRATION &&
           typeof window
             .SC_REGISTRATION
             .refresh ===
@@ -1332,6 +1560,7 @@
             .SC_REGISTRATION
             .refresh();
         }
+
       } catch (error) {
         console.warn(
           LOG,
@@ -1341,7 +1570,8 @@
       }
 
       /*
-       * Прибираємо кнопку.
+       * Після успішної відмови
+       * кнопка більше не потрібна.
        */
       hideBox();
 
@@ -1371,7 +1601,7 @@
         )
       ) {
         setBoxMessage(
-          "Firestore не дозволив відмову. Потрібно додати правило для finalQualifications."
+          "Firestore не дозволив відмову. Перевірте правило update для finalQualifications/{year}/teams/{teamId}."
         );
 
       } else {
@@ -1396,13 +1626,12 @@
     auth.onAuthStateChanged(
       async user => {
         /*
-         * Скасовуємо логічно
-         * всі попередні refresh.
+         * Інвалідуємо всі
+         * старі refresh().
          */
         ++refreshRequestId;
 
         clearQualificationListener();
-
         hideBox();
 
         currentUser =
@@ -1423,6 +1652,9 @@
           return;
         }
 
+        const expectedUid =
+          user.uid;
+
         try {
           const teamId =
             await loadTeamId(
@@ -1430,17 +1662,19 @@
             );
 
           /*
-           * Поки читали users/{uid},
-           * користувач міг вийти
-           * або змінитися.
+           * Поки читали profile,
+           * auth міг змінитися.
            */
           if (
             !auth.currentUser ||
             auth.currentUser.uid !==
-              user.uid
+              expectedUid
           ) {
             return;
           }
+
+          currentUser =
+            auth.currentUser;
 
           currentTeamId =
             teamId;
@@ -1468,23 +1702,73 @@
   }
 
   // =========================================================
+  // OTHER MODULE EVENTS
+  // =========================================================
+
+  /*
+   * Якщо інший модуль повідомив,
+   * що qualification змінилася,
+   * перечитуємо стан.
+   *
+   * Ігноруємо власний declined event,
+   * бо після нього ми вже ховаємо box.
+   */
+  window.addEventListener(
+    "sc:finalQualificationChanged",
+    event => {
+      const detail =
+        event?.detail ||
+        {};
+
+      const teamId =
+        normalize(
+          detail.teamId
+        );
+
+      const status =
+        clean(
+          detail.status
+        );
+
+      if (
+        !currentTeamId ||
+        (
+          teamId &&
+          teamId !==
+            currentTeamId
+        )
+      ) {
+        return;
+      }
+
+      if (
+        status ===
+        "declined"
+      ) {
+        return;
+      }
+
+      refresh().catch(
+        error => {
+          console.warn(
+            LOG,
+            "event refresh:",
+            error
+          );
+        }
+      );
+    }
+  );
+
+  // =========================================================
   // PUBLIC API
   // =========================================================
 
   window.SC_FINAL_DECLINE = {
-
-    /*
-     * Можна вручну:
-     *
-     * await SC_FINAL_DECLINE.refresh()
-     */
     refresh,
 
-    /*
-     * Debug:
-     *
-     * SC_FINAL_DECLINE.getState()
-     */
+    getCandidateYears,
+
     getState() {
       return {
         uid:
@@ -1497,6 +1781,9 @@
           null,
 
         declining,
+
+        candidateYears:
+          getCandidateYears(),
 
         qualification:
           activeQualification
@@ -1543,17 +1830,8 @@
       };
     },
 
-    /*
-     * Для debug.
-     *
-     * Сам decline напряму
-     * навмисно НЕ експортуємо.
-     *
-     * Користувач має пройти
-     * через кнопку + confirm.
-     */
     version:
-      "1.0.0"
+      "1.1.0"
   };
 
   // =========================================================
@@ -1584,18 +1862,27 @@
       }
 
       /*
-       * Створюємо контейнер UI.
+       * Створюємо UI-контейнер.
        */
       getOrCreateBox();
 
       /*
-       * Запускаємо auth.
+       * Запускаємо auth listener.
        */
       subscribeAuth();
 
       console.info(
         LOG,
-        "ready"
+        "ready",
+        {
+          version:
+            window
+              .SC_FINAL_DECLINE
+              .version,
+
+          candidateYears:
+            getCandidateYears()
+        }
       );
 
     } catch (error) {

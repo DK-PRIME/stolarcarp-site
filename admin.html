@@ -508,17 +508,32 @@
   </main>
 
   <!-- ============================================
-       FIREBASE
+       FIREBASE SDK
        ============================================ -->
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script src="assets/js/firebase-init.js"></script>
+  <!-- ============================================
+       FIREBASE INIT
+       ============================================ -->
 
-  <!-- Основна логіка адмінки -->
-  <script src="assets/js/admin.js?v=20260801"></script>
+  <script src="assets/js/firebase-init.js?v=20260813"></script>
+
+  <!-- ============================================
+       FINAL QUALIFICATION MANAGER
+       ВАЖЛИВО:
+       має бути ПІСЛЯ firebase-init.js
+       ============================================ -->
+
+  <script src="assets/js/final_qualification.js?v=20260813"></script>
+
+  <!-- ============================================
+       ОСНОВНА ЛОГІКА АДМІНКИ
+       ============================================ -->
+
+  <script src="assets/js/admin.js?v=20260813"></script>
 
 </body>
 </html>

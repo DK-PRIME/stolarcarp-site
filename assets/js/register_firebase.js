@@ -14,6 +14,7 @@
 // ✅ Pending / Open / Closed
 // ✅ Finished stages hidden
 // ✅ Payment UI
+// ✅ Payment visible BEFORE registration opens
 // ✅ Season + one-off competitions
 //
 // =========================================================
@@ -29,32 +30,14 @@
 // finalQualifications/2026/teams/TEAM_ID
 // finalQualifications/2027/teams/TEAM_ID
 //
-// Документ команди:
-//
-// {
-//   seasonYear: "2026",
-//   competitionId: "season-2026",
-//   stageId: "final",
-//   teamId: "...",
-//   teamName: "...",
-//   rank: 1,
-//   status: "invited"
-// }
-//
 // status:
-// invited | reserve | declined | confirmed
 //
-// Для final:
+// invited   -> можна подати заявку
+// reserve   -> резерв
+// declined  -> відмова
+// confirmed -> підтверджено
 //
-// • invited   -> можна подати заявку;
-// • reserve   -> очікує своєї черги;
-// • declined  -> доступ закритий;
-// • confirmed -> участь уже підтверджена;
-// • документа немає -> доступу немає;
-//
-// Сезони НЕ змішуються.
-// 2026 читає тільки finalQualifications/2026.
-// 2027 читає тільки finalQualifications/2027.
+// Сезони не змішуються.
 //
 // =========================================================
 
@@ -65,102 +48,65 @@
   // FIREBASE
   // =========================================================
 
-  const auth =
-    window.scAuth;
-
-  const db =
-    window.scDb;
-
-  const fb =
-    window.firebase;
+  const auth = window.scAuth;
+  const db = window.scDb;
+  const fb = window.firebase;
 
   // =========================================================
   // DOM
   // =========================================================
 
   const form =
-    document.getElementById(
-      "regForm"
-    );
+    document.getElementById("regForm");
 
   const eventOptionsEl =
-    document.getElementById(
-      "eventOptions"
-    );
+    document.getElementById("eventOptions");
 
   const msgEl =
-    document.getElementById(
-      "msg"
-    );
+    document.getElementById("msg");
 
   const submitBtn =
-    document.getElementById(
-      "submitBtn"
-    );
+    document.getElementById("submitBtn");
 
   const spinnerEl =
-    document.getElementById(
-      "spinner"
-    );
+    document.getElementById("spinner");
 
   const hpInput =
-    document.getElementById(
-      "hp"
-    );
+    document.getElementById("hp");
 
   const profileSummary =
-    document.getElementById(
-      "profileSummary"
-    );
+    document.getElementById("profileSummary");
 
   const rulesChk =
-    document.getElementById(
-      "rules"
-    );
+    document.getElementById("rules");
 
   const copyPayBtn =
-    document.getElementById(
-      "copyCard"
-    );
+    document.getElementById("copyCard");
 
   const payBoxEl =
-    document.getElementById(
-      "cardNum"
-    );
+    document.getElementById("cardNum");
 
   const payAmountEl =
-    document.getElementById(
-      "payAmount"
-    );
+    document.getElementById("payAmount");
 
   const payCurrEl =
-    document.getElementById(
-      "payCurrency"
-    );
+    document.getElementById("payCurrency");
 
   const payDetailsEl =
-    document.getElementById(
-      "payDetails"
-    );
+    document.getElementById("payDetails");
 
   // =========================================================
   // FIREBASE CHECK
   // =========================================================
 
-  if (
-    !auth ||
-    !db ||
-    !fb
-  ) {
-
+  if (!auth || !db || !fb) {
     if (eventOptionsEl) {
       eventOptionsEl.innerHTML =
         '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
     }
 
     if (submitBtn) {
-      submitBtn.disabled =
-        true;
+      submitBtn.disabled = true;
     }
 
     return;
@@ -170,8 +116,16 @@
   // SETTINGS
   // =========================================================
 
+  /*
+   * v9:
+   *
+   * спеціально міняємо ключ,
+   * щоб старий localStorage cache
+   * не залишив payment дані
+   * від попередньої версії JS.
+   */
   const COMP_CACHE_KEY =
-    "sc_competitions_cache_v8_final_qualifications";
+    "sc_competitions_cache_v9_final_qualifications_payment";
 
   const TEAM_CACHE_PREFIX =
     "sc_team_cache_";
@@ -189,71 +143,38 @@
   // STATE
   // =========================================================
 
-  let currentUser =
-    null;
+  let currentUser = null;
+  let profile = null;
 
-  let profile =
-    null;
+  let lastItems = [];
 
-  let lastItems =
-    [];
+  let nearestUpcomingValue = null;
 
-  let nearestUpcomingValue =
-    null;
-
-  let activePayCopyText =
-    "";
+  let activePayCopyText = "";
 
   /*
-   * key:
-   *
    * competitionId||stageId
    */
   const finalAccessByEvent =
     new Map();
 
-  let finalAccessRequestId =
-    0;
+  let finalAccessRequestId = 0;
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  function escapeHtml(
-    value
-  ) {
-    return String(
-      value ?? ""
-    )
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#39;"
-      );
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
-  function firstDefined(
-    ...values
-  ) {
-    for (
-      const value of values
-    ) {
-
+  function firstDefined(...values) {
+    for (const value of values) {
       if (
         value !== undefined &&
         value !== null &&
@@ -266,20 +187,15 @@
     return null;
   }
 
-  function normalize(
-    value
-  ) {
+  function normalize(value) {
     return String(
       value ?? ""
     ).trim();
   }
 
-  function normalizeLower(
-    value
-  ) {
-    return normalize(
-      value
-    ).toLowerCase();
+  function normalizeLower(value) {
+    return normalize(value)
+      .toLowerCase();
   }
 
   function setMsg(
@@ -300,18 +216,13 @@
 
     if (text) {
       msgEl.classList.add(
-        ok
-          ? "ok"
-          : "err"
+        ok ? "ok" : "err"
       );
     }
   }
 
-  function setLoading(
-    value
-  ) {
+  function setLoading(value) {
     if (spinnerEl) {
-
       spinnerEl.classList.toggle(
         "spinner--on",
         Boolean(value)
@@ -321,9 +232,7 @@
     refreshSubmitState();
   }
 
-  function fmtDate(
-    date
-  ) {
+  function fmtDate(date) {
     if (!date) {
       return "—";
     }
@@ -331,21 +240,14 @@
     return date.toLocaleDateString(
       "uk-UA",
       {
-        day:
-          "2-digit",
-
-        month:
-          "2-digit",
-
-        year:
-          "numeric"
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
       }
     );
   }
 
-  function normalizeMoney(
-    value
-  ) {
+  function normalizeMoney(value) {
     if (value === 0) {
       return 0;
     }
@@ -362,17 +264,49 @@
       Number(
         String(value)
           .trim()
-          .replace(
-            ",",
-            "."
-          )
+          .replace(",", ".")
       );
 
-    return Number.isFinite(
-      number
-    )
+    return Number.isFinite(number)
       ? number
       : null;
+  }
+
+  function normalizeBoolean(value) {
+    if (value === true) {
+      return true;
+    }
+
+    if (value === false) {
+      return false;
+    }
+
+    if (
+      value === 1 ||
+      value === "1"
+    ) {
+      return true;
+    }
+
+    if (
+      value === 0 ||
+      value === "0"
+    ) {
+      return false;
+    }
+
+    const text =
+      normalizeLower(value);
+
+    if (
+      text === "true" ||
+      text === "yes" ||
+      text === "on"
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   // =========================================================
@@ -384,9 +318,7 @@
     endOfDay = false
   ) {
     const match =
-      String(
-        value || ""
-      )
+      String(value || "")
         .trim()
         .match(
           /^(\d{4})-(\d{2})-(\d{2})$/
@@ -397,19 +329,13 @@
     }
 
     const year =
-      Number(
-        match[1]
-      );
+      Number(match[1]);
 
     const month =
-      Number(
-        match[2]
-      );
+      Number(match[2]);
 
     const day =
-      Number(
-        match[3]
-      );
+      Number(match[3]);
 
     if (
       !year ||
@@ -456,14 +382,11 @@
     }
 
     const endOfDay =
-      options.endOfDay ===
-      true;
+      options.endOfDay === true;
 
     try {
-
       if (
-        value instanceof
-        Date
+        value instanceof Date
       ) {
         return Number.isFinite(
           value.getTime()
@@ -476,7 +399,6 @@
         typeof value ===
         "string"
       ) {
-
         const raw =
           value.trim();
 
@@ -491,9 +413,7 @@
         }
 
         const parsed =
-          new Date(
-            raw
-          );
+          new Date(raw);
 
         return Number.isFinite(
           parsed.getTime()
@@ -505,9 +425,8 @@
       if (
         value &&
         typeof value.toDate ===
-        "function"
+          "function"
       ) {
-
         const parsed =
           value.toDate();
 
@@ -521,13 +440,11 @@
       if (
         value &&
         typeof value.seconds ===
-        "number"
+          "number"
       ) {
-
         const parsed =
           new Date(
-            value.seconds *
-            1000
+            value.seconds * 1000
           );
 
         return Number.isFinite(
@@ -541,11 +458,8 @@
         typeof value ===
         "number"
       ) {
-
         const parsed =
-          new Date(
-            value
-          );
+          new Date(value);
 
         return Number.isFinite(
           parsed.getTime()
@@ -554,10 +468,7 @@
           : null;
       }
 
-    } catch (
-      error
-    ) {
-
+    } catch (error) {
       console.warn(
         "[Registration] toDateMaybe:",
         error
@@ -587,7 +498,6 @@
 
     const startAt =
       firstDefined(
-
         event?.startAt,
         event?.startDate,
 
@@ -603,7 +513,6 @@
 
     const endAt =
       firstDefined(
-
         event?.finishAt,
         event?.finishDate,
 
@@ -647,7 +556,6 @@
 
     const regOpenAt =
       firstDefined(
-
         event?.regOpenAt,
         event?.regOpenDate,
         event?.regOpen,
@@ -671,7 +579,6 @@
 
     const regCloseAt =
       firstDefined(
-
         event?.regCloseAt,
         event?.regCloseDate,
         event?.regClose,
@@ -705,7 +612,6 @@
   ) {
     return String(
       firstDefined(
-
         event?.registration?.mode,
         event?.regMode,
 
@@ -725,7 +631,6 @@
   ) {
     const value =
       firstDefined(
-
         event?.manualOpen,
         event?.registration?.manualOpen,
 
@@ -735,7 +640,7 @@
         false
       );
 
-    return value === true;
+    return normalizeBoolean(value);
   }
 
   // =========================================================
@@ -752,23 +657,36 @@
     const compPayment =
       competition?.payment || {};
 
+    /*
+     * Підтримуємо:
+     *
+     * payEnabled
+     * paymentEnabled
+     * payment.enabled
+     *
+     * як на event,
+     * так і на competition.
+     */
     const enabledRaw =
       firstDefined(
-
         eventPayment.enabled,
+
         event?.payEnabled,
         event?.paymentEnabled,
 
         compPayment.enabled,
+
         competition?.payEnabled,
         competition?.paymentEnabled,
 
         false
       );
 
+    /*
+     * Сума.
+     */
     const priceRaw =
       firstDefined(
-
         eventPayment.price,
         eventPayment.amount,
 
@@ -790,15 +708,19 @@
         null
       );
 
+    /*
+     * Валюта.
+     */
     const currency =
       String(
         firstDefined(
-
           eventPayment.currency,
+
           event?.currency,
           event?.paymentCurrency,
 
           compPayment.currency,
+
           competition?.currency,
           competition?.paymentCurrency,
 
@@ -808,11 +730,17 @@
         .trim()
         .toUpperCase();
 
+    /*
+     * Реквізити.
+     *
+     * Зокрема підтримується
+     * саме твоє поле payDetails.
+     */
     const details =
       String(
         firstDefined(
-
           eventPayment.details,
+          eventPayment.payDetails,
 
           event?.payDetails,
           event?.paymentDetails,
@@ -823,6 +751,7 @@
           event?.cardNumber,
 
           compPayment.details,
+          compPayment.payDetails,
 
           competition?.payDetails,
           competition?.paymentDetails,
@@ -834,20 +763,38 @@
 
           ""
         )
-      )
-        .trim();
+      ).trim();
+
+    const price =
+      normalizeMoney(
+        priceRaw
+      );
+
+    /*
+     * Основний прапорець —
+     * payEnabled.
+     *
+     * Але для старих competitions:
+     * якщо є price / details,
+     * оплату також вважаємо заданою.
+     *
+     * Це захищає старі змагання,
+     * створені до поточної схеми.
+     */
+    const payEnabled =
+      normalizeBoolean(
+        enabledRaw
+      ) ||
+      (
+        price !== null &&
+        price > 0
+      ) ||
+      Boolean(details);
 
     return {
-      payEnabled:
-        enabledRaw === true,
-
-      price:
-        normalizeMoney(
-          priceRaw
-        ),
-
+      payEnabled,
+      price,
       currency,
-
       payDetails:
         details
     };
@@ -864,19 +811,15 @@
     const type =
       String(
         firstDefined(
-
           event?.entryType,
           competition?.entryType,
-
           "team"
         )
-      )
-        .toLowerCase();
+      ).toLowerCase();
 
-    return type ===
-      "solo"
-        ? "solo"
-        : "team";
+    return type === "solo"
+      ? "solo"
+      : "team";
   }
 
   // =========================================================
@@ -912,18 +855,10 @@
     return (
       event?.isFinal === true ||
       rawKey === "final" ||
-      rawKey.includes(
-        "final"
-      ) ||
-      rawKey.includes(
-        "фінал"
-      ) ||
-      rawText.includes(
-        "final"
-      ) ||
-      rawText.includes(
-        "фінал"
-      )
+      rawKey.includes("final") ||
+      rawKey.includes("фінал") ||
+      rawText.includes("final") ||
+      rawText.includes("фінал")
     );
   }
 
@@ -993,12 +928,8 @@
       .doc(
         seasonYear
       )
-      .collection(
-        "teams"
-      )
-      .doc(
-        teamId
-      );
+      .collection("teams")
+      .doc(teamId);
   }
 
   // =========================================================
@@ -1018,8 +949,7 @@
     }
 
     return (
-      nowLocal()
-        .getTime() >
+      nowLocal().getTime() >
       endAt.getTime() +
         FINISHED_HIDE_GRACE_MS
     );
@@ -1032,9 +962,7 @@
       items || []
     ).filter(
       item =>
-        !isFinishedEvent(
-          item
-        )
+        !isFinishedEvent(item)
     );
   }
 
@@ -1046,9 +974,7 @@
     }
 
     if (
-      isFinishedEvent(
-        item
-      )
+      isFinishedEvent(item)
     ) {
       return "closed";
     }
@@ -1066,8 +992,7 @@
       toDateMaybe(
         item.regOpenAt,
         {
-          endOfDay:
-            false
+          endOfDay: false
         }
       );
 
@@ -1075,8 +1000,7 @@
       toDateMaybe(
         item.regCloseAt,
         {
-          endOfDay:
-            true
+          endOfDay: true
         }
       );
 
@@ -1084,17 +1008,14 @@
       openAt &&
       closeAt
     ) {
-
       if (
-        now <
-        openAt
+        now < openAt
       ) {
         return "pending";
       }
 
       if (
-        now >
-        closeAt
+        now > closeAt
       ) {
         return "closed";
       }
@@ -1106,29 +1027,23 @@
       openAt &&
       !closeAt
     ) {
-
-      return now >=
-        openAt
-          ? "open"
-          : "pending";
+      return now >= openAt
+        ? "open"
+        : "pending";
     }
 
     if (
       !openAt &&
       closeAt
     ) {
-
-      return now <=
-        closeAt
-          ? "open"
-          : "closed";
+      return now <= closeAt
+        ? "open"
+        : "closed";
     }
 
     if (
-      mode ===
-        "manual" &&
-      item.manualOpen ===
-        true
+      mode === "manual" &&
+      item.manualOpen === true
     ) {
       return "open";
     }
@@ -1175,8 +1090,7 @@
       "main";
 
     if (
-      entryType ===
-      "solo"
+      entryType === "solo"
     ) {
       return (
         `${competitionId}__` +
@@ -1260,8 +1174,7 @@
         items || []
       ).filter(
         item =>
-          item.isFinal ===
-          true
+          item.isFinal === true
       );
 
     finalAccessByEvent.clear();
@@ -1276,10 +1189,8 @@
       !currentUser ||
       !profile
     ) {
-
       finalItems.forEach(
         item => {
-
           finalAccessByEvent.set(
             eventValue(item),
             emptyFinalAccess(
@@ -1295,10 +1206,8 @@
     if (
       !profile.teamId
     ) {
-
       finalItems.forEach(
         item => {
-
           finalAccessByEvent.set(
             eventValue(item),
             emptyFinalAccess(
@@ -1314,7 +1223,6 @@
     await Promise.all(
       finalItems.map(
         async item => {
-
           const competitionId =
             normalize(
               item.compId
@@ -1323,8 +1231,7 @@
           const stageId =
             normalize(
               item.stageKey
-            ) ||
-            "final";
+            ) || "final";
 
           const seasonYear =
             getSeasonYearFromItem(
@@ -1338,20 +1245,16 @@
             buildRegDocId({
               competitionId,
               stageId,
-
               entryType:
                 "team",
-
               uid:
                 profile.uid,
-
               teamId
             });
 
           if (
             !seasonYear
           ) {
-
             finalAccessByEvent.set(
               eventValue(item),
               emptyFinalAccess(
@@ -1371,7 +1274,6 @@
           if (
             !qualificationRef
           ) {
-
             finalAccessByEvent.set(
               eventValue(item),
               emptyFinalAccess(
@@ -1383,13 +1285,11 @@
           }
 
           try {
-
             const [
               qualificationSnap,
               registrationSnap
             ] =
               await Promise.all([
-
                 qualificationRef.get(),
 
                 db
@@ -1478,12 +1378,6 @@
                 qualificationExists:
                   qualificationValid,
 
-                /*
-                 * Alias залишений,
-                 * щоб решта UI
-                 * не потребувала
-                 * окремої перебудови.
-                 */
                 inviteExists:
                   qualificationValid,
 
@@ -1505,9 +1399,7 @@
                     : 0,
 
                 seasonYear,
-
                 competitionId,
-
                 stageId,
 
                 registrationExists:
@@ -1526,10 +1418,7 @@
               }
             );
 
-          } catch (
-            error
-          ) {
-
+          } catch (error) {
             console.warn(
               "[Registration] final qualification access:",
               seasonYear,
@@ -1564,9 +1453,7 @@
     }
 
     const access =
-      getFinalAccess(
-        item
-      );
+      getFinalAccess(item);
 
     if (!access) {
       return false;
@@ -1594,26 +1481,20 @@
     }
 
     if (
-      isFinishedEvent(
-        item
-      )
+      isFinishedEvent(item)
     ) {
       return false;
     }
 
     if (
-      !isOpenWindow(
-        item
-      )
+      !isOpenWindow(item)
     ) {
       return false;
     }
 
     if (
       item.isFinal &&
-      !canRegisterFinal(
-        item
-      )
+      !canRegisterFinal(item)
     ) {
       return false;
     }
@@ -1633,10 +1514,17 @@
         text || ""
       ).trim();
 
+    /*
+     * 16 цифр:
+     *
+     * 4441111066640446
+     *
+     * ->
+     *
+     * 4441 1110 6664 0446
+     */
     if (
-      /^\d{16}$/.test(
-        raw
-      )
+      /^\d{16}$/.test(raw)
     ) {
       return raw.replace(
         /(\d{4})(?=\d)/g,
@@ -1662,9 +1550,7 @@
     }
 
     if (!item) {
-
-      activePayCopyText =
-        "";
+      activePayCopyText = "";
 
       if (payAmountEl) {
         payAmountEl.textContent =
@@ -1690,8 +1576,7 @@
     }
 
     const payEnabled =
-      item.payEnabled ===
-      true;
+      item.payEnabled === true;
 
     const price =
       normalizeMoney(
@@ -1711,9 +1596,8 @@
       ).trim();
 
     if (!payEnabled) {
-
       activePayCopyText =
-        "Оплата не потрібна для цього етапу.";
+        "";
 
       if (payAmountEl) {
         payAmountEl.textContent =
@@ -1741,16 +1625,18 @@
     const amountText =
       price === null
         ? "—"
-        : String(
-            price
-          );
+        : String(price);
 
     const detailsText =
       details ||
       "Реквізити не задані адміністратором.";
 
+    /*
+     * Копіюємо оригінальні реквізити,
+     * без доданих пробілів.
+     */
     activePayCopyText =
-      detailsText;
+      details;
 
     if (payAmountEl) {
       payAmountEl.textContent =
@@ -1764,7 +1650,9 @@
 
     if (payDetailsEl) {
       payDetailsEl.textContent =
-        detailsText;
+        formatCardLikeText(
+          detailsText
+        );
     }
 
     if (payBoxEl) {
@@ -1775,12 +1663,153 @@
     }
   }
 
-  if (copyPayBtn) {
+  /*
+   * Визначає, оплату якого етапу
+   * показувати, якщо користувач
+   * ще нічого не вибрав.
+   *
+   * Це і є ключове виправлення.
+   */
+  function getDefaultPaymentItem(
+    items
+  ) {
+    const visibleItems =
+      visibleItemsOnly(
+        items
+      );
 
+    if (
+      !visibleItems.length
+    ) {
+      return null;
+    }
+
+    /*
+     * 1. Якщо radio вже вибраний —
+     * показуємо саме його.
+     */
+    const picked =
+      document.querySelector(
+        'input[name="stagePick"]:checked'
+      );
+
+    if (picked) {
+      const selected =
+        visibleItems.find(
+          item =>
+            eventValue(item) ===
+            String(picked.value)
+        );
+
+      if (selected) {
+        return selected;
+      }
+    }
+
+    /*
+     * 2. Відкритий зараз.
+     */
+    const openItem =
+      visibleItems.find(
+        item =>
+          getRegistrationState(
+            item
+          ) === "open"
+      );
+
+    if (openItem) {
+      return openItem;
+    }
+
+    /*
+     * 3. Найближчий майбутній
+     * старт реєстрації.
+     */
+    const pending =
+      visibleItems
+        .filter(
+          item =>
+            getRegistrationState(
+              item
+            ) ===
+            "pending"
+        )
+        .map(
+          item => ({
+            item,
+
+            openAt:
+              toDateMaybe(
+                item.regOpenAt,
+                {
+                  endOfDay: false
+                }
+              )
+          })
+        )
+        .filter(
+          row =>
+            row.openAt
+        )
+        .sort(
+          (a, b) =>
+            a.openAt.getTime() -
+            b.openAt.getTime()
+        );
+
+    if (
+      pending.length
+    ) {
+      return pending[0].item;
+    }
+
+    /*
+     * 4. Якщо дати не задані,
+     * але є оплата —
+     * все одно показуємо її.
+     */
+    const paymentConfigured =
+      visibleItems.find(
+        item =>
+          item.payEnabled ===
+            true ||
+          normalizeMoney(
+            item.price
+          ) !== null ||
+          normalize(
+            item.payDetails
+          )
+      );
+
+    if (
+      paymentConfigured
+    ) {
+      return paymentConfigured;
+    }
+
+    /*
+     * 5. Останній fallback.
+     */
+    return (
+      visibleItems[0] ||
+      null
+    );
+  }
+
+  function refreshPaymentUI(
+    items = lastItems
+  ) {
+    setPayUIFromSelected(
+      getDefaultPaymentItem(
+        items
+      )
+    );
+  }
+
+  if (copyPayBtn) {
     copyPayBtn.addEventListener(
       "click",
       async () => {
-
         const text =
           String(
             activePayCopyText ||
@@ -1789,19 +1818,16 @@
 
         if (!text) {
           alert(
-            "Нема що копіювати."
+            "Нема реквізитів для копіювання."
           );
 
           return;
         }
 
         try {
-
           await navigator
             .clipboard
-            .writeText(
-              text
-            );
+            .writeText(text);
 
           const previousText =
             copyPayBtn.textContent;
@@ -1811,7 +1837,6 @@
 
           setTimeout(
             () => {
-
               copyPayBtn.textContent =
                 previousText ||
                 "Скопіювати реквізити";
@@ -1820,7 +1845,6 @@
           );
 
         } catch {
-
           alert(
             "Не вдалося скопіювати. Скопіюйте вручну."
           );
@@ -1836,8 +1860,7 @@
   function calcNearestUpcoming(
     items
   ) {
-    let best =
-      null;
+    let best = null;
 
     const now =
       nowLocal();
@@ -1846,13 +1869,11 @@
       items
     ).forEach(
       item => {
-
         const openAt =
           toDateMaybe(
             item.regOpenAt,
             {
-              endOfDay:
-                false
+              endOfDay: false
             }
           );
 
@@ -1864,14 +1885,11 @@
         }
 
         const value =
-          eventValue(
-            item
-          );
+          eventValue(item);
 
         if (
           !best ||
-          openAt <
-            best.openAt
+          openAt < best.openAt
         ) {
           best = {
             value,
@@ -1895,14 +1913,9 @@
     item,
     value
   ) {
-    if (
-      item?.isFinal
-    ) {
-
+    if (item?.isFinal) {
       const access =
-        getFinalAccess(
-          item
-        );
+        getFinalAccess(item);
 
       if (
         access?.registrationExists
@@ -1937,15 +1950,13 @@
       );
 
     if (
-      state ===
-      "open"
+      state === "open"
     ) {
       return "lamp-green";
     }
 
     if (
-      state ===
-        "pending" &&
+      state === "pending" &&
       nearestUpcomingValue &&
       value ===
         nearestUpcomingValue
@@ -1965,63 +1976,42 @@
       );
 
     if (
-      state ===
-      "open"
+      state === "open"
     ) {
       return {
         state,
-
-        short:
-          "Відкрито",
-
-        badge:
-          "ВІДКРИТО",
-
+        short: "Відкрито",
+        badge: "ВІДКРИТО",
         text:
           "Реєстрація відкрита ✅",
-
         badgeClass:
           "pill-b--open"
       };
     }
 
     if (
-      state ===
-      "pending"
+      state === "pending"
     ) {
       return {
         state,
-
-        short:
-          "Очікується",
-
-        badge:
-          "ОЧІКУЄТЬСЯ",
-
+        short: "Очікується",
+        badge: "ОЧІКУЄТЬСЯ",
         text:
           "Реєстрація ще не розпочалася.",
-
         badgeClass:
           "pill-b--closed"
       };
     }
 
     if (
-      state ===
-      "closed"
+      state === "closed"
     ) {
       return {
         state,
-
-        short:
-          "Закрито",
-
-        badge:
-          "ЗАКРИТО",
-
+        short: "Закрито",
+        badge: "ЗАКРИТО",
         text:
           "Реєстрація завершена.",
-
         badgeClass:
           "pill-b--closed"
       };
@@ -2029,16 +2019,12 @@
 
     return {
       state,
-
       short:
         "Недоступно",
-
       badge:
         "НЕДОСТУПНО",
-
       text:
         "Дати реєстрації не налаштовані.",
-
       badgeClass:
         "pill-b--closed"
     };
@@ -2048,9 +2034,7 @@
     item
   ) {
     const access =
-      getFinalAccess(
-        item
-      );
+      getFinalAccess(item);
 
     const normalState =
       getRegistrationState(
@@ -2126,7 +2110,6 @@
     if (
       access?.registrationExists
     ) {
-
       const status =
         access.registrationStatus;
 
@@ -2218,7 +2201,6 @@
       access?.inviteStatus ===
       "invited"
     ) {
-
       const rankText =
         access.rank > 0
           ? ` Ваше місце у рейтингу — №${access.rank}.`
@@ -2421,9 +2403,7 @@
   function getStatusUI(
     item
   ) {
-    if (
-      item?.isFinal
-    ) {
+    if (item?.isFinal) {
       return getFinalStatusUI(
         item
       );
@@ -2450,7 +2430,6 @@
       );
 
     if (loading) {
-
       submitBtn.disabled =
         true;
 
@@ -2464,8 +2443,7 @@
 
     const rulesOk =
       rulesChk
-        ? rulesChk.checked ===
-          true
+        ? rulesChk.checked === true
         : true;
 
     const selectedValue =
@@ -2486,17 +2464,11 @@
 
     const canSubmit =
       Boolean(
-
         currentUser &&
-
         profile &&
-
         picked &&
-
         rulesOk &&
-
         selectedItem &&
-
         canSubmitItem(
           selectedItem
         )
@@ -2515,10 +2487,7 @@
   ) {
     return (
       TEAM_CACHE_PREFIX +
-      String(
-        teamId ||
-        ""
-      )
+      String(teamId || "")
     );
   }
 
@@ -2526,7 +2495,6 @@
     teamId
   ) {
     try {
-
       const raw =
         localStorage.getItem(
           getTeamCacheKey(
@@ -2539,9 +2507,7 @@
       }
 
       const object =
-        JSON.parse(
-          raw
-        );
+        JSON.parse(raw);
 
       if (
         !object ||
@@ -2564,7 +2530,6 @@
       );
 
     } catch {
-
       return null;
     }
   }
@@ -2574,7 +2539,6 @@
     name
   ) {
     try {
-
       localStorage.setItem(
         getTeamCacheKey(
           teamId
@@ -2611,12 +2575,8 @@
 
     const teamSnap =
       await db
-        .collection(
-          "teams"
-        )
-        .doc(
-          teamId
-        )
+        .collection("teams")
+        .doc(teamId)
         .get();
 
     const name =
@@ -2649,12 +2609,8 @@
   ) {
     const userSnap =
       await db
-        .collection(
-          "users"
-        )
-        .doc(
-          user.uid
-        )
+        .collection("users")
+        .doc(user.uid)
         .get();
 
     if (
@@ -2719,7 +2675,6 @@
     if (
       profileSummary
     ) {
-
       profileSummary.innerHTML =
         `Команда: <b>${
           escapeHtml(
@@ -2763,8 +2718,7 @@
     }
 
     return (
-      typeof value ===
-      "string"
+      typeof value === "string"
     )
       ? value
       : null;
@@ -2794,22 +2748,37 @@
         item.regCloseAt ||
         null,
 
+      payEnabled:
+        item.payEnabled === true,
+
+      price:
+        normalizeMoney(
+          item.price
+        ),
+
+      currency:
+        String(
+          item.currency ||
+          "UAH"
+        ).toUpperCase(),
+
+      payDetails:
+        String(
+          item.payDetails ||
+          ""
+        ).trim(),
+
       isFinal:
-        item.isFinal ===
-        true
+        item.isFinal === true
     };
   }
 
   function clearOldCompetitionCaches() {
     try {
-
       Object
-        .keys(
-          localStorage
-        )
+        .keys(localStorage)
         .forEach(
           key => {
-
             if (
               key.startsWith(
                 "sc_competitions_cache_"
@@ -2818,9 +2787,7 @@
                 COMP_CACHE_KEY
             ) {
               localStorage
-                .removeItem(
-                  key
-                );
+                .removeItem(key);
             }
           }
         );
@@ -2830,7 +2797,6 @@
 
   async function tryRenderCompetitionsFromCache() {
     try {
-
       const raw =
         localStorage.getItem(
           COMP_CACHE_KEY
@@ -2841,9 +2807,7 @@
       }
 
       const object =
-        JSON.parse(
-          raw
-        );
+        JSON.parse(raw);
 
       if (
         !object ||
@@ -2862,16 +2826,15 @@
           )
         );
 
-      lastItems =
-        items;
+      lastItems = items;
 
       calcNearestUpcoming(
         items
       );
 
       /*
-       * Кваліфікацію фіналу
-       * ніколи не беремо з cache.
+       * Кваліфікація фіналу
+       * завжди читається з Firestore.
        */
       await loadFinalAccess(
         items
@@ -2883,10 +2846,7 @@
 
       refreshSubmitState();
 
-      if (
-        eventOptionsEl
-      ) {
-
+      if (eventOptionsEl) {
         const hint =
           document.createElement(
             "div"
@@ -2908,7 +2868,11 @@
 
       return true;
 
-    } catch {
+    } catch (error) {
+      console.warn(
+        "[Registration] cache:",
+        error
+      );
 
       return false;
     }
@@ -2918,7 +2882,6 @@
     items
   ) {
     try {
-
       const packed =
         visibleItemsOnly(
           items
@@ -3012,20 +2975,15 @@
     eventIndex = 0
   }) {
     const c =
-      competition ||
-      {};
+      competition || {};
 
     const ev =
-      event ||
-      {};
+      event || {};
 
     const brand =
       c.brand ||
       "STOLAR CARP";
 
-    /*
-     * Рік може бути number або string.
-     */
     const yearRaw =
       firstDefined(
         ev.year,
@@ -3111,11 +3069,8 @@
 
     return {
       compId,
-
       brand,
-
       year,
-
       compTitle,
 
       stageKey:
@@ -3159,7 +3114,6 @@
         ),
 
       regOpenAt,
-
       regCloseAt,
 
       payEnabled:
@@ -3201,7 +3155,6 @@
     }
 
     try {
-
       const snapshot =
         await db
           .collection(
@@ -3209,12 +3162,10 @@
           )
           .get();
 
-      const items =
-        [];
+      const items = [];
 
       snapshot.forEach(
         docSnap => {
-
           const competition =
             docSnap.data() ||
             {};
@@ -3229,16 +3180,12 @@
               ? competition.events
               : [];
 
-          if (
-            events.length
-          ) {
-
+          if (events.length) {
             events.forEach(
               (
                 event,
                 index
               ) => {
-
                 items.push(
                   buildCompetitionItem({
                     competition,
@@ -3252,7 +3199,6 @@
             );
 
           } else {
-
             items.push(
               buildCompetitionItem({
                 competition,
@@ -3269,11 +3215,7 @@
         );
 
       visibleItems.sort(
-        (
-          a,
-          b
-        ) => {
-
+        (a, b) => {
           const timeA =
             a.startAt
               ? a.startAt
@@ -3287,12 +3229,10 @@
               : Number.MAX_SAFE_INTEGER;
 
           if (
-            timeA !==
-            timeB
+            timeA !== timeB
           ) {
             return (
-              timeA -
-              timeB
+              timeA - timeB
             );
           }
 
@@ -3330,10 +3270,7 @@
         visibleItems
       );
 
-    } catch (
-      error
-    ) {
-
+    } catch (error) {
       console.error(
         "[Registration] loadCompetitionsFresh:",
         error
@@ -3343,7 +3280,6 @@
         eventOptionsEl &&
         !lastItems.length
       ) {
-
         eventOptionsEl.innerHTML =
           '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання. Перевірте Firestore Rules та доступ.</p>';
       }
@@ -3368,12 +3304,29 @@
       return;
     }
 
+    /*
+     * ВАЖЛИВО:
+     *
+     * зберігаємо вибір ДО
+     * eventOptionsEl.innerHTML = "".
+     *
+     * Інакше будь-який повторний render
+     * скидав radio.
+     */
+    const previousPicked =
+      document.querySelector(
+        'input[name="stagePick"]:checked'
+      );
+
+    const previousPickedValue =
+      previousPicked
+        ? String(
+            previousPicked.value
+          )
+        : "";
+
     eventOptionsEl.innerHTML =
       "";
-
-    setPayUIFromSelected(
-      null
-    );
 
     const visibleItems =
       visibleItemsOnly(
@@ -3383,9 +3336,12 @@
     if (
       !visibleItems.length
     ) {
-
       eventOptionsEl.innerHTML =
         '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
+
+      setPayUIFromSelected(
+        null
+      );
 
       if (submitBtn) {
         submitBtn.disabled =
@@ -3397,21 +3353,14 @@
 
     visibleItems.forEach(
       item => {
-
         const open =
-          canSubmitItem(
-            item
-          );
+          canSubmitItem(item);
 
         const status =
-          getStatusUI(
-            item
-          );
+          getStatusUI(item);
 
         const value =
-          eventValue(
-            item
-          );
+          eventValue(item);
 
         const lamp =
           statusLamp(
@@ -3457,8 +3406,7 @@
           toDateMaybe(
             item.regOpenAt,
             {
-              endOfDay:
-                false
+              endOfDay: false
             }
           );
 
@@ -3466,8 +3414,7 @@
           toDateMaybe(
             item.regCloseAt,
             {
-              endOfDay:
-                true
+              endOfDay: true
             }
           );
 
@@ -3475,13 +3422,9 @@
           regOpen ||
           regClose
             ? `Реєстрація: ${
-                fmtDate(
-                  regOpen
-                )
+                fmtDate(regOpen)
               } — ${
-                fmtDate(
-                  regClose
-                )
+                fmtDate(regClose)
               }`
             : "Дати реєстрації не задані";
 
@@ -3516,6 +3459,16 @@
             ? "pointer"
             : "default";
 
+        /*
+         * Якщо до render цей етап
+         * був вибраний і все ще
+         * доступний — вибір зберігаємо.
+         */
+        const shouldRemainChecked =
+          open &&
+          previousPickedValue ===
+            value;
+
         label.innerHTML = `
           <input
             type="radio"
@@ -3527,6 +3480,11 @@
               open
                 ? ""
                 : "disabled"
+            }
+            ${
+              shouldRemainChecked
+                ? "checked"
+                : ""
             }
             style="
               flex:0 0 auto;
@@ -3697,6 +3655,23 @@
         );
       }
     );
+
+    /*
+     * КЛЮЧОВЕ ВИПРАВЛЕННЯ.
+     *
+     * Більше НЕ робимо:
+     *
+     * setPayUIFromSelected(null)
+     *
+     * після кожного render.
+     *
+     * Тепер навіть якщо radio disabled
+     * через майбутню дату,
+     * сума і картка все одно видно.
+     */
+    refreshPaymentUI(
+      visibleItems
+    );
   }
 
   // =========================================================
@@ -3706,7 +3681,6 @@
   document.addEventListener(
     "change",
     event => {
-
       const target =
         event.target;
 
@@ -3718,7 +3692,6 @@
         target.name ===
         "stagePick"
       ) {
-
         const picked =
           document.querySelector(
             'input[name="stagePick"]:checked'
@@ -3740,19 +3713,23 @@
               )
             : null;
 
+        /*
+         * Коли користувач реально
+         * вибирає інший етап —
+         * payment UI перемикається
+         * саме на нього.
+         */
         setPayUIFromSelected(
           selectedItem ||
-          null
+          getDefaultPaymentItem(
+            lastItems
+          )
         );
 
-        if (
-          selectedItem
-        ) {
-
+        if (selectedItem) {
           if (
             selectedItem.isFinal
           ) {
-
             const finalStatus =
               getFinalStatusUI(
                 selectedItem
@@ -3763,69 +3740,55 @@
                 selectedItem
               )
             ) {
-
               setMsg(
                 finalStatus.text,
                 false
               );
 
             } else {
-
               const state =
                 getRegistrationState(
                   selectedItem
                 );
 
               if (
-                state ===
-                "pending"
+                state === "pending"
               ) {
-
                 setMsg(
                   "Ви маєте право участі у фіналі, але реєстрація ще не розпочалася.",
                   false
                 );
 
               } else if (
-                state ===
-                "closed"
+                state === "closed"
               ) {
-
                 setMsg(
                   "Ви маєте право участі у фіналі, але реєстрація вже завершена.",
                   false
                 );
 
               } else {
-
-                setMsg(
-                  ""
-                );
+                setMsg("");
               }
             }
 
           } else {
-
             const state =
               getRegistrationState(
                 selectedItem
               );
 
             if (
-              state ===
-              "pending"
+              state === "pending"
             ) {
-
               setMsg(
                 "Реєстрація на це змагання ще не розпочалася.",
                 false
               );
 
             } else if (
-              state ===
-              "closed"
+              state === "closed"
             ) {
-
               setMsg(
                 "Реєстрація на це змагання вже завершена.",
                 false
@@ -3835,17 +3798,13 @@
               state ===
               "unavailable"
             ) {
-
               setMsg(
                 "Дати реєстрації для цього змагання не налаштовані.",
                 false
               );
 
             } else {
-
-              setMsg(
-                ""
-              );
+              setMsg("");
             }
           }
         }
@@ -3890,24 +3849,18 @@
 
   auth.onAuthStateChanged(
     async user => {
-
       currentUser =
-        user ||
-        null;
+        user || null;
 
-      profile =
-        null;
+      profile = null;
 
       finalAccessByEvent.clear();
 
-      setMsg(
-        ""
-      );
+      setMsg("");
 
       refreshSubmitState();
 
       if (!user) {
-
         if (submitBtn) {
           submitBtn.disabled =
             true;
@@ -3916,7 +3869,6 @@
         if (
           profileSummary
         ) {
-
           profileSummary.textContent =
             "Ви не залогінені. Зайдіть у «Мій кабінет» і поверніться сюди.";
         }
@@ -3938,7 +3890,6 @@
       }
 
       try {
-
         await loadProfile(
           user
         );
@@ -3953,10 +3904,7 @@
 
         refreshSubmitState();
 
-      } catch (
-        error
-      ) {
-
+      } catch (error) {
         console.error(
           "[Registration] profile:",
           error
@@ -3993,26 +3941,21 @@
   }) {
     return {
       uid:
-        uid ||
-        null,
+        uid || null,
 
       competitionId,
 
       stageId:
-        stageId ||
-        null,
+        stageId || null,
 
       entryType:
-        entryType ||
-        "team",
+        entryType || "team",
 
       teamId:
-        teamId ||
-        null,
+        teamId || null,
 
       teamName:
-        teamName ||
-        null,
+        teamName || null,
 
       status:
         status ||
@@ -4095,8 +4038,7 @@
     const stageId =
       normalize(
         selectedItem.stageKey
-      ) ||
-      "final";
+      ) || "final";
 
     const qualificationRef =
       getFinalQualificationRef(
@@ -4114,7 +4056,6 @@
 
     await db.runTransaction(
       async transaction => {
-
         const qualificationSnap =
           await transaction.get(
             qualificationRef
@@ -4201,7 +4142,6 @@
           qualificationStatus !==
           "invited"
         ) {
-
           if (
             qualificationStatus ===
             "reserve"
@@ -4251,8 +4191,7 @@
           registrationRef,
           payload,
           {
-            merge:
-              false
+            merge: false
           }
         );
       }
@@ -4264,18 +4203,15 @@
   // =========================================================
 
   if (form) {
-
     form.addEventListener(
       "submit",
       async event => {
-
         event.preventDefault();
 
         if (
           hpInput &&
           hpInput.value
         ) {
-
           setMsg(
             "Підозра на бота. Заявка не відправлена.",
             false
@@ -4288,7 +4224,6 @@
           !currentUser ||
           !profile
         ) {
-
           setMsg(
             "Увійдіть у акаунт.",
             false
@@ -4303,7 +4238,6 @@
           );
 
         if (!picked) {
-
           setMsg(
             "Оберіть змагання або етап.",
             false
@@ -4320,16 +4254,13 @@
         const selectedItem =
           lastItems.find(
             item =>
-              eventValue(
-                item
-              ) ===
+              eventValue(item) ===
               selectedValue
           );
 
         if (
           !selectedItem
         ) {
-
           setMsg(
             "Не знайдено вибране змагання.",
             false
@@ -4346,7 +4277,6 @@
             selectedItem
           )
         ) {
-
           setMsg(
             "Це змагання зараз недоступне для реєстрації.",
             false
@@ -4361,7 +4291,6 @@
             selectedItem
           )
         ) {
-
           const finalStatus =
             getFinalStatusUI(
               selectedItem
@@ -4379,7 +4308,6 @@
           rulesChk &&
           !rulesChk.checked
         ) {
-
           setMsg(
             "Підтвердіть ознайомлення з регламентом.",
             false
@@ -4408,14 +4336,11 @@
           "team";
 
         if (
-          entryType ===
-          "team"
+          entryType === "team"
         ) {
-
           if (
             !profile.teamId
           ) {
-
             setMsg(
               "Це командне змагання. Спочатку приєднайтесь до команди в «Мій кабінет».",
               false
@@ -4427,7 +4352,6 @@
           if (
             !profile.teamName
           ) {
-
             setMsg(
               "Не знайдено назву команди. Перевірте teams/{teamId}.name.",
               false
@@ -4491,9 +4415,7 @@
             .collection(
               "registrations"
             )
-            .doc(
-              docId
-            );
+            .doc(docId);
 
         const finalSeasonYear =
           selectedItem.isFinal
@@ -4509,32 +4431,27 @@
           competitionId,
 
           stageId:
-            stageId ||
-            null,
+            stageId || null,
 
           entryType,
 
           teamId:
-            entryType ===
-            "team"
+            entryType === "team"
               ? profile.teamId
               : null,
 
           teamName:
-            entryType ===
-            "team"
+            entryType === "team"
               ? profile.teamName
               : null,
 
           participantName:
-            entryType ===
-            "solo"
+            entryType === "solo"
               ? participantName
               : null,
 
           captain:
-            entryType ===
-            "team"
+            entryType === "team"
               ? profile.captain
               : participantName,
 
@@ -4554,17 +4471,12 @@
           payDetails:
             payment.payDetails,
 
-          /*
-           * Нова фінальна схема.
-           */
           finalQualification:
             selectedItem.isFinal ===
             true,
 
           /*
-           * Legacy flag залишаємо,
-           * поки інші сторінки
-           * можуть його використовувати.
+           * Legacy flag.
            */
           finalInvite:
             selectedItem.isFinal ===
@@ -4596,8 +4508,7 @@
               .serverTimestamp(),
 
           confirmedAt:
-            status ===
-            "confirmed"
+            status === "confirmed"
               ? fb.firestore
                   .FieldValue
                   .serverTimestamp()
@@ -4605,19 +4516,12 @@
         };
 
         try {
-
-          setLoading(
-            true
-          );
-
-          setMsg(
-            ""
-          );
+          setLoading(true);
+          setMsg("");
 
           if (
             selectedItem.isFinal
           ) {
-
             await createFinalRegistration({
               selectedItem,
               registrationRef,
@@ -4625,12 +4529,10 @@
             });
 
           } else {
-
             await registrationRef.set(
               payload,
               {
-                merge:
-                  false
+                merge: false
               }
             );
           }
@@ -4640,15 +4542,12 @@
           // =================================================
 
           try {
-
             const publicRef =
               db
                 .collection(
                   "public_participants"
                 )
-                .doc(
-                  docId
-                );
+                .doc(docId);
 
             const publicPayload =
               buildPublicPayload({
@@ -4662,14 +4561,12 @@
                 entryType,
 
                 teamId:
-                  entryType ===
-                  "team"
+                  entryType === "team"
                     ? profile.teamId
                     : null,
 
                 teamName:
-                  entryType ===
-                  "team"
+                  entryType === "team"
                     ? profile.teamName
                     : null,
 
@@ -4686,15 +4583,13 @@
             await publicRef.set(
               publicPayload,
               {
-                merge:
-                  false
+                merge: false
               }
             );
 
           } catch (
             mirrorError
           ) {
-
             console.warn(
               "[Registration] public_participants:",
               mirrorError
@@ -4708,7 +4603,6 @@
           if (
             selectedItem.isFinal
           ) {
-
             setMsg(
               payment.payEnabled
                 ? "Заявка на Фінал подана ✔ Очікується підтвердження оплати."
@@ -4717,7 +4611,6 @@
             );
 
           } else {
-
             setMsg(
               payment.payEnabled
                 ? "Заявка подана ✔ Підтвердження буде після перевірки оплати."
@@ -4726,37 +4619,38 @@
             );
           }
 
+          /*
+           * reset прибирає checked radio.
+           */
           form.reset();
 
-          setPayUIFromSelected(
-            null
-          );
-
           /*
-           * Після заявки у фінал
-           * перечитуємо саме
-           * finalQualifications
-           * відповідного сезону.
+           * Після фінальної заявки
+           * перечитуємо qualification
+           * та registration.
            */
           if (
             selectedItem.isFinal
           ) {
-
             await loadFinalAccess(
-              lastItems
-            );
-
-            renderItems(
               lastItems
             );
           }
 
+          /*
+           * Повторний render:
+           *
+           * - відновлює правильні статуси;
+           * - payment UI НЕ пропадає;
+           * - показує актуальний внесок.
+           */
+          renderItems(
+            lastItems
+          );
+
           refreshSubmitState();
 
-        } catch (
-          error
-        ) {
-
+        } catch (error) {
           console.error(
             "[Registration] submit:",
             error
@@ -4766,8 +4660,7 @@
             String(
               error?.code ||
               ""
-            )
-              .toLowerCase();
+            ).toLowerCase();
 
           const message =
             String(
@@ -4779,7 +4672,6 @@
             selectedItem.isFinal &&
             message
           ) {
-
             setMsg(
               message,
               false
@@ -4790,7 +4682,6 @@
               "permission"
             )
           ) {
-
             setMsg(
               selectedItem.isFinal
                 ? "Firebase не дозволив реєстрацію у фінал. Перевірте finalQualifications цього сезону та Firestore Rules."
@@ -4799,7 +4690,6 @@
             );
 
           } else {
-
             setMsg(
               `Помилка відправки заявки. (${
                 error?.code ||
@@ -4810,10 +4700,7 @@
           }
 
         } finally {
-
-          setLoading(
-            false
-          );
+          setLoading(false);
         }
       }
     );

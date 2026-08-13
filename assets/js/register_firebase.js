@@ -20,29 +20,20 @@
 // ФІНАЛ
 // =========================================================
 //
-// ФІНАЛ працює ІНАКШЕ.
+// Фінал працює через:
 //
-// Для final:
-// • реєстрація тільки за finalInvites;
-// • стороння команда не може зареєструватися;
-// • invited   -> можна подати заявку;
-// • reserve   -> очікує своєї черги;
-// • declined  -> доступ закритий;
-// • confirmed -> участь уже підтверджена;
-// • якщо invite немає -> доступу немає.
-//
-// finalInvites ID:
-//
-// {competitionId}__{stageId}__{teamId}
+// finalQualifications/{year}/teams/{teamId}
 //
 // Наприклад:
 //
-// season-2026__final__TEAM_ID
+// finalQualifications/2026/teams/TEAM_ID
+// finalQualifications/2027/teams/TEAM_ID
 //
-// Документ:
+// Документ команди:
 //
 // {
-//   competitionId: "...",
+//   seasonYear: "2026",
+//   competitionId: "season-2026",
 //   stageId: "final",
 //   teamId: "...",
 //   teamName: "...",
@@ -52,6 +43,18 @@
 //
 // status:
 // invited | reserve | declined | confirmed
+//
+// Для final:
+//
+// • invited   -> можна подати заявку;
+// • reserve   -> очікує своєї черги;
+// • declined  -> доступ закритий;
+// • confirmed -> участь уже підтверджена;
+// • документа немає -> доступу немає;
+//
+// Сезони НЕ змішуються.
+// 2026 читає тільки finalQualifications/2026.
+// 2027 читає тільки finalQualifications/2027.
 //
 // =========================================================
 
@@ -167,15 +170,8 @@
   // SETTINGS
   // =========================================================
 
-  /*
-   * Новий cache key.
-   *
-   * Старий кеш не використовуємо,
-   * щоб фінал не підтягнувся
-   * зі старої логіки.
-   */
   const COMP_CACHE_KEY =
-    "sc_competitions_cache_v7_final_invites";
+    "sc_competitions_cache_v8_final_qualifications";
 
   const TEAM_CACHE_PREFIX =
     "sc_team_cache_";
@@ -186,8 +182,8 @@
   const FINISHED_HIDE_GRACE_MS =
     24 * 60 * 60 * 1000;
 
-  const FINAL_INVITES_COLLECTION =
-    "finalInvites";
+  const FINAL_QUALIFICATIONS_COLLECTION =
+    "finalQualifications";
 
   // =========================================================
   // STATE
@@ -212,25 +208,10 @@
    * key:
    *
    * competitionId||stageId
-   *
-   * value:
-   *
-   * {
-   *   inviteExists,
-   *   inviteStatus,
-   *   rank,
-   *   registrationExists,
-   *   registrationStatus
-   * }
    */
   const finalAccessByEvent =
     new Map();
 
-  /*
-   * Захист від race-condition,
-   * коли auth / competitions
-   * завантажуються одночасно.
-   */
   let finalAccessRequestId =
     0;
 
@@ -290,8 +271,7 @@
   ) {
     return String(
       value ?? ""
-    )
-      .trim();
+    ).trim();
   }
 
   function normalizeLower(
@@ -948,6 +928,80 @@
   }
 
   // =========================================================
+  // SEASON YEAR
+  // =========================================================
+
+  function getSeasonYearFromItem(
+    item
+  ) {
+    const directYear =
+      normalize(
+        item?.year
+      );
+
+    if (
+      /^\d{4}$/.test(
+        directYear
+      )
+    ) {
+      return directYear;
+    }
+
+    const text =
+      normalize(
+        `${
+          item?.compId || ""
+        } ${
+          item?.compTitle || ""
+        } ${
+          item?.stageTitle || ""
+        }`
+      );
+
+    const match =
+      text.match(
+        /\b(20\d{2})\b/
+      );
+
+    if (match) {
+      return match[1];
+    }
+
+    return "";
+  }
+
+  function getFinalQualificationRef(
+    item,
+    teamId
+  ) {
+    const seasonYear =
+      getSeasonYearFromItem(
+        item
+      );
+
+    if (
+      !seasonYear ||
+      !teamId
+    ) {
+      return null;
+    }
+
+    return db
+      .collection(
+        FINAL_QUALIFICATIONS_COLLECTION
+      )
+      .doc(
+        seasonYear
+      )
+      .collection(
+        "teams"
+      )
+      .doc(
+        teamId
+      );
+  }
+
+  // =========================================================
   // EVENT STATE
   // =========================================================
 
@@ -1026,9 +1080,6 @@
         }
       );
 
-    /*
-     * Обидві дати.
-     */
     if (
       openAt &&
       closeAt
@@ -1051,9 +1102,6 @@
       return "open";
     }
 
-    /*
-     * Тільки open.
-     */
     if (
       openAt &&
       !closeAt
@@ -1065,9 +1113,6 @@
           : "pending";
     }
 
-    /*
-     * Тільки close.
-     */
     if (
       !openAt &&
       closeAt
@@ -1079,9 +1124,6 @@
           : "closed";
     }
 
-    /*
-     * Legacy manual.
-     */
     if (
       mode ===
         "manual" &&
@@ -1151,22 +1193,6 @@
   }
 
   // =========================================================
-  // FINAL INVITE ID
-  // =========================================================
-
-  function buildFinalInviteId(
-    competitionId,
-    stageId,
-    teamId
-  ) {
-    return (
-      `${competitionId}__` +
-      `${stageId || "final"}__` +
-      `${teamId}`
-    );
-  }
-
-  // =========================================================
   // FINAL ACCESS
   // =========================================================
 
@@ -1174,6 +1200,9 @@
     status = "not_invited"
   ) {
     return {
+      qualificationExists:
+        false,
+
       inviteExists:
         false,
 
@@ -1182,6 +1211,15 @@
 
       rank:
         0,
+
+      seasonYear:
+        "",
+
+      competitionId:
+        "",
+
+      stageId:
+        "",
 
       registrationExists:
         false,
@@ -1226,9 +1264,6 @@
           true
       );
 
-    /*
-     * Видаляємо старі дані.
-     */
     finalAccessByEvent.clear();
 
     if (
@@ -1237,9 +1272,6 @@
       return;
     }
 
-    /*
-     * Користувач ще не увійшов.
-     */
     if (
       !currentUser ||
       !profile
@@ -1260,10 +1292,6 @@
       return;
     }
 
-    /*
-     * Фінал командний.
-     * Без teamId право участі неможливо визначити.
-     */
     if (
       !profile.teamId
     ) {
@@ -1288,49 +1316,81 @@
         async item => {
 
           const competitionId =
-            item.compId;
+            normalize(
+              item.compId
+            );
 
           const stageId =
-            item.stageKey ||
+            normalize(
+              item.stageKey
+            ) ||
             "final";
+
+          const seasonYear =
+            getSeasonYearFromItem(
+              item
+            );
 
           const teamId =
             profile.teamId;
-
-          const inviteId =
-            buildFinalInviteId(
-              competitionId,
-              stageId,
-              teamId
-            );
 
           const registrationId =
             buildRegDocId({
               competitionId,
               stageId,
+
               entryType:
                 "team",
+
               uid:
                 profile.uid,
+
               teamId
             });
+
+          if (
+            !seasonYear
+          ) {
+
+            finalAccessByEvent.set(
+              eventValue(item),
+              emptyFinalAccess(
+                "season_missing"
+              )
+            );
+
+            return;
+          }
+
+          const qualificationRef =
+            getFinalQualificationRef(
+              item,
+              teamId
+            );
+
+          if (
+            !qualificationRef
+          ) {
+
+            finalAccessByEvent.set(
+              eventValue(item),
+              emptyFinalAccess(
+                "season_missing"
+              )
+            );
+
+            return;
+          }
 
           try {
 
             const [
-              inviteSnap,
+              qualificationSnap,
               registrationSnap
             ] =
               await Promise.all([
 
-                db
-                  .collection(
-                    FINAL_INVITES_COLLECTION
-                  )
-                  .doc(
-                    inviteId
-                  )
-                  .get(),
+                qualificationRef.get(),
 
                 db
                   .collection(
@@ -1342,11 +1402,6 @@
                   .get()
               ]);
 
-            /*
-             * Якщо за цей час прийшов
-             * новіший запит — старий результат
-             * ігноруємо.
-             */
             if (
               requestId !==
               finalAccessRequestId
@@ -1354,10 +1409,10 @@
               return;
             }
 
-            const inviteData =
-              inviteSnap.exists
+            const qualificationData =
+              qualificationSnap.exists
                 ? (
-                    inviteSnap.data() ||
+                    qualificationSnap.data() ||
                     {}
                   )
                 : {};
@@ -1370,26 +1425,90 @@
                   )
                 : {};
 
+            let qualificationValid =
+              qualificationSnap.exists;
+
+            if (
+              qualificationValid &&
+              qualificationData.teamId &&
+              normalize(
+                qualificationData.teamId
+              ) !== teamId
+            ) {
+              qualificationValid =
+                false;
+            }
+
+            if (
+              qualificationValid &&
+              qualificationData.seasonYear &&
+              normalize(
+                qualificationData.seasonYear
+              ) !== seasonYear
+            ) {
+              qualificationValid =
+                false;
+            }
+
+            if (
+              qualificationValid &&
+              qualificationData.competitionId &&
+              normalize(
+                qualificationData.competitionId
+              ) !== competitionId
+            ) {
+              qualificationValid =
+                false;
+            }
+
+            if (
+              qualificationValid &&
+              qualificationData.stageId &&
+              normalize(
+                qualificationData.stageId
+              ) !== stageId
+            ) {
+              qualificationValid =
+                false;
+            }
+
             finalAccessByEvent.set(
               eventValue(item),
               {
+                qualificationExists:
+                  qualificationValid,
+
+                /*
+                 * Alias залишений,
+                 * щоб решта UI
+                 * не потребувала
+                 * окремої перебудови.
+                 */
                 inviteExists:
-                  inviteSnap.exists,
+                  qualificationValid,
 
                 inviteStatus:
-                  inviteSnap.exists
+                  qualificationValid
                     ? normalizeLower(
-                        inviteData.status ||
-                        "invited"
+                        qualificationData.status ||
+                        "reserve"
                       )
                     : "not_invited",
 
                 rank:
-                  Number(
-                    inviteData.rank ||
-                    inviteData.place ||
-                    0
-                  ),
+                  qualificationValid
+                    ? Number(
+                        qualificationData.rank ||
+                        qualificationData.place ||
+                        0
+                      )
+                    : 0,
+
+                seasonYear,
+
+                competitionId,
+
+                stageId,
 
                 registrationExists:
                   registrationSnap.exists,
@@ -1403,7 +1522,7 @@
 
                 registrationId,
 
-                inviteId
+                qualificationRef
               }
             );
 
@@ -1412,9 +1531,10 @@
           ) {
 
             console.warn(
-              "[Registration] final access:",
-              item.compId,
-              item.stageKey,
+              "[Registration] final qualification access:",
+              seasonYear,
+              competitionId,
+              stageId,
               error
             );
 
@@ -1452,25 +1572,14 @@
       return false;
     }
 
-    /*
-     * Якщо заявка вже існує,
-     * повторно подавати не можна.
-     */
     if (
       access.registrationExists
     ) {
       return false;
     }
 
-    /*
-     * Тільки invited.
-     *
-     * reserve / declined /
-     * confirmed / not_invited —
-     * реєстрацію блокують.
-     */
     return (
-      access.inviteExists ===
+      access.qualificationExists ===
         true &&
       access.inviteStatus ===
         "invited"
@@ -1593,8 +1702,7 @@
       String(
         item.currency ||
         "UAH"
-      )
-        .toUpperCase();
+      ).toUpperCase();
 
     const details =
       String(
@@ -1787,9 +1895,6 @@
     item,
     value
   ) {
-    /*
-     * Фінал має власний статус.
-     */
     if (
       item?.isFinal
     ) {
@@ -1865,6 +1970,7 @@
     ) {
       return {
         state,
+
         short:
           "Відкрито",
 
@@ -1885,6 +1991,7 @@
     ) {
       return {
         state,
+
         short:
           "Очікується",
 
@@ -1905,6 +2012,7 @@
     ) {
       return {
         state,
+
         short:
           "Закрито",
 
@@ -1921,6 +2029,7 @@
 
     return {
       state,
+
       short:
         "Недоступно",
 
@@ -1948,9 +2057,6 @@
         item
       );
 
-    /*
-     * Ще не увійшов.
-     */
     if (
       access?.inviteStatus ===
       "login_required"
@@ -1963,7 +2069,7 @@
           "Фінал",
 
         badge:
-          "ЗА ЗАПРОШЕННЯМ",
+          "ЗА РЕЙТИНГОМ",
 
         text:
           "Увійдіть у акаунт, щоб перевірити право участі у фіналі.",
@@ -1973,9 +2079,6 @@
       };
     }
 
-    /*
-     * Немає команди.
-     */
     if (
       access?.inviteStatus ===
       "no_team"
@@ -1998,9 +2101,28 @@
       };
     }
 
-    /*
-     * Уже є registrations.
-     */
+    if (
+      access?.inviteStatus ===
+      "season_missing"
+    ) {
+      return {
+        state:
+          "final-season-missing",
+
+        short:
+          "Фінал",
+
+        badge:
+          "ПОМИЛКА СЕЗОНУ",
+
+        text:
+          "Для цього фіналу не визначено рік сезону. Перевірте year або seasonYear у competitions.",
+
+        badgeClass:
+          "pill-b--closed"
+      };
+    }
+
     if (
       access?.registrationExists
     ) {
@@ -2092,9 +2214,6 @@
       };
     }
 
-    /*
-     * TOP-18 або піднятий резерв.
-     */
     if (
       access?.inviteStatus ===
       "invited"
@@ -2114,7 +2233,7 @@
             "final-invited-pending",
 
           short:
-            "Запрошено",
+            "Фіналіст",
 
           badge:
             "ФІНАЛІСТ",
@@ -2158,7 +2277,7 @@
             "final-invited-open",
 
           short:
-            "Запрошено",
+            "Фіналіст",
 
           badge:
             "ФІНАЛІСТ",
@@ -2176,7 +2295,7 @@
           "final-invited-unavailable",
 
         short:
-          "Запрошено",
+          "Фіналіст",
 
         badge:
           "ФІНАЛІСТ",
@@ -2189,9 +2308,6 @@
       };
     }
 
-    /*
-     * Резерв.
-     */
     if (
       access?.inviteStatus ===
       "reserve"
@@ -2210,7 +2326,7 @@
 
         text:
           access.rank > 0
-            ? `Ваша команда зараз №${access.rank} у загальному рейтингу. Очікуйте запрошення, якщо звільниться місце у TOP-18.`
+            ? `Ваша команда зараз №${access.rank} у рейтингу сезону. Очікуйте, якщо звільниться місце у TOP-18.`
             : "Ваша команда перебуває у резерві. Очікуйте звільнення місця у фіналі.",
 
         badgeClass:
@@ -2218,9 +2334,6 @@
       };
     }
 
-    /*
-     * Відмова.
-     */
     if (
       access?.inviteStatus ===
       "declined"
@@ -2243,11 +2356,6 @@
       };
     }
 
-    /*
-     * invite confirmed,
-     * навіть якщо registrations
-     * ще не прочитався.
-     */
     if (
       access?.inviteStatus ===
       "confirmed"
@@ -2270,9 +2378,6 @@
       };
     }
 
-    /*
-     * Помилка читання finalInvites.
-     */
     if (
       access?.inviteStatus ===
       "error"
@@ -2288,17 +2393,13 @@
           "ПЕРЕВІРКА",
 
         text:
-          "Не вдалося перевірити право участі у фіналі.",
+          "Не вдалося перевірити фінальну кваліфікацію.",
 
         badgeClass:
           "pill-b--closed"
       };
     }
 
-    /*
-     * Команда не входить ні у TOP-18,
-     * ні в активний резерв.
-     */
     return {
       state:
         "final-not-invited",
@@ -2307,10 +2408,10 @@
         "Фінал",
 
       badge:
-        "ЗА ЗАПРОШЕННЯМ",
+        "ЗА РЕЙТИНГОМ",
 
       text:
-        "Реєстрація у фінал доступна тільки командам, які отримали запрошення за рейтингом.",
+        "Реєстрація у фінал доступна тільки командам, які отримали право участі за рейтингом сезону.",
 
       badgeClass:
         "pill-b--closed"
@@ -2693,12 +2794,9 @@
         item.regCloseAt ||
         null,
 
-      /*
-       * Явно відновлюємо
-       * final flag.
-       */
       isFinal:
-        item.isFinal === true
+        item.isFinal ===
+        true
     };
   }
 
@@ -2772,8 +2870,8 @@
       );
 
       /*
-       * finalInvites НІКОЛИ
-       * не беремо з cache.
+       * Кваліфікацію фіналу
+       * ніколи не беремо з cache.
        */
       await loadFinalAccess(
         items
@@ -2828,10 +2926,6 @@
           item => ({
             ...item,
 
-            /*
-             * Ніяких invite/status
-             * у кеш не записуємо.
-             */
             finalAccess:
               undefined,
 
@@ -2929,10 +3023,22 @@
       c.brand ||
       "STOLAR CARP";
 
+    /*
+     * Рік може бути number або string.
+     */
+    const yearRaw =
+      firstDefined(
+        ev.year,
+        ev.seasonYear,
+        c.year,
+        c.seasonYear,
+        ""
+      );
+
     const year =
-      c.year ||
-      c.seasonYear ||
-      "";
+      normalize(
+        yearRaw
+      );
 
     const compTitle =
       c.name ||
@@ -3021,11 +3127,6 @@
 
       stageTitle,
 
-      /*
-       * ГОЛОВНЕ:
-       * тільки final отримує
-       * спеціальну логіку.
-       */
       isFinal:
         finalEvent,
 
@@ -3215,11 +3316,6 @@
         visibleItems
       );
 
-      /*
-       * ПЕРЕД render перевіряємо,
-       * чи має поточна команда
-       * доступ до фіналу.
-       */
       await loadFinalAccess(
         visibleItems
       );
@@ -3302,13 +3398,6 @@
     visibleItems.forEach(
       item => {
 
-        /*
-         * Для звичайного етапу:
-         * open = дата.
-         *
-         * Для final:
-         * open = дата + invited.
-         */
         const open =
           canSubmitItem(
             item
@@ -3409,11 +3498,6 @@
               : " is-closed"
           );
 
-        /*
-         * Додатковий class,
-         * якщо захочемо оформити
-         * фінал окремо через CSS.
-         */
         if (
           item.isFinal
         ) {
@@ -3510,9 +3594,7 @@
                 "
               >
 
-                <span
-                  class="pill-b"
-                >
+                <span class="pill-b">
                   ${escapeHtml(
                     typeBadge
                   )}
@@ -3793,11 +3875,6 @@
 
   clearOldCompetitionCaches();
 
-  /*
-   * Кеш можна показати швидко,
-   * але finalInvites все одно
-   * читаємо живцем.
-   */
   tryRenderCompetitionsFromCache();
 
   setTimeout(
@@ -3866,10 +3943,6 @@
           user
         );
 
-        /*
-         * Після завантаження profile
-         * перевіряємо finalInvites.
-         */
         await loadFinalAccess(
           lastItems
         );
@@ -3915,7 +3988,8 @@
     teamId,
     teamName,
     status,
-    finalInvite = false
+    finalQualification = false,
+    seasonYear = null
   }) {
     return {
       uid:
@@ -3944,13 +4018,28 @@
         status ||
         "pending_payment",
 
-      finalInvite:
-        finalInvite ===
+      finalQualification:
+        finalQualification ===
         true,
 
+      /*
+       * Legacy compatibility.
+       */
+      finalInvite:
+        finalQualification ===
+        true,
+
+      seasonYear:
+        finalQualification
+          ? (
+              seasonYear ||
+              null
+            )
+          : null,
+
       source:
-        finalInvite
-          ? "final_invite_registration"
+        finalQualification
+          ? "final_qualification_registration"
           : "registration",
 
       createdAt:
@@ -3985,84 +4074,136 @@
       );
     }
 
+    const seasonYear =
+      getSeasonYearFromItem(
+        selectedItem
+      );
+
+    if (
+      !seasonYear
+    ) {
+      throw new Error(
+        "Для фіналу не визначено сезон."
+      );
+    }
+
     const competitionId =
-      selectedItem.compId;
+      normalize(
+        selectedItem.compId
+      );
 
     const stageId =
-      selectedItem.stageKey ||
+      normalize(
+        selectedItem.stageKey
+      ) ||
       "final";
 
-    const inviteId =
-      buildFinalInviteId(
-        competitionId,
-        stageId,
+    const qualificationRef =
+      getFinalQualificationRef(
+        selectedItem,
         profile.teamId
       );
 
-    const inviteRef =
-      db
-        .collection(
-          FINAL_INVITES_COLLECTION
-        )
-        .doc(
-          inviteId
-        );
+    if (
+      !qualificationRef
+    ) {
+      throw new Error(
+        "Не вдалося визначити фінальну кваліфікацію."
+      );
+    }
 
-    /*
-     * КРИТИЧНА ПЕРЕВІРКА.
-     *
-     * Не довіряємо тільки DOM.
-     *
-     * Перед створенням registrations
-     * знову читаємо finalInvites.
-     */
     await db.runTransaction(
       async transaction => {
 
-        const inviteSnap =
+        const qualificationSnap =
           await transaction.get(
-            inviteRef
+            qualificationRef
           );
 
         if (
-          !inviteSnap.exists
+          !qualificationSnap.exists
         ) {
           throw new Error(
-            "Ваша команда не має активного запрошення у фінал."
+            "Ваша команда не має права участі у цьому фіналі."
           );
         }
 
-        const invite =
-          inviteSnap.data() ||
+        const qualification =
+          qualificationSnap.data() ||
           {};
 
-        const inviteStatus =
+        const qualificationStatus =
           normalizeLower(
-            invite.status
+            qualification.status
           );
 
-        const inviteTeamId =
+        const qualificationTeamId =
           normalize(
-            invite.teamId
+            qualification.teamId
+          );
+
+        const qualificationCompetitionId =
+          normalize(
+            qualification.competitionId
+          );
+
+        const qualificationStageId =
+          normalize(
+            qualification.stageId
+          );
+
+        const qualificationSeason =
+          normalize(
+            qualification.seasonYear
           );
 
         if (
-          inviteTeamId &&
-          inviteTeamId !==
+          qualificationTeamId &&
+          qualificationTeamId !==
             profile.teamId
         ) {
           throw new Error(
-            "Запрошення належить іншій команді."
+            "Фінальна кваліфікація належить іншій команді."
           );
         }
 
         if (
-          inviteStatus !==
+          qualificationSeason &&
+          qualificationSeason !==
+            seasonYear
+        ) {
+          throw new Error(
+            "Фінальна кваліфікація належить іншому сезону."
+          );
+        }
+
+        if (
+          qualificationCompetitionId &&
+          qualificationCompetitionId !==
+            competitionId
+        ) {
+          throw new Error(
+            "Фінальна кваліфікація належить іншому змаганню."
+          );
+        }
+
+        if (
+          qualificationStageId &&
+          qualificationStageId !==
+            stageId
+        ) {
+          throw new Error(
+            "Фінальна кваліфікація належить іншому фіналу."
+          );
+        }
+
+        if (
+          qualificationStatus !==
           "invited"
         ) {
 
           if (
-            inviteStatus ===
+            qualificationStatus ===
             "reserve"
           ) {
             throw new Error(
@@ -4071,16 +4212,16 @@
           }
 
           if (
-            inviteStatus ===
+            qualificationStatus ===
             "declined"
           ) {
             throw new Error(
-              "Команда вже відмовилася від участі у фіналі."
+              "Команда відмовилася від участі у фіналі."
             );
           }
 
           if (
-            inviteStatus ===
+            qualificationStatus ===
             "confirmed"
           ) {
             throw new Error(
@@ -4089,14 +4230,10 @@
           }
 
           throw new Error(
-            "Запрошення у фінал зараз неактивне."
+            "Право участі у фіналі зараз неактивне."
           );
         }
 
-        /*
-         * Не дозволяємо випадково
-         * перезаписати існуючу заявку.
-         */
         const existingReg =
           await transaction.get(
             registrationRef
@@ -4110,17 +4247,6 @@
           );
         }
 
-        /*
-         * Створюємо registration.
-         *
-         * status invite поки НЕ міняємо.
-         *
-         * Якщо потрібна оплата:
-         * admin підтвердить payment.
-         *
-         * Якщо оплати немає:
-         * registration одразу confirmed.
-         */
         transaction.set(
           registrationRef,
           payload,
@@ -4145,10 +4271,6 @@
 
         event.preventDefault();
 
-        // -----------------------------------------------------
-        // BOT
-        // -----------------------------------------------------
-
         if (
           hpInput &&
           hpInput.value
@@ -4162,10 +4284,6 @@
           return;
         }
 
-        // -----------------------------------------------------
-        // AUTH
-        // -----------------------------------------------------
-
         if (
           !currentUser ||
           !profile
@@ -4178,10 +4296,6 @@
 
           return;
         }
-
-        // -----------------------------------------------------
-        // PICK
-        // -----------------------------------------------------
 
         const picked =
           document.querySelector(
@@ -4224,10 +4338,6 @@
           return;
         }
 
-        // -----------------------------------------------------
-        // DATE CHECK
-        // -----------------------------------------------------
-
         if (
           isFinishedEvent(
             selectedItem
@@ -4244,10 +4354,6 @@
 
           return;
         }
-
-        // -----------------------------------------------------
-        // FINAL CHECK — CLIENT
-        // -----------------------------------------------------
 
         if (
           selectedItem.isFinal &&
@@ -4269,10 +4375,6 @@
           return;
         }
 
-        // -----------------------------------------------------
-        // RULES CHECKBOX
-        // -----------------------------------------------------
-
         if (
           rulesChk &&
           !rulesChk.checked
@@ -4285,10 +4387,6 @@
 
           return;
         }
-
-        // -----------------------------------------------------
-        // IDs
-        // -----------------------------------------------------
 
         const [
           competitionId,
@@ -4308,10 +4406,6 @@
         const entryType =
           selectedItem.entryType ||
           "team";
-
-        // -----------------------------------------------------
-        // TEAM
-        // -----------------------------------------------------
 
         if (
           entryType ===
@@ -4351,10 +4445,6 @@
             ""
           ).trim();
 
-        // -----------------------------------------------------
-        // PAYMENT
-        // -----------------------------------------------------
-
         const payment = {
           payEnabled:
             selectedItem.payEnabled ===
@@ -4378,21 +4468,10 @@
             ).trim()
         };
 
-        /*
-         * З оплатою:
-         * pending_payment
-         *
-         * Без оплати:
-         * confirmed
-         */
         const status =
           payment.payEnabled
             ? "pending_payment"
             : "confirmed";
-
-        // -----------------------------------------------------
-        // DOC ID
-        // -----------------------------------------------------
 
         const docId =
           buildRegDocId({
@@ -4416,9 +4495,12 @@
               docId
             );
 
-        // -----------------------------------------------------
-        // PAYLOAD
-        // -----------------------------------------------------
+        const finalSeasonYear =
+          selectedItem.isFinal
+            ? getSeasonYearFromItem(
+                selectedItem
+              )
+            : null;
 
         const payload = {
           uid:
@@ -4473,21 +4555,29 @@
             payment.payDetails,
 
           /*
-           * Позначаємо фінал.
+           * Нова фінальна схема.
+           */
+          finalQualification:
+            selectedItem.isFinal ===
+            true,
+
+          /*
+           * Legacy flag залишаємо,
+           * поки інші сторінки
+           * можуть його використовувати.
            */
           finalInvite:
             selectedItem.isFinal ===
             true,
 
+          seasonYear:
+            finalSeasonYear,
+
           source:
             selectedItem.isFinal
-              ? "final_invite_registration"
+              ? "final_qualification_registration"
               : "registration",
 
-          /*
-           * Місце у рейтингу,
-           * якщо це фінал.
-           */
           finalQualificationRank:
             selectedItem.isFinal
               ? Number(
@@ -4514,10 +4604,6 @@
               : null
         };
 
-        // -----------------------------------------------------
-        // WRITE
-        // -----------------------------------------------------
-
         try {
 
           setLoading(
@@ -4528,17 +4614,6 @@
             ""
           );
 
-          /*
-           * ФІНАЛ:
-           *
-           * transaction:
-           *
-           * finalInvites ->
-           * verify invited ->
-           * verify team ->
-           * verify registration does not exist ->
-           * create registration.
-           */
           if (
             selectedItem.isFinal
           ) {
@@ -4551,10 +4626,6 @@
 
           } else {
 
-            /*
-             * ЗВИЧАЙНІ ЕТАПИ:
-             * стара поведінка.
-             */
             await registrationRef.set(
               payload,
               {
@@ -4564,9 +4635,9 @@
             );
           }
 
-          // ---------------------------------------------------
+          // =================================================
           // PUBLIC MIRROR
-          // ---------------------------------------------------
+          // =================================================
 
           try {
 
@@ -4604,9 +4675,12 @@
 
                 status,
 
-                finalInvite:
+                finalQualification:
                   selectedItem.isFinal ===
-                  true
+                  true,
+
+                seasonYear:
+                  finalSeasonYear
               });
 
             await publicRef.set(
@@ -4621,22 +4695,15 @@
             mirrorError
           ) {
 
-            /*
-             * Registration уже створений.
-             *
-             * Якщо rules не дозволили
-             * public mirror, не вважаємо
-             * основну заявку невдалою.
-             */
             console.warn(
               "[Registration] public_participants:",
               mirrorError
             );
           }
 
-          // ---------------------------------------------------
+          // =================================================
           // SUCCESS
-          // ---------------------------------------------------
+          // =================================================
 
           if (
             selectedItem.isFinal
@@ -4666,9 +4733,10 @@
           );
 
           /*
-           * Після фінальної заявки
-           * перечитуємо registrations
-           * та finalInvites.
+           * Після заявки у фінал
+           * перечитуємо саме
+           * finalQualifications
+           * відповідного сезону.
            */
           if (
             selectedItem.isFinal
@@ -4707,10 +4775,6 @@
               ""
             ).trim();
 
-          /*
-           * Наші зрозумілі помилки
-           * фінальної перевірки.
-           */
           if (
             selectedItem.isFinal &&
             message
@@ -4729,7 +4793,7 @@
 
             setMsg(
               selectedItem.isFinal
-                ? "Firebase не дозволив реєстрацію у фінал. Перевірте finalInvites та Firestore Rules."
+                ? "Firebase не дозволив реєстрацію у фінал. Перевірте finalQualifications цього сезону та Firestore Rules."
                 : "Заявка вже існує або дані команди не збігаються з профілем. Перевірте «Мій кабінет».",
               false
             );

@@ -3296,207 +3296,206 @@
   // =========================================================
 
   function renderItems(
-    items
+  items
+) {
+  if (
+    !eventOptionsEl
   ) {
-    if (
-      !eventOptionsEl
-    ) {
-      return;
-    }
+    return;
+  }
 
-    /*
-     * ВАЖЛИВО:
-     *
-     * зберігаємо вибір ДО
-     * eventOptionsEl.innerHTML = "".
-     *
-     * Інакше будь-який повторний render
-     * скидав radio.
-     */
-    const previousPicked =
-      document.querySelector(
-        'input[name="stagePick"]:checked'
-      );
+  /*
+   * Зберігаємо поточний вибір
+   * перед повторним render.
+   */
+  const previousPicked =
+    document.querySelector(
+      'input[name="stagePick"]:checked'
+    );
 
-    const previousPickedValue =
-      previousPicked
-        ? String(
-            previousPicked.value
-          )
-        : "";
+  const previousPickedValue =
+    previousPicked
+      ? String(
+          previousPicked.value
+        )
+      : "";
 
+  eventOptionsEl.innerHTML =
+    "";
+
+  const visibleItems =
+    visibleItemsOnly(
+      items
+    );
+
+  if (
+    !visibleItems.length
+  ) {
     eventOptionsEl.innerHTML =
-      "";
+      '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
 
-    const visibleItems =
-      visibleItemsOnly(
-        items
-      );
+    setPayUIFromSelected(
+      null
+    );
 
-    if (
-      !visibleItems.length
-    ) {
-      eventOptionsEl.innerHTML =
-        '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
-
-      setPayUIFromSelected(
-        null
-      );
-
-      if (submitBtn) {
-        submitBtn.disabled =
-          true;
-      }
-
-      return;
+    if (submitBtn) {
+      submitBtn.disabled =
+        true;
     }
 
-    visibleItems.forEach(
-      item => {
-        const open =
-          canSubmitItem(item);
+    return;
+  }
 
-        const status =
-          getStatusUI(item);
+  visibleItems.forEach(
+    item => {
+      const open =
+        canSubmitItem(item);
 
-        const value =
-          eventValue(item);
+      const status =
+        getStatusUI(item);
 
-        const lamp =
-          statusLamp(
-            item,
-            value
-          );
+      const value =
+        eventValue(item);
 
-        const typeBadge =
-          item.entryType ===
-          "solo"
-            ? "SOLO"
-            : "TEAM";
-
-        const titleText =
-          `${
-            item.brand
-              ? item.brand +
-                " · "
-              : ""
-          }${
-            item.compTitle
-          }` +
-          (
-            item.stageTitle
-              ? ` — ${
-                  item.stageTitle
-                }`
-              : ""
-          );
-
-        const dateLine =
-          `${
-            fmtDate(
-              item.startAt
-            )
-          } — ${
-            fmtDate(
-              item.endAt
-            )
-          }`;
-
-        const regOpen =
-          toDateMaybe(
-            item.regOpenAt,
-            {
-              endOfDay: false
-            }
-          );
-
-        const regClose =
-          toDateMaybe(
-            item.regCloseAt,
-            {
-              endOfDay: true
-            }
-          );
-
-        const registrationDatesLine =
-          regOpen ||
-          regClose
-            ? `Реєстрація: ${
-                fmtDate(regOpen)
-              } — ${
-                fmtDate(regClose)
-              }`
-            : "Дати реєстрації не задані";
-
-        const label =
-          document.createElement(
-            "label"
-          );
-
-        label.className =
-          "event-item" +
-          (
-            open
-              ? ""
-              : " is-closed"
-          );
-
-        if (
-          item.isFinal
-        ) {
-          label.classList.add(
-            "event-item--final"
-          );
-        }
-
-        label.setAttribute(
-          "role",
-          "button"
+      const lamp =
+        statusLamp(
+          item,
+          value
         );
 
-        label.style.cursor =
+      const titleText =
+        `${
+          item.brand
+            ? item.brand +
+              " · "
+            : ""
+        }${
+          item.compTitle
+        }` +
+        (
+          item.stageTitle
+            ? ` — ${
+                item.stageTitle
+              }`
+            : ""
+        );
+
+      const dateLine =
+        `${
+          fmtDate(
+            item.startAt
+          )
+        } — ${
+          fmtDate(
+            item.endAt
+          )
+        }`;
+
+      const regOpen =
+        toDateMaybe(
+          item.regOpenAt,
+          {
+            endOfDay: false
+          }
+        );
+
+      const regClose =
+        toDateMaybe(
+          item.regCloseAt,
+          {
+            endOfDay: true
+          }
+        );
+
+      const registrationDatesLine =
+        regOpen ||
+        regClose
+          ? `Реєстрація: ${
+              fmtDate(regOpen)
+            } — ${
+              fmtDate(regClose)
+            }`
+          : "Дати реєстрації не задані";
+
+      const label =
+        document.createElement(
+          "label"
+        );
+
+      label.className =
+        "event-item" +
+        (
           open
-            ? "pointer"
-            : "default";
+            ? ""
+            : " is-closed"
+        );
 
-        /*
-         * Якщо до render цей етап
-         * був вибраний і все ще
-         * доступний — вибір зберігаємо.
-         */
-        const shouldRemainChecked =
-          open &&
-          previousPickedValue ===
-            value;
+      if (
+        item.isFinal
+      ) {
+        label.classList.add(
+          "event-item--final"
+        );
+      }
 
-        label.innerHTML = `
-          <input
-            type="radio"
-            name="stagePick"
-            value="${escapeHtml(
-              value
-            )}"
-            ${
-              open
-                ? ""
-                : "disabled"
-            }
-            ${
-              shouldRemainChecked
-                ? "checked"
-                : ""
-            }
-            style="
-              flex:0 0 auto;
-              margin-top:4px;
-            "
-          >
+      label.setAttribute(
+        "role",
+        "button"
+      );
+
+      label.style.cursor =
+        open
+          ? "pointer"
+          : "default";
+
+      /*
+       * Якщо цей етап був вибраний
+       * і все ще доступний —
+       * залишаємо його вибраним.
+       */
+      const shouldRemainChecked =
+        open &&
+        previousPickedValue ===
+          value;
+
+      label.innerHTML = `
+        <input
+          type="radio"
+          name="stagePick"
+          value="${escapeHtml(
+            value
+          )}"
+          ${
+            open
+              ? ""
+              : "disabled"
+          }
+          ${
+            shouldRemainChecked
+              ? "checked"
+              : ""
+          }
+          style="
+            flex:0 0 auto;
+            margin-top:4px;
+          "
+        >
+
+        <div
+          class="event-content"
+          style="
+            min-width:0;
+            flex:1;
+          "
+        >
 
           <div
-            class="event-content"
             style="
-              min-width:0;
-              flex:1;
+              display:flex;
+              align-items:center;
+              justify-content:space-between;
+              gap:10px;
+              margin-bottom:8px;
             "
           >
 
@@ -3504,175 +3503,139 @@
               style="
                 display:flex;
                 align-items:center;
-                justify-content:space-between;
-                gap:10px;
-                margin-bottom:8px;
+                gap:8px;
+                min-width:0;
               "
             >
 
-              <div
+              <span
+                class="lamp ${lamp}"
                 style="
-                  display:flex;
-                  align-items:center;
-                  gap:8px;
-                  min-width:0;
-                "
-              >
-
-                <span
-                  class="lamp ${lamp}"
-                  style="
-                    flex:0 0 auto;
-                  "
-                ></span>
-
-                <span
-                  style="
-                    font-size:12px;
-                    color:var(--muted);
-                    font-weight:800;
-                    white-space:nowrap;
-                  "
-                >
-                  ${escapeHtml(
-                    status.short
-                  )}
-                </span>
-
-              </div>
-
-              <div
-                class="event-badges"
-                style="
-                  display:flex;
-                  gap:6px;
-                  flex-wrap:wrap;
-                  justify-content:flex-end;
                   flex:0 0 auto;
                 "
+              ></span>
+
+              <span
+                style="
+                  font-size:12px;
+                  color:var(--muted);
+                  font-weight:800;
+                  white-space:nowrap;
+                "
               >
-
-                <span class="pill-b">
-                  ${escapeHtml(
-                    typeBadge
-                  )}
-                </span>
-
-                ${
-                  item.isFinal
-                    ? `
-                      <span class="pill-b">
-                        FINAL
-                      </span>
-                    `
-                    : ""
-                }
-
-                <span
-                  class="pill-b ${
-                    status.badgeClass
-                  }"
-                >
-                  ${escapeHtml(
-                    status.badge
-                  )}
-                </span>
-
-              </div>
+                ${escapeHtml(
+                  status.short
+                )}
+              </span>
 
             </div>
 
             <div
+              class="event-badges"
               style="
-                font-weight:900;
-                font-size:16px;
-                line-height:1.28;
-                letter-spacing:.02em;
-                color:#f3f4f6;
-                white-space:normal;
-                overflow-wrap:break-word;
+                display:flex;
+                gap:6px;
+                flex-wrap:wrap;
+                justify-content:flex-end;
+                flex:0 0 auto;
               "
             >
-              ${escapeHtml(
-                titleText
-              )}
-            </div>
 
-            <div
-              style="
-                margin-top:7px;
-                color:var(--muted);
-                font-size:13px;
-                line-height:1.35;
-              "
-            >
-              ${escapeHtml(
-                dateLine
-              )}
-            </div>
+              <span
+                class="pill-b ${
+                  status.badgeClass
+                }"
+              >
+                ${escapeHtml(
+                  status.badge
+                )}
+              </span>
 
-            <div
-              style="
-                margin-top:5px;
-                color:var(--muted);
-                font-size:12px;
-                line-height:1.35;
-              "
-            >
-              ${escapeHtml(
-                registrationDatesLine
-              )}
-            </div>
-
-            <div
-              style="
-                margin-top:7px;
-                color:${
-                  item.isFinal &&
-                  canRegisterFinal(item)
-                    ? "#fde68a"
-                    : "var(--muted)"
-                };
-                font-size:13px;
-                line-height:1.45;
-                font-weight:${
-                  item.isFinal
-                    ? "700"
-                    : "400"
-                };
-              "
-            >
-              ${escapeHtml(
-                status.text
-              )}
             </div>
 
           </div>
-        `;
 
-        eventOptionsEl.appendChild(
-          label
-        );
-      }
-    );
+          <div
+            style="
+              font-weight:900;
+              font-size:16px;
+              line-height:1.28;
+              letter-spacing:.02em;
+              color:#f3f4f6;
+              white-space:normal;
+              overflow-wrap:break-word;
+            "
+          >
+            ${escapeHtml(
+              titleText
+            )}
+          </div>
 
-    /*
-     * КЛЮЧОВЕ ВИПРАВЛЕННЯ.
-     *
-     * Більше НЕ робимо:
-     *
-     * setPayUIFromSelected(null)
-     *
-     * після кожного render.
-     *
-     * Тепер навіть якщо radio disabled
-     * через майбутню дату,
-     * сума і картка все одно видно.
-     */
-    refreshPaymentUI(
-      visibleItems
-    );
-  }
+          <div
+            style="
+              margin-top:7px;
+              color:var(--muted);
+              font-size:13px;
+              line-height:1.35;
+            "
+          >
+            ${escapeHtml(
+              dateLine
+            )}
+          </div>
+
+          <div
+            style="
+              margin-top:5px;
+              color:var(--muted);
+              font-size:12px;
+              line-height:1.35;
+            "
+          >
+            ${escapeHtml(
+              registrationDatesLine
+            )}
+          </div>
+
+          <div
+            style="
+              margin-top:7px;
+              color:${
+                item.isFinal &&
+                canRegisterFinal(item)
+                  ? "#fde68a"
+                  : "var(--muted)"
+              };
+              font-size:13px;
+              line-height:1.45;
+              font-weight:${
+                item.isFinal
+                  ? "700"
+                  : "400"
+              };
+            "
+          >
+            ${escapeHtml(
+              status.text
+            )}
+          </div>
+
+        </div>
+      `;
+
+      eventOptionsEl.appendChild(
+        label
+      );
+    }
+  );
+
+  /*
+   * Payment UI залишаємо без змін.
+   */
+  refreshPaymentUI(
+    visibleItems
+  );
+}
 
   // =========================================================
   // CHANGE

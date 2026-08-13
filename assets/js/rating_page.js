@@ -1,86 +1,153 @@
 // assets/js/rating_page.js
 // STOLAR CARP • Вихід у фінал
 //
-// Джерело:
+// =========================================================
+// ДЖЕРЕЛА
+// =========================================================
+//
 // seasonRating/{year}
 // seasonResults/{year}/stages
 //
-// ЛОГІКА:
+// =========================================================
+// ЛОГІКА
+// =========================================================
+//
+// • сезон НЕ прив'язаний до 2026;
+// • підтримуються 2027 / 2028 / 2029 / ...;
+// • рік визначається автоматично;
+// • ?year=2028 має найвищий пріоритет;
+// • далі settings/app;
+// • далі activeCompetitionId;
+// • далі останній доступний seasonRating;
+// • фінал не входить у розрахунок рейтингу;
 // • показуються всі заархівовані ВІДБІРКОВІ етапи;
 // • кількість колонок етапів динамічна;
-// • Фінал тут повністю виключений;
 // • бал за етап = місце команди у своїй зоні;
 // • у рейтинг ідуть 2 найкращі результати;
-// • відсутній результат на вже проведеному етапі = 8 балів;
+// • відсутній результат = 8 балів;
 // • сортування:
 //      1) сума 2 кращих балів ↑
-//      2) загальна вага всіх відбіркових етапів ↓
-//      3) Big Fish всіх відбіркових етапів ↓
-// • TOP 18 = вихід у фінал.
+//      2) загальна вага ↓
+//      3) Big Fish ↓
+// • TOP 18 = право на фінал;
+// • teamId зберігається у payload для автоматизації finalInvites.
+//
+// =========================================================
 
 (function () {
   "use strict";
 
-  const $ = (id) => document.getElementById(id);
+  const $ = (id) =>
+    document.getElementById(id);
 
   // =========================================================
-  // НАЛАШТУВАННЯ
+  // SETTINGS
   // =========================================================
 
   const TOP_COUNT = 18;
-  const SEASON_YEAR = "2026";
 
-  // Два найкращі результати
   const BEST_COUNT = 2;
 
-  // Неявка / відсутність результату
   const ABSENT_POINTS = 8;
 
-  const CACHE_TTL_MS = 5 * 60 * 1000;
+  const CACHE_TTL_MS =
+    5 * 60 * 1000;
 
-  // Новий кеш без старої логіки фіналу
-  const CACHE_KEY =
-    "sc_final_qualification_dynamic_stages_v2";
+  const CACHE_PREFIX =
+    "sc_final_qualification_dynamic_stages_v3";
+
+  /*
+   * Визначається автоматично.
+   *
+   * Наприклад:
+   *
+   * 2026
+   * 2027
+   * 2028
+   * ...
+   */
+  let SEASON_YEAR = "";
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  function safeText(v, dash = "—") {
+  function safeText(
+    value,
+    dash = "—"
+  ) {
     return (
-      v === null ||
-      v === undefined ||
-      v === ""
+      value === null ||
+      value === undefined ||
+      value === ""
     )
       ? dash
-      : String(v);
+      : String(value);
   }
 
-  function num(v) {
-    const n = Number(v);
+  function num(value) {
+    const number =
+      Number(value);
 
-    return Number.isFinite(n)
-      ? n
+    return Number.isFinite(number)
+      ? number
       : 0;
   }
 
-  function fmtKg(v) {
-    const n = num(v);
+  function fmtKg(value) {
+    const number =
+      num(value);
 
-    if (n <= 0) {
+    if (number <= 0) {
       return "—";
     }
 
-    return n
+    return number
       .toFixed(2)
-      .replace(/\.?0+$/, "");
+      .replace(
+        /\.?0+$/,
+        ""
+      );
   }
 
-  function clean(s) {
-    return String(s || "")
+  function clean(value) {
+    return String(
+      value || ""
+    )
       .trim()
       .toLowerCase()
-      .replace(/\s+/g, " ");
+      .replace(
+        /\s+/g,
+        " "
+      );
+  }
+
+  function normalizeYear(
+    value
+  ) {
+    const raw =
+      String(
+        value ?? ""
+      ).trim();
+
+    if (
+      !/^\d{4}$/.test(raw)
+    ) {
+      return "";
+    }
+
+    const year =
+      Number(raw);
+
+    if (
+      !Number.isInteger(year) ||
+      year < 2000 ||
+      year > 2200
+    ) {
+      return "";
+    }
+
+    return raw;
   }
 
   // =========================================================
@@ -88,28 +155,43 @@
   // =========================================================
 
   function setReadyFlag() {
-    document.documentElement.setAttribute(
-      "data-rating-ready",
-      "1"
-    );
+    document.documentElement
+      .setAttribute(
+        "data-rating-ready",
+        "1"
+      );
   }
 
-  function showError(msgHtml) {
-    const box = $("ratingError");
+  function showError(
+    msgHtml
+  ) {
+    const box =
+      $("ratingError");
 
-    if (!box) return;
+    if (!box) {
+      return;
+    }
 
-    box.style.display = "block";
-    box.innerHTML = msgHtml;
+    box.style.display =
+      "block";
+
+    box.innerHTML =
+      msgHtml;
   }
 
   function hideError() {
-    const box = $("ratingError");
+    const box =
+      $("ratingError");
 
-    if (!box) return;
+    if (!box) {
+      return;
+    }
 
-    box.style.display = "none";
-    box.innerHTML = "";
+    box.style.display =
+      "none";
+
+    box.innerHTML =
+      "";
   }
 
   // =========================================================
@@ -126,7 +208,9 @@
     }
 
     const style =
-      document.createElement("style");
+      document.createElement(
+        "style"
+      );
 
     style.id =
       "sc-rating-bigfish-style";
@@ -141,54 +225,89 @@
       }
     `;
 
-    document.head.appendChild(style);
+    document.head
+      .appendChild(style);
   }
 
   // =========================================================
   // CACHE
   // =========================================================
 
+  function getCacheKey() {
+    if (!SEASON_YEAR) {
+      return "";
+    }
+
+    return (
+      CACHE_PREFIX +
+      "_" +
+      SEASON_YEAR
+    );
+  }
+
   function cacheGet() {
+    const key =
+      getCacheKey();
+
+    if (!key) {
+      return null;
+    }
+
     try {
       const raw =
         localStorage.getItem(
-          CACHE_KEY
+          key
         );
 
       if (!raw) {
         return null;
       }
 
-      const obj =
+      const object =
         JSON.parse(raw);
 
       if (
-        !obj ||
-        !obj.ts
+        !object ||
+        !object.ts
       ) {
         return null;
       }
 
       if (
-        Date.now() - obj.ts >
+        Date.now() -
+          object.ts >
         CACHE_TTL_MS
       ) {
         return null;
       }
 
-      return obj.payload || null;
+      return (
+        object.payload ||
+        null
+      );
 
     } catch {
       return null;
     }
   }
 
-  function cacheSet(payload) {
+  function cacheSet(
+    payload
+  ) {
+    const key =
+      getCacheKey();
+
+    if (!key) {
+      return;
+    }
+
     try {
       localStorage.setItem(
-        CACHE_KEY,
+        key,
         JSON.stringify({
-          ts: Date.now(),
+          ts:
+            Date.now(),
+
           payload
         })
       );
@@ -196,10 +315,39 @@
   }
 
   function cacheClear() {
+    const key =
+      getCacheKey();
+
+    if (!key) {
+      return;
+    }
+
     try {
       localStorage.removeItem(
-        CACHE_KEY
+        key
       );
+    } catch {}
+  }
+
+  function clearOldRatingCaches() {
+    try {
+      Object
+        .keys(localStorage)
+        .forEach(key => {
+
+          if (
+            key.startsWith(
+              "sc_final_qualification_dynamic_stages_"
+            ) &&
+            !key.startsWith(
+              CACHE_PREFIX
+            )
+          ) {
+            localStorage
+              .removeItem(key);
+          }
+        });
+
     } catch {}
   }
 
@@ -208,11 +356,14 @@
   // =========================================================
 
   async function waitReady() {
-    if (window.scReady) {
+    if (
+      window.scReady
+    ) {
       await window.scReady;
     }
 
-    const db = window.scDb;
+    const db =
+      window.scDb;
 
     if (!db) {
       throw new Error(
@@ -224,57 +375,354 @@
   }
 
   // =========================================================
+  // SEASON YEAR
+  // =========================================================
+
+  function getYearFromUrl() {
+    try {
+      const params =
+        new URLSearchParams(
+          window.location.search
+        );
+
+      return normalizeYear(
+        params.get("year")
+      );
+
+    } catch {
+      return "";
+    }
+  }
+
+  async function getYearFromSettings(
+    db
+  ) {
+    try {
+      const snap =
+        await db
+          .collection(
+            "settings"
+          )
+          .doc(
+            "app"
+          )
+          .get();
+
+      if (!snap.exists) {
+        return {
+          year: "",
+          activeCompetitionId: ""
+        };
+      }
+
+      const data =
+        snap.data() || {};
+
+      const explicitYear =
+        normalizeYear(
+          data.activeSeasonYear ||
+          data.currentSeasonYear ||
+          data.seasonYear ||
+          data.year
+        );
+
+      return {
+        year:
+          explicitYear,
+
+        activeCompetitionId:
+          String(
+            data.activeCompetitionId ||
+            ""
+          ).trim()
+      };
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        "[Final qualification] settings year:",
+        error
+      );
+
+      return {
+        year: "",
+        activeCompetitionId: ""
+      };
+    }
+  }
+
+  async function getYearFromCompetition(
+    db,
+    competitionId
+  ) {
+    if (!competitionId) {
+      return "";
+    }
+
+    try {
+      const snap =
+        await db
+          .collection(
+            "competitions"
+          )
+          .doc(
+            competitionId
+          )
+          .get();
+
+      if (!snap.exists) {
+        return "";
+      }
+
+      const data =
+        snap.data() || {};
+
+      /*
+       * Якщо це season —
+       * беремо його рік.
+       *
+       * Якщо type відсутній у старому
+       * документі, теж дозволяємо.
+       */
+      const type =
+        String(
+          data.type || ""
+        )
+          .trim()
+          .toLowerCase();
+
+      if (
+        type &&
+        type !== "season"
+      ) {
+        return "";
+      }
+
+      return normalizeYear(
+        data.year ||
+        data.seasonYear
+      );
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        "[Final qualification] competition year:",
+        error
+      );
+
+      return "";
+    }
+  }
+
+  async function getLatestRatingYear(
+    db
+  ) {
+    try {
+      const snap =
+        await db
+          .collection(
+            "seasonRating"
+          )
+          .get();
+
+      const years =
+        [];
+
+      snap.forEach(
+        doc => {
+
+          const year =
+            normalizeYear(
+              doc.id
+            );
+
+          if (year) {
+            years.push(
+              Number(year)
+            );
+          }
+        }
+      );
+
+      if (!years.length) {
+        return "";
+      }
+
+      years.sort(
+        (a, b) =>
+          b - a
+      );
+
+      return String(
+        years[0]
+      );
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        "[Final qualification] latest season:",
+        error
+      );
+
+      return "";
+    }
+  }
+
+  async function resolveSeasonYear(
+    db
+  ) {
+    /*
+     * 1.
+     * URL:
+     *
+     * rating.html?year=2028
+     */
+    const urlYear =
+      getYearFromUrl();
+
+    if (urlYear) {
+      return urlYear;
+    }
+
+    /*
+     * 2.
+     * settings/app
+     */
+    const settings =
+      await getYearFromSettings(
+        db
+      );
+
+    if (
+      settings.year
+    ) {
+      return settings.year;
+    }
+
+    /*
+     * 3.
+     * activeCompetitionId
+     */
+    if (
+      settings.activeCompetitionId
+    ) {
+      const competitionYear =
+        await getYearFromCompetition(
+          db,
+          settings.activeCompetitionId
+        );
+
+      if (competitionYear) {
+        return competitionYear;
+      }
+    }
+
+    /*
+     * 4.
+     * Останній реально існуючий
+     * seasonRating/{year}.
+     *
+     * Це важливо, якщо activeCompetition
+     * зараз не сезонне змагання.
+     */
+    const latestRatingYear =
+      await getLatestRatingYear(
+        db
+      );
+
+    if (
+      latestRatingYear
+    ) {
+      return latestRatingYear;
+    }
+
+    /*
+     * 5.
+     * Крайній fallback.
+     */
+    return String(
+      new Date()
+        .getFullYear()
+    );
+  }
+
+  // =========================================================
   // FINAL DETECTOR
   // =========================================================
 
-  function isFinalStage(stage) {
+  function isFinalStage(
+    stage
+  ) {
     if (!stage) {
       return false;
     }
 
-    const raw = clean(
-      `${
-        stage.stageDocId || ""
-      } ${
-        stage.stageId || ""
-      } ${
-        stage.stageName || ""
-      } ${
-        stage.type || ""
-      } ${
-        stage.stageType || ""
-      }`
-    );
+    const raw =
+      clean(
+        `${
+          stage.stageDocId ||
+          ""
+        } ${
+          stage.stageId ||
+          ""
+        } ${
+          stage.stageName ||
+          ""
+        } ${
+          stage.type ||
+          ""
+        } ${
+          stage.stageType ||
+          ""
+        }`
+      );
 
     return (
-      stage.isFinal === true ||
-      raw.includes("final") ||
-      raw.includes("фінал")
+      stage.isFinal ===
+        true ||
+
+      raw.includes(
+        "final"
+      ) ||
+
+      raw.includes(
+        "фінал"
+      )
     );
   }
 
   // =========================================================
-  // СОРТУВАННЯ ЕТАПІВ
+  // STAGE SORT
   // =========================================================
 
-  function stageSortValue(stage) {
-    const raw = String(
-      stage.stageId ||
-      stage.stageDocId ||
-      stage.id ||
-      ""
-    );
+  function stageSortValue(
+    stage
+  ) {
+    const raw =
+      String(
+        stage.stageId ||
+        stage.stageDocId ||
+        stage.id ||
+        ""
+      );
 
     const match =
-      raw.match(/(\d+)/);
+      raw.match(
+        /(\d+)/
+      );
 
     return match
-      ? Number(match[1])
+      ? Number(
+          match[1]
+        )
       : 9999;
   }
 
   // =========================================================
-  // НАЗВА КОЛОНКИ ЕТАПУ
+  // STAGE DISPLAY NUMBER
   // =========================================================
 
   function stageDisplayNumber(
@@ -287,21 +735,30 @@
       stage.stageName
     ];
 
-    for (const value of values) {
+    for (
+      const value of values
+    ) {
       const match =
-        String(value || "")
-          .match(/(\d+)/);
+        String(
+          value || ""
+        ).match(
+          /(\d+)/
+        );
 
       if (match) {
-        return Number(match[1]);
+        return Number(
+          match[1]
+        );
       }
     }
 
-    return index + 1;
+    return (
+      index + 1
+    );
   }
 
   // =========================================================
-  // ЧИТАЄМО ТІЛЬКИ ВІДБІРКОВІ ЕТАПИ
+  // REGULAR ARCHIVED STAGES
   // =========================================================
 
   function getRegularArchivedStages(
@@ -315,83 +772,115 @@
         : [];
 
     return arr
-      .map(s => {
+      .map(
+        stageRaw => {
 
-        if (typeof s === "string") {
+          if (
+            typeof stageRaw ===
+            "string"
+          ) {
+            const stage = {
+              stageDocId:
+                stageRaw,
+
+              stageId:
+                stageRaw,
+
+              stageName:
+                stageRaw,
+
+              type:
+                "",
+
+              stageType:
+                "",
+
+              isFinal:
+                false
+            };
+
+            stage.isFinal =
+              isFinalStage(
+                stage
+              );
+
+            return stage;
+          }
+
           const stage = {
-            stageDocId: s,
-            stageId: s,
-            stageName: s,
-            type: "",
-            stageType: "",
-            isFinal: false
+            stageDocId:
+              String(
+                stageRaw.stageDocId ||
+                stageRaw.id ||
+                ""
+              ),
+
+            stageId:
+              String(
+                stageRaw.stageId ||
+                stageRaw.stageDocId ||
+                stageRaw.id ||
+                ""
+              ),
+
+            stageName:
+              String(
+                stageRaw.stageName ||
+                stageRaw.stageId ||
+                stageRaw.stageDocId ||
+                stageRaw.id ||
+                ""
+              ),
+
+            type:
+              String(
+                stageRaw.type ||
+                ""
+              ),
+
+            stageType:
+              String(
+                stageRaw.stageType ||
+                ""
+              ),
+
+            isFinal:
+              Boolean(
+                stageRaw.isFinal
+              )
           };
 
           stage.isFinal =
-            isFinalStage(stage);
+            isFinalStage(
+              stage
+            );
 
           return stage;
         }
-
-        const stage = {
-          stageDocId:
-            String(
-              s.stageDocId ||
-              s.id ||
-              ""
-            ),
-
-          stageId:
-            String(
-              s.stageId ||
-              s.stageDocId ||
-              s.id ||
-              ""
-            ),
-
-          stageName:
-            String(
-              s.stageName ||
-              s.stageId ||
-              s.stageDocId ||
-              s.id ||
-              ""
-            ),
-
-          type:
-            String(
-              s.type || ""
-            ),
-
-          stageType:
-            String(
-              s.stageType || ""
-            ),
-
-          isFinal:
-            Boolean(
-              s.isFinal
-            )
-        };
-
-        stage.isFinal =
-          isFinalStage(stage);
-
-        return stage;
-      })
-
-      // Без порожніх ID
-      .filter(stage =>
-        stage.stageDocId
       )
 
-      // ГОЛОВНЕ:
-      // Фінал тут повністю прибираємо
-      .filter(stage =>
-        !isFinalStage(stage)
+      /*
+       * Без пустих ID.
+       */
+      .filter(
+        stage =>
+          stage.stageDocId
       )
 
-      // Е1 → Е2 → Е3 → ...
+      /*
+       * ФІНАЛ ПОВНІСТЮ
+       * ВИКЛЮЧАЄМО З РЕЙТИНГУ.
+       */
+      .filter(
+        stage =>
+          !isFinalStage(
+            stage
+          )
+      )
+
+      /*
+       * Е1 → Е2 → Е3...
+       */
       .sort(
         (a, b) =>
           stageSortValue(a) -
@@ -400,7 +889,7 @@
   }
 
   // =========================================================
-  // ДИНАМІЧНА ШАПКА ТАБЛИЦІ
+  // HEADERS
   // =========================================================
 
   function buildStageHeaders(
@@ -411,69 +900,73 @@
       $("seasonContendersHead")
     ].filter(Boolean);
 
-    heads.forEach(head => {
+    heads.forEach(
+      head => {
 
-      // При повторному render
-      // видаляємо попередні
-      // динамічні заголовки.
-      head
-        .querySelectorAll(
-          "th.col-stage"
-        )
-        .forEach(el =>
-          el.remove()
-        );
-
-      const pointsTh =
-        head.querySelector(
-          "th.col-points"
-        );
-
-      if (!pointsTh) {
-        return;
-      }
-
-      regularStages.forEach(
-        (stage, index) => {
-
-          const stageNo =
-            stageDisplayNumber(
-              stage,
-              index
-            );
-
-          const th =
-            document.createElement(
-              "th"
-            );
-
-          th.className =
-            "col-stage";
-
-          th.dataset.stageDocId =
-            stage.stageDocId;
-
-          th.innerHTML =
-            `Е${stageNo}<br>м / б`;
-
-          head.insertBefore(
-            th,
-            pointsTh
+        head
+          .querySelectorAll(
+            "th.col-stage"
+          )
+          .forEach(
+            element =>
+              element.remove()
           );
-        }
-      );
-    });
 
-    document.body.setAttribute(
-      "data-stages",
-      String(
-        regularStages.length
-      )
+        const pointsTh =
+          head.querySelector(
+            "th.col-points"
+          );
+
+        if (!pointsTh) {
+          return;
+        }
+
+        regularStages.forEach(
+          (
+            stage,
+            index
+          ) => {
+
+            const stageNo =
+              stageDisplayNumber(
+                stage,
+                index
+              );
+
+            const th =
+              document.createElement(
+                "th"
+              );
+
+            th.className =
+              "col-stage";
+
+            th.dataset.stageDocId =
+              stage.stageDocId;
+
+            th.innerHTML =
+              `Е${stageNo}<br>м / б`;
+
+            head.insertBefore(
+              th,
+              pointsTh
+            );
+          }
+        );
+      }
     );
+
+    document.body
+      .setAttribute(
+        "data-stages",
+        String(
+          regularStages.length
+        )
+      );
   }
 
   // =========================================================
-  // HTML РЯДКА
+  // ROW HTML
   // =========================================================
 
   function rowHTML(
@@ -483,27 +976,30 @@
   ) {
     const stagesHtml =
       Array.from({
-        length: stagesCount
+        length:
+          stagesCount
       })
-        .map(() => `
-          <td class="col-stage">
-            <div class="stage-cell">
+        .map(
+          () => `
+            <td class="col-stage">
+              <div class="stage-cell">
 
-              <span class="stage-place">
-                –
-              </span>
+                <span class="stage-place">
+                  –
+                </span>
 
-              <span class="stage-slash">
-                /
-              </span>
+                <span class="stage-slash">
+                  /
+                </span>
 
-              <span class="stage-points">
-                –
-              </span>
+                <span class="stage-points">
+                  –
+                </span>
 
-            </div>
-          </td>
-        `)
+              </div>
+            </td>
+          `
+        )
         .join("");
 
     return `
@@ -568,101 +1064,118 @@
       return;
     }
 
-    topTbody.innerHTML = "";
+    topTbody.innerHTML =
+      "";
 
     for (
       let i = 1;
       i <= TOP_COUNT;
       i++
     ) {
-      topTbody.insertAdjacentHTML(
-        "beforeend",
-        rowHTML(
-          i,
-          true,
-          stagesCount
-        )
-      );
+      topTbody
+        .insertAdjacentHTML(
+          "beforeend",
+          rowHTML(
+            i,
+            true,
+            stagesCount
+          )
+        );
     }
 
-    contTbody.innerHTML = "";
+    contTbody.innerHTML =
+      "";
 
-    const cc =
+    const count =
       Math.max(
         3,
         Number(
-          contendersCount || 0
+          contendersCount ||
+          0
         )
       );
 
     for (
       let i = 0;
-      i < cc;
+      i < count;
       i++
     ) {
-      contTbody.insertAdjacentHTML(
-        "beforeend",
-        rowHTML(
-          TOP_COUNT + i + 1,
-          false,
-          stagesCount
-        )
-      );
+      contTbody
+        .insertAdjacentHTML(
+          "beforeend",
+          rowHTML(
+            TOP_COUNT +
+              i +
+              1,
+            false,
+            stagesCount
+          )
+        );
     }
   }
 
   // =========================================================
-  // РУХ У РЕЙТИНГУ
+  // MOVE
   // =========================================================
 
   function setMove(
-    el,
+    element,
     moveDelta
   ) {
-    if (!el) return;
+    if (!element) {
+      return;
+    }
 
-    el.classList.remove(
+    element.classList.remove(
       "move--up",
       "move--down",
       "move--same"
     );
 
-    const d =
+    const delta =
       Number(
-        moveDelta || 0
+        moveDelta ||
+        0
       );
 
-    if (d > 0) {
-
-      el.classList.add(
+    if (
+      delta > 0
+    ) {
+      element.classList.add(
         "move--up"
       );
 
-      el.textContent =
-        `▲${d}`;
+      element.textContent =
+        `▲${delta}`;
 
-    } else if (d < 0) {
+      return;
+    }
 
-      el.classList.add(
+    if (
+      delta < 0
+    ) {
+      element.classList.add(
         "move--down"
       );
 
-      el.textContent =
-        `▼${Math.abs(d)}`;
+      element.textContent =
+        `▼${Math.abs(
+          delta
+        )}`;
 
-    } else {
-
-      el.classList.add(
-        "move--same"
-      );
-
-      el.textContent =
-        "–";
+      return;
     }
+
+    element.classList.add(
+      "move--same"
+    );
+
+    element.textContent =
+      "–";
   }
 
   // =========================================================
-  // РЕНДЕР РЯДКА
+  // RENDER ROW
   // =========================================================
 
   function renderRow(
@@ -674,6 +1187,22 @@
       !item
     ) {
       return;
+    }
+
+    /*
+     * Зберігаємо teamId
+     * прямо у DOM теж.
+     *
+     * Це не впливає на вигляд,
+     * але корисно для діагностики.
+     */
+    if (
+      item.teamId
+    ) {
+      tr.dataset.teamId =
+        item.teamId;
+    } else {
+      delete tr.dataset.teamId;
     }
 
     const placeEl =
@@ -688,13 +1217,10 @@
         );
     }
 
-    const moveEl =
+    setMove(
       tr.querySelector(
         ".move"
-      );
-
-    setMove(
-      moveEl,
+      ),
       item.moveDelta
     );
 
@@ -710,9 +1236,9 @@
         );
     }
 
-    // -------------------------
-    // ЕТАПИ
-    // -------------------------
+    // ---------------------------------------------------------
+    // STAGES
+    // ---------------------------------------------------------
 
     const stages =
       Array.isArray(
@@ -727,31 +1253,39 @@
       );
 
     stageCells.forEach(
-      (cell, index) => {
+      (
+        cell,
+        index
+      ) => {
 
         const stage =
-          stages[index] || {};
+          stages[index] ||
+          {};
 
-        const stagePlaceEl =
+        const placeElement =
           cell.querySelector(
             ".stage-place"
           );
 
-        const stagePointsEl =
+        const pointsElement =
           cell.querySelector(
             ".stage-points"
           );
 
-        if (stagePlaceEl) {
-          stagePlaceEl.textContent =
+        if (
+          placeElement
+        ) {
+          placeElement.textContent =
             safeText(
               stage.p,
               "–"
             );
         }
 
-        if (stagePointsEl) {
-          stagePointsEl.textContent =
+        if (
+          pointsElement
+        ) {
+          pointsElement.textContent =
             safeText(
               stage.pts,
               "–"
@@ -765,22 +1299,26 @@
         );
 
         if (
-          stage.noShow === true
+          stage.noShow ===
+          true
         ) {
           cell.classList.add(
             "stage-noshow"
           );
 
         } else if (
-          stage.counted === true
+          stage.counted ===
+          true
         ) {
           cell.classList.add(
             "stage-counted"
           );
 
         } else if (
-          stage.dropped === true ||
-          stage.counted === false
+          stage.dropped ===
+            true ||
+          stage.counted ===
+            false
         ) {
           cell.classList.add(
             "stage-dropped"
@@ -789,49 +1327,54 @@
       }
     );
 
-    // -------------------------
-    // БАЛИ
-    // -------------------------
+    // ---------------------------------------------------------
+    // POINTS
+    // ---------------------------------------------------------
 
     const pointsEl =
       tr.querySelector(
         ".col-points b"
       );
 
-    if (pointsEl) {
+    if (
+      pointsEl
+    ) {
       pointsEl.textContent =
         safeText(
           item.points
         );
     }
 
-    // -------------------------
-    // ВАГА
-    // -------------------------
+    // ---------------------------------------------------------
+    // WEIGHT
+    // ---------------------------------------------------------
 
     const weightEl =
       tr.querySelector(
         "td.col-weight"
       );
 
-    if (weightEl) {
+    if (
+      weightEl
+    ) {
       weightEl.textContent =
         safeText(
           item.weight
         );
     }
 
-    // -------------------------
+    // ---------------------------------------------------------
     // BIG FISH
-    // -------------------------
+    // ---------------------------------------------------------
 
     const bigCell =
       tr.querySelector(
         "td.col-big"
       );
 
-    if (bigCell) {
-
+    if (
+      bigCell
+    ) {
       bigCell.classList.remove(
         "season-bigfish-winner"
       );
@@ -851,9 +1394,9 @@
         );
     }
 
-    // -------------------------
+    // ---------------------------------------------------------
     // TOP 18
-    // -------------------------
+    // ---------------------------------------------------------
 
     if (
       item.qualifiedForFinal ===
@@ -871,66 +1414,71 @@
   }
 
   // =========================================================
-  // NORMALIZE STANDINGS
+  // NORMALIZE STANDING
   // =========================================================
 
-  function normalizeStandingRow(r) {
+  function normalizeStandingRow(
+    row
+  ) {
     return {
       teamId:
         String(
-          r.teamId || ""
+          row.teamId ||
+          ""
         ).trim(),
 
       team:
         String(
-          r.team ||
-          r.teamName ||
+          row.team ||
+          row.teamName ||
           "—"
         ).trim(),
 
       zone:
         String(
-          r.zone || ""
+          row.zone ||
+          ""
         )
           .toUpperCase()
           .trim(),
 
       sector:
         String(
-          r.sector || ""
+          row.sector ||
+          ""
         ).trim(),
 
       overallPlace:
         num(
-          r.overallPlace ||
-          r.finalPlace ||
-          r.place
+          row.overallPlace ||
+          row.finalPlace ||
+          row.place
         ),
 
       zonePlace:
         num(
-          r.zonePlace
+          row.zonePlace
         ),
 
       points:
         num(
-          r.points ||
-          r.zonePlace
+          row.points ||
+          row.zonePlace
         ),
 
       totalWeight:
         num(
-          r.totalWeight
+          row.totalWeight
         ),
 
       bigFish:
         num(
-          r.bigFish
+          row.bigFish
         ),
 
       totalCount:
         num(
-          r.totalCount
+          row.totalCount
         )
     };
   }
@@ -959,21 +1507,28 @@
     const byTeamName =
       new Map();
 
-    // -------------------------
-    // ЗОНИ A/B/C
-    // -------------------------
-
-    ["A", "B", "C"].forEach(
+    /*
+     * Зони.
+     */
+    [
+      "A",
+      "B",
+      "C"
+    ].forEach(
       zone => {
 
         const zoneRows =
           rows
             .filter(
-              r =>
-                r.zone === zone
+              row =>
+                row.zone ===
+                zone
             )
             .sort(
-              (a, b) => {
+              (
+                a,
+                b
+              ) => {
 
                 if (
                   b.totalWeight !==
@@ -998,23 +1553,31 @@
                 return String(
                   a.team
                 ).localeCompare(
-                  String(b.team),
+                  String(
+                    b.team
+                  ),
                   "uk"
                 );
               }
             );
 
         zoneRows.forEach(
-          (r, index) => {
+          (
+            row,
+            index
+          ) => {
 
             const zonePlace =
-              r.zonePlace ||
+              row.zonePlace ||
               index + 1;
 
             const fixed = {
-              ...r,
+              ...row,
+
               zonePlace,
-              points: zonePlace
+
+              points:
+                zonePlace
             };
 
             if (
@@ -1041,48 +1604,54 @@
       }
     );
 
-    // -------------------------
-    // Якщо зони немає
-    // -------------------------
-
+    /*
+     * Якщо зона відсутня.
+     */
     rows
       .filter(
-        r =>
-          !["A", "B", "C"]
-            .includes(r.zone)
+        row =>
+          ![
+            "A",
+            "B",
+            "C"
+          ].includes(
+            row.zone
+          )
       )
-      .forEach(r => {
+      .forEach(
+        row => {
 
-        const fixed = {
-          ...r,
+          const fixed = {
+            ...row,
 
-          points:
-            r.points ||
-            r.zonePlace ||
-            r.overallPlace ||
-            0
-        };
+            points:
+              row.points ||
+              row.zonePlace ||
+              row.overallPlace ||
+              0
+          };
 
-        if (
-          fixed.teamId
-        ) {
-          byTeamId.set(
-            fixed.teamId,
-            fixed
-          );
+          if (
+            fixed.teamId
+          ) {
+            byTeamId.set(
+              fixed.teamId,
+              fixed
+            );
+          }
+
+          if (
+            fixed.team
+          ) {
+            byTeamName.set(
+              clean(
+                fixed.team
+              ),
+              fixed
+            );
+          }
         }
-
-        if (
-          fixed.team
-        ) {
-          byTeamName.set(
-            clean(
-              fixed.team
-            ),
-            fixed
-          );
-        }
-      });
+      );
 
     return {
       byTeamId,
@@ -1091,7 +1660,7 @@
   }
 
   // =========================================================
-  // ЗАВАНТАЖЕННЯ АРХІВУ ЕТАПІВ
+  // LOAD ARCHIVED STAGES
   // =========================================================
 
   async function loadArchiveStageMaps(
@@ -1107,7 +1676,6 @@
         async stage => {
 
           try {
-
             const snap =
               await db
                 .collection(
@@ -1131,7 +1699,8 @@
             }
 
             const data =
-              snap.data() || {};
+              snap.data() ||
+              {};
 
             const standings =
               Array.isArray(
@@ -1147,12 +1716,13 @@
               )
             );
 
-          } catch (e) {
-
+          } catch (
+            error
+          ) {
             console.warn(
               "[Final qualification] Не вдалося прочитати етап:",
               stage.stageDocId,
-              e
+              error
             );
           }
         }
@@ -1163,7 +1733,7 @@
   }
 
   // =========================================================
-  // ЗНАХОДИМО КОМАНДУ
+  // FIND TEAM IN ARCHIVE
   // =========================================================
 
   function findArchiveRowForTeam(
@@ -1179,7 +1749,8 @@
 
     const teamId =
       String(
-        team.teamId || ""
+        team.teamId ||
+        ""
       ).trim();
 
     const teamName =
@@ -1189,6 +1760,10 @@
         ""
       );
 
+    /*
+     * teamId завжди має
+     * найвищий пріоритет.
+     */
     if (
       teamId &&
       stageMap.byTeamId.has(
@@ -1197,9 +1772,15 @@
     ) {
       return stageMap
         .byTeamId
-        .get(teamId);
+        .get(
+          teamId
+        );
     }
 
+    /*
+     * Назва — тільки fallback
+     * для старих даних.
+     */
     if (
       teamName &&
       stageMap.byTeamName.has(
@@ -1208,14 +1789,16 @@
     ) {
       return stageMap
         .byTeamName
-        .get(teamName);
+        .get(
+          teamName
+        );
     }
 
     return null;
   }
 
   // =========================================================
-  // РЕЗУЛЬТАТ ВІДБІРКОВОГО ЕТАПУ
+  // REGULAR STAGE RESULT
   // =========================================================
 
   function readRegularStageResult(
@@ -1223,10 +1806,14 @@
     stage,
     archiveMaps
   ) {
-    // Додатковий захист:
-    // фінал сюди не потрапить.
+    /*
+     * Фінал ніколи
+     * не враховуємо.
+     */
     if (
-      isFinalStage(stage)
+      isFinalStage(
+        stage
+      )
     ) {
       return null;
     }
@@ -1242,8 +1829,9 @@
         team
       );
 
-    if (archiveRow) {
-
+    if (
+      archiveRow
+    ) {
       const place =
         num(
           archiveRow.zonePlace ||
@@ -1255,8 +1843,11 @@
       }
 
       return {
-        p: place,
-        pts: place,
+        p:
+          place,
+
+        pts:
+          place,
 
         totalWeight:
           num(
@@ -1275,12 +1866,13 @@
       };
     }
 
-    // -------------------------
-    // fallback із seasonRating
-    // -------------------------
-
+    /*
+     * Fallback зі старого
+     * seasonRating.
+     */
     const stagesObj =
-      team.stages || {};
+      team.stages ||
+      {};
 
     const stageData =
       stagesObj[
@@ -1291,7 +1883,9 @@
       ] ||
       null;
 
-    if (!stageData) {
+    if (
+      !stageData
+    ) {
       return null;
     }
 
@@ -1307,8 +1901,11 @@
     }
 
     return {
-      p: place,
-      pts: place,
+      p:
+        place,
+
+      pts:
+        place,
 
       totalWeight:
         num(
@@ -1328,7 +1925,7 @@
   }
 
   // =========================================================
-  // 2 НАЙКРАЩІ РЕЗУЛЬТАТИ
+  // BEST RESULTS
   // =========================================================
 
   function calculateBestResults(
@@ -1336,7 +1933,8 @@
     regularStages,
     archiveMaps
   ) {
-    const allResults = [];
+    const allResults =
+      [];
 
     regularStages.forEach(
       stage => {
@@ -1348,8 +1946,9 @@
             archiveMaps
           );
 
-        if (result) {
-
+        if (
+          result
+        ) {
           allResults.push({
             stageDocId:
               stage.stageDocId,
@@ -1361,17 +1960,24 @@
           });
 
         } else {
-
           allResults.push({
             stageDocId:
               stage.stageDocId,
 
-            p: "–",
-            pts: ABSENT_POINTS,
+            p:
+              "–",
 
-            totalWeight: 0,
-            bigFish: 0,
-            totalCount: 0,
+            pts:
+              ABSENT_POINTS,
+
+            totalWeight:
+              0,
+
+            bigFish:
+              0,
+
+            totalCount:
+              0,
 
             isNoShow:
               true
@@ -1380,14 +1986,14 @@
       }
     );
 
-    // Менше балів = краще.
-    // Якщо однаково:
-    // вага, потім Big Fish.
     const sorted =
       allResults
         .slice()
         .sort(
-          (a, b) => {
+          (
+            a,
+            b
+          ) => {
 
             if (
               a.pts !==
@@ -1430,24 +2036,29 @@
     const countedKeys =
       new Set(
         counted.map(
-          x =>
-            x.stageDocId
+          item =>
+            item.stageDocId
         )
       );
 
     const droppedKeys =
       new Set(
         dropped.map(
-          x =>
-            x.stageDocId
+          item =>
+            item.stageDocId
         )
       );
 
     const ratingPoints =
       counted.reduce(
-        (sum, x) =>
+        (
+          sum,
+          item
+        ) =>
           sum +
-          num(x.pts),
+          num(
+            item.pts
+          ),
         0
       );
 
@@ -1459,7 +2070,7 @@
   }
 
   // =========================================================
-  // КЛІТИНКИ ЕТАПІВ
+  // STAGE CELLS
   // =========================================================
 
   function makeStageCells(
@@ -1492,24 +2103,37 @@
               stage.stageDocId
             );
 
-        if (!result) {
-
+        if (
+          !result
+        ) {
           return {
-            p: "–",
-            pts: ABSENT_POINTS,
+            p:
+              "–",
 
-            noShow: true,
+            pts:
+              ABSENT_POINTS,
+
+            noShow:
+              true,
+
             counted,
+
             dropped
           };
         }
 
         return {
-          p: result.p,
-          pts: result.pts,
+          p:
+            result.p,
 
-          noShow: false,
+          pts:
+            result.pts,
+
+          noShow:
+            false,
+
           counted,
+
           dropped
         };
       }
@@ -1517,7 +2141,7 @@
   }
 
   // =========================================================
-  // ЗАГАЛЬНА ВАГА ВСІХ ВІДБІРКОВИХ ЕТАПІВ
+  // TOTAL WEIGHT
   // =========================================================
 
   function getTournamentWeight(
@@ -1525,7 +2149,8 @@
     regularStages,
     archiveMaps
   ) {
-    let weight = 0;
+    let weight =
+      0;
 
     regularStages.forEach(
       stage => {
@@ -1537,7 +2162,9 @@
             archiveMaps
           );
 
-        if (result) {
+        if (
+          result
+        ) {
           weight +=
             num(
               result.totalWeight
@@ -1550,7 +2177,7 @@
   }
 
   // =========================================================
-  // BIG FISH ВСІХ ВІДБІРКОВИХ ЕТАПІВ
+  // TOURNAMENT BIG FISH
   // =========================================================
 
   function getTournamentBigFish(
@@ -1558,7 +2185,8 @@
     regularStages,
     archiveMaps
   ) {
-    let bigFish = 0;
+    let bigFish =
+      0;
 
     regularStages.forEach(
       stage => {
@@ -1570,7 +2198,9 @@
             archiveMaps
           );
 
-        if (result) {
+        if (
+          result
+        ) {
           bigFish =
             Math.max(
               bigFish,
@@ -1586,7 +2216,7 @@
   }
 
   // =========================================================
-  // РАНЖУВАННЯ КОМАНД
+  // RANK TEAMS
   // =========================================================
 
   function rankTeams(
@@ -1605,28 +2235,27 @@
               archiveMaps
             );
 
-          const stageCells =
-            makeStageCells(
-              team,
-              regularStages,
-              bestInfo,
-              archiveMaps
-            );
-
           return {
             teamId:
               String(
                 team.teamId ||
                 ""
-              ),
+              ).trim(),
 
             team:
-              team.team ||
-              team.teamName ||
-              "—",
+              String(
+                team.team ||
+                team.teamName ||
+                "—"
+              ).trim(),
 
             stages:
-              stageCells,
+              makeStageCells(
+                team,
+                regularStages,
+                bestInfo,
+                archiveMaps
+              ),
 
             ratingPoints:
               bestInfo.ratingPoints,
@@ -1649,9 +2278,15 @@
       );
 
     rows.sort(
-      (a, b) => {
+      (
+        a,
+        b
+      ) => {
 
-        // 1. Бали
+        /*
+         * 1.
+         * Менше балів = краще.
+         */
         if (
           a.ratingPoints !==
           b.ratingPoints
@@ -1662,7 +2297,10 @@
           );
         }
 
-        // 2. Вага
+        /*
+         * 2.
+         * Більша загальна вага.
+         */
         if (
           b.displayWeight !==
           a.displayWeight
@@ -1673,7 +2311,10 @@
           );
         }
 
-        // 3. Big Fish
+        /*
+         * 3.
+         * Більший Big Fish.
+         */
         if (
           b.displayBigFish !==
           a.displayBigFish
@@ -1684,26 +2325,36 @@
           );
         }
 
-        // 4. Стабільність
+        /*
+         * 4.
+         * Стабільний fallback.
+         */
         return String(
           a.team
         ).localeCompare(
-          String(b.team),
+          String(
+            b.team
+          ),
           "uk"
         );
       }
     );
 
     return rows.map(
-      (row, index) => ({
+      (
+        row,
+        index
+      ) => ({
         ...row,
-        place: index + 1
+
+        place:
+          index + 1
       })
     );
   }
 
   // =========================================================
-  // ПОПЕРЕДНЄ МІСЦЕ
+  // PREVIOUS PLACES
   // =========================================================
 
   function calculatePreviousPlaces(
@@ -1712,13 +2363,12 @@
     archiveMaps
   ) {
     if (
-      regularStages.length <= 1
+      regularStages.length <=
+      1
     ) {
       return new Map();
     }
 
-    // Прибираємо останній
-    // заархівований етап.
     const previousStages =
       regularStages.slice(
         0,
@@ -1753,15 +2403,13 @@
   }
 
   // =========================================================
-  // FIRESTORE → PAYLOAD
+  // FIRESTORE -> PAYLOAD
   // =========================================================
 
   async function convertRatingToRows(
     db,
     rating
   ) {
-    // ТІЛЬКИ звичайні етапи.
-    // Фінал тут уже відкинутий.
     const regularStages =
       getRegularArchivedStages(
         rating
@@ -1797,7 +2445,10 @@
 
     const seasonBigFish =
       currentRows.reduce(
-        (max, row) =>
+        (
+          max,
+          row
+        ) =>
           Math.max(
             max,
             num(
@@ -1811,17 +2462,29 @@
       currentRows.map(
         row => {
 
-          const prevPlace =
+          const previousPlace =
             previousPlaces.get(
               row.teamId
             ) ||
             row.place;
 
           const moveDelta =
-            prevPlace -
+            previousPlace -
             row.place;
 
           return {
+            /*
+             * КРИТИЧНО:
+             *
+             * teamId тепер передається
+             * далі разом із рейтингом.
+             *
+             * Саме він потрібен
+             * автоматизації finalInvites.
+             */
+            teamId:
+              row.teamId,
+
             place:
               row.place,
 
@@ -1832,8 +2495,11 @@
               row.stages,
 
             points:
-              row.ratingPoints ||
-              "—",
+              Number.isFinite(
+                row.ratingPoints
+              )
+                ? row.ratingPoints
+                : "—",
 
             weight:
               fmtKg(
@@ -1846,11 +2512,12 @@
               ),
 
             seasonBigFishWinner:
-              seasonBigFish > 0 &&
+              seasonBigFish >
+                0 &&
               num(
                 row.displayBigFish
               ) ===
-              seasonBigFish,
+                seasonBigFish,
 
             moveDelta,
 
@@ -1861,16 +2528,15 @@
         }
       );
 
-    /*
-      regularStages теж кладемо
-      в payload.
-
-      Це потрібно для
-      динамічної шапки:
-      Е1 / Е2 / Е3 / Е4...
-    */
     return {
+      seasonYear:
+        SEASON_YEAR,
+
+      topCount:
+        TOP_COUNT,
+
       regularStages,
+
       rows
     };
   }
@@ -1901,20 +2567,12 @@
       Math.max(
         3,
         rows.length -
-        TOP_COUNT
+          TOP_COUNT
       );
-
-    // -------------------------
-    // 1. ШАПКА Е1 / Е2 / Е3...
-    // -------------------------
 
     buildStageHeaders(
       regularStages
     );
-
-    // -------------------------
-    // 2. РЯДКИ
-    // -------------------------
 
     buildSkeleton(
       regularStages.length,
@@ -1929,7 +2587,7 @@
             )
         : [];
 
-    const contRows =
+    const contenderRows =
       $("season-contenders")
         ? $("season-contenders")
             .querySelectorAll(
@@ -1938,13 +2596,15 @@
         : [];
 
     rows.forEach(
-      (item, index) => {
+      (
+        item,
+        index
+      ) => {
 
         if (
           index <
           TOP_COUNT
         ) {
-
           if (
             topRows[index]
           ) {
@@ -1954,36 +2614,36 @@
             );
           }
 
-        } else {
+          return;
+        }
 
-          const contenderIndex =
-            index -
-            TOP_COUNT;
+        const contenderIndex =
+          index -
+          TOP_COUNT;
 
-          if (
-            contRows[
+        if (
+          contenderRows[
+            contenderIndex
+          ]
+        ) {
+          renderRow(
+            contenderRows[
               contenderIndex
-            ]
-          ) {
+            ],
+            {
+              ...item,
 
-            renderRow(
-              contRows[
-                contenderIndex
-              ],
-              {
-                ...item,
-                qualifiedForFinal:
-                  false
-              }
-            );
-          }
+              qualifiedForFinal:
+                false
+            }
+          );
         }
       }
     );
 
-    // -------------------------
+    // ---------------------------------------------------------
     // TITLES
-    // -------------------------
+    // ---------------------------------------------------------
 
     if (
       $("seasonTitle")
@@ -2001,16 +2661,22 @@
         `СЕЗОН ${SEASON_YEAR}`;
     }
 
-    // -------------------------
+    document.body
+      .setAttribute(
+        "data-season-year",
+        SEASON_YEAR
+      );
+
+    // ---------------------------------------------------------
     // ERROR
-    // -------------------------
+    // ---------------------------------------------------------
 
     if (
       !rows.length &&
       !offline
     ) {
       showError(
-        "⚠️ Немає даних відбору. Спочатку потрібно архівувати хоча б один етап."
+        `⚠️ Немає даних відбору сезону ${SEASON_YEAR}. Спочатку потрібно архівувати хоча б один етап.`
       );
 
     } else if (
@@ -2029,42 +2695,66 @@
   async function loadRating() {
     injectBigFishStyle();
     hideError();
-
-    /*
-      НЕ створюємо тут 5 колонок,
-      як робив старий JS.
-
-      Чекаємо дані Firestore,
-      дізнаємося реальну кількість
-      етапів і тільки тоді
-      будуємо таблицю.
-    */
-
-    const cached =
-      cacheGet();
-
-    if (cached) {
-
-      try {
-        renderRatingPayload(
-          cached,
-          true
-        );
-
-      } catch (e) {
-
-        console.warn(
-          "[Final qualification] cache render error:",
-          e
-        );
-      }
-    }
+    clearOldRatingCaches();
 
     try {
-
       const db =
         await waitReady();
 
+      /*
+       * ГОЛОВНЕ:
+       *
+       * визначаємо рік ДО читання
+       * seasonRating і cache.
+       */
+      SEASON_YEAR =
+        await resolveSeasonYear(
+          db
+        );
+
+      if (
+        !SEASON_YEAR
+      ) {
+        throw new Error(
+          "Не вдалося визначити сезон."
+        );
+      }
+
+      console.log(
+        "[Final qualification] active season:",
+        SEASON_YEAR
+      );
+
+      /*
+       * Тепер cache уже
+       * прив'язаний до конкретного року.
+       */
+      const cached =
+        cacheGet();
+
+      if (
+        cached
+      ) {
+        try {
+          renderRatingPayload(
+            cached,
+            true
+          );
+
+        } catch (
+          error
+        ) {
+          console.warn(
+            "[Final qualification] cache render:",
+            error
+          );
+        }
+      }
+
+      /*
+       * Реальний рейтинг
+       * конкретного сезону.
+       */
       db
         .collection(
           "seasonRating"
@@ -2074,10 +2764,10 @@
         )
         .onSnapshot(
 
-          async snap => {
+          async snapshot => {
 
             if (
-              !snap.exists
+              !snapshot.exists
             ) {
               showError(
                 `⚠️ Немає документа seasonRating/${SEASON_YEAR}`
@@ -2088,51 +2778,71 @@
               return;
             }
 
-            const rating =
-              snap.data() || {};
+            try {
+              const rating =
+                snapshot.data() ||
+                {};
 
-            const payload =
-              await convertRatingToRows(
-                db,
-                rating
+              const payload =
+                await convertRatingToRows(
+                  db,
+                  rating
+                );
+
+              cacheSet(
+                payload
               );
 
-            cacheSet(
-              payload
-            );
+              renderRatingPayload(
+                payload,
+                false
+              );
 
-            renderRatingPayload(
-              payload,
-              false
-            );
+            } catch (
+              error
+            ) {
+              console.error(
+                "[Final qualification] convert:",
+                error
+              );
+
+              showError(
+                `⚠️ Помилка формування рейтингу сезону ${SEASON_YEAR}: ${safeText(
+                  error.message ||
+                  error
+                )}`
+              );
+
+              setReadyFlag();
+            }
           },
 
-          err => {
+          error => {
 
             console.error(
-              "[Final qualification] onSnapshot error:",
-              err
+              "[Final qualification] onSnapshot:",
+              error
             );
 
             const cachedData =
               cacheGet();
 
-            if (cachedData) {
-
+            if (
+              cachedData
+            ) {
               renderRatingPayload(
                 cachedData,
                 true
               );
 
               showError(
-                "⚠️ Офлайн-режим. Показано кеш рейтингу."
+                `⚠️ Офлайн-режим. Показано кеш рейтингу сезону ${SEASON_YEAR}.`
               );
 
             } else {
-
               showError(
                 `⚠️ Помилка читання seasonRating/${SEASON_YEAR}: ${safeText(
-                  err.message
+                  error.message
                 )}`
               );
             }
@@ -2141,32 +2851,22 @@
           }
         );
 
-    } catch (e) {
+    } catch (
+      error
+    ) {
+      console.error(
+        "[Final qualification] load:",
+        error
+      );
 
-      const cachedData =
-        cacheGet();
+      showError(
+        `⚠️ Помилка завантаження рейтингу: ${safeText(
+          error.message ||
+          error
+        )}`
+      );
 
-      if (cachedData) {
-
-        renderRatingPayload(
-          cachedData,
-          true
-        );
-
-        showError(
-          "⚠️ Офлайн-режим. Показано кеш рейтингу."
-        );
-
-      } else {
-
-        showError(
-          `⚠️ Помилка завантаження рейтингу: ${safeText(
-            e.message || e
-          )}`
-        );
-
-        setReadyFlag();
-      }
+      setReadyFlag();
     }
   }
 
@@ -2180,6 +2880,18 @@
       cacheClear();
 
       window.location.reload();
+    };
+
+  /*
+   * Корисно для інших JS.
+   *
+   * Наприклад:
+   *
+   * window.getActiveSeasonYear()
+   */
+  window.getActiveSeasonYear =
+    function () {
+      return SEASON_YEAR;
     };
 
   // =========================================================

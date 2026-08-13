@@ -207,16 +207,16 @@
     }
 
     /*
-     * final_decline.js НЕ повинен
-     * ламати сторінки, де немає
-     * форми реєстрації.
+     * Кнопка відмови повинна
+     * розташовуватися відразу
+     * після кнопки "Подати заявку".
      *
-     * Тому якщо немає ні eventOptions,
-     * ні regForm — нічого не створюємо.
+     * У HTML кнопка submit знаходиться
+     * всередині .form-actions.
      */
-    const eventOptions =
-      document.getElementById(
-        "eventOptions"
+    const formActions =
+      document.querySelector(
+        "#regForm .form-actions"
       );
 
     const form =
@@ -224,10 +224,11 @@
         "regForm"
       );
 
-    if (
-      !eventOptions &&
-      !form
-    ) {
+    /*
+     * Якщо форми реєстрації немає,
+     * нічого не створюємо.
+     */
+    if (!form) {
       return null;
     }
 
@@ -239,46 +240,32 @@
     box.id =
       "finalDeclineBox";
 
+    /*
+     * Контейнер прихований,
+     * доки не буде знайдено
+     * qualification зі status=invited.
+     */
     box.style.display =
       "none";
 
     box.style.marginTop =
-      "16px";
+      "10px";
 
-    box.style.padding =
-      "14px";
+    box.style.marginBottom =
+      "0";
 
-    box.style.borderRadius =
-      "14px";
-
-    box.style.border =
-      "1px solid rgba(239,68,68,.35)";
-
-    box.style.background =
-      "rgba(127,29,29,.12)";
-
+    /*
+     * Тут навмисно НЕМАЄ:
+     *
+     * "Участь у Фіналі"
+     *
+     * і НЕМАЄ опису:
+     *
+     * "Ваша команда має право участі..."
+     *
+     * Залишається тільки кнопка.
+     */
     box.innerHTML = `
-      <div
-        style="
-          font-weight:900;
-          font-size:15px;
-          margin-bottom:6px;
-          color:#f3f4f6;
-        "
-      >
-        Участь у Фіналі
-      </div>
-
-      <div
-        id="finalDeclineText"
-        style="
-          font-size:13px;
-          line-height:1.45;
-          color:#9ca3af;
-          margin-bottom:10px;
-        "
-      ></div>
-
       <button
         id="btnFinalDecline"
         type="button"
@@ -291,6 +278,10 @@
           color:#fecaca;
           font-weight:900;
           cursor:pointer;
+          transition:
+            opacity .15s ease,
+            background .15s ease,
+            border-color .15s ease;
         "
       >
         Відмовитися від Фіналу
@@ -298,6 +289,8 @@
 
       <div
         id="finalDeclineMsg"
+        role="status"
+        aria-live="polite"
         style="
           display:none;
           margin-top:8px;
@@ -310,14 +303,17 @@
     `;
 
     /*
-     * Бажане місце:
-     * одразу після eventOptions.
+     * Основне місце:
+     *
+     * одразу ПІСЛЯ .form-actions,
+     * тобто після кнопки
+     * "Подати заявку".
      */
     if (
-      eventOptions &&
-      eventOptions.parentNode
+      formActions &&
+      formActions.parentNode
     ) {
-      eventOptions
+      formActions
         .insertAdjacentElement(
           "afterend",
           box
@@ -326,9 +322,10 @@
 
     /*
      * Fallback:
-     * кінець regForm.
+     * якщо .form-actions чомусь
+     * відсутній — додаємо в кінець form.
      */
-    else if (form) {
+    else {
       form.appendChild(
         box
       );
@@ -379,27 +376,35 @@
   function showBox(
     qualification
   ) {
+    /*
+     * Додатково перевіряємо status,
+     * щоб кнопку неможливо було
+     * випадково показати для reserve,
+     * confirmed або declined.
+     */
+    const data =
+      qualification?.data ||
+      {};
+
+    const status =
+      clean(
+        data.status
+      );
+
+    if (
+      status !==
+      DECLINABLE_STATUS
+    ) {
+      hideBox();
+      return;
+    }
+
     const box =
       getOrCreateBox();
 
     if (!box) {
       return;
     }
-
-    const data =
-      qualification?.data ||
-      {};
-
-    const year =
-      normalize(
-        qualification?.year ||
-        data.seasonYear
-      );
-
-    const text =
-      box.querySelector(
-        "#finalDeclineText"
-      );
 
     const msg =
       box.querySelector(
@@ -411,35 +416,10 @@
         "#btnFinalDecline"
       );
 
-    const rank =
-      Number(
-        data.rank ||
-        0
-      );
-
-    let message =
-      "Ваша команда має право участі у Фіналі.";
-
-    if (
-      rank >
-      0
-    ) {
-      message +=
-        ` Поточне місце у рейтингу — №${rank}.`;
-    }
-
-    if (year) {
-      message +=
-        ` Сезон ${year}.`;
-    }
-
-    message +=
-      " Якщо ви не плануєте брати участь, можете звільнити місце для наступної команди.";
-
-    if (text) {
-      text.textContent =
-        message;
-    }
+    /*
+     * Ніякого текстового опису
+     * qualification тут більше немає.
+     */
 
     if (msg) {
       msg.textContent =
@@ -650,8 +630,7 @@
     }
 
     /*
-     * Аналогічно:
-     * старий запис може не мати
+     * Старий запис може не мати
      * seasonYear всередині.
      *
      * Path:
@@ -824,7 +803,6 @@
 
           data: {
             ...data,
-
             status
           }
         };
@@ -965,9 +943,6 @@
              * Після нашої успішної відмови
              * handleDecline сам покаже
              * success message і сховає box.
-             *
-             * Listener не повинен зробити
-             * це раніше.
              */
             if (
               declineCompleted &&
@@ -1003,7 +978,6 @@
 
               data: {
                 ...data,
-
                 status
               }
             };
@@ -1087,7 +1061,7 @@
 
   async function handleDecline() {
     /*
-     * Подвійний клік.
+     * Захист від подвійного кліку.
      */
     if (
       declining
@@ -1218,11 +1192,6 @@
           // TEAM VALIDATION
           // =================================================
 
-          /*
-           * Якщо teamId є всередині
-           * qualification — він мусить
-           * відповідати поточній команді.
-           */
           if (
             documentTeamId &&
             documentTeamId !==
@@ -1233,11 +1202,6 @@
             );
           }
 
-          /*
-           * Перевіряємо також teamId,
-           * з яким qualification була
-           * знайдена.
-           */
           if (
             expectedTeamId !==
               currentTeamId
@@ -1251,13 +1215,6 @@
           // YEAR VALIDATION
           // =================================================
 
-          /*
-           * seasonYear може бути відсутнім
-           * у legacy документі.
-           *
-           * Якщо поле є — воно повинно
-           * відповідати path року.
-           */
           if (
             documentYear &&
             documentYear !==
@@ -1273,8 +1230,7 @@
           // =================================================
 
           /*
-           * Відмовитися можна
-           * ТІЛЬКИ:
+           * Відмовитися можна ТІЛЬКИ:
            *
            * invited -> declined
            */
@@ -1319,8 +1275,7 @@
           // =================================================
 
           /*
-           * Користувач НЕ має права
-           * змінювати:
+           * НЕ змінюємо:
            *
            * rank
            * ratingPoints
@@ -1335,7 +1290,6 @@
            * Міняємо виключно поля,
            * пов'язані з відмовою.
            */
-
           transaction.update(
             qualificationRef,
             {
@@ -1348,13 +1302,6 @@
               declinedAt:
                 serverTimestamp(),
 
-              /*
-               * ВАЖЛИВО.
-               *
-               * Firestore Rules можуть
-               * перевірити, хто саме
-               * виконав відмову.
-               */
               declinedByUid:
                 currentUser.uid,
 
@@ -1655,8 +1602,7 @@
 
       /*
        * UI створюємо лише якщо
-       * сторінка має відповідний
-       * контейнер/форму.
+       * сторінка має форму реєстрації.
        */
       getOrCreateBox();
 

@@ -7,6 +7,7 @@
 // ✅ stalker-solo => solo
 // ✅ інші формати => team
 // ✅ entryType пишеться в competition / events / engine
+// ✅ final завжди TEAM у поточній системі qualification
 
 (function(){
   "use strict";
@@ -114,25 +115,16 @@
 
   function renderFormatSpecificFields(html){
     if(!formatFieldsEl) return;
-
-    formatFieldsEl.innerHTML =
-      html || "";
+    formatFieldsEl.innerHTML = html || "";
   }
 
   function getRegistry(){
-    const sc =
-      window.SC_FORMATS || null;
-
+    const sc = window.SC_FORMATS || null;
     if(!sc) return null;
 
-    if(typeof sc.get === "function"){
-      return sc;
-    }
+    if(typeof sc.get === "function") return sc;
 
-    if(
-      sc.registry &&
-      typeof sc.registry.get === "function"
-    ){
+    if(sc.registry && typeof sc.registry.get === "function"){
       return sc.registry;
     }
 
@@ -140,16 +132,10 @@
   }
 
   function getPreset(name){
-    const reg =
-      getRegistry();
+    const reg = getRegistry();
+    const key = String(name || "").toLowerCase();
 
-    const key =
-      String(name || "")
-        .toLowerCase();
-
-    if(!reg || !key){
-      return null;
-    }
+    if(!reg || !key) return null;
 
     try{
       return reg.get(key) || null;
@@ -163,56 +149,29 @@
   // =========================================================
 
   function entryTypeFromFormat(formatName){
-    const format =
-      String(formatName || "")
-        .trim()
-        .toLowerCase();
+    const format = String(formatName || "")
+      .trim()
+      .toLowerCase();
 
-    /*
-     * SOLO format.
-     *
-     * Людина реєструється окремо,
-     * навіть якщо вона є членом команди.
-     */
-    if(format === "stalker-solo"){
-      return "solo";
-    }
-
-    /*
-     * Старі та інші формати
-     * залишаються командними.
-     */
-    return "team";
+    return format === "stalker-solo"
+      ? "solo"
+      : "team";
   }
 
   async function activateFormat(formatName, opts){
-    const requested =
-      String(formatName || "classic")
-        .toLowerCase();
+    const requested = String(formatName || "classic").toLowerCase();
+    const preset = getPreset(requested);
 
-    const preset =
-      getPreset(requested);
-
-    activeFormatName =
-      requested || "classic";
-
-    activeFormat =
-      preset || null;
+    activeFormatName = requested || "classic";
+    activeFormat = preset || null;
 
     renderFormatSpecificFields("");
 
-    if(!activeFormat){
-      return;
-    }
+    if(!activeFormat) return;
 
-    if(
-      typeof activeFormat.init ===
-      "function"
-    ){
-      activeFormat.init({
-        render:
-          renderFormatSpecificFields,
-
+    if(typeof activeFormat.init === "function"){
+      await activeFormat.init({
+        render: renderFormatSpecificFields,
         $,
         esc
       });
@@ -221,25 +180,19 @@
     if(
       opts &&
       opts.deserializeData &&
-      typeof activeFormat.deserialize ===
-        "function"
+      typeof activeFormat.deserialize === "function"
     ){
       try{
-        activeFormat.deserialize(
+        await activeFormat.deserialize(
           opts.deserializeData,
           {
-            render:
-              renderFormatSpecificFields,
-
+            render: renderFormatSpecificFields,
             $,
             esc
           }
         );
       }catch(e){
-        console.warn(
-          "deserialize error:",
-          e
-        );
+        console.warn("deserialize error:", e);
       }
     }
   }
@@ -250,11 +203,7 @@
 
   function getDraft(){
     try{
-      return JSON.parse(
-        localStorage.getItem(
-          DRAFT_KEY
-        ) || "null"
-      );
+      return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
     }catch{
       return null;
     }
@@ -262,18 +211,13 @@
 
   function setDraft(data){
     try{
-      localStorage.setItem(
-        DRAFT_KEY,
-        JSON.stringify(data)
-      );
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
     }catch{}
   }
 
   function clearDraft(){
     try{
-      localStorage.removeItem(
-        DRAFT_KEY
-      );
+      localStorage.removeItem(DRAFT_KEY);
     }catch{}
   }
 
@@ -282,44 +226,32 @@
   // =========================================================
 
   function parseLocalDateTime(v){
-    const s =
-      (v || "").trim();
+    const s = (v || "").trim();
+    if(!s) return null;
 
-    if(!s){
-      return null;
-    }
+    const m = s.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
+    );
 
-    const m =
-      s.match(
-        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
-      );
+    if(!m) return null;
 
-    if(!m){
-      return null;
-    }
+    const dt = new Date(
+      +m[1],
+      +m[2]-1,
+      +m[3],
+      +m[4],
+      +m[5],
+      0,
+      0
+    );
 
-    const dt =
-      new Date(
-        +m[1],
-        +m[2]-1,
-        +m[3],
-        +m[4],
-        +m[5],
-        0,
-        0
-      );
-
-    return Number.isNaN(
-      dt.getTime()
-    )
+    return Number.isNaN(dt.getTime())
       ? null
       : dt;
   }
 
   function toDateTimeLocalValue(date){
-    if(!date){
-      return "";
-    }
+    if(!date) return "";
 
     const pad =
       (n)=>String(n).padStart(2,"0");
@@ -334,9 +266,7 @@
   }
 
   function toDateOnly(date){
-    if(!date){
-      return "";
-    }
+    if(!date) return "";
 
     const pad =
       (n)=>String(n).padStart(2,"0");
@@ -349,9 +279,7 @@
   }
 
   function timestampToDate(ts){
-    if(!ts){
-      return null;
-    }
+    if(!ts) return null;
 
     if(ts instanceof Date){
       return ts;
@@ -365,22 +293,8 @@
     }
 
     if(
-      typeof ts ===
-      "string"
-    ){
-      const d =
-        new Date(ts);
-
-      return Number.isFinite(
-        d.getTime()
-      )
-        ? d
-        : null;
-    }
-
-    if(
-      typeof ts ===
-      "number"
+      typeof ts === "string" ||
+      typeof ts === "number"
     ){
       const d =
         new Date(ts);
@@ -526,6 +440,40 @@
     return "open";
   }
 
+  /*
+   * Замість старого величезного
+   * вкладеного ternary.
+   */
+  function firstMoneyValue(...values){
+    for(const value of values){
+      if(value === 0){
+        return 0;
+      }
+
+      if(
+        value === null ||
+        value === undefined ||
+        value === ""
+      ){
+        continue;
+      }
+
+      const num =
+        Number(
+          String(value)
+            .replace(",", ".")
+        );
+
+      if(
+        Number.isFinite(num)
+      ){
+        return num;
+      }
+    }
+
+    return null;
+  }
+
   // =========================================================
   // ADMIN
   // =========================================================
@@ -606,6 +554,7 @@
         "mode",
         "edit"
       );
+
     }else{
       u.searchParams.delete(
         "mode"
@@ -712,6 +661,7 @@
             .activeCompetitionId ||
           "";
       }
+
     }catch(_){}
 
     const snap =
@@ -1018,11 +968,6 @@
         .trim() ||
       "classic";
 
-    /*
-     * НОВЕ:
-     * тип учасника визначається
-     * автоматично з формату.
-     */
     const entryType =
       entryTypeFromFormat(
         format
@@ -1294,9 +1239,6 @@
       format:
         d.format,
 
-      /*
-       * НОВЕ
-       */
       entryType:
         d.entryType,
 
@@ -1802,11 +1744,6 @@
         index:
           i,
 
-        /*
-         * НОВЕ:
-         * stage теж знає,
-         * TEAM він чи SOLO.
-         */
         entryType:
           form.entryType ||
           "team",
@@ -1816,6 +1753,7 @@
           "classic",
 
         title,
+
         name:
           title,
 
@@ -1903,10 +1841,10 @@
           order,
 
         /*
-         * НОВЕ
+         * Фінал у поточній системі
+         * кваліфікації залишається TEAM.
          */
         entryType:
-          form.entryType ||
           "team",
 
         format:
@@ -2044,6 +1982,21 @@
         d.payment ||
         {};
 
+      /*
+       * ВИПРАВЛЕНО:
+       * тут раніше була синтаксична
+       * помилка у вкладених ternary.
+       */
+      const loadedPrice =
+        firstMoneyValue(
+          pay.price,
+          d.price,
+          d.entryFee,
+          d.fee,
+          d.paymentAmount,
+          d.amount
+        );
+
       applyForm({
         type:
           d.type ||
@@ -2130,46 +2083,7 @@
           "",
 
         price:
-          (
-            pay.price === 0 ||
-            pay.price
-          )
-            ? pay.price
-            : (
-                (
-                  d.price === 0 ||
-                  d.price
-                )
-                  ? d.price
-                  : (
-                      (
-                        d.entryFee === 0 ||
-                        d.entryFee
-                      )
-                        ? d.entryFee
-                        : (
-                            (
-                              d.fee === 0 ||
-                              d.fee
-                            )
-                              ? d.fee
-                              : (
-                                  (
-                                    d.paymentAmount === 0 ||
-                                    d.paymentAmount
-                                  )
-                                    ? d.paymentAmount
-                                    : (
-                                        (
-                                          d.amount === 0 ||
-                                          d.amount
-                                        )
-                                          ? d.amount
-                                          : null
-                                      )
-                                )
-                          )
-              ),
+          loadedPrice,
 
         currency:
           pay.currency ||
@@ -2240,7 +2154,7 @@
       typeof activeFormat.validate ===
         "function"
     ){
-      activeFormat.validate({
+      await activeFormat.validate({
         $,
         format:
           form.format
@@ -2253,7 +2167,7 @@
         "function"
     ){
       formatExtra =
-        activeFormat.serialize({
+        await activeFormat.serialize({
           $,
           format:
             form.format
@@ -2329,11 +2243,6 @@
       );
     }
 
-    /*
-     * НОВЕ:
-     * entryType зберігаємо
-     * також всередині engine.
-     */
     const engine = {
       baseFormat:
         form.format ||
@@ -2352,12 +2261,6 @@
       type:
         form.type,
 
-      /*
-       * ГОЛОВНЕ НОВЕ ПОЛЕ.
-       *
-       * stalker-solo -> solo
-       * усе інше -> team
-       */
       entryType:
         form.entryType ||
         "team",

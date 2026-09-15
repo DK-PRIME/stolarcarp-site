@@ -3,7 +3,8 @@
 //
 // ✅ TEAM + SOLO
 // ✅ TEAM -> назва команди
-// ✅ SOLO -> Ім'я та Прізвище учасника
+// ✅ SOLO -> ім'я та прізвище учасника
+// ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як учасник
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
 // ✅ SOLO не відкриває popup команди
@@ -13,48 +14,36 @@
 (function () {
   "use strict";
 
-  // =========================================================
-  // DOM / HELPERS
-  // =========================================================
+  const $ = id =>
+    document.getElementById(id);
 
-  const $ =
-    id =>
-      document.getElementById(id);
-
-  const esc =
-    s =>
-      String(s ?? "")
-        .replace(
-          /[&<>"']/g,
-          m => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-          }[m])
-        );
-
-  const norm =
-    v =>
-      String(
-        v ?? ""
-      ).trim();
-
-  const normLower =
-    v =>
-      norm(v)
-        .toLowerCase();
-
-  const isPaidStatus =
-    status =>
-      [
-        "confirmed",
-        "paid",
-        "payment_confirmed"
-      ].includes(
-        normLower(status)
+  const esc = s =>
+    String(s ?? "")
+      .replace(
+        /[&<>"']/g,
+        m => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[m])
       );
+
+  const norm = v =>
+    String(v ?? "").trim();
+
+  const normLower = v =>
+    norm(v).toLowerCase();
+
+  const isPaidStatus = status =>
+    [
+      "confirmed",
+      "paid",
+      "payment_confirmed"
+    ].includes(
+      normLower(status)
+    );
 
   const ALLOWED_STATUSES =
     new Set([
@@ -64,6 +53,9 @@
       "pending_payment",
       "cancelled"
     ]);
+
+  const userNameCache =
+    new Map();
 
   // =========================================================
   // FIREBASE
@@ -130,7 +122,8 @@
       );
 
     /*
-     * Backward compatibility.
+     * Старі SOLO competitions
+     * могли ще не мати entryType.
      */
     if (
       format ===
@@ -142,14 +135,82 @@
     return "team";
   }
 
+  function isFinalMeta(
+    event,
+    stageId
+  ) {
+    const key =
+      normLower(
+        event?.key ||
+        event?.stageId ||
+        event?.id ||
+        stageId ||
+        ""
+      );
+
+    const text =
+      normLower(
+        `${
+          event?.title || ""
+        } ${
+          event?.name || ""
+        } ${
+          event?.label || ""
+        }`
+      );
+
+    return (
+      event?.isFinal === true ||
+      key === "final" ||
+      key.includes("final") ||
+      key.includes("фінал") ||
+      text.includes("final") ||
+      text.includes("фінал")
+    );
+  }
+
   function resolveRowEntryType(
     row,
-    competitionEntryType
+    meta
   ) {
     const explicit =
       normLower(
         row?.entryType
       );
+
+    /*
+     * Поточний фінал —
+     * тільки TEAM.
+     */
+    if (
+      meta.isFinal
+    ) {
+      return "team";
+    }
+
+    /*
+     * ВАЖЛИВО.
+     *
+     * Якщо саме competition/event
+     * вже визначений як SOLO —
+     * це головне джерело істини
+     * для цієї сторінки.
+     *
+     * Тому старий запис:
+     *
+     * entryType: "team"
+     * teamName: "DK Два Кума"
+     * uid: "..."
+     *
+     * буде показаний як SOLO
+     * і ім'я підтягнеться через UID.
+     */
+    if (
+      meta.entryType ===
+      "solo"
+    ) {
+      return "solo";
+    }
 
     if (
       explicit === "solo" ||
@@ -159,15 +220,12 @@
     }
 
     /*
-     * Legacy SOLO:
-     * немає entryType,
-     * немає teamId,
-     * зате є participantName.
+     * Legacy SOLO без entryType.
      */
     if (
-      competitionEntryType ===
-        "solo" &&
-      !norm(row?.teamId) &&
+      !norm(
+        row?.teamId
+      ) &&
       (
         norm(
           row?.participantName
@@ -261,7 +319,9 @@
             }
           ) || null;
 
-        if (event) {
+        if (
+          event
+        ) {
           stageTitle =
             norm(
               event.title ||
@@ -277,34 +337,12 @@
             event
           );
 
-        /*
-         * Поточна фінальна система
-         * залишається TEAM.
-         */
-        const eventKey =
-          normLower(
-            event?.key ||
-            event?.stageId ||
-            stageId
-          );
-
-        const isFinal =
-          event?.isFinal === true ||
-          eventKey === "final" ||
-          eventKey.includes(
-            "фінал"
-          );
-
-        if (isFinal) {
-          entryType =
-            "team";
-        }
-
         format =
           normLower(
             event?.format ||
             competition.format ||
-            competition.engine?.baseFormat ||
+            competition.engine
+              ?.baseFormat ||
             "classic"
           );
       }
@@ -316,19 +354,37 @@
       );
     }
 
+    const isFinal =
+      isFinalMeta(
+        event,
+        stageId
+      );
+
+    if (
+      isFinal
+    ) {
+      entryType =
+        "team";
+    }
+
     return {
       title:
         norm(title) ||
         "Змагання",
 
       stageTitle:
-        norm(stageTitle),
+        norm(
+          stageTitle
+        ),
 
       entryType,
 
       format,
 
+      isFinal,
+
       competition,
+
       event
     };
   }
@@ -384,10 +440,6 @@
             norm(stageId)
         );
 
-      /*
-       * Підтримуємо і TEAM,
-       * і SOLO назви ліміту.
-       */
       const value =
         ev?.maxParticipants ??
         ev?.participantsLimit ??
@@ -405,7 +457,8 @@
           ? value
           : parseInt(
               String(
-                value || ""
+                value ||
+                ""
               ),
               10
             );
@@ -421,6 +474,88 @@
     } catch (_) {}
 
     return max;
+  }
+
+  // =========================================================
+  // USER NAME FALLBACK
+  // =========================================================
+
+  async function getUserDisplayName(
+    uid
+  ) {
+    const id =
+      norm(uid);
+
+    if (
+      !id
+    ) {
+      return "";
+    }
+
+    if (
+      userNameCache.has(
+        id
+      )
+    ) {
+      return (
+        userNameCache.get(
+          id
+        ) ||
+        ""
+      );
+    }
+
+    let name =
+      "";
+
+    try {
+      const snap =
+        await window.scDb
+          .collection(
+            "users"
+          )
+          .doc(id)
+          .get();
+
+      if (
+        snap.exists
+      ) {
+        const d =
+          snap.data() ||
+          {};
+
+        name =
+          norm(
+            d.fullName ||
+            d.displayName ||
+            d.name ||
+            d.email ||
+            ""
+          );
+      }
+
+    } catch (e) {
+      /*
+       * Якщо сторінка відкрита
+       * без авторизації і users
+       * закриті Rules —
+       * просто використовуємо
+       * public_participants.
+       */
+      console.warn(
+        "[participation] user name fallback skipped:",
+        id,
+        e?.message ||
+        e
+      );
+    }
+
+    userNameCache.set(
+      id,
+      name
+    );
+
+    return name;
   }
 
   // =========================================================
@@ -473,7 +608,9 @@
           .collection(
             "teams"
           )
-          .doc(teamDocId)
+          .doc(
+            teamDocId
+          )
           .get();
 
       if (
@@ -554,7 +691,9 @@
             .collection(
               "users"
             )
-            .doc(ownerUid)
+            .doc(
+              ownerUid
+            )
             .get();
 
         if (
@@ -717,7 +856,9 @@
     const popup =
       $("teamPopup");
 
-    if (popup) {
+    if (
+      popup
+    ) {
       popup.style.display =
         "none";
     }
@@ -753,7 +894,8 @@
       if (
         popup?.style.display ===
           "flex" &&
-        event.target === popup &&
+        event.target ===
+          popup &&
         !content?.contains(
           event.target
         )
@@ -785,7 +927,9 @@
     const btnClear =
       $("btnClearMealOrders");
 
-    if (btnOpen) {
+    if (
+      btnOpen
+    ) {
       btnOpen.onclick =
         () => {
           if (
@@ -800,7 +944,9 @@
         };
     }
 
-    if (btnOrder) {
+    if (
+      btnOrder
+    ) {
       btnOrder.onclick =
         () => {
           if (
@@ -815,7 +961,9 @@
         };
     }
 
-    if (btnList) {
+    if (
+      btnList
+    ) {
       btnList.onclick =
         () => {
           if (
@@ -830,7 +978,9 @@
         };
     }
 
-    if (btnClear) {
+    if (
+      btnClear
+    ) {
       btnClear.onclick =
         () => {
           if (
@@ -870,12 +1020,14 @@
     const rowStage =
       norm(
         rowStageId
-      ) || "main";
+      ) ||
+      "main";
 
     const wanted =
       norm(
         stageParam
-      ) || "main";
+      ) ||
+      "main";
 
     const wantedRaw =
       wanted.replace(
@@ -892,10 +1044,13 @@
     return (
       rowStage ===
         wanted ||
+
       rowStage ===
         `stage-${wantedRaw}` ||
+
       rowRaw ===
         wantedRaw ||
+
       (
         wanted ===
           "main" &&
@@ -906,7 +1061,7 @@
   }
 
   // =========================================================
-  // ROW
+  // DISPLAY NAMES
   // =========================================================
 
   function participantDisplayName(
@@ -915,6 +1070,9 @@
     return (
       norm(
         row.participantName
+      ) ||
+      norm(
+        row.userName
       ) ||
       norm(
         row.displayName
@@ -939,6 +1097,486 @@
       "—"
     );
   }
+
+  // =========================================================
+  // NORMALIZE PUBLIC ROW
+  // =========================================================
+
+  async function normalizeParticipantRow(
+    doc,
+    meta
+  ) {
+    const r =
+      doc.data() ||
+      {};
+
+    const status =
+      normLower(
+        r.status ||
+        "pending_payment"
+      );
+
+    if (
+      !ALLOWED_STATUSES
+        .has(status)
+    ) {
+      return null;
+    }
+
+    const entryType =
+      resolveRowEntryType(
+        r,
+        meta
+      );
+
+    // =====================================================
+    // SOLO
+    // =====================================================
+
+    if (
+      entryType ===
+      "solo"
+    ) {
+      const uid =
+        norm(
+          r.uid
+        );
+
+      if (
+        !uid
+      ) {
+        return null;
+      }
+
+      let participantName =
+        norm(
+          r.participantName ||
+          r.userName ||
+          r.displayName ||
+          r.captain ||
+          ""
+        );
+
+      /*
+       * Якщо це стара TEAM-заявка,
+       * participantName часто немає.
+       *
+       * Тоді ім'я беремо з:
+       *
+       * users/{uid}.fullName
+       *
+       * А teamName НЕ використовуємо
+       * як ім'я людини.
+       */
+      if (
+        !participantName ||
+        (
+          norm(
+            r.teamName
+          ) &&
+          participantName ===
+            norm(
+              r.teamName
+            )
+        )
+      ) {
+        const fromUser =
+          await getUserDisplayName(
+            uid
+          );
+
+        if (
+          fromUser
+        ) {
+          participantName =
+            fromUser;
+        }
+      }
+
+      /*
+       * Дуже старий fallback.
+       *
+       * Використається тільки якщо
+       * немає participantName
+       * і users/{uid} недоступний.
+       */
+      if (
+        !participantName
+      ) {
+        participantName =
+          norm(
+            r.teamName
+          ) ||
+          "Учасник";
+      }
+
+      return {
+        participantDocId:
+          doc.id,
+
+        sourceEntryType:
+          normLower(
+            r.entryType
+          ),
+
+        legacyConvertedToSolo:
+          normLower(
+            r.entryType
+          ) !== "solo",
+
+        entryType:
+          "solo",
+
+        uid,
+
+        participantName,
+
+        displayName:
+          participantName,
+
+        teamId:
+          null,
+
+        teamName:
+          null,
+
+        status,
+
+        createdAt:
+          r.createdAt ||
+          null,
+
+        confirmedAt:
+          r.confirmedAt ||
+          null,
+
+        updatedAt:
+          r.updatedAt ||
+          null,
+
+        orderPaid:
+          Number.isFinite(
+            r.orderPaid
+          )
+            ? r.orderPaid
+            : null,
+
+        drawZone:
+          r.drawZone ||
+          r.zone ||
+          "",
+
+        drawSector:
+          r.drawSector ||
+          r.sector ||
+          "",
+
+        drawKey:
+          r.drawKey ||
+          (
+            (
+              r.drawZone ||
+              r.zone
+            ) &&
+            (
+              r.drawSector ||
+              r.sector
+            )
+              ? `${
+                  r.drawZone ||
+                  r.zone
+                }${
+                  r.drawSector ||
+                  r.sector
+                }`
+              : ""
+          )
+      };
+    }
+
+    // =====================================================
+    // TEAM
+    // =====================================================
+
+    const teamId =
+      norm(
+        r.teamId
+      );
+
+    if (
+      !teamId
+    ) {
+      return null;
+    }
+
+    const teamName =
+      teamDisplayName(
+        r
+      );
+
+    return {
+      participantDocId:
+        doc.id,
+
+      sourceEntryType:
+        normLower(
+          r.entryType
+        ),
+
+      legacyConvertedToSolo:
+        false,
+
+      entryType:
+        "team",
+
+      uid:
+        norm(
+          r.uid
+        ),
+
+      teamId,
+
+      teamName,
+
+      displayName:
+        teamName,
+
+      status,
+
+      createdAt:
+        r.createdAt ||
+        null,
+
+      confirmedAt:
+        r.confirmedAt ||
+        null,
+
+      updatedAt:
+        r.updatedAt ||
+        null,
+
+      orderPaid:
+        Number.isFinite(
+          r.orderPaid
+        )
+          ? r.orderPaid
+          : null,
+
+      drawZone:
+        r.drawZone ||
+        r.zone ||
+        "",
+
+      drawSector:
+        r.drawSector ||
+        r.sector ||
+        "",
+
+      drawKey:
+        r.drawKey ||
+        (
+          (
+            r.drawZone ||
+            r.zone
+          ) &&
+          (
+            r.drawSector ||
+            r.sector
+          )
+            ? `${
+                r.drawZone ||
+                r.zone
+              }${
+                r.drawSector ||
+                r.sector
+              }`
+            : ""
+        )
+    };
+  }
+
+  // =========================================================
+  // TIMESTAMP
+  // =========================================================
+
+  function timestampMs(
+    value
+  ) {
+    if (
+      !value
+    ) {
+      return 0;
+    }
+
+    try {
+      if (
+        typeof value.toMillis ===
+        "function"
+      ) {
+        return value.toMillis();
+      }
+
+      if (
+        typeof value.toDate ===
+        "function"
+      ) {
+        return value
+          .toDate()
+          .getTime();
+      }
+
+      if (
+        value._seconds
+      ) {
+        return (
+          value._seconds *
+          1000
+        );
+      }
+
+      const d =
+        new Date(
+          value
+        );
+
+      return Number.isNaN(
+        d.getTime()
+      )
+        ? 0
+        : d.getTime();
+
+    } catch {
+      return 0;
+    }
+  }
+
+  function rowTimestamp(
+    row
+  ) {
+    return timestampMs(
+      row.updatedAt ||
+      row.confirmedAt ||
+      row.createdAt
+    );
+  }
+
+  // =========================================================
+  // DEDUPE
+  // =========================================================
+
+  function chooseBetterRow(
+    a,
+    b
+  ) {
+    if (
+      !a
+    ) {
+      return b;
+    }
+
+    if (
+      !b
+    ) {
+      return a;
+    }
+
+    /*
+     * Якщо вже існує новий
+     * справжній SOLO document,
+     * він кращий за старий TEAM,
+     * який ми лише показуємо як SOLO.
+     */
+    if (
+      a.legacyConvertedToSolo !==
+      b.legacyConvertedToSolo
+    ) {
+      return a.legacyConvertedToSolo
+        ? b
+        : a;
+    }
+
+    const aPaid =
+      isPaidStatus(
+        a.status
+      );
+
+    const bPaid =
+      isPaidStatus(
+        b.status
+      );
+
+    if (
+      aPaid !==
+      bPaid
+    ) {
+      return bPaid
+        ? b
+        : a;
+    }
+
+    return (
+      rowTimestamp(b) >
+      rowTimestamp(a)
+    )
+      ? b
+      : a;
+  }
+
+  function dedupeRows(
+    rows
+  ) {
+    const map =
+      new Map();
+
+    rows.forEach(
+      row => {
+        let identity =
+          "";
+
+        if (
+          row.entryType ===
+          "solo"
+        ) {
+          identity =
+            norm(
+              row.uid
+            );
+
+        } else {
+          identity =
+            norm(
+              row.teamId
+            );
+        }
+
+        if (
+          !identity
+        ) {
+          identity =
+            row.participantDocId;
+        }
+
+        const key =
+          `${row.entryType}||${identity}`;
+
+        map.set(
+          key,
+          chooseBetterRow(
+            map.get(key),
+            row
+          )
+        );
+      }
+    );
+
+    return Array.from(
+      map.values()
+    );
+  }
+
+  // =========================================================
+  // ROW HTML
+  // =========================================================
 
   function rowHtml(
     idx,
@@ -1050,14 +1688,18 @@
     const msg =
       $("msg");
 
-    if (!list) {
+    if (
+      !list
+    ) {
       return;
     }
 
     list.innerHTML =
       "";
 
-    if (msg) {
+    if (
+      msg
+    ) {
       msg.textContent =
         "";
     }
@@ -1087,7 +1729,10 @@
     list.innerHTML +=
       main
         .map(
-          (row, index) =>
+          (
+            row,
+            index
+          ) =>
             rowHtml(
               index + 1,
               row
@@ -1104,7 +1749,10 @@
       list.innerHTML +=
         reserve
           .map(
-            (row, index) =>
+            (
+              row,
+              index
+            ) =>
               rowHtml(
                 maxEntries +
                 index +
@@ -1172,52 +1820,9 @@
   // SORT
   // =========================================================
 
-  function timestampMs(value) {
-    if (!value) {
-      return 0;
-    }
-
-    try {
-      if (
-        typeof value.toMillis ===
-        "function"
-      ) {
-        return value.toMillis();
-      }
-
-      if (
-        typeof value.toDate ===
-        "function"
-      ) {
-        return value
-          .toDate()
-          .getTime();
-      }
-
-      if (
-        value._seconds
-      ) {
-        return (
-          value._seconds *
-          1000
-        );
-      }
-
-      const d =
-        new Date(value);
-
-      return Number.isNaN(
-        d.getTime()
-      )
-        ? 0
-        : d.getTime();
-
-    } catch {
-      return 0;
-    }
-  }
-
-  function sortRows(rows) {
+  function sortRows(
+    rows
+  ) {
     const rank = {
       confirmed:
         1,
@@ -1264,7 +1869,8 @@
         }
 
         if (
-          aRank === 1
+          aRank ===
+          1
         ) {
           if (
             Number.isFinite(
@@ -1338,17 +1944,25 @@
 
       const compId =
         norm(
-          params.get("comp")
+          params.get(
+            "comp"
+          )
         );
 
       const stageParam =
         norm(
-          params.get("stage")
+          params.get(
+            "stage"
+          )
         ) ||
         "main";
 
-      if (!compId) {
-        if ($("msg")) {
+      if (
+        !compId
+      ) {
+        if (
+          $("msg")
+        ) {
           $("msg").textContent =
             "❌ Не передано competitionId";
         }
@@ -1398,21 +2012,19 @@
       }
 
       // =====================================================
-      // LOAD PUBLIC PARTICIPANTS
+      // PUBLIC PARTICIPANTS
       // =====================================================
 
       /*
-       * ВАЖЛИВО:
+       * Не ставимо:
        *
-       * Не ставимо тут:
+       * .where("entryType", "==", ...)
        *
-       * .where("entryType", "==", "team")
+       * Тут навмисно беремо всі
+       * документи competitionId.
        *
-       * Бо сторінка повинна працювати
-       * і для SOLO, і для TEAM.
-       *
-       * Беремо competitionId,
-       * а тип відсіюємо нижче.
+       * Далі кожен документ
+       * нормалізується окремо.
        */
       const snap =
         await db
@@ -1426,35 +2038,14 @@
           )
           .get();
 
-      const rowsMap =
-        new Map();
+      const docs =
+        [];
 
       snap.forEach(
         doc => {
           const r =
             doc.data() ||
             {};
-
-          // -----------------------------------------------
-          // STATUS
-          // -----------------------------------------------
-
-          const status =
-            normLower(
-              r.status ||
-              "pending_payment"
-            );
-
-          if (
-            !ALLOWED_STATUSES
-              .has(status)
-          ) {
-            return;
-          }
-
-          // -----------------------------------------------
-          // STAGE
-          // -----------------------------------------------
 
           if (
             !stageMatches(
@@ -1465,244 +2056,42 @@
             return;
           }
 
-          // -----------------------------------------------
-          // ENTRY TYPE
-          // -----------------------------------------------
-
-          const rowType =
-            resolveRowEntryType(
-              r,
-              meta.entryType
-            );
-
-          /*
-           * SOLO competition:
-           * показуємо тільки SOLO docs.
-           *
-           * TEAM competition:
-           * показуємо тільки TEAM docs.
-           */
-          if (
-            meta.entryType ===
-              "solo" &&
-            rowType !==
-              "solo"
-          ) {
-            return;
-          }
-
-          if (
-            meta.entryType ===
-              "team" &&
-            rowType !==
-              "team"
-          ) {
-            return;
-          }
-
-          // -----------------------------------------------
-          // SOLO
-          // -----------------------------------------------
-
-          if (
-            rowType ===
-            "solo"
-          ) {
-            const uid =
-              norm(
-                r.uid
-              );
-
-            if (!uid) {
-              return;
-            }
-
-            const participantName =
-              participantDisplayName(
-                r
-              );
-
-            rowsMap.set(
-              doc.id,
-              {
-                participantDocId:
-                  doc.id,
-
-                entryType:
-                  "solo",
-
-                uid,
-
-                participantName,
-
-                displayName:
-                  participantName,
-
-                teamId:
-                  null,
-
-                teamName:
-                  null,
-
-                status,
-
-                createdAt:
-                  r.createdAt ||
-                  null,
-
-                confirmedAt:
-                  r.confirmedAt ||
-                  null,
-
-                updatedAt:
-                  r.updatedAt ||
-                  null,
-
-                orderPaid:
-                  Number.isFinite(
-                    r.orderPaid
-                  )
-                    ? r.orderPaid
-                    : null,
-
-                drawZone:
-                  r.drawZone ||
-                  r.zone ||
-                  "",
-
-                drawSector:
-                  r.drawSector ||
-                  r.sector ||
-                  "",
-
-                drawKey:
-                  r.drawKey ||
-                  (
-                    (
-                      r.drawZone ||
-                      r.zone
-                    ) &&
-                    (
-                      r.drawSector ||
-                      r.sector
-                    )
-                      ? `${
-                          r.drawZone ||
-                          r.zone
-                        }${
-                          r.drawSector ||
-                          r.sector
-                        }`
-                      : ""
-                  )
-              }
-            );
-
-            return;
-          }
-
-          // -----------------------------------------------
-          // TEAM
-          // -----------------------------------------------
-
-          const teamId =
-            norm(
-              r.teamId
-            );
-
-          if (!teamId) {
-            return;
-          }
-
-          rowsMap.set(
-            doc.id,
-            {
-              participantDocId:
-                doc.id,
-
-              entryType:
-                "team",
-
-              uid:
-                r.uid ||
-                "",
-
-              teamId,
-
-              teamName:
-                teamDisplayName(
-                  r
-                ),
-
-              displayName:
-                teamDisplayName(
-                  r
-                ),
-
-              status,
-
-              createdAt:
-                r.createdAt ||
-                null,
-
-              confirmedAt:
-                r.confirmedAt ||
-                null,
-
-              updatedAt:
-                r.updatedAt ||
-                null,
-
-              orderPaid:
-                Number.isFinite(
-                  r.orderPaid
-                )
-                  ? r.orderPaid
-                  : null,
-
-              drawZone:
-                r.drawZone ||
-                r.zone ||
-                "",
-
-              drawSector:
-                r.drawSector ||
-                r.sector ||
-                "",
-
-              drawKey:
-                r.drawKey ||
-                (
-                  (
-                    r.drawZone ||
-                    r.zone
-                  ) &&
-                  (
-                    r.drawSector ||
-                    r.sector
-                  )
-                    ? `${
-                        r.drawZone ||
-                        r.zone
-                      }${
-                        r.drawSector ||
-                        r.sector
-                      }`
-                    : ""
-                )
-            }
+          docs.push(
+            doc
           );
         }
       );
 
-      let rows =
-        Array.from(
-          rowsMap.values()
+      // =====================================================
+      // NORMALIZE
+      // =====================================================
+
+      const normalized =
+        await Promise.all(
+          docs.map(
+            doc =>
+              normalizeParticipantRow(
+                doc,
+                meta
+              )
+          )
         );
 
-      // =====================================================
-      // SORT
-      // =====================================================
+      let rows =
+        normalized.filter(
+          Boolean
+        );
+
+      /*
+       * Якщо є і старий TEAM document,
+       * і вже новий SOLO document
+       * тієї самої людини —
+       * залишаємо тільки правильний.
+       */
+      rows =
+        dedupeRows(
+          rows
+        );
 
       rows =
         sortRows(
@@ -1722,12 +2111,16 @@
 
         stageIdVariants: [
           stageParam,
+
           `stage-${stageParam}`,
+
           stageParam.replace(
             /^stage-/,
             ""
           )
-        ].filter(Boolean),
+        ].filter(
+          Boolean
+        ),
 
         competitionTitle:
           meta.title,
@@ -1741,6 +2134,9 @@
         format:
           meta.format,
 
+        isFinal:
+          meta.isFinal,
+
         maxTeams:
           maxEntries,
 
@@ -1748,13 +2144,14 @@
           maxEntries,
 
         /*
-         * Legacy compatibility.
+         * Legacy compatibility
+         * для meal_orders.js.
          */
         teams:
           rows,
 
         /*
-         * Нова назва.
+         * Нова універсальна назва.
          */
         participants:
           rows
@@ -1798,7 +2195,8 @@
       if (
         $("msg")
       ) {
-        $("msg").textContent =
+        $("msg")
+          .textContent =
           "❌ " +
           (
             e?.message ||

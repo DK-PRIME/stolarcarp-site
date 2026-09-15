@@ -18,17 +18,26 @@
 // ✅ Season + one-off competitions
 //
 // =========================================================
+// TEAM / SOLO
+// =========================================================
+//
+// ✅ competition.entryType = team / solo
+// ✅ event.entryType = team / solo
+// ✅ stalker-solo автоматично fallback -> solo
+// ✅ SOLO реєструється по UID користувача
+// ✅ TEAM реєструється по teamId
+// ✅ кілька людей з однієї команди можуть подати SOLO заявки
+// ✅ SOLO зберігає participantName
+// ✅ public_participants теж зберігає participantName
+// ✅ повторна заявка не перезаписує існуючу
+//
+// =========================================================
 // ФІНАЛ
 // =========================================================
 //
-// Фінал працює через:
+// Фінал залишається КОМАНДНИМ і працює через:
 //
 // finalQualifications/{year}/teams/{teamId}
-//
-// Наприклад:
-//
-// finalQualifications/2026/teams/TEAM_ID
-// finalQualifications/2027/teams/TEAM_ID
 //
 // status:
 //
@@ -36,8 +45,6 @@
 // reserve   -> резерв
 // declined  -> відмова
 // confirmed -> підтверджено
-//
-// Сезони не змішуються.
 //
 // =========================================================
 
@@ -117,15 +124,14 @@
   // =========================================================
 
   /*
-   * v9:
+   * Новий cache key.
    *
-   * спеціально міняємо ключ,
-   * щоб старий localStorage cache
-   * не залишив payment дані
-   * від попередньої версії JS.
+   * Важливо:
+   * старий кеш міг пам'ятати Stalker Solo
+   * як командне змагання.
    */
   const COMP_CACHE_KEY =
-    "sc_competitions_cache_v9_final_qualifications_payment";
+    "sc_competitions_cache_v10_solo_entry_type";
 
   const TEAM_CACHE_PREFIX =
     "sc_team_cache_";
@@ -657,16 +663,6 @@
     const compPayment =
       competition?.payment || {};
 
-    /*
-     * Підтримуємо:
-     *
-     * payEnabled
-     * paymentEnabled
-     * payment.enabled
-     *
-     * як на event,
-     * так і на competition.
-     */
     const enabledRaw =
       firstDefined(
         eventPayment.enabled,
@@ -682,9 +678,6 @@
         false
       );
 
-    /*
-     * Сума.
-     */
     const priceRaw =
       firstDefined(
         eventPayment.price,
@@ -708,9 +701,6 @@
         null
       );
 
-    /*
-     * Валюта.
-     */
     const currency =
       String(
         firstDefined(
@@ -730,12 +720,6 @@
         .trim()
         .toUpperCase();
 
-    /*
-     * Реквізити.
-     *
-     * Зокрема підтримується
-     * саме твоє поле payDetails.
-     */
     const details =
       String(
         firstDefined(
@@ -770,17 +754,6 @@
         priceRaw
       );
 
-    /*
-     * Основний прапорець —
-     * payEnabled.
-     *
-     * Але для старих competitions:
-     * якщо є price / details,
-     * оплату також вважаємо заданою.
-     *
-     * Це захищає старі змагання,
-     * створені до поточної схеми.
-     */
     const payEnabled =
       normalizeBoolean(
         enabledRaw
@@ -808,18 +781,52 @@
     event,
     competition
   ) {
-    const type =
-      String(
+    /*
+     * 1. Якщо новий entryType уже записаний —
+     * використовуємо його.
+     */
+    const explicitType =
+      normalizeLower(
         firstDefined(
           event?.entryType,
           competition?.entryType,
-          "team"
+          ""
         )
-      ).toLowerCase();
+      );
 
-    return type === "solo"
-      ? "solo"
-      : "team";
+    if (
+      explicitType === "solo" ||
+      explicitType === "team"
+    ) {
+      return explicitType;
+    }
+
+    /*
+     * 2. Backward compatibility.
+     *
+     * Уже створений stalker-solo міг
+     * ще не мати entryType.
+     */
+    const format =
+      normalizeLower(
+        firstDefined(
+          event?.format,
+          competition?.format,
+          competition?.engine?.baseFormat,
+          ""
+        )
+      );
+
+    if (
+      format === "stalker-solo"
+    ) {
+      return "solo";
+    }
+
+    /*
+     * 3. Старі змагання не чіпаємо.
+     */
+    return "team";
   }
 
   // =========================================================
@@ -1089,6 +1096,10 @@
       stageId ||
       "main";
 
+    /*
+     * SOLO:
+     * окрема заявка на кожного UID.
+     */
     if (
       entryType === "solo"
     ) {
@@ -1099,6 +1110,10 @@
       );
     }
 
+    /*
+     * TEAM:
+     * одна заявка на teamId.
+     */
     return (
       `${competitionId}__` +
       `${stage}__team__` +
@@ -1241,14 +1256,20 @@
           const teamId =
             profile.teamId;
 
+          /*
+           * Фінал залишається командним.
+           */
           const registrationId =
             buildRegDocId({
               competitionId,
               stageId,
+
               entryType:
                 "team",
+
               uid:
                 profile.uid,
+
               teamId
             });
 
@@ -1514,15 +1535,6 @@
         text || ""
       ).trim();
 
-    /*
-     * 16 цифр:
-     *
-     * 4441111066640446
-     *
-     * ->
-     *
-     * 4441 1110 6664 0446
-     */
     if (
       /^\d{16}$/.test(raw)
     ) {
@@ -1631,10 +1643,6 @@
       details ||
       "Реквізити не задані адміністратором.";
 
-    /*
-     * Копіюємо оригінальні реквізити,
-     * без доданих пробілів.
-     */
     activePayCopyText =
       details;
 
@@ -1663,13 +1671,6 @@
     }
   }
 
-  /*
-   * Визначає, оплату якого етапу
-   * показувати, якщо користувач
-   * ще нічого не вибрав.
-   *
-   * Це і є ключове виправлення.
-   */
   function getDefaultPaymentItem(
     items
   ) {
@@ -1684,10 +1685,6 @@
       return null;
     }
 
-    /*
-     * 1. Якщо radio вже вибраний —
-     * показуємо саме його.
-     */
     const picked =
       document.querySelector(
         'input[name="stagePick"]:checked'
@@ -1706,9 +1703,6 @@
       }
     }
 
-    /*
-     * 2. Відкритий зараз.
-     */
     const openItem =
       visibleItems.find(
         item =>
@@ -1721,10 +1715,6 @@
       return openItem;
     }
 
-    /*
-     * 3. Найближчий майбутній
-     * старт реєстрації.
-     */
     const pending =
       visibleItems
         .filter(
@@ -1763,11 +1753,6 @@
       return pending[0].item;
     }
 
-    /*
-     * 4. Якщо дати не задані,
-     * але є оплата —
-     * все одно показуємо її.
-     */
     const paymentConfigured =
       visibleItems.find(
         item =>
@@ -1787,9 +1772,6 @@
       return paymentConfigured;
     }
 
-    /*
-     * 5. Останній fallback.
-     */
     return (
       visibleItems[0] ||
       null
@@ -2601,6 +2583,107 @@
   }
 
   // =========================================================
+  // PROFILE SUMMARY
+  // =========================================================
+
+  function renderProfileSummary(
+    selectedItem = null
+  ) {
+    if (
+      !profileSummary ||
+      !profile
+    ) {
+      return;
+    }
+
+    const participantName =
+      String(
+        profile.fullName ||
+        profile.captain ||
+        profile.email ||
+        ""
+      ).trim();
+
+    /*
+     * SOLO
+     */
+    if (
+      selectedItem?.entryType ===
+      "solo" &&
+      !selectedItem?.isFinal
+    ) {
+      profileSummary.innerHTML =
+        `Учасник: <b>${
+          escapeHtml(
+            participantName ||
+            "—"
+          )
+        }</b><br>` +
+
+        `Телефон: <b>${
+          escapeHtml(
+            profile.phone ||
+            "не вказано"
+          )
+        }</b>`;
+
+      return;
+    }
+
+    /*
+     * TEAM / FINAL
+     */
+    if (
+      selectedItem?.entryType ===
+        "team" ||
+      selectedItem?.isFinal
+    ) {
+      profileSummary.innerHTML =
+        `Команда: <b>${
+          escapeHtml(
+            profile.teamId
+              ? profile.teamName
+              : "— (нема команди)"
+          )
+        }</b><br>` +
+
+        `Заявник: <b>${
+          escapeHtml(
+            participantName ||
+            "—"
+          )
+        }</b><br>` +
+
+        `Телефон: <b>${
+          escapeHtml(
+            profile.phone ||
+            "не вказано"
+          )
+        }</b>`;
+
+      return;
+    }
+
+    /*
+     * Поки нічого не вибрано.
+     */
+    profileSummary.innerHTML =
+      `Користувач: <b>${
+        escapeHtml(
+          participantName ||
+          "—"
+        )
+      }</b><br>` +
+
+      `Телефон: <b>${
+        escapeHtml(
+          profile.phone ||
+          "не вказано"
+        )
+      }</b>`;
+  }
+
+  // =========================================================
   // PROFILE
   // =========================================================
 
@@ -2672,33 +2755,9 @@
         ).trim()
     };
 
-    if (
-      profileSummary
-    ) {
-      profileSummary.innerHTML =
-        `Команда: <b>${
-          escapeHtml(
-            profile.teamId
-              ? profile.teamName
-              : "— (нема команди)"
-          )
-        }</b><br>` +
-
-        `Користувач: <b>${
-          escapeHtml(
-            profile.fullName ||
-            profile.email ||
-            "—"
-          )
-        }</b><br>` +
-
-        `Телефон: <b>${
-          escapeHtml(
-            profile.phone ||
-            "не вказано"
-          )
-        }</b>`;
-    }
+    renderProfileSummary(
+      null
+    );
   }
 
   // =========================================================
@@ -2768,6 +2827,11 @@
           ""
         ).trim(),
 
+      entryType:
+        item.entryType === "solo"
+          ? "solo"
+          : "team",
+
       isFinal:
         item.isFinal === true
     };
@@ -2826,16 +2890,13 @@
           )
         );
 
-      lastItems = items;
+      lastItems =
+        items;
 
       calcNearestUpcoming(
         items
       );
 
-      /*
-       * Кваліфікація фіналу
-       * завжди читається з Firestore.
-       */
       await loadFinalAccess(
         items
       );
@@ -2935,6 +2996,11 @@
                 item.payDetails ||
                 ""
               ).trim(),
+
+            entryType:
+              item.entryType === "solo"
+                ? "solo"
+                : "team",
 
             regMode:
               item.regMode ||
@@ -3067,6 +3133,18 @@
         c
       );
 
+    /*
+     * Фінал у чинній системі
+     * завжди командний.
+     */
+    const entryType =
+      finalEvent
+        ? "team"
+        : entryTypeFromEvent(
+            ev,
+            c
+          );
+
     return {
       compId,
       brand,
@@ -3085,11 +3163,7 @@
       isFinal:
         finalEvent,
 
-      entryType:
-        entryTypeFromEvent(
-          ev,
-          c
-        ),
+      entryType,
 
       startAt:
         toDateMaybe(
@@ -3296,206 +3370,187 @@
   // =========================================================
 
   function renderItems(
-  items
-) {
-  if (
-    !eventOptionsEl
+    items
   ) {
-    return;
-  }
-
-  /*
-   * Зберігаємо поточний вибір
-   * перед повторним render.
-   */
-  const previousPicked =
-    document.querySelector(
-      'input[name="stagePick"]:checked'
-    );
-
-  const previousPickedValue =
-    previousPicked
-      ? String(
-          previousPicked.value
-        )
-      : "";
-
-  eventOptionsEl.innerHTML =
-    "";
-
-  const visibleItems =
-    visibleItemsOnly(
-      items
-    );
-
-  if (
-    !visibleItems.length
-  ) {
-    eventOptionsEl.innerHTML =
-      '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
-
-    setPayUIFromSelected(
-      null
-    );
-
-    if (submitBtn) {
-      submitBtn.disabled =
-        true;
+    if (
+      !eventOptionsEl
+    ) {
+      return;
     }
 
-    return;
-  }
-
-  visibleItems.forEach(
-    item => {
-      const open =
-        canSubmitItem(item);
-
-      const status =
-        getStatusUI(item);
-
-      const value =
-        eventValue(item);
-
-      const lamp =
-        statusLamp(
-          item,
-          value
-        );
-
-      const titleText =
-        `${
-          item.brand
-            ? item.brand +
-              " · "
-            : ""
-        }${
-          item.compTitle
-        }` +
-        (
-          item.stageTitle
-            ? ` — ${
-                item.stageTitle
-              }`
-            : ""
-        );
-
-      const dateLine =
-        `${
-          fmtDate(
-            item.startAt
-          )
-        } — ${
-          fmtDate(
-            item.endAt
-          )
-        }`;
-
-      const regOpen =
-        toDateMaybe(
-          item.regOpenAt,
-          {
-            endOfDay: false
-          }
-        );
-
-      const regClose =
-        toDateMaybe(
-          item.regCloseAt,
-          {
-            endOfDay: true
-          }
-        );
-
-      const registrationDatesLine =
-        regOpen ||
-        regClose
-          ? `Реєстрація: ${
-              fmtDate(regOpen)
-            } — ${
-              fmtDate(regClose)
-            }`
-          : "Дати реєстрації не задані";
-
-      const label =
-        document.createElement(
-          "label"
-        );
-
-      label.className =
-        "event-item" +
-        (
-          open
-            ? ""
-            : " is-closed"
-        );
-
-      if (
-        item.isFinal
-      ) {
-        label.classList.add(
-          "event-item--final"
-        );
-      }
-
-      label.setAttribute(
-        "role",
-        "button"
+    const previousPicked =
+      document.querySelector(
+        'input[name="stagePick"]:checked'
       );
 
-      label.style.cursor =
-        open
-          ? "pointer"
-          : "default";
+    const previousPickedValue =
+      previousPicked
+        ? String(
+            previousPicked.value
+          )
+        : "";
 
-      /*
-       * Якщо цей етап був вибраний
-       * і все ще доступний —
-       * залишаємо його вибраним.
-       */
-      const shouldRemainChecked =
-        open &&
-        previousPickedValue ===
-          value;
+    eventOptionsEl.innerHTML =
+      "";
 
-      label.innerHTML = `
-        <input
-          type="radio"
-          name="stagePick"
-          value="${escapeHtml(
+    const visibleItems =
+      visibleItemsOnly(
+        items
+      );
+
+    if (
+      !visibleItems.length
+    ) {
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
+
+      setPayUIFromSelected(
+        null
+      );
+
+      if (submitBtn) {
+        submitBtn.disabled =
+          true;
+      }
+
+      return;
+    }
+
+    visibleItems.forEach(
+      item => {
+        const open =
+          canSubmitItem(item);
+
+        const status =
+          getStatusUI(item);
+
+        const value =
+          eventValue(item);
+
+        const lamp =
+          statusLamp(
+            item,
             value
-          )}"
-          ${
+          );
+
+        const titleText =
+          `${
+            item.brand
+              ? item.brand +
+                " · "
+              : ""
+          }${
+            item.compTitle
+          }` +
+          (
+            item.stageTitle
+              ? ` — ${
+                  item.stageTitle
+                }`
+              : ""
+          );
+
+        const dateLine =
+          `${
+            fmtDate(
+              item.startAt
+            )
+          } — ${
+            fmtDate(
+              item.endAt
+            )
+          }`;
+
+        const regOpen =
+          toDateMaybe(
+            item.regOpenAt,
+            {
+              endOfDay: false
+            }
+          );
+
+        const regClose =
+          toDateMaybe(
+            item.regCloseAt,
+            {
+              endOfDay: true
+            }
+          );
+
+        const registrationDatesLine =
+          regOpen ||
+          regClose
+            ? `Реєстрація: ${
+                fmtDate(regOpen)
+              } — ${
+                fmtDate(regClose)
+              }`
+            : "Дати реєстрації не задані";
+
+        const label =
+          document.createElement(
+            "label"
+          );
+
+        label.className =
+          "event-item" +
+          (
             open
               ? ""
-              : "disabled"
-          }
-          ${
-            shouldRemainChecked
-              ? "checked"
-              : ""
-          }
-          style="
-            flex:0 0 auto;
-            margin-top:4px;
-          "
-        >
+              : " is-closed"
+          );
 
-        <div
-          class="event-content"
-          style="
-            min-width:0;
-            flex:1;
-          "
-        >
+        if (
+          item.isFinal
+        ) {
+          label.classList.add(
+            "event-item--final"
+          );
+        }
+
+        label.setAttribute(
+          "role",
+          "button"
+        );
+
+        label.style.cursor =
+          open
+            ? "pointer"
+            : "default";
+
+        const shouldRemainChecked =
+          open &&
+          previousPickedValue ===
+            value;
+
+        label.innerHTML = `
+          <input
+            type="radio"
+            name="stagePick"
+            value="${escapeHtml(
+              value
+            )}"
+            ${
+              open
+                ? ""
+                : "disabled"
+            }
+            ${
+              shouldRemainChecked
+                ? "checked"
+                : ""
+            }
+            style="
+              flex:0 0 auto;
+              margin-top:4px;
+            "
+          >
 
           <div
+            class="event-content"
             style="
-              display:flex;
-              align-items:center;
-              justify-content:space-between;
-              gap:10px;
-              margin-bottom:8px;
+              min-width:0;
+              flex:1;
             "
           >
 
@@ -3503,139 +3558,146 @@
               style="
                 display:flex;
                 align-items:center;
-                gap:8px;
-                min-width:0;
+                justify-content:space-between;
+                gap:10px;
+                margin-bottom:8px;
               "
             >
 
-              <span
-                class="lamp ${lamp}"
+              <div
                 style="
-                  flex:0 0 auto;
-                "
-              ></span>
-
-              <span
-                style="
-                  font-size:12px;
-                  color:var(--muted);
-                  font-weight:800;
-                  white-space:nowrap;
+                  display:flex;
+                  align-items:center;
+                  gap:8px;
+                  min-width:0;
                 "
               >
-                ${escapeHtml(
-                  status.short
-                )}
-              </span>
+
+                <span
+                  class="lamp ${lamp}"
+                  style="
+                    flex:0 0 auto;
+                  "
+                ></span>
+
+                <span
+                  style="
+                    font-size:12px;
+                    color:var(--muted);
+                    font-weight:800;
+                    white-space:nowrap;
+                  "
+                >
+                  ${escapeHtml(
+                    status.short
+                  )}
+                </span>
+
+              </div>
+
+              <div
+                class="event-badges"
+                style="
+                  display:flex;
+                  gap:6px;
+                  flex-wrap:wrap;
+                  justify-content:flex-end;
+                  flex:0 0 auto;
+                "
+              >
+
+                <span
+                  class="pill-b ${
+                    status.badgeClass
+                  }"
+                >
+                  ${escapeHtml(
+                    status.badge
+                  )}
+                </span>
+
+              </div>
 
             </div>
 
             <div
-              class="event-badges"
               style="
-                display:flex;
-                gap:6px;
-                flex-wrap:wrap;
-                justify-content:flex-end;
-                flex:0 0 auto;
+                font-weight:900;
+                font-size:16px;
+                line-height:1.28;
+                letter-spacing:.02em;
+                color:#f3f4f6;
+                white-space:normal;
+                overflow-wrap:break-word;
               "
             >
+              ${escapeHtml(
+                titleText
+              )}
+            </div>
 
-              <span
-                class="pill-b ${
-                  status.badgeClass
-                }"
-              >
-                ${escapeHtml(
-                  status.badge
-                )}
-              </span>
+            <div
+              style="
+                margin-top:7px;
+                color:var(--muted);
+                font-size:13px;
+                line-height:1.35;
+              "
+            >
+              ${escapeHtml(
+                dateLine
+              )}
+            </div>
 
+            <div
+              style="
+                margin-top:5px;
+                color:var(--muted);
+                font-size:12px;
+                line-height:1.35;
+              "
+            >
+              ${escapeHtml(
+                registrationDatesLine
+              )}
+            </div>
+
+            <div
+              style="
+                margin-top:7px;
+                color:${
+                  item.isFinal &&
+                  canRegisterFinal(item)
+                    ? "#fde68a"
+                    : "var(--muted)"
+                };
+                font-size:13px;
+                line-height:1.45;
+                font-weight:${
+                  item.isFinal
+                    ? "700"
+                    : "400"
+                };
+              "
+            >
+              ${escapeHtml(
+                status.text
+              )}
             </div>
 
           </div>
+        `;
 
-          <div
-            style="
-              font-weight:900;
-              font-size:16px;
-              line-height:1.28;
-              letter-spacing:.02em;
-              color:#f3f4f6;
-              white-space:normal;
-              overflow-wrap:break-word;
-            "
-          >
-            ${escapeHtml(
-              titleText
-            )}
-          </div>
+        eventOptionsEl.appendChild(
+          label
+        );
+      }
+    );
 
-          <div
-            style="
-              margin-top:7px;
-              color:var(--muted);
-              font-size:13px;
-              line-height:1.35;
-            "
-          >
-            ${escapeHtml(
-              dateLine
-            )}
-          </div>
-
-          <div
-            style="
-              margin-top:5px;
-              color:var(--muted);
-              font-size:12px;
-              line-height:1.35;
-            "
-          >
-            ${escapeHtml(
-              registrationDatesLine
-            )}
-          </div>
-
-          <div
-            style="
-              margin-top:7px;
-              color:${
-                item.isFinal &&
-                canRegisterFinal(item)
-                  ? "#fde68a"
-                  : "var(--muted)"
-              };
-              font-size:13px;
-              line-height:1.45;
-              font-weight:${
-                item.isFinal
-                  ? "700"
-                  : "400"
-              };
-            "
-          >
-            ${escapeHtml(
-              status.text
-            )}
-          </div>
-
-        </div>
-      `;
-
-      eventOptionsEl.appendChild(
-        label
-      );
-    }
-  );
-
-  /*
-   * Payment UI залишаємо без змін.
-   */
-  refreshPaymentUI(
-    visibleItems
-  );
-}
+    refreshPaymentUI(
+      visibleItems
+    );
+  }
 
   // =========================================================
   // CHANGE
@@ -3677,11 +3739,14 @@
             : null;
 
         /*
-         * Коли користувач реально
-         * вибирає інший етап —
-         * payment UI перемикається
-         * саме на нього.
+         * НОВЕ:
+         * при SOLO показуємо ім'я людини,
+         * при TEAM — команду.
          */
+        renderProfileSummary(
+          selectedItem
+        );
+
         setPayUIFromSelected(
           selectedItem ||
           getDefaultPaymentItem(
@@ -3898,6 +3963,7 @@
     entryType,
     teamId,
     teamName,
+    participantName,
     status,
     finalQualification = false,
     seasonYear = null
@@ -3915,10 +3981,32 @@
         entryType || "team",
 
       teamId:
-        teamId || null,
+        entryType === "team"
+          ? teamId || null
+          : null,
 
       teamName:
-        teamName || null,
+        entryType === "team"
+          ? teamName || null
+          : null,
+
+      /*
+       * НОВЕ:
+       * ім'я SOLO учасника.
+       */
+      participantName:
+        entryType === "solo"
+          ? participantName || null
+          : null,
+
+      /*
+       * Універсальне поле для майбутніх
+       * списків / таблиць.
+       */
+      displayName:
+        entryType === "solo"
+          ? participantName || null
+          : teamName || null,
 
       status:
         status ||
@@ -3928,9 +4016,6 @@
         finalQualification ===
         true,
 
-      /*
-       * Legacy compatibility.
-       */
       finalInvite:
         finalQualification ===
         true,
@@ -4162,6 +4247,57 @@
   }
 
   // =========================================================
+  // NORMAL REGISTRATION
+  // =========================================================
+
+  /*
+   * Важливо:
+   * set(... merge:false) сам по собі
+   * ПЕРЕЗАПИСУЄ існуючий документ.
+   *
+   * Тому звичайну реєстрацію теж
+   * створюємо через transaction.
+   */
+  async function createNormalRegistration({
+    registrationRef,
+    payload
+  }) {
+    await db.runTransaction(
+      async transaction => {
+        const existingSnap =
+          await transaction.get(
+            registrationRef
+          );
+
+        if (
+          existingSnap.exists
+        ) {
+          if (
+            payload.entryType ===
+            "solo"
+          ) {
+            throw new Error(
+              "Ви вже подали заявку на це змагання."
+            );
+          }
+
+          throw new Error(
+            "Ваша команда вже подала заявку на це змагання."
+          );
+        }
+
+        transaction.set(
+          registrationRef,
+          payload,
+          {
+            merge: false
+          }
+        );
+      }
+    );
+  }
+
+  // =========================================================
   // FORM SUBMIT
   // =========================================================
 
@@ -4294,9 +4430,20 @@
           ).trim() ||
           null;
 
+        /*
+         * Фінал завжди командний.
+         */
         const entryType =
-          selectedItem.entryType ||
-          "team";
+          selectedItem.isFinal
+            ? "team"
+            : (
+                selectedItem.entryType ||
+                "team"
+              );
+
+        // =====================================================
+        // TEAM CHECK
+        // =====================================================
 
         if (
           entryType === "team"
@@ -4324,6 +4471,10 @@
           }
         }
 
+        // =====================================================
+        // PARTICIPANT NAME
+        // =====================================================
+
         const participantName =
           String(
             profile.fullName ||
@@ -4331,6 +4482,26 @@
             profile.email ||
             ""
           ).trim();
+
+        /*
+         * Для SOLO обов'язково повинно
+         * бути ім'я учасника.
+         */
+        if (
+          entryType === "solo" &&
+          !participantName
+        ) {
+          setMsg(
+            "Для SOLO потрібно вказати ім'я та прізвище у «Мій кабінет».",
+            false
+          );
+
+          return;
+        }
+
+        // =====================================================
+        // PAYMENT
+        // =====================================================
 
         const payment = {
           payEnabled:
@@ -4360,6 +4531,10 @@
             ? "pending_payment"
             : "confirmed";
 
+        // =====================================================
+        // REGISTRATION ID
+        // =====================================================
+
         const docId =
           buildRegDocId({
             competitionId,
@@ -4387,6 +4562,10 @@
               )
             : null;
 
+        // =====================================================
+        // PAYLOAD
+        // =====================================================
+
         const payload = {
           uid:
             profile.uid,
@@ -4398,6 +4577,9 @@
 
           entryType,
 
+          /*
+           * TEAM
+           */
           teamId:
             entryType === "team"
               ? profile.teamId
@@ -4408,10 +4590,22 @@
               ? profile.teamName
               : null,
 
+          /*
+           * SOLO
+           */
           participantName:
             entryType === "solo"
               ? participantName
               : null,
+
+          /*
+           * Універсальне ім'я:
+           * корисне далі для таблиць.
+           */
+          displayName:
+            entryType === "solo"
+              ? participantName
+              : profile.teamName,
 
           captain:
             entryType === "team"
@@ -4438,9 +4632,6 @@
             selectedItem.isFinal ===
             true,
 
-          /*
-           * Legacy flag.
-           */
           finalInvite:
             selectedItem.isFinal ===
             true,
@@ -4482,6 +4673,10 @@
           setLoading(true);
           setMsg("");
 
+          // =================================================
+          // WRITE REGISTRATION
+          // =================================================
+
           if (
             selectedItem.isFinal
           ) {
@@ -4492,12 +4687,10 @@
             });
 
           } else {
-            await registrationRef.set(
-              payload,
-              {
-                merge: false
-              }
-            );
+            await createNormalRegistration({
+              registrationRef,
+              payload
+            });
           }
 
           // =================================================
@@ -4531,6 +4724,14 @@
                 teamName:
                   entryType === "team"
                     ? profile.teamName
+                    : null,
+
+                /*
+                 * НОВЕ
+                 */
+                participantName:
+                  entryType === "solo"
+                    ? participantName
                     : null,
 
                 status,
@@ -4573,6 +4774,17 @@
               true
             );
 
+          } else if (
+            entryType ===
+            "solo"
+          ) {
+            setMsg(
+              payment.payEnabled
+                ? `Заявка учасника «${participantName}» подана ✔ Підтвердження буде після перевірки оплати.`
+                : `Заявка учасника «${participantName}» подана і підтверджена ✔`,
+              true
+            );
+
           } else {
             setMsg(
               payment.payEnabled
@@ -4582,16 +4794,12 @@
             );
           }
 
-          /*
-           * reset прибирає checked radio.
-           */
           form.reset();
 
-          /*
-           * Після фінальної заявки
-           * перечитуємо qualification
-           * та registration.
-           */
+          renderProfileSummary(
+            null
+          );
+
           if (
             selectedItem.isFinal
           ) {
@@ -4600,13 +4808,6 @@
             );
           }
 
-          /*
-           * Повторний render:
-           *
-           * - відновлює правильні статуси;
-           * - payment UI НЕ пропадає;
-           * - показує актуальний внесок.
-           */
           renderItems(
             lastItems
           );
@@ -4631,6 +4832,10 @@
               ""
             ).trim();
 
+          // =================================================
+          // FINAL ERROR
+          // =================================================
+
           if (
             selectedItem.isFinal &&
             message
@@ -4640,17 +4845,53 @@
               false
             );
 
+          // =================================================
+          // DUPLICATE
+          // =================================================
+
+          } else if (
+            message ===
+              "Ви вже подали заявку на це змагання." ||
+            message ===
+              "Ваша команда вже подала заявку на це змагання."
+          ) {
+            setMsg(
+              message,
+              false
+            );
+
+          // =================================================
+          // FIRESTORE RULES
+          // =================================================
+
           } else if (
             code.includes(
               "permission"
             )
           ) {
-            setMsg(
+            if (
               selectedItem.isFinal
-                ? "Firebase не дозволив реєстрацію у фінал. Перевірте finalQualifications цього сезону та Firestore Rules."
-                : "Заявка вже існує або дані команди не збігаються з профілем. Перевірте «Мій кабінет».",
-              false
-            );
+            ) {
+              setMsg(
+                "Firebase не дозволив реєстрацію у фінал. Перевірте finalQualifications цього сезону та Firestore Rules.",
+                false
+              );
+
+            } else if (
+              entryType ===
+              "solo"
+            ) {
+              setMsg(
+                "Firebase не дозволив SOLO-реєстрацію. Потрібно перевірити Firestore Rules для registrations.",
+                false
+              );
+
+            } else {
+              setMsg(
+                "Заявка вже існує або дані команди не збігаються з профілем. Перевірте «Мій кабінет».",
+                false
+              );
+            }
 
           } else {
             setMsg(

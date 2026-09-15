@@ -4,6 +4,8 @@
 // ✅ TEAM + SOLO
 // ✅ TEAM -> teamId + teamName
 // ✅ SOLO -> uid + participantName
+// ✅ SOLO "Учасник" НЕ вважається справжнім ім'ям
+// ✅ SOLO fallback -> users/{uid}
 // ✅ SOLO одразу синхронізується в stageResults для LIVE
 // ✅ Вага кожної риби окремо
 // ✅ Галочка "Амур" біля кожної риби
@@ -105,7 +107,9 @@
   }
 
   function isSoloTeam(team){
-    return normLower(team?.entryType) === ENTRY_SOLO;
+    return normLower(
+      team?.entryType
+    ) === ENTRY_SOLO;
   }
 
   function entityLabel(){
@@ -127,7 +131,9 @@
   }
 
   function entityIdOf(team){
-    if (!team) return "";
+    if (!team) {
+      return "";
+    }
 
     if (isSoloTeam(team)) {
       return norm(
@@ -178,20 +184,24 @@
   }
 
   function normalizeFishItem(f){
-    const kg = fishKg(f);
+    const kg =
+      fishKg(f);
 
     if (kg <= 0) {
       return null;
     }
 
-    const isAmur = fishIsAmur(f);
+    const isAmur =
+      fishIsAmur(f);
 
     return {
       kg,
+
       fishType:
         isAmur
           ? "amur"
           : "carp",
+
       isAmur
     };
   }
@@ -394,8 +404,11 @@
         : {};
 
     const info = {
-      exists: snap.exists,
+      exists:
+        snap.exists,
+
       data,
+
       kind:
         detectCompetitionKind(
           id,
@@ -446,8 +459,10 @@
 
     return events.find(
       (ev, idx) =>
-        eventKey(ev, idx) ===
-        norm(stageKey)
+        eventKey(
+          ev,
+          idx
+        ) === norm(stageKey)
     ) || null;
   }
 
@@ -493,10 +508,6 @@
       return ENTRY_TEAM;
     }
 
-    /*
-     * Явний entryType —
-     * головне джерело істини.
-     */
     const explicit =
       normLower(
         event?.entryType ||
@@ -680,8 +691,7 @@
     const role =
       snap.exists
         ? String(
-            (snap.data() || {})
-              .role ||
+            (snap.data() || {}).role ||
             ""
           )
         : "";
@@ -690,8 +700,90 @@
   }
 
   // =========================================================
-  // USER NAME
+  // USER / SOLO NAME
   // =========================================================
+
+  /*
+   * Це НЕ справжні імена.
+   *
+   * Якщо в старій заявці записано:
+   *
+   * participantName: "Учасник"
+   *
+   * ми НЕ повинні його приймати.
+   * Треба йти в users/{uid}.
+   */
+  function isPlaceholderParticipantName(value){
+    const v =
+      normLower(value)
+        .replace(/[.!]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return (
+      !v ||
+      v === "учасник" ||
+      v === "учасник команди" ||
+      v === "participant" ||
+      v === "player" ||
+      v === "команда" ||
+      v === "team" ||
+      v === "користувач" ||
+      v === "user" ||
+      v === "—" ||
+      v === "-"
+    );
+  }
+
+  function isProbablyEmail(value){
+    const v =
+      norm(value);
+
+    return (
+      v.includes("@") &&
+      v.includes(".")
+    );
+  }
+
+  function validParticipantName(
+    value,
+    oldTeamName = ""
+  ){
+    const name =
+      norm(value);
+
+    if (
+      !name ||
+      isPlaceholderParticipantName(
+        name
+      ) ||
+      isProbablyEmail(
+        name
+      )
+    ) {
+      return "";
+    }
+
+    const teamName =
+      norm(
+        oldTeamName
+      );
+
+    /*
+     * Стару назву команди
+     * не дозволяємо використовувати
+     * як ім'я SOLO-учасника.
+     */
+    if (
+      teamName &&
+      normLower(name) ===
+        normLower(teamName)
+    ) {
+      return "";
+    }
+
+    return name;
+  }
 
   async function getUserNameByUid(uid){
     const id =
@@ -720,19 +812,32 @@
           .doc(id)
           .get();
 
-      if (snap.exists) {
+      if (
+        snap.exists
+      ) {
         const u =
           snap.data() ||
           {};
 
+        /*
+         * Спочатку пробуємо окремі
+         * Ім'я + Прізвище.
+         */
         const first =
-          norm(
-            u.firstName
+          validParticipantName(
+            u.firstName ||
+            u.firstname ||
+            u.first_name ||
+            ""
           );
 
         const last =
-          norm(
-            u.lastName
+          validParticipantName(
+            u.lastName ||
+            u.lastname ||
+            u.last_name ||
+            u.surname ||
+            ""
           );
 
         if (
@@ -741,15 +846,39 @@
         ) {
           name =
             `${first} ${last}`;
+
         } else {
-          name =
-            norm(
-              u.fullName ||
-              u.displayName ||
-              u.name ||
-              u.email ||
-              ""
-            );
+          /*
+           * Потім повне ім'я.
+           *
+           * EMAIL спеціально
+           * не використовуємо.
+           */
+          const candidates = [
+            u.fullName,
+            u.displayName,
+            u.userName,
+            u.name
+          ];
+
+          for (
+            const candidate
+            of candidates
+          ) {
+            const found =
+              validParticipantName(
+                candidate
+              );
+
+            if (
+              found
+            ) {
+              name =
+                found;
+
+              break;
+            }
+          }
         }
       }
 
@@ -774,98 +903,140 @@
     uid
   ){
     const r =
-      registration || {};
+      registration ||
+      {};
 
-    let name =
+    const oldTeamName =
       norm(
-        r.participantName
+        r.teamName ||
+        r.team ||
+        ""
       );
 
-    if (name) {
-      return name;
-    }
+    // -------------------------------------------------------
+    // 1. FIRST NAME + LAST NAME З РЕЄСТРАЦІЇ
+    // -------------------------------------------------------
 
     const first =
-      norm(
-        r.firstName
+      validParticipantName(
+        r.firstName ||
+        r.firstname ||
+        r.first_name ||
+        "",
+        oldTeamName
       );
 
     const last =
-      norm(
-        r.lastName
+      validParticipantName(
+        r.lastName ||
+        r.lastname ||
+        r.last_name ||
+        r.surname ||
+        "",
+        oldTeamName
       );
 
     if (
       first &&
       last
     ) {
-      return `${first} ${last}`;
-    }
-
-    name =
-      norm(
-        r.fullName ||
-        r.userName ||
-        ""
+      return (
+        `${first} ${last}`
       );
-
-    if (name) {
-      return name;
     }
 
-    /*
-     * Найнадійніший fallback
-     * для старої TEAM-заявки,
-     * яку тепер трактуємо як SOLO:
-     * users/{uid}.
-     */
+    // -------------------------------------------------------
+    // 2. ПЕРСОНАЛЬНІ ПОЛЯ З REGISTRATION
+    // -------------------------------------------------------
+
+    const registrationCandidates = [
+      r.participantName,
+      r.fullName,
+      r.userName,
+      r.name
+    ];
+
+    for (
+      const candidate
+      of registrationCandidates
+    ) {
+      const found =
+        validParticipantName(
+          candidate,
+          oldTeamName
+        );
+
+      if (
+        found
+      ) {
+        return found;
+      }
+    }
+
+    // -------------------------------------------------------
+    // 3. users/{uid}
+    //
+    // КЛЮЧОВИЙ FALLBACK.
+    //
+    // Якщо registration містить:
+    // participantName = "Учасник"
+    //
+    // сюди ми ТЕПЕР точно дійдемо.
+    // -------------------------------------------------------
+
     const profileName =
       await getUserNameByUid(
         uid
       );
 
-    if (profileName) {
-      return profileName;
-    }
-
-    /*
-     * displayName використовуємо
-     * тільки якщо це не teamName.
-     */
-    const display =
-      norm(
-        r.displayName
-      );
-
-    const teamName =
-      norm(
-        r.teamName ||
-        r.team
+    const validProfileName =
+      validParticipantName(
+        profileName,
+        oldTeamName
       );
 
     if (
-      display &&
-      display !== teamName
+      validProfileName
+    ) {
+      return validProfileName;
+    }
+
+    // -------------------------------------------------------
+    // 4. DISPLAY NAME
+    // -------------------------------------------------------
+
+    const display =
+      validParticipantName(
+        r.displayName,
+        oldTeamName
+      );
+
+    if (
+      display
     ) {
       return display;
     }
 
-    /*
-     * captain допускаємо лише
-     * як останній персональний fallback.
-     */
+    // -------------------------------------------------------
+    // 5. CAPTAIN
+    // -------------------------------------------------------
+
     const captain =
-      norm(
-        r.captain
+      validParticipantName(
+        r.captain,
+        oldTeamName
       );
 
     if (
-      captain &&
-      captain !== teamName
+      captain
     ) {
       return captain;
     }
 
+    /*
+     * Тільки якщо реально
+     * ніде немає імені.
+     */
     return "Учасник";
   }
 
@@ -926,6 +1097,14 @@
     if (
       isSoloTeam(team)
     ) {
+      const participantName =
+        validParticipantName(
+          team.participantName ||
+          team.team ||
+          ""
+        ) ||
+        "Учасник";
+
       return {
         entryType:
           ENTRY_SOLO,
@@ -938,19 +1117,10 @@
             entityId
           ),
 
-        participantName:
-          norm(
-            team.participantName ||
-            team.team
-          ) ||
-          "Учасник",
+        participantName,
 
         displayName:
-          norm(
-            team.participantName ||
-            team.team
-          ) ||
-          "Учасник",
+          participantName,
 
         teamId:
           null,
@@ -1537,7 +1707,8 @@
                   );
 
                 /*
-                 * Fallback для нового canonical doc id:
+                 * Canonical SOLO doc:
+                 *
                  * COMP__main__solo__UID
                  */
                 if (
@@ -1548,9 +1719,11 @@
                 ) {
                   uid =
                     norm(
-                      d.id.split(
-                        "__solo__"
-                      ).pop()
+                      d.id
+                        .split(
+                          "__solo__"
+                        )
+                        .pop()
                     );
                 }
 
@@ -1558,6 +1731,13 @@
                   uid ||
                   d.id;
 
+                /*
+                 * ТУТ тепер:
+                 *
+                 * "Учасник" буде відкинуто,
+                 * а реальне ім'я підтягується
+                 * з users/{uid}.
+                 */
                 const participantName =
                   await resolveSoloParticipantName(
                     r,
@@ -1579,11 +1759,6 @@
 
                   participantName,
 
-                  /*
-                   * Це лише legacy alias.
-                   * У нові SOLO записи teamId
-                   * більше не записується.
-                   */
                   legacyTeamId:
                     norm(
                       r.teamId
@@ -1801,9 +1976,10 @@
           );
 
         const participantName =
-          norm(
+          validParticipantName(
             participant.participantName ||
-            participant.team
+            participant.team ||
+            ""
           ) ||
           "Учасник";
 
@@ -1891,10 +2067,6 @@
         if (
           idx >= 0
         ) {
-          /*
-           * Зберігаємо старі результати,
-           * але виправляємо identity.
-           */
           teamsArr[idx] = {
             ...teamsArr[idx],
             ...patch
@@ -2762,6 +2934,7 @@
         return {
           ref,
           snap,
+
           data:
             snap.data() ||
             {}
@@ -2871,13 +3044,6 @@
           entityId:
             identity.entityId,
 
-          /*
-           * SOLO:
-           * uid + participantName.
-           *
-           * TEAM:
-           * teamId + teamName.
-           */
           ...(isSoloTeam(team)
             ? {
                 uid:
@@ -3210,14 +3376,6 @@
       }
     );
 
-    /*
-     * Якщо це SOLO і ми мігрували
-     * зі старого teamId-doc —
-     * старий doc поки не видаляємо.
-     *
-     * Це безпечніше для старих даних.
-     */
-
     // ---------------------------------------------------------
     // stageResults/{stage}.teams[]
     // ---------------------------------------------------------
@@ -3509,11 +3667,20 @@
       true
     );
 
-    setDbg(
-      ""
-    );
+    setDbg("");
 
     try {
+      /*
+       * Щоб після зміни ПІБ
+       * або виправлення профілю
+       * не залишився старий кеш.
+       */
+      if (
+        isSoloMode()
+      ) {
+        userNameCache.clear();
+      }
+
       currentTeams =
         await loadTeamsFromRegistrations(
           compId,
@@ -3572,9 +3739,15 @@
     /*
      * КЛЮЧОВЕ ДЛЯ LIVE.
      *
-     * Для SOLO одразу записуємо:
-     * uid + participantName
-     * у stageResults.teams,
+     * Для SOLO одразу записуємо
+     * реальні:
+     *
+     * uid
+     * participantName
+     * displayName
+     *
+     * у stageResults.teams[]
+     *
      * навіть якщо ще немає риби.
      */
     if (
@@ -6053,9 +6226,7 @@ STACK: ${e.stack || "—"}`,
         );
       }
 
-      setDbg(
-        ""
-      );
+      setDbg("");
 
     } catch(e) {
       console.error(e);

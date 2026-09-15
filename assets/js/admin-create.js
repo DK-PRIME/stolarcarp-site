@@ -8,34 +8,134 @@
 // ✅ інші формати => team
 // ✅ entryType пишеться в competition / events / engine
 // ✅ final завжди TEAM у поточній системі qualification
+//
+// =========================================================
+// ONE-OFF DELETE
+// =========================================================
+//
+// Для type === "oneoff":
+//
+// Після натискання "Видалити змагання"
+// виконується HARD DELETE.
+//
+// Видаляється:
+// • competitions
+// • registrations
+// • registrations_deleted
+// • public_participants
+// • weighings
+// • stageResults
+// • stageResults/{doc}/teams
+// • judgeTokens
+// • mealOrders
+// • mealSettings
+// • випадкові хвости у seasonResults
+// • випадкові хвости у finalQualifications
+//
+// НІЧОГО НЕ АРХІВУЄТЬСЯ.
+//
+// Для type === "season":
+// стара логіка не змінюється.
+//
+// =========================================================
 
 (function(){
   "use strict";
 
-  const DRAFT_KEY = "sc_admin_create_draft_v1";
-  const $ = (id)=>document.getElementById(id);
+  const DRAFT_KEY =
+    "sc_admin_create_draft_v1";
 
-  const setStatus = (t)=>{ const e=$("createStatus"); if(e) e.textContent=t; };
-  const setDebug  = (t)=>{ const e=$("createDebug");  if(e) e.textContent=t||""; };
-  const setMsg    = (html)=>{ const e=$("createMsg"); if(e) e.innerHTML = html || ""; };
+  const $ =
+    (id)=>
+      document.getElementById(id);
 
-  function show(el){ el && el.classList.remove("hidden"); }
-  function hide(el){ el && el.classList.add("hidden"); }
+  const setStatus =
+    (t)=>{
+      const e =
+        $("createStatus");
 
-  function esc(s){
-    return String(s||"").replace(/[&<>"']/g, m=>({
-      "&":"&amp;",
-      "<":"&lt;",
-      ">":"&gt;",
-      '"':"&quot;",
-      "'":"&#39;"
-    }[m]));
+      if(e){
+        e.textContent =
+          t;
+      }
+    };
+
+  const setDebug =
+    (t)=>{
+      const e =
+        $("createDebug");
+
+      if(e){
+        e.textContent =
+          t || "";
+      }
+    };
+
+  const setMsg =
+    (html)=>{
+      const e =
+        $("createMsg");
+
+      if(e){
+        e.innerHTML =
+          html || "";
+      }
+    };
+
+  function show(el){
+    el &&
+    el.classList.remove(
+      "hidden"
+    );
   }
 
+  function hide(el){
+    el &&
+    el.classList.add(
+      "hidden"
+    );
+  }
+
+  function esc(s){
+    return String(
+      s || ""
+    ).replace(
+      /[&<>"']/g,
+      m=>({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
+      }[m])
+    );
+  }
+
+  // =========================================================
+  // FIREBASE
+  // =========================================================
+
   async function waitForFirebase(){
-    for(let i=0;i<140;i++){
-      if(window.scAuth && window.scDb && window.firebase) return;
-      await new Promise(r=>setTimeout(r,100));
+    for(
+      let i=0;
+      i<140;
+      i++
+    ){
+      if(
+        window.scAuth &&
+        window.scDb &&
+        window.firebase
+      ){
+        return;
+      }
+
+      await new Promise(
+        r=>
+          setTimeout(
+            r,
+            100
+          )
+      );
     }
 
     throw new Error(
@@ -43,102 +143,224 @@
     );
   }
 
-  let auth=null;
-  let db=null;
-  let fb=null;
+  let auth =
+    null;
 
-  let currentSavedCompId = "";
+  let db =
+    null;
 
-  const url = new URL(location.href);
+  let fb =
+    null;
+
+  let currentSavedCompId =
+    "";
+
+  // =========================================================
+  // MODE
+  // =========================================================
+
+  const url =
+    new URL(
+      location.href
+    );
 
   const mode =
-    (url.searchParams.get("mode") || "create")
-      .toLowerCase();
+    (
+      url.searchParams.get(
+        "mode"
+      ) ||
+      "create"
+    ).toLowerCase();
 
   const isEditMode =
-    mode === "edit";
+    mode ===
+    "edit";
 
-  const gate = $("createGate");
-  const app  = $("createApp");
+  // =========================================================
+  // DOM
+  // =========================================================
 
-  const tabCreate = $("tabCreate");
-  const tabEdit   = $("tabEdit");
-  const editPicker = $("editPicker");
-  const deleteWrap = $("deleteWrap");
+  const gate =
+    $("createGate");
 
-  const inpType = $("inpType");
-  const inpYear = $("inpYear");
-  const inpName = $("inpName");
-  const inpFormat = $("inpFormat");
-  const inpLake = $("inpLake");
+  const app =
+    $("createApp");
 
-  const inpStartAt = $("inpStartAt");
-  const inpFinishAt = $("inpFinishAt");
+  const tabCreate =
+    $("tabCreate");
 
-  const outDuration = $("outDuration");
-  const outDurationHours = $("outDurationHours");
-  const outDurationDays = $("outDurationDays");
+  const tabEdit =
+    $("tabEdit");
 
-  const seasonOnly = $("seasonOnly");
-  const inpStagesCount = $("inpStagesCount");
-  const inpHasFinal = $("inpHasFinal");
+  const editPicker =
+    $("editPicker");
 
-  const inpRegMode = $("inpRegMode");
-  const inpPayEnabled = $("inpPayEnabled");
+  const deleteWrap =
+    $("deleteWrap");
 
-  const inpRegOpen = $("inpRegOpen");
-  const inpRegClose = $("inpRegClose");
+  const inpType =
+    $("inpType");
 
-  const inpPrice = $("inpPrice");
-  const inpCurrency = $("inpCurrency");
-  const inpPayDetails = $("inpPayDetails");
+  const inpYear =
+    $("inpYear");
 
-  const regPreview = $("regPreview");
+  const inpName =
+    $("inpName");
 
-  const btnSave = $("btnSave");
-  const btnMakeActive = $("btnMakeActive");
-  const btnResetDraft = $("btnResetDraft");
-  const btnDelete = $("btnDelete");
+  const inpFormat =
+    $("inpFormat");
 
-  const selCompetition = $("selCompetition");
-  const btnReloadList = $("btnReloadList");
-  const editPickerMsg = $("editPickerMsg");
+  const inpLake =
+    $("inpLake");
 
-  const formatFieldsEl = $("formatFields");
+  const inpStartAt =
+    $("inpStartAt");
 
-  let activeFormatName = "";
-  let activeFormat = null;
+  const inpFinishAt =
+    $("inpFinishAt");
+
+  const outDuration =
+    $("outDuration");
+
+  const outDurationHours =
+    $("outDurationHours");
+
+  const outDurationDays =
+    $("outDurationDays");
+
+  const seasonOnly =
+    $("seasonOnly");
+
+  const inpStagesCount =
+    $("inpStagesCount");
+
+  const inpHasFinal =
+    $("inpHasFinal");
+
+  const inpRegMode =
+    $("inpRegMode");
+
+  const inpPayEnabled =
+    $("inpPayEnabled");
+
+  const inpRegOpen =
+    $("inpRegOpen");
+
+  const inpRegClose =
+    $("inpRegClose");
+
+  const inpPrice =
+    $("inpPrice");
+
+  const inpCurrency =
+    $("inpCurrency");
+
+  const inpPayDetails =
+    $("inpPayDetails");
+
+  const regPreview =
+    $("regPreview");
+
+  const btnSave =
+    $("btnSave");
+
+  const btnMakeActive =
+    $("btnMakeActive");
+
+  const btnResetDraft =
+    $("btnResetDraft");
+
+  const btnDelete =
+    $("btnDelete");
+
+  const selCompetition =
+    $("selCompetition");
+
+  const btnReloadList =
+    $("btnReloadList");
+
+  const editPickerMsg =
+    $("editPickerMsg");
+
+  const formatFieldsEl =
+    $("formatFields");
+
+  let activeFormatName =
+    "";
+
+  let activeFormat =
+    null;
 
   // =========================================================
   // FORMAT UI
   // =========================================================
 
-  function renderFormatSpecificFields(html){
-    if(!formatFieldsEl) return;
-    formatFieldsEl.innerHTML = html || "";
+  function renderFormatSpecificFields(
+    html
+  ){
+    if(
+      !formatFieldsEl
+    ){
+      return;
+    }
+
+    formatFieldsEl.innerHTML =
+      html || "";
   }
 
   function getRegistry(){
-    const sc = window.SC_FORMATS || null;
-    if(!sc) return null;
+    const sc =
+      window.SC_FORMATS ||
+      null;
 
-    if(typeof sc.get === "function") return sc;
+    if(!sc){
+      return null;
+    }
 
-    if(sc.registry && typeof sc.registry.get === "function"){
+    if(
+      typeof sc.get ===
+      "function"
+    ){
+      return sc;
+    }
+
+    if(
+      sc.registry &&
+      typeof sc.registry.get ===
+        "function"
+    ){
       return sc.registry;
     }
 
     return null;
   }
 
-  function getPreset(name){
-    const reg = getRegistry();
-    const key = String(name || "").toLowerCase();
+  function getPreset(
+    name
+  ){
+    const reg =
+      getRegistry();
 
-    if(!reg || !key) return null;
+    const key =
+      String(
+        name || ""
+      ).toLowerCase();
+
+    if(
+      !reg ||
+      !key
+    ){
+      return null;
+    }
 
     try{
-      return reg.get(key) || null;
+      return (
+        reg.get(
+          key
+        ) ||
+        null
+      );
+
     }catch(_){
       return null;
     }
@@ -148,30 +370,65 @@
   // ENTRY TYPE
   // =========================================================
 
-  function entryTypeFromFormat(formatName){
-    const format = String(formatName || "")
-      .trim()
-      .toLowerCase();
+  function entryTypeFromFormat(
+    formatName
+  ){
+    const format =
+      String(
+        formatName || ""
+      )
+        .trim()
+        .toLowerCase();
 
-    return format === "stalker-solo"
+    return (
+      format ===
+      "stalker-solo"
+    )
       ? "solo"
       : "team";
   }
 
-  async function activateFormat(formatName, opts){
-    const requested = String(formatName || "classic").toLowerCase();
-    const preset = getPreset(requested);
+  async function activateFormat(
+    formatName,
+    opts
+  ){
+    const requested =
+      String(
+        formatName ||
+        "classic"
+      ).toLowerCase();
 
-    activeFormatName = requested || "classic";
-    activeFormat = preset || null;
+    const preset =
+      getPreset(
+        requested
+      );
 
-    renderFormatSpecificFields("");
+    activeFormatName =
+      requested ||
+      "classic";
 
-    if(!activeFormat) return;
+    activeFormat =
+      preset ||
+      null;
 
-    if(typeof activeFormat.init === "function"){
+    renderFormatSpecificFields(
+      ""
+    );
+
+    if(
+      !activeFormat
+    ){
+      return;
+    }
+
+    if(
+      typeof activeFormat.init ===
+      "function"
+    ){
       await activeFormat.init({
-        render: renderFormatSpecificFields,
+        render:
+          renderFormatSpecificFields,
+
         $,
         esc
       });
@@ -180,19 +437,26 @@
     if(
       opts &&
       opts.deserializeData &&
-      typeof activeFormat.deserialize === "function"
+      typeof activeFormat.deserialize ===
+        "function"
     ){
       try{
         await activeFormat.deserialize(
           opts.deserializeData,
           {
-            render: renderFormatSpecificFields,
+            render:
+              renderFormatSpecificFields,
+
             $,
             esc
           }
         );
+
       }catch(e){
-        console.warn("deserialize error:", e);
+        console.warn(
+          "deserialize error:",
+          e
+        );
       }
     }
   }
@@ -203,58 +467,130 @@
 
   function getDraft(){
     try{
-      return JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
+      return JSON.parse(
+        localStorage.getItem(
+          DRAFT_KEY
+        ) ||
+        "null"
+      );
+
     }catch{
       return null;
     }
   }
 
-  function setDraft(data){
+  function setDraft(
+    data
+  ){
     try{
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify(
+          data
+        )
+      );
+
     }catch{}
   }
 
   function clearDraft(){
     try{
-      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(
+        DRAFT_KEY
+      );
+
     }catch{}
+  }
+
+  // =========================================================
+  // CACHE
+  // =========================================================
+
+  function clearCompetitionCaches(){
+    try{
+      Object
+        .keys(
+          localStorage
+        )
+        .forEach(
+          key=>{
+            if(
+              key.startsWith(
+                "sc_competitions_cache_"
+              )
+            ){
+              localStorage.removeItem(
+                key
+              );
+            }
+          }
+        );
+
+    }catch(e){
+      console.warn(
+        "[admin-create] competition cache cleanup:",
+        e
+      );
+    }
   }
 
   // =========================================================
   // DATE HELPERS
   // =========================================================
 
-  function parseLocalDateTime(v){
-    const s = (v || "").trim();
-    if(!s) return null;
+  function parseLocalDateTime(
+    v
+  ){
+    const s =
+      (
+        v || ""
+      ).trim();
 
-    const m = s.match(
-      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
-    );
+    if(!s){
+      return null;
+    }
 
-    if(!m) return null;
+    const m =
+      s.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/
+      );
 
-    const dt = new Date(
-      +m[1],
-      +m[2]-1,
-      +m[3],
-      +m[4],
-      +m[5],
-      0,
-      0
-    );
+    if(!m){
+      return null;
+    }
 
-    return Number.isNaN(dt.getTime())
+    const dt =
+      new Date(
+        +m[1],
+        +m[2]-1,
+        +m[3],
+        +m[4],
+        +m[5],
+        0,
+        0
+      );
+
+    return Number.isNaN(
+      dt.getTime()
+    )
       ? null
       : dt;
   }
 
-  function toDateTimeLocalValue(date){
-    if(!date) return "";
+  function toDateTimeLocalValue(
+    date
+  ){
+    if(!date){
+      return "";
+    }
 
     const pad =
-      (n)=>String(n).padStart(2,"0");
+      (n)=>
+        String(n)
+          .padStart(
+            2,
+            "0"
+          );
 
     return (
       `${date.getFullYear()}-` +
@@ -265,11 +601,20 @@
     );
   }
 
-  function toDateOnly(date){
-    if(!date) return "";
+  function toDateOnly(
+    date
+  ){
+    if(!date){
+      return "";
+    }
 
     const pad =
-      (n)=>String(n).padStart(2,"0");
+      (n)=>
+        String(n)
+          .padStart(
+            2,
+            "0"
+          );
 
     return (
       `${date.getFullYear()}-` +
@@ -278,10 +623,16 @@
     );
   }
 
-  function timestampToDate(ts){
-    if(!ts) return null;
+  function timestampToDate(
+    ts
+  ){
+    if(!ts){
+      return null;
+    }
 
-    if(ts instanceof Date){
+    if(
+      ts instanceof Date
+    ){
       return ts;
     }
 
@@ -293,11 +644,15 @@
     }
 
     if(
-      typeof ts === "string" ||
-      typeof ts === "number"
+      typeof ts ===
+        "string" ||
+      typeof ts ===
+        "number"
     ){
       const d =
-        new Date(ts);
+        new Date(
+          ts
+        );
 
       return Number.isFinite(
         d.getTime()
@@ -306,10 +661,13 @@
         : null;
     }
 
-    if(ts.seconds){
+    if(
+      ts.seconds
+    ){
       const d =
         new Date(
-          ts.seconds * 1000
+          ts.seconds *
+          1000
         );
 
       return Number.isFinite(
@@ -322,8 +680,14 @@
     return null;
   }
 
-  function diffMinutes(a,b){
-    if(!a || !b){
+  function diffMinutes(
+    a,
+    b
+  ){
+    if(
+      !a ||
+      !b
+    ){
       return null;
     }
 
@@ -331,26 +695,43 @@
       b.getTime() -
       a.getTime();
 
-    return Number.isFinite(ms)
-      ? Math.floor(ms / 60000)
+    return Number.isFinite(
+      ms
+    )
+      ? Math.floor(
+          ms / 60000
+        )
       : null;
   }
 
-  function normDate(v){
+  function normDate(
+    v
+  ){
     const s =
-      (v || "").trim();
+      (
+        v || ""
+      ).trim();
 
     if(!s){
       return "";
     }
 
-    return /^\d{4}-\d{2}-\d{2}$/.test(s)
+    return /^\d{4}-\d{2}-\d{2}$/.test(
+      s
+    )
       ? s
       : "";
   }
 
-  function addDays(dateStr, days){
-    const [y,m,d] =
+  function addDays(
+    dateStr,
+    days
+  ){
+    const [
+      y,
+      m,
+      d
+    ] =
       dateStr
         .split("-")
         .map(Number);
@@ -373,7 +754,12 @@
     );
 
     const pad =
-      (n)=>String(n).padStart(2,"0");
+      (n)=>
+        String(n)
+          .padStart(
+            2,
+            "0"
+          );
 
     return (
       `${dt.getUTCFullYear()}-` +
@@ -382,7 +768,9 @@
     );
   }
 
-  function regOpenFromStartDate(startDateStr){
+  function regOpenFromStartDate(
+    startDateStr
+  ){
     return startDateStr
       ? addDays(
           startDateStr,
@@ -391,7 +779,9 @@
       : "";
   }
 
-  function regCloseFromStartDate(startDateStr){
+  function regCloseFromStartDate(
+    startDateStr
+  ){
     return startDateStr
       ? addDays(
           startDateStr,
@@ -403,25 +793,32 @@
   function startDateOnly(){
     const dt =
       parseLocalDateTime(
-        inpStartAt?.value || ""
+        inpStartAt?.value ||
+        ""
       );
 
     return dt
-      ? toDateOnly(dt)
+      ? toDateOnly(
+          dt
+        )
       : "";
   }
 
-  function registrationStatusFromBlock(regBlock){
+  function registrationStatusFromBlock(
+    regBlock
+  ){
     const today =
       toDateOnly(
         new Date()
       );
 
     const open =
-      regBlock.openDate || "";
+      regBlock.openDate ||
+      "";
 
     const close =
-      regBlock.closeDate || "";
+      regBlock.closeDate ||
+      "";
 
     if(
       open &&
@@ -440,13 +837,16 @@
     return "open";
   }
 
-  /*
-   * Замість старого величезного
-   * вкладеного ternary.
-   */
-  function firstMoneyValue(...values){
-    for(const value of values){
-      if(value === 0){
+  function firstMoneyValue(
+    ...values
+  ){
+    for(
+      const value of
+      values
+    ){
+      if(
+        value === 0
+      ){
         return 0;
       }
 
@@ -460,12 +860,18 @@
 
       const num =
         Number(
-          String(value)
-            .replace(",", ".")
+          String(
+            value
+          ).replace(
+            ",",
+            "."
+          )
         );
 
       if(
-        Number.isFinite(num)
+        Number.isFinite(
+          num
+        )
       ){
         return num;
       }
@@ -478,7 +884,9 @@
   // ADMIN
   // =========================================================
 
-  async function requireAdmin(user){
+  async function requireAdmin(
+    user
+  ){
     if(!user){
       return false;
     }
@@ -486,13 +894,20 @@
     try{
       const snap =
         await db
-          .collection("users")
-          .doc(user.uid)
+          .collection(
+            "users"
+          )
+          .doc(
+            user.uid
+          )
           .get();
 
       return (
         String(
-          (snap.data() || {}).role ||
+          (
+            snap.data() ||
+            {}
+          ).role ||
           ""
         ).toLowerCase() ===
         "admin"
@@ -507,7 +922,9 @@
   // TABS
   // =========================================================
 
-  function setActiveTab(isEdit){
+  function setActiveTab(
+    isEdit
+  ){
     if(
       tabCreate &&
       tabEdit
@@ -523,24 +940,34 @@
       );
     }
 
-    if(editPicker){
+    if(
+      editPicker
+    ){
       (
         isEdit
           ? show
           : hide
-      )(editPicker);
+      )(
+        editPicker
+      );
     }
 
-    if(deleteWrap){
+    if(
+      deleteWrap
+    ){
       (
         isEdit
           ? show
           : hide
-      )(deleteWrap);
+      )(
+        deleteWrap
+      );
     }
   }
 
-  function gotoMode(nextMode){
+  function gotoMode(
+    nextMode
+  ){
     const u =
       new URL(
         location.href
@@ -570,7 +997,9 @@
   // =========================================================
 
   async function loadLakes(){
-    if(!inpLake){
+    if(
+      !inpLake
+    ){
       return;
     }
 
@@ -580,31 +1009,41 @@
     try{
       const snap =
         await db
-          .collection("lakes")
+          .collection(
+            "lakes"
+          )
           .get();
 
       const items =
         snap.docs.map(
-          d => ({
+          d=>({
             id:
               d.id,
 
             name:
-              (d.data() || {}).name ||
+              (
+                d.data() ||
+                {}
+              ).name ||
               d.id
           })
         );
 
       items.sort(
         (a,b)=>
-          (a.name || "")
-            .localeCompare(
-              b.name || "",
-              "uk"
-            )
+          (
+            a.name ||
+            ""
+          ).localeCompare(
+            b.name ||
+            "",
+            "uk"
+          )
       );
 
-      if(!items.length){
+      if(
+        !items.length
+      ){
         inpLake.innerHTML =
           `<option value="">Нема водойм</option>`;
 
@@ -614,7 +1053,7 @@
       inpLake.innerHTML =
         `<option value="">— вибери водойму —</option>` +
         items.map(
-          it =>
+          it=>
             `<option value="${esc(it.id)}">${esc(it.name)}</option>`
         ).join("");
 
@@ -634,31 +1073,44 @@
   // =========================================================
 
   async function loadCompetitionsList(){
-    if(!selCompetition){
+    if(
+      !selCompetition
+    ){
       return;
     }
 
     selCompetition.innerHTML =
       `<option value="">Завантаження…</option>`;
 
-    if(editPickerMsg){
+    if(
+      editPickerMsg
+    ){
       editPickerMsg.textContent =
         "";
     }
 
-    let activeId = "";
+    let activeId =
+      "";
 
     try{
       const s =
         await db
-          .collection("settings")
-          .doc("app")
+          .collection(
+            "settings"
+          )
+          .doc(
+            "app"
+          )
           .get();
 
-      if(s.exists){
+      if(
+        s.exists
+      ){
         activeId =
-          (s.data() || {})
-            .activeCompetitionId ||
+          (
+            s.data() ||
+            {}
+          ).activeCompetitionId ||
           "";
       }
 
@@ -666,21 +1118,25 @@
 
     const snap =
       await db
-        .collection("competitions")
+        .collection(
+          "competitions"
+        )
         .get();
 
     const items =
       snap.docs.map(
-        doc => {
+        doc=>{
           const d =
-            doc.data() || {};
+            doc.data() ||
+            {};
 
           return {
             id:
               doc.id,
 
             year:
-              d.year || 0,
+              d.year ||
+              0,
 
             name:
               d.name ||
@@ -695,15 +1151,23 @@
 
     items.sort(
       (a,b)=>
-        (b.year - a.year) ||
-        (a.name || "")
-          .localeCompare(
-            b.name || "",
-            "uk"
-          )
+        (
+          b.year -
+          a.year
+        ) ||
+        (
+          a.name ||
+          ""
+        ).localeCompare(
+          b.name ||
+          "",
+          "uk"
+        )
     );
 
-    if(!items.length){
+    if(
+      !items.length
+    ){
       selCompetition.innerHTML =
         `<option value="">Нема змагань</option>`;
 
@@ -713,7 +1177,7 @@
     selCompetition.innerHTML =
       `<option value="">— вибери —</option>` +
       items.map(
-        it => {
+        it=>{
           const label =
             `${
               it.active
@@ -739,12 +1203,16 @@
       inpType?.value ||
       "season";
 
-    if(seasonOnly){
+    if(
+      seasonOnly
+    ){
       (
         type === "season"
           ? show
           : hide
-      )(seasonOnly);
+      )(
+        seasonOnly
+      );
     }
   }
 
@@ -772,17 +1240,23 @@
       !b ||
       mins === null
     ){
-      if(outDuration){
+      if(
+        outDuration
+      ){
         outDuration.value =
           "—";
       }
 
-      if(outDurationHours){
+      if(
+        outDurationHours
+      ){
         outDurationHours.value =
           "—";
       }
 
-      if(outDurationDays){
+      if(
+        outDurationDays
+      ){
         outDurationDays.value =
           "—";
       }
@@ -790,18 +1264,26 @@
       return;
     }
 
-    if(mins <= 0){
-      if(outDuration){
+    if(
+      mins <= 0
+    ){
+      if(
+        outDuration
+      ){
         outDuration.value =
           "❌ Фініш після старту";
       }
 
-      if(outDurationHours){
+      if(
+        outDurationHours
+      ){
         outDurationHours.value =
           "—";
       }
 
-      if(outDurationDays){
+      if(
+        outDurationDays
+      ){
         outDurationDays.value =
           "—";
       }
@@ -815,19 +1297,29 @@
     const days =
       hours / 24;
 
-    if(outDuration){
+    if(
+      outDuration
+    ){
       outDuration.value =
         `${Math.round(hours)} год (${days.toFixed(2)} доби)`;
     }
 
-    if(outDurationHours){
+    if(
+      outDurationHours
+    ){
       outDurationHours.value =
-        hours.toFixed(2);
+        hours.toFixed(
+          2
+        );
     }
 
-    if(outDurationDays){
+    if(
+      outDurationDays
+    ){
       outDurationDays.value =
-        days.toFixed(2);
+        days.toFixed(
+          2
+        );
     }
   }
 
@@ -837,29 +1329,36 @@
       "auto";
 
     if(
-      mode ===
-      "manual"
+      mode === "manual"
     ){
-      if(inpRegOpen){
+      if(
+        inpRegOpen
+      ){
         inpRegOpen.disabled =
           false;
       }
 
-      if(inpRegClose){
+      if(
+        inpRegClose
+      ){
         inpRegClose.disabled =
           false;
       }
 
-      if(regPreview){
+      if(
+        regPreview
+      ){
         const o =
           normDate(
             inpRegOpen?.value
-          ) || "—";
+          ) ||
+          "—";
 
         const c =
           normDate(
             inpRegClose?.value
-          ) || "—";
+          ) ||
+          "—";
 
         const status =
           registrationStatusFromBlock({
@@ -890,12 +1389,16 @@
       return;
     }
 
-    if(inpRegOpen){
+    if(
+      inpRegOpen
+    ){
       inpRegOpen.disabled =
         true;
     }
 
-    if(inpRegClose){
+    if(
+      inpRegClose
+    ){
       inpRegClose.disabled =
         true;
     }
@@ -903,8 +1406,12 @@
     const startD =
       startDateOnly();
 
-    if(!startD){
-      if(regPreview){
+    if(
+      !startD
+    ){
+      if(
+        regPreview
+      ){
         regPreview.textContent =
           "Реєстрація: —";
       }
@@ -940,7 +1447,9 @@
               : `<span style="color:#ff6c6c;">❌ Закрито</span>`
           );
 
-    if(regPreview){
+    if(
+      regPreview
+    ){
       regPreview.innerHTML =
         `Реєстрація: <b>${o}</b> → <b>${c}</b> ${statusHtml}`;
     }
@@ -956,16 +1465,22 @@
       "season";
 
     const yearStr =
-      (inpYear?.value || "")
-        .trim();
+      (
+        inpYear?.value ||
+        ""
+      ).trim();
 
     const name =
-      (inpName?.value || "")
-        .trim();
+      (
+        inpName?.value ||
+        ""
+      ).trim();
 
     const format =
-      (inpFormat?.value || "classic")
-        .trim() ||
+      (
+        inpFormat?.value ||
+        "classic"
+      ).trim() ||
       "classic";
 
     const entryType =
@@ -974,8 +1489,10 @@
       );
 
     const lakeId =
-      (inpLake?.value || "")
-        .trim();
+      (
+        inpLake?.value ||
+        ""
+      ).trim();
 
     const startDt =
       parseLocalDateTime(
@@ -1030,14 +1547,20 @@
       );
 
     const priceRaw =
-      (inpPrice?.value || "")
-        .trim();
+      (
+        inpPrice?.value ||
+        ""
+      ).trim();
 
     const price =
       priceRaw
         ? Number(
-            String(priceRaw)
-              .replace(",", ".")
+            String(
+              priceRaw
+            ).replace(
+              ",",
+              "."
+            )
           )
         : null;
 
@@ -1082,55 +1605,75 @@
     };
   }
 
-  function applyForm(data){
-    if(!data){
+  function applyForm(
+    data
+  ){
+    if(
+      !data
+    ){
       return;
     }
 
-    if(inpType){
+    if(
+      inpType
+    ){
       inpType.value =
         data.type ||
         "season";
     }
 
-    if(inpYear){
+    if(
+      inpYear
+    ){
       inpYear.value =
         data.yearStr ||
         data.year ||
         "";
     }
 
-    if(inpName){
+    if(
+      inpName
+    ){
       inpName.value =
         data.name ||
         "";
     }
 
-    if(inpFormat){
+    if(
+      inpFormat
+    ){
       inpFormat.value =
         data.format ||
         "classic";
     }
 
-    if(inpLake){
+    if(
+      inpLake
+    ){
       inpLake.value =
         data.lakeId ||
         "";
     }
 
-    if(inpStartAt){
+    if(
+      inpStartAt
+    ){
       inpStartAt.value =
         data.startAtLocal ||
         "";
     }
 
-    if(inpFinishAt){
+    if(
+      inpFinishAt
+    ){
       inpFinishAt.value =
         data.finishAtLocal ||
         "";
     }
 
-    if(inpStagesCount){
+    if(
+      inpStagesCount
+    ){
       inpStagesCount.value =
         String(
           data.stagesCount ||
@@ -1138,49 +1681,67 @@
         );
     }
 
-    if(inpHasFinal){
+    if(
+      inpHasFinal
+    ){
       inpHasFinal.value =
-        data.hasFinal === false
+        data.hasFinal ===
+          false
           ? "no"
           : "yes";
     }
 
-    if(inpRegMode){
+    if(
+      inpRegMode
+    ){
       inpRegMode.value =
         data.regMode ||
         "auto";
     }
 
-    if(inpPayEnabled){
+    if(
+      inpPayEnabled
+    ){
       inpPayEnabled.value =
-        data.payEnabled === false
+        data.payEnabled ===
+          false
           ? "no"
           : "yes";
     }
 
-    if(inpRegOpen){
+    if(
+      inpRegOpen
+    ){
       inpRegOpen.value =
         data.manualOpen ||
         "";
     }
 
-    if(inpRegClose){
+    if(
+      inpRegClose
+    ){
       inpRegClose.value =
         data.manualClose ||
         "";
     }
 
-    if(inpPrice){
+    if(
+      inpPrice
+    ){
       inpPrice.value =
         (
           data.price === 0 ||
           data.price
         )
-          ? String(data.price)
+          ? String(
+              data.price
+            )
           : "";
     }
 
-    if(inpCurrency){
+    if(
+      inpCurrency
+    ){
       inpCurrency.value =
         (
           data.currency ||
@@ -1188,7 +1749,9 @@
         ).toUpperCase();
     }
 
-    if(inpPayDetails){
+    if(
+      inpPayDetails
+    ){
       inpPayDetails.value =
         data.payDetails ||
         data.paymentDetails ||
@@ -1200,7 +1763,8 @@
     const d =
       collectForm();
 
-    let engine = {};
+    let engine =
+      {};
 
     try{
       engine =
@@ -1212,6 +1776,7 @@
           ? (
               activeFormat.serialize({
                 $,
+
                 format:
                   activeFormatName
               }) ||
@@ -1298,10 +1863,15 @@
   function rand4(){
     return Math.random()
       .toString(36)
-      .slice(2,6);
+      .slice(
+        2,
+        6
+      );
   }
 
-  function slugify(s){
+  function slugify(
+    s
+  ){
     return String(
       s ||
       "event"
@@ -1331,7 +1901,9 @@
     name
   ){
     const slug =
-      slugify(name);
+      slugify(
+        name
+      );
 
     const rnd =
       rand4();
@@ -1358,7 +1930,9 @@
   // VALIDATE
   // =========================================================
 
-  function validate(form){
+  function validate(
+    form
+  ){
     if(
       !/^\d{4}$/.test(
         form.yearStr
@@ -1369,19 +1943,25 @@
       );
     }
 
-    if(!form.name){
+    if(
+      !form.name
+    ){
       throw new Error(
         "Вкажи назву змагання."
       );
     }
 
-    if(!form.startDt){
+    if(
+      !form.startDt
+    ){
       throw new Error(
         "Заповни старт."
       );
     }
 
-    if(!form.finishDt){
+    if(
+      !form.finishDt
+    ){
       throw new Error(
         "Заповни фініш."
       );
@@ -1447,19 +2027,29 @@
   // LAKE SNAPSHOT
   // =========================================================
 
-  async function getLakeSnapshot(lakeId){
-    if(!lakeId){
+  async function getLakeSnapshot(
+    lakeId
+  ){
+    if(
+      !lakeId
+    ){
       return null;
     }
 
     try{
       const doc =
         await db
-          .collection("lakes")
-          .doc(lakeId)
+          .collection(
+            "lakes"
+          )
+          .doc(
+            lakeId
+          )
           .get();
 
-      if(!doc.exists){
+      if(
+        !doc.exists
+      ){
         return {
           id:
             lakeId,
@@ -1474,7 +2064,10 @@
           lakeId,
 
         name:
-          (doc.data() || {}).name ||
+          (
+            doc.data() ||
+            {}
+          ).name ||
           lakeId
       };
 
@@ -1493,7 +2086,9 @@
   // REGISTRATION BLOCK
   // =========================================================
 
-  function computeRegistrationBlock(form){
+  function computeRegistrationBlock(
+    form
+  ){
     if(
       form.regMode ===
       "manual"
@@ -1543,7 +2138,9 @@
   // PAYMENT BLOCK
   // =========================================================
 
-  function paymentBlock(form){
+  function paymentBlock(
+    form
+  ){
     return {
       enabled:
         !!form.payEnabled,
@@ -1568,7 +2165,9 @@
     };
   }
 
-  function paymentLegacyFields(form){
+  function paymentLegacyFields(
+    form
+  ){
     const price =
       (
         form.price === 0 ||
@@ -1598,6 +2197,7 @@
         enabled,
 
       price,
+
       fee:
         price,
 
@@ -1644,7 +2244,9 @@
     };
   }
 
-  function dateLegacyFields(form){
+  function dateLegacyFields(
+    form
+  ){
     return {
       startAt:
         fb.firestore.Timestamp
@@ -1685,7 +2287,8 @@
       return [];
     }
 
-    const events = [];
+    const events =
+      [];
 
     const count =
       Math.max(
@@ -1729,6 +2332,7 @@
 
       events.push({
         key,
+
         stageId:
           key,
 
@@ -1811,14 +2415,18 @@
           status,
 
         isOpen:
-          status === "open",
+          status ===
+          "open",
 
         open:
-          status === "open"
+          status ===
+          "open"
       });
     }
 
-    if(form.hasFinal){
+    if(
+      form.hasFinal
+    ){
       const order =
         count + 1;
 
@@ -1840,10 +2448,6 @@
         index:
           order,
 
-        /*
-         * Фінал у поточній системі
-         * кваліфікації залишається TEAM.
-         */
         entryType:
           "team",
 
@@ -1911,10 +2515,12 @@
           status,
 
         isOpen:
-          status === "open",
+          status ===
+          "open",
 
         open:
-          status === "open"
+          status ===
+          "open"
       });
     }
 
@@ -1925,12 +2531,19 @@
   // LOAD COMPETITION
   // =========================================================
 
-  async function loadCompetition(compId){
-    if(!compId){
+  async function loadCompetition(
+    compId
+  ){
+    if(
+      !compId
+    ){
       return;
     }
 
-    setMsg("");
+    setMsg(
+      ""
+    );
+
     setStatus(
       "Завантаження…"
     );
@@ -1938,11 +2551,17 @@
     try{
       const doc =
         await db
-          .collection("competitions")
-          .doc(compId)
+          .collection(
+            "competitions"
+          )
+          .doc(
+            compId
+          )
           .get();
 
-      if(!doc.exists){
+      if(
+        !doc.exists
+      ){
         throw new Error(
           `Не знайдено ${compId}`
         );
@@ -1982,11 +2601,6 @@
         d.payment ||
         {};
 
-      /*
-       * ВИПРАВЛЕНО:
-       * тут раніше була синтаксична
-       * помилка у вкладених ternary.
-       */
       const loadedPrice =
         firstMoneyValue(
           pay.price,
@@ -2042,7 +2656,7 @@
               d.events
             )
               ? d.events.filter(
-                  e =>
+                  e=>
                     String(
                       e.key ||
                       e.stageId ||
@@ -2121,7 +2735,9 @@
         "Завантажено ✅"
       );
 
-      setDebug("");
+      setDebug(
+        ""
+      );
 
     }catch(e){
       setStatus(
@@ -2139,7 +2755,9 @@
   // SAVE COMPETITION
   // =========================================================
 
-  async function saveCompetition(editingCompId){
+  async function saveCompetition(
+    editingCompId
+  ){
     const form =
       collectForm();
 
@@ -2147,7 +2765,8 @@
       form
     );
 
-    let formatExtra = {};
+    let formatExtra =
+      {};
 
     if(
       activeFormat &&
@@ -2156,6 +2775,7 @@
     ){
       await activeFormat.validate({
         $,
+
         format:
           form.format
       });
@@ -2169,6 +2789,7 @@
       formatExtra =
         await activeFormat.serialize({
           $,
+
           format:
             form.format
         }) ||
@@ -2228,8 +2849,12 @@
 
     const ref =
       db
-        .collection("competitions")
-        .doc(compId);
+        .collection(
+          "competitions"
+        )
+        .doc(
+          compId
+        );
 
     const snap =
       await ref.get();
@@ -2331,7 +2956,9 @@
         durationHours:
           durationHours !== null
             ? Number(
-                durationHours.toFixed(2)
+                durationHours.toFixed(
+                  2
+                )
               )
             : null
       },
@@ -2339,14 +2966,16 @@
       ...dateLegacy,
 
       stagesCount:
-        form.type === "season"
+        form.type ===
+          "season"
           ? Number(
               form.stagesCount
             )
           : 1,
 
       hasFinal:
-        form.type === "season"
+        form.type ===
+          "season"
           ? !!form.hasFinal
           : false,
 
@@ -2389,10 +3018,12 @@
         regStatus,
 
       isOpen:
-        regStatus === "open",
+        regStatus ===
+        "open",
 
       open:
-        regStatus === "open",
+        regStatus ===
+        "open",
 
       payment:
         payBlock,
@@ -2400,7 +3031,8 @@
       ...payLegacy,
 
       events:
-        form.type === "season"
+        form.type ===
+          "season"
           ? buildEventsForCompetition(
               form,
               regBlock
@@ -2413,7 +3045,9 @@
           .serverTimestamp()
     };
 
-    if(!snap.exists){
+    if(
+      !snap.exists
+    ){
       data.createdAt =
         fb.firestore
           .FieldValue
@@ -2430,6 +3064,8 @@
 
     saveDraftNow();
 
+    clearCompetitionCaches();
+
     return compId;
   }
 
@@ -2437,22 +3073,34 @@
   // ACTIVE
   // =========================================================
 
-  async function makeActive(compId){
+  async function makeActive(
+    compId
+  ){
     const check =
       await db
-        .collection("competitions")
-        .doc(compId)
+        .collection(
+          "competitions"
+        )
+        .doc(
+          compId
+        )
         .get();
 
-    if(!check.exists){
+    if(
+      !check.exists
+    ){
       throw new Error(
         `Змагання ${compId} не існує.`
       );
     }
 
     await db
-      .collection("settings")
-      .doc("app")
+      .collection(
+        "settings"
+      )
+      .doc(
+        "app"
+      )
       .set(
         {
           activeCompetitionId:
@@ -2468,18 +3116,958 @@
             true
         }
       );
+
+    clearCompetitionCaches();
   }
 
   // =========================================================
-  // DELETE
+  // ONE-OFF HARD DELETE HELPERS
   // =========================================================
 
-  async function deleteCompetition(compId){
+  function normalizeId(
+    value
+  ){
+    return String(
+      value ??
+      ""
+    ).trim();
+  }
+
+  function parseCompetitionYear(
+    compId,
+    competition
+  ){
+    const direct =
+      Number(
+        competition?.year
+      );
+
+    if(
+      Number.isFinite(
+        direct
+      ) &&
+      direct >= 2000 &&
+      direct <= 3000
+    ){
+      return String(
+        Math.trunc(
+          direct
+        )
+      );
+    }
+
+    const match =
+      String(
+        compId ||
+        ""
+      ).match(
+        /\b(20\d{2})\b/
+      );
+
+    return match
+      ? match[1]
+      : "";
+  }
+
+  function docIdBelongsToCompetition(
+    docId,
+    compId
+  ){
+    const id =
+      normalizeId(
+        docId
+      );
+
+    const target =
+      normalizeId(
+        compId
+      );
+
+    if(
+      !id ||
+      !target
+    ){
+      return false;
+    }
+
+    if(
+      id === target
+    ){
+      return true;
+    }
+
+    const prefixes = [
+      `${target}__`,
+      `${target}||`,
+      `${target}|`,
+      `${target}--`,
+      `${target}::`
+    ];
+
+    return prefixes.some(
+      prefix=>
+        id.startsWith(
+          prefix
+        )
+    );
+  }
+
+  function dataBelongsToCompetition(
+    data,
+    compId
+  ){
+    const d =
+      data ||
+      {};
+
+    const target =
+      normalizeId(
+        compId
+      );
+
+    if(
+      !target
+    ){
+      return false;
+    }
+
+    const directValues = [
+      d.competitionId,
+      d.compId,
+      d.originalCompetitionId,
+      d.competitionKey,
+
+      d.competition?.id,
+      d.competition?.competitionId,
+
+      d.source?.competitionId,
+      d.source?.compId,
+
+      d.event?.competitionId,
+      d.event?.compId
+    ];
+
+    return directValues.some(
+      value=>
+        normalizeId(
+          value
+        ) ===
+        target
+    );
+  }
+
+  function documentBelongsToCompetition(
+    doc,
+    compId
+  ){
+    if(
+      !doc
+    ){
+      return false;
+    }
+
+    return (
+      docIdBelongsToCompetition(
+        doc.id,
+        compId
+      ) ||
+      dataBelongsToCompetition(
+        doc.data?.() ||
+        {},
+        compId
+      )
+    );
+  }
+
+  // =========================================================
+  // DELETE REFS IN CHUNKS
+  // =========================================================
+
+  async function deleteRefsInChunks(
+    refs
+  ){
+    const unique =
+      new Map();
+
+    (
+      refs ||
+      []
+    ).forEach(
+      ref=>{
+        if(
+          ref?.path
+        ){
+          unique.set(
+            ref.path,
+            ref
+          );
+        }
+      }
+    );
+
+    const list =
+      [
+        ...unique.values()
+      ];
+
+    if(
+      !list.length
+    ){
+      return 0;
+    }
+
+    /*
+     * Firestore batch max = 500.
+     * Беремо 400 із запасом.
+     */
+    const CHUNK_SIZE =
+      400;
+
+    let deleted =
+      0;
+
+    for(
+      let i=0;
+      i<list.length;
+      i+=CHUNK_SIZE
+    ){
+      const chunk =
+        list.slice(
+          i,
+          i +
+          CHUNK_SIZE
+        );
+
+      const batch =
+        db.batch();
+
+      chunk.forEach(
+        ref=>{
+          batch.delete(
+            ref
+          );
+        }
+      );
+
+      await batch.commit();
+
+      deleted +=
+        chunk.length;
+    }
+
+    return deleted;
+  }
+
+  // =========================================================
+  // FIND DOCS IN TOP LEVEL COLLECTION
+  // =========================================================
+
+  async function findCompetitionDocuments(
+    collectionName,
+    compId
+  ){
+    let snap;
+
+    try{
+      /*
+       * Навмисно читаємо колекцію
+       * і фільтруємо самі.
+       *
+       * Так не залежимо від
+       * Firestore indexes.
+       */
+      snap =
+        await db
+          .collection(
+            collectionName
+          )
+          .get();
+
+    }catch(e){
+      throw new Error(
+        `Не вдалося перевірити ${collectionName}: ${
+          e?.message ||
+          e
+        }`
+      );
+    }
+
+    return snap.docs.filter(
+      doc=>
+        documentBelongsToCompetition(
+          doc,
+          compId
+        )
+    );
+  }
+
+  // =========================================================
+  // DELETE FROM SIMPLE COLLECTION
+  // =========================================================
+
+  async function deleteFromSimpleCollection(
+    collectionName,
+    compId
+  ){
+    const docs =
+      await findCompetitionDocuments(
+        collectionName,
+        compId
+      );
+
+    if(
+      !docs.length
+    ){
+      console.info(
+        "[admin-create] clean:",
+        collectionName,
+        "0"
+      );
+
+      return 0;
+    }
+
+    const deleted =
+      await deleteRefsInChunks(
+        docs.map(
+          doc=>
+            doc.ref
+        )
+      );
+
+    console.info(
+      "[admin-create] clean:",
+      collectionName,
+      deleted
+    );
+
+    return deleted;
+  }
+
+  // =========================================================
+  // STAGE RESULTS
+  // =========================================================
+
+  async function deleteStageResultTeams(
+    stageRef
+  ){
+    try{
+      const teamsSnap =
+        await stageRef
+          .collection(
+            "teams"
+          )
+          .get();
+
+      if(
+        teamsSnap.empty
+      ){
+        return 0;
+      }
+
+      return await deleteRefsInChunks(
+        teamsSnap.docs.map(
+          doc=>
+            doc.ref
+        )
+      );
+
+    }catch(e){
+      throw new Error(
+        `Не вдалося очистити ${stageRef.path}/teams: ${
+          e?.message ||
+          e
+        }`
+      );
+    }
+  }
+
+  function possibleStageResultIds(
+    compId,
+    competition
+  ){
+    const ids =
+      new Set([
+        compId,
+
+        `${compId}__main`,
+
+        `${compId}__stage-1`,
+
+        `${compId}__final`
+      ]);
+
+    const events =
+      Array.isArray(
+        competition?.events
+      )
+        ? competition.events
+        : [];
+
+    events.forEach(
+      event=>{
+        const stageKey =
+          normalizeId(
+            event?.key ||
+            event?.stageId ||
+            event?.id
+          );
+
+        if(
+          stageKey
+        ){
+          ids.add(
+            `${compId}__${stageKey}`
+          );
+        }
+      }
+    );
+
+    return [
+      ...ids
+    ];
+  }
+
+  async function deleteStageResultsForCompetition(
+    compId,
+    competition
+  ){
+    const collection =
+      db.collection(
+        "stageResults"
+      );
+
+    const foundDocs =
+      await findCompetitionDocuments(
+        "stageResults",
+        compId
+      );
+
+    const refs =
+      new Map();
+
+    foundDocs.forEach(
+      doc=>{
+        refs.set(
+          doc.ref.path,
+          doc.ref
+        );
+      }
+    );
+
+    /*
+     * Важливо:
+     *
+     * Firestore може мати subcollection
+     * навіть якщо parent документ уже
+     * колись був видалений.
+     *
+     * Тому окремо перевіряємо відомі
+     * можливі stageResults IDs.
+     */
+    possibleStageResultIds(
+      compId,
+      competition
+    ).forEach(
+      id=>{
+        const ref =
+          collection.doc(
+            id
+          );
+
+        refs.set(
+          ref.path,
+          ref
+        );
+      }
+    );
+
+    let deleted =
+      0;
+
+    /*
+     * Спочатку teams subcollection.
+     */
+    for(
+      const stageRef of
+      refs.values()
+    ){
+      deleted +=
+        await deleteStageResultTeams(
+          stageRef
+        );
+    }
+
+    /*
+     * Потім видаляємо тільки ті parent
+     * документи, які реально існують
+     * або були знайдені у collection scan.
+     *
+     * delete() на неіснуючий doc теж
+     * допустимий, тому можемо видалити
+     * всі candidate refs.
+     */
+    deleted +=
+      await deleteRefsInChunks(
+        [
+          ...refs.values()
+        ]
+      );
+
+    console.info(
+      "[admin-create] clean stageResults:",
+      deleted
+    );
+
+    return deleted;
+  }
+
+  // =========================================================
+  // FINAL QUALIFICATIONS LEGACY CLEANUP
+  // =========================================================
+
+  async function deleteFinalQualificationsForCompetition(
+    compId,
+    competition
+  ){
+    const year =
+      parseCompetitionYear(
+        compId,
+        competition
+      );
+
+    if(
+      !year
+    ){
+      return 0;
+    }
+
+    const teamsRef =
+      db
+        .collection(
+          "finalQualifications"
+        )
+        .doc(
+          year
+        )
+        .collection(
+          "teams"
+        );
+
+    let snap;
+
+    try{
+      snap =
+        await teamsRef.get();
+
+    }catch(e){
+      throw new Error(
+        `Не вдалося перевірити finalQualifications/${year}/teams: ${
+          e?.message ||
+          e
+        }`
+      );
+    }
+
+    const refs =
+      snap.docs
+        .filter(
+          doc=>
+            documentBelongsToCompetition(
+              doc,
+              compId
+            )
+        )
+        .map(
+          doc=>
+            doc.ref
+        );
+
+    const deleted =
+      await deleteRefsInChunks(
+        refs
+      );
+
+    console.info(
+      "[admin-create] clean finalQualifications:",
+      deleted
+    );
+
+    return deleted;
+  }
+
+  // =========================================================
+  // SEASON RESULTS LEGACY CLEANUP
+  // =========================================================
+
+  async function deleteSeasonResultsForCompetition(
+    compId,
+    competition
+  ){
+    const year =
+      parseCompetitionYear(
+        compId,
+        competition
+      );
+
+    if(
+      !year
+    ){
+      return 0;
+    }
+
+    const stagesRef =
+      db
+        .collection(
+          "seasonResults"
+        )
+        .doc(
+          year
+        )
+        .collection(
+          "stages"
+        );
+
+    let snap;
+
+    try{
+      snap =
+        await stagesRef.get();
+
+    }catch(e){
+      throw new Error(
+        `Не вдалося перевірити seasonResults/${year}/stages: ${
+          e?.message ||
+          e
+        }`
+      );
+    }
+
+    const refs =
+      snap.docs
+        .filter(
+          doc=>
+            documentBelongsToCompetition(
+              doc,
+              compId
+            )
+        )
+        .map(
+          doc=>
+            doc.ref
+        );
+
+    const deleted =
+      await deleteRefsInChunks(
+        refs
+      );
+
+    console.info(
+      "[admin-create] clean seasonResults:",
+      deleted
+    );
+
+    return deleted;
+  }
+
+  // =========================================================
+  // ACTIVE COMPETITION CLEANUP
+  // =========================================================
+
+  async function clearActiveCompetitionIfNeeded(
+    compId
+  ){
+    const settingsRef =
+      db
+        .collection(
+          "settings"
+        )
+        .doc(
+          "app"
+        );
+
+    const snap =
+      await settingsRef.get();
+
+    if(
+      !snap.exists
+    ){
+      return false;
+    }
+
+    const activeId =
+      normalizeId(
+        (
+          snap.data() ||
+          {}
+        ).activeCompetitionId
+      );
+
+    if(
+      activeId !==
+      compId
+    ){
+      return false;
+    }
+
+    await settingsRef.set(
+      {
+        activeCompetitionId:
+          "",
+
+        updatedAt:
+          fb.firestore
+            .FieldValue
+            .serverTimestamp()
+      },
+      {
+        merge:
+          true
+      }
+    );
+
+    return true;
+  }
+
+  // =========================================================
+  // HARD DELETE ONE-OFF
+  // =========================================================
+
+  async function hardDeleteOneoffCompetition(
+    compId,
+    competition
+  ){
+    let deleted =
+      0;
+
+    /*
+     * Усі відомі top-level колекції,
+     * де one-off може мати свої
+     * робочі документи.
+     *
+     * teams / users / lakes
+     * НЕ ЧІПАЄМО.
+     */
+    const collections = [
+      "registrations",
+
+      /*
+       * Старий сміттєвий архів
+       * реєстрацій.
+       *
+       * Для oneoff він нам
+       * взагалі не потрібен.
+       */
+      "registrations_deleted",
+
+      "public_participants",
+
+      "weighings",
+
+      "judgeTokens",
+
+      "mealOrders",
+
+      "mealSettings"
+    ];
+
+    for(
+      const collectionName of
+      collections
+    ){
+      deleted +=
+        await deleteFromSimpleCollection(
+          collectionName,
+          compId
+        );
+    }
+
+    /*
+     * stageResults має teams
+     * subcollection.
+     */
+    deleted +=
+      await deleteStageResultsForCompetition(
+        compId,
+        competition
+      );
+
+    /*
+     * ONE-OFF взагалі не повинен
+     * потрапляти сюди.
+     *
+     * Але якщо старий код залишив
+     * слід — прибираємо.
+     */
+    deleted +=
+      await deleteFinalQualificationsForCompetition(
+        compId,
+        competition
+      );
+
+    deleted +=
+      await deleteSeasonResultsForCompetition(
+        compId,
+        competition
+      );
+
+    /*
+     * activeCompetitionId
+     */
+    await clearActiveCompetitionIfNeeded(
+      compId
+    );
+
+    /*
+     * competition видаляємо ОСТАННІМ.
+     *
+     * Якщо будь-який cleanup вище
+     * впаде — сам competition
+     * залишиться, і видалення
+     * можна повторити.
+     */
+    await db
+      .collection(
+        "competitions"
+      )
+      .doc(
+        compId
+      )
+      .delete();
+
+    deleted +=
+      1;
+
+    clearCompetitionCaches();
+
+    return deleted;
+  }
+
+  // =========================================================
+  // SEASON / NORMAL DOCUMENT DELETE
+  // =========================================================
+
+  async function deleteCompetitionDocumentOnly(
+    compId
+  ){
+    await clearActiveCompetitionIfNeeded(
+      compId
+    );
+
+    await db
+      .collection(
+        "competitions"
+      )
+      .doc(
+        compId
+      )
+      .delete();
+
+    clearCompetitionCaches();
+
+    return 1;
+  }
+
+  // =========================================================
+  // DELETE COMPETITION
+  // =========================================================
+
+  async function deleteCompetition(
+    compId
+  ){
+    if(
+      !compId
+    ){
+      throw new Error(
+        "Не визначено ID змагання."
+      );
+    }
+
+    /*
+     * Спочатку читаємо competition,
+     * щоб знати його тип.
+     */
+    const ref =
+      db
+        .collection(
+          "competitions"
+        )
+        .doc(
+          compId
+        );
+
+    const snap =
+      await ref.get();
+
+    if(
+      !snap.exists
+    ){
+      throw new Error(
+        `Змагання ${compId} не знайдено.`
+      );
+    }
+
+    const competition =
+      snap.data() ||
+      {};
+
+    const type =
+      normalizeId(
+        competition.type
+      ).toLowerCase();
+
+    /*
+     * Старі oneoff могли не мати type,
+     * тому ID теж використовуємо
+     * як fallback.
+     */
+    const isOneoff =
+      type ===
+        "oneoff" ||
+      (
+        !type &&
+        String(
+          compId
+        ).startsWith(
+          "oneoff-"
+        )
+      );
+
+    const warning =
+      isOneoff
+        ? (
+            `УВАГА!\n\n` +
+
+            `ONE-OFF змагання буде СТЕРТО ПОВНІСТЮ.\n\n` +
+
+            `${compId}\n\n` +
+
+            `Будуть видалені всі пов'язані дані:\n\n` +
+
+            `• competitions\n` +
+            `• registrations\n` +
+            `• registrations_deleted\n` +
+            `• public_participants\n` +
+            `• weighings\n` +
+            `• stageResults + teams\n` +
+            `• judgeTokens\n` +
+            `• mealOrders / mealSettings\n` +
+            `• випадкові хвости у seasonResults\n` +
+            `• випадкові хвости у finalQualifications\n\n` +
+
+            `НІЧОГО НЕ АРХІВУЄТЬСЯ.\n\n` +
+
+            `Для підтвердження введи: DELETE`
+          )
+        : (
+            `УВАГА! Видалення без відновлення.\n\n` +
+            `Змагання:\n${compId}\n\n` +
+            `Для підтвердження введи: DELETE`
+          );
+
     const typed =
       prompt(
-        `УВАГА! Видалення без відновлення.\n\n` +
-        `Змагання:\n${compId}\n\n` +
-        `Для підтвердження введи: DELETE`
+        warning
       );
 
     if(
@@ -2496,52 +4084,46 @@
       );
     }
 
-    try{
-      const s =
-        await db
-          .collection("settings")
-          .doc("app")
-          .get();
+    if(
+      isOneoff
+    ){
+      const deleted =
+        await hardDeleteOneoffCompetition(
+          compId,
+          competition
+        );
 
-      const activeId =
-        s.exists
-          ? (
-              (s.data() || {})
-                .activeCompetitionId ||
-              ""
-            )
-          : "";
+      console.info(
+        "[admin-create] ONE-OFF fully deleted:",
+        compId,
+        "documents:",
+        deleted
+      );
 
-      if(
-        activeId ===
+      return {
+        type:
+          "oneoff",
+
+        deleted
+      };
+    }
+
+    /*
+     * SEASON:
+     * залишаємо попередню поведінку.
+     */
+    const deleted =
+      await deleteCompetitionDocumentOnly(
         compId
-      ){
-        await db
-          .collection("settings")
-          .doc("app")
-          .set(
-            {
-              activeCompetitionId:
-                "",
+      );
 
-              updatedAt:
-                fb.firestore
-                  .FieldValue
-                  .serverTimestamp()
-            },
-            {
-              merge:
-                true
-            }
-          );
-      }
+    return {
+      type:
+        type ||
+        "season",
 
-    }catch(_){}
-
-    await db
-      .collection("competitions")
-      .doc(compId)
-      .delete();
+      deleted
+    };
   }
 
   // =========================================================
@@ -2549,31 +4131,42 @@
   // =========================================================
 
   function bindUI(){
-    if(tabCreate){
+    if(
+      tabCreate
+    ){
       tabCreate.onclick =
-        ()=>gotoMode(
-          "create"
-        );
+        ()=>
+          gotoMode(
+            "create"
+          );
     }
 
-    if(tabEdit){
+    if(
+      tabEdit
+    ){
       tabEdit.onclick =
-        ()=>gotoMode(
-          "edit"
-        );
+        ()=>
+          gotoMode(
+            "edit"
+          );
     }
 
-    if(inpType){
+    if(
+      inpType
+    ){
       inpType.addEventListener(
         "change",
         ()=>{
           setSeasonVisibility();
+
           saveDraftNow();
         }
       );
     }
 
-    if(inpFormat){
+    if(
+      inpFormat
+    ){
       inpFormat.addEventListener(
         "change",
         async ()=>{
@@ -2608,7 +4201,9 @@
       inpPayDetails
     ].forEach(
       el=>{
-        if(!el){
+        if(
+          !el
+        ){
           return;
         }
 
@@ -2616,7 +4211,9 @@
           "change",
           ()=>{
             updateDurationUI();
+
             updateRegUI();
+
             saveDraftNow();
           }
         );
@@ -2625,14 +4222,22 @@
           "input",
           ()=>{
             updateDurationUI();
+
             updateRegUI();
+
             saveDraftNow();
           }
         );
       }
     );
 
-    if(btnResetDraft){
+    // =======================================================
+    // RESET DRAFT
+    // =======================================================
+
+    if(
+      btnResetDraft
+    ){
       btnResetDraft.onclick =
         async ()=>{
           clearDraft();
@@ -2640,82 +4245,114 @@
           currentSavedCompId =
             "";
 
-          if(inpType){
+          if(
+            inpType
+          ){
             inpType.value =
               "season";
           }
 
-          if(inpYear){
+          if(
+            inpYear
+          ){
             inpYear.value =
               "";
           }
 
-          if(inpName){
+          if(
+            inpName
+          ){
             inpName.value =
               "";
           }
 
-          if(inpFormat){
+          if(
+            inpFormat
+          ){
             inpFormat.value =
               "classic";
           }
 
-          if(inpLake){
+          if(
+            inpLake
+          ){
             inpLake.value =
               "";
           }
 
-          if(inpStartAt){
+          if(
+            inpStartAt
+          ){
             inpStartAt.value =
               "";
           }
 
-          if(inpFinishAt){
+          if(
+            inpFinishAt
+          ){
             inpFinishAt.value =
               "";
           }
 
-          if(inpStagesCount){
+          if(
+            inpStagesCount
+          ){
             inpStagesCount.value =
               "3";
           }
 
-          if(inpHasFinal){
+          if(
+            inpHasFinal
+          ){
             inpHasFinal.value =
               "yes";
           }
 
-          if(inpRegMode){
+          if(
+            inpRegMode
+          ){
             inpRegMode.value =
               "auto";
           }
 
-          if(inpPayEnabled){
+          if(
+            inpPayEnabled
+          ){
             inpPayEnabled.value =
               "yes";
           }
 
-          if(inpRegOpen){
+          if(
+            inpRegOpen
+          ){
             inpRegOpen.value =
               "";
           }
 
-          if(inpRegClose){
+          if(
+            inpRegClose
+          ){
             inpRegClose.value =
               "";
           }
 
-          if(inpPrice){
+          if(
+            inpPrice
+          ){
             inpPrice.value =
               "";
           }
 
-          if(inpCurrency){
+          if(
+            inpCurrency
+          ){
             inpCurrency.value =
               "UAH";
           }
 
-          if(inpPayDetails){
+          if(
+            inpPayDetails
+          ){
             inpPayDetails.value =
               "";
           }
@@ -2729,7 +4366,9 @@
           );
 
           setSeasonVisibility();
+
           updateDurationUI();
+
           updateRegUI();
 
           setMsg(
@@ -2738,30 +4377,48 @@
         };
     }
 
-    if(btnReloadList){
+    // =======================================================
+    // RELOAD LIST
+    // =======================================================
+
+    if(
+      btnReloadList
+    ){
       btnReloadList.onclick =
         async ()=>{
-          if(editPickerMsg){
+          if(
+            editPickerMsg
+          ){
             editPickerMsg.textContent =
               "Оновлення…";
           }
 
           await loadCompetitionsList();
 
-          if(editPickerMsg){
+          if(
+            editPickerMsg
+          ){
             editPickerMsg.textContent =
               "";
           }
         };
     }
 
-    if(selCompetition){
+    // =======================================================
+    // SELECT COMPETITION
+    // =======================================================
+
+    if(
+      selCompetition
+    ){
       selCompetition.onchange =
         async ()=>{
           const id =
             selCompetition.value;
 
-          if(!id){
+          if(
+            !id
+          ){
             return;
           }
 
@@ -2771,7 +4428,13 @@
         };
     }
 
-    if(btnSave){
+    // =======================================================
+    // SAVE
+    // =======================================================
+
+    if(
+      btnSave
+    ){
       btnSave.onclick =
         async ()=>{
           setMsg(
@@ -2823,7 +4486,13 @@
         };
     }
 
-    if(btnMakeActive){
+    // =======================================================
+    // MAKE ACTIVE
+    // =======================================================
+
+    if(
+      btnMakeActive
+    ){
       btnMakeActive.onclick =
         async ()=>{
           setMsg(
@@ -2844,7 +4513,9 @@
               editingId ||
               currentSavedCompId;
 
-            if(!compId){
+            if(
+              !compId
+            ){
               compId =
                 await saveCompetition(
                   ""
@@ -2870,11 +4541,19 @@
         };
     }
 
-    if(btnDelete){
+    // =======================================================
+    // DELETE
+    // =======================================================
+
+    if(
+      btnDelete
+    ){
       btnDelete.onclick =
         async ()=>{
           try{
-            if(!isEditMode){
+            if(
+              !isEditMode
+            ){
               throw new Error(
                 "Тільки в edit."
               );
@@ -2884,7 +4563,9 @@
               selCompetition?.value ||
               "";
 
-            if(!compId){
+            if(
+              !compId
+            ){
               throw new Error(
                 "Вибери змагання."
               );
@@ -2894,9 +4575,14 @@
               `<span class="muted">Видаляю…</span>`
             );
 
-            await deleteCompetition(
-              compId
+            setStatus(
+              "Видалення…"
             );
+
+            const result =
+              await deleteCompetition(
+                compId
+              );
 
             await loadCompetitionsList();
 
@@ -2905,13 +4591,52 @@
             currentSavedCompId =
               "";
 
-            setMsg(
-              `<span class="ok">✅ Видалено</span>`
+            if(
+              selCompetition
+            ){
+              selCompetition.value =
+                "";
+            }
+
+            if(
+              result?.type ===
+              "oneoff"
+            ){
+              setMsg(
+                `<span class="ok">✅ ONE-OFF видалено повністю.</span> ` +
+                `Очищено документів: <b>${esc(result.deleted)}</b>`
+              );
+
+              setStatus(
+                "ONE-OFF очищено ✅"
+              );
+
+            }else{
+              setMsg(
+                `<span class="ok">✅ Видалено</span>`
+              );
+
+              setStatus(
+                "Видалено ✅"
+              );
+            }
+
+            setDebug(
+              ""
             );
 
           }catch(e){
             setMsg(
               `<span class="err">❌</span> ${esc(e?.message || String(e))}`
+            );
+
+            setStatus(
+              "Помилка видалення ❌"
+            );
+
+            setDebug(
+              e?.message ||
+              String(e)
             );
           }
         };
@@ -2960,7 +4685,9 @@
 
     auth.onAuthStateChanged(
       async user=>{
-        if(!user){
+        if(
+          !user
+        ){
           setStatus(
             "Нема сесії"
           );
@@ -2981,7 +4708,9 @@
             user
           );
 
-        if(!ok){
+        if(
+          !ok
+        ){
           setStatus(
             "Доступ заборонено ❌"
           );
@@ -3054,10 +4783,14 @@
         }
 
         setSeasonVisibility();
+
         updateDurationUI();
+
         updateRegUI();
 
-        if(isEditMode){
+        if(
+          isEditMode
+        ){
           await loadCompetitionsList();
 
           const pre =

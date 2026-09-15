@@ -4,7 +4,8 @@
 // ✅ TEAM + SOLO
 // ✅ TEAM -> назва команди
 // ✅ SOLO -> ім'я та прізвище учасника
-// ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як учасник
+// ✅ "Учасник" / "Participant" не вважається справжнім ім'ям
+// ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як SOLO
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
 // ✅ SOLO не відкриває popup команди
@@ -14,24 +15,24 @@
 (function () {
   "use strict";
 
-  const $ = id =>
-    document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   const esc = s =>
-    String(s ?? "")
-      .replace(
-        /[&<>"']/g,
-        m => ({
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        }[m])
-      );
+    String(s ?? "").replace(
+      /[&<>"']/g,
+      m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[m]
+    );
 
   const norm = v =>
-    String(v ?? "").trim();
+    String(v ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
 
   const normLower = v =>
     norm(v).toLowerCase();
@@ -116,23 +117,17 @@
     const format =
       normLower(
         event?.format ||
+        event?.engine?.baseFormat ||
         competition?.format ||
         competition?.engine?.baseFormat ||
         ""
-      );
+      )
+        .replace(/\s+/g, "")
+        .replace(/_/g, "-");
 
-    /*
-     * Старі SOLO competitions
-     * могли ще не мати entryType.
-     */
-    if (
-      format ===
-      "stalker-solo"
-    ) {
-      return "solo";
-    }
-
-    return "team";
+    return format === "stalker-solo"
+      ? "solo"
+      : "team";
   }
 
   function isFinalMeta(
@@ -179,8 +174,7 @@
       );
 
     /*
-     * Поточний фінал —
-     * тільки TEAM.
+     * Фінал залишається TEAM.
      */
     if (
       meta.isFinal
@@ -189,25 +183,12 @@
     }
 
     /*
-     * ВАЖЛИВО.
-     *
-     * Якщо саме competition/event
-     * вже визначений як SOLO —
-     * це головне джерело істини
-     * для цієї сторінки.
-     *
-     * Тому старий запис:
-     *
-     * entryType: "team"
-     * teamName: "DK Два Кума"
-     * uid: "..."
-     *
-     * буде показаний як SOLO
-     * і ім'я підтягнеться через UID.
+     * Для SOLO competition
+     * competition/event є головним
+     * джерелом істини.
      */
     if (
-      meta.entryType ===
-      "solo"
+      meta.entryType === "solo"
     ) {
       return "solo";
     }
@@ -220,7 +201,7 @@
     }
 
     /*
-     * Legacy SOLO без entryType.
+     * Legacy SOLO.
      */
     if (
       !norm(
@@ -340,6 +321,7 @@
         format =
           normLower(
             event?.format ||
+            event?.engine?.baseFormat ||
             competition.format ||
             competition.engine
               ?.baseFormat ||
@@ -477,6 +459,252 @@
   }
 
   // =========================================================
+  // PERSON NAME HELPERS
+  // =========================================================
+
+  /*
+   * Такі значення НЕ є ім'ям.
+   *
+   * Тобто якщо в Firestore:
+   *
+   * participantName: "Учасник"
+   *
+   * ми НЕ зупиняємось на цьому,
+   * а шукаємо справжнє ПІБ далі.
+   */
+
+  function isPlaceholderPersonName(
+    value
+  ) {
+    const raw =
+      normLower(
+        value
+      );
+
+    if (
+      !raw
+    ) {
+      return true;
+    }
+
+    if (
+      [
+        "—",
+        "-",
+        "учасник",
+        "учасниця",
+        "participant",
+        "user",
+        "користувач",
+        "невідомо",
+        "unknown",
+        "команда",
+        "team"
+      ].includes(
+        raw
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      /^учасник\s*\d*$/i.test(
+        raw
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      /^participant\s*\d*$/i.test(
+        raw
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function validPersonalName(
+    value,
+    teamName = ""
+  ) {
+    const name =
+      norm(
+        value
+      );
+
+    const team =
+      norm(
+        teamName
+      );
+
+    if (
+      isPlaceholderPersonName(
+        name
+      )
+    ) {
+      return "";
+    }
+
+    /*
+     * У SOLO назва команди
+     * не може бути ім'ям людини.
+     */
+    if (
+      team &&
+      normLower(name) ===
+        normLower(team)
+    ) {
+      return "";
+    }
+
+    return name;
+  }
+
+  function personNameFromObject(
+    data
+  ) {
+    const d =
+      data ||
+      {};
+
+    const firstName =
+      validPersonalName(
+        d.firstName
+      );
+
+    const lastName =
+      validPersonalName(
+        d.lastName
+      );
+
+    if (
+      firstName &&
+      lastName
+    ) {
+      return (
+        `${firstName} ${lastName}`
+      );
+    }
+
+    const teamName =
+      norm(
+        d.teamName ||
+        d.team ||
+        ""
+      );
+
+    const candidates = [
+      d.participantName,
+      d.fullName,
+      d.userName,
+      d.displayName,
+      d.name,
+      d.captain
+    ];
+
+    for (
+      const candidate
+      of candidates
+    ) {
+      const name =
+        validPersonalName(
+          candidate,
+          teamName
+        );
+
+      if (
+        name
+      ) {
+        return name;
+      }
+    }
+
+    return "";
+  }
+
+  /*
+   * Наприклад:
+   *
+   * Роман Дячок
+   * -> Дячок Роман
+   *
+   * якщо довге:
+   *
+   * Олександр Коваленко
+   * -> Коваленко О.
+   */
+
+  function formatSoloName(
+    value,
+    maxChars = 18
+  ) {
+    const raw =
+      norm(
+        value
+      );
+
+    if (
+      !raw ||
+      isPlaceholderPersonName(
+        raw
+      )
+    ) {
+      return "Учасник";
+    }
+
+    const parts =
+      raw
+        .split(" ")
+        .filter(
+          Boolean
+        );
+
+    if (
+      parts.length < 2
+    ) {
+      return raw;
+    }
+
+    /*
+     * У профілі очікуємо:
+     * Ім'я Прізвище
+     *
+     * або:
+     * Ім'я По-батькові Прізвище.
+     */
+
+    const firstName =
+      parts[0];
+
+    const lastName =
+      parts[
+        parts.length - 1
+      ];
+
+    const full =
+      `${lastName} ${firstName}`;
+
+    if (
+      full.length <=
+      maxChars
+    ) {
+      return full;
+    }
+
+    const initial =
+      firstName
+        .charAt(0)
+        .toUpperCase();
+
+    return initial
+      ? `${lastName} ${initial}.`
+      : lastName;
+  }
+
+  // =========================================================
   // USER NAME FALLBACK
   // =========================================================
 
@@ -484,7 +712,9 @@
     uid
   ) {
     const id =
-      norm(uid);
+      norm(
+        uid
+      );
 
     if (
       !id
@@ -520,28 +750,22 @@
       if (
         snap.exists
       ) {
-        const d =
-          snap.data() ||
-          {};
-
         name =
-          norm(
-            d.fullName ||
-            d.displayName ||
-            d.name ||
-            d.email ||
-            ""
+          personNameFromObject(
+            snap.data() ||
+            {}
           );
       }
 
     } catch (e) {
       /*
-       * Якщо сторінка відкрита
-       * без авторизації і users
-       * закриті Rules —
-       * просто використовуємо
-       * public_participants.
+       * На публічній сторінці
+       * users може бути закрита Rules.
+       *
+       * Тоді ім'я повинно бути
+       * у public_participants.
        */
+
       console.warn(
         "[participation] user name fallback skipped:",
         id,
@@ -556,6 +780,64 @@
     );
 
     return name;
+  }
+
+  /*
+   * UID беремо не тільки з поля uid.
+   *
+   * Підтримує:
+   * participantUid
+   * userId
+   * registeredByUid
+   *
+   * і canonical document ID:
+   *
+   * comp__main__solo__UID
+   */
+
+  function uidFromPublicDoc(
+    doc,
+    data
+  ) {
+    const r =
+      data ||
+      {};
+
+    const direct =
+      norm(
+        r.uid ||
+        r.participantUid ||
+        r.userId ||
+        r.registeredByUid ||
+        ""
+      );
+
+    if (
+      direct
+    ) {
+      return direct;
+    }
+
+    const docId =
+      norm(
+        doc?.id
+      );
+
+    if (
+      docId.includes(
+        "__solo__"
+      )
+    ) {
+      return norm(
+        docId
+          .split(
+            "__solo__"
+          )
+          .pop()
+      );
+    }
+
+    return "";
   }
 
   // =========================================================
@@ -659,8 +941,9 @@
               doc.id,
 
             fullName:
-              d.fullName ||
-              d.displayName ||
+              personNameFromObject(
+                d
+              ) ||
               d.email ||
               "Учасник",
 
@@ -708,8 +991,9 @@
               ownerUid,
 
             fullName:
-              c.fullName ||
-              c.displayName ||
+              personNameFromObject(
+                c
+              ) ||
               c.email ||
               "Капітан",
 
@@ -813,6 +1097,7 @@
 
               return `
                 <div class="team-member">
+
                   ${avatarHtml}
 
                   <div class="member-info">
@@ -832,6 +1117,7 @@
                     </div>
 
                   </div>
+
                 </div>
               `;
             }
@@ -844,11 +1130,14 @@
         err
       );
 
-      body.innerHTML =
-        `<div class="team-loading">Помилка: ${esc(
-          err?.message ||
-          err
-        )}</div>`;
+      body.innerHTML = `
+        <div class="team-loading">
+          Помилка: ${esc(
+            err?.message ||
+            err
+          )}
+        </div>
+      `;
     }
   }
 
@@ -1067,21 +1356,16 @@
   function participantDisplayName(
     row
   ) {
-    return (
-      norm(
-        row.participantName
-      ) ||
-      norm(
-        row.userName
-      ) ||
-      norm(
-        row.displayName
-      ) ||
-      norm(
-        row.captain
-      ) ||
-      "Учасник"
-    );
+    const raw =
+      personNameFromObject(
+        row
+      );
+
+    return raw
+      ? formatSoloName(
+          raw
+        )
+      : "Учасник";
   }
 
   function teamDisplayName(
@@ -1118,7 +1402,9 @@
 
     if (
       !ALLOWED_STATUSES
-        .has(status)
+        .has(
+          status
+        )
     ) {
       return null;
     }
@@ -1138,8 +1424,9 @@
       "solo"
     ) {
       const uid =
-        norm(
-          r.uid
+        uidFromPublicDoc(
+          doc,
+          r
         );
 
       if (
@@ -1148,35 +1435,43 @@
         return null;
       }
 
-      let participantName =
+      const teamName =
         norm(
-          r.participantName ||
-          r.userName ||
-          r.displayName ||
-          r.captain ||
+          r.teamName ||
+          r.team ||
           ""
         );
 
       /*
-       * Якщо це стара TEAM-заявка,
-       * participantName часто немає.
+       * Спочатку шукаємо нормальне
+       * персональне ім'я в самому
+       * public_participants.
+       */
+      let participantName =
+        personNameFromObject(
+          r
+        );
+
+      /*
+       * "Учасник" — це заглушка.
        *
-       * Тоді ім'я беремо з:
+       * Так само якщо випадково
+       * participantName === teamName.
        *
-       * users/{uid}.fullName
-       *
-       * А teamName НЕ використовуємо
-       * як ім'я людини.
+       * Тоді пробуємо users/{uid}.
        */
       if (
         !participantName ||
+        isPlaceholderPersonName(
+          participantName
+        ) ||
         (
-          norm(
-            r.teamName
-          ) &&
-          participantName ===
-            norm(
-              r.teamName
+          teamName &&
+          normLower(
+            participantName
+          ) ===
+            normLower(
+              teamName
             )
         )
       ) {
@@ -1194,19 +1489,20 @@
       }
 
       /*
-       * Дуже старий fallback.
+       * КЛЮЧОВЕ:
        *
-       * Використається тільки якщо
-       * немає participantName
-       * і users/{uid} недоступний.
+       * У SOLO НІКОЛИ
+       * не підставляємо teamName
+       * як ім'я людини.
        */
+
       if (
-        !participantName
+        !participantName ||
+        isPlaceholderPersonName(
+          participantName
+        )
       ) {
         participantName =
-          norm(
-            r.teamName
-          ) ||
           "Учасник";
       }
 
@@ -1233,6 +1529,16 @@
 
         displayName:
           participantName,
+
+        firstName:
+          norm(
+            r.firstName
+          ),
+
+        lastName:
+          norm(
+            r.lastName
+          ),
 
         teamId:
           null,
@@ -1413,7 +1719,8 @@
         typeof value.toMillis ===
         "function"
       ) {
-        return value.toMillis();
+        return value
+          .toMillis();
       }
 
       if (
@@ -1481,10 +1788,9 @@
     }
 
     /*
-     * Якщо вже існує новий
-     * справжній SOLO document,
-     * він кращий за старий TEAM,
-     * який ми лише показуємо як SOLO.
+     * Справжній новий SOLO
+     * кращий за legacy TEAM,
+     * який ми трактуємо як SOLO.
      */
     if (
       a.legacyConvertedToSolo !==
@@ -1515,8 +1821,12 @@
     }
 
     return (
-      rowTimestamp(b) >
-      rowTimestamp(a)
+      rowTimestamp(
+        b
+      ) >
+      rowTimestamp(
+        a
+      )
     )
       ? b
       : a;
@@ -1531,23 +1841,14 @@
     rows.forEach(
       row => {
         let identity =
-          "";
-
-        if (
           row.entryType ===
           "solo"
-        ) {
-          identity =
-            norm(
-              row.uid
-            );
-
-        } else {
-          identity =
-            norm(
-              row.teamId
-            );
-        }
+            ? norm(
+                row.uid
+              )
+            : norm(
+                row.teamId
+              );
 
         if (
           !identity
@@ -1621,15 +1922,19 @@
             ? "row--solo"
             : "row--team"
         }"
+
         data-entry-type="${esc(
           row.entryType
         )}"
+
         data-team-id="${esc(
           teamId
         )}"
+
         data-team-name="${esc(
           teamName
         )}"
+
         style="
           cursor:${
             !isSolo &&
@@ -1652,7 +1957,13 @@
           ${idx}.
         </span>
 
-        <span class="name">
+        <span
+          class="name"
+          title="${esc(
+            row.participantName ||
+            name
+          )}"
+        >
           ${esc(name)}
         </span>
 
@@ -1743,8 +2054,11 @@
     if (
       reserve.length
     ) {
-      list.innerHTML +=
-        `<div class="dividerLabel">Резерв: ${reserve.length}</div>`;
+      list.innerHTML += `
+        <div class="dividerLabel">
+          Резерв: ${reserve.length}
+        </div>
+      `;
 
       list.innerHTML +=
         reserve
@@ -1963,7 +2277,8 @@
         if (
           $("msg")
         ) {
-          $("msg").textContent =
+          $("msg")
+            .textContent =
             "❌ Не передано competitionId";
         }
 
@@ -2016,16 +2331,12 @@
       // =====================================================
 
       /*
-       * Не ставимо:
-       *
-       * .where("entryType", "==", ...)
-       *
-       * Тут навмисно беремо всі
-       * документи competitionId.
-       *
-       * Далі кожен документ
-       * нормалізується окремо.
+       * entryType спеціально
+       * НЕ додаємо в where,
+       * щоб legacy SOLO теж
+       * потрапив у список.
        */
+
       const snap =
         await db
           .collection(
@@ -2082,12 +2393,6 @@
           Boolean
         );
 
-      /*
-       * Якщо є і старий TEAM document,
-       * і вже новий SOLO document
-       * тієї самої людини —
-       * залишаємо тільки правильний.
-       */
       rows =
         dedupeRows(
           rows
@@ -2144,15 +2449,11 @@
           maxEntries,
 
         /*
-         * Legacy compatibility
-         * для meal_orders.js.
+         * Legacy meal_orders.js
          */
         teams:
           rows,
 
-        /*
-         * Нова універсальна назва.
-         */
         participants:
           rows
       };

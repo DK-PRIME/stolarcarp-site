@@ -2,49 +2,22 @@
 // STOLAR CARP • Відмова від участі у Фіналі
 //
 // =========================================================
-// ПРИЗНАЧЕННЯ
+// ЛОГІКА
 // =========================================================
 //
-// Відповідальність цього файла:
+// Кнопка "Відмовитися від Фіналу" показується ТІЛЬКИ якщо:
 //
-// 1. Визначити поточного користувача.
-// 2. Визначити його teamId.
-// 3. Знайти його qualification у finalQualifications.
-// 4. Показати кнопку відмови ТІЛЬКИ для status == "invited".
-// 5. Безпечно виконати:
+// 1. користувач авторизований;
+// 2. користувач має teamId;
+// 3. існує finalQualifications/{year}/teams/{teamId};
+// 4. status == "invited";
+// 5. сезон ЩЕ НЕ завершений;
+// 6. Фінал ЩЕ НЕ завершений;
+// 7. реєстрація на Фінал ЩЕ НЕ закрита.
 //
-//      invited -> declined
-//
-// 6. Записати:
-//
-//      status: "declined"
-//      qualifiedForFinal: false
-//      declinedAt
-//      declinedByUid
-//      updatedAt
-//
-// ЦЕЙ ФАЙЛ:
-//
-// • НЕ рахує рейтинг;
-// • НЕ визначає TOP-18;
-// • НЕ переводить reserve -> invited;
-// • НЕ змінює rank;
-// • НЕ змінює competitionId;
-// • НЕ змінює stageId.
-//
-// За перерахунок фіналістів відповідає:
-//
-// assets/js/final_qualification.js
-//
-// =========================================================
-// FIRESTORE
-// =========================================================
-//
-// finalQualifications/{year}/teams/{teamId}
-//
-// Наприклад:
-//
-// finalQualifications/2026/teams/TEAM_ID
+// Після завершення сезону стара qualification може залишатися
+// status="invited" як історичний запис — це нормально.
+// Кнопка при цьому більше НЕ показується.
 //
 // =========================================================
 
@@ -64,6 +37,15 @@
   const USERS_COLLECTION =
     "users";
 
+  const COMPETITIONS_COLLECTION =
+    "competitions";
+
+  const SEASON_RATING_COLLECTION =
+    "seasonRating";
+
+  const SEASON_ARCHIVES_COLLECTION =
+    "seasonArchives";
+
   const DECLINABLE_STATUS =
     "invited";
 
@@ -80,42 +62,24 @@
   // =========================================================
 
   let currentUser = null;
+
   let currentTeamId = "";
 
   // =========================================================
   // QUALIFICATION STATE
   // =========================================================
 
-  /*
-   * Поточна qualification, яку
-   * користувач має право відхилити.
-   *
-   * {
-   *   year,
-   *   teamId,
-   *   ref,
-   *   data
-   * }
-   */
-  let activeQualification = null;
+  let activeQualification =
+    null;
 
-  /*
-   * Listener конкретного документа:
-   *
-   * finalQualifications/{year}/teams/{teamId}
-   */
-  let unsubscribeQualification = null;
+  let unsubscribeQualification =
+    null;
 
-  /*
-   * Захист від подвійного натискання.
-   */
-  let declining = false;
+  let declining =
+    false;
 
-  /*
-   * Після успішної відмови не даємо
-   * listener миттєво стерти повідомлення.
-   */
-  let declineCompleted = false;
+  let declineCompleted =
+    false;
 
   // =========================================================
   // HELPERS
@@ -131,6 +95,24 @@
     return normalize(
       value
     ).toLowerCase();
+  }
+
+  function firstDefined(
+    ...values
+  ) {
+    for (
+      const value of values
+    ) {
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        return value;
+      }
+    }
+
+    return null;
   }
 
   function sleep(ms) {
@@ -157,6 +139,182 @@
         value
       )
     );
+  }
+
+  // =========================================================
+  // DATE HELPERS
+  // =========================================================
+
+  function parseDateYMDLocal(
+    value,
+    endOfDay = false
+  ) {
+    const match =
+      normalize(
+        value
+      ).match(
+        /^(\d{4})-(\d{2})-(\d{2})$/
+      );
+
+    if (!match) {
+      return null;
+    }
+
+    const year =
+      Number(match[1]);
+
+    const month =
+      Number(match[2]);
+
+    const day =
+      Number(match[3]);
+
+    if (
+      !year ||
+      !month ||
+      !day
+    ) {
+      return null;
+    }
+
+    const date =
+      endOfDay
+        ? new Date(
+            year,
+            month - 1,
+            day,
+            23,
+            59,
+            59,
+            999
+          )
+        : new Date(
+            year,
+            month - 1,
+            day,
+            0,
+            0,
+            0,
+            0
+          );
+
+    return Number.isFinite(
+      date.getTime()
+    )
+      ? date
+      : null;
+  }
+
+  function toDateMaybe(
+    value,
+    options = {}
+  ) {
+    if (!value) {
+      return null;
+    }
+
+    const endOfDay =
+      options.endOfDay === true;
+
+    try {
+
+      if (
+        value instanceof Date
+      ) {
+        return Number.isFinite(
+          value.getTime()
+        )
+          ? value
+          : null;
+      }
+
+      if (
+        typeof value ===
+        "string"
+      ) {
+        const raw =
+          value.trim();
+
+        const localDate =
+          parseDateYMDLocal(
+            raw,
+            endOfDay
+          );
+
+        if (localDate) {
+          return localDate;
+        }
+
+        const parsed =
+          new Date(raw);
+
+        return Number.isFinite(
+          parsed.getTime()
+        )
+          ? parsed
+          : null;
+      }
+
+      if (
+        value &&
+        typeof value.toDate ===
+          "function"
+      ) {
+        const parsed =
+          value.toDate();
+
+        return Number.isFinite(
+          parsed.getTime()
+        )
+          ? parsed
+          : null;
+      }
+
+      if (
+        value &&
+        typeof value.seconds ===
+          "number"
+      ) {
+        const parsed =
+          new Date(
+            value.seconds *
+            1000
+          );
+
+        return Number.isFinite(
+          parsed.getTime()
+        )
+          ? parsed
+          : null;
+      }
+
+      if (
+        typeof value ===
+          "number"
+      ) {
+        const parsed =
+          new Date(
+            value
+          );
+
+        return Number.isFinite(
+          parsed.getTime()
+        )
+          ? parsed
+          : null;
+      }
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        LOG,
+        "date parse:",
+        error
+      );
+    }
+
+    return null;
   }
 
   // =========================================================
@@ -206,14 +364,6 @@
       return box;
     }
 
-    /*
-     * Кнопка відмови повинна
-     * розташовуватися відразу
-     * після кнопки "Подати заявку".
-     *
-     * У HTML кнопка submit знаходиться
-     * всередині .form-actions.
-     */
     const formActions =
       document.querySelector(
         "#regForm .form-actions"
@@ -224,10 +374,6 @@
         "regForm"
       );
 
-    /*
-     * Якщо форми реєстрації немає,
-     * нічого не створюємо.
-     */
     if (!form) {
       return null;
     }
@@ -241,9 +387,7 @@
       "finalDeclineBox";
 
     /*
-     * Контейнер прихований,
-     * доки не буде знайдено
-     * qualification зі status=invited.
+     * За замовчуванням завжди приховано.
      */
     box.style.display =
       "none";
@@ -254,17 +398,6 @@
     box.style.marginBottom =
       "0";
 
-    /*
-     * Тут навмисно НЕМАЄ:
-     *
-     * "Участь у Фіналі"
-     *
-     * і НЕМАЄ опису:
-     *
-     * "Ваша команда має право участі..."
-     *
-     * Залишається тільки кнопка.
-     */
     box.innerHTML = `
       <button
         id="btnFinalDecline"
@@ -302,13 +435,6 @@
       ></div>
     `;
 
-    /*
-     * Основне місце:
-     *
-     * одразу ПІСЛЯ .form-actions,
-     * тобто після кнопки
-     * "Подати заявку".
-     */
     if (
       formActions &&
       formActions.parentNode
@@ -318,14 +444,7 @@
           "afterend",
           box
         );
-    }
-
-    /*
-     * Fallback:
-     * якщо .form-actions чомусь
-     * відсутній — додаємо в кінець form.
-     */
-    else {
+    } else {
       form.appendChild(
         box
       );
@@ -363,7 +482,9 @@
         "none";
     }
 
-    if (clearActive) {
+    if (
+      clearActive
+    ) {
       activeQualification =
         null;
     }
@@ -376,12 +497,6 @@
   function showBox(
     qualification
   ) {
-    /*
-     * Додатково перевіряємо status,
-     * щоб кнопку неможливо було
-     * випадково показати для reserve,
-     * confirmed або declined.
-     */
     const data =
       qualification?.data ||
       {};
@@ -396,6 +511,7 @@
       DECLINABLE_STATUS
     ) {
       hideBox();
+
       return;
     }
 
@@ -415,11 +531,6 @@
       box.querySelector(
         "#btnFinalDecline"
       );
-
-    /*
-     * Ніякого текстового опису
-     * qualification тут більше немає.
-     */
 
     if (msg) {
       msg.textContent =
@@ -594,14 +705,6 @@
       return false;
     }
 
-    /*
-     * Старий qualification може
-     * теоретично не мати teamId
-     * всередині документа.
-     *
-     * У такому випадку сам document ID
-     * уже є teamId.
-     */
     const storedTeamId =
       normalize(
         data.teamId
@@ -629,16 +732,6 @@
       return false;
     }
 
-    /*
-     * Старий запис може не мати
-     * seasonYear всередині.
-     *
-     * Path:
-     *
-     * finalQualifications/{year}
-     *
-     * уже визначає сезон.
-     */
     const storedYear =
       normalize(
         data.seasonYear
@@ -647,14 +740,570 @@
     if (
       storedYear &&
       storedYear !==
-        String(
-          year
-        )
+        String(year)
     ) {
       return false;
     }
 
     return true;
+  }
+
+  // =========================================================
+  // SEASON CLOSED CHECK
+  // =========================================================
+
+  async function isSeasonClosed(
+    year
+  ) {
+    const seasonYear =
+      normalize(
+        year
+      );
+
+    if (
+      !isValidYear(
+        seasonYear
+      )
+    ) {
+      return false;
+    }
+
+    /*
+     * 1. seasonRating/{year}.archived
+     */
+    try {
+      const ratingSnap =
+        await db
+          .collection(
+            SEASON_RATING_COLLECTION
+          )
+          .doc(
+            seasonYear
+          )
+          .get();
+
+      if (
+        ratingSnap.exists
+      ) {
+        const rating =
+          ratingSnap.data() ||
+          {};
+
+        if (
+          rating.archived ===
+          true
+        ) {
+          console.info(
+            LOG,
+            seasonYear,
+            "seasonRating archived"
+          );
+
+          return true;
+        }
+      }
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        LOG,
+        seasonYear,
+        "seasonRating check:",
+        error
+      );
+    }
+
+    /*
+     * 2. seasonArchives/{year}
+     */
+    try {
+      const archiveSnap =
+        await db
+          .collection(
+            SEASON_ARCHIVES_COLLECTION
+          )
+          .doc(
+            seasonYear
+          )
+          .get();
+
+      if (
+        archiveSnap.exists
+      ) {
+        const archive =
+          archiveSnap.data() ||
+          {};
+
+        const archiveStatus =
+          clean(
+            archive.status
+          );
+
+        /*
+         * Новий формат:
+         * status = archived.
+         *
+         * Для старого архіву самого
+         * існування документа теж
+         * достатньо, якщо status пустий.
+         */
+        if (
+          archiveStatus ===
+            "archived" ||
+          archiveStatus ===
+            "closed" ||
+          archiveStatus ===
+            "completed" ||
+          !archiveStatus
+        ) {
+          console.info(
+            LOG,
+            seasonYear,
+            "season archive found"
+          );
+
+          return true;
+        }
+      }
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        LOG,
+        seasonYear,
+        "seasonArchives check:",
+        error
+      );
+    }
+
+    return false;
+  }
+
+  // =========================================================
+  // COMPETITION / FINAL CHECK
+  // =========================================================
+
+  function looksLikeFinalEvent(
+    event,
+    key = ""
+  ) {
+    const raw =
+      clean(
+        `${
+          key || ""
+        } ${
+          event?.key || ""
+        } ${
+          event?.stageId || ""
+        } ${
+          event?.id || ""
+        } ${
+          event?.title || ""
+        } ${
+          event?.name || ""
+        } ${
+          event?.label || ""
+        }`
+      );
+
+    return (
+      event?.isFinal ===
+        true ||
+      raw.includes(
+        "final"
+      ) ||
+      raw.includes(
+        "фінал"
+      )
+    );
+  }
+
+  function findFinalEvent(
+    competition,
+    stageId
+  ) {
+    const events =
+      Array.isArray(
+        competition?.events
+      )
+        ? competition.events
+        : [];
+
+    if (
+      !events.length
+    ) {
+      return null;
+    }
+
+    const wantedStageId =
+      normalize(
+        stageId
+      );
+
+    /*
+     * Спочатку шукаємо
+     * точний stageId/key/id.
+     */
+    if (
+      wantedStageId
+    ) {
+      const exact =
+        events.find(
+          event => {
+            const values = [
+              event?.key,
+              event?.stageId,
+              event?.id
+            ]
+              .map(
+                normalize
+              )
+              .filter(Boolean);
+
+            return values.includes(
+              wantedStageId
+            );
+          }
+        );
+
+      if (exact) {
+        return exact;
+      }
+    }
+
+    /*
+     * Fallback:
+     * шукаємо явно позначений Фінал.
+     */
+    const finalEvent =
+      events.find(
+        event =>
+          looksLikeFinalEvent(
+            event,
+            wantedStageId
+          )
+      );
+
+    return (
+      finalEvent ||
+      null
+    );
+  }
+
+  function getFinalRunEnd(
+    event,
+    competition
+  ) {
+    const eventSchedule =
+      event?.schedule ||
+      {};
+
+    const compSchedule =
+      competition?.schedule ||
+      {};
+
+    const value =
+      firstDefined(
+        event?.finishAt,
+        event?.finishDate,
+
+        event?.endAt,
+        event?.endDate,
+
+        eventSchedule.finishAt,
+        eventSchedule.finishDate,
+
+        eventSchedule.endAt,
+        eventSchedule.endDate,
+
+        competition?.finishAt,
+        competition?.finishDate,
+
+        competition?.endAt,
+        competition?.endDate,
+
+        compSchedule.finishAt,
+        compSchedule.finishDate,
+
+        compSchedule.endAt,
+        compSchedule.endDate
+      );
+
+    return toDateMaybe(
+      value,
+      {
+        endOfDay: true
+      }
+    );
+  }
+
+  function getFinalRegistrationClose(
+    event,
+    competition
+  ) {
+    const eventRegistration =
+      event?.registration ||
+      {};
+
+    const compRegistration =
+      competition?.registration ||
+      {};
+
+    const value =
+      firstDefined(
+        event?.regCloseAt,
+        event?.regCloseDate,
+        event?.regClose,
+
+        event?.registrationCloseAt,
+        event?.registrationCloseDate,
+
+        eventRegistration.closeAt,
+        eventRegistration.closeDate,
+
+        competition?.regCloseAt,
+        competition?.regCloseDate,
+        competition?.regClose,
+
+        competition?.registrationCloseAt,
+        competition?.registrationCloseDate,
+
+        compRegistration.closeAt,
+        compRegistration.closeDate
+      );
+
+    return toDateMaybe(
+      value,
+      {
+        endOfDay: true
+      }
+    );
+  }
+
+  async function isFinalClosed(
+    qualification
+  ) {
+    if (!qualification) {
+      return true;
+    }
+
+    const year =
+      normalize(
+        qualification.year
+      );
+
+    const data =
+      qualification.data ||
+      {};
+
+    /*
+     * 1. Якщо сезон уже офіційно
+     * завершений — все.
+     */
+    if (
+      await isSeasonClosed(
+        year
+      )
+    ) {
+      return true;
+    }
+
+    const competitionId =
+      normalize(
+        data.competitionId
+      );
+
+    /*
+     * Старий qualification може
+     * не мати competitionId.
+     *
+     * У такому випадку сезонна
+     * перевірка вище лишається
+     * основною.
+     */
+    if (
+      !competitionId
+    ) {
+      return false;
+    }
+
+    try {
+      const competitionSnap =
+        await db
+          .collection(
+            COMPETITIONS_COLLECTION
+          )
+          .doc(
+            competitionId
+          )
+          .get();
+
+      if (
+        !competitionSnap.exists
+      ) {
+        return false;
+      }
+
+      const competition =
+        competitionSnap.data() ||
+        {};
+
+      /*
+       * Якщо саме competition
+       * явно закрите.
+       */
+      const competitionStatus =
+        clean(
+          competition.status
+        );
+
+      if (
+        competition.archived ===
+          true ||
+        competition.finished ===
+          true ||
+        competition.completed ===
+          true ||
+        [
+          "archived",
+          "finished",
+          "completed",
+          "closed"
+        ].includes(
+          competitionStatus
+        )
+      ) {
+        return true;
+      }
+
+      const stageId =
+        normalize(
+          data.stageId
+        );
+
+      const finalEvent =
+        findFinalEvent(
+          competition,
+          stageId
+        );
+
+      /*
+       * Якщо events нема —
+       * можемо ще перевірити
+       * дати самого competition.
+       */
+      const runEnd =
+        getFinalRunEnd(
+          finalEvent,
+          competition
+        );
+
+      const registrationClose =
+        getFinalRegistrationClose(
+          finalEvent,
+          competition
+        );
+
+      const now =
+        new Date();
+
+      /*
+       * Фінал уже закінчився.
+       */
+      if (
+        runEnd &&
+        now.getTime() >
+          runEnd.getTime()
+      ) {
+        console.info(
+          LOG,
+          year,
+          "final finished",
+          runEnd
+        );
+
+        return true;
+      }
+
+      /*
+       * Реєстрація на Фінал
+       * уже закрита.
+       *
+       * Після цього відмовлятися
+       * через публічну форму вже
+       * немає сенсу.
+       */
+      if (
+        registrationClose &&
+        now.getTime() >
+          registrationClose.getTime()
+      ) {
+        console.info(
+          LOG,
+          year,
+          "final registration closed",
+          registrationClose
+        );
+
+        return true;
+      }
+
+      return false;
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        LOG,
+        year,
+        "competition/final check:",
+        error
+      );
+
+      /*
+       * Якщо не змогли прочитати
+       * competition — не блокуємо
+       * майбутній сезон помилково.
+       */
+      return false;
+    }
+  }
+
+  // =========================================================
+  // CAN DECLINE QUALIFICATION
+  // =========================================================
+
+  async function canDeclineQualification(
+    qualification
+  ) {
+    if (
+      !qualification
+    ) {
+      return false;
+    }
+
+    const status =
+      clean(
+        qualification
+          .data
+          ?.status
+      );
+
+    if (
+      status !==
+      DECLINABLE_STATUS
+    ) {
+      return false;
+    }
+
+    const closed =
+      await isFinalClosed(
+        qualification
+      );
+
+    return !closed;
   }
 
   // =========================================================
@@ -668,16 +1317,6 @@
       return null;
     }
 
-    /*
-     * Отримуємо доступні сезони:
-     *
-     * finalQualifications/2026
-     * finalQualifications/2027
-     * finalQualifications/2028
-     * ...
-     *
-     * Новіший сезон перевіряємо першим.
-     */
     const seasonsSnapshot =
       await db
         .collection(
@@ -702,12 +1341,8 @@
             a,
             b
           ) =>
-            Number(
-              b
-            ) -
-            Number(
-              a
-            )
+            Number(b) -
+            Number(a)
         );
 
     for (
@@ -777,10 +1412,6 @@
             data.status
           );
 
-        /*
-         * Відмова доступна
-         * ТІЛЬКИ invited.
-         */
         if (
           status !==
           DECLINABLE_STATUS
@@ -788,16 +1419,12 @@
           continue;
         }
 
-        return {
+        const qualification = {
           year:
-            String(
-              year
-            ),
+            String(year),
 
           teamId:
-            String(
-              teamId
-            ),
+            String(teamId),
 
           ref,
 
@@ -806,6 +1433,35 @@
             status
           }
         };
+
+        /*
+         * ГОЛОВНА ПРАВКА:
+         *
+         * invited самого по собі
+         * вже недостатньо.
+         *
+         * Перевіряємо, що сезон /
+         * фінал / реєстрація
+         * ще не завершені.
+         */
+        const allowed =
+          await canDeclineQualification(
+            qualification
+          );
+
+        if (
+          !allowed
+        ) {
+          console.info(
+            LOG,
+            year,
+            "qualification is historical — decline hidden"
+          );
+
+          continue;
+        }
+
+        return qualification;
 
       } catch (
         error
@@ -878,7 +1534,7 @@
       qualification
         .ref
         .onSnapshot(
-          snapshot => {
+          async snapshot => {
 
             if (
               !snapshot.exists
@@ -896,10 +1552,6 @@
               snapshot.data() ||
               {};
 
-            /*
-             * Захист від невідповідності
-             * документа.
-             */
             if (
               !qualificationMatchesTeam(
                 data,
@@ -939,11 +1591,6 @@
                 data.status
               );
 
-            /*
-             * Після нашої успішної відмови
-             * handleDecline сам покаже
-             * success message і сховає box.
-             */
             if (
               declineCompleted &&
               status ===
@@ -952,11 +1599,6 @@
               return;
             }
 
-            /*
-             * Якщо статус змінився
-             * іншим процесом —
-             * кнопка більше недоступна.
-             */
             if (
               status !==
               DECLINABLE_STATUS
@@ -966,7 +1608,7 @@
               return;
             }
 
-            activeQualification = {
+            const liveQualification = {
               year:
                 expectedYear,
 
@@ -981,6 +1623,27 @@
                 status
               }
             };
+
+            /*
+             * Навіть listener
+             * повторно перевіряє,
+             * чи Фінал ще активний.
+             */
+            const allowed =
+              await canDeclineQualification(
+                liveQualification
+              );
+
+            if (
+              !allowed
+            ) {
+              hideBox();
+
+              return;
+            }
+
+            activeQualification =
+              liveQualification;
 
             showBox(
               activeQualification
@@ -1060,9 +1723,6 @@
   // =========================================================
 
   async function handleDecline() {
-    /*
-     * Захист від подвійного кліку.
-     */
     if (
       declining
     ) {
@@ -1081,12 +1741,6 @@
       return;
     }
 
-    /*
-     * Зберігаємо значення ДО async операцій.
-     *
-     * Listener може змінити
-     * activeQualification.
-     */
     const qualification =
       activeQualification;
 
@@ -1103,16 +1757,53 @@
         qualification.teamId
       );
 
-    /*
-     * Перевіряємо, що qualification
-     * належить поточній команді.
-     */
     if (
       expectedTeamId !==
       currentTeamId
     ) {
       setBoxMessage(
         "Фінальна кваліфікація належить іншій команді."
+      );
+
+      return;
+    }
+
+    /*
+     * КРИТИЧНИЙ ЗАХИСТ:
+     *
+     * Сторінка могла бути відкрита
+     * ще до завершення Фіналу.
+     *
+     * Перед самим натисканням
+     * повторно перевіряємо стан.
+     */
+    try {
+      const stillAllowed =
+        await canDeclineQualification(
+          qualification
+        );
+
+      if (
+        !stillAllowed
+      ) {
+        clearQualificationListener();
+
+        hideBox();
+
+        window.alert(
+          "Фінал або реєстрація на нього вже завершені. Відмова більше недоступна."
+        );
+
+        return;
+      }
+
+    } catch (
+      error
+    ) {
+      console.warn(
+        LOG,
+        "pre-decline check:",
+        error
       );
 
       return;
@@ -1145,17 +1836,9 @@
 
     try {
 
-      // =====================================================
-      // TRANSACTION
-      // =====================================================
-
       await db.runTransaction(
         async transaction => {
 
-          /*
-           * Перед UPDATE ще раз читаємо
-           * актуальний документ.
-           */
           const snapshot =
             await transaction.get(
               qualificationRef
@@ -1229,18 +1912,13 @@
           // STATUS VALIDATION
           // =================================================
 
-          /*
-           * Відмовитися можна ТІЛЬКИ:
-           *
-           * invited -> declined
-           */
           if (
             status !==
-              DECLINABLE_STATUS
+            DECLINABLE_STATUS
           ) {
             if (
               status ===
-                "declined"
+              "declined"
             ) {
               throw new Error(
                 "Команда вже відмовилася від участі."
@@ -1249,7 +1927,7 @@
 
             if (
               status ===
-                "confirmed"
+              "confirmed"
             ) {
               throw new Error(
                 "Участь уже підтверджена. Автоматична відмова недоступна."
@@ -1258,7 +1936,7 @@
 
             if (
               status ===
-                "reserve"
+              "reserve"
             ) {
               throw new Error(
                 "Команда зараз перебуває у резерві."
@@ -1275,7 +1953,7 @@
           // =================================================
 
           /*
-           * НЕ змінюємо:
+           * НЕ чіпаємо:
            *
            * rank
            * ratingPoints
@@ -1286,9 +1964,6 @@
            * seasonYear
            * competitionId
            * stageId
-           *
-           * Міняємо виключно поля,
-           * пов'язані з відмовою.
            */
           transaction.update(
             qualificationRef,
@@ -1353,10 +2028,6 @@
         }
       );
 
-      /*
-       * Даємо користувачу побачити
-       * повідомлення.
-       */
       setTimeout(
         () => {
           clearQualificationListener();
@@ -1432,10 +2103,6 @@
     auth.onAuthStateChanged(
       async user => {
 
-        /*
-         * При будь-якій зміні auth
-         * старий listener прибираємо.
-         */
         clearQualificationListener();
 
         hideBox();
@@ -1466,10 +2133,6 @@
 
         try {
 
-          // =================================================
-          // LOAD TEAM
-          // =================================================
-
           currentTeamId =
             await loadTeamId(
               user
@@ -1492,10 +2155,6 @@
             currentTeamId
           );
 
-          // =================================================
-          // FIND QUALIFICATION
-          // =================================================
-
           await refresh();
 
         } catch (
@@ -1517,18 +2176,8 @@
 
   window.SC_FINAL_DECLINE = {
 
-    /*
-     * Ручне оновлення:
-     *
-     * await SC_FINAL_DECLINE.refresh()
-     */
     refresh,
 
-    /*
-     * Debug state:
-     *
-     * SC_FINAL_DECLINE.getState()
-     */
     getState() {
       return {
         user:
@@ -1601,8 +2250,11 @@
         window.firebase;
 
       /*
-       * UI створюємо лише якщо
-       * сторінка має форму реєстрації.
+       * Створюємо лише прихований
+       * контейнер.
+       *
+       * Показати кнопку можна буде
+       * тільки після всіх перевірок.
        */
       getOrCreateBox();
 

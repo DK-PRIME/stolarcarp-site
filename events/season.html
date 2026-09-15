@@ -1,229 +1,1009 @@
 <!doctype html>
 <html lang="uk">
+
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Архів сезону — STOLAR CARP</title>
 
-  <link rel="stylesheet" href="../assets/css/main.css">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <meta
+    name="theme-color"
+    content="#020617"
+  >
+
+  <title>
+    Архів сезону — STOLAR CARP
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="../assets/css/main.css"
+  >
 
   <style>
+
+    /* =====================================================
+       PAGE
+       ===================================================== */
+
     body.archive-page{
-      background:radial-gradient(circle at top,#1f2937 0,#05060a 55%);
-      color:#e5e7eb;
       min-height:100vh;
+      margin:0;
+
+      background:
+        radial-gradient(
+          circle at 50% 0%,
+          rgba(250,204,21,.12),
+          transparent 28%
+        ),
+        radial-gradient(
+          circle at 10% 20%,
+          rgba(249,115,22,.08),
+          transparent 30%
+        ),
+        linear-gradient(
+          180deg,
+          #111827 0%,
+          #020617 48%,
+          #030712 100%
+        );
+
+      color:#e5e7eb;
+    }
+
+
+    /* =====================================================
+       MAIN
+       ===================================================== */
+
+    .season-archive-main{
+      padding-top:20px;
+      padding-bottom:70px;
+    }
+
+
+    /* =====================================================
+       BACK
+       ===================================================== */
+
+    .back-link{
+      display:inline-flex;
+      align-items:center;
+      gap:7px;
+
+      margin:14px 0 8px;
+
+      color:#facc15;
+
+      text-decoration:none;
+      font-weight:850;
+      font-size:.9rem;
+    }
+
+    .back-link:hover{
+      color:#fde68a;
+    }
+
+
+    /* =====================================================
+       HERO
+       ===================================================== */
+
+    .season-hero{
+      text-align:center;
+
+      padding:
+        22px 0
+        26px;
+    }
+
+    .season-kicker{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:7px;
+
+      padding:7px 12px;
+
+      border-radius:999px;
+
+      border:
+        1px solid
+        rgba(
+          250,
+          204,
+          21,
+          .40
+        );
+
+      background:
+        rgba(
+          15,
+          23,
+          42,
+          .65
+        );
+
+      color:#facc15;
+
+      font-size:.78rem;
+      font-weight:900;
+
+      letter-spacing:.08em;
+
+      text-transform:uppercase;
     }
 
     .archive-title{
-      font-size:clamp(30px,6vw,54px);
-      font-weight:900;
+      margin:
+        15px 0 0;
+
       text-align:center;
-      margin:34px 0 24px;
+
+      font-size:
+        clamp(
+          32px,
+          7vw,
+          58px
+        );
+
+      line-height:1.05;
+
+      font-weight:950;
+
+      letter-spacing:-.035em;
+
+      color:#f8fafc;
+
+      text-shadow:
+        0 18px 42px
+        rgba(
+          0,
+          0,
+          0,
+          .45
+        );
     }
 
+    .season-hero-sub{
+      max-width:620px;
+
+      margin:
+        12px auto 0;
+
+      color:#94a3b8;
+
+      font-size:.92rem;
+
+      line-height:1.55;
+    }
+
+
+    /* =====================================================
+       GENERAL CARD
+       ===================================================== */
+
     .archive-card{
-      background:#0f172a;
-      border:1px solid #334155;
-      border-radius:18px;
-      padding:16px;
-      margin:16px 0;
+      margin:
+        18px 0;
+
+      padding:
+        16px;
+
+      border-radius:
+        20px;
+
+      border:
+        1px solid
+        rgba(
+          148,
+          163,
+          184,
+          .20
+        );
+
+      background:
+        radial-gradient(
+          circle at top left,
+          rgba(
+            250,
+            204,
+            21,
+            .045
+          ),
+          transparent 42%
+        ),
+        rgba(
+          15,
+          23,
+          42,
+          .78
+        );
+
+      box-shadow:
+        0 18px 42px
+        rgba(
+          0,
+          0,
+          0,
+          .28
+        );
+    }
+
+    .archive-card-title{
+      margin:0;
+
+      color:#f8fafc;
+
+      font-size:1.12rem;
+
+      font-weight:950;
+    }
+
+    .archive-card-sub{
+      margin-top:5px;
+
+      color:#94a3b8;
+
+      font-size:.82rem;
+
+      line-height:1.45;
+    }
+
+
+    /* =====================================================
+       MESSAGE
+       ===================================================== */
+
+    .muted{
+      color:#94a3b8;
+    }
+
+    .err{
+      color:#ef4444;
+    }
+
+    .ok{
+      color:#22c55e;
+    }
+
+    #msg{
+      margin-top:8px;
+
+      min-height:20px;
+
+      font-size:.85rem;
+
+      font-weight:750;
+    }
+
+
+    /* =====================================================
+       SEASON SUMMARY
+       ===================================================== */
+
+    #seasonArchiveSummary{
+      margin-top:4px;
+    }
+
+
+    /* =====================================================
+       STAGES
+       ===================================================== */
+
+    #stagesList{
+      margin-top:12px;
     }
 
     .stage-btn{
       width:100%;
-      background:#111827;
-      border:1px solid #334155;
-      color:#e5e7eb;
-      border-radius:14px;
-      padding:14px;
+
+      margin:
+        8px 0;
+
+      padding:
+        14px;
+
       text-align:left;
-      font-weight:800;
-      margin:8px 0;
+
       cursor:pointer;
+
+      border-radius:
+        15px;
+
+      border:
+        1px solid
+        rgba(
+          148,
+          163,
+          184,
+          .22
+        );
+
+      background:#111827;
+
+      color:#e5e7eb;
+
+      font-weight:850;
+
+      box-shadow:
+        0 10px 24px
+        rgba(
+          0,
+          0,
+          0,
+          .18
+        );
     }
 
     .stage-btn:hover{
       border-color:#facc15;
     }
 
-    .muted{color:#94a3b8}
-    .err{color:#ef4444}
-    .ok{color:#22c55e}
+
+    /* =====================================================
+       RESULT SECTION
+       ===================================================== */
+
+    #resultSection{
+      scroll-margin-top:20px;
+    }
+
+    .stage-detail-head{
+      text-align:center;
+
+      margin:
+        32px 0 14px;
+    }
+
+    .stage-detail-title{
+      margin:0;
+
+      font-size:
+        clamp(
+          28px,
+          7vw,
+          48px
+        );
+
+      font-weight:950;
+
+      color:#f8fafc;
+    }
+
+    #stageMeta{
+      margin-top:7px;
+
+      text-align:center;
+
+      color:#94a3b8;
+
+      font-size:.86rem;
+
+      font-weight:750;
+    }
+
+
+    /* =====================================================
+       ZONES — BASE FALLBACK
+       archive.js додає точні compact styles
+       ===================================================== */
+
+    #zonesWrap{
+      width:100%;
+    }
 
     .zone-card{
-      background:#11111a;
-      border:1px solid #2f3144;
-      border-radius:18px;
-      padding:12px;
-      margin:14px 0;
+      margin:
+        14px 0;
+
+      padding:
+        12px;
+
+      border:
+        1px solid
+        #2f3144;
+
+      border-radius:
+        18px;
+
+      background:
+        #11111a;
     }
 
     .zone-head{
       display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:10px;
+
+      justify-content:
+        space-between;
+
+      align-items:
+        center;
+
       gap:10px;
+
+      margin-bottom:
+        10px;
     }
 
     .zone-head h2{
-      font-size:clamp(32px,8vw,58px);
       margin:0;
+
+      font-size:
+        clamp(
+          32px,
+          8vw,
+          58px
+        );
     }
 
     .zone-badge{
-      border:2px solid #333;
-      border-radius:999px;
-      padding:8px 14px;
-      color:#d1d5db;
-      background:#111;
-      white-space:nowrap;
+      padding:
+        8px 14px;
+
+      border-radius:
+        999px;
+
+      border:
+        2px solid
+        #333;
+
+      background:
+        #111;
+
+      color:
+        #d1d5db;
+
+      white-space:
+        nowrap;
     }
 
-    .table-wrap{
-      overflow-x:auto;
-      -webkit-overflow-scrolling:touch;
-      border-radius:12px;
-    }
 
-    table{
-      width:100%;
-      min-width:780px;
-      border-collapse:collapse;
-      font-size:.9rem;
-    }
+    /* =====================================================
+       FOOT NOTE
+       ===================================================== */
 
-    th,td{
-      border:1px solid #2f3144;
-      padding:7px 8px;
+    .archive-bottom-note{
+      margin:
+        18px 0
+        38px;
+
       text-align:center;
-      white-space:nowrap;
+
+      color:#64748b;
+
+      font-size:.8rem;
+
+      line-height:1.45;
     }
 
-    th{
-      background:#191923;
-      color:#d1d5db;
-      font-weight:900;
+
+    /* =====================================================
+       FOOTER
+       ===================================================== */
+
+    footer.footer{
+      margin-top:
+        30px;
     }
 
-    td{
-      color:#d1d5db;
-    }
 
-    td.team{
-      text-align:left;
-      max-width:190px;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+    /* =====================================================
+       MOBILE
+       ===================================================== */
 
-    td.weight,
-    td.place{
-      font-weight:900;
-      color:#f8fafc;
-    }
+    @media(
+      max-width:768px
+    ){
 
-    .back-link{
-      display:inline-block;
-      margin:18px 0;
-      color:#facc15;
-      text-decoration:none;
-      font-weight:800;
-    }
+      .season-archive-main{
+        padding-top:
+          8px;
+      }
 
-    @media(max-width:768px){
+      .season-hero{
+        padding:
+          14px 0
+          18px;
+      }
+
       .archive-card{
-        padding:14px;
+        padding:
+          13px;
+
+        border-radius:
+          17px;
       }
 
-      .zone-head h2{
-        font-size:2rem;
-      }
-
-      table{
-        font-size:.82rem;
+      .stage-btn{
+        padding:
+          13px 12px;
       }
     }
+
   </style>
+
 </head>
+
 
 <body class="archive-page">
 
+
+<!-- ======================================================
+     HEADER
+     ====================================================== -->
+
 <header class="header">
+
   <div class="container header__row">
-    <a class="logo" href="../index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
+
+    <a
+      class="logo"
+      href="../index.html"
+    >
+
+      <span class="logo__mark">
+        SC
+      </span>
+
+      <span class="logo__text">
+        STOLAR CARP
+      </span>
+
     </a>
 
-    <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+
+    <nav
+      class="nav"
+      id="nav"
+    >
+
+      <a
+        href="/index.html"
+        class="nav__link"
+      >
+        Головна
+      </a>
+
+      <a
+        href="/rules.html"
+        class="nav__link"
+      >
+        Регламент
+      </a>
+
+      <a
+        href="/formats.html"
+        class="nav__link"
+      >
+        Формат змагань
+      </a>
+
+      <a
+        href="/register.html"
+        class="nav__link"
+      >
+        Реєстрація
+      </a>
+
+      <a
+        href="/live.html"
+        class="nav__link"
+      >
+        Live
+      </a>
+
+      <a
+        href="/rating.html"
+        class="nav__link"
+      >
+        Рейтинг
+      </a>
+
+      <a
+        href="/lakes.html"
+        class="nav__link"
+      >
+        Водойми
+      </a>
+
+      <a
+        href="/sponsors.html"
+        class="nav__link"
+      >
+        Спонсори
+      </a>
+
+      <a
+        href="/events/index.html"
+        class="nav__link nav__link--active"
+      >
+        Архів
+      </a>
+
+      <a
+        href="/cabinet.html"
+        class="nav__link"
+      >
+        Мій кабінет
+      </a>
+
     </nav>
 
-    <button class="burger" id="burger" type="button" aria-label="Меню">
-      <span></span><span></span><span></span>
+
+    <button
+      class="burger"
+      id="burger"
+      type="button"
+      aria-label="Меню"
+    >
+
+      <span></span>
+      <span></span>
+      <span></span>
+
     </button>
+
   </div>
+
 </header>
 
-<main class="container">
-  <a class="back-link" href="index.html">← До сезонів</a>
 
-  <h1 id="pageTitle" class="archive-title">Архів сезону</h1>
+<!-- ======================================================
+     MAIN
+     ====================================================== -->
+
+<main
+  class="
+    container
+    season-archive-main
+  "
+>
+
+
+  <!-- ====================================================
+       BACK
+       ==================================================== -->
+
+  <a
+    class="back-link"
+    href="index.html"
+  >
+    ← До сезонів
+  </a>
+
+
+  <!-- ====================================================
+       HERO
+       ==================================================== -->
+
+  <section class="season-hero">
+
+    <div class="season-kicker">
+      🏆 Архів STOLAR CARP
+    </div>
+
+    <h1
+      id="pageTitle"
+      class="archive-title"
+    >
+      Архів сезону
+    </h1>
+
+    <div class="season-hero-sub">
+      Етапи сезону, Фінал,
+      підсумковий рейтинг,
+      призери та Big Fish.
+    </div>
+
+  </section>
+
+
+  <!-- ====================================================
+       ПІДСУМОК СЕЗОНУ
+       archive.js заповнює після завершення сезону
+       ==================================================== -->
+
+  <div id="seasonArchiveSummary">
+
+
+    <!-- TOP 3 -->
+
+    <section
+      id="seasonArchivePodium"
+      class="season-summary-section"
+      hidden
+    >
+
+      <div class="season-summary-title">
+        🏆 Підсумок сезону
+      </div>
+
+      <div
+        id="seasonPodiumGrid"
+        class="season-podium-grid"
+      ></div>
+
+    </section>
+
+
+    <!-- BIG FISH -->
+
+    <section
+      id="seasonArchiveBigFish"
+      class="season-summary-section"
+      hidden
+    >
+
+      <div class="season-summary-title">
+        🎣 Big Fish сезону
+      </div>
+
+      <div
+        id="seasonBigFishArchiveCard"
+        class="season-bigfish-card"
+      ></div>
+
+    </section>
+
+
+    <!-- FULL RANKING -->
+
+    <section
+      id="seasonArchiveRanking"
+      class="season-summary-section"
+      hidden
+    >
+
+      <div class="season-summary-title">
+        📊 Підсумковий рейтинг
+      </div>
+
+      <div class="season-ranking-scroll">
+
+        <table
+          id="seasonArchiveRankingTable"
+          class="season-ranking-table"
+        >
+
+          <thead></thead>
+
+          <tbody></tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+
+  </div>
+
+
+  <!-- ====================================================
+       ЕТАПИ
+       ==================================================== -->
 
   <section class="archive-card">
-    <h2 style="margin-top:0;">Етапи сезону</h2>
-    <div id="msg" class="muted">Завантаження…</div>
+
+    <h2 class="archive-card-title">
+      Етапи сезону
+    </h2>
+
+    <div class="archive-card-sub">
+      Натисни на етап або Фінал,
+      щоб відкрити детальний протокол
+      зон A / B / C.
+    </div>
+
+    <div
+      id="msg"
+      class="muted"
+    >
+      Завантаження…
+    </div>
+
     <div id="stagesList"></div>
+
   </section>
 
-  <section id="resultSection" style="display:none;">
-    <h1 id="stageTitle" class="archive-title">Зони A / B / C</h1>
-    <div id="stageMeta" class="muted"></div>
+
+  <!-- ====================================================
+       DETAIL
+       ==================================================== -->
+
+  <section
+    id="resultSection"
+    style="display:none;"
+  >
+
+    <div class="stage-detail-head">
+
+      <h2
+        id="stageTitle"
+        class="stage-detail-title"
+      >
+        Зони A / B / C
+      </h2>
+
+      <div
+        id="stageMeta"
+        class="muted"
+      ></div>
+
+    </div>
+
+
     <div id="zonesWrap"></div>
-    <div class="muted" style="margin:20px 0 40px;">Місця у зоні.</div>
+
+
+    <div class="archive-bottom-note">
+      Місця визначені окремо
+      всередині зон A / B / C.
+    </div>
+
   </section>
+
+
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<script src="../assets/js/firebase-init.js"></script>
-<script src="archive.js?v=20260610-5"></script>
+<!-- ======================================================
+     FOOTER
+     ====================================================== -->
+
+<footer class="footer">
+
+  <div class="container footer__row">
+
+    <div>
+      © 2025 STOLAR CARP · Львів
+    </div>
+
+    <div class="footer__links">
+
+      <a
+        href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+      >
+        Viber
+      </a>
+
+      <a
+        href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+      >
+        YouTube
+      </a>
+
+    </div>
+
+  </div>
+
+</footer>
+
+
+<!-- ======================================================
+     FIREBASE
+     ====================================================== -->
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
+></script>
+
+
+<script
+  src="../assets/js/firebase-init.js?v=20260915-1"
+></script>
+
+
+<!--
+  Наш новий архів:
+  seasonArchives/{year}
+  +
+  seasonResults/{year}/stages
+-->
+
+<script
+  src="archive.js?v=20260915-season-2"
+></script>
+
+
+<!-- ======================================================
+     MOBILE MENU
+     ====================================================== -->
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const burger = document.getElementById("burger");
-    const nav = document.getElementById("nav");
 
-    if (!burger || !nav) return;
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-    burger.addEventListener("click", () => {
-      nav.classList.toggle("active");
-      nav.classList.toggle("nav--open");
-      burger.classList.toggle("active");
-      document.body.classList.toggle("menu-open");
-    });
+    const burger =
+      document.getElementById(
+        "burger"
+      );
 
-    nav.addEventListener("click", e => {
-      if (e.target.classList.contains("nav__link")) {
-        nav.classList.remove("active", "nav--open");
-        burger.classList.remove("active");
-        document.body.classList.remove("menu-open");
+    const nav =
+      document.getElementById(
+        "nav"
+      );
+
+    if (
+      !burger ||
+      !nav
+    ) {
+      return;
+    }
+
+    burger.addEventListener(
+      "click",
+      () => {
+
+        nav.classList.toggle(
+          "active"
+        );
+
+        nav.classList.toggle(
+          "nav--open"
+        );
+
+        burger.classList.toggle(
+          "active"
+        );
+
+        document.body.classList.toggle(
+          "menu-open"
+        );
+
       }
-    });
-  });
+    );
+
+
+    nav.addEventListener(
+      "click",
+      event => {
+
+        if (
+          event.target
+            .classList
+            .contains(
+              "nav__link"
+            )
+        ) {
+
+          nav.classList.remove(
+            "active",
+            "nav--open"
+          );
+
+          burger.classList.remove(
+            "active"
+          );
+
+          document.body.classList.remove(
+            "menu-open"
+          );
+
+        }
+
+      }
+    );
+
+  }
+);
+
 </script>
+
 
 </body>
 </html>

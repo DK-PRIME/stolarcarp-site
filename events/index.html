@@ -31,10 +31,8 @@
 
     body.archive-page{
       min-height:100vh;
-
       display:flex;
       flex-direction:column;
-
       margin:0;
 
       background:
@@ -69,99 +67,54 @@
 
     .archive-hero{
       text-align:center;
-
-      padding:
-        56px 0
-        48px;
+      padding:56px 0 48px;
     }
 
     .archive-kicker{
       display:inline-flex;
-
       align-items:center;
       justify-content:center;
-
       gap:8px;
 
       margin-bottom:18px;
+      padding:8px 14px;
 
-      padding:
-        8px 14px;
+      border:1px solid rgba(250,204,21,.45);
+      border-radius:999px;
 
-      border:
-        1px solid
-        rgba(
-          250,
-          204,
-          21,
-          .45
-        );
-
-      border-radius:
-        999px;
-
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          .72
-        );
+      background:rgba(15,23,42,.72);
 
       color:#facc15;
 
       font-weight:850;
       font-size:.9rem;
-
       letter-spacing:.04em;
-
       text-transform:uppercase;
     }
 
     .archive-title{
       margin:0;
 
-      font-size:
-        clamp(
-          34px,
-          8vw,
-          72px
-        );
-
+      font-size:clamp(34px,8vw,72px);
       line-height:1.06;
-
       font-weight:950;
-
       letter-spacing:-.04em;
 
       color:#f8fafc;
 
       text-shadow:
-        0 16px 45px
-        rgba(
-          0,
-          0,
-          0,
-          .55
-        );
+        0 16px 45px rgba(0,0,0,.55);
     }
 
     .archive-subtitle{
       max-width:680px;
-
-      margin:
-        18px auto 0;
+      margin:18px auto 0;
 
       color:#cbd5e1;
 
       line-height:1.6;
 
-      font-size:
-        clamp(
-          14px,
-          3.6vw,
-          17px
-        );
+      font-size:clamp(14px,3.6vw,17px);
     }
 
 
@@ -171,14 +124,11 @@
 
     .archive-status{
       min-height:22px;
-
-      margin:
-        24px auto 0;
+      margin:24px auto 0;
 
       color:#94a3b8;
 
       font-size:.86rem;
-
       font-weight:750;
     }
 
@@ -192,119 +142,57 @@
 
 
     /* =====================================================
-       SEASONS GRID
+       CURRENT SEASON
        ===================================================== */
 
-    .seasons-grid{
-      max-width:820px;
-
-      margin:
-        26px auto 0;
-
-      display:grid;
-
-      gap:18px;
-
-      grid-template-columns:
-        repeat(
-          auto-fit,
-          minmax(
-            260px,
-            1fr
-          )
-        );
+    .current-season-wrap{
+      max-width:760px;
+      margin:26px auto 0;
     }
-
-
-    /* =====================================================
-       SEASON CARD
-       ===================================================== */
 
     .season-card{
       position:relative;
-
       overflow:hidden;
 
+      width:100%;
       min-height:210px;
 
       padding:24px;
 
       display:flex;
-
       flex-direction:column;
-
-      justify-content:
-        space-between;
+      justify-content:space-between;
 
       text-decoration:none;
-
       color:#fff;
 
       border-radius:26px;
 
       border:
         1px solid
-        rgba(
-          250,
-          204,
-          21,
-          .55
-        );
+        rgba(34,197,94,.46);
 
       background:
         linear-gradient(
           135deg,
-          rgba(
-            250,
-            204,
-            21,
-            .13
-          ),
-          rgba(
-            236,
-            72,
-            153,
-            .06
-          )
+          rgba(250,204,21,.13),
+          rgba(236,72,153,.06)
         ),
         radial-gradient(
           circle at 20% 0%,
-          rgba(
-            250,
-            204,
-            21,
-            .28
-          ),
+          rgba(250,204,21,.28),
           transparent 34%
         ),
         radial-gradient(
           circle at 100% 100%,
-          rgba(
-            249,
-            115,
-            22,
-            .22
-          ),
+          rgba(249,115,22,.22),
           transparent 34%
         ),
         #050816;
 
       box-shadow:
-        0 26px 70px
-        rgba(
-          0,
-          0,
-          0,
-          .50
-        ),
-        inset
-        0 1px 0
-        rgba(
-          255,
-          255,
-          255,
-          .07
-        );
+        0 26px 70px rgba(0,0,0,.50),
+        inset 0 1px 0 rgba(255,255,255,.07);
 
       transition:
         transform .22s ease,
@@ -316,12 +204,7 @@
       content:"";
 
       position:absolute;
-
-      inset:
-        -80px
-        -80px
-        auto
-        auto;
+      inset:-80px -80px auto auto;
 
       width:190px;
       height:190px;
@@ -329,71 +212,32 @@
       border-radius:999px;
 
       background:
-        rgba(
-          250,
-          204,
-          21,
-          .16
-        );
+        rgba(250,204,21,.16);
 
-      filter:
-        blur(8px);
+      filter:blur(8px);
 
       pointer-events:none;
     }
 
     .season-card:hover{
-      transform:
-        translateY(-5px);
+      transform:translateY(-5px);
 
-      border-color:
-        #facc15;
+      border-color:#22c55e;
 
       box-shadow:
-        0 34px 90px
-        rgba(
-          0,
-          0,
-          0,
-          .62
-        ),
-        0 0 0 1px
-        rgba(
-          250,
-          204,
-          21,
-          .20
-        );
+        0 34px 90px rgba(0,0,0,.62),
+        0 0 0 1px rgba(34,197,94,.18);
     }
-
-    .season-card--active{
-      border-color:
-        rgba(
-          34,
-          197,
-          94,
-          .46
-        );
-    }
-
-
-    /* =====================================================
-       CARD TOP
-       ===================================================== */
 
     .season-top{
       position:relative;
-
       z-index:1;
     }
 
     .season-status-row{
       display:flex;
-
       align-items:center;
-      justify-content:
-        space-between;
-
+      justify-content:space-between;
       gap:10px;
     }
 
@@ -401,7 +245,6 @@
       color:#94a3b8;
 
       font-size:.8rem;
-
       font-weight:800;
     }
 
@@ -409,84 +252,37 @@
       flex:0 0 auto;
 
       display:inline-flex;
-
       align-items:center;
 
-      padding:
-        5px 9px;
+      padding:5px 9px;
 
-      border-radius:
-        999px;
+      border-radius:999px;
 
       border:
         1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .24
-        );
+        rgba(34,197,94,.36);
 
       background:
-        rgba(
-          15,
-          23,
-          42,
-          .76
-        );
+        rgba(15,23,42,.76);
 
-      color:#cbd5e1;
-
-      font-size:.64rem;
-
-      font-weight:950;
-
-      letter-spacing:.05em;
-
-      text-transform:uppercase;
-    }
-
-    .season-badge--archived{
-      color:#fde68a;
-
-      border-color:
-        rgba(
-          250,
-          204,
-          21,
-          .40
-        );
-    }
-
-    .season-badge--active{
       color:#86efac;
 
-      border-color:
-        rgba(
-          34,
-          197,
-          94,
-          .36
-        );
+      font-size:.64rem;
+      font-weight:950;
+      letter-spacing:.05em;
+      text-transform:uppercase;
     }
 
     .season-year{
       margin-top:12px;
 
-      font-size:
-        clamp(
-          34px,
-          8vw,
-          50px
-        );
-
+      font-size:clamp(34px,8vw,50px);
       line-height:1;
 
       font-weight:950;
+      letter-spacing:-.035em;
 
       color:#facc15;
-
-      letter-spacing:-.035em;
     }
 
     .season-desc{
@@ -495,67 +291,43 @@
       color:#cbd5e1;
 
       line-height:1.45;
-
       font-size:.9rem;
     }
 
-
-    /* =====================================================
-       CARD STATS
-       ===================================================== */
-
     .season-stats{
       position:relative;
-
       z-index:1;
 
       display:flex;
-
       flex-wrap:wrap;
 
-      gap:
-        6px 12px;
+      gap:6px 12px;
 
       margin-top:15px;
 
       color:#94a3b8;
 
       font-size:.75rem;
-
       font-weight:750;
     }
 
     .season-stat strong{
       color:#e5e7eb;
-
       font-weight:950;
     }
 
-    .season-big{
-      color:#fb923c !important;
-    }
-
-
-    /* =====================================================
-       BUTTON
-       ===================================================== */
-
     .season-btn{
       position:relative;
-
       z-index:1;
 
       margin-top:20px;
 
       display:flex;
-
       align-items:center;
       justify-content:center;
-
       gap:10px;
 
-      padding:
-        13px 18px;
+      padding:13px 18px;
 
       border-radius:16px;
 
@@ -569,101 +341,153 @@
       color:#111827;
 
       text-align:center;
-
       font-weight:950;
 
       box-shadow:
-        0 14px 32px
-        rgba(
-          249,
-          115,
-          22,
-          .25
-        );
+        0 14px 32px rgba(249,115,22,.25);
     }
 
 
     /* =====================================================
-       EMPTY
+       COMPLETED SEASONS
+       ===================================================== */
+
+    .completed-seasons{
+      max-width:760px;
+
+      margin:
+        34px auto 0;
+
+      padding-top:24px;
+
+      border-top:
+        1px solid
+        rgba(148,163,184,.14);
+    }
+
+    .completed-seasons[hidden]{
+      display:none !important;
+    }
+
+    .completed-title{
+      margin:0 0 16px;
+
+      text-align:left;
+
+      color:#f8fafc;
+
+      font-size:1.05rem;
+      font-weight:950;
+    }
+
+    .completed-grid{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+
+      justify-content:flex-start;
+    }
+
+    .completed-season{
+      width:104px;
+      height:104px;
+
+      flex:0 0 104px;
+
+      display:flex;
+      align-items:center;
+      justify-content:center;
+
+      position:relative;
+      overflow:hidden;
+
+      text-decoration:none;
+
+      border-radius:20px;
+
+      border:
+        1px solid
+        rgba(250,204,21,.38);
+
+      background:
+        radial-gradient(
+          circle at 20% 10%,
+          rgba(250,204,21,.16),
+          transparent 50%
+        ),
+        linear-gradient(
+          145deg,
+          rgba(249,115,22,.08),
+          rgba(15,23,42,.15)
+        ),
+        #0b0d14;
+
+      box-shadow:
+        0 12px 28px rgba(0,0,0,.30);
+
+      transition:
+        transform .18s ease,
+        border-color .18s ease;
+    }
+
+    .completed-season:hover{
+      transform:translateY(-3px);
+
+      border-color:#facc15;
+    }
+
+    .completed-season::before{
+      content:"🏆";
+
+      position:absolute;
+
+      top:9px;
+      right:10px;
+
+      font-size:.8rem;
+      opacity:.50;
+    }
+
+    .completed-year{
+      position:relative;
+      z-index:1;
+
+      color:#facc15;
+
+      font-size:1.45rem;
+      font-weight:950;
+      letter-spacing:-.03em;
+    }
+
+
+    /* =====================================================
+       EMPTY CURRENT
        ===================================================== */
 
     .archive-empty{
       max-width:700px;
 
-      margin:
-        26px auto 0;
+      margin:26px auto 0;
 
-      padding:
-        24px 18px;
+      padding:20px 18px;
 
-      border-radius:
-        20px;
+      border-radius:20px;
 
       border:
         1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .18
-        );
+        rgba(148,163,184,.18);
 
       background:
-        rgba(
-          15,
-          23,
-          42,
-          .48
-        );
+        rgba(15,23,42,.48);
 
       color:#94a3b8;
 
       text-align:center;
-
       line-height:1.55;
     }
 
-
-    /* =====================================================
-       NOTE
-       ===================================================== */
-
-    .archive-note{
-      max-width:760px;
-
-      margin:
-        20px auto 0;
-
-      padding:
-        13px 16px;
-
-      border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .14
-        );
-
-      border-radius:
-        17px;
-
-      background:
-        rgba(
-          15,
-          23,
-          42,
-          .35
-        );
-
-      color:#64748b;
-
-      line-height:1.5;
-
-      font-size:.8rem;
-
-      text-align:center;
+    .archive-empty[hidden]{
+      display:none !important;
     }
 
 
@@ -673,13 +497,11 @@
 
     footer.footer{
       flex-shrink:0;
-
       margin-top:auto;
 
       text-align:center;
 
-      padding:
-        22px 0;
+      padding:22px 0;
 
       font-size:.875rem;
 
@@ -687,20 +509,10 @@
 
       border-top:
         1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .12
-        );
+        rgba(148,163,184,.12);
 
       background:
-        rgba(
-          2,
-          6,
-          23,
-          .65
-        );
+        rgba(2,6,23,.65);
     }
 
     footer.footer a{
@@ -708,8 +520,7 @@
 
       text-decoration:none;
 
-      margin:
-        0 8px;
+      margin:0 8px;
 
       font-weight:800;
     }
@@ -719,26 +530,36 @@
        MOBILE
        ===================================================== */
 
-    @media(
-      max-width:768px
-    ){
+    @media(max-width:768px){
 
       .archive-hero{
-        padding:
-          42px 0
-          34px;
+        padding:42px 0 34px;
       }
 
       .season-card{
-        min-height:
-          195px;
-
-        padding:
-          21px;
+        min-height:195px;
+        padding:21px;
       }
 
-      .archive-note{
-        text-align:left;
+      .completed-seasons{
+        margin-top:28px;
+      }
+
+      .completed-grid{
+        gap:10px;
+      }
+
+      .completed-season{
+        width:92px;
+        height:92px;
+
+        flex-basis:92px;
+
+        border-radius:18px;
+      }
+
+      .completed-year{
+        font-size:1.25rem;
       }
 
     }
@@ -762,15 +583,8 @@
       class="logo"
       href="../index.html"
     >
-
-      <span class="logo__mark">
-        SC
-      </span>
-
-      <span class="logo__text">
-        STOLAR CARP
-      </span>
-
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
     </a>
 
 
@@ -778,60 +592,35 @@
       class="nav"
       id="nav"
     >
-
-      <a
-        href="/index.html"
-        class="nav__link"
-      >
+      <a href="/index.html" class="nav__link">
         Головна
       </a>
 
-      <a
-        href="/rules.html"
-        class="nav__link"
-      >
+      <a href="/rules.html" class="nav__link">
         Регламент
       </a>
 
-      <a
-        href="/formats.html"
-        class="nav__link"
-      >
+      <a href="/formats.html" class="nav__link">
         Формат змагань
       </a>
 
-      <a
-        href="/register.html"
-        class="nav__link"
-      >
+      <a href="/register.html" class="nav__link">
         Реєстрація
       </a>
 
-      <a
-        href="/live.html"
-        class="nav__link"
-      >
+      <a href="/live.html" class="nav__link">
         Live
       </a>
 
-      <a
-        href="/rating.html"
-        class="nav__link"
-      >
+      <a href="/rating.html" class="nav__link">
         Рейтинг
       </a>
 
-      <a
-        href="/lakes.html"
-        class="nav__link"
-      >
+      <a href="/lakes.html" class="nav__link">
         Водойми
       </a>
 
-      <a
-        href="/sponsors.html"
-        class="nav__link"
-      >
+      <a href="/sponsors.html" class="nav__link">
         Спонсори
       </a>
 
@@ -842,13 +631,9 @@
         Архів
       </a>
 
-      <a
-        href="/cabinet.html"
-        class="nav__link"
-      >
+      <a href="/cabinet.html" class="nav__link">
         Мій кабінет
       </a>
-
     </nav>
 
 
@@ -875,11 +660,7 @@
 <main class="main">
 
   <section
-    class="
-      container
-      section
-      archive-hero
-    "
+    class="container section archive-hero"
   >
 
     <div class="archive-kicker">
@@ -910,28 +691,41 @@
     </div>
 
 
+    <!-- ПОТОЧНИЙ СЕЗОН -->
+
     <div
-      id="seasonsGrid"
-      class="seasons-grid"
+      id="currentSeasonWrap"
+      class="current-season-wrap"
     ></div>
 
 
     <div
-      id="archiveEmpty"
+      id="currentSeasonEmpty"
       class="archive-empty"
       hidden
     >
-      Архів сезонів поки порожній.
+      Поточного сезону поки немає.
     </div>
 
 
-    <div class="archive-note">
-      Завершені сезони зберігаються
-      окремо за роками.
-      Новий сезон з'являється
-      автоматично без ручного
-      редагування цієї сторінки.
-    </div>
+    <!-- ЗАВЕРШЕНІ СЕЗОНИ -->
+
+    <section
+      id="completedSeasons"
+      class="completed-seasons"
+      hidden
+    >
+
+      <h2 class="completed-title">
+        Завершені сезони
+      </h2>
+
+      <div
+        id="completedGrid"
+        class="completed-grid"
+      ></div>
+
+    </section>
 
   </section>
 
@@ -981,34 +775,44 @@
   src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
 ></script>
 
-
 <script
-  src="../assets/js/config.js?v=20260915-1"
+  src="../assets/js/config.js?v=20260915-2"
 ></script>
 
 <script
-  src="../assets/js/firebase-init.js?v=20260915-2"
+  src="../assets/js/firebase-init.js?v=20260915-3"
 ></script>
 
 
 <!-- ======================================================
-     ARCHIVE YEARS
+     SEASONS
      ====================================================== -->
 
 <script>
 
-(async function () {
+(async function(){
 
   "use strict";
 
 
-  // =======================================================
-  // DOM
-  // =======================================================
-
-  const grid =
+  const currentWrap =
     document.getElementById(
-      "seasonsGrid"
+      "currentSeasonWrap"
+    );
+
+  const currentEmpty =
+    document.getElementById(
+      "currentSeasonEmpty"
+    );
+
+  const completedSection =
+    document.getElementById(
+      "completedSeasons"
+    );
+
+  const completedGrid =
+    document.getElementById(
+      "completedGrid"
     );
 
   const status =
@@ -1016,76 +820,42 @@
       "archiveStatus"
     );
 
-  const empty =
-    document.getElementById(
-      "archiveEmpty"
-    );
-
 
   // =======================================================
   // HELPERS
   // =======================================================
 
-  function esc(value) {
+  function esc(value){
 
     return String(
       value ?? ""
     ).replace(
       /[&<>"']/g,
       char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#39;"
       }[char])
     );
 
   }
 
 
-  function num(value) {
+  function num(value){
 
     const n =
-      Number(
-        value
-      );
+      Number(value);
 
-    return Number.isFinite(
-      n
-    )
+    return Number.isFinite(n)
       ? n
       : 0;
 
   }
 
 
-  function fmtWeight(value) {
-
-    const n =
-      num(
-        value
-      );
-
-    if (
-      n <= 0
-    ) {
-      return "";
-    }
-
-    return n
-      .toFixed(2)
-      .replace(
-        /\.?0+$/,
-        ""
-      );
-
-  }
-
-
-  function normalizeYear(
-    value
-  ) {
+  function normalizeYear(value){
 
     const raw =
       String(
@@ -1108,17 +878,15 @@
   // FIREBASE READY
   // =======================================================
 
-  try {
+  try{
 
-    if (
+    if(
       window.scReady
-    ) {
+    ){
       await window.scReady;
     }
 
-  } catch (
-    error
-  ) {
+  }catch(error){
 
     console.error(
       "[Archive Index] Firebase:",
@@ -1132,13 +900,9 @@
     window.scDb;
 
 
-  if (
-    !db
-  ) {
+  if(!db){
 
-    if (
-      status
-    ) {
+    if(status){
 
       status.textContent =
         "Не вдалося підключитися до Firestore.";
@@ -1154,79 +918,54 @@
 
 
   // =======================================================
-  // SEASONS MAP
+  // SEASONS
   // =======================================================
 
   const seasons =
     new Map();
 
 
-  function ensureSeason(
-    year
-  ) {
+  function ensureSeason(year){
 
     const y =
-      normalizeYear(
-        year
-      );
+      normalizeYear(year);
 
-    if (
-      !y
-    ) {
+    if(!y){
       return null;
     }
 
-    if (
-      !seasons.has(
-        y
-      )
-    ) {
+    if(
+      !seasons.has(y)
+    ){
 
       seasons.set(
         y,
         {
-          year:
-            y,
+          year:y,
 
-          archived:
-            false,
+          hasRating:false,
+          ratingArchived:false,
 
-          hasRating:
-            false,
+          hasArchive:false,
 
-          hasArchive:
-            false,
-
-          stagesCount:
-            0,
-
-          finalistsCount:
-            0,
-
-          bigFish:
-            0,
-
-          winner:
-            ""
+          stagesCount:0
         }
       );
 
     }
 
-    return seasons.get(
-      y
-    );
+    return seasons.get(y);
 
   }
 
 
   // =======================================================
-  // LOAD CURRENT / WORKING SEASONS
+  // LOAD SEASON RATING
   // =======================================================
 
-  async function loadRatings() {
+  async function loadRatings(){
 
-    try {
+    try{
 
       const snap =
         await db
@@ -1236,68 +975,55 @@
           .get();
 
 
-      snap.forEach(
-        doc => {
+      snap.forEach(doc => {
 
-          const data =
-            doc.data() ||
-            {};
+        const data =
+          doc.data() ||
+          {};
 
-          const year =
-            normalizeYear(
-              data.seasonYear ||
-              doc.id
+        const year =
+          normalizeYear(
+            data.seasonYear ||
+            doc.id
+          );
+
+        const item =
+          ensureSeason(year);
+
+        if(!item){
+          return;
+        }
+
+
+        item.hasRating =
+          true;
+
+
+        item.ratingArchived =
+          data.archived ===
+          true;
+
+
+        if(
+          Array.isArray(
+            data.archivedStages
+          )
+        ){
+
+          item.stagesCount =
+            Math.max(
+              item.stagesCount,
+              data.archivedStages.length
             );
-
-          const item =
-            ensureSeason(
-              year
-            );
-
-          if (
-            !item
-          ) {
-            return;
-          }
-
-
-          item.hasRating =
-            true;
-
-
-          if (
-            data.archived ===
-            true
-          ) {
-            item.archived =
-              true;
-          }
-
-
-          if (
-            Array.isArray(
-              data.archivedStages
-            )
-          ) {
-
-            item.stagesCount =
-              Math.max(
-                item.stagesCount,
-                data
-                  .archivedStages
-                  .length
-              );
-
-          }
 
         }
-      );
+
+      });
+
 
       return true;
 
-    } catch (
-      error
-    ) {
+    }catch(error){
 
       console.warn(
         "[Archive Index] seasonRating:",
@@ -1312,12 +1038,12 @@
 
 
   // =======================================================
-  // LOAD FINISHED ARCHIVES
+  // LOAD ARCHIVES
   // =======================================================
 
-  async function loadArchives() {
+  async function loadArchives(){
 
-    try {
+    try{
 
       const snap =
         await db
@@ -1327,126 +1053,54 @@
           .get();
 
 
-      snap.forEach(
-        doc => {
+      snap.forEach(doc => {
 
-          const data =
-            doc.data() ||
-            {};
+        const data =
+          doc.data() ||
+          {};
 
-          const year =
-            normalizeYear(
-              data.seasonYear ||
-              doc.id
-            );
+        const year =
+          normalizeYear(
+            data.seasonYear ||
+            doc.id
+          );
 
-          const item =
-            ensureSeason(
-              year
-            );
+        const item =
+          ensureSeason(year);
 
-          if (
-            !item
-          ) {
-            return;
-          }
+        if(!item){
+          return;
+        }
 
 
-          item.hasArchive =
-            true;
-
-          item.archived =
-            (
-              String(
-                data.status ||
-                ""
-              )
-                .trim()
-                .toLowerCase() ===
-                "archived"
-            ) ||
-            data.archived ===
-              true ||
-            true;
+        item.hasArchive =
+          true;
 
 
-          const archiveStages =
-            Array.isArray(
-              data.stages
-            )
-              ? data.stages
-              : [];
+        const stages =
+          Array.isArray(
+            data.stages
+          )
+            ? data.stages
+            : [];
 
 
-          item.stagesCount =
+        item.stagesCount =
+          Math.max(
+            item.stagesCount,
+
             num(
               data.stagesCount
             ) ||
-            archiveStages.length ||
-            item.stagesCount;
+            stages.length
+          );
 
+      });
 
-          item.finalistsCount =
-            num(
-              data.finalistsCount
-            ) ||
-            (
-              Array.isArray(
-                data.ranking
-              )
-                ? data.ranking
-                    .length
-                : 0
-            );
-
-
-          item.bigFish =
-            num(
-              data.bigFish
-                ?.weight
-            );
-
-
-          const podium =
-            Array.isArray(
-              data.podium
-            )
-              ? data.podium
-              : [];
-
-
-          const winner =
-            podium.find(
-              row =>
-                num(
-                  row.place
-                ) === 1
-            ) ||
-            podium[0] ||
-            null;
-
-
-          if (
-            winner
-          ) {
-
-            item.winner =
-              String(
-                winner.team ||
-                winner.teamName ||
-                ""
-              ).trim();
-
-          }
-
-        }
-      );
 
       return true;
 
-    } catch (
-      error
-    ) {
+    }catch(error){
 
       console.warn(
         "[Archive Index] seasonArchives:",
@@ -1461,336 +1115,253 @@
 
 
   // =======================================================
-  // LOAD
+  // LOAD ALL
   // =======================================================
 
-  const results =
+  const loadResults =
     await Promise.all([
       loadRatings(),
       loadArchives()
     ]);
 
 
-  const anyReadSucceeded =
-    results.some(
-      Boolean
-    );
+  const readSucceeded =
+    loadResults.some(Boolean);
 
 
-  // =======================================================
-  // BUILD ARRAY
-  // =======================================================
-
-  const items =
+  const allSeasons =
     [
       ...seasons.values()
-    ]
-      .filter(
-        item =>
-          item.year
+    ];
+
+
+  // =======================================================
+  // CURRENT SEASON
+  // =======================================================
+
+  /*
+   * Поточний сезон:
+   *
+   * є seasonRating/{year}
+   * і він ще НЕ archived.
+   *
+   * Якщо випадково є кілька —
+   * показуємо найновіший.
+   */
+  const currentSeasons =
+    allSeasons
+      .filter(item =>
+        item.hasRating &&
+        !item.ratingArchived &&
+        !item.hasArchive
       )
       .sort(
-        (
-          a,
-          b
-        ) =>
-          Number(
-            b.year
-          ) -
-          Number(
-            a.year
-          )
+        (a,b) =>
+          Number(b.year) -
+          Number(a.year)
+      );
+
+
+  const currentSeason =
+    currentSeasons[0] ||
+    null;
+
+
+  // =======================================================
+  // ARCHIVED SEASONS
+  // =======================================================
+
+  /*
+   * Завершений сезон показуємо
+   * ТІЛЬКИ коли реально є:
+   *
+   * seasonArchives/{year}
+   */
+  const archivedSeasons =
+    allSeasons
+      .filter(
+        item =>
+          item.hasArchive ===
+          true
+      )
+      .sort(
+        (a,b) =>
+          Number(b.year) -
+          Number(a.year)
       );
 
 
   // =======================================================
-  // EMPTY
+  // CURRENT RENDER
   // =======================================================
 
-  if (
-    !items.length
-  ) {
+  if(currentSeason){
 
-    if (
-      grid
-    ) {
-      grid.innerHTML =
-        "";
-    }
+    currentEmpty.hidden =
+      true;
 
 
-    if (
-      empty
-    ) {
-      empty.hidden =
-        false;
-    }
+    currentWrap.innerHTML = `
+      <a
+        class="season-card"
+        href="season.html?year=${encodeURIComponent(
+          currentSeason.year
+        )}"
+      >
+
+        <div class="season-top">
+
+          <div class="season-status-row">
+
+            <div class="season-label">
+              STOLAR CARP
+            </div>
+
+            <div class="season-badge">
+              Поточний сезон
+            </div>
+
+          </div>
 
 
-    if (
-      status
-    ) {
+          <div class="season-year">
+            Сезон ${esc(
+              currentSeason.year
+            )}
+          </div>
+
+
+          <div class="season-desc">
+            Результати етапів
+            поточного сезону.
+          </div>
+
+
+          ${
+            currentSeason.stagesCount > 0
+              ? `
+                <div class="season-stats">
+
+                  <span class="season-stat">
+                    Етапів:
+                    <strong>
+                      ${esc(
+                        currentSeason.stagesCount
+                      )}
+                    </strong>
+                  </span>
+
+                </div>
+              `
+              : ""
+          }
+
+        </div>
+
+
+        <div class="season-btn">
+          Відкрити сезон →
+        </div>
+
+      </a>
+    `;
+
+  }else{
+
+    currentWrap.innerHTML =
+      "";
+
+    currentEmpty.hidden =
+      false;
+
+  }
+
+
+  // =======================================================
+  // ARCHIVED RENDER
+  // =======================================================
+
+  if(
+    archivedSeasons.length
+  ){
+
+    completedSection.hidden =
+      false;
+
+
+    completedGrid.innerHTML =
+      archivedSeasons
+        .map(
+          item => `
+            <a
+              class="completed-season"
+              href="season.html?year=${encodeURIComponent(
+                item.year
+              )}"
+              aria-label="Відкрити сезон ${esc(
+                item.year
+              )}"
+            >
+              <span class="completed-year">
+                ${esc(
+                  item.year
+                )}
+              </span>
+            </a>
+          `
+        )
+        .join("");
+
+  }else{
+
+    completedSection.hidden =
+      true;
+
+    completedGrid.innerHTML =
+      "";
+
+  }
+
+
+  // =======================================================
+  // STATUS
+  // =======================================================
+
+  if(status){
+
+    if(
+      currentSeason
+    ){
 
       status.textContent =
-        anyReadSucceeded
-          ? "Завершених або активних сезонів ще немає."
-          : "Не вдалося прочитати список сезонів.";
+        `Поточних сезонів: 1`;
 
       status.className =
-        anyReadSucceeded
+        "archive-status is-ok";
+
+    }else if(
+      archivedSeasons.length
+    ){
+
+      status.textContent =
+        "Поточний сезон завершено.";
+
+      status.className =
+        "archive-status";
+
+    }else{
+
+      status.textContent =
+        readSucceeded
+          ? "Сезонів поки немає."
+          : "Не вдалося прочитати сезони.";
+
+      status.className =
+        readSucceeded
           ? "archive-status"
           : "archive-status is-error";
 
     }
-
-    return;
-
-  }
-
-
-  if (
-    empty
-  ) {
-    empty.hidden =
-      true;
-  }
-
-
-  // =======================================================
-  // RENDER
-  // =======================================================
-
-  grid.innerHTML =
-    items
-      .map(
-        item => {
-
-          const archived =
-            item.archived ||
-            item.hasArchive;
-
-
-          const statusLabel =
-            archived
-              ? "Завершений сезон"
-              : "Поточний сезон";
-
-
-          const labelClass =
-            archived
-              ? "season-badge--archived"
-              : "season-badge--active";
-
-
-          const cardClass =
-            archived
-              ? ""
-              : "season-card--active";
-
-
-          const stats =
-            [];
-
-
-          if (
-            item.stagesCount >
-            0
-          ) {
-
-            stats.push(
-              `
-                <span class="season-stat">
-                  Етапів:
-                  <strong>
-                    ${esc(
-                      item.stagesCount
-                    )}
-                  </strong>
-                </span>
-              `
-            );
-
-          }
-
-
-          if (
-            item.finalistsCount >
-            0
-          ) {
-
-            stats.push(
-              `
-                <span class="season-stat">
-                  Фіналістів:
-                  <strong>
-                    ${esc(
-                      item.finalistsCount
-                    )}
-                  </strong>
-                </span>
-              `
-            );
-
-          }
-
-
-          const bigFish =
-            fmtWeight(
-              item.bigFish
-            );
-
-
-          if (
-            bigFish
-          ) {
-
-            stats.push(
-              `
-                <span class="season-stat">
-                  BIG:
-                  <strong class="season-big">
-                    ${esc(
-                      bigFish
-                    )} кг
-                  </strong>
-                </span>
-              `
-            );
-
-          }
-
-
-          let description =
-            archived
-              ? "Етапи, Фінал, підсумковий рейтинг та призери сезону."
-              : "Результати етапів поточного сезону.";
-
-
-          if (
-            archived &&
-            item.winner
-          ) {
-
-            description +=
-              ` Переможець: ${item.winner}.`;
-
-          }
-
-
-          return `
-            <a
-              class="
-                season-card
-                ${cardClass}
-              "
-              href="season.html?year=${encodeURIComponent(
-                item.year
-              )}"
-            >
-
-              <div class="season-top">
-
-                <div class="season-status-row">
-
-                  <div class="season-label">
-                    STOLAR CARP
-                  </div>
-
-                  <div
-                    class="
-                      season-badge
-                      ${labelClass}
-                    "
-                  >
-                    ${esc(
-                      statusLabel
-                    )}
-                  </div>
-
-                </div>
-
-
-                <div class="season-year">
-                  Сезон ${esc(
-                    item.year
-                  )}
-                </div>
-
-
-                <div class="season-desc">
-                  ${esc(
-                    description
-                  )}
-                </div>
-
-
-                ${
-                  stats.length
-                    ? `
-                      <div class="season-stats">
-                        ${stats.join("")}
-                      </div>
-                    `
-                    : ""
-                }
-
-              </div>
-
-
-              <div class="season-btn">
-                Відкрити сезон →
-              </div>
-
-            </a>
-          `;
-
-        }
-      )
-      .join("");
-
-
-  if (
-    status
-  ) {
-
-    const archivedCount =
-      items.filter(
-        item =>
-          item.archived ||
-          item.hasArchive
-      ).length;
-
-
-    const activeCount =
-      items.length -
-      archivedCount;
-
-
-    if (
-      archivedCount &&
-      activeCount
-    ) {
-
-      status.textContent =
-        `Сезонів: ${items.length} · завершених: ${archivedCount} · поточних: ${activeCount}`;
-
-    } else if (
-      archivedCount
-    ) {
-
-      status.textContent =
-        `Збережено сезонів: ${archivedCount}`;
-
-    } else {
-
-      status.textContent =
-        `Поточних сезонів: ${activeCount}`;
-
-    }
-
-
-    status.className =
-      "archive-status is-ok";
 
   }
 
@@ -1820,10 +1391,10 @@ document.addEventListener(
       );
 
 
-    if (
+    if(
       !burger ||
       !nav
-    ) {
+    ){
       return;
     }
 
@@ -1856,13 +1427,13 @@ document.addEventListener(
       "click",
       event => {
 
-        if (
+        if(
           event.target
             .classList
             .contains(
               "nav__link"
             )
-        ) {
+        ){
 
           nav.classList.remove(
             "active",

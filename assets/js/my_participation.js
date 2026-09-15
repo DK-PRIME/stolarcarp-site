@@ -6,13 +6,16 @@
 // ✅ SOLO — показує тільки особисту заявку користувача
 // ✅ SOLO не залежить від teamId
 // ✅ Користувач без команди теж бачить свої SOLO заявки
-// ✅ participantName для SOLO
-// ✅ teamName для TEAM
+// ✅ "Учасник" НЕ вважається справжнім ім'ям
+// ✅ SOLO ім'я береться з registration/public_participants або профілю
+// ✅ Legacy SOLO з entryType:"team" правильно визначається через competition
+// ✅ Stalker Solo -> SOLO
+// ✅ Stalker Teams -> TEAM
+// ✅ Final -> TEAM
 // ✅ Показує тільки поточні та майбутні змагання
 // ✅ Завершені етапи автоматично зникають
 // ✅ Нічого не видаляє з Firestore
 // ✅ Якщо дати немає — запис не ховається
-// ✅ Підтримка старих TEAM записів без entryType
 
 (function () {
   "use strict";
@@ -112,7 +115,12 @@
   function norm(v) {
     return String(
       v ?? ""
-    ).trim();
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
   }
 
   function normLower(v) {
@@ -159,9 +167,276 @@
 
     return (
       s === "confirmed" ||
-      s === "paid"
+      s === "paid" ||
+      s === "payment_confirmed"
     );
   }
+
+  // =========================================================
+  // PERSON NAME
+  // =========================================================
+
+  function isPlaceholderPersonName(
+    value
+  ) {
+    const raw =
+      normLower(
+        value
+      );
+
+    if (!raw) {
+      return true;
+    }
+
+    if (
+      [
+        "—",
+        "-",
+        "учасник",
+        "учасниця",
+        "participant",
+        "user",
+        "користувач",
+        "невідомо",
+        "unknown",
+        "команда",
+        "team"
+      ].includes(raw)
+    ) {
+      return true;
+    }
+
+    if (
+      /^учасник\s*\d*$/i.test(
+        raw
+      )
+    ) {
+      return true;
+    }
+
+    if (
+      /^participant\s*\d*$/i.test(
+        raw
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function validPersonName(
+    value,
+    teamName = ""
+  ) {
+    const name =
+      norm(
+        value
+      );
+
+    const team =
+      norm(
+        teamName
+      );
+
+    if (
+      isPlaceholderPersonName(
+        name
+      )
+    ) {
+      return "";
+    }
+
+    if (
+      team &&
+      normLower(name) ===
+        normLower(team)
+    ) {
+      return "";
+    }
+
+    return name;
+  }
+
+  function personNameFromObject(
+    data
+  ) {
+    const d =
+      data ||
+      {};
+
+    const firstName =
+      validPersonName(
+        d.firstName
+      );
+
+    const lastName =
+      validPersonName(
+        d.lastName
+      );
+
+    if (
+      firstName &&
+      lastName
+    ) {
+      return (
+        `${firstName} ${lastName}`
+      );
+    }
+
+    const teamName =
+      norm(
+        d.teamName ||
+        d.team ||
+        ""
+      );
+
+    const candidates = [
+      d.participantName,
+      d.fullName,
+      d.userName,
+      d.name,
+      d.displayName,
+      d.captain
+    ];
+
+    for (
+      const candidate
+      of candidates
+    ) {
+      const name =
+        validPersonName(
+          candidate,
+          teamName
+        );
+
+      if (name) {
+        return name;
+      }
+    }
+
+    return "";
+  }
+
+  /*
+   * Роман Дячок
+   * -> Дячок Роман
+   *
+   * Олександр Коваленко
+   * -> Коваленко О.
+   */
+  function formatSoloName(
+    value,
+    maxChars = 20
+  ) {
+    const raw =
+      norm(
+        value
+      );
+
+    if (
+      !raw ||
+      isPlaceholderPersonName(
+        raw
+      )
+    ) {
+      return "Учасник";
+    }
+
+    const parts =
+      raw
+        .split(" ")
+        .filter(Boolean);
+
+    if (
+      parts.length < 2
+    ) {
+      return raw;
+    }
+
+    const firstName =
+      parts[0];
+
+    const lastName =
+      parts[
+        parts.length - 1
+      ];
+
+    const full =
+      `${lastName} ${firstName}`;
+
+    if (
+      full.length <=
+      maxChars
+    ) {
+      return full;
+    }
+
+    const initial =
+      firstName
+        .charAt(0)
+        .toUpperCase();
+
+    return initial
+      ? `${lastName} ${initial}.`
+      : lastName;
+  }
+
+  function resolveSoloIdentityName(
+    row
+  ) {
+    /*
+     * 1. Спочатку сама заявка.
+     */
+    const fromRow =
+      personNameFromObject(
+        row
+      );
+
+    if (
+      fromRow
+    ) {
+      return fromRow;
+    }
+
+    /*
+     * 2. Це сторінка "Моя участь",
+     * тому можемо брати ПІБ
+     * поточного користувача.
+     */
+    const fromProfile =
+      personNameFromObject(
+        currentProfile ||
+        {}
+      );
+
+    if (
+      fromProfile
+    ) {
+      return fromProfile;
+    }
+
+    /*
+     * 3. Email тільки як
+     * аварійний fallback.
+     */
+    const email =
+      norm(
+        currentUser?.email
+      );
+
+    if (
+      email
+    ) {
+      return email;
+    }
+
+    return "Учасник";
+  }
+
+  // =========================================================
+  // TIME
+  // =========================================================
 
   function toMillis(v) {
     if (!v) {
@@ -223,7 +498,6 @@
     }
 
     try {
-      // Firestore Timestamp
       if (
         typeof v.toDate ===
         "function"
@@ -231,7 +505,9 @@
         const d =
           v.toDate();
 
-        if (endOfDay) {
+        if (
+          endOfDay
+        ) {
           d.setHours(
             23,
             59,
@@ -243,7 +519,6 @@
         return d.getTime();
       }
 
-      // Date
       if (
         v instanceof Date
       ) {
@@ -252,7 +527,9 @@
             v.getTime()
           );
 
-        if (endOfDay) {
+        if (
+          endOfDay
+        ) {
           d.setHours(
             23,
             59,
@@ -264,7 +541,6 @@
         return d.getTime();
       }
 
-      // Number timestamp
       if (
         typeof v ===
         "number"
@@ -280,7 +556,9 @@
           return 0;
         }
 
-        if (endOfDay) {
+        if (
+          endOfDay
+        ) {
           d.setHours(
             23,
             59,
@@ -309,7 +587,9 @@
             /^(\d{4})-(\d{2})-(\d{2})$/
           );
 
-        if (isoDate) {
+        if (
+          isoDate
+        ) {
           const year =
             Number(
               isoDate[1]
@@ -355,7 +635,9 @@
             /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/
           );
 
-        if (ukDate) {
+        if (
+          ukDate
+        ) {
           const day =
             Number(
               ukDate[1]
@@ -403,7 +685,9 @@
             parsed.getTime()
           )
         ) {
-          if (endOfDay) {
+          if (
+            endOfDay
+          ) {
             parsed.setHours(
               23,
               59,
@@ -459,10 +743,74 @@
   // ENTRY TYPE
   // =========================================================
 
+  function normalizeFormat(
+    value
+  ) {
+    return normLower(
+      value
+    )
+      .replace(
+        /\s+/g,
+        ""
+      )
+      .replace(
+        /_/g,
+        "-"
+      );
+  }
+
+  function isFinalMeta(
+    event,
+    stageId
+  ) {
+    const key =
+      normLower(
+        event?.key ||
+        event?.stageId ||
+        event?.id ||
+        stageId ||
+        ""
+      );
+
+    const title =
+      normLower(
+        `${
+          event?.title || ""
+        } ${
+          event?.name || ""
+        } ${
+          event?.label || ""
+        }`
+      );
+
+    return (
+      event?.isFinal === true ||
+      key === "final" ||
+      key.includes("final") ||
+      key.includes("фінал") ||
+      title.includes("final") ||
+      title.includes("фінал")
+    );
+  }
+
   function entryTypeFromCompetition(
     event,
-    competition
+    competition,
+    stageId = ""
   ) {
+    /*
+     * Поточна логіка фіналу —
+     * TEAM.
+     */
+    if (
+      isFinalMeta(
+        event,
+        stageId
+      )
+    ) {
+      return "team";
+    }
+
     const explicitType =
       normLower(
         event?.entryType ||
@@ -478,8 +826,9 @@
     }
 
     const format =
-      normLower(
+      normalizeFormat(
         event?.format ||
+        event?.engine?.baseFormat ||
         competition?.format ||
         competition?.engine?.baseFormat ||
         ""
@@ -574,17 +923,26 @@
     const db =
       window.scDb;
 
-    let compTitle = "";
-    let stageTitle = "";
+    let compTitle =
+      "";
 
-    let startMillis = 0;
-    let endMillis = 0;
+    let stageTitle =
+      "";
+
+    let startMillis =
+      0;
+
+    let endMillis =
+      0;
 
     let entryType =
       "team";
 
     let format =
       "classic";
+
+    let isFinal =
+      false;
 
     try {
       const cSnap =
@@ -631,23 +989,33 @@
                 evId === st
               );
             }
+          ) || null;
+
+        isFinal =
+          isFinalMeta(
+            ev,
+            st
           );
 
         entryType =
           entryTypeFromCompetition(
-            ev || null,
-            c
+            ev,
+            c,
+            st
           );
 
         format =
-          normLower(
+          normalizeFormat(
             ev?.format ||
+            ev?.engine?.baseFormat ||
             c.format ||
             c.engine?.baseFormat ||
             "classic"
           );
 
-        if (ev) {
+        if (
+          ev
+        ) {
           stageTitle =
             norm(
               ev.title ||
@@ -723,7 +1091,8 @@
       endMillis,
 
       entryType,
-      format
+      format,
+      isFinal
     };
 
     metaCache[key] =
@@ -748,7 +1117,8 @@
         stage
       )
     ) {
-      stage = "";
+      stage =
+        "";
     }
 
     if (
@@ -764,7 +1134,9 @@
           /\d+/
         );
 
-      if (m) {
+      if (
+        m
+      ) {
         stage =
           `Етап ${m[0]}`;
       }
@@ -806,10 +1178,6 @@
       );
     }
 
-    /*
-     * Якщо дат немає —
-     * запис не ховаємо.
-     */
     return true;
   }
 
@@ -817,12 +1185,62 @@
   // ROW HELPERS
   // =========================================================
 
-  function rowEntryType(row) {
-    return normLower(
-      row?.entryType
-    ) === "solo"
+  function rowEntryType(
+    row
+  ) {
+    return (
+      normLower(
+        row?.entryType
+      ) === "solo"
+    )
       ? "solo"
       : "team";
+  }
+
+  function rowUid(
+    row
+  ) {
+    if (
+      !row
+    ) {
+      return "";
+    }
+
+    const direct =
+      norm(
+        row.uid ||
+        row.participantUid ||
+        row.userId ||
+        row.registeredByUid ||
+        ""
+      );
+
+    if (
+      direct
+    ) {
+      return direct;
+    }
+
+    const docId =
+      norm(
+        row.id
+      );
+
+    if (
+      docId.includes(
+        "__solo__"
+      )
+    ) {
+      return norm(
+        docId
+          .split(
+            "__solo__"
+          )
+          .pop()
+      );
+    }
+
+    return "";
   }
 
   function rowTime(row) {
@@ -837,7 +1255,9 @@
     oldRow,
     newRow
   ) {
-    if (!oldRow) {
+    if (
+      !oldRow
+    ) {
       return newRow;
     }
 
@@ -866,8 +1286,12 @@
     }
 
     return (
-      rowTime(newRow) >
-      rowTime(oldRow)
+      rowTime(
+        newRow
+      ) >
+      rowTime(
+        oldRow
+      )
     )
       ? newRow
       : oldRow;
@@ -877,7 +1301,9 @@
   // RENDER
   // =========================================================
 
-  function renderItems(items) {
+  function renderItems(
+    items
+  ) {
     if (
       !items ||
       items.length === 0
@@ -889,7 +1315,8 @@
       return;
     }
 
-    let html = "";
+    let html =
+      "";
 
     items.forEach(
       it => {
@@ -904,7 +1331,9 @@
             : "#ef4444";
 
         const entryType =
-          rowEntryType(it);
+          rowEntryType(
+            it
+          );
 
         const isSolo =
           entryType ===
@@ -915,32 +1344,33 @@
             ? "Учасник"
             : "Команда";
 
-        const identityName =
+        let identityName =
+          "";
+
+        if (
           isSolo
-            ? (
-                norm(
-                  it.participantName
-                ) ||
-                norm(
-                  it.displayName
-                ) ||
-                norm(
-                  currentProfile?.fullName
-                ) ||
-                norm(
-                  currentUser?.email
-                ) ||
-                "—"
-              )
-            : (
-                norm(
-                  it.teamName
-                ) ||
-                norm(
-                  it.displayName
-                ) ||
-                "—"
-              );
+        ) {
+          const rawName =
+            resolveSoloIdentityName(
+              it
+            );
+
+          identityName =
+            formatSoloName(
+              rawName,
+              20
+            );
+
+        } else {
+          identityName =
+            norm(
+              it.teamName
+            ) ||
+            norm(
+              it.displayName
+            ) ||
+            "—";
+        }
 
         html += `
           <div
@@ -999,10 +1429,18 @@
                   "
                 >
                   ${esc(identityLabel)}:
+
                   <strong
                     style="
                       color:#e5e7eb;
                     "
+                    title="${esc(
+                      isSolo
+                        ? resolveSoloIdentityName(
+                            it
+                          )
+                        : identityName
+                    )}"
                   >
                     ${esc(identityName)}
                   </strong>
@@ -1025,6 +1463,7 @@
                   "
                 >
                   Статус:
+
                   <strong
                     style="
                       color:${
@@ -1091,11 +1530,10 @@
       return;
     }
 
-    const combined =
-      [
-        ...teamRows,
-        ...soloRows
-      ];
+    const combined = [
+      ...teamRows,
+      ...soloRows
+    ];
 
     if (
       !combined.length
@@ -1108,7 +1546,7 @@
     }
 
     // =====================================================
-    // DEDUPE BY DOCUMENT ID
+    // DEDUPE SAME FIRESTORE DOCUMENT
     // =====================================================
 
     const byDocId =
@@ -1123,26 +1561,38 @@
           return;
         }
 
-        byDocId[row.id] =
+        byDocId[
+          row.id
+        ] =
           chooseBetterRow(
-            byDocId[row.id],
+            byDocId[
+              row.id
+            ],
             row
           );
       }
     );
 
-    const rows =
+    const rawRows =
       Object.values(
         byDocId
       );
 
+    const rows =
+      [];
+
     // =====================================================
-    // LOAD COMPETITION META
+    // LOAD META + NORMALIZE
     // =====================================================
 
     for (
-      const it of rows
+      const sourceRow
+      of rawRows
     ) {
+      const it = {
+        ...sourceRow
+      };
+
       const compId =
         norm(
           it.competitionId
@@ -1151,9 +1601,12 @@
       const stageId =
         norm(
           it.stageId
-        ) || "main";
+        ) ||
+        "main";
 
-      if (!compId) {
+      if (
+        !compId
+      ) {
         continue;
       }
 
@@ -1189,63 +1642,117 @@
         meta.endMillis ||
         0;
 
+      it.format =
+        meta.format ||
+        it.format ||
+        "classic";
+
+      it.isFinal =
+        meta.isFinal ===
+        true;
+
       /*
-       * Якщо entryType відсутній
-       * у старому public document —
-       * беремо його зі competition.
+       * КЛЮЧОВА ЗМІНА.
        *
-       * Якщо entryType уже є —
-       * довіряємо самій заявці.
+       * Competition/event —
+       * джерело істини.
+       *
+       * Якщо Stalker Solo:
+       * навіть старий документ
+       * entryType:"team"
+       * стає SOLO.
+       *
+       * Final примусово TEAM.
        */
-      if (
-        !norm(
+      it.entryType =
+        meta.entryType ||
+        norm(
           it.entryType
-        )
-      ) {
-        it.entryType =
-          meta.entryType ||
-          "team";
-      }
+        ) ||
+        "team";
 
       const isSolo =
-        rowEntryType(it) ===
-        "solo";
+        rowEntryType(
+          it
+        ) === "solo";
 
-      if (isSolo) {
+      if (
+        isSolo
+      ) {
+        const uid =
+          rowUid(
+            it
+          );
+
         /*
-         * SOLO:
-         * команда тут не використовується.
+         * У "Моя участь" SOLO
+         * показуємо ТІЛЬКИ
+         * поточного користувача.
+         *
+         * Це особливо важливо,
+         * якщо legacy SOLO документ
+         * ще має старий teamId.
          */
+        if (
+          !uid ||
+          uid !==
+            norm(
+              currentUser?.uid
+            )
+        ) {
+          continue;
+        }
+
+        it.uid =
+          uid;
+
         it.teamId =
           null;
 
         it.teamName =
           null;
 
-        it.participantName =
-          norm(
-            it.participantName
-          ) ||
-          norm(
-            it.displayName
-          ) ||
-          (
-            norm(it.uid) ===
-            norm(currentUser?.uid)
-              ? (
-                  norm(
-                    currentProfile?.fullName
-                  ) ||
-                  norm(
-                    currentUser?.email
-                  )
-                )
-              : ""
+        let participantName =
+          personNameFromObject(
+            it
           );
+
+        /*
+         * Якщо в public document:
+         *
+         * participantName: "Учасник"
+         *
+         * беремо ім'я з профілю.
+         */
+        if (
+          !participantName
+        ) {
+          participantName =
+            personNameFromObject(
+              currentProfile ||
+              {}
+            );
+        }
+
+        if (
+          !participantName
+        ) {
+          participantName =
+            norm(
+              currentUser?.email
+            );
+        }
+
+        it.participantName =
+          participantName ||
+          "Учасник";
+
+        it.displayName =
+          it.participantName;
 
       } else {
         /*
-         * TEAM.
+         * TEAM
          */
         it.teamName =
           norm(
@@ -1268,6 +1775,17 @@
 
       it.stageId =
         stageId;
+
+      rows.push(
+        it
+      );
+    }
+
+    if (
+      requestId !==
+      renderRequestId
+    ) {
+      return;
     }
 
     // =====================================================
@@ -1284,27 +1802,33 @@
             row.competitionId
           );
 
-        if (!compId) {
+        if (
+          !compId
+        ) {
           return;
         }
 
         const stageId =
           norm(
             row.stageId
-          ) || "main";
+          ) ||
+          "main";
 
         const entryType =
-          rowEntryType(row);
+          rowEntryType(
+            row
+          );
 
-        let identity = "";
+        let identity =
+          "";
 
         if (
           entryType ===
           "solo"
         ) {
           identity =
-            norm(
-              row.uid
+            rowUid(
+              row
             ) ||
             norm(
               currentUser?.uid
@@ -1320,15 +1844,27 @@
             );
         }
 
+        if (
+          !identity
+        ) {
+          identity =
+            row.id ||
+            "";
+        }
+
         const key =
           `${compId}||` +
           `${stageId}||` +
           `${entryType}||` +
           `${identity}`;
 
-        participationMap[key] =
+        participationMap[
+          key
+        ] =
           chooseBetterRow(
-            participationMap[key],
+            participationMap[
+              key
+            ],
             row
           );
       }
@@ -1393,7 +1929,8 @@
           );
 
         if (
-          ap !== bp
+          ap !==
+          bp
         ) {
           return ap
             ? -1
@@ -1427,9 +1964,14 @@
     db,
     teamId
   ) {
-    if (!teamId) {
-      teamRows = [];
-      teamLoaded = true;
+    if (
+      !teamId
+    ) {
+      teamRows =
+        [];
+
+      teamLoaded =
+        true;
 
       rebuildParticipation();
 
@@ -1437,11 +1979,16 @@
     }
 
     /*
-     * Не ставимо entryType == team
-     * у Firestore query.
+     * Не ставимо:
      *
-     * Так підтримуємо старі TEAM документи,
-     * де entryType ще могло бути відсутнє.
+     * entryType == team
+     *
+     * бо legacy документи
+     * можуть не мати entryType
+     * або мати старий team.
+     *
+     * Пізніше competition meta
+     * визначить правильний тип.
      */
     const unsub =
       db
@@ -1455,7 +2002,8 @@
         )
         .onSnapshot(
           qs => {
-            const rows = [];
+            const rows =
+              [];
 
             qs.forEach(
               d => {
@@ -1464,11 +2012,12 @@
                   {};
 
                 /*
-                 * SOLO сюди не повинно
-                 * потрапляти.
+                 * Новий canonical SOLO
+                 * сюди не потрібен:
+                 * він читається через UID.
                  *
-                 * Нові SOLO мають:
-                 * teamId = null.
+                 * Але legacy TEAM document
+                 * залишаємо.
                  */
                 if (
                   normLower(
@@ -1484,10 +2033,7 @@
 
                   ...data,
 
-                  entryType:
-                    norm(
-                      data.entryType
-                    ) ||
+                  _sourceQuery:
                     "team"
                 });
               }
@@ -1508,8 +2054,11 @@
               err
             );
 
-            teamRows = [];
-            teamLoaded = true;
+            teamRows =
+              [];
+
+            teamLoaded =
+              true;
 
             rebuildParticipation();
           }
@@ -1521,16 +2070,21 @@
   }
 
   // =========================================================
-  // SOLO SUBSCRIPTION
+  // SOLO / UID SUBSCRIPTION
   // =========================================================
 
   function subscribeSoloParticipation(
     db,
     uid
   ) {
-    if (!uid) {
-      soloRows = [];
-      soloLoaded = true;
+    if (
+      !uid
+    ) {
+      soloRows =
+        [];
+
+      soloLoaded =
+        true;
 
       rebuildParticipation();
 
@@ -1538,14 +2092,24 @@
     }
 
     /*
-     * SOLO шукаємо ПО UID.
+     * КЛЮЧОВА ЗМІНА.
      *
-     * Не по команді.
+     * Шукаємо ПО UID,
+     * але НЕ фільтруємо тут
+     * entryType === solo.
      *
-     * Тому два, три або десять
-     * учасників однієї команди
-     * можуть незалежно мати
-     * свої SOLO заявки.
+     * Чому?
+     *
+     * Старий Stalker Solo
+     * міг мати:
+     *
+     * entryType: "team"
+     *
+     * Але competition уже
+     * говорить, що це SOLO.
+     *
+     * Тип визначимо пізніше
+     * через competitions.
      */
     const unsub =
       db
@@ -1559,7 +2123,8 @@
         )
         .onSnapshot(
           qs => {
-            const rows = [];
+            const rows =
+              [];
 
             qs.forEach(
               d => {
@@ -1567,22 +2132,20 @@
                   d.data() ||
                   {};
 
-                if (
-                  normLower(
-                    data.entryType
-                  ) !== "solo"
-                ) {
-                  return;
-                }
-
                 rows.push({
                   id:
                     d.id,
 
                   ...data,
 
-                  entryType:
-                    "solo"
+                  uid:
+                    norm(
+                      data.uid
+                    ) ||
+                    uid,
+
+                  _sourceQuery:
+                    "uid"
                 });
               }
             );
@@ -1598,12 +2161,15 @@
 
           err => {
             console.warn(
-              "[my_participation] SOLO query:",
+              "[my_participation] UID query:",
               err
             );
 
-            soloRows = [];
-            soloLoaded = true;
+            soloRows =
+              [];
+
+            soloLoaded =
+              true;
 
             rebuildParticipation();
           }
@@ -1626,11 +2192,17 @@
 
     stopSubscriptions();
 
-    teamRows = [];
-    soloRows = [];
+    teamRows =
+      [];
 
-    teamLoaded = false;
-    soloLoaded = false;
+    soloRows =
+      [];
+
+    teamLoaded =
+      false;
+
+    soloLoaded =
+      false;
 
     showMuted(
       "Завантаження участі…"
@@ -1665,6 +2237,33 @@
         u.teamId
       );
 
+    const firstName =
+      norm(
+        u.firstName
+      );
+
+    const lastName =
+      norm(
+        u.lastName
+      );
+
+    let fullName =
+      "";
+
+    if (
+      firstName &&
+      lastName
+    ) {
+      fullName =
+        `${firstName} ${lastName}`;
+
+    } else {
+      fullName =
+        personNameFromObject(
+          u
+        );
+    }
+
     currentUser =
       user;
 
@@ -1677,10 +2276,13 @@
           user.email
         ),
 
+      firstName,
+
+      lastName,
+
       fullName:
+        fullName ||
         norm(
-          u.fullName ||
-          u.name ||
           user.email
         ),
 
@@ -1693,12 +2295,7 @@
     };
 
     /*
-     * TEAM:
-     * якщо користувач у команді —
-     * бачить заявку своєї команди.
-     *
-     * Якщо команди немає —
-     * TEAM просто пропускаємо.
+     * TEAM участь.
      */
     subscribeTeamParticipation(
       db,
@@ -1706,11 +2303,7 @@
     );
 
     /*
-     * SOLO:
-     * завжди перевіряємо UID.
-     *
-     * Навіть якщо користувач
-     * взагалі не входить у команду.
+     * SOLO / legacy SOLO.
      */
     subscribeSoloParticipation(
       db,
@@ -1742,13 +2335,21 @@
             currentProfile =
               null;
 
-            teamRows = [];
-            soloRows = [];
+            teamRows =
+              [];
 
-            teamLoaded = false;
-            soloLoaded = false;
+            soloRows =
+              [];
 
-            if (!user) {
+            teamLoaded =
+              false;
+
+            soloLoaded =
+              false;
+
+            if (
+              !user
+            ) {
               showMuted(
                 "Увійдіть у акаунт"
               );

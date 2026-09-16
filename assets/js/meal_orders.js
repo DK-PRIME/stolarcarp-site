@@ -1,27 +1,33 @@
 // assets/js/meal_orders.js
 // STOLAR CARP • Харчування 2 доби
+//
 // ✅ команди подають свої заявки
-// ✅ актуальний сектор береться з stageResults після жеребкування
-// ✅ побажання показуються у списку
-// ✅ окреме харчування для СУДДІВ — тільки admin
-// ✅ без подвійних click-handler'ів
-// ✅ готує безпечний public mirror для окремої апки харчування
+// ✅ сектор автоматично береться з stageResults після жеребкування
+// ✅ побажання видно під командою
+// ✅ СУДДІ завжди є окремим рядком
+// ✅ суддів редагує тільки admin
+// ✅ судді входять у загальний підсумок
+// ✅ public mirror для майбутньої meal-app
+// ✅ без подвійних click-handler
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-judges-public-app-v1");
+  console.log("✅ meal_orders.js LOADED v20260917-judges-v2");
 
   let ctx = window.scMealContext || null;
+
   let currentUser = null;
   let userTeamId = "";
   let userRole = "";
+
   let canManageMeals = false;
   let canManageJudges = false;
   let mealIsOpen = false;
 
   const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+
   const JUDGES_ID = "__judges__";
 
   const PAID_STATUSES = [
@@ -30,47 +36,57 @@
     "payment_confirmed"
   ];
 
-  const $ = (id) => document.getElementById(id);
+  const $ = id =>
+    document.getElementById(id);
 
-  const esc = (s) =>
-    String(s ?? "").replace(/[&<>"']/g, (m) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[m]));
-
-  const norm = (v) =>
-    String(v ?? "")
+  const norm = value =>
+    String(value ?? "")
       .replace(/\s+/g, " ")
       .trim();
 
-  const clean = (v) =>
-    norm(v).toLowerCase();
+  const clean = value =>
+    norm(value).toLowerCase();
 
-  function num(v) {
-    const n = Number(v);
+  const esc = value =>
+    String(value ?? "").replace(
+      /[&<>"']/g,
+      char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char])
+    );
+
+  function num(value) {
+    const n = Number(value);
 
     return Number.isFinite(n) && n > 0
       ? Math.floor(n)
       : 0;
   }
 
-  function safeId(v) {
-    return String(v || "").replace(/[\/#?\[\]]/g, "_");
+  function safeId(value) {
+    return String(value || "")
+      .replace(/[\/#?\[\]]/g, "_");
   }
 
-  function orderId(compId, stageId, entityId) {
-    return safeId(`${compId}__${stageId}__${entityId}`);
-  }
-
-  function stageResultsId(compId, stageId) {
-    return `${norm(compId)}__${norm(stageId) || "main"}`;
+  function orderId(
+    competitionId,
+    stageId,
+    entityId
+  ) {
+    return safeId(
+      `${competitionId}__${stageId}__${entityId}`
+    );
   }
 
   function mealSettingsId() {
-    if (!ctx?.competitionId || !ctx?.stageId) {
+    if (
+      !ctx?.competitionId ||
+      !ctx?.stageId
+    ) {
       return "";
     }
 
@@ -79,12 +95,38 @@
     );
   }
 
-  function setStatus(text, ok = true) {
+  function stageResultsId(
+    competitionId,
+    stageId
+  ) {
+    return (
+      `${norm(competitionId)}__` +
+      `${norm(stageId) || "main"}`
+    );
+  }
+
+  function totalOrder(order) {
+    return (
+      num(order?.day1?.lunch) +
+      num(order?.day1?.dinner) +
+      num(order?.day1?.breakfast) +
+      num(order?.day2?.lunch) +
+      num(order?.day2?.dinner) +
+      num(order?.day2?.breakfast)
+    );
+  }
+
+  // =========================================================
+  // UI
+  // =========================================================
+
+  function setStatus(
+    text,
+    ok = true
+  ) {
     const el = $("mealStatus");
 
-    if (!el) {
-      return;
-    }
+    if (!el) return;
 
     el.textContent = text || "";
 
@@ -92,48 +134,66 @@
       "mealStatus " +
       (
         text
-          ? (ok ? "ok" : "err")
+          ? ok
+            ? "ok"
+            : "err"
           : ""
       );
   }
 
-  function setPopupStatus(text, ok = true) {
-    const el = $("mealPopupStatus");
+  function setPopupStatus(
+    text,
+    ok = true
+  ) {
+    const el =
+      $("mealPopupStatus");
 
-    if (!el) {
-      return;
-    }
+    if (!el) return;
 
-    el.textContent = text || "";
+    el.textContent =
+      text || "";
 
     el.className =
       "mealStatus " +
       (
         text
-          ? (ok ? "ok" : "err")
+          ? ok
+            ? "ok"
+            : "err"
           : ""
       );
   }
 
-  function openPopup(title, html) {
+  function openPopup(
+    title,
+    html
+  ) {
     if ($("mealPopupTitle")) {
-      $("mealPopupTitle").textContent = title;
+      $("mealPopupTitle").textContent =
+        title;
     }
 
     if ($("mealPopupBody")) {
-      $("mealPopupBody").innerHTML = html;
+      $("mealPopupBody").innerHTML =
+        html;
     }
 
     if ($("mealPopup")) {
-      $("mealPopup").style.display = "flex";
+      $("mealPopup").style.display =
+        "flex";
     }
   }
 
   function closePopup() {
     if ($("mealPopup")) {
-      $("mealPopup").style.display = "none";
+      $("mealPopup").style.display =
+        "none";
     }
   }
+
+  // =========================================================
+  // FIREBASE
+  // =========================================================
 
   async function waitReady() {
     if (window.scReady) {
@@ -157,8 +217,11 @@
     };
   }
 
-  async function waitMealContext(maxMs = 10000) {
-    const started = Date.now();
+  async function waitMealContext(
+    maxMs = 10000
+  ) {
+    const started =
+      Date.now();
 
     while (
       Date.now() - started <
@@ -178,9 +241,9 @@
       }
 
       await new Promise(
-        (r) =>
+        resolve =>
           setTimeout(
-            r,
+            resolve,
             150
           )
       );
@@ -200,10 +263,10 @@
     }
 
     return new Promise(
-      (resolve) => {
+      resolve => {
         const unsub =
           auth.onAuthStateChanged(
-            (user) => {
+            user => {
               unsub();
 
               resolve(
@@ -222,12 +285,12 @@
     currentUser =
       await getAuthUser();
 
-    if (!currentUser) {
-      userTeamId = "";
-      userRole = "";
-      canManageMeals = false;
-      canManageJudges = false;
+    userTeamId = "";
+    userRole = "";
+    canManageMeals = false;
+    canManageJudges = false;
 
+    if (!currentUser) {
       return;
     }
 
@@ -237,38 +300,40 @@
         .doc(currentUser.uid)
         .get();
 
-    const u =
+    const data =
       snap.exists
-        ? (snap.data() || {})
+        ? snap.data() || {}
         : {};
 
     userTeamId =
       norm(
-        u.teamId ||
-        u.currentTeamId ||
+        data.teamId ||
+        data.currentTeamId ||
         ""
       );
 
     userRole =
       clean(
-        u.role ||
+        data.role ||
         ""
       );
 
     const isAdmin =
-      currentUser.uid ===
-        ADMIN_UID ||
-      userRole ===
-        "admin";
+      currentUser.uid === ADMIN_UID ||
+      userRole === "admin";
 
     canManageJudges =
       isAdmin;
 
     canManageMeals =
+      isAdmin ||
       currentUser.uid ===
-        FOOD_OWNER_UID ||
-      isAdmin;
+        FOOD_OWNER_UID;
   }
+
+  // =========================================================
+  // OPEN / CLOSE MEALS
+  // =========================================================
 
   async function loadMealGate() {
     const { db } =
@@ -279,50 +344,45 @@
 
     if (!id) {
       mealIsOpen = false;
-
       return false;
     }
 
     const snap =
       await db
-        .collection(
-          "mealSettings"
-        )
+        .collection("mealSettings")
         .doc(id)
         .get();
 
-    const d =
+    const data =
       snap.exists
-        ? (snap.data() || {})
+        ? snap.data() || {}
         : {};
 
     mealIsOpen =
-      d.isOpen === true;
+      data.isOpen === true;
 
     return mealIsOpen;
   }
 
-  async function publishMealAppState(isOpen) {
-    if (
-      !ctx?.competitionId ||
-      !ctx?.stageId
-    ) {
-      return;
-    }
-
+  async function publishMealAppState(
+    isOpen
+  ) {
     try {
+      if (
+        !ctx?.competitionId ||
+        !ctx?.stageId
+      ) {
+        return;
+      }
+
       const {
         db,
         fb
       } = await waitReady();
 
       await db
-        .collection(
-          "mealPublic"
-        )
-        .doc(
-          "current"
-        )
+        .collection("mealPublic")
+        .doc("current")
         .set({
           competitionId:
             ctx.competitionId,
@@ -343,13 +403,15 @@
 
     } catch (e) {
       console.warn(
-        "[Meals] public current mirror skipped:",
+        "[Meals] mealPublic/current:",
         e?.message || e
       );
     }
   }
 
-  async function setMealGate(isOpen) {
+  async function setMealGate(
+    isOpen
+  ) {
     const {
       db,
       fb
@@ -365,9 +427,7 @@
     }
 
     await db
-      .collection(
-        "mealSettings"
-      )
+      .collection("mealSettings")
       .doc(id)
       .set({
         competitionId:
@@ -385,9 +445,7 @@
             .serverTimestamp(),
 
         updatedBy:
-          currentUser
-            ? currentUser.uid
-            : ""
+          currentUser?.uid || ""
       }, {
         merge: true
       });
@@ -400,15 +458,19 @@
     );
   }
 
+  // =========================================================
+  // BUTTONS
+  // =========================================================
+
   function ensureJudgesButton() {
-    const mealBox =
-      $("mealBox");
+    let btn =
+      $("btnOpenJudgesMeal");
 
     const listBtn =
       $("btnOpenMealList");
 
-    let btn =
-      $("btnOpenJudgesMeal");
+    const mealBox =
+      $("mealBox");
 
     if (
       !btn &&
@@ -442,9 +504,7 @@
           );
 
       } else {
-        mealBox.appendChild(
-          btn
-        );
+        mealBox.appendChild(btn);
       }
     }
 
@@ -507,17 +567,19 @@
 
     ensureJudgesButton();
 
-    if (!mealIsOpen) {
-      setStatus("");
-    }
-
     if (mealIsOpen) {
       setStatus(
         "Харчування відкрите.",
         true
       );
+    } else {
+      setStatus("");
     }
   }
+
+  // =========================================================
+  // TEAMS
+  // =========================================================
 
   function getMainPaidTeams() {
     if (
@@ -534,10 +596,9 @@
 
     return ctx.teams
       .filter(
-        (t) =>
+        team =>
           PAID_STATUSES.includes(
-            norm(t.status)
-              .toLowerCase()
+            clean(team.status)
           )
       )
       .slice(
@@ -547,16 +608,14 @@
   }
 
   function getMyTeam() {
-    const mainPaidTeams =
+    const teams =
       getMainPaidTeams();
 
     if (userTeamId) {
       const byTeamId =
-        mainPaidTeams.find(
-          (t) =>
-            norm(
-              t.teamId
-            ) ===
+        teams.find(
+          team =>
+            norm(team.teamId) ===
             userTeamId
         );
 
@@ -567,11 +626,9 @@
 
     if (currentUser) {
       const byUid =
-        mainPaidTeams.find(
-          (t) =>
-            norm(
-              t.uid
-            ) ===
+        teams.find(
+          team =>
+            norm(team.uid) ===
             currentUser.uid
         );
 
@@ -583,56 +640,238 @@
     return null;
   }
 
-  function teamDrawKey(t) {
+  // =========================================================
+  // DRAW
+  // =========================================================
+
+  function parseDraw(team) {
     const direct =
       norm(
-        t?.drawKey
+        team?.drawKey
       ).toUpperCase();
 
     if (direct) {
-      return direct;
+      const match =
+        direct.match(
+          /^([ABC])(\d+)$/i
+        );
+
+      if (match) {
+        return {
+          zone:
+            match[1].toUpperCase(),
+
+          sector:
+            match[2],
+
+          drawKey:
+            `${match[1].toUpperCase()}${match[2]}`
+        };
+      }
     }
 
     const zone =
       norm(
-        t?.drawZone ||
-        t?.zone
+        team?.drawZone ||
+        team?.zone
       ).toUpperCase();
 
     const sectorRaw =
       norm(
-        t?.drawSector ||
-        t?.sector
+        team?.drawSector ||
+        team?.sector
       );
 
     if (
-      !zone ||
-      !sectorRaw
+      zone &&
+      sectorRaw
     ) {
-      return "";
+      const sector =
+        sectorRaw.replace(
+          /^[ABC]/i,
+          ""
+        );
+
+      return {
+        zone,
+        sector,
+        drawKey:
+          `${zone}${sector}`
+      };
     }
 
-    const sector =
-      sectorRaw.replace(
-        /^[ABC]/i,
-        ""
+    return {
+      zone: "",
+      sector: "",
+      drawKey: ""
+    };
+  }
+
+  function teamDrawKey(team) {
+    return parseDraw(team)
+      .drawKey;
+  }
+
+  async function loadDrawMap() {
+    const { db } =
+      await waitReady();
+
+    const id =
+      stageResultsId(
+        ctx.competitionId,
+        ctx.stageId
       );
 
-    return `${zone}${sector}`;
+    try {
+      const snap =
+        await db
+          .collection("stageResults")
+          .doc(id)
+          .get();
+
+      const data =
+        snap.exists
+          ? snap.data() || {}
+          : {};
+
+      const teams =
+        Array.isArray(data.teams)
+          ? data.teams
+          : [];
+
+      const byId =
+        new Map();
+
+      const byName =
+        new Map();
+
+      teams.forEach(
+        team => {
+          const draw =
+            parseDraw(team);
+
+          if (!draw.drawKey) {
+            return;
+          }
+
+          const teamId =
+            norm(
+              team.teamId ||
+              team.entityId ||
+              ""
+            );
+
+          const teamName =
+            norm(
+              team.teamName ||
+              team.team ||
+              team.displayName ||
+              ""
+            );
+
+          const row = {
+            ...draw,
+            teamId,
+            teamName
+          };
+
+          if (teamId) {
+            byId.set(
+              teamId,
+              row
+            );
+          }
+
+          if (teamName) {
+            byName.set(
+              clean(teamName),
+              row
+            );
+          }
+        }
+      );
+
+      return {
+        byId,
+        byName
+      };
+
+    } catch (e) {
+      console.warn(
+        "[Meals] draw error:",
+        e
+      );
+
+      return {
+        byId: new Map(),
+        byName: new Map()
+      };
+    }
   }
 
-  function totalOrder(o) {
-    return (
-      num(o?.day1?.lunch) +
-      num(o?.day1?.dinner) +
-      num(o?.day1?.breakfast) +
-      num(o?.day2?.lunch) +
-      num(o?.day2?.dinner) +
-      num(o?.day2?.breakfast)
-    );
+  function applyCurrentDraw(
+    order,
+    drawMap
+  ) {
+    if (
+      order?.type ===
+      "judges"
+    ) {
+      return order;
+    }
+
+    let draw = null;
+
+    const teamId =
+      norm(order.teamId);
+
+    const teamName =
+      clean(order.teamName);
+
+    if (
+      teamId &&
+      drawMap.byId.has(teamId)
+    ) {
+      draw =
+        drawMap.byId.get(teamId);
+    }
+
+    if (
+      !draw &&
+      teamName &&
+      drawMap.byName.has(teamName)
+    ) {
+      draw =
+        drawMap.byName.get(
+          teamName
+        );
+    }
+
+    if (!draw) {
+      return order;
+    }
+
+    return {
+      ...order,
+
+      zone:
+        draw.zone,
+
+      sector:
+        draw.sector,
+
+      drawKey:
+        draw.drawKey
+    };
   }
 
-  async function readOrderByEntity(entityId) {
+  // =========================================================
+  // READ ORDER
+  // =========================================================
+
+  async function readOrderByEntity(
+    entityId
+  ) {
     const { db } =
       await waitReady();
 
@@ -645,20 +884,22 @@
 
     const snap =
       await db
-        .collection(
-          "mealOrders"
-        )
+        .collection("mealOrders")
         .doc(id)
         .get();
 
     return snap.exists
-      ? (snap.data() || {})
+      ? snap.data() || {}
       : null;
   }
 
+  // =========================================================
+  // FORM
+  // =========================================================
+
   function mealFieldsHtml(
     old,
-    prefix = "meal"
+    prefix
   ) {
     const d1 =
       old?.day1 || {};
@@ -773,6 +1014,56 @@
     `;
   }
 
+  function readFields(prefix) {
+    return {
+      day1: {
+        lunch:
+          num(
+            $(`${prefix}D1Lunch`)
+              ?.value
+          ),
+
+        dinner:
+          num(
+            $(`${prefix}D1Dinner`)
+              ?.value
+          ),
+
+        breakfast:
+          num(
+            $(`${prefix}D1Breakfast`)
+              ?.value
+          )
+      },
+
+      day2: {
+        lunch:
+          num(
+            $(`${prefix}D2Lunch`)
+              ?.value
+          ),
+
+        dinner:
+          num(
+            $(`${prefix}D2Dinner`)
+              ?.value
+          ),
+
+        breakfast:
+          num(
+            $(`${prefix}D2Breakfast`)
+              ?.value
+          )
+      },
+
+      note:
+        norm(
+          $(`${prefix}Note`)
+            ?.value
+        )
+    };
+  }
+
   function orderFormHtml(
     team,
     old
@@ -801,14 +1092,12 @@
         "meal"
       )}
 
-      <div
-        style="
-          display:flex;
-          gap:8px;
-          flex-wrap:wrap;
-          margin-top:14px;
-        "
-      >
+      <div style="
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+        margin-top:14px;
+      ">
 
         <button
           class="mealBtn mealBtn--primary"
@@ -835,25 +1124,18 @@
     `;
   }
 
-  function judgesFormHtml(old) {
+  function judgesFormHtml(
+    old
+  ) {
     return `
       <div
         class="mealDayTitle"
         style="
           color:#facc15;
+          font-weight:900;
         "
       >
         👨‍⚖️ СУДДІ
-      </div>
-
-      <div
-        class="hint"
-        style="
-          margin-bottom:10px;
-        "
-      >
-        Цю кількість може змінювати
-        тільки адміністратор.
       </div>
 
       ${mealFieldsHtml(
@@ -861,14 +1143,12 @@
         "judgeMeal"
       )}
 
-      <div
-        style="
-          display:flex;
-          gap:8px;
-          flex-wrap:wrap;
-          margin-top:14px;
-        "
-      >
+      <div style="
+        display:flex;
+        gap:8px;
+        flex-wrap:wrap;
+        margin-top:14px;
+      ">
 
         <button
           class="mealBtn mealBtn--primary"
@@ -895,59 +1175,82 @@
     `;
   }
 
-  function readFields(prefix) {
-    const day1 = {
-      lunch:
-        num(
-          $(`${prefix}D1Lunch`)
-            ?.value
-        ),
+  // =========================================================
+  // PUBLIC MIRROR
+  // =========================================================
 
-      dinner:
-        num(
-          $(`${prefix}D1Dinner`)
-            ?.value
-        ),
+  async function publishPublicOrder(
+    data,
+    id
+  ) {
+    try {
+      const {
+        db,
+        fb
+      } = await waitReady();
 
-      breakfast:
-        num(
-          $(`${prefix}D1Breakfast`)
-            ?.value
-        )
-    };
+      await db
+        .collection("mealPublicOrders")
+        .doc(id)
+        .set({
+          competitionId:
+            data.competitionId,
 
-    const day2 = {
-      lunch:
-        num(
-          $(`${prefix}D2Lunch`)
-            ?.value
-        ),
+          stageId:
+            data.stageId,
 
-      dinner:
-        num(
-          $(`${prefix}D2Dinner`)
-            ?.value
-        ),
+          type:
+            data.type || "team",
 
-      breakfast:
-        num(
-          $(`${prefix}D2Breakfast`)
-            ?.value
-        )
-    };
+          entityId:
+            data.entityId || "",
 
-    const note =
-      norm(
-        $(`${prefix}Note`)
-          ?.value
+          teamId:
+            data.teamId || null,
+
+          teamName:
+            data.teamName || "—",
+
+          zone:
+            data.zone || "",
+
+          sector:
+            data.sector || "",
+
+          drawKey:
+            data.drawKey || "",
+
+          day1:
+            data.day1 || {},
+
+          day2:
+            data.day2 || {},
+
+          note:
+            data.note || "",
+
+          status:
+            data.status || "empty",
+
+          updatedAt:
+            fb.firestore
+              .FieldValue
+              .serverTimestamp()
+        }, {
+          merge: true
+        });
+
+    } catch (e) {
+      console.warn(
+        "[Meals] public mirror:",
+        e?.message || e
       );
-
-    return {
-      day1,
-      day2,
-      note
-    };
+    }
   }
+
+  // =========================================================
+  // TEAM ORDER
+  // =========================================================
 
   async function openOrder() {
     try {
@@ -995,165 +1298,42 @@
         )
       );
 
-      if (
-        $("btnCloseMealPopup")
-      ) {
-        $("btnCloseMealPopup")
-          .onclick =
-          closePopup;
-      }
+      $("btnCloseMealPopup").onclick =
+        closePopup;
 
-      if (
-        $("btnSaveMealOrder")
-      ) {
-        $("btnSaveMealOrder")
-          .onclick =
-          () =>
-            saveOrder(
-              team,
-              old
-            );
-      }
+      $("btnSaveMealOrder").onclick =
+        () =>
+          saveOrder(
+            team,
+            old
+          );
 
     } catch (e) {
       console.error(e);
 
       setStatus(
-        "Помилка відкриття заявки: " +
+        "Помилка: " +
         (e.message || e),
         false
       );
     }
   }
 
-  async function publishPublicOrder(
-    privateData,
-    id
-  ) {
-    try {
-      const {
-        db,
-        fb
-      } = await waitReady();
-
-      const publicData = {
-        competitionId:
-          privateData.competitionId,
-
-        stageId:
-          privateData.stageId,
-
-        type:
-          privateData.type ||
-          "team",
-
-        entityId:
-          privateData.entityId ||
-          privateData.teamId ||
-          "",
-
-        teamId:
-          privateData.teamId ||
-          null,
-
-        teamName:
-          privateData.teamName ||
-          "—",
-
-        zone:
-          privateData.zone ||
-          "",
-
-        sector:
-          privateData.sector ||
-          "",
-
-        drawKey:
-          privateData.drawKey ||
-          "",
-
-        day1:
-          privateData.day1 ||
-          {},
-
-        day2:
-          privateData.day2 ||
-          {},
-
-        note:
-          privateData.note ||
-          "",
-
-        status:
-          privateData.status ||
-          "empty",
-
-        updatedAt:
-          fb.firestore
-            .FieldValue
-            .serverTimestamp()
-      };
-
-      await db
-        .collection(
-          "mealPublicOrders"
-        )
-        .doc(id)
-        .set(
-          publicData,
-          {
-            merge: true
-          }
-        );
-
-    } catch (e) {
-      console.warn(
-        "[Meals] public order mirror skipped:",
-        e?.message || e
-      );
-    }
-  }
-
   async function saveOrder(
     team,
-    oldOrder = null
+    oldOrder
   ) {
     try {
-      await waitMealContext();
-
       const {
         db,
         fb
       } = await waitReady();
 
-      const {
-        day1,
-        day2,
-        note
-      } =
-        readFields(
-          "meal"
-        );
+      const fields =
+        readFields("meal");
 
-      const zone =
-        norm(
-          team.drawZone ||
-          team.zone
-        ).toUpperCase();
-
-      const sector =
-        norm(
-          team.drawSector ||
-          team.sector
-        ).replace(
-          /^[ABC]/i,
-          ""
-        );
-
-      const drawKey =
-        teamDrawKey(
-          team
-        );
+      const draw =
+        parseDraw(team);
 
       const data = {
         competitionId:
@@ -1176,26 +1356,29 @@
           team.team ||
           "—",
 
-        zone,
+        zone:
+          draw.zone,
 
-        sector,
+        sector:
+          draw.sector,
 
-        drawKey,
+        drawKey:
+          draw.drawKey,
 
-        day1,
+        day1:
+          fields.day1,
 
-        day2,
+        day2:
+          fields.day2,
 
-        note,
+        note:
+          fields.note,
 
         uid:
           currentUser.uid,
 
         status:
-          totalOrder({
-            day1,
-            day2
-          }) > 0
+          totalOrder(fields) > 0
             ? "submitted"
             : "empty",
 
@@ -1205,9 +1388,7 @@
             .serverTimestamp()
       };
 
-      if (
-        !oldOrder?.createdAt
-      ) {
+      if (!oldOrder?.createdAt) {
         data.createdAt =
           fb.firestore
             .FieldValue
@@ -1222,9 +1403,7 @@
         );
 
       await db
-        .collection(
-          "mealOrders"
-        )
+        .collection("mealOrders")
         .doc(id)
         .set(
           data,
@@ -1259,13 +1438,15 @@
     }
   }
 
+  // =========================================================
+  // JUDGES
+  // =========================================================
+
   async function openJudgesOrder() {
     try {
       await waitMealContext();
       await loadUserData();
       await loadMealGate();
-
-      applyVisibility();
 
       if (!mealIsOpen) {
         return;
@@ -1287,35 +1468,21 @@
 
       openPopup(
         "👨‍⚖️ Харчування суддів",
-        judgesFormHtml(
-          old
-        )
+        judgesFormHtml(old)
       );
 
-      if (
-        $("btnCloseMealPopup")
-      ) {
-        $("btnCloseMealPopup")
-          .onclick =
-          closePopup;
-      }
+      $("btnCloseMealPopup").onclick =
+        closePopup;
 
-      if (
-        $("btnSaveJudgesMeal")
-      ) {
-        $("btnSaveJudgesMeal")
-          .onclick =
-          () =>
-            saveJudgesOrder(
-              old
-            );
-      }
+      $("btnSaveJudgesMeal").onclick =
+        () =>
+          saveJudgesOrder(old);
 
     } catch (e) {
       console.error(e);
 
       setStatus(
-        "Помилка харчування суддів: " +
+        "Помилка: " +
         (e.message || e),
         false
       );
@@ -1323,10 +1490,9 @@
   }
 
   async function saveJudgesOrder(
-    oldOrder = null
+    oldOrder
   ) {
     try {
-      await waitMealContext();
       await loadUserData();
 
       if (!canManageJudges) {
@@ -1340,11 +1506,7 @@
         fb
       } = await waitReady();
 
-      const {
-        day1,
-        day2,
-        note
-      } =
+      const fields =
         readFields(
           "judgeMeal"
         );
@@ -1375,37 +1537,35 @@
           "",
 
         drawKey:
-          "СУДДІ",
+          "",
 
-        day1,
+        day1:
+          fields.day1,
 
-        day2,
+        day2:
+          fields.day2,
 
-        note,
+        note:
+          fields.note,
 
         uid:
           currentUser.uid,
 
         status:
-          totalOrder({
-            day1,
-            day2
-          }) > 0
+          totalOrder(fields) > 0
             ? "submitted"
             : "empty",
+
+        updatedBy:
+          currentUser.uid,
 
         updatedAt:
           fb.firestore
             .FieldValue
-            .serverTimestamp(),
-
-        updatedBy:
-          currentUser.uid
+            .serverTimestamp()
       };
 
-      if (
-        !oldOrder?.createdAt
-      ) {
+      if (!oldOrder?.createdAt) {
         data.createdAt =
           fb.firestore
             .FieldValue
@@ -1420,9 +1580,7 @@
         );
 
       await db
-        .collection(
-          "mealOrders"
-        )
+        .collection("mealOrders")
         .doc(id)
         .set(
           data,
@@ -1442,7 +1600,7 @@
       );
 
       setStatus(
-        "✅ Суддів додано до загального харчування.",
+        "✅ Суддів додано до харчування.",
         true
       );
 
@@ -1457,254 +1615,60 @@
     }
   }
 
-  function parseDraw(team) {
-    const direct =
-      norm(
-        team?.drawKey
-      ).toUpperCase();
+  // =========================================================
+  // LOAD LIST
+  // =========================================================
 
-    if (direct) {
-      const m =
-        direct.match(
-          /^([ABC])(\d+)$/i
-        );
-
-      if (m) {
-        return {
-          zone:
-            m[1]
-              .toUpperCase(),
-
-          sector:
-            m[2],
-
-          drawKey:
-            `${m[1].toUpperCase()}${m[2]}`
-        };
-      }
-    }
-
-    const zone =
-      norm(
-        team?.drawZone ||
-        team?.zone
-      ).toUpperCase();
-
-    const sectorRaw =
-      norm(
-        team?.drawSector ||
-        team?.sector
-      );
-
-    if (
-      zone &&
-      sectorRaw
-    ) {
-      const sector =
-        sectorRaw.replace(
-          /^[ABC]/i,
-          ""
-        );
-
-      return {
-        zone,
-
-        sector,
-
-        drawKey:
-          `${zone}${sector}`
-      };
-    }
-
+  function emptyJudgesRow() {
     return {
-      zone: "",
-      sector: "",
-      drawKey: ""
-    };
-  }
+      id:
+        orderId(
+          ctx.competitionId,
+          ctx.stageId,
+          JUDGES_ID
+        ),
 
-  async function loadDrawMap() {
-    const { db } =
-      await waitReady();
+      type:
+        "judges",
 
-    const id =
-      stageResultsId(
-        ctx.competitionId,
-        ctx.stageId
-      );
+      entityId:
+        JUDGES_ID,
 
-    try {
-      const snap =
-        await db
-          .collection(
-            "stageResults"
-          )
-          .doc(id)
-          .get();
+      teamId:
+        null,
 
-      const data =
-        snap.exists
-          ? (snap.data() || {})
-          : {};
-
-      const teams =
-        Array.isArray(
-          data.teams
-        )
-          ? data.teams
-          : [];
-
-      const byId =
-        new Map();
-
-      const byName =
-        new Map();
-
-      teams.forEach(
-        (team) => {
-          const draw =
-            parseDraw(
-              team
-            );
-
-          if (
-            !draw.drawKey
-          ) {
-            return;
-          }
-
-          const item = {
-            ...draw,
-
-            teamId:
-              norm(
-                team.teamId ||
-                team.entityId
-              ),
-
-            teamName:
-              norm(
-                team.teamName ||
-                team.team ||
-                team.displayName
-              )
-          };
-
-          if (
-            item.teamId
-          ) {
-            byId.set(
-              item.teamId,
-              item
-            );
-          }
-
-          if (
-            item.teamName
-          ) {
-            byName.set(
-              clean(
-                item.teamName
-              ),
-              item
-            );
-          }
-        }
-      );
-
-      return {
-        byId,
-        byName
-      };
-
-    } catch (e) {
-      console.warn(
-        "[Meals] draw map error:",
-        e
-      );
-
-      return {
-        byId:
-          new Map(),
-
-        byName:
-          new Map()
-      };
-    }
-  }
-
-  function applyCurrentDraw(
-    order,
-    drawMap
-  ) {
-    if (
-      order?.type ===
-      "judges"
-    ) {
-      return order;
-    }
-
-    const byId =
-      drawMap?.byId ||
-      new Map();
-
-    const byName =
-      drawMap?.byName ||
-      new Map();
-
-    let draw =
-      null;
-
-    const teamId =
-      norm(
-        order.teamId
-      );
-
-    const teamName =
-      clean(
-        order.teamName
-      );
-
-    if (
-      teamId &&
-      byId.has(
-        teamId
-      )
-    ) {
-      draw =
-        byId.get(
-          teamId
-        );
-    }
-
-    if (
-      !draw &&
-      teamName &&
-      byName.has(
-        teamName
-      )
-    ) {
-      draw =
-        byName.get(
-          teamName
-        );
-    }
-
-    if (!draw) {
-      return order;
-    }
-
-    return {
-      ...order,
+      teamName:
+        "СУДДІ",
 
       zone:
-        draw.zone,
+        "",
 
       sector:
-        draw.sector,
+        "",
 
       drawKey:
-        draw.drawKey
+        "",
+
+      day1: {
+        lunch: 0,
+        dinner: 0,
+        breakfast: 0
+      },
+
+      day2: {
+        lunch: 0,
+        dinner: 0,
+        breakfast: 0
+      },
+
+      note:
+        "",
+
+      status:
+        "empty",
+
+      _synthetic:
+        true
     };
   }
 
@@ -1713,46 +1677,38 @@
     b
   ) {
     if (
-      a?.type ===
-        "judges" &&
-      b?.type !==
-        "judges"
+      a.type === "judges" &&
+      b.type !== "judges"
     ) {
       return 1;
     }
 
     if (
-      b?.type ===
-        "judges" &&
-      a?.type !==
-        "judges"
+      b.type === "judges" &&
+      a.type !== "judges"
     ) {
       return -1;
     }
 
-    const zOrder = {
+    const zones = {
       A: 1,
       B: 2,
       C: 3
     };
 
     const za =
-      zOrder[
-        String(
-          a.zone || ""
-        ).toUpperCase()
+      zones[
+        norm(a.zone)
+          .toUpperCase()
       ] || 9;
 
     const zb =
-      zOrder[
-        String(
-          b.zone || ""
-        ).toUpperCase()
+      zones[
+        norm(b.zone)
+          .toUpperCase()
       ] || 9;
 
-    if (
-      za !== zb
-    ) {
+    if (za !== zb) {
       return za - zb;
     }
 
@@ -1766,18 +1722,14 @@
         b.sector || 999
       );
 
-    if (
-      sa !== sb
-    ) {
+    if (sa !== sb) {
       return sa - sb;
     }
 
-    return String(
-      a.teamName || ""
+    return norm(
+      a.teamName
     ).localeCompare(
-      String(
-        b.teamName || ""
-      ),
+      norm(b.teamName),
       "uk"
     );
   }
@@ -1791,44 +1743,65 @@
     const [
       snap,
       drawMap
-    ] =
-      await Promise.all([
-        db
-          .collection(
-            "mealOrders"
-          )
-          .where(
-            "competitionId",
-            "==",
-            ctx.competitionId
-          )
-          .where(
-            "stageId",
-            "==",
-            ctx.stageId
-          )
-          .get(),
+    ] = await Promise.all([
+      db
+        .collection("mealOrders")
+        .where(
+          "competitionId",
+          "==",
+          ctx.competitionId
+        )
+        .where(
+          "stageId",
+          "==",
+          ctx.stageId
+        )
+        .get(),
 
-        loadDrawMap()
-      ]);
+      loadDrawMap()
+    ]);
 
-    const rows =
-      [];
+    const rows = [];
+
+    let judges =
+      null;
 
     snap.forEach(
-      (doc) => {
-        const d =
+      doc => {
+        const data =
           doc.data() || {};
 
+        const isJudges =
+          data.type === "judges" ||
+          data.entityId ===
+            JUDGES_ID ||
+          doc.id.endsWith(
+            `__${JUDGES_ID}`
+          );
+
+        if (isJudges) {
+          judges = {
+            id: doc.id,
+            ...data,
+            type: "judges",
+            entityId:
+              JUDGES_ID,
+            teamName:
+              "СУДДІ"
+          };
+
+          return;
+        }
+
         if (
-          d.status !==
+          data.status !==
           "submitted"
         ) {
           return;
         }
 
         if (
-          totalOrder(d) <= 0
+          totalOrder(data) <= 0
         ) {
           return;
         }
@@ -1836,15 +1809,25 @@
         rows.push(
           applyCurrentDraw(
             {
-              id:
-                doc.id,
-
-              ...d
+              id: doc.id,
+              ...data
             },
             drawMap
           )
         );
       }
+    );
+
+    /*
+     * КЛЮЧОВА ЗМІНА:
+     *
+     * Судді є ЗАВЖДИ.
+     * Навіть якщо ще нічого
+     * не збережено.
+     */
+    rows.push(
+      judges ||
+      emptyJudgesRow()
     );
 
     rows.sort(
@@ -1854,19 +1837,16 @@
     return rows;
   }
 
-  function listHtml(rows) {
-    if (!rows.length) {
-      return `
-        <div class="team-loading">
-          Заявок на харчування ще немає.
-        </div>
-      `;
-    }
+  // =========================================================
+  // LIST HTML
+  // =========================================================
 
+  function listHtml(rows) {
     const totals = {
       d1l: 0,
       d1d: 0,
       d1b: 0,
+
       d2l: 0,
       d2d: 0,
       d2b: 0
@@ -1874,84 +1854,87 @@
 
     const body =
       rows.map(
-        (r) => {
+        row => {
+          const isJudges =
+            row.type ===
+            "judges";
+
           const d1 =
-            r.day1 || {};
+            row.day1 || {};
 
           const d2 =
-            r.day2 || {};
+            row.day2 || {};
 
           const d1l =
-            num(
-              d1.lunch
-            );
+            num(d1.lunch);
 
           const d1d =
-            num(
-              d1.dinner
-            );
+            num(d1.dinner);
 
           const d1b =
-            num(
-              d1.breakfast
-            );
+            num(d1.breakfast);
 
           const d2l =
-            num(
-              d2.lunch
-            );
+            num(d2.lunch);
 
           const d2d =
-            num(
-              d2.dinner
-            );
+            num(d2.dinner);
 
           const d2b =
-            num(
-              d2.breakfast
-            );
+            num(d2.breakfast);
 
-          totals.d1l +=
-            d1l;
+          totals.d1l += d1l;
+          totals.d1d += d1d;
+          totals.d1b += d1b;
 
-          totals.d1d +=
-            d1d;
-
-          totals.d1b +=
-            d1b;
-
-          totals.d2l +=
-            d2l;
-
-          totals.d2d +=
-            d2d;
-
-          totals.d2b +=
-            d2b;
-
-          const isJudges =
-            r.type ===
-            "judges";
+          totals.d2l += d2l;
+          totals.d2d += d2d;
+          totals.d2b += d2b;
 
           const sector =
             isJudges
-              ? "СУДДІ"
+              ? "—"
               : (
-                  r.drawKey ||
+                  row.drawKey ||
                   (
-                    (r.zone || "") +
-                    (r.sector || "")
+                    (row.zone || "") +
+                    (row.sector || "")
                   ) ||
                   "—"
                 );
 
           const note =
-            norm(
-              r.note
-            );
+            norm(row.note);
+
+          const editJudges =
+            (
+              isJudges &&
+              canManageJudges
+            )
+              ? `
+                <button
+                  id="btnEditJudgesFromList"
+                  type="button"
+                  class="mealBtn"
+                  style="
+                    margin-top:5px;
+                    padding:4px 8px;
+                    font-size:.72rem;
+                  "
+                >
+                  ✏️ Вказати
+                </button>
+              `
+              : "";
 
           return `
-            <tr>
+            <tr
+              ${
+                isJudges
+                  ? 'style="background:rgba(250,204,21,.06);"'
+                  : ""
+              }
+            >
 
               <td
                 class="m-sector"
@@ -1973,10 +1956,14 @@
                       : ""
                   }"
                 >
-                  ${esc(
-                    r.teamName ||
-                    "—"
-                  )}
+                  ${
+                    isJudges
+                      ? "👨‍⚖️ СУДДІ"
+                      : esc(
+                          row.teamName ||
+                          "—"
+                        )
+                  }
                 </div>
 
                 ${
@@ -1985,10 +1972,10 @@
                       <div
                         style="
                           margin-top:3px;
-                          font-size:.78em;
                           color:#facc15;
-                          white-space:normal;
+                          font-size:.78em;
                           line-height:1.25;
+                          white-space:normal;
                         "
                       >
                         ⚠ ${esc(note)}
@@ -1996,6 +1983,8 @@
                     `
                     : ""
                 }
+
+                ${editJudges}
 
               </td>
 
@@ -2010,7 +1999,8 @@
             </tr>
           `;
         }
-      ).join("");
+      )
+      .join("");
 
     return `
       <div class="mealScreenTableWrap">
@@ -2021,9 +2011,11 @@
             <tr>
               <th>С</th>
               <th>Команда</th>
+
               <th>1О</th>
               <th>1В</th>
               <th>1С</th>
+
               <th>2О</th>
               <th>2В</th>
               <th>2С</th>
@@ -2082,14 +2074,18 @@
       const rows =
         await loadOrders();
 
-      if (
-        $("mealPopupBody")
-      ) {
+      if ($("mealPopupBody")) {
         $("mealPopupBody")
           .innerHTML =
-          listHtml(
-            rows
-          );
+          listHtml(rows);
+      }
+
+      const editJudges =
+        $("btnEditJudgesFromList");
+
+      if (editJudges) {
+        editJudges.onclick =
+          openJudgesOrder;
       }
 
     } catch (e) {
@@ -2099,12 +2095,18 @@
         "Помилка",
         `
           <div class="team-loading">
-            ❌ ${esc(e.message || e)}
+            ❌ ${esc(
+              e.message || e
+            )}
           </div>
         `
       );
     }
   }
+
+  // =========================================================
+  // OPEN MEALS
+  // =========================================================
 
   async function openMeals() {
     try {
@@ -2128,10 +2130,7 @@
       applyVisibility();
 
     } catch (e) {
-      console.error(
-        "[Meals] openMeals error:",
-        e
-      );
+      console.error(e);
 
       alert(
         "Не вдалося відкрити харчування: " +
@@ -2140,16 +2139,18 @@
     }
   }
 
-  async function deletePublicOrdersForCurrentStage() {
+  // =========================================================
+  // CLEAR
+  // =========================================================
+
+  async function deletePublicOrders() {
     try {
       const { db } =
         await waitReady();
 
       const snap =
         await db
-          .collection(
-            "mealPublicOrders"
-          )
+          .collection("mealPublicOrders")
           .where(
             "competitionId",
             "==",
@@ -2165,8 +2166,7 @@
       let batch =
         db.batch();
 
-      let count =
-        0;
+      let count = 0;
 
       for (
         const doc of snap.docs
@@ -2177,29 +2177,24 @@
 
         count++;
 
-        if (
-          count >= 400
-        ) {
+        if (count >= 400) {
           await batch.commit();
 
           batch =
             db.batch();
 
-          count =
-            0;
+          count = 0;
         }
       }
 
-      if (
-        count > 0
-      ) {
+      if (count > 0) {
         await batch.commit();
       }
 
     } catch (e) {
       console.warn(
-        "[Meals] public clear skipped:",
-        e?.message || e
+        "[Meals] public clear:",
+        e
       );
     }
   }
@@ -2231,9 +2226,7 @@
 
       const snap =
         await db
-          .collection(
-            "mealOrders"
-          )
+          .collection("mealOrders")
           .where(
             "competitionId",
             "==",
@@ -2249,11 +2242,8 @@
       let batch =
         db.batch();
 
-      let count =
-        0;
-
-      let total =
-        0;
+      let count = 0;
+      let total = 0;
 
       for (
         const doc of snap.docs
@@ -2265,26 +2255,21 @@
         count++;
         total++;
 
-        if (
-          count >= 400
-        ) {
+        if (count >= 400) {
           await batch.commit();
 
           batch =
             db.batch();
 
-          count =
-            0;
+          count = 0;
         }
       }
 
-      if (
-        count > 0
-      ) {
+      if (count > 0) {
         await batch.commit();
       }
 
-      await deletePublicOrdersForCurrentStage();
+      await deletePublicOrders();
 
       await setMealGate(
         false
@@ -2312,6 +2297,10 @@
     }
   }
 
+  // =========================================================
+  // INIT
+  // =========================================================
+
   async function refreshAdminButtons() {
     try {
       await waitMealContext();
@@ -2320,35 +2309,23 @@
 
       applyVisibility();
 
-      if (
-        $("btnMealGateOpen")
-      ) {
-        $("btnMealGateOpen")
-          .onclick =
+      if ($("btnMealGateOpen")) {
+        $("btnMealGateOpen").onclick =
           openMeals;
       }
 
-      if (
-        $("btnOpenMealOrder")
-      ) {
-        $("btnOpenMealOrder")
-          .onclick =
+      if ($("btnOpenMealOrder")) {
+        $("btnOpenMealOrder").onclick =
           openOrder;
       }
 
-      if (
-        $("btnOpenMealList")
-      ) {
-        $("btnOpenMealList")
-          .onclick =
+      if ($("btnOpenMealList")) {
+        $("btnOpenMealList").onclick =
           openList;
       }
 
-      if (
-        $("btnClearMealOrders")
-      ) {
-        $("btnClearMealOrders")
-          .onclick =
+      if ($("btnClearMealOrders")) {
+        $("btnClearMealOrders").onclick =
           clearOrders;
       }
 
@@ -2356,7 +2333,7 @@
 
     } catch (e) {
       console.warn(
-        "[Meals] refresh error:",
+        "[Meals] refresh:",
         e
       );
 
@@ -2367,7 +2344,9 @@
     }
   }
 
-  function setContext(nextCtx) {
+  function setContext(
+    nextCtx
+  ) {
     ctx =
       nextCtx ||
       ctx;
@@ -2377,19 +2356,16 @@
 
   document.addEventListener(
     "click",
-    (e) => {
+    event => {
       if (
-        e.target.id ===
-        "mealPopupClose"
-      ) {
-        closePopup();
-      }
-
-      if (
-        e.target.id ===
+        event.target.id ===
+        "mealPopupClose" ||
+        event.target.id ===
         "btnCloseMealPopup"
       ) {
         closePopup();
+
+        return;
       }
 
       const popup =
@@ -2398,7 +2374,7 @@
       if (
         popup?.style.display ===
           "flex" &&
-        e.target === popup
+        event.target === popup
       ) {
         closePopup();
       }
@@ -2418,9 +2394,7 @@
   };
 
   if (ctx) {
-    setContext(
-      ctx
-    );
+    setContext(ctx);
   }
 
   const boot =
@@ -2428,14 +2402,10 @@
       () => {
         if (
           window.scMealContext &&
-          window.scMealContext
-            .competitionId &&
-          window.scMealContext
-            .stageId
+          window.scMealContext.competitionId &&
+          window.scMealContext.stageId
         ) {
-          clearInterval(
-            boot
-          );
+          clearInterval(boot);
 
           setContext(
             window.scMealContext
@@ -2447,9 +2417,7 @@
 
   setTimeout(
     () =>
-      clearInterval(
-        boot
-      ),
+      clearInterval(boot),
     12000
   );
 

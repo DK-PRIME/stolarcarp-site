@@ -8,13 +8,14 @@
 // ✅ сектор команд автоматично береться з жеребкування
 // ✅ побажання видно під назвою команди
 // ✅ судді входять у загальний підсумок
+// ✅ у таблиці немає кнопок редагування суддів
 // ✅ без role === "admin"
 // ✅ підготовка даних для окремої публічної meal-app
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-owner-judges-v3");
+  console.log("✅ meal_orders.js LOADED v20260917-owner-judges-v4");
 
   let ctx = window.scMealContext || null;
 
@@ -1187,16 +1188,6 @@
         👨‍⚖️ СУДДІ
       </div>
 
-      <div
-        style="
-          margin-bottom:12px;
-          opacity:.8;
-          font-size:.9rem;
-        "
-      >
-        Кількість для суддів задає Дячок Роман.
-      </div>
-
       ${mealFieldsHtml(
         old,
         "judgeMeal"
@@ -2023,27 +2014,6 @@
               row.note
             );
 
-          const editButton =
-            (
-              judges &&
-              isOwner
-            )
-              ? `
-                <button
-                  id="btnEditJudgesFromList"
-                  type="button"
-                  class="mealBtn"
-                  style="
-                    margin-top:6px;
-                    padding:4px 8px;
-                    font-size:.72rem;
-                  "
-                >
-                  ✏️ Вказати
-                </button>
-              `
-              : "";
-
           return `
             <tr
               ${
@@ -2116,8 +2086,6 @@
                     `
                     : ""
                 }
-
-                ${editButton}
 
               </td>
 
@@ -2213,14 +2181,6 @@
           listHtml(
             rows
           );
-      }
-
-      if (
-        $("btnEditJudgesFromList")
-      ) {
-        $("btnEditJudgesFromList")
-          .onclick =
-          openJudgesOrder;
       }
 
     } catch (e) {

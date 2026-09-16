@@ -1,23 +1,16 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live public
 //
-// CLASSIC:
-// - стандартні зони A / B / C;
-// - W1–W4;
-// - фінальні Big Fish Короп / Амур.
-//
-// SOLO:
-// - використовується той самий CLASSIC Live;
-// - замість назви команди показується учасник;
-// - короткий формат при довгому імені: Дячок Р.
-//
-// 3TABLES:
-// - стандартний Live залишається;
-// - нижче додається компактна таблиця.
-//
-// STALKER TEAMS:
-// - поки працює як звичайний TEAM;
-// - окремий Live renderer зробимо пізніше.
+// ✅ TEAM + SOLO одним модулем
+// ✅ Жереб показується одразу після збереження
+// ✅ stageResults = основне джерело жеребу для LIVE
+// ✅ public_participants = SOLO fallback для імені/жеребу
+// ✅ SOLO identity = uid / entityId
+// ✅ TEAM identity = teamId
+// ✅ SOLO canonical name = Прізвище Ім'я
+// ✅ legacy 2-word name НЕ переставляємо
+// ✅ W1–W4 + Big Fish працюють для TEAM + SOLO
+// ✅ 3TABLES лишається без змін
 //
 // Потрібно:
 // live-3tables.js підключити ПЕРЕД live_firebase.js
@@ -25,50 +18,81 @@
 (function () {
   "use strict";
 
-  const db = window.scDb;
+  console.log(
+    "✅ live_firebase.js LOADED v20260916-team-solo-v8"
+  );
+
+  const db =
+    window.scDb;
 
   // =========================================================
   // DOM
   // =========================================================
 
   const stageEl =
-    document.getElementById("liveStageName");
+    document.getElementById(
+      "liveStageName"
+    );
 
   const zonesWrap =
-    document.getElementById("zonesContainer");
+    document.getElementById(
+      "zonesContainer"
+    );
 
   const weighTableEl =
-    document.getElementById("totalTable");
+    document.getElementById(
+      "totalTable"
+    );
 
   const weighInfoEl =
-    document.getElementById("weighInfo");
+    document.getElementById(
+      "weighInfo"
+    );
 
   const updatedEl =
-    document.getElementById("liveUpdatedAt");
+    document.getElementById(
+      "liveUpdatedAt"
+    );
 
   const finalBigFishBox =
-    document.getElementById("finalBigFishBox");
+    document.getElementById(
+      "finalBigFishBox"
+    );
 
   const loadingEl =
-    document.getElementById("liveLoading");
+    document.getElementById(
+      "liveLoading"
+    );
 
   const contentEl =
-    document.getElementById("liveContent");
+    document.getElementById(
+      "liveContent"
+    );
 
   const errorEl =
-    document.getElementById("liveError");
+    document.getElementById(
+      "liveError"
+    );
 
   const wBtn1 =
-    document.getElementById("wBtn1");
+    document.getElementById(
+      "wBtn1"
+    );
 
   const wBtn2 =
-    document.getElementById("wBtn2");
+    document.getElementById(
+      "wBtn2"
+    );
 
   const wBtn3 =
-    document.getElementById("wBtn3");
+    document.getElementById(
+      "wBtn3"
+    );
 
   const wBtn4 =
-    document.getElementById("wBtn4");
+    document.getElementById(
+      "wBtn4"
+    );
 
   // =========================================================
   // CONSTANTS
@@ -133,17 +157,16 @@
   };
 
   /*
-   * SOLO fallback names.
-   *
-   * Дані беруться з public_participants,
-   * щоб Live не залежав від приватної
-   * users / registrations.
+   * SOLO public fallback.
    */
   let publicSoloNameByUid =
     new Map();
 
   let publicSoloNameByTeamId =
     new Map();
+
+  let publicSoloRows =
+    [];
 
   let threeTablesSection =
     null;
@@ -171,43 +194,69 @@
   // =========================================================
 
   const fmt =
-    value => {
-      return (
-        value === null ||
-        value === undefined ||
-        value === ""
-      )
+    value => (
+      value === null ||
+      value === undefined ||
+      value === ""
         ? "—"
-        : String(value);
-    };
+        : String(
+            value
+          )
+    );
 
-  function esc(value) {
+  function esc(
+    value
+  ) {
     return String(
       value ?? ""
     ).replace(
       /[&<>"']/g,
       char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[char]
+        "&":
+          "&amp;",
+
+        "<":
+          "&lt;",
+
+        ">":
+          "&gt;",
+
+        '"':
+          "&quot;",
+
+        "'":
+          "&#39;"
+      })[
+        char
+      ]
     );
   }
 
-  function norm(value) {
+  function norm(
+    value
+  ) {
     return String(
       value ?? ""
-    ).trim();
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
+      .trim();
   }
 
-  function normLower(value) {
-    return norm(value)
+  function normLower(
+    value
+  ) {
+    return norm(
+      value
+    )
       .toLowerCase();
   }
 
-  function fmtTs(ts) {
+  function fmtTs(
+    ts
+  ) {
     try {
       const date =
         ts?.toDate
@@ -216,67 +265,99 @@
             ? ts
             : null;
 
-      if (!date) {
+      if (
+        !date
+      ) {
         return "—";
       }
 
-      return date.toLocaleString(
-        "uk-UA",
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-          day: "2-digit",
-          month: "2-digit"
-        }
-      );
+      return date
+        .toLocaleString(
+          "uk-UA",
+          {
+            hour:
+              "2-digit",
+
+            minute:
+              "2-digit",
+
+            day:
+              "2-digit",
+
+            month:
+              "2-digit"
+          }
+        );
 
     } catch {
       return "—";
     }
   }
 
-  function fmtNum(value) {
+  function fmtNum(
+    value
+  ) {
     const number =
-      Number(value);
+      Number(
+        value
+      );
 
     if (
-      !Number.isFinite(number)
+      !Number.isFinite(
+        number
+      )
     ) {
       return null;
     }
 
     return number
-      .toFixed(2)
+      .toFixed(
+        2
+      )
       .replace(
         /\.?0+$/,
         ""
       );
   }
 
-  function kgShort(value) {
+  function kgShort(
+    value
+  ) {
     const number =
-      Number(value);
+      Number(
+        value
+      );
 
     if (
-      !Number.isFinite(number)
+      !Number.isFinite(
+        number
+      )
     ) {
       return "0";
     }
 
     return number
-      .toFixed(2)
+      .toFixed(
+        2
+      )
       .replace(
         /\.?0+$/,
         ""
       );
   }
 
-  function weightOrDash(value) {
+  function weightOrDash(
+    value
+  ) {
     const number =
-      Number(value);
+      Number(
+        value
+      );
 
     if (
-      !Number.isFinite(number) ||
+      !Number.isFinite(
+        number
+      ) ||
       number <= 0
     ) {
       return "—";
@@ -287,7 +368,9 @@
     );
   }
 
-  function valueOrDash(value) {
+  function valueOrDash(
+    value
+  ) {
     if (
       value === null ||
       value === undefined ||
@@ -331,7 +414,9 @@
     };
   }
 
-  function showError(text) {
+  function showError(
+    text
+  ) {
     if (
       errorEl
     ) {
@@ -384,7 +469,9 @@
   // FISH HELPERS
   // =========================================================
 
-  function getFishKg(fish) {
+  function getFishKg(
+    fish
+  ) {
     if (
       typeof fish ===
         "number" ||
@@ -404,7 +491,9 @@
     );
   }
 
-  function isAmurFish(fish) {
+  function isAmurFish(
+    fish
+  ) {
     if (
       !fish ||
       typeof fish !==
@@ -473,10 +562,14 @@
       );
   }
 
-  function fishCellHTML(fish) {
+  function fishCellHTML(
+    fish
+  ) {
     const normalized =
       normalizeFishArray(
-        [fish]
+        [
+          fish
+        ]
       )[0];
 
     if (
@@ -561,7 +654,9 @@
   // FORMAT / ENTRY TYPE
   // =========================================================
 
-  function normalizeFormat(value) {
+  function normalizeFormat(
+    value
+  ) {
     const raw =
       String(
         value ||
@@ -588,10 +683,6 @@
       return FORMAT_3TABLES;
     }
 
-    /*
-     * Stalker Solo та Stalker Teams
-     * поки використовують classic Live.
-     */
     return FORMAT_CLASSIC;
   }
 
@@ -607,6 +698,36 @@
       activeEntryType ===
       ENTRY_SOLO
     );
+  }
+
+  /*
+   * ВАЖЛИВО:
+   *
+   * Не покладаємося тільки
+   * на activeEntryType.
+   *
+   * stageResults може прийти
+   * швидше за competitions.
+   */
+  function isSoloItem(
+    item
+  ) {
+    if (
+      !item
+    ) {
+      return false;
+    }
+
+    if (
+      normLower(
+        item.entryType
+      ) ===
+      ENTRY_SOLO
+    ) {
+      return true;
+    }
+
+    return isSoloEntry();
   }
 
   function getCompetitionEvent(
@@ -669,10 +790,6 @@
         competition
       );
 
-    /*
-     * Фінал поточної сезонної
-     * системи залишається TEAM.
-     */
     const eventKey =
       normLower(
         event?.key ||
@@ -691,10 +808,18 @@
       );
 
     const isFinal =
-      event?.isFinal === true ||
-      eventKey === "final" ||
+      event?.isFinal ===
+        true ||
+      eventKey ===
+        "final" ||
+      eventKey.includes(
+        "final"
+      ) ||
       eventKey.includes(
         "фінал"
+      ) ||
+      eventTitle.includes(
+        "final"
       ) ||
       eventTitle.includes(
         "фінал"
@@ -722,11 +847,6 @@
       return explicit;
     }
 
-    /*
-     * Backward compatibility:
-     * старий stalker-solo,
-     * де entryType ще не записувався.
-     */
     const rawFormat =
       String(
         event?.format ||
@@ -761,41 +881,206 @@
   // SOLO NAME
   // =========================================================
 
-  function rawSoloFullName(item) {
+  function isPlaceholderSoloName(
+    value
+  ) {
+    const v =
+      normLower(
+        value
+      )
+        .replace(
+          /[.!]/g,
+          ""
+        )
+        .trim();
+
+    return (
+      !v ||
+      v === "учасник" ||
+      v === "учасник команди" ||
+      v === "participant" ||
+      v === "player" ||
+      v === "користувач" ||
+      v === "user" ||
+      v === "команда" ||
+      v === "team" ||
+      v === "—" ||
+      v === "-"
+    );
+  }
+
+  function cleanSoloName(
+    value
+  ) {
+    const name =
+      norm(
+        value
+      );
+
     if (
-      !item
+      !name ||
+      isPlaceholderSoloName(
+        name
+      )
     ) {
       return "";
     }
 
-    /*
-     * Якщо окремо є firstName / lastName.
-     */
+    if (
+      name.includes(
+        "@"
+      )
+    ) {
+      return "";
+    }
+
+    return name;
+  }
+
+  function isPatronymicPart(
+    value
+  ) {
+    const s =
+      normLower(
+        value
+      );
+
+    if (
+      !s
+    ) {
+      return false;
+    }
+
+    return (
+      /(?:ович|евич|євич|йович)$/i.test(
+        s
+      ) ||
+      /(?:івна|ївна|овна|евна|євна)$/i.test(
+        s
+      )
+    );
+  }
+
+  /*
+   * Legacy:
+   *
+   * 2 слова — НЕ переставляємо.
+   *
+   * 3 слова:
+   * пробуємо забрати по батькові.
+   */
+  function normalizeLegacySoloName(
+    value
+  ) {
+    const raw =
+      cleanSoloName(
+        value
+      );
+
+    if (
+      !raw
+    ) {
+      return "";
+    }
+
+    const parts =
+      raw
+        .split(
+          " "
+        )
+        .filter(
+          Boolean
+        );
+
+    if (
+      parts.length ===
+      2
+    ) {
+      return raw;
+    }
+
+    if (
+      parts.length ===
+      3
+    ) {
+      const patronymicIndex =
+        parts.findIndex(
+          isPatronymicPart
+        );
+
+      /*
+       * Прізвище Ім'я По-батькові
+       */
+      if (
+        patronymicIndex ===
+        2
+      ) {
+        return (
+          `${parts[0]} ${parts[1]}`
+        );
+      }
+
+      /*
+       * Ім'я По-батькові Прізвище
+       */
+      if (
+        patronymicIndex ===
+        1
+      ) {
+        return (
+          `${parts[2]} ${parts[0]}`
+        );
+      }
+
+      if (
+        patronymicIndex ===
+        0
+      ) {
+        return (
+          `${parts[2]} ${parts[1]}`
+        );
+      }
+    }
+
+    return raw;
+  }
+
+  function canonicalSoloNameFromData(
+    data
+  ) {
+    const d =
+      data ||
+      {};
+
     const firstName =
-      norm(
-        item.firstName
+      cleanSoloName(
+        d.firstName
       );
 
     const lastName =
-      norm(
-        item.lastName
+      cleanSoloName(
+        d.lastName
       );
 
+    /*
+     * Canonical:
+     * Прізвище Ім'я
+     */
     if (
       firstName &&
       lastName
     ) {
       return (
-        `${firstName} ${lastName}`
+        `${lastName} ${firstName}`
       );
     }
 
     const direct =
-      norm(
-        item.participantName ||
-        item.fullName ||
-        item.userName ||
-        item.name ||
+      normalizeLegacySoloName(
+        d.participantName ||
+        d.fullName ||
+        d.userName ||
+        d.name ||
         ""
       );
 
@@ -805,19 +1090,89 @@
       return direct;
     }
 
-    /*
-     * captain у SOLO registration
-     * теж може містити ім'я.
-     */
-    const captain =
+    const displayName =
+      cleanSoloName(
+        d.displayName
+      );
+
+    const teamName =
       norm(
-        item.captain
+        d.teamName ||
+        d.team
       );
 
     if (
-      captain
+      displayName &&
+      (
+        !teamName ||
+        normLower(
+          displayName
+        ) !==
+          normLower(
+            teamName
+          )
+      )
     ) {
-      return captain;
+      return normalizeLegacySoloName(
+        displayName
+      );
+    }
+
+    const captain =
+      cleanSoloName(
+        d.captain
+      );
+
+    if (
+      captain &&
+      (
+        !teamName ||
+        normLower(
+          captain
+        ) !==
+          normLower(
+            teamName
+          )
+      )
+    ) {
+      return normalizeLegacySoloName(
+        captain
+      );
+    }
+
+    return "";
+  }
+
+  function rawSoloFullName(
+    item
+  ) {
+    if (
+      !item
+    ) {
+      return "";
+    }
+
+    const firstName =
+      cleanSoloName(
+        item.firstName
+      );
+
+    const lastName =
+      cleanSoloName(
+        item.lastName
+      );
+
+    /*
+     * Найвищий пріоритет:
+     * structured fields.
+     */
+    if (
+      firstName &&
+      lastName
+    ) {
+      return (
+        `${lastName} ${firstName}`
+      );
     }
 
     const uid =
@@ -826,229 +1181,152 @@
         item.participantUid ||
         item.userId ||
         item.registeredByUid ||
+        item.entityId ||
         ""
       );
 
+    /*
+     * Public profile/mirror може
+     * містити новіший canonical ПІБ,
+     * ніж старий stageResults.
+     */
     if (
       uid &&
       publicSoloNameByUid.has(
         uid
       )
     ) {
-      return norm(
-        publicSoloNameByUid.get(
-          uid
-        )
-      );
+      const publicName =
+        cleanSoloName(
+          publicSoloNameByUid.get(
+            uid
+          )
+        );
+
+      if (
+        publicName
+      ) {
+        return publicName;
+      }
     }
 
-    const teamId =
+    const legacyTeamId =
       norm(
         item.teamId
       );
 
     if (
-      teamId &&
+      legacyTeamId &&
       publicSoloNameByTeamId.has(
-        teamId
+        legacyTeamId
       )
     ) {
-      return norm(
-        publicSoloNameByTeamId.get(
-          teamId
-        )
-      );
+      const publicName =
+        cleanSoloName(
+          publicSoloNameByTeamId.get(
+            legacyTeamId
+          )
+        );
+
+      if (
+        publicName
+      ) {
+        return publicName;
+      }
     }
 
-    /*
-     * displayName беремо лише якщо
-     * він НЕ дорівнює teamName.
-     *
-     * Так стару назву команди
-     * не покажемо замість людини.
-     */
-    const displayName =
-      norm(
-        item.displayName
-      );
-
-    const teamName =
-      norm(
-        item.teamName ||
-        item.team
-      );
-
-    if (
-      displayName &&
-      (
-        !teamName ||
-        displayName !==
-          teamName
-      )
-    ) {
-      return displayName;
-    }
-
-    return "";
+    return canonicalSoloNameFromData(
+      item
+    );
   }
 
   /*
-   * Перетворює:
+   * Уже отримуємо canonical:
    *
-   * Роман Дячок
-   * -> Дячок Роман
+   * Прізвище Ім'я
    *
-   * якщо довго:
-   *
-   * Олександр Коваленко
-   * -> Коваленко О.
+   * НІЧОГО не перевертаємо.
    */
   function soloDisplayName(
     item,
     maxChars = 16
   ) {
-    const raw =
+    const full =
       rawSoloFullName(
         item
       );
 
     if (
-      !raw
+      !full
     ) {
       return "Учасник";
     }
 
+    if (
+      full.length <=
+      maxChars
+    ) {
+      return full;
+    }
+
     const parts =
-      raw
-        .replace(
-          /\s+/g,
+      full
+        .split(
           " "
         )
-        .trim()
-        .split(" ")
         .filter(
           Boolean
         );
 
     if (
-      parts.length < 2
+      parts.length <
+      2
     ) {
-      return raw;
+      return full;
     }
-
-    /*
-     * У профілі очікуємо:
-     * Ім'я Прізвище.
-     *
-     * Якщо є по батькові:
-     * Ім'я По-батькові Прізвище.
-     *
-     * У Live показуємо:
-     * Прізвище Ім'я.
-     */
-    const firstName =
-      parts[0];
 
     const lastName =
-      parts[
-        parts.length - 1
-      ];
+      parts[0];
 
-    const fullSurnameFirst =
-      `${lastName} ${firstName}`;
-
-    if (
-      fullSurnameFirst.length <=
-      maxChars
-    ) {
-      return fullSurnameFirst;
-    }
+    const firstName =
+      parts[1];
 
     const initial =
       firstName
-        .charAt(0)
+        .charAt(
+          0
+        )
         .toUpperCase();
 
-    if (
-      initial
-    ) {
-      return (
-        `${lastName} ` +
-        `${initial}.`
-      );
-    }
-
-    return lastName;
+    return initial
+      ? `${lastName} ${initial}.`
+      : lastName;
   }
 
   function fullSoloDisplayName(
     item
   ) {
-    const raw =
+    return (
       rawSoloFullName(
         item
-      );
-
-    if (
-      !raw
-    ) {
-      return "Учасник";
-    }
-
-    const parts =
-      raw
-        .replace(
-          /\s+/g,
-          " "
-        )
-        .trim()
-        .split(" ")
-        .filter(
-          Boolean
-        );
-
-    if (
-      parts.length < 2
-    ) {
-      return raw;
-    }
-
-    const firstName =
-      parts[0];
-
-    const lastName =
-      parts[
-        parts.length - 1
-      ];
-
-    return (
-      `${lastName} ` +
-      `${firstName}`
+      ) ||
+      "Учасник"
     );
   }
 
-  function displayName(item) {
-    /*
-     * ГОЛОВНЕ:
-     *
-     * ТІЛЬКИ SOLO
-     * -> ім'я людини.
-     */
+  function displayName(
+    item
+  ) {
     if (
-      isSoloEntry()
+      isSoloItem(
+        item
+      )
     ) {
       return soloDisplayName(
         item
       );
     }
 
-    /*
-     * TEAM:
-     * Classic / 3 Tables /
-     * Stalker Teams.
-     *
-     * Нічого не змінюємо.
-     */
     return (
       norm(
         item?.teamName ||
@@ -1058,9 +1336,13 @@
     );
   }
 
-  function fullDisplayName(item) {
+  function fullDisplayName(
+    item
+  ) {
     if (
-      isSoloEntry()
+      isSoloItem(
+        item
+      )
     ) {
       return fullSoloDisplayName(
         item
@@ -1096,17 +1378,6 @@
   // ENTITY IDS
   // =========================================================
 
-  /*
-   * TEAM:
-   * teamId.
-   *
-   * SOLO:
-   * UID — основний ID.
-   *
-   * teamId залишений fallback,
-   * щоб старі дані не зламали Live.
-   */
-
   function entityCandidates(
     item
   ) {
@@ -1119,48 +1390,73 @@
     const ids =
       [];
 
-    if (
-      isSoloEntry()
-    ) {
-      [
-        item.uid,
-        item.participantUid,
-        item.userId,
-        item.registeredByUid,
-        item.entityId,
-        item.teamId
-      ].forEach(
-        value => {
-          const id =
-            norm(value);
+    const addId =
+      value => {
+        const id =
+          norm(
+            value
+          );
 
-          if (
-            id &&
-            !ids.includes(id)
-          ) {
-            ids.push(
-              id
-            );
-          }
+        if (
+          id &&
+          !ids.includes(
+            id
+          )
+        ) {
+          ids.push(
+            id
+          );
         }
+      };
+
+    /*
+     * SOLO:
+     * UID / entityId.
+     *
+     * teamId лише legacy alias.
+     */
+    if (
+      isSoloItem(
+        item
+      )
+    ) {
+      addId(
+        item.uid
+      );
+
+      addId(
+        item.participantUid
+      );
+
+      addId(
+        item.userId
+      );
+
+      addId(
+        item.registeredByUid
+      );
+
+      addId(
+        item.entityId
+      );
+
+      addId(
+        item.teamId
       );
 
       return ids;
     }
 
-    const teamId =
-      norm(
-        item.teamId ||
-        item.entityId
-      );
+    /*
+     * TEAM.
+     */
+    addId(
+      item.teamId
+    );
 
-    if (
-      teamId
-    ) {
-      ids.push(
-        teamId
-      );
-    }
+    addId(
+      item.entityId
+    );
 
     return ids;
   }
@@ -1168,13 +1464,10 @@
   function primaryEntityId(
     item
   ) {
-    const ids =
+    return (
       entityCandidates(
         item
-      );
-
-    return (
-      ids[0] ||
+      )[0] ||
       ""
     );
   }
@@ -1188,7 +1481,8 @@
       );
 
     for (
-      const id of ids
+      const id
+      of ids
     ) {
       if (
         weighByTeam.has(
@@ -1652,7 +1946,9 @@
 
     threeTablesSection.innerHTML = `
       <div class="three-tables-heading">
+
         <div class="three-tables-heading__text">
+
           <h2>
             Результати — три таблиці
           </h2>
@@ -1662,17 +1958,21 @@
             2 таблиця — 5 великих без Big Fish ·
             3 таблиця — Big Fish
           </p>
+
         </div>
 
         <span class="badge badge--warn">
           Підсумок за зонами
         </span>
+
       </div>
 
       <div id="threeTablesContainer">
+
         <div class="three-empty">
           Очікую команди та зважування…
         </div>
+
       </div>
     `;
 
@@ -1683,14 +1983,17 @@
         );
 
     const anchor =
-      zonesWrap?.parentElement ||
+      zonesWrap
+        ?.parentElement ||
       zonesWrap ||
       contentEl;
 
     if (
-      anchor?.parentElement
+      anchor
+        ?.parentElement
     ) {
-      anchor.parentElement
+      anchor
+        .parentElement
         .insertBefore(
           threeTablesSection,
           anchor.nextSibling
@@ -1764,22 +2067,27 @@
     place
   ) {
     const number =
-      Number(place);
+      Number(
+        place
+      );
 
     if (
-      number === 1
+      number ===
+      1
     ) {
       return "three-final-first";
     }
 
     if (
-      number === 2
+      number ===
+      2
     ) {
       return "three-final-second";
     }
 
     if (
-      number === 3
+      number ===
+      3
     ) {
       return "three-final-third";
     }
@@ -1799,15 +2107,21 @@
         : [];
 
     const value =
-      fish[index];
+      fish[
+        index
+      ];
 
     if (
       value === null ||
       value === undefined ||
       !Number.isFinite(
-        Number(value)
+        Number(
+          value
+        )
       ) ||
-      Number(value) <= 0
+      Number(
+        value
+      ) <= 0
     ) {
       return "—";
     }
@@ -1823,10 +2137,12 @@
   ) {
     const rows =
       Array.isArray(
-        zoneResult?.finalTable
+        zoneResult
+          ?.finalTable
       )
         ? [
-            ...zoneResult.finalTable
+            ...zoneResult
+              .finalTable
           ]
         : [];
 
@@ -1835,7 +2151,9 @@
     ) {
       return `
         <div class="live-zone card">
+
           <div class="live-zone-title">
+
             <h3 style="margin:0;">
               Зона ${esc(zoneName)}
             </h3>
@@ -1843,11 +2161,13 @@
             <span class="badge">
               немає команд
             </span>
+
           </div>
 
           <p class="form__hint">
             ...
           </p>
+
         </div>
       `;
     }
@@ -1868,150 +2188,174 @@
     );
 
     const rowsHtml =
-      rows.map(
-        row => {
-          const rowClass =
-            finalPlaceClass(
-              row.finalPlace
-            );
+      rows
+        .map(
+          row => {
+            const rowClass =
+              finalPlaceClass(
+                row.finalPlace
+              );
 
-          return `
-            <tr class="${rowClass}">
-              <td class="three-zone-cell">
-                ${esc(
-                  row.zoneLabel ||
-                  row.sector ||
-                  "—"
-                )}
-              </td>
+            return `
+              <tr class="${rowClass}">
 
-              <td
-                class="three-team-cell"
-                title="${esc(
-                  row.teamName ||
-                  "—"
-                )}"
-              >
-                ${esc(
-                  row.teamName ||
-                  "—"
-                )}
-              </td>
+                <td class="three-zone-cell">
+                  ${esc(
+                    row.zoneLabel ||
+                    row.sector ||
+                    "—"
+                  )}
+                </td>
 
-              <td
-                class="
-                  three-weight-cell
-                  three-group-total
-                "
-              >
-                ${esc(
-                  weightOrDash(
-                    row.totalWeight
-                  )
-                )}
-              </td>
+                <td
+                  class="three-team-cell"
+                  title="${esc(
+                    row.teamName ||
+                    "—"
+                  )}"
+                >
+                  ${esc(
+                    row.teamName ||
+                    "—"
+                  )}
+                </td>
 
-              <td
-                class="
-                  three-place-cell
-                  three-group-total
-                "
-              >
-                ${esc(
-                  valueOrDash(
-                    row.totalPlace
-                  )
-                )}
-              </td>
+                <td class="three-weight-cell three-group-total">
+                  ${esc(
+                    weightOrDash(
+                      row.totalWeight
+                    )
+                  )}
+                </td>
 
-              <td class="three-fish-cell three-group-five">
-                ${esc(fishValueAt(row, 0))}
-              </td>
+                <td class="three-place-cell three-group-total">
+                  ${esc(
+                    valueOrDash(
+                      row.totalPlace
+                    )
+                  )}
+                </td>
 
-              <td class="three-fish-cell three-group-five">
-                ${esc(fishValueAt(row, 1))}
-              </td>
+                <td class="three-fish-cell three-group-five">
+                  ${esc(
+                    fishValueAt(
+                      row,
+                      0
+                    )
+                  )}
+                </td>
 
-              <td class="three-fish-cell three-group-five">
-                ${esc(fishValueAt(row, 2))}
-              </td>
+                <td class="three-fish-cell three-group-five">
+                  ${esc(
+                    fishValueAt(
+                      row,
+                      1
+                    )
+                  )}
+                </td>
 
-              <td class="three-fish-cell three-group-five">
-                ${esc(fishValueAt(row, 3))}
-              </td>
+                <td class="three-fish-cell three-group-five">
+                  ${esc(
+                    fishValueAt(
+                      row,
+                      2
+                    )
+                  )}
+                </td>
 
-              <td class="three-fish-cell three-group-five">
-                ${esc(fishValueAt(row, 4))}
-              </td>
+                <td class="three-fish-cell three-group-five">
+                  ${esc(
+                    fishValueAt(
+                      row,
+                      3
+                    )
+                  )}
+                </td>
 
-              <td class="three-weight-cell three-group-five">
-                ${esc(
-                  weightOrDash(
-                    row.top5Weight
-                  )
-                )}
-              </td>
+                <td class="three-fish-cell three-group-five">
+                  ${esc(
+                    fishValueAt(
+                      row,
+                      4
+                    )
+                  )}
+                </td>
 
-              <td class="three-place-cell three-group-five">
-                ${esc(
-                  valueOrDash(
-                    row.top5Place
-                  )
-                )}
-              </td>
+                <td class="three-weight-cell three-group-five">
+                  ${esc(
+                    weightOrDash(
+                      row.top5Weight
+                    )
+                  )}
+                </td>
 
-              <td class="three-weight-cell three-group-big">
-                ${esc(
-                  weightOrDash(
-                    row.bigFish
-                  )
-                )}
-              </td>
+                <td class="three-place-cell three-group-five">
+                  ${esc(
+                    valueOrDash(
+                      row.top5Place
+                    )
+                  )}
+                </td>
 
-              <td class="three-place-cell three-group-big">
-                ${esc(
-                  valueOrDash(
-                    row.bigFishPlace
-                  )
-                )}
-              </td>
+                <td class="three-weight-cell three-group-big">
+                  ${esc(
+                    weightOrDash(
+                      row.bigFish
+                    )
+                  )}
+                </td>
 
-              <td class="three-points-cell">
-                ${esc(
-                  valueOrDash(
-                    row.pointsSum
-                  )
-                )}
-              </td>
+                <td class="three-place-cell three-group-big">
+                  ${esc(
+                    valueOrDash(
+                      row.bigFishPlace
+                    )
+                  )}
+                </td>
 
-              <td class="three-final-cell">
-                ${esc(
-                  valueOrDash(
-                    row.finalPlace
-                  )
-                )}
-              </td>
-            </tr>
-          `;
-        }
-      ).join("");
+                <td class="three-points-cell">
+                  ${esc(
+                    valueOrDash(
+                      row.pointsSum
+                    )
+                  )}
+                </td>
+
+                <td class="three-final-cell">
+                  ${esc(
+                    valueOrDash(
+                      row.finalPlace
+                    )
+                  )}
+                </td>
+
+              </tr>
+            `;
+          }
+        )
+        .join("");
 
     return `
       <div class="live-zone card">
+
         <div class="live-zone-title">
+
           <h3 style="margin:0;">
             Зона ${esc(zoneName)}
           </h3>
 
           <span class="badge badge--warn">
             команд: ${esc(
-              zoneResult?.teamsCount ||
+              zoneResult
+                ?.teamsCount ||
               rows.length
             )}
           </span>
+
         </div>
 
         <div class="three-table-wrap">
+
           <table class="table table-sm three-live-table">
 
             <colgroup>
@@ -2208,7 +2552,9 @@
             </tbody>
 
           </table>
+
         </div>
+
       </div>
     `;
   }
@@ -2271,7 +2617,9 @@
           )
         ].join("");
 
-    } catch (error) {
+    } catch (
+      error
+    ) {
       console.error(
         "renderThreeTables error:",
         error
@@ -2310,315 +2658,360 @@
       new Map();
 
     /*
-     * Один bucket може мати
-     * кілька alias ID:
-     * UID + legacy teamId.
+     * Збираємо W1-W4
+     * по універсальному identity.
      */
-    (weighDocs || [])
-      .forEach(
-        doc => {
-          const ids =
-            entityCandidates(
-              doc
-            );
-
-          if (
-            !ids.length
-          ) {
-            return;
-          }
-
-          const weighNo =
-            Number(
-              doc.weighNo
-            );
-
-          if (
-            weighNo < 1 ||
-            weighNo > 4
-          ) {
-            return;
-          }
-
-          let bucket =
-            null;
-
-          for (
-            const id of ids
-          ) {
-            if (
-              byEntity.has(
-                id
-              )
-            ) {
-              bucket =
-                byEntity.get(
-                  id
-                );
-
-              break;
-            }
-          }
-
-          if (
-            !bucket
-          ) {
-            bucket = {
-              has: {
-                1: false,
-                2: false,
-                3: false,
-                4: false
-              },
-
-              weights: {
-                1: [],
-                2: [],
-                3: [],
-                4: []
-              }
-            };
-          }
-
-          ids.forEach(
-            id => {
-              byEntity.set(
-                id,
-                bucket
-              );
-            }
+    (
+      weighDocs ||
+      []
+    ).forEach(
+      doc => {
+        const ids =
+          entityCandidates(
+            doc
           );
 
-          bucket.has[
-            weighNo
-          ] = true;
-
-          bucket.weights[
-            weighNo
-          ] =
-            normalizeFishArray(
-              doc.weights ||
-              []
-            );
+        if (
+          !ids.length
+        ) {
+          return;
         }
-      );
 
-    (regRowsArg || [])
-      .forEach(
-        row => {
-          const zoneLetter =
-            String(
-              row.zoneLabel ||
-              ""
-            )[0]
-              ?.toUpperCase();
+        const weighNo =
+          Number(
+            doc.weighNo
+          );
 
+        if (
+          weighNo < 1 ||
+          weighNo > 4
+        ) {
+          return;
+        }
+
+        let bucket =
+          null;
+
+        for (
+          const id
+          of ids
+        ) {
           if (
-            ![
-              "A",
-              "B",
-              "C"
-            ].includes(
-              zoneLetter
+            byEntity.has(
+              id
             )
           ) {
-            return;
-          }
-
-          let team =
-            null;
-
-          const ids =
-            entityCandidates(
-              row
-            );
-
-          for (
-            const id of ids
-          ) {
-            if (
-              byEntity.has(
+            bucket =
+              byEntity.get(
                 id
-              )
-            ) {
-              team =
-                byEntity.get(
-                  id
-                );
+              );
 
-              break;
+            break;
+          }
+        }
+
+        if (
+          !bucket
+        ) {
+          bucket = {
+            has: {
+              1: false,
+              2: false,
+              3: false,
+              4: false
+            },
+
+            weights: {
+              1: [],
+              2: [],
+              3: [],
+              4: []
             }
-          }
+          };
+        }
 
+        ids.forEach(
+          id => {
+            byEntity.set(
+              id,
+              bucket
+            );
+          }
+        );
+
+        bucket.has[
+          weighNo
+        ] =
+          true;
+
+        bucket.weights[
+          weighNo
+        ] =
+          normalizeFishArray(
+            doc.weights ||
+            []
+          );
+      }
+    );
+
+    /*
+     * ГОЛОВНЕ:
+     *
+     * regRows вже містить жереб.
+     * Навіть коли weighings = [],
+     * учасники/команди вже показуються.
+     */
+    (
+      regRowsArg ||
+      []
+    ).forEach(
+      row => {
+        const zoneLetter =
+          String(
+            row.zoneLabel ||
+            ""
+          )[0]
+            ?.toUpperCase();
+
+        if (
+          ![
+            "A",
+            "B",
+            "C"
+          ].includes(
+            zoneLetter
+          )
+        ) {
+          return;
+        }
+
+        let entityBucket =
+          null;
+
+        const ids =
+          entityCandidates(
+            row
+          );
+
+        for (
+          const id
+          of ids
+        ) {
           if (
-            !team
+            byEntity.has(
+              id
+            )
           ) {
-            team = {
-              has: {
-                1: false,
-                2: false,
-                3: false,
-                4: false
-              },
+            entityBucket =
+              byEntity.get(
+                id
+              );
 
-              weights: {
-                1: [],
-                2: [],
-                3: [],
-                4: []
-              }
-            };
+            break;
           }
+        }
 
-          let totalCount =
-            0;
+        if (
+          !entityBucket
+        ) {
+          entityBucket = {
+            has: {
+              1: false,
+              2: false,
+              3: false,
+              4: false
+            },
 
-          let totalWeight =
-            0;
+            weights: {
+              1: [],
+              2: [],
+              3: [],
+              4: []
+            }
+          };
+        }
 
-          let bigFish =
-            0;
+        let totalCount =
+          0;
 
-          [
-            1,
-            2,
-            3,
-            4
-          ].forEach(
-            number => {
-              if (
-                !team.has[
+        let totalWeight =
+          0;
+
+        let bigFish =
+          0;
+
+        [
+          1,
+          2,
+          3,
+          4
+        ].forEach(
+          number => {
+            if (
+              !entityBucket
+                .has[
                   number
                 ]
-              ) {
-                return;
-              }
+            ) {
+              return;
+            }
 
-              const fish =
-                team.weights[
+            const fish =
+              entityBucket
+                .weights[
                   number
                 ] ||
-                [];
+              [];
 
-              totalCount +=
-                fish.length;
+            totalCount +=
+              fish.length;
 
-              const sum =
-                fish.reduce(
-                  (
-                    total,
-                    item
-                  ) =>
-                    total +
+            const sum =
+              fish.reduce(
+                (
+                  total,
+                  item
+                ) =>
+                  total +
+                  Number(
+                    item.kg ||
+                    0
+                  ),
+                0
+              );
+
+            totalWeight +=
+              sum;
+
+            fish.forEach(
+              item => {
+                bigFish =
+                  Math.max(
+                    bigFish,
                     Number(
                       item.kg ||
                       0
-                    ),
-                  0
-                );
+                    )
+                  );
+              }
+            );
+          }
+        );
 
-              totalWeight +=
-                sum;
+        zones[
+          zoneLetter
+        ].push({
+          entryType:
+            row.entryType ||
+            (
+              isSoloEntry()
+                ? ENTRY_SOLO
+                : ENTRY_TEAM
+            ),
 
-              fish.forEach(
-                item => {
-                  bigFish =
-                    Math.max(
-                      bigFish,
-                      Number(
-                        item.kg ||
-                        0
-                      )
-                    );
-                }
-              );
-            }
-          );
+          entityId:
+            row.entityId ||
+            primaryEntityId(
+              row
+            ),
 
-          zones[
-            zoneLetter
-          ].push({
-            zoneLabel:
-              row.zoneLabel,
+          zoneLabel:
+            row.zoneLabel,
 
-            displayLabel:
-              displayName(
-                row
-              ),
+          displayLabel:
+            displayName(
+              row
+            ),
 
-            fullDisplayLabel:
-              fullDisplayName(
-                row
-              ),
+          fullDisplayLabel:
+            fullDisplayName(
+              row
+            ),
 
-            participantName:
-              row.participantName ||
-              "",
+          participantName:
+            row.participantName ||
+            "",
 
-            uid:
-              row.uid ||
-              "",
+          firstName:
+            row.firstName ||
+            "",
 
-            teamId:
-              row.teamId ||
-              "",
+          lastName:
+            row.lastName ||
+            "",
 
-            teamName:
-              row.teamName ||
-              "",
+          uid:
+            row.uid ||
+            "",
 
-            w1:
-              wCell(
-                team.has[1],
-                team.weights[1]
-              ),
+          teamId:
+            row.teamId ||
+            "",
 
-            w2:
-              wCell(
-                team.has[2],
-                team.weights[2]
-              ),
+          teamName:
+            row.teamName ||
+            "",
 
-            w3:
-              wCell(
-                team.has[3],
-                team.weights[3]
-              ),
+          w1:
+            wCell(
+              entityBucket
+                .has[1],
+              entityBucket
+                .weights[1]
+            ),
 
-            w4:
-              wCell(
-                team.has[4],
-                team.weights[4]
-              ),
+          w2:
+            wCell(
+              entityBucket
+                .has[2],
+              entityBucket
+                .weights[2]
+            ),
 
-            total:
-              totalCount,
+          w3:
+            wCell(
+              entityBucket
+                .has[3],
+              entityBucket
+                .weights[3]
+            ),
 
-            big:
-              bigFish
-                ? kgShort(
-                    bigFish
-                  )
-                : "—",
+          w4:
+            wCell(
+              entityBucket
+                .has[4],
+              entityBucket
+                .weights[4]
+            ),
 
-            weight:
-              totalWeight
-                ? kgShort(
-                    totalWeight
-                  )
-                : "—",
+          total:
+            totalCount,
 
-            _totalWeight:
-              totalWeight,
+          big:
+            bigFish
+              ? kgShort(
+                  bigFish
+                )
+              : "—",
 
-            _bigFish:
-              bigFish,
+          weight:
+            totalWeight
+              ? kgShort(
+                  totalWeight
+                )
+              : "—",
 
-            _totalCount:
-              totalCount
-          });
-        }
-      );
+          _totalWeight:
+            totalWeight,
+
+          _bigFish:
+            bigFish,
+
+          _totalCount:
+            totalCount
+        });
+      }
+    );
 
     [
       "A",
@@ -2653,12 +3046,49 @@
               );
             }
 
-            return (
-              b._totalCount -
+            if (
+              b._totalCount !==
               a._totalCount
+            ) {
+              return (
+                b._totalCount -
+                a._totalCount
+              );
+            }
+
+            return String(
+              a.zoneLabel ||
+              ""
+            ).localeCompare(
+              String(
+                b.zoneLabel ||
+                ""
+              ),
+              "uk",
+              {
+                numeric:
+                  true
+              }
             );
           }
         );
+
+        /*
+         * До першої риби
+         * місця НЕ показуємо.
+         */
+        const hasAnyResult =
+          zones[
+            zone
+          ].some(
+            row =>
+              row._totalWeight >
+                0 ||
+              row._totalCount >
+                0 ||
+              row._bigFish >
+                0
+          );
 
         zones[
           zone
@@ -2668,7 +3098,9 @@
             index
           ) => {
             row.place =
-              index + 1;
+              hasAnyResult
+                ? index + 1
+                : "—";
           }
         );
       }
@@ -2677,7 +3109,9 @@
     return zones;
   }
 
-  function fmtW(value) {
+  function fmtW(
+    value
+  ) {
     if (
       value === null ||
       value === undefined ||
@@ -2883,18 +3317,20 @@
 
     const hasZoneData =
       Boolean(
-        useZones.A?.length
+        useZones.A
+          ?.length
       ) ||
       Boolean(
-        useZones.B?.length
+        useZones.B
+          ?.length
       ) ||
       Boolean(
-        useZones.C?.length
+        useZones.C
+          ?.length
       );
 
     /*
-     * Якщо готових zones немає —
-     * будуємо fallback із stage teams.
+     * Fallback із stageResults.teams.
      */
     if (
       !hasZoneData &&
@@ -2931,8 +3367,8 @@
               .toUpperCase();
 
           const sector =
-            team.drawSector ||
-            team.sector ||
+            team.drawSector ??
+            team.sector ??
             (
               drawKey
                 ? parseInt(
@@ -2956,43 +3392,82 @@
             return;
           }
 
+          const rowSolo =
+            normLower(
+              team.entryType
+            ) ===
+              ENTRY_SOLO ||
+            isSoloEntry();
+
           fallback[
             zone
           ].push({
             entryType:
-              isSoloEntry()
+              rowSolo
                 ? ENTRY_SOLO
                 : ENTRY_TEAM,
 
+            entityId:
+              norm(
+                team.entityId
+              ),
+
             uid:
-              team.uid ||
-              team.participantUid ||
-              team.userId ||
-              team.registeredByUid ||
-              "",
+              norm(
+                team.uid ||
+                team.participantUid ||
+                team.userId ||
+                team.registeredByUid ||
+                (
+                  rowSolo
+                    ? team.entityId
+                    : ""
+                ) ||
+                ""
+              ),
 
             participantName:
-              team.participantName ||
-              team.fullName ||
-              team.userName ||
-              "",
+              rowSolo
+                ? normalizeLegacySoloName(
+                    team.participantName ||
+                    team.fullName ||
+                    team.userName ||
+                    ""
+                  )
+                : "",
+
+            firstName:
+              norm(
+                team.firstName
+              ),
+
+            lastName:
+              norm(
+                team.lastName
+              ),
 
             displayName:
-              team.displayName ||
-              "",
+              norm(
+                team.displayName
+              ),
 
             captain:
-              team.captain ||
-              "",
+              norm(
+                team.captain
+              ),
 
             teamId:
-              team.teamId ||
-              "",
+              norm(
+                team.teamId
+              ),
 
             teamName:
-              team.teamName ||
-              team.team ||
-              "",
+              rowSolo
+                ? ""
+                : norm(
+                    team.teamName ||
+                    team.team
+                  ),
 
             zone,
 
@@ -3002,7 +3477,14 @@
             drawSector:
               sector,
 
-            drawKey,
+            drawKey:
+              drawKey ||
+              (
+                zone &&
+                sector
+                  ? `${zone}${sector}`
+                  : zone
+              ),
 
             place:
               "—",
@@ -3055,7 +3537,9 @@
             ) {
               return `
                 <div class="live-zone card">
+
                   <div class="live-zone-title">
+
                     <h3 style="margin:0;">
                       Зона ${esc(zone)}
                     </h3>
@@ -3063,11 +3547,13 @@
                     <span class="badge">
                       немає даних
                     </span>
+
                   </div>
 
                   <p class="form__hint">
                     ...
                   </p>
+
                 </div>
               `;
             }
@@ -3077,6 +3563,7 @@
                 .map(
                   row => `
                     <tr>
+
                       <td>
                         ${esc(
                           fmt(
@@ -3106,6 +3593,7 @@
                       <td>${esc(fmt(row.big))}</td>
                       <td>${esc(fmt(row.weight))}</td>
                       <td>${esc(fmt(row.place))}</td>
+
                     </tr>
                   `
                 )
@@ -3113,7 +3601,9 @@
 
             return `
               <div class="live-zone card">
+
                 <div class="live-zone-title">
+
                   <h3 style="margin:0;">
                     Зона ${esc(zone)}
                   </h3>
@@ -3125,6 +3615,7 @@
                       )
                     )}
                   </span>
+
                 </div>
 
                 <div
@@ -3135,10 +3626,14 @@
                     -webkit-overflow-scrolling:touch;
                   "
                 >
+
                   <table class="table table-sm">
+
                     <thead>
                       <tr>
-                        <th>Зона</th>
+                        <th>
+                          Зона
+                        </th>
 
                         <th>
                           ${esc(
@@ -3160,8 +3655,11 @@
                     <tbody>
                       ${rowsHtml}
                     </tbody>
+
                   </table>
+
                 </div>
+
               </div>
             `;
           }
@@ -3184,49 +3682,99 @@
     drawZone,
     drawSector
   ) {
-    const zone =
-      String(
-        drawZone ||
-        (
-          drawKey
-            ? String(
-                drawKey
-              )[0]
-            : ""
-        ) ||
-        ""
+    const rawDrawKey =
+      norm(
+        drawKey
       )
         .toUpperCase();
 
-    const sector =
-      Number(
-        drawSector ||
-        (
-          drawKey
-            ? parseInt(
-                String(
-                  drawKey
-                ).slice(
-                  1
-                ),
-                10
-              )
-            : 0
-        ) ||
-        0
-      );
+    let zone =
+      norm(
+        drawZone
+      )
+        .toUpperCase();
+
+    let sector =
+      0;
+
+    if (
+      rawDrawKey
+    ) {
+      const match =
+        rawDrawKey.match(
+          /^([ABC])(\d+)$/
+        );
+
+      if (
+        match
+      ) {
+        zone =
+          match[1];
+
+        sector =
+          Number(
+            match[2]
+          );
+      }
+    }
+
+    /*
+     * Підтримка:
+     * 7
+     * або A7
+     */
+    if (
+      !sector
+    ) {
+      const rawSector =
+        norm(
+          drawSector
+        )
+          .toUpperCase();
+
+      const sectorMatch =
+        rawSector.match(
+          /^(?:[ABC])?(\d+)$/
+        );
+
+      if (
+        sectorMatch
+      ) {
+        sector =
+          Number(
+            sectorMatch[1]
+          );
+      }
+    }
+
+    if (
+      ![
+        "A",
+        "B",
+        "C"
+      ].includes(
+        zone
+      )
+    ) {
+      zone =
+        rawDrawKey &&
+        /^[ABC]/.test(
+          rawDrawKey
+        )
+          ? rawDrawKey[0]
+          : "";
+    }
 
     const label =
-      drawKey
-        ? String(
-            drawKey
-          )
-            .toUpperCase()
-        : zone &&
-          sector
-          ? `${zone}${sector}`
-          : zone ||
-            "—";
+      rawDrawKey
+        ? rawDrawKey
+        : (
+            zone &&
+            sector
+              ? `${zone}${sector}`
+              : zone ||
+                "—"
+          );
 
     const zoneOrder =
       zone === "A"
@@ -3239,11 +3787,12 @@
 
     const sortKey =
       zoneOrder *
-      100 +
+        100 +
       (
         Number.isFinite(
           sector
-        )
+        ) &&
+        sector > 0
           ? sector
           : 99
       );
@@ -3262,153 +3811,201 @@
     const rows =
       [];
 
-    (teamsRaw || [])
-      .forEach(
-        team => {
-          const teamId =
-            norm(
-              team.teamId
-            );
+    (
+      teamsRaw ||
+      []
+    ).forEach(
+      team => {
+        /*
+         * Визначаємо SOLO
+         * по самому row,
+         * а не тільки по competition.
+         */
+        const rowSolo =
+          normLower(
+            team.entryType
+          ) ===
+            ENTRY_SOLO ||
+          isSoloEntry();
 
-          const uid =
+        const teamId =
+          norm(
+            team.teamId
+          );
+
+        const uid =
+          norm(
+            team.uid ||
+            team.participantUid ||
+            team.userId ||
+            team.registeredByUid ||
+            (
+              rowSolo
+                ? team.entityId
+                : ""
+            ) ||
+            ""
+          );
+
+        const entityId =
+          rowSolo
+            ? (
+                uid ||
+                norm(
+                  team.entityId
+                ) ||
+                teamId
+              )
+            : (
+                teamId ||
+                norm(
+                  team.entityId
+                )
+              );
+
+        if (
+          !entityId
+        ) {
+          return;
+        }
+
+        const hasDraw =
+          Boolean(
+            team.drawKey ||
+            team.drawZone ||
+            team.drawSector ||
+            team.zone ||
+            team.sector
+          );
+
+        if (
+          !hasDraw
+        ) {
+          return;
+        }
+
+        const parsed =
+          parseZoneKey(
+            team.drawKey,
+            team.drawZone ||
+            team.zone,
+            team.drawSector ??
+            team.sector
+          );
+
+        if (
+          ![
+            "A",
+            "B",
+            "C"
+          ].includes(
+            parsed.zone
+          )
+        ) {
+          return;
+        }
+
+        rows.push({
+          entityId,
+
+          entryType:
+            rowSolo
+              ? ENTRY_SOLO
+              : ENTRY_TEAM,
+
+          uid:
+            rowSolo
+              ? uid
+              : "",
+
+          participantUid:
             norm(
-              team.uid ||
-              team.participantUid ||
-              team.userId ||
-              team.registeredByUid ||
-              ""
-            );
+              team.participantUid
+            ),
+
+          userId:
+            norm(
+              team.userId
+            ),
+
+          registeredByUid:
+            norm(
+              team.registeredByUid
+            ),
+
+          participantName:
+            rowSolo
+              ? normalizeLegacySoloName(
+                  team.participantName ||
+                  team.fullName ||
+                  team.userName ||
+                  ""
+                )
+              : "",
+
+          firstName:
+            norm(
+              team.firstName
+            ),
+
+          lastName:
+            norm(
+              team.lastName
+            ),
+
+          displayName:
+            norm(
+              team.displayName
+            ),
+
+          captain:
+            norm(
+              team.captain
+            ),
 
           /*
-           * TEAM:
-           * teamId обов'язковий.
-           *
            * SOLO:
-           * UID основний.
+           * teamId не identity.
            *
-           * teamId fallback
-           * для старого Live.
+           * Але legacy value
+           * залишаємо alias.
            */
-          if (
-            isSoloEntry()
-          ) {
-            if (
-              !uid &&
-              !teamId
-            ) {
-              return;
-            }
+          teamId:
+            rowSolo
+              ? teamId
+              : entityId,
 
-          } else if (
-            !teamId
-          ) {
-            return;
-          }
+          teamName:
+            rowSolo
+              ? ""
+              : norm(
+                  team.teamName ||
+                  team.team
+                ),
 
-          const hasDraw =
-            Boolean(
-              team.drawKey ||
-              team.drawZone ||
-              team.drawSector ||
-              team.zone ||
-              team.sector
-            );
+          zone:
+            parsed.zone,
 
-          if (
-            !hasDraw
-          ) {
-            return;
-          }
+          sector:
+            parsed.sector,
 
-          const parsed =
-            parseZoneKey(
-              team.drawKey,
-              team.drawZone ||
-              team.zone,
-              team.drawSector ||
-              team.sector
-            );
+          zoneLabel:
+            parsed.label,
 
-          rows.push({
-            entityId:
-              isSoloEntry()
-                ? (
-                    uid ||
-                    teamId
-                  )
-                : teamId,
+          drawKey:
+            parsed.label,
 
-            entryType:
-              isSoloEntry()
-                ? ENTRY_SOLO
-                : ENTRY_TEAM,
+          drawZone:
+            parsed.zone,
 
-            uid,
+          drawSector:
+            parsed.sector,
 
-            participantUid:
-              team.participantUid ||
-              "",
-
-            userId:
-              team.userId ||
-              "",
-
-            registeredByUid:
-              team.registeredByUid ||
-              "",
-
-            participantName:
-              team.participantName ||
-              team.fullName ||
-              team.userName ||
-              "",
-
-            firstName:
-              team.firstName ||
-              "",
-
-            lastName:
-              team.lastName ||
-              "",
-
-            displayName:
-              team.displayName ||
-              "",
-
-            captain:
-              team.captain ||
-              "",
-
-            teamId,
-
-            teamName:
-              team.teamName ||
-              team.team ||
-              "",
-
-            zone:
-              parsed.zone,
-
-            sector:
-              parsed.sector,
-
-            zoneLabel:
-              parsed.label,
-
-            drawKey:
-              parsed.label,
-
-            drawZone:
-              parsed.zone,
-
-            drawSector:
-              parsed.sector,
-
-            sortKey:
-              parsed.sortKey
-          });
-        }
-      );
+          sortKey:
+            parsed.sortKey
+        });
+      }
+    );
 
     rows.sort(
       (
@@ -3448,17 +4045,20 @@
       hasCurrentStageZones();
 
     /*
-     * SOLO:
-     * готовий zonesData може містити
-     * старий teamName.
+     * SOLO завжди будуємо
+     * з regRows + weighings.
      *
-     * Тому SOLO завжди перебудовуємо
-     * з regRows.
+     * Саме тому жереб видно
+     * ДО першого зважування.
      */
     needAutoZones =
       isSoloEntry() ||
       !hasStageZones;
 
+    /*
+     * Старий TEAM із готовими zones
+     * залишається без змін.
+     */
     if (
       !isSoloEntry() &&
       hasStageZones
@@ -3471,8 +4071,15 @@
       return;
     }
 
+    /*
+     * КЛЮЧОВЕ:
+     *
+     * не чекаємо allWeighDocs.
+     *
+     * Якщо є regRows —
+     * показуємо жереб одразу.
+     */
     if (
-      allWeighDocs.length &&
       regRows.length
     ) {
       renderZonesDebounced(
@@ -3583,7 +4190,8 @@
           if (
             Number(
               doc.weighNo
-            ) === 4 &&
+            ) ===
+              4 &&
             participantId
           ) {
             w4Done.add(
@@ -3685,6 +4293,7 @@
     finalBigFishBox
       .innerHTML = `
         <div class="final-bigfish-line">
+
           <strong>
             Big Fish Короп
           </strong>
@@ -3712,6 +4321,7 @@
                 : "немає даних"
             }
           </span>
+
         </div>
 
         <div
@@ -3720,6 +4330,7 @@
             final-bigfish-line--amur
           "
         >
+
           <strong>
             Big Fish Амур
           </strong>
@@ -3747,12 +4358,13 @@
                 : "немає даних"
             }
           </span>
+
         </div>
       `;
   }
 
   // =========================================================
-  // W1–W4
+  // W1-W4
   // =========================================================
 
   function setWeighButtons(
@@ -3844,7 +4456,9 @@
         .innerHTML = `
           <thead>
             <tr>
-              <th>Зона</th>
+              <th>
+                Зона
+              </th>
 
               <th>
                 ${esc(
@@ -3852,7 +4466,9 @@
                 )}
               </th>
 
-              <th>🐟1</th>
+              <th>
+                🐟1
+              </th>
             </tr>
           </thead>
 
@@ -3956,6 +4572,7 @@
 
           return `
             <tr>
+
               <td>
                 ${esc(
                   fmt(
@@ -3978,15 +4595,18 @@
               </td>
 
               ${cells.join("")}
+
             </tr>
           `;
         }
-      ).join("");
+      )
+      .join("");
 
     weighTableEl
       .innerHTML = `
         <thead>
           <tr>
+
             <th>
               Зона
             </th>
@@ -3998,6 +4618,7 @@
             </th>
 
             ${fishHeaders}
+
           </tr>
         </thead>
 
@@ -4119,8 +4740,7 @@
     if (
       weighInfoEl
     ) {
-      weighInfoEl
-        .textContent =
+      weighInfoEl.textContent =
         `${currentWeighKey} — список риб по секторах`;
     }
   }
@@ -4217,198 +4837,6 @@
   }
 
   // =========================================================
-  // PUBLIC PARTICIPANTS — SOLO NAME FALLBACK
-  // =========================================================
-
-  function stopPublicParticipantsSub() {
-    if (
-      unsubPublicParticipants
-    ) {
-      unsubPublicParticipants();
-
-      unsubPublicParticipants =
-        null;
-    }
-
-    publicSoloNameByUid =
-      new Map();
-
-    publicSoloNameByTeamId =
-      new Map();
-  }
-
-  function startPublicParticipantsSub(
-    compId
-  ) {
-    stopPublicParticipantsSub();
-
-    if (
-      !compId
-    ) {
-      return;
-    }
-
-    unsubPublicParticipants =
-      db
-        .collection(
-          "public_participants"
-        )
-        .where(
-          "competitionId",
-          "==",
-          compId
-        )
-        .onSnapshot(
-          snapshot => {
-            const uidMap =
-              new Map();
-
-            const teamMap =
-              new Map();
-
-            snapshot.forEach(
-              docSnap => {
-                const data =
-                  docSnap.data() ||
-                  {};
-
-                if (
-                  !stageMatches(
-                    data.stageId,
-                    activeStageId
-                  )
-                ) {
-                  return;
-                }
-
-                const entryType =
-                  normLower(
-                    data.entryType
-                  );
-
-                /*
-                 * Нас цікавить SOLO.
-                 *
-                 * Для legacy також допускаємо,
-                 * що competition уже SOLO,
-                 * але старий документ ще team.
-                 */
-                if (
-                  entryType !==
-                    ENTRY_SOLO &&
-                  !isSoloEntry()
-                ) {
-                  return;
-                }
-
-                const candidate =
-                  norm(
-                    data.participantName ||
-                    data.fullName ||
-                    data.userName ||
-                    ""
-                  );
-
-                let name =
-                  candidate;
-
-                if (
-                  !name
-                ) {
-                  const display =
-                    norm(
-                      data.displayName
-                    );
-
-                  const teamName =
-                    norm(
-                      data.teamName
-                    );
-
-                  if (
-                    display &&
-                    display !==
-                      teamName
-                  ) {
-                    name =
-                      display;
-                  }
-                }
-
-                if (
-                  !name
-                ) {
-                  return;
-                }
-
-                const uid =
-                  norm(
-                    data.uid ||
-                    data.participantUid ||
-                    data.userId ||
-                    data.registeredByUid ||
-                    ""
-                  );
-
-                const teamId =
-                  norm(
-                    data.teamId
-                  );
-
-                if (
-                  uid
-                ) {
-                  uidMap.set(
-                    uid,
-                    name
-                  );
-                }
-
-                if (
-                  teamId
-                ) {
-                  teamMap.set(
-                    teamId,
-                    name
-                  );
-                }
-              }
-            );
-
-            publicSoloNameByUid =
-              uidMap;
-
-            publicSoloNameByTeamId =
-              teamMap;
-
-            /*
-             * Імена могли приїхати
-             * після stageResults.
-             */
-            if (
-              currentStageTeamsRaw.length
-            ) {
-              regRows =
-                buildRegRowsFromStageTeams(
-                  currentStageTeamsRaw
-                );
-            }
-
-            refreshClassicZones();
-            renderWeighDebounced();
-            renderFinalBigFishTables();
-          },
-
-          error => {
-            console.warn(
-              "public_participants snapshot error:",
-              error
-            );
-          }
-        );
-  }
-
-  // =========================================================
   // STAGE MATCH
   // =========================================================
 
@@ -4457,6 +4885,318 @@
   }
 
   // =========================================================
+  // PUBLIC PARTICIPANTS — SOLO FALLBACK
+  // =========================================================
+
+  function stopPublicParticipantsSub() {
+    if (
+      unsubPublicParticipants
+    ) {
+      unsubPublicParticipants();
+
+      unsubPublicParticipants =
+        null;
+    }
+
+    publicSoloNameByUid =
+      new Map();
+
+    publicSoloNameByTeamId =
+      new Map();
+
+    publicSoloRows =
+      [];
+  }
+
+  function startPublicParticipantsSub(
+    compId
+  ) {
+    stopPublicParticipantsSub();
+
+    if (
+      !compId
+    ) {
+      return;
+    }
+
+    unsubPublicParticipants =
+      db
+        .collection(
+          "public_participants"
+        )
+        .where(
+          "competitionId",
+          "==",
+          compId
+        )
+        .onSnapshot(
+          snapshot => {
+            const uidMap =
+              new Map();
+
+            const teamMap =
+              new Map();
+
+            const rows =
+              [];
+
+            snapshot.forEach(
+              docSnap => {
+                const data =
+                  docSnap.data() ||
+                  {};
+
+                if (
+                  !stageMatches(
+                    data.stageId,
+                    activeStageId
+                  )
+                ) {
+                  return;
+                }
+
+                const status =
+                  normLower(
+                    data.status
+                  );
+
+                /*
+                 * Якщо status присутній —
+                 * беремо тільки confirmed.
+                 */
+                if (
+                  status &&
+                  status !==
+                    "confirmed"
+                ) {
+                  return;
+                }
+
+                const entryType =
+                  normLower(
+                    data.entryType
+                  );
+
+                /*
+                 * Canonical SOLO,
+                 * __solo__ doc,
+                 * або legacy row
+                 * у SOLO competition.
+                 */
+                const looksSolo =
+                  entryType ===
+                    ENTRY_SOLO ||
+                  docSnap.id.includes(
+                    "__solo__"
+                  ) ||
+                  isSoloEntry();
+
+                if (
+                  !looksSolo
+                ) {
+                  return;
+                }
+
+                let uid =
+                  norm(
+                    data.uid ||
+                    data.participantUid ||
+                    data.userId ||
+                    data.registeredByUid ||
+                    data.entityId ||
+                    ""
+                  );
+
+                if (
+                  !uid &&
+                  docSnap.id.includes(
+                    "__solo__"
+                  )
+                ) {
+                  uid =
+                    norm(
+                      docSnap.id
+                        .split(
+                          "__solo__"
+                        )
+                        .pop()
+                    );
+                }
+
+                const teamId =
+                  norm(
+                    data.teamId
+                  );
+
+                const name =
+                  canonicalSoloNameFromData(
+                    data
+                  );
+
+                if (
+                  name
+                ) {
+                  if (
+                    uid
+                  ) {
+                    uidMap.set(
+                      uid,
+                      name
+                    );
+                  }
+
+                  if (
+                    teamId
+                  ) {
+                    teamMap.set(
+                      teamId,
+                      name
+                    );
+                  }
+                }
+
+                /*
+                 * PUBLIC може бути
+                 * резервним джерелом жеребу,
+                 * якщо stageResults ще
+                 * не встиг приїхати.
+                 */
+                const hasDraw =
+                  Boolean(
+                    data.drawKey ||
+                    data.drawZone ||
+                    data.drawSector ||
+                    data.zone ||
+                    data.sector
+                  );
+
+                if (
+                  !hasDraw
+                ) {
+                  return;
+                }
+
+                const entityId =
+                  uid ||
+                  norm(
+                    data.entityId
+                  ) ||
+                  docSnap.id;
+
+                rows.push({
+                  _id:
+                    docSnap.id,
+
+                  entryType:
+                    ENTRY_SOLO,
+
+                  entityId,
+
+                  uid:
+                    uid ||
+                    entityId,
+
+                  participantName:
+                    name ||
+                    "Учасник",
+
+                  firstName:
+                    norm(
+                      data.firstName
+                    ),
+
+                  lastName:
+                    norm(
+                      data.lastName
+                    ),
+
+                  displayName:
+                    norm(
+                      data.displayName
+                    ),
+
+                  teamId,
+
+                  teamName:
+                    "",
+
+                  drawKey:
+                    norm(
+                      data.drawKey
+                    ),
+
+                  drawZone:
+                    norm(
+                      data.drawZone ||
+                      data.zone
+                    ),
+
+                  drawSector:
+                    data.drawSector ??
+                    data.sector ??
+                    null,
+
+                  zone:
+                    norm(
+                      data.zone ||
+                      data.drawZone
+                    ),
+
+                  sector:
+                    data.sector ??
+                    data.drawSector ??
+                    null
+                });
+              }
+            );
+
+            publicSoloNameByUid =
+              uidMap;
+
+            publicSoloNameByTeamId =
+              teamMap;
+
+            publicSoloRows =
+              rows;
+
+            /*
+             * stageResults головний.
+             *
+             * PUBLIC rows —
+             * тільки fallback.
+             */
+            if (
+              currentStageTeamsRaw.length
+            ) {
+              regRows =
+                buildRegRowsFromStageTeams(
+                  currentStageTeamsRaw
+                );
+
+            } else if (
+              publicSoloRows.length
+            ) {
+              regRows =
+                buildRegRowsFromStageTeams(
+                  publicSoloRows
+                );
+            }
+
+            refreshClassicZones();
+            renderWeighDebounced();
+            renderFinalBigFishTables();
+          },
+
+          error => {
+            console.warn(
+              "public_participants snapshot error:",
+              error
+            );
+          }
+        );
+  }
+
+  // =========================================================
   // STAGE RESULTS
   // =========================================================
 
@@ -4497,27 +5237,28 @@
         .onSnapshot(
           snapshot => {
             try {
+              /*
+               * Якщо stageResults
+               * ще не створився,
+               * SOLO жереб можемо
+               * показати з public mirror.
+               */
               if (
                 !snapshot.exists
               ) {
                 if (
                   stageEl
                 ) {
-                  stageEl
-                    .textContent =
+                  stageEl.textContent =
                     docId;
                 }
 
                 if (
                   updatedEl
                 ) {
-                  updatedEl
-                    .textContent =
+                  updatedEl.textContent =
                     "";
                 }
-
-                regRows =
-                  [];
 
                 currentStageTeamsRaw =
                   [];
@@ -4527,6 +5268,13 @@
                   B: [],
                   C: []
                 };
+
+                regRows =
+                  publicSoloRows.length
+                    ? buildRegRowsFromStageTeams(
+                        publicSoloRows
+                      )
+                    : [];
 
                 refreshClassicZones();
 
@@ -4545,6 +5293,30 @@
                 snapshot.data() ||
                 {};
 
+              /*
+               * Дуже важливо:
+               *
+               * draw_admin.js вже записує
+               * entryType у stageResults.
+               *
+               * Тому можемо визначити SOLO
+               * одразу, не чекаючи competitions.
+               */
+              const stageEntryType =
+                normLower(
+                  data.entryType
+                );
+
+              if (
+                stageEntryType ===
+                  ENTRY_SOLO ||
+                stageEntryType ===
+                  ENTRY_TEAM
+              ) {
+                activeEntryType =
+                  stageEntryType;
+              }
+
               const stageName =
                 data.stageName ||
                 data.stage ||
@@ -4554,8 +5326,7 @@
               if (
                 stageEl
               ) {
-                stageEl
-                  .textContent =
+                stageEl.textContent =
                   stageName;
               }
 
@@ -4568,8 +5339,7 @@
               if (
                 updatedEl
               ) {
-                updatedEl
-                  .textContent =
+                updatedEl.textContent =
                   `Оновлено: ${fmtTs(
                     updatedAt
                   )}`;
@@ -4595,10 +5365,35 @@
               currentStageZonesData =
                 zonesData;
 
-              regRows =
-                buildRegRowsFromStageTeams(
-                  teamsRaw
-                );
+              /*
+               * stageResults — основа.
+               *
+               * public_participants —
+               * тільки якщо teams[]
+               * реально порожній.
+               */
+              if (
+                teamsRaw.length
+              ) {
+                regRows =
+                  buildRegRowsFromStageTeams(
+                    teamsRaw
+                  );
+
+              } else if (
+                publicSoloRows.length
+              ) {
+                regRows =
+                  buildRegRowsFromStageTeams(
+                    publicSoloRows
+                  );
+
+              } else {
+                regRows =
+                  [];
+              }
+
+              applyFormatVisibility();
 
               refreshClassicZones();
 
@@ -4610,7 +5405,9 @@
 
               showContent();
 
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 "stageResults render error:",
                 error
@@ -4715,6 +5512,22 @@
               activeEntryType =
                 nextEntryType;
 
+              /*
+               * Якщо спочатку public snapshot
+               * прийшов як legacy TEAM,
+               * після визначення SOLO
+               * перечитуємо public mirror.
+               */
+              if (
+                entryTypeChanged &&
+                activeEntryType ===
+                  ENTRY_SOLO
+              ) {
+                startPublicParticipantsSub(
+                  compId
+                );
+              }
+
               if (
                 formatChanged ||
                 entryTypeChanged
@@ -4732,10 +5545,11 @@
               }
 
               /*
-               * Якщо competition прийшов
-               * після stageResults,
-               * тепер перебудуємо stage rows
-               * уже з правильним SOLO/TEAM.
+               * Competition може
+               * завантажитись ПІСЛЯ
+               * stageResults.
+               *
+               * Перебудовуємо identity.
                */
               if (
                 currentStageTeamsRaw.length
@@ -4743,6 +5557,15 @@
                 regRows =
                   buildRegRowsFromStageTeams(
                     currentStageTeamsRaw
+                  );
+
+              } else if (
+                isSoloEntry() &&
+                publicSoloRows.length
+              ) {
+                regRows =
+                  buildRegRowsFromStageTeams(
+                    publicSoloRows
                   );
               }
 
@@ -4754,7 +5577,9 @@
               renderFinalBigFishTables();
               renderThreeTablesDebounced();
 
-            } catch (error) {
+            } catch (
+              error
+            ) {
               console.error(
                 "competition format error:",
                 error
@@ -4961,9 +5786,9 @@
             false;
 
           /*
-           * До завантаження competition
-           * безпечний default:
-           * classic TEAM.
+           * Безпечний default,
+           * поки не прийде
+           * competition/stageResults.
            */
           activeFormat =
             FORMAT_CLASSIC;
@@ -4974,9 +5799,8 @@
           applyFormatVisibility();
 
           /*
-           * Порядок не критичний:
-           * після приходу competition
-           * усе буде перемальовано.
+           * Усі realtime джерела
+           * стартують паралельно.
            */
           startCompetitionSub(
             activeCompId
@@ -4994,7 +5818,9 @@
             currentWeighNo
           );
 
-        } catch (error) {
+        } catch (
+          error
+        ) {
           console.error(
             "settings/app error:",
             error

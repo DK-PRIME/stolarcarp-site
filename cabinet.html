@@ -2,16 +2,40 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8" />
-  <title>Мій кабінет · STOLAR CARP</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <link rel="icon" type="image/png" href="assets/favicon.png" />
-  <link rel="apple-touch-icon" href="assets/favicon.png" />
-  <meta name="theme-color" content="#020617" />
+  <title>Мій кабінет · STOLAR CARP</title>
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+
+  <link
+    rel="icon"
+    type="image/png"
+    href="assets/favicon.png"
+  />
+
+  <link
+    rel="apple-touch-icon"
+    href="assets/favicon.png"
+  />
+
+  <meta
+    name="theme-color"
+    content="#020617"
+  />
 
   <!-- ✅ анти-кеш -->
-  <link rel="stylesheet" href="assets/css/main.css?v=20260215-1" />
-  <script defer src="assets/js/config.js?v=20260215-1"></script>
+  <link
+    rel="stylesheet"
+    href="assets/css/main.css?v=20260215-1"
+  />
+
+  <script
+    defer
+    src="assets/js/config.js?v=20260215-1"
+  ></script>
 
   <style>
     body.cabinet-page{
@@ -38,13 +62,23 @@
       width:10px;
       height:10px;
       border-radius:999px;
-      background:linear-gradient(135deg,#facc15,#f97316);
-      box-shadow:0 0 10px rgba(250,204,21,.7);
+      background:linear-gradient(
+        135deg,
+        #facc15,
+        #f97316
+      );
+      box-shadow:
+        0 0 10px
+        rgba(250,204,21,.7);
     }
 
     .cabinet-title{
       margin:0 0 6px;
-      font-size:clamp(22px,3.4vw,30px);
+      font-size:clamp(
+        22px,
+        3.4vw,
+        30px
+      );
       font-weight:800;
       letter-spacing:.06em;
       text-transform:uppercase;
@@ -72,7 +106,8 @@
     .cabinet-layout{
       margin-top:18px;
       display:grid;
-      grid-template-columns:minmax(0,1fr);
+      grid-template-columns:
+        minmax(0,1fr);
       gap:18px;
     }
 
@@ -80,16 +115,19 @@
       background:#020617;
       border-radius:18px;
       border:1px solid #1f2937;
-      box-shadow:0 20px 40px rgba(0,0,0,.75);
+      box-shadow:
+        0 20px 40px
+        rgba(0,0,0,.75);
       padding:16px 14px;
     }
 
     .card--soft{
-      background:radial-gradient(
-        circle at top,
-        #0b1220 0,
-        #020617 65%
-      );
+      background:
+        radial-gradient(
+          circle at top,
+          #0b1220 0,
+          #020617 65%
+        );
     }
 
     .card-title{
@@ -119,7 +157,9 @@
       margin-bottom:12px;
     }
 
-    /* === КРУГЛИЙ АВАТАР === */
+    /* =========================
+       КРУГЛИЙ АВАТАР
+    ========================= */
 
     .team-avatar-wrap{
       width:82px;
@@ -133,12 +173,16 @@
       border:2px solid #facc15;
       flex-shrink:0;
       cursor:pointer;
-      transition:transform .2s,box-shadow .2s;
+      transition:
+        transform .2s,
+        box-shadow .2s;
     }
 
     .team-avatar-wrap:hover{
       transform:scale(1.05);
-      box-shadow:0 0 15px rgba(250,204,21,.4);
+      box-shadow:
+        0 0 15px
+        rgba(250,204,21,.4);
     }
 
     .team-avatar{
@@ -156,6 +200,7 @@
 
     .team-main{
       flex:1;
+      min-width:0;
     }
 
     .team-name{
@@ -172,7 +217,9 @@
       margin-bottom:8px;
     }
 
-    /* === ПІБ / МІСТО === */
+    /* =========================
+       ПІБ / МІСТО
+    ========================= */
 
     .user-fullname{
       font-size:.95rem;
@@ -208,7 +255,9 @@
       font-weight:600;
     }
 
-    /* === EDIT PROFILE === */
+    /* =========================
+       EDIT PROFILE
+    ========================= */
 
     .profile-actions{
       margin-top:10px;
@@ -235,11 +284,12 @@
     }
 
     .profile-btn--primary{
-      background:linear-gradient(
-        135deg,
-        #facc15,
-        #f97316
-      );
+      background:
+        linear-gradient(
+          135deg,
+          #facc15,
+          #f97316
+        );
       color:#0b1220;
       border:0;
     }
@@ -259,11 +309,12 @@
       padding:12px;
       border-radius:16px;
       border:1px solid #1f2937;
-      background:radial-gradient(
-        circle at top,
-        #0b1220 0,
-        #020617 70%
-      );
+      background:
+        radial-gradient(
+          circle at top,
+          #0b1220 0,
+          #020617 70%
+        );
     }
 
     .profile-grid{
@@ -292,7 +343,9 @@
 
     .profile-input:focus{
       border-color:#facc15;
-      box-shadow:0 0 0 3px rgba(250,204,21,.12);
+      box-shadow:
+        0 0 0 3px
+        rgba(250,204,21,.12);
     }
 
     #profileEditMsg{
@@ -309,7 +362,9 @@
       color:#ef4444;
     }
 
-    /* === CLOUDINARY WIDGET БЛОК === */
+    /* =========================
+       CLOUDINARY
+    ========================= */
 
     .avatar-section{
       margin-top:12px;
@@ -353,7 +408,9 @@
       color:#ef4444;
     }
 
-    /* === MEMBERS === */
+    /* =========================
+       MEMBERS
+    ========================= */
 
     .members-list{
       margin-top:10px;
@@ -369,11 +426,17 @@
       margin-bottom:6px;
     }
 
-    /* === ДОСЯГНЕННЯ === */
+    /* =========================
+       ДОСЯГНЕННЯ
+    ========================= */
 
     .stats-grid{
       display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
+      grid-template-columns:
+        repeat(
+          2,
+          minmax(0,1fr)
+        );
       gap:10px;
       margin:8px 0 10px;
       font-size:.85rem;
@@ -382,11 +445,12 @@
     .stat-card{
       border-radius:12px;
       padding:9px 10px;
-      background:radial-gradient(
-        circle at top,
-        #0b1120 0,
-        #020617 70%
-      );
+      background:
+        radial-gradient(
+          circle at top,
+          #0b1120 0,
+          #020617 70%
+        );
       border:1px solid #1f2937;
     }
 
@@ -407,7 +471,9 @@
       margin-left:3px;
     }
 
-    /* === AVATAR POPUP === */
+    /* =========================
+       AVATAR POPUP
+    ========================= */
 
     #avatarPopup{
       display:none;
@@ -428,7 +494,9 @@
       max-width:90%;
       max-height:90%;
       border-radius:18px;
-      box-shadow:0 0 40px rgba(0,0,0,.9);
+      box-shadow:
+        0 0 40px
+        rgba(0,0,0,.9);
       object-fit:contain;
     }
   </style>
@@ -439,22 +507,91 @@
 <header class="header">
   <div class="container header__row">
 
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
+    <a
+      class="logo"
+      href="index.html"
+    >
+      <span class="logo__mark">
+        SC
+      </span>
+
+      <span class="logo__text">
+        STOLAR CARP
+      </span>
     </a>
 
     <nav class="nav">
-      <a href="index.html" class="nav__link">Головна</a>
-      <a href="rules.html" class="nav__link">Регламент</a>
-      <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="register.html" class="nav__link">Реєстрація</a>
-      <a href="live.html" class="nav__link">Live</a>
-      <a href="rating.html" class="nav__link">Рейтинг</a>
-      <a href="lakes.html" class="nav__link">Водойми</a>
-      <a href="sponsors.html" class="nav__link">Спонсори</a>
-      <a href="events/index.html" class="nav__link">Архів</a>
-      <a href="cabinet.html" class="nav__link nav__link--active">Мій кабінет</a>
+
+      <a
+        href="index.html"
+        class="nav__link"
+      >
+        Головна
+      </a>
+
+      <a
+        href="rules.html"
+        class="nav__link"
+      >
+        Регламент
+      </a>
+
+      <a
+        href="/formats.html"
+        class="nav__link"
+      >
+        Формат змагань
+      </a>
+
+      <a
+        href="register.html"
+        class="nav__link"
+      >
+        Реєстрація
+      </a>
+
+      <a
+        href="live.html"
+        class="nav__link"
+      >
+        Live
+      </a>
+
+      <a
+        href="rating.html"
+        class="nav__link"
+      >
+        Рейтинг
+      </a>
+
+      <a
+        href="lakes.html"
+        class="nav__link"
+      >
+        Водойми
+      </a>
+
+      <a
+        href="sponsors.html"
+        class="nav__link"
+      >
+        Спонсори
+      </a>
+
+      <a
+        href="events/index.html"
+        class="nav__link"
+      >
+        Архів
+      </a>
+
+      <a
+        href="cabinet.html"
+        class="nav__link nav__link--active"
+      >
+        Мій кабінет
+      </a>
+
     </nav>
 
     <button
@@ -472,17 +609,23 @@
 </header>
 
 <main class="main">
+
 <section class="container">
 
   <div class="cabinet-hero">
 
     <div class="cabinet-kicker">
+
       <span class="cabinet-kicker-dot"></span>
+
       STOLAR CARP · CABINET
+
     </div>
 
     <h1 class="cabinet-title">
-      <span>МІЙ КАБІНЕТ</span>
+      <span>
+        МІЙ КАБІНЕТ
+      </span>
     </h1>
 
     <p
@@ -502,6 +645,8 @@
 
     <!-- =================================================
          КОМАНДА ТА ПРОФІЛЬ
+
+         ✅ assets/js/cabinet.js
     ================================================== -->
 
     <div class="card card--soft">
@@ -517,6 +662,7 @@
           id="avatarWrapper"
           title="Натисніть для збільшення"
         >
+
           <img
             id="cabinetAvatarImg"
             class="team-avatar"
@@ -529,6 +675,7 @@
           >
             SC
           </div>
+
         </div>
 
         <div class="team-main">
@@ -558,13 +705,23 @@
           <div class="team-meta">
 
             <div class="meta-pill">
-              <strong>Роль:</strong>
-              <span id="userRoleText">–</span>
+              <strong>
+                Роль:
+              </strong>
+
+              <span id="userRoleText">
+                –
+              </span>
             </div>
 
             <div class="meta-pill">
-              <strong>Телефон:</strong>
-              <span id="userPhoneText">–</span>
+              <strong>
+                Телефон:
+              </strong>
+
+              <span id="userPhoneText">
+                –
+              </span>
             </div>
 
             <div
@@ -572,7 +729,10 @@
               id="joinCodePill"
               style="display:none;"
             >
-              <strong>Код команди:</strong>
+              <strong>
+                Код команди:
+              </strong>
+
               <span id="joinCodeText"></span>
             </div>
 
@@ -580,6 +740,11 @@
 
           <!-- =============================================
                РЕДАГУВАННЯ ПРОФІЛЮ
+
+               ✅ Прізвище
+               ✅ Імʼя
+               ✅ Телефон
+               ✅ Місто
           ============================================== -->
 
           <div class="profile-actions">
@@ -622,6 +787,7 @@
               <!-- ПРІЗВИЩЕ -->
 
               <div>
+
                 <div class="profile-label">
                   Прізвище
                 </div>
@@ -634,11 +800,13 @@
                   maxlength="40"
                   autocomplete="family-name"
                 >
+
               </div>
 
-              <!-- ІМ'Я -->
+              <!-- ІМʼЯ -->
 
               <div>
+
                 <div class="profile-label">
                   Імʼя
                 </div>
@@ -651,11 +819,13 @@
                   maxlength="40"
                   autocomplete="given-name"
                 >
+
               </div>
 
               <!-- ТЕЛЕФОН -->
 
               <div>
+
                 <div class="profile-label">
                   Телефон
                 </div>
@@ -668,11 +838,13 @@
                   maxlength="25"
                   autocomplete="tel"
                 >
+
               </div>
 
               <!-- МІСТО -->
 
               <div>
+
                 <div class="profile-label">
                   Місто проживання
                 </div>
@@ -685,6 +857,7 @@
                   maxlength="40"
                   autocomplete="address-level2"
                 >
+
               </div>
 
             </div>
@@ -724,10 +897,13 @@
           <div id="cabinetMsg"></div>
 
         </div>
+
       </div>
 
       <!-- =============================================
            СКЛАД КОМАНДИ
+
+           ✅ assets/js/cabinet.js
       ============================================== -->
 
       <div class="members-list">
@@ -737,9 +913,11 @@
         </div>
 
         <div id="membersContainer">
+
           <div class="cabinet-small-muted">
             Завантаження списку учасників…
           </div>
+
         </div>
 
       </div>
@@ -748,7 +926,10 @@
 
     <!-- =================================================
          МОЯ УЧАСТЬ
-         ✅ ПРАЦЮЄ ТІЛЬКИ ЧЕРЕЗ cabinet.js
+
+         ✅ ТІЛЬКИ assets/js/my_participation.js
+
+         ❌ cabinet.js цей блок НЕ обробляє
     ================================================== -->
 
     <div class="card">
@@ -758,15 +939,19 @@
       </h2>
 
       <div id="myCompetitions">
+
         <div class="cabinet-small-muted">
           Завантаження участі…
         </div>
+
       </div>
 
     </div>
 
     <!-- =================================================
          ДОСЯГНЕННЯ
+
+         ✅ assets/js/cabinet_achievements.js
     ================================================== -->
 
     <div class="card">
@@ -788,8 +973,15 @@
           </div>
 
           <div class="stat-value">
-            <span id="statTotalWeight">—</span>
-            <span class="stat-unit">кг</span>
+
+            <span id="statTotalWeight">
+              —
+            </span>
+
+            <span class="stat-unit">
+              кг
+            </span>
+
           </div>
 
         </div>
@@ -801,8 +993,15 @@
           </div>
 
           <div class="stat-value">
-            <span id="statBigFish">—</span>
-            <span class="stat-unit">кг</span>
+
+            <span id="statBigFish">
+              —
+            </span>
+
+            <span class="stat-unit">
+              кг
+            </span>
+
           </div>
 
         </div>
@@ -814,14 +1013,19 @@
   </div>
 
 </section>
+
 </main>
 
 <footer class="footer">
+
   <div class="container footer__row">
+
     <div>
       © 2025 STOLAR CARP · Львів
     </div>
+
   </div>
+
 </footer>
 
 <!-- =====================================================
@@ -829,53 +1033,103 @@
 ====================================================== -->
 
 <div id="avatarPopup">
+
   <img
     id="avatarPopupImg"
     src=""
     alt="Аватар повний розмір"
   >
+
 </div>
 
 <!-- =====================================================
      FIREBASE
 ====================================================== -->
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"
+></script>
 
 <!-- =====================================================
      CLOUDINARY
 ====================================================== -->
 
-<script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
+<script
+  src="https://widget.cloudinary.com/v2.0/global/all.js"
+></script>
 
 <!-- =====================================================
      STOLAR CARP JS
 ====================================================== -->
 
-<script src="assets/js/firebase-init.js?v=20260215-1"></script>
+<script
+  src="assets/js/firebase-init.js?v=20260215-1"
+></script>
 
-<!--
-  ✅ Один-єдиний модуль кабінету.
-  ✅ Він сам обробляє:
-     - профіль
-     - команду
-     - склад команди
-     - TEAM + SOLO "Моя участь"
-     - SOLO name sync
--->
-<script src="assets/js/cabinet.js?v=20260916-4"></script>
+<!-- =====================================================
+     CABINET CORE
 
-<script src="assets/js/final_invite.js?v=20260215-1"></script>
+     ✅ профіль
+     ✅ Прізвище
+     ✅ Імʼя
+     ✅ fullName = Прізвище Імʼя
+     ✅ телефон
+     ✅ місто
+     ✅ аватар
+     ✅ команда
+     ✅ склад команди
+     ✅ SOLO name sync
 
-<script src="assets/js/cabinet_achievements.js?v=20260215-1"></script>
+     ❌ НЕ керує #myCompetitions
+====================================================== -->
 
-<!--
-  ❌ my_participation.js БІЛЬШЕ НЕ ПІДКЛЮЧАЄМО.
-  Його функціонал уже є в cabinet.js.
--->
+<script
+  src="assets/js/cabinet.js?v=20260916-9"
+></script>
+
+<!-- =====================================================
+     MY PARTICIPATION
+
+     ✅ ЄДИНИЙ модуль для #myCompetitions
+     ✅ TEAM
+     ✅ SOLO
+     ✅ public_participants
+     ✅ competition / stage
+     ✅ поточні та майбутні
+     ✅ завершені автоматично ховаються
+====================================================== -->
+
+<script
+  src="assets/js/my_participation.js?v=20260916-9"
+></script>
+
+<!-- =====================================================
+     FINAL INVITE
+====================================================== -->
+
+<script
+  src="assets/js/final_invite.js?v=20260215-1"
+></script>
+
+<!-- =====================================================
+     ACHIEVEMENTS
+====================================================== -->
+
+<script
+  src="assets/js/cabinet_achievements.js?v=20260215-1"
+></script>
 
 </body>
 </html>

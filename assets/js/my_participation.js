@@ -9,15 +9,20 @@
 // ✅ "Учасник" НЕ вважається справжнім ім'ям
 //
 // ✅ SOLO canonical name:
-//    firstName + lastName
-// ✅ НІЧОГО не перевертаємо
+//    lastName + firstName
+//    Прізвище Ім'я
+//
 // ✅ НІЧОГО не скорочуємо
-// ✅ middleName / по батькові не використовуємо
+// ✅ middleName / по батькові не показуємо
 //
 // ✅ SOLO ім'я:
-//    1. firstName + lastName із registration/public
-//    2. firstName + lastName із users profile
+//    1. lastName + firstName із public_participants
+//    2. lastName + firstName із users profile
 //    3. legacy participantName/fullName як fallback
+//
+// ✅ Legacy:
+//    "Цьотар Василь Богданович" -> "Цьотар Василь"
+//    "Василь Богданович Цьотар" -> "Цьотар Василь"
 //
 // ✅ Legacy SOLO з entryType:"team" правильно визначається через competition
 // ✅ Stalker Solo -> SOLO
@@ -270,25 +275,23 @@
   }
 
   // =========================================================
-  // CANONICAL FIRST + LAST
+  // CANONICAL LAST + FIRST
   // =========================================================
 
   /*
    * ГОЛОВНЕ правило SOLO:
    *
-   * firstName + lastName
-   *
-   * Приклад:
+   * lastName + firstName
    *
    * firstName = "Василь"
    * lastName  = "Цьотар"
    *
-   * => "Василь Цьотар"
+   * => "Цьотар Василь"
    *
    * middleName / patronymic
-   * тут НЕ використовується.
+   * не використовуємо.
    */
-  function firstLastNameFromObject(
+  function lastFirstNameFromObject(
     data
   ) {
     const d =
@@ -297,12 +300,19 @@
 
     const firstName =
       validPersonName(
-        d.firstName
+        d.firstName ||
+        d.givenName ||
+        d.first_name ||
+        ""
       );
 
     const lastName =
       validPersonName(
-        d.lastName
+        d.lastName ||
+        d.surname ||
+        d.familyName ||
+        d.last_name ||
+        ""
       );
 
     if (
@@ -310,12 +320,143 @@
       lastName
     ) {
       return (
-        `${firstName} ${lastName}`
+        `${lastName} ${firstName}`
       );
     }
 
     return "";
   }
+
+  // =========================================================
+  // LEGACY PATRONYMIC
+  // =========================================================
+
+  function isPatronymicPart(
+    value
+  ) {
+    const s =
+      normLower(
+        value
+      );
+
+    if (
+      !s
+    ) {
+      return false;
+    }
+
+    return (
+      /(?:ович|евич|євич|йович)$/i.test(
+        s
+      ) ||
+      /(?:івна|ївна|овна|евна|євна)$/i.test(
+        s
+      )
+    );
+  }
+
+  // =========================================================
+  // LEGACY SOLO NAME
+  // =========================================================
+
+  /*
+   * "Цьотар Василь Богданович"
+   * -> "Цьотар Василь"
+   *
+   * "Василь Богданович Цьотар"
+   * -> "Цьотар Василь"
+   *
+   * "Мілян Андрій"
+   * -> "Мілян Андрій"
+   *
+   * Два слова не переставляємо
+   * без структурованих полів.
+   */
+  function normalizeLegacySoloName(
+    value
+  ) {
+    const raw =
+      norm(
+        value
+      );
+
+    if (
+      !raw ||
+      isPlaceholderPersonName(
+        raw
+      )
+    ) {
+      return "";
+    }
+
+    const parts =
+      raw
+        .split(" ")
+        .filter(Boolean);
+
+    if (
+      parts.length === 2
+    ) {
+      return raw;
+    }
+
+    if (
+      parts.length === 3
+    ) {
+      const patronymicIndex =
+        parts.findIndex(
+          isPatronymicPart
+        );
+
+      /*
+       * Прізвище Ім'я По батькові
+       *
+       * Цьотар Василь Богданович
+       * -> Цьотар Василь
+       */
+      if (
+        patronymicIndex === 2
+      ) {
+        return (
+          `${parts[0]} ${parts[1]}`
+        );
+      }
+
+      /*
+       * Ім'я По батькові Прізвище
+       *
+       * Василь Богданович Цьотар
+       * -> Цьотар Василь
+       */
+      if (
+        patronymicIndex === 1
+      ) {
+        return (
+          `${parts[2]} ${parts[0]}`
+        );
+      }
+
+      /*
+       * По батькові Ім'я Прізвище
+       *
+       * Богданович Василь Цьотар
+       * -> Цьотар Василь
+       */
+      if (
+        patronymicIndex === 0
+      ) {
+        return (
+          `${parts[2]} ${parts[1]}`
+        );
+      }
+    }
+
+    return raw;
+  }
+
+  // =========================================================
+  // PERSON NAME FROM OBJECT
+  // =========================================================
 
   function personNameFromObject(
     data
@@ -325,11 +466,13 @@
       {};
 
     /*
-     * Завжди спочатку
-     * структуровані поля.
+     * №1.
+     * Структуровані поля:
+     *
+     * lastName + firstName.
      */
     const structured =
-      firstLastNameFromObject(
+      lastFirstNameFromObject(
         d
       );
 
@@ -347,11 +490,8 @@
       );
 
     /*
+     * №2.
      * Legacy fallback.
-     *
-     * ВАЖЛИВО:
-     * ці поля НЕ розбираємо
-     * по словах.
      */
     const candidates = [
       d.participantName,
@@ -372,8 +512,14 @@
           teamName
         );
 
-      if (name) {
-        return name;
+      if (
+        name
+      ) {
+        return (
+          normalizeLegacySoloName(
+            name
+          )
+        );
       }
     }
 
@@ -385,37 +531,24 @@
   // =========================================================
 
   /*
-   * РАНІШЕ тут було:
+   * Ніяких скорочень.
    *
-   * Роман Дячок
-   * -> Дячок Роман
+   * "Цьотар Василь"
+   * -> "Цьотар Василь"
    *
-   * а довгі імена:
-   * -> Коваленко О.
-   *
-   * Це було неправильно.
-   *
-   * ТЕПЕР:
-   *
-   * "Василь Цьотар"
-   * -> "Василь Цьотар"
-   *
-   * Нічого не переставляємо.
-   * Нічого не скорочуємо.
+   * "Цьотар Василь Богданович"
+   * -> "Цьотар Василь"
    */
   function formatSoloName(
     value
   ) {
     const raw =
-      norm(
+      normalizeLegacySoloName(
         value
       );
 
     if (
-      !raw ||
-      isPlaceholderPersonName(
-        raw
-      )
+      !raw
     ) {
       return "Учасник";
     }
@@ -423,17 +556,21 @@
     return raw;
   }
 
+  // =========================================================
+  // RESOLVE SOLO NAME
+  // =========================================================
+
   function resolveSoloIdentityName(
     row
   ) {
     /*
      * 1.
-     * Якщо сама заявка вже має
-     * canonical firstName + lastName —
-     * використовуємо їх.
+     * Якщо заявка вже має
+     * firstName + lastName —
+     * це головне джерело.
      */
     const rowStructured =
-      firstLastNameFromObject(
+      lastFirstNameFromObject(
         row ||
         {}
       );
@@ -446,16 +583,11 @@
 
     /*
      * 2.
-     * Це сторінка "Моя участь".
-     *
-     * Якщо в старій заявці
-     * participantName записаний
-     * неправильно / старим форматом,
-     * актуальні firstName + lastName
-     * профілю мають пріоритет.
+     * Актуальний профіль
+     * поточного користувача.
      */
     const profileStructured =
-      firstLastNameFromObject(
+      lastFirstNameFromObject(
         currentProfile ||
         {}
       );
@@ -468,9 +600,7 @@
 
     /*
      * 3.
-     * Legacy ім'я із самої заявки.
-     *
-     * Нічого не парсимо.
+     * Legacy ім'я із заявки.
      */
     const fromRow =
       personNameFromObject(
@@ -480,7 +610,11 @@
     if (
       fromRow
     ) {
-      return fromRow;
+      return (
+        formatSoloName(
+          fromRow
+        )
+      );
     }
 
     /*
@@ -496,7 +630,11 @@
     if (
       fromProfile
     ) {
-      return fromProfile;
+      return (
+        formatSoloName(
+          fromProfile
+        )
+      );
     }
 
     /*
@@ -882,10 +1020,6 @@
     competition,
     stageId = ""
   ) {
-    /*
-     * Поточна логіка фіналу —
-     * TEAM.
-     */
     if (
       isFinalMeta(
         event,
@@ -1733,13 +1867,6 @@
       /*
        * Competition/event —
        * джерело істини.
-       *
-       * Якщо Stalker Solo:
-       * навіть старий документ
-       * entryType:"team"
-       * стає SOLO.
-       *
-       * Final примусово TEAM.
        */
       it.entryType =
         meta.entryType ||
@@ -1763,7 +1890,7 @@
 
         /*
          * У "Моя участь" SOLO
-         * показуємо ТІЛЬКИ
+         * показуємо тільки
          * поточного користувача.
          */
         if (
@@ -1786,13 +1913,8 @@
           null;
 
         /*
-         * КЛЮЧОВО:
-         *
-         * беремо canonical SOLO name
-         * через єдину функцію.
-         *
-         * Вона дає пріоритет
-         * firstName + lastName.
+         * Canonical:
+         * Прізвище Ім'я.
          */
         const participantName =
           resolveSoloIdentityName(
@@ -2034,18 +2156,6 @@
       return;
     }
 
-    /*
-     * Не ставимо:
-     *
-     * entryType == team
-     *
-     * бо legacy документи
-     * можуть не мати entryType
-     * або мати старий team.
-     *
-     * Пізніше competition meta
-     * визначить правильний тип.
-     */
     const unsub =
       db
         .collection(
@@ -2068,12 +2178,8 @@
                   {};
 
                 /*
-                 * Новий canonical SOLO
-                 * сюди не потрібен:
-                 * він читається через UID.
-                 *
-                 * Але legacy TEAM document
-                 * залишаємо.
+                 * Canonical SOLO
+                 * читається через UID.
                  */
                 if (
                   normLower(
@@ -2148,15 +2254,11 @@
     }
 
     /*
-     * Шукаємо ПО UID,
-     * але НЕ фільтруємо тут
-     * entryType === solo.
+     * Шукаємо по UID.
      *
-     * Старий Stalker Solo
+     * entryType тут не фільтруємо,
+     * бо старий Stalker Solo
      * міг мати entryType:"team".
-     *
-     * Тип визначимо через
-     * competitions.
      */
     const unsub =
       db
@@ -2295,7 +2397,9 @@
       );
 
     /*
-     * canonical SOLO profile name.
+     * Canonical SOLO profile name:
+     *
+     * Прізвище Ім'я.
      */
     let fullName =
       "";
@@ -2305,12 +2409,11 @@
       lastName
     ) {
       fullName =
-        `${firstName} ${lastName}`;
+        `${lastName} ${firstName}`;
 
     } else {
       /*
        * Legacy fallback.
-       * Нічого не переставляємо.
        */
       fullName =
         personNameFromObject(

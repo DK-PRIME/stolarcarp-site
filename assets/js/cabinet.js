@@ -8,39 +8,57 @@
 // ✅ legacy fullName не розбиваємо автоматично
 // ✅ SOLO public_participants синхронізується при зміні ПІБ
 // ✅ TEAM-заявки не перейменовуються
-// ✅ "Моя участь" показує ТІЛЬКИ активне змагання/етап
-// ✅ activeCompetitionId + activeStageId беремо з settings/app
-// ✅ public_participants читаємо одним запитом по activeCompetitionId
+// ✅ "Моя участь" = TEAM + SOLO
+// ✅ завершені змагання ховаємо по competitions/{id}.schedule.finishAt
+// ✅ settings/app більше НЕ використовується для "Моя участь"
+// ✅ public_participants читається двома простими паралельними запитами
 // ✅ team/members не перепідписуються при кожній зміні users/{uid}
-// ✅ competition meta кешується
+// ✅ competition docs кешуються і читаються паралельно
 
 (function () {
   "use strict";
 
-  console.log("✅ cabinet.js LOADED v20260916-active-only-v5");
+  console.log(
+    "✅ cabinet.js LOADED v20260916-current-participation-v6"
+  );
 
   // =========================
   // BURGER MENU
   // =========================
 
-  const burger = document.getElementById("burger");
-  const nav = document.querySelector(".nav");
+  const burger =
+    document.getElementById(
+      "burger"
+    );
 
-  if (burger && nav) {
+  const nav =
+    document.querySelector(
+      ".nav"
+    );
+
+  if (
+    burger &&
+    nav
+  ) {
     burger.addEventListener(
       "click",
-      () => nav.classList.toggle("open")
+      () =>
+        nav.classList.toggle(
+          "open"
+        )
     );
 
     nav.addEventListener(
       "click",
-      (e) => {
+      e => {
         if (
           e.target.classList.contains(
             "nav__link"
           )
         ) {
-          nav.classList.remove("open");
+          nav.classList.remove(
+            "open"
+          );
         }
       }
     );
@@ -56,7 +74,8 @@
   async function waitFirebase(
     maxMs = 12000
   ) {
-    const t0 = Date.now();
+    const t0 =
+      Date.now();
 
     while (
       Date.now() - t0 <
@@ -70,7 +89,7 @@
       }
 
       await new Promise(
-        (resolve) =>
+        resolve =>
           setTimeout(
             resolve,
             100
@@ -89,21 +108,34 @@
 
   const Cache = {
     data: {
-      user: null,
-      team: null,
-      members: [],
-      competitions: [],
-      userLastUpdate: 0,
-      compsLastUpdate: 0
+      user:
+        null,
+
+      team:
+        null,
+
+      members:
+        [],
+
+      competitions:
+        [],
+
+      userLastUpdate:
+        0,
+
+      compsLastUpdate:
+        0
     },
 
     isUserValid(
       maxAgeMs = 60000
     ) {
       return Boolean(
-        this.data.userLastUpdate &&
+        this.data
+          .userLastUpdate &&
         Date.now() -
-          this.data.userLastUpdate <
+          this.data
+            .userLastUpdate <
           maxAgeMs
       );
     },
@@ -112,14 +144,18 @@
       maxAgeMs = 300000
     ) {
       return Boolean(
-        this.data.compsLastUpdate &&
+        this.data
+          .compsLastUpdate &&
         Date.now() -
-          this.data.compsLastUpdate <
+          this.data
+            .compsLastUpdate <
           maxAgeMs
       );
     },
 
-    setUser(value) {
+    setUser(
+      value
+    ) {
       this.data.user =
         value;
 
@@ -127,17 +163,23 @@
         Date.now();
     },
 
-    setTeam(value) {
+    setTeam(
+      value
+    ) {
       this.data.team =
         value;
     },
 
-    setMembers(value) {
+    setMembers(
+      value
+    ) {
       this.data.members =
         value;
     },
 
-    setComps(value) {
+    setComps(
+      value
+    ) {
       this.data.competitions =
         value;
 
@@ -145,18 +187,33 @@
         Date.now();
     },
 
-    get(key) {
-      return this.data[key];
+    get(
+      key
+    ) {
+      return this.data[
+        key
+      ];
     },
 
     clear() {
       this.data = {
-        user: null,
-        team: null,
-        members: [],
-        competitions: [],
-        userLastUpdate: 0,
-        compsLastUpdate: 0
+        user:
+          null,
+
+        team:
+          null,
+
+        members:
+          [],
+
+        competitions:
+          [],
+
+        userLastUpdate:
+          0,
+
+        compsLastUpdate:
+          0
       };
     }
   };
@@ -320,20 +377,16 @@
   let participationLoadSeq =
     0;
 
-  let activeAppContextPromise =
-    null;
-
   const competitionDocCache =
-    new Map();
-
-  const competitionMetaCache =
     new Map();
 
   // =========================
   // HELPERS
   // =========================
 
-  function setStatus(t) {
+  function setStatus(
+    t
+  ) {
     if (
       statusEl
     ) {
@@ -360,7 +413,9 @@
     }
   }
 
-  function norm(v) {
+  function norm(
+    v
+  ) {
     return String(
       v ?? ""
     )
@@ -371,26 +426,38 @@
       .trim();
   }
 
-  function normLower(v) {
-    return norm(v)
+  function normLower(
+    v
+  ) {
+    return norm(
+      v
+    )
       .toLowerCase();
   }
 
-  function roleText(role) {
+  function roleText(
+    role
+  ) {
     return (
-      role === "admin"
+      role ===
+      "admin"
         ? "Адміністратор"
-        : role === "judge"
+        : role ===
+            "judge"
           ? "Суддя"
-          : role === "captain"
+          : role ===
+              "captain"
             ? "Капітан команди"
             : "Учасник команди"
     );
   }
 
-  function escapeHtml(str) {
+  function escapeHtml(
+    str
+  ) {
     return String(
-      str || ""
+      str ||
+      ""
     )
       .replace(
         /&/g,
@@ -427,13 +494,103 @@
     }
   }
 
+  function toMillis(
+    value
+  ) {
+    if (
+      !value
+    ) {
+      return 0;
+    }
+
+    try {
+      if (
+        typeof value
+          .toMillis ===
+        "function"
+      ) {
+        return value
+          .toMillis();
+      }
+
+      if (
+        typeof value
+          .toDate ===
+        "function"
+      ) {
+        return value
+          .toDate()
+          .getTime();
+      }
+
+      if (
+        typeof value ===
+        "number"
+      ) {
+        return Number.isFinite(
+          value
+        )
+          ? value
+          : 0;
+      }
+
+      if (
+        typeof value ===
+          "object"
+        &&
+        Number.isFinite(
+          value.seconds
+        )
+      ) {
+        return (
+          value.seconds *
+          1000
+        );
+      }
+
+      if (
+        typeof value ===
+          "object"
+        &&
+        Number.isFinite(
+          value._seconds
+        )
+      ) {
+        return (
+          value._seconds *
+          1000
+        );
+      }
+
+      const d =
+        new Date(
+          value
+        );
+
+      const ms =
+        d.getTime();
+
+      return Number.isNaN(
+        ms
+      )
+        ? 0
+        : ms;
+
+    } catch {
+      return 0;
+    }
+  }
+
   // =========================
   // NAME HELPERS
   // =========================
 
-  function cleanNamePart(v) {
+  function cleanNamePart(
+    v
+  ) {
     return String(
-      v || ""
+      v ||
+      ""
     )
       .trim()
       .replace(
@@ -472,9 +629,12 @@
     );
   }
 
-  function getDisplayName(u) {
+  function getDisplayName(
+    u
+  ) {
     const data =
-      u || {};
+      u ||
+      {};
 
     const canonical =
       buildFullName(
@@ -491,17 +651,22 @@
     return (
       norm(
         data.fullName
-      ) ||
+      )
+      ||
       norm(
         data.name
-      ) ||
+      )
+      ||
       ""
     );
   }
 
-  function cleanPhone(v) {
+  function cleanPhone(
+    v
+  ) {
     return String(
-      v || ""
+      v ||
+      ""
     )
       .trim()
       .replace(
@@ -518,9 +683,12 @@
       );
   }
 
-  function cleanCity(v) {
+  function cleanCity(
+    v
+  ) {
     return String(
-      v || ""
+      v ||
+      ""
     )
       .trim()
       .replace(
@@ -534,130 +702,6 @@
   }
 
   // =========================
-  // ACTIVE COMPETITION / STAGE
-  // =========================
-
-  async function getActiveAppContext(
-    db,
-    force = false
-  ) {
-    if (
-      !force &&
-      activeAppContextPromise
-    ) {
-      return activeAppContextPromise;
-    }
-
-    activeAppContextPromise =
-      (async () => {
-        try {
-          const snap =
-            await db
-              .collection(
-                "settings"
-              )
-              .doc(
-                "app"
-              )
-              .get();
-
-          if (
-            !snap.exists
-          ) {
-            return {
-              competitionId:
-                "",
-              stageId:
-                ""
-            };
-          }
-
-          const data =
-            snap.data() ||
-            {};
-
-          return {
-            competitionId:
-              norm(
-                data.activeCompetitionId
-              ),
-
-            stageId:
-              norm(
-                data.activeStageId
-              ) ||
-              "main"
-          };
-
-        } catch (
-          err
-        ) {
-          console.warn(
-            "[cabinet] settings/app:",
-            err
-          );
-
-          return {
-            competitionId:
-              "",
-            stageId:
-              ""
-          };
-        }
-      })();
-
-    return activeAppContextPromise;
-  }
-
-  function stageMatches(
-    rowStageId,
-    activeStageId
-  ) {
-    const rowStage =
-      norm(
-        rowStageId
-      ) ||
-      "main";
-
-    const wanted =
-      norm(
-        activeStageId
-      ) ||
-      "main";
-
-    const rowRaw =
-      rowStage.replace(
-        /^stage-/,
-        ""
-      );
-
-    const wantedRaw =
-      wanted.replace(
-        /^stage-/,
-        ""
-      );
-
-    return (
-      rowStage ===
-        wanted
-      ||
-      rowStage ===
-        `stage-${wantedRaw}`
-      ||
-      rowRaw ===
-        wantedRaw
-      ||
-      (
-        wanted ===
-          "main"
-        &&
-        rowStage ===
-          "main"
-      )
-    );
-  }
-
-  // =========================
   // SOLO PUBLIC SYNC
   // =========================
 
@@ -666,7 +710,8 @@
     data
   ) {
     const d =
-      data || {};
+      data ||
+      {};
 
     if (
       normLower(
@@ -708,6 +753,7 @@
       return {
         found:
           0,
+
         updated:
           0
       };
@@ -731,6 +777,7 @@
       return {
         found:
           0,
+
         updated:
           0
       };
@@ -766,6 +813,7 @@
       return {
         found:
           snap.size,
+
         updated:
           0
       };
@@ -776,22 +824,34 @@
 
     refs.forEach(
       ref => {
-        batch.set(
-          ref,
-          {
-            firstName,
-            lastName,
+        const upd = {
+          firstName,
+          lastName,
+          fullName,
+
+          participantName:
             fullName,
 
-            participantName:
-              fullName,
+          displayName:
+            fullName,
 
-            displayName:
-              fullName,
+          captain:
+            fullName
+        };
 
-            captain:
-              fullName
-          },
+        const ts =
+          serverTimestamp();
+
+        if (
+          ts
+        ) {
+          upd.updatedAt =
+            ts;
+        }
+
+        batch.set(
+          ref,
+          upd,
           {
             merge:
               true
@@ -811,6 +871,7 @@
     return {
       found:
         snap.size,
+
       updated:
         refs.length
     };
@@ -820,7 +881,9 @@
   // AVATAR
   // =========================
 
-  function setAvatarUrl(url) {
+  function setAvatarUrl(
+    url
+  ) {
     if (
       !avatarImgEl ||
       !avatarPhEl
@@ -908,9 +971,6 @@
     activeParticipationKey =
       "";
 
-    activeAppContextPromise =
-      null;
-
     participationLoadSeq +=
       1;
   }
@@ -930,7 +990,8 @@
     }
 
     profileEditMsg.textContent =
-      txt || "";
+      txt ||
+      "";
 
     profileEditMsg.classList.remove(
       "ok",
@@ -938,7 +999,8 @@
     );
 
     if (
-      type === "ok"
+      type ===
+      "ok"
     ) {
       profileEditMsg.classList.add(
         "ok"
@@ -946,7 +1008,8 @@
     }
 
     if (
-      type === "err"
+      type ===
+      "err"
     ) {
       profileEditMsg.classList.add(
         "err"
@@ -954,14 +1017,12 @@
     }
   }
 
-  function fillProfileInputs(u) {
+  function fillProfileInputs(
+    u
+  ) {
     const data =
-      u || {};
-
-    /*
-     * Старий fullName
-     * НЕ розділяємо автоматично.
-     */
+      u ||
+      {};
 
     if (
       lastNameInput
@@ -1000,7 +1061,9 @@
     }
   }
 
-  function openEditProfile(u) {
+  function openEditProfile(
+    u
+  ) {
     if (
       !profileEditBox ||
       !lastNameInput ||
@@ -1117,11 +1180,14 @@
   // USER RENDER
   // =========================
 
-  function renderUserInfo(u) {
+  function renderUserInfo(
+    u
+  ) {
     const name =
       getDisplayName(
         u
-      ) ||
+      )
+      ||
       "Без імені";
 
     const city =
@@ -1308,7 +1374,9 @@
   // MEMBERS
   // =========================
 
-  function renderMembers(list) {
+  function renderMembers(
+    list
+  ) {
     if (
       !membersEl
     ) {
@@ -1334,8 +1402,10 @@
         const name =
           getDisplayName(
             m
-          ) ||
-          m.email ||
+          )
+          ||
+          m.email
+          ||
           "Учасник";
 
         const role =
@@ -1411,6 +1481,7 @@
           ${avatarHtml}
 
           <div>
+
             <div style="font-weight:800">
               ${escapeHtml(
                 name
@@ -1422,6 +1493,7 @@
                 role
               )}
             </div>
+
           </div>
         `;
 
@@ -1498,7 +1570,8 @@
       );
 
     if (
-      !Cache.isUserValid() ||
+      !Cache.isUserValid()
+      ||
       !user
     ) {
       return false;
@@ -1537,7 +1610,7 @@
   }
 
   // =========================
-  // COMPETITION META
+  // COMPETITIONS
   // =========================
 
   async function getCompetitionDoc(
@@ -1575,18 +1648,28 @@
         )
         .get()
         .then(
-          snap =>
-            snap.exists
-              ? (
-                  snap.data() ||
-                  {}
-                )
-              : null
+          snap => {
+            if (
+              !snap.exists
+            ) {
+              return null;
+            }
+
+            return {
+              id:
+                snap.id,
+
+              ...(
+                snap.data() ||
+                {}
+              )
+            };
+          }
         )
         .catch(
           err => {
             console.warn(
-              "[cabinet] competition meta:",
+              "[cabinet] competition:",
               id,
               err
             );
@@ -1603,15 +1686,126 @@
     return promise;
   }
 
-  async function getCompetitionMeta(
-    db,
-    compId,
-    stageId
+  function getCompetitionFinishMs(
+    competition
   ) {
-    const id =
-      norm(
-        compId
+    const c =
+      competition ||
+      {};
+
+    return (
+      toMillis(
+        c?.schedule?.finishAt
+      )
+      ||
+      toMillis(
+        c?.finishAt
+      )
+      ||
+      toMillis(
+        c?.endAt
+      )
+      ||
+      0
+    );
+  }
+
+  function getCompetitionStartMs(
+    competition
+  ) {
+    const c =
+      competition ||
+      {};
+
+    return (
+      toMillis(
+        c?.schedule?.startAt
+      )
+      ||
+      toMillis(
+        c?.startAt
+      )
+      ||
+      0
+    );
+  }
+
+  function isCompetitionFinished(
+    competition
+  ) {
+    const c =
+      competition ||
+      {};
+
+    /*
+     * ГОЛОВНЕ ДЖЕРЕЛО:
+     *
+     * schedule.finishAt
+     *
+     * Якщо дата є —
+     * status уже не вгадуємо.
+     */
+    const finishMs =
+      getCompetitionFinishMs(
+        c
       );
+
+    if (
+      finishMs >
+      0
+    ) {
+      return (
+        finishMs <
+        Date.now()
+      );
+    }
+
+    /*
+     * Fallback тільки
+     * для старих документів,
+     * де finishAt відсутній.
+     */
+    const status =
+      normLower(
+        c.status ||
+        c.state ||
+        ""
+      );
+
+    return [
+      "finished",
+      "completed",
+      "ended",
+      "archived"
+    ].includes(
+      status
+    );
+  }
+
+  function getCompetitionTitle(
+    competition,
+    fallbackId
+  ) {
+    const c =
+      competition ||
+      {};
+
+    return norm(
+      c.name ||
+      c.title ||
+      fallbackId ||
+      "Змагання"
+    );
+  }
+
+  function getStageTitle(
+    competition,
+    stageId,
+    fallbackTitle = ""
+  ) {
+    const c =
+      competition ||
+      {};
 
     const st =
       norm(
@@ -1619,110 +1813,69 @@
       ) ||
       "main";
 
-    const key =
-      `${id}||${st}`;
+    const events =
+      Array.isArray(
+        c.events
+      )
+        ? c.events
+        : [];
+
+    const ev =
+      events.find(
+        e => {
+          const eventId =
+            norm(
+              e?.key ||
+              e?.stageId ||
+              e?.id
+            );
+
+          return (
+            eventId ===
+            st
+          );
+        }
+      );
+
+    const fromCompetition =
+      norm(
+        ev?.title ||
+        ev?.name ||
+        ev?.label ||
+        ""
+      );
 
     if (
-      competitionMetaCache.has(
-        key
+      fromCompetition
+    ) {
+      return fromCompetition;
+    }
+
+    if (
+      norm(
+        fallbackTitle
       )
     ) {
-      return competitionMetaCache.get(
-        key
+      return norm(
+        fallbackTitle
       );
     }
 
-    const promise =
-      (async () => {
-        const c =
-          await getCompetitionDoc(
-            db,
-            id
-          );
-
-        if (
-          !c
-        ) {
-          return {
-            compTitle:
-              id ||
-              "Змагання",
-
-            stageTitle:
-              st ===
-                "main"
-                ? ""
-                : st
-          };
-        }
-
-        const compTitle =
-          norm(
-            c.name ||
-            c.title ||
-            id ||
-            "Змагання"
-          );
-
-        const events =
-          Array.isArray(
-            c.events
-          )
-            ? c.events
-            : [];
-
-        const ev =
-          events.find(
-            e => {
-              const eventId =
-                norm(
-                  e?.key ||
-                  e?.stageId ||
-                  e?.id
-                );
-
-              return (
-                eventId ===
-                st
-              );
-            }
-          );
-
-        let stageTitle =
-          norm(
-            ev?.title ||
-            ev?.name ||
-            ev?.label ||
-            ""
-          );
-
-        if (
-          !stageTitle &&
-          st !== "main"
-        ) {
-          stageTitle =
-            st;
-        }
-
-        return {
-          compTitle,
-          stageTitle
-        };
-      })();
-
-    competitionMetaCache.set(
-      key,
-      promise
+    return (
+      st ===
+      "main"
+        ? ""
+        : st
     );
-
-    return promise;
   }
 
   // =========================
   // MY PARTICIPATION
   // =========================
 
-  function niceTitleOnly(it) {
+  function niceTitleOnly(
+    it
+  ) {
     const comp =
       norm(
         it.compTitle ||
@@ -1741,19 +1894,22 @@
             "main"
             ? it.stageId
             : ""
-        ) ||
+        )
+        ||
         ""
       );
 
-    return st
-      ? `${escapeHtml(
-          comp
-        )} · ${escapeHtml(
-          st
-        )}`
-      : escapeHtml(
-          comp
-        );
+    return (
+      st
+        ? `${escapeHtml(
+            comp
+          )} · ${escapeHtml(
+            st
+          )}`
+        : escapeHtml(
+            comp
+          )
+    );
   }
 
   function renderMyParticipation(
@@ -1774,7 +1930,7 @@
         0
     ) {
       myPartListEl.innerHTML =
-        '<div class="cabinet-small-muted">Немає участі в активному змаганні.</div>';
+        '<div class="cabinet-small-muted">Немає участі в актуальних змаганнях.</div>';
 
       return;
     }
@@ -1795,7 +1951,8 @@
         const href =
           `participation.html?comp=${encodeURIComponent(
             compId
-          )}` +
+          )}`
+          +
           `&stage=${encodeURIComponent(
             stageId
           )}`;
@@ -1844,40 +2001,16 @@
     );
   }
 
-  function rowBelongsToUser(
-    docId,
-    data,
-    teamId,
-    uid
+  function rowPreference(
+    row
   ) {
-    const d =
-      data ||
-      {};
-
-    const isSolo =
+    return (
       isSoloPublicDoc(
-        docId,
-        d
-      );
-
-    if (
-      isSolo
-    ) {
-      return (
-        norm(
-          d.uid
-        ) ===
-        uid
-      );
-    }
-
-    return Boolean(
-      teamId
-      &&
-      norm(
-        d.teamId
-      ) ===
-      teamId
+        row?.id,
+        row
+      )
+        ? 2
+        : 1
     );
   }
 
@@ -1907,6 +2040,9 @@
         uid
       );
 
+    const contextKey =
+      `${cleanUid}||${cleanTeamId}`;
+
     if (
       !cleanTeamId &&
       !cleanUid
@@ -1925,19 +2061,103 @@
       return;
     }
 
+    if (
+      !force &&
+      activeParticipationKey ===
+        contextKey &&
+      Cache.isCompsValid()
+    ) {
+      renderMyParticipation(
+        Cache.get(
+          "competitions"
+        ) ||
+        []
+      );
+
+      return;
+    }
+
+    activeParticipationKey =
+      contextKey;
+
     const seq =
       ++participationLoadSeq;
 
+    if (
+      !Cache.isCompsValid()
+      ||
+      force
+    ) {
+      myPartListEl.innerHTML =
+        '<div class="cabinet-small-muted">Завантаження…</div>';
+    }
+
     try {
-      /*
-       * 1. Беремо тільки
-       * активне змагання/етап.
-       */
-      const active =
-        await getActiveAppContext(
-          db,
-          force
-        );
+
+      // ===============================================
+      // TEAM + SOLO ПАРАЛЕЛЬНО
+      // ===============================================
+
+      const teamPromise =
+        cleanTeamId
+          ? db
+              .collection(
+                "public_participants"
+              )
+              .where(
+                "teamId",
+                "==",
+                cleanTeamId
+              )
+              .get()
+              .catch(
+                err => {
+                  console.warn(
+                    "[cabinet] TEAM participation:",
+                    err
+                  );
+
+                  return null;
+                }
+              )
+          : Promise.resolve(
+              null
+            );
+
+      const uidPromise =
+        cleanUid
+          ? db
+              .collection(
+                "public_participants"
+              )
+              .where(
+                "uid",
+                "==",
+                cleanUid
+              )
+              .get()
+              .catch(
+                err => {
+                  console.warn(
+                    "[cabinet] UID participation:",
+                    err
+                  );
+
+                  return null;
+                }
+              )
+          : Promise.resolve(
+              null
+            );
+
+      const [
+        teamSnap,
+        uidSnap
+      ] =
+        await Promise.all([
+          teamPromise,
+          uidPromise
+        ]);
 
       if (
         seq !==
@@ -1946,47 +2166,82 @@
         return;
       }
 
-      const activeCompId =
-        norm(
-          active.competitionId
-        );
+      // ===============================================
+      // DEDUPE ПО DOC ID
+      // ===============================================
 
-      const activeStageId =
-        norm(
-          active.stageId
-        ) ||
-        "main";
-
-      const contextKey =
-        `${cleanUid}||${cleanTeamId}||${activeCompId}||${activeStageId}`;
+      const byDocId =
+        new Map();
 
       if (
-        !force
-        &&
-        activeParticipationKey ===
-          contextKey
-        &&
-        Cache.isCompsValid()
+        teamSnap
       ) {
-        renderMyParticipation(
-          Cache.get(
-            "competitions"
-          ) ||
-          []
-        );
+        teamSnap.forEach(
+          doc => {
+            const data =
+              doc.data() ||
+              {};
 
-        return;
+            /*
+             * По teamId
+             * беремо лише TEAM.
+             */
+            if (
+              normLower(
+                data.entryType
+              ) ===
+                "solo"
+              ||
+              isSoloPublicDoc(
+                doc.id,
+                data
+              )
+            ) {
+              return;
+            }
+
+            byDocId.set(
+              doc.id,
+              {
+                id:
+                  doc.id,
+
+                ...data
+              }
+            );
+          }
+        );
       }
 
-      activeParticipationKey =
-        contextKey;
-
-      /*
-       * Нема активного competitionId —
-       * нічого старого не показуємо.
-       */
       if (
-        !activeCompId
+        uidSnap
+      ) {
+        uidSnap.forEach(
+          doc => {
+            const data =
+              doc.data() ||
+              {};
+
+            byDocId.set(
+              doc.id,
+              {
+                id:
+                  doc.id,
+
+                ...data
+              }
+            );
+          }
+        );
+      }
+
+      const allRows =
+        Array.from(
+          byDocId.values()
+        );
+
+      if (
+        !allRows.length
       ) {
         Cache.setComps(
           []
@@ -1999,29 +2254,115 @@
         return;
       }
 
+      // ===============================================
+      // ONE COMPETITION/STAGE = ONE ROW
+      // ===============================================
+
+      const byCompetitionStage =
+        new Map();
+
+      allRows.forEach(
+        row => {
+          const compId =
+            norm(
+              row.competitionId
+            );
+
+          const stageId =
+            norm(
+              row.stageId
+            ) ||
+            "main";
+
+          if (
+            !compId
+          ) {
+            return;
+          }
+
+          const key =
+            `${compId}||${stageId}`;
+
+          const existing =
+            byCompetitionStage.get(
+              key
+            );
+
+          if (
+            !existing
+            ||
+            rowPreference(
+              row
+            ) >
+              rowPreference(
+                existing
+              )
+          ) {
+            byCompetitionStage.set(
+              key,
+              row
+            );
+          }
+        }
+      );
+
+      const uniq =
+        Array.from(
+          byCompetitionStage
+            .values()
+        );
+
       if (
-        !Cache.isCompsValid() ||
-        force
+        !uniq.length
       ) {
-        myPartListEl.innerHTML =
-          '<div class="cabinet-small-muted">Завантаження…</div>';
+        Cache.setComps(
+          []
+        );
+
+        renderMyParticipation(
+          []
+        );
+
+        return;
       }
 
-      /*
-       * 2. ОДИН запит:
-       * тільки activeCompetitionId.
-       */
-      const snap =
-        await db
-          .collection(
-            "public_participants"
+      // ===============================================
+      // COMPETITION DOCS ПАРАЛЕЛЬНО
+      // ===============================================
+
+      const uniqueCompIds =
+        Array.from(
+          new Set(
+            uniq
+              .map(
+                row =>
+                  norm(
+                    row.competitionId
+                  )
+              )
+              .filter(
+                Boolean
+              )
           )
-          .where(
-            "competitionId",
-            "==",
-            activeCompId
+        );
+
+      const competitionPairs =
+        await Promise.all(
+          uniqueCompIds.map(
+            async compId => {
+              const competition =
+                await getCompetitionDoc(
+                  db,
+                  compId
+                );
+
+              return [
+                compId,
+                competition
+              ];
+            }
           )
-          .get();
+        );
 
       if (
         seq !==
@@ -2030,146 +2371,171 @@
         return;
       }
 
-      const rows =
+      const competitionMap =
+        new Map(
+          competitionPairs
+        );
+
+      // ===============================================
+      // FILTER FINISHED
+      // ===============================================
+
+      const visible =
         [];
 
-      snap.forEach(
-        doc => {
-          const data =
-            doc.data() ||
-            {};
+      uniq.forEach(
+        row => {
+          const compId =
+            norm(
+              row.competitionId
+            );
+
+          const competition =
+            competitionMap.get(
+              compId
+            );
 
           /*
-           * Тільки наша команда
-           * або наш SOLO.
+           * Якщо competition
+           * вже видалений —
+           * orphan не показуємо.
            */
           if (
-            !rowBelongsToUser(
-              doc.id,
-              data,
-              cleanTeamId,
-              cleanUid
-            )
+            !competition
           ) {
             return;
           }
 
           /*
-           * Тільки активний етап.
+           * ГОЛОВНА ЛОГІКА:
+           *
+           * schedule.finishAt < now
+           * = завершене
+           * = не показуємо.
            */
           if (
-            !stageMatches(
-              data.stageId,
-              activeStageId
+            isCompetitionFinished(
+              competition
             )
           ) {
             return;
           }
 
-          rows.push({
-            id:
-              doc.id,
+          const stageId =
+            norm(
+              row.stageId
+            ) ||
+            "main";
 
-            ...data
+          visible.push({
+            ...row,
+
+            compTitle:
+              getCompetitionTitle(
+                competition,
+                compId
+              ),
+
+            stageTitle:
+              getStageTitle(
+                competition,
+                stageId,
+                row.stageName ||
+                row.stageTitle ||
+                ""
+              ),
+
+            _competitionStart:
+              getCompetitionStartMs(
+                competition
+              ),
+
+            _competitionFinish:
+              getCompetitionFinishMs(
+                competition
+              ),
+
+            _registrationTime:
+              toMillis(
+                row.updatedAt
+              )
+              ||
+              toMillis(
+                row.confirmedAt
+              )
+              ||
+              toMillis(
+                row.createdAt
+              )
+              ||
+              0
           });
         }
       );
 
       if (
-        !rows.length
-      ) {
-        Cache.setComps(
-          []
-        );
-
-        renderMyParticipation(
-          []
-        );
-
-        return;
-      }
-
-      /*
-       * На одному active competition/stage
-       * показуємо один рядок.
-       *
-       * SOLO має пріоритет
-       * над legacy TEAM-дублем.
-       */
-      rows.sort(
-        (
-          a,
-          b
-        ) => {
-          const aSolo =
-            isSoloPublicDoc(
-              a.id,
-              a
-            )
-              ? 1
-              : 0;
-
-          const bSolo =
-            isSoloPublicDoc(
-              b.id,
-              b
-            )
-              ? 1
-              : 0;
-
-          return (
-            bSolo -
-            aSolo
-          );
-        }
-      );
-
-      const picked =
-        rows[0];
-
-      const meta =
-        await getCompetitionMeta(
-          db,
-          activeCompId,
-          activeStageId
-        );
-
-      if (
         seq !==
         participationLoadSeq
       ) {
         return;
       }
 
-      const result = [
-        {
-          ...picked,
+      // ===============================================
+      // SORT
+      // ===============================================
 
-          competitionId:
-            activeCompId,
+      visible.sort(
+        (
+          a,
+          b
+        ) => {
+          const aStart =
+            a._competitionStart ||
+            0;
 
-          stageId:
-            activeStageId,
+          const bStart =
+            b._competitionStart ||
+            0;
 
-          compTitle:
-            meta.compTitle ||
-            picked.competitionTitle ||
-            picked.competitionName ||
-            activeCompId,
+          if (
+            aStart &&
+            bStart &&
+            aStart !==
+              bStart
+          ) {
+            return (
+              aStart -
+              bStart
+            );
+          }
 
-          stageTitle:
-            meta.stageTitle ||
-            picked.stageName ||
-            ""
+          if (
+            aStart &&
+            !bStart
+          ) {
+            return -1;
+          }
+
+          if (
+            !aStart &&
+            bStart
+          ) {
+            return 1;
+          }
+
+          return (
+            b._registrationTime -
+            a._registrationTime
+          );
         }
-      ];
+      );
 
       Cache.setComps(
-        result
+        visible
       );
 
       renderMyParticipation(
-        result
+        visible
       );
 
     } catch (
@@ -2211,7 +2577,7 @@
 
       myPartListEl.insertAdjacentHTML(
         "beforeend",
-        '<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Не вдалося оновити активну участь.</div>'
+        '<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Не вдалося оновити список участі.</div>'
       );
     }
   }
@@ -2394,10 +2760,6 @@
         teamId
       );
 
-    /*
-     * teamId не змінився —
-     * нічого не перепідписуємо.
-     */
     if (
       nextTeamId ===
       activeTeamId
@@ -2486,14 +2848,19 @@
                 teamId
               );
 
+            const participationKey =
+              `${uid}||${teamId}`;
+
             /*
-             * Якщо listener users спрацював
-             * через ПІБ / телефон / аватар,
-             * участь вдруге не вантажимо.
+             * Зміна ПІБ / телефона /
+             * аватара не перезапускає
+             * "Мою участь".
              */
             if (
-              teamChanged ||
-              !activeParticipationKey
+              teamChanged
+              ||
+              activeParticipationKey !==
+                participationKey
             ) {
               loadMyParticipation(
                 db,
@@ -2599,7 +2966,8 @@
       );
 
       if (
-        type === "ok"
+        type ===
+        "ok"
       ) {
         msgEl.classList.add(
           "ok"
@@ -2607,7 +2975,8 @@
       }
 
       if (
-        type === "err"
+        type ===
+        "err"
       ) {
         msgEl.classList.add(
           "err"

@@ -23,6 +23,10 @@
 // • тільки TEAM
 // • доступ через finalQualifications/{year}/teams/{teamId}
 //
+// ВАЖЛИВО:
+// • звичайний користувач НЕ читає registrations перед CREATE
+// • дубль перевіряємо через public_participants
+//
 // =========================================================
 
 (async function () {
@@ -32,22 +36,47 @@
   // DOM
   // =========================================================
 
-  const $ = id => document.getElementById(id);
+  const $ = id =>
+    document.getElementById(id);
 
-  const form = $("regForm");
-  const eventOptionsEl = $("eventOptions");
-  const msgEl = $("msg");
-  const submitBtn = $("submitBtn");
-  const spinnerEl = $("spinner");
-  const hpInput = $("hp");
-  const profileSummary = $("profileSummary");
-  const rulesChk = $("rules");
+  const form =
+    $("regForm");
 
-  const copyPayBtn = $("copyCard");
-  const payBoxEl = $("cardNum");
-  const payAmountEl = $("payAmount");
-  const payCurrEl = $("payCurrency");
-  const payDetailsEl = $("payDetails");
+  const eventOptionsEl =
+    $("eventOptions");
+
+  const msgEl =
+    $("msg");
+
+  const submitBtn =
+    $("submitBtn");
+
+  const spinnerEl =
+    $("spinner");
+
+  const hpInput =
+    $("hp");
+
+  const profileSummary =
+    $("profileSummary");
+
+  const rulesChk =
+    $("rules");
+
+  const copyPayBtn =
+    $("copyCard");
+
+  const payBoxEl =
+    $("cardNum");
+
+  const payAmountEl =
+    $("payAmount");
+
+  const payCurrEl =
+    $("payCurrency");
+
+  const payDetailsEl =
+    $("payDetails");
 
   // =========================================================
   // STATE
@@ -63,7 +92,8 @@
   let lastItems = [];
   let activePayCopyText = "";
 
-  const finalAccessByEvent = new Map();
+  const finalAccessByEvent =
+    new Map();
 
   const FINISHED_HIDE_GRACE_MS =
     24 * 60 * 60 * 1000;
@@ -73,8 +103,12 @@
   // =========================================================
 
   const sleep = ms =>
-    new Promise(resolve =>
-      setTimeout(resolve, ms)
+    new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          ms
+        )
     );
 
   function normalize(value) {
@@ -88,7 +122,9 @@
       .toLowerCase();
   }
 
-  function firstDefined(...values) {
+  function firstDefined(
+    ...values
+  ) {
     for (const value of values) {
       if (
         value !== undefined &&
@@ -103,12 +139,29 @@
   }
 
   function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return String(
+      value ?? ""
+    )
+      .replace(
+        /&/g,
+        "&amp;"
+      )
+      .replace(
+        /</g,
+        "&lt;"
+      )
+      .replace(
+        />/g,
+        "&gt;"
+      )
+      .replace(
+        /"/g,
+        "&quot;"
+      )
+      .replace(
+        /'/g,
+        "&#39;"
+      );
   }
 
   function normalizeMoney(value) {
@@ -128,17 +181,27 @@
       Number(
         String(value)
           .trim()
-          .replace(",", ".")
+          .replace(
+            ",",
+            "."
+          )
       );
 
-    return Number.isFinite(number)
+    return Number.isFinite(
+      number
+    )
       ? number
       : null;
   }
 
   function normalizeBoolean(value) {
-    if (value === true) return true;
-    if (value === false) return false;
+    if (value === true) {
+      return true;
+    }
+
+    if (value === false) {
+      return false;
+    }
 
     if (
       value === 1 ||
@@ -167,7 +230,9 @@
     text,
     ok = true
   ) {
-    if (!msgEl) return;
+    if (!msgEl) {
+      return;
+    }
 
     msgEl.textContent =
       text || "";
@@ -179,7 +244,9 @@
 
     if (text) {
       msgEl.classList.add(
-        ok ? "ok" : "err"
+        ok
+          ? "ok"
+          : "err"
       );
     }
   }
@@ -200,15 +267,24 @@
   // =========================================================
 
   async function waitForFirebase() {
-    for (let i = 0; i < 150; i++) {
+    for (
+      let i = 0;
+      i < 150;
+      i++
+    ) {
       if (
         window.scAuth &&
         window.scDb &&
         window.firebase
       ) {
-        auth = window.scAuth;
-        db = window.scDb;
-        fb = window.firebase;
+        auth =
+          window.scAuth;
+
+        db =
+          window.scDb;
+
+        fb =
+          window.firebase;
 
         return;
       }
@@ -281,7 +357,8 @@
         "number"
       ) {
         return new Date(
-          value.seconds * 1000
+          value.seconds *
+          1000
         );
       }
 
@@ -325,9 +402,14 @@
     return date.toLocaleDateString(
       "uk-UA",
       {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
+        day:
+          "2-digit",
+
+        month:
+          "2-digit",
+
+        year:
+          "numeric"
       }
     );
   }
@@ -360,11 +442,13 @@
         firstDefined(
           event?.format,
           competition?.format,
-          competition?.engine?.baseFormat
+          competition?.engine
+            ?.baseFormat
         )
       );
 
-    return format === "stalker-solo"
+    return format ===
+      "stalker-solo"
       ? "solo"
       : "team";
   }
@@ -402,7 +486,9 @@
   ) {
     if (
       /^\d{4}$/.test(
-        normalize(item?.year)
+        normalize(
+          item?.year
+        )
       )
     ) {
       return normalize(
@@ -442,10 +528,12 @@
     competition
   ) {
     const ep =
-      event?.payment || {};
+      event?.payment ||
+      {};
 
     const cp =
-      competition?.payment || {};
+      competition?.payment ||
+      {};
 
     const price =
       normalizeMoney(
@@ -510,11 +598,13 @@
           competition?.payEnabled,
           competition?.paymentEnabled
         )
-      ) ||
+      )
+      ||
       (
         price !== null &&
         price > 0
-      ) ||
+      )
+      ||
       Boolean(details);
 
     return {
@@ -529,9 +619,12 @@
             ep.currency,
             event?.currency,
             event?.paymentCurrency,
+
             cp.currency,
+
             competition?.currency,
             competition?.paymentCurrency,
+
             "UAH"
           )
         ).toUpperCase(),
@@ -578,7 +671,8 @@
 
       if (payCurrEl) {
         payCurrEl.textContent =
-          item.currency || "UAH";
+          item.currency ||
+          "UAH";
       }
 
       if (payDetailsEl) {
@@ -599,18 +693,22 @@
       "Реквізити не задані.";
 
     activePayCopyText =
-      item.payDetails || "";
+      item.payDetails ||
+      "";
 
     if (payAmountEl) {
       payAmountEl.textContent =
         item.price === null
           ? "—"
-          : String(item.price);
+          : String(
+              item.price
+            );
     }
 
     if (payCurrEl) {
       payCurrEl.textContent =
-        item.currency || "UAH";
+        item.currency ||
+        "UAH";
     }
 
     if (payDetailsEl) {
@@ -636,7 +734,8 @@
         }
 
         try {
-          await navigator.clipboard
+          await navigator
+            .clipboard
             .writeText(
               activePayCopyText
             );
@@ -674,10 +773,12 @@
     eventIndex = 0
   }) {
     const c =
-      competition || {};
+      competition ||
+      {};
 
     const ev =
-      event || {};
+      event ||
+      {};
 
     const eventKey =
       event
@@ -698,16 +799,20 @@
         : false;
 
     const eventSchedule =
-      ev.schedule || {};
+      ev.schedule ||
+      {};
 
     const compSchedule =
-      c.schedule || {};
+      c.schedule ||
+      {};
 
     const eventRegistration =
-      ev.registration || {};
+      ev.registration ||
+      {};
 
     const compRegistration =
-      c.registration || {};
+      c.registration ||
+      {};
 
     const payment =
       getPaymentData(
@@ -739,7 +844,9 @@
 
       stageKey:
         eventKey
-          ? String(eventKey)
+          ? String(
+              eventKey
+            )
           : null,
 
       stageTitle:
@@ -751,7 +858,10 @@
               (
                 finalEvent
                   ? "Фінал"
-                  : `Етап ${eventIndex + 1}`
+                  : `Етап ${
+                      eventIndex +
+                      1
+                    }`
               )
             )
           : null,
@@ -774,6 +884,7 @@
             ev.startDate,
             eventSchedule.startAt,
             eventSchedule.startDate,
+
             c.startAt,
             c.startDate,
             compSchedule.startAt,
@@ -788,12 +899,15 @@
             ev.finishDate,
             ev.endAt,
             ev.endDate,
+
             eventSchedule.finishAt,
             eventSchedule.finishDate,
+
             c.finishAt,
             c.finishDate,
             c.endAt,
             c.endDate,
+
             compSchedule.finishAt,
             compSchedule.finishDate
           )
@@ -830,8 +944,10 @@
           firstDefined(
             eventRegistration.mode,
             ev.regMode,
+
             compRegistration.mode,
             c.regMode,
+
             "auto"
           )
         ),
@@ -841,6 +957,7 @@
           firstDefined(
             eventRegistration.manualOpen,
             ev.manualOpen,
+
             compRegistration.manualOpen,
             c.manualOpen
           )
@@ -872,18 +989,19 @@
     return (
       Date.now() >
       item.endAt.getTime() +
-        FINISHED_HIDE_GRACE_MS
+      FINISHED_HIDE_GRACE_MS
     );
   }
 
-  function visibleItemsOnly(
-    array
-  ) {
+  function visibleItemsOnly(array) {
     return (
-      array || []
+      array ||
+      []
     ).filter(
       item =>
-        !isFinishedEvent(item)
+        !isFinishedEvent(
+          item
+        )
     );
   }
 
@@ -895,7 +1013,9 @@
     }
 
     if (
-      isFinishedEvent(item)
+      isFinishedEvent(
+        item
+      )
     ) {
       return "closed";
     }
@@ -937,7 +1057,8 @@
     }
 
     if (
-      item.regMode === "manual" &&
+      item.regMode ===
+        "manual" &&
       item.manualOpen
     ) {
       return "open";
@@ -955,8 +1076,12 @@
   ) {
     const snap =
       await db
-        .collection("users")
-        .doc(user.uid)
+        .collection(
+          "users"
+        )
+        .doc(
+          user.uid
+        )
         .get();
 
     if (!snap.exists) {
@@ -966,20 +1091,26 @@
     }
 
     const data =
-      snap.data() || {};
+      snap.data() ||
+      {};
 
     const teamId =
       normalize(
         data.teamId
       );
 
-    let teamName = "";
+    let teamName =
+      "";
 
     if (teamId) {
       const teamSnap =
         await db
-          .collection("teams")
-          .doc(teamId)
+          .collection(
+            "teams"
+          )
+          .doc(
+            teamId
+          )
           .get();
 
       if (teamSnap.exists) {
@@ -998,7 +1129,8 @@
         user.uid,
 
       email:
-        user.email || "",
+        user.email ||
+        "",
 
       fullName:
         normalize(
@@ -1012,7 +1144,8 @@
         ),
 
       teamId:
-        teamId || null,
+        teamId ||
+        null,
 
       teamName
     };
@@ -1054,7 +1187,8 @@
     ) {
       profileSummary.innerHTML =
         `Учасник: <b>${escapeHtml(
-          participantName || "—"
+          participantName ||
+          "—"
         )}</b><br>` +
 
         `Телефон: <b>${escapeHtml(
@@ -1077,7 +1211,8 @@
         )}</b><br>` +
 
         `Заявник: <b>${escapeHtml(
-          participantName || "—"
+          participantName ||
+          "—"
         )}</b><br>` +
 
         `Телефон: <b>${escapeHtml(
@@ -1090,7 +1225,8 @@
 
     profileSummary.innerHTML =
       `Користувач: <b>${escapeHtml(
-        participantName || "—"
+        participantName ||
+        "—"
       )}</b><br>` +
 
       `Телефон: <b>${escapeHtml(
@@ -1111,10 +1247,12 @@
     teamId
   }) {
     const stage =
-      stageId || "main";
+      stageId ||
+      "main";
 
     if (
-      entryType === "solo"
+      entryType ===
+      "solo"
     ) {
       return (
         `${competitionId}__` +
@@ -1214,7 +1352,8 @@
       const stageId =
         normalize(
           item.stageKey
-        ) || "final";
+        ) ||
+        "final";
 
       const regId =
         buildRegDocId({
@@ -1234,9 +1373,19 @@
         });
 
       try {
+        /*
+         * ВАЖЛИВО:
+         *
+         * registrations тут НЕ читаємо.
+         *
+         * public_participants має public read,
+         * тому звичайний користувач
+         * може безпечно перевірити,
+         * чи заявка вже існує.
+         */
         const [
           qualificationSnap,
-          registrationSnap
+          publicSnap
         ] =
           await Promise.all([
             db
@@ -1244,21 +1393,31 @@
                 "finalQualifications"
               )
               .doc(year)
-              .collection("teams")
-              .doc(profile.teamId)
+              .collection(
+                "teams"
+              )
+              .doc(
+                profile.teamId
+              )
               .get(),
 
             db
               .collection(
-                "registrations"
+                "public_participants"
               )
-              .doc(regId)
+              .doc(
+                regId
+              )
               .get()
           ]);
 
         const q =
           qualificationSnap.exists
-            ? qualificationSnap.data() || {}
+            ? (
+                qualificationSnap
+                  .data() ||
+                {}
+              )
             : {};
 
         let valid =
@@ -1267,7 +1426,9 @@
         if (
           valid &&
           q.teamId &&
-          normalize(q.teamId) !==
+          normalize(
+            q.teamId
+          ) !==
             profile.teamId
         ) {
           valid = false;
@@ -1278,7 +1439,8 @@
           q.competitionId &&
           normalize(
             q.competitionId
-          ) !== item.compId
+          ) !==
+            item.compId
         ) {
           valid = false;
         }
@@ -1286,15 +1448,20 @@
         if (
           valid &&
           q.stageId &&
-          normalize(q.stageId) !==
+          normalize(
+            q.stageId
+          ) !==
             stageId
         ) {
           valid = false;
         }
 
-        const regData =
-          registrationSnap.exists
-            ? registrationSnap.data() || {}
+        const publicData =
+          publicSnap.exists
+            ? (
+                publicSnap.data() ||
+                {}
+              )
             : {};
 
         finalAccessByEvent.set(
@@ -1318,11 +1485,11 @@
                 : 0,
 
             registrationExists:
-              registrationSnap.exists,
+              publicSnap.exists,
 
             registrationStatus:
               normalizeLower(
-                regData.status
+                publicData.status
               )
           }
         );
@@ -1354,7 +1521,8 @@
     return (
       finalAccessByEvent.get(
         eventValue(item)
-      ) || null
+      ) ||
+      null
     );
   }
 
@@ -1376,15 +1544,18 @@
     }
 
     if (
-      getRegistrationState(item) !==
-      "open"
+      getRegistrationState(
+        item
+      ) !== "open"
     ) {
       return false;
     }
 
     if (
       item.isFinal &&
-      !canRegisterFinal(item)
+      !canRegisterFinal(
+        item
+      )
     ) {
       return false;
     }
@@ -1399,7 +1570,9 @@
   function getStatusUI(item) {
     if (item.isFinal) {
       const access =
-        getFinalAccess(item);
+        getFinalAccess(
+          item
+        );
 
       if (
         access?.registrationExists
@@ -1466,8 +1639,9 @@
               : "pill-b--closed",
 
           lamp:
-            getRegistrationState(item) ===
-              "open"
+            getRegistrationState(
+              item
+            ) === "open"
               ? "lamp-green"
               : "lamp-yellow"
         };
@@ -1538,9 +1712,14 @@
     }
 
     const state =
-      getRegistrationState(item);
+      getRegistrationState(
+        item
+      );
 
-    if (state === "open") {
+    if (
+      state ===
+      "open"
+    ) {
       return {
         short:
           "Відкрито",
@@ -1559,7 +1738,10 @@
       };
     }
 
-    if (state === "pending") {
+    if (
+      state ===
+      "pending"
+    ) {
       return {
         short:
           "Очікується",
@@ -1586,7 +1768,8 @@
         "ЗАКРИТО",
 
       text:
-        state === "unavailable"
+        state ===
+        "unavailable"
           ? "Дати реєстрації не налаштовані."
           : "Реєстрація завершена.",
 
@@ -1615,9 +1798,12 @@
     return (
       lastItems.find(
         item =>
-          eventValue(item) ===
+          eventValue(
+            item
+          ) ===
           picked.value
-      ) || null
+      ) ||
+      null
     );
   }
 
@@ -1631,7 +1817,9 @@
 
     const oldValue =
       oldSelected
-        ? eventValue(oldSelected)
+        ? eventValue(
+            oldSelected
+          )
         : "";
 
     eventOptionsEl.innerHTML =
@@ -1647,175 +1835,186 @@
         '<p class="form__hint">Наразі немає доступних змагань.</p>';
 
       setPayUI(null);
+
       refreshSubmitState();
 
       return;
     }
 
-    visible.forEach(item => {
-      const value =
-        eventValue(item);
+    visible.forEach(
+      item => {
+        const value =
+          eventValue(item);
 
-      const status =
-        getStatusUI(item);
+        const status =
+          getStatusUI(item);
 
-      const enabled =
-        canSubmitItem(item);
+        const enabled =
+          canSubmitItem(item);
 
-      const label =
-        document.createElement(
-          "label"
-        );
+        const label =
+          document.createElement(
+            "label"
+          );
 
-      label.className =
-        "event-item" +
-        (
-          enabled
-            ? ""
-            : " is-closed"
-        );
+        label.className =
+          "event-item" +
+          (
+            enabled
+              ? ""
+              : " is-closed"
+          );
 
-      if (item.isFinal) {
-        label.classList.add(
-          "event-item--final"
-        );
-      }
+        if (item.isFinal) {
+          label.classList.add(
+            "event-item--final"
+          );
+        }
 
-      const checked =
-        enabled &&
-        oldValue === value;
+        const checked =
+          enabled &&
+          oldValue === value;
 
-      const title =
-        `${item.brand} · ${item.compTitle}` +
-        (
-          item.stageTitle
-            ? ` — ${item.stageTitle}`
-            : ""
-        );
+        const title =
+          `${item.brand} · ${item.compTitle}` +
+          (
+            item.stageTitle
+              ? ` — ${item.stageTitle}`
+              : ""
+          );
 
-      label.innerHTML = `
-        <input
-          type="radio"
-          name="stagePick"
-          value="${escapeHtml(value)}"
-          ${enabled ? "" : "disabled"}
-          ${checked ? "checked" : ""}
-          style="
-            flex:0 0 auto;
-            margin-top:4px;
-          "
-        >
-
-        <div
-          class="event-content"
-          style="
-            min-width:0;
-            flex:1;
-          "
-        >
+        label.innerHTML = `
+          <input
+            type="radio"
+            name="stagePick"
+            value="${escapeHtml(value)}"
+            ${enabled ? "" : "disabled"}
+            ${checked ? "checked" : ""}
+            style="
+              flex:0 0 auto;
+              margin-top:4px;
+            "
+          >
 
           <div
+            class="event-content"
             style="
-              display:flex;
-              justify-content:space-between;
-              align-items:center;
-              gap:10px;
-              margin-bottom:8px;
+              min-width:0;
+              flex:1;
             "
           >
 
             <div
               style="
                 display:flex;
+                justify-content:space-between;
                 align-items:center;
-                gap:8px;
+                gap:10px;
+                margin-bottom:8px;
               "
             >
-              <span
-                class="lamp ${status.lamp}"
-              ></span>
 
-              <span
+              <div
                 style="
-                  font-size:12px;
-                  color:var(--muted);
-                  font-weight:800;
+                  display:flex;
+                  align-items:center;
+                  gap:8px;
                 "
               >
-                ${escapeHtml(status.short)}
+                <span
+                  class="lamp ${status.lamp}"
+                ></span>
+
+                <span
+                  style="
+                    font-size:12px;
+                    color:var(--muted);
+                    font-weight:800;
+                  "
+                >
+                  ${escapeHtml(status.short)}
+                </span>
+              </div>
+
+              <span
+                class="pill-b ${status.badgeClass}"
+              >
+                ${escapeHtml(status.badge)}
               </span>
+
             </div>
 
-            <span
-              class="pill-b ${status.badgeClass}"
+            <div
+              style="
+                font-weight:900;
+                font-size:16px;
+                line-height:1.28;
+                color:#f3f4f6;
+              "
             >
-              ${escapeHtml(status.badge)}
-            </span>
+              ${escapeHtml(title)}
+            </div>
+
+            <div
+              style="
+                margin-top:7px;
+                color:var(--muted);
+                font-size:13px;
+              "
+            >
+              ${escapeHtml(
+                fmtDate(
+                  item.startAt
+                )
+              )}
+              —
+              ${escapeHtml(
+                fmtDate(
+                  item.endAt
+                )
+              )}
+            </div>
+
+            <div
+              style="
+                margin-top:5px;
+                color:var(--muted);
+                font-size:12px;
+              "
+            >
+              Реєстрація:
+              ${escapeHtml(
+                fmtDate(
+                  item.regOpenAt
+                )
+              )}
+              —
+              ${escapeHtml(
+                fmtDate(
+                  item.regCloseAt
+                )
+              )}
+            </div>
+
+            <div
+              style="
+                margin-top:7px;
+                color:var(--muted);
+                font-size:13px;
+                line-height:1.4;
+              "
+            >
+              ${escapeHtml(status.text)}
+            </div>
 
           </div>
+        `;
 
-          <div
-            style="
-              font-weight:900;
-              font-size:16px;
-              line-height:1.28;
-              color:#f3f4f6;
-            "
-          >
-            ${escapeHtml(title)}
-          </div>
-
-          <div
-            style="
-              margin-top:7px;
-              color:var(--muted);
-              font-size:13px;
-            "
-          >
-            ${escapeHtml(
-              fmtDate(item.startAt)
-            )}
-            —
-            ${escapeHtml(
-              fmtDate(item.endAt)
-            )}
-          </div>
-
-          <div
-            style="
-              margin-top:5px;
-              color:var(--muted);
-              font-size:12px;
-            "
-          >
-            Реєстрація:
-            ${escapeHtml(
-              fmtDate(item.regOpenAt)
-            )}
-            —
-            ${escapeHtml(
-              fmtDate(item.regCloseAt)
-            )}
-          </div>
-
-          <div
-            style="
-              margin-top:7px;
-              color:var(--muted);
-              font-size:13px;
-              line-height:1.4;
-            "
-          >
-            ${escapeHtml(status.text)}
-          </div>
-
-        </div>
-      `;
-
-      eventOptionsEl.appendChild(
-        label
-      );
-    });
+        eventOptionsEl.appendChild(
+          label
+        );
+      }
+    );
 
     const selected =
       getSelectedItem();
@@ -1824,8 +2023,9 @@
       selected ||
       visible.find(
         item =>
-          getRegistrationState(item) ===
-          "open"
+          getRegistrationState(
+            item
+          ) === "open"
       ) ||
       visible[0];
 
@@ -1843,66 +2043,77 @@
   async function loadCompetitions() {
     const snapshot =
       await db
-        .collection("competitions")
+        .collection(
+          "competitions"
+        )
         .get();
 
-    const result = [];
+    const result =
+      [];
 
-    snapshot.forEach(docSnap => {
-      const competition =
-        docSnap.data() || {};
+    snapshot.forEach(
+      docSnap => {
+        const competition =
+          docSnap.data() ||
+          {};
 
-      const events =
-        Array.isArray(
-          competition.events
-        )
-          ? competition.events
-          : [];
+        const events =
+          Array.isArray(
+            competition.events
+          )
+            ? competition.events
+            : [];
 
-      if (events.length) {
-        events.forEach(
-          (event, index) => {
-            result.push(
-              buildCompetitionItem({
-                competition,
+        if (events.length) {
+          events.forEach(
+            (
+              event,
+              index
+            ) => {
+              result.push(
+                buildCompetitionItem({
+                  competition,
 
-                compId:
-                  docSnap.id,
+                  compId:
+                    docSnap.id,
 
-                event,
+                  event,
 
-                eventIndex:
-                  index
-              })
-            );
-          }
-        );
+                  eventIndex:
+                    index
+                })
+              );
+            }
+          );
 
-      } else {
-        result.push(
-          buildCompetitionItem({
-            competition,
+        } else {
+          result.push(
+            buildCompetitionItem({
+              competition,
 
-            compId:
-              docSnap.id
-          })
-        );
+              compId:
+                docSnap.id
+            })
+          );
+        }
       }
-    });
+    );
 
-    result.sort((a, b) => {
-      const ta =
-        a.startAt
-          ? a.startAt.getTime()
-          : Number.MAX_SAFE_INTEGER;
+    result.sort(
+      (a, b) => {
+        const ta =
+          a.startAt
+            ? a.startAt.getTime()
+            : Number.MAX_SAFE_INTEGER;
 
-      const tb =
-        b.startAt
-          ? b.startAt.getTime()
-          : Number.MAX_SAFE_INTEGER;
+        const tb =
+          b.startAt
+            ? b.startAt.getTime()
+            : Number.MAX_SAFE_INTEGER;
 
-      return ta - tb;
-    });
+        return ta - tb;
+      }
+    );
 
     lastItems =
       visibleItemsOnly(
@@ -1928,7 +2139,9 @@
         "spinner--on"
       )
     ) {
-      submitBtn.disabled = true;
+      submitBtn.disabled =
+        true;
+
       return;
     }
 
@@ -1941,10 +2154,8 @@
         : true;
 
     /*
-     * ВАЖЛИВО:
-     *
-     * TEAM і SOLO обидва
-     * вимагають реальну команду.
+     * TEAM і SOLO
+     * обидва мають командну прив'язку.
      */
     const teamOk =
       Boolean(
@@ -1955,7 +2166,8 @@
 
     const participantOk =
       !item ||
-      item.entryType !== "solo" ||
+      item.entryType !==
+        "solo" ||
       Boolean(
         getParticipantName()
       );
@@ -1999,14 +2211,16 @@
           !hasTeam()
         ) {
           setMsg(
-            item.entryType === "solo"
+            item.entryType ===
+              "solo"
               ? "Для SOLO ваш профіль повинен бути прив’язаний до команди. На змаганнях буде показано ваше ім’я та прізвище."
               : "Спочатку приєднайтесь до команди в «Мій кабінет».",
             false
           );
 
         } else if (
-          item?.entryType === "solo" &&
+          item?.entryType ===
+            "solo" &&
           !getParticipantName()
         ) {
           setMsg(
@@ -2057,7 +2271,7 @@
 
       /*
        * TEAM + SOLO:
-       * реальна прив'язка до команди.
+       * команда користувача.
        */
       teamId:
         profile.teamId,
@@ -2067,31 +2281,34 @@
 
       /*
        * SOLO:
-       * ім'я конкретного учасника.
+       * конкретний учасник.
        */
       participantName:
-        entryType === "solo"
+        entryType ===
+          "solo"
           ? participantName
           : null,
 
       /*
-       * Що показуємо в таблицях.
+       * SOLO показує ім'я,
+       * TEAM показує команду.
        */
       displayName:
-        entryType === "solo"
+        entryType ===
+          "solo"
           ? participantName
           : profile.teamName,
 
       captain:
-        entryType === "solo"
-          ? participantName
-          : participantName,
+        participantName,
 
       phone:
-        profile.phone || "",
+        profile.phone ||
+        "",
 
       payEnabled:
-        item.payEnabled === true,
+        item.payEnabled ===
+        true,
 
       price:
         item.price,
@@ -2105,10 +2322,12 @@
         "",
 
       finalQualification:
-        item.isFinal === true,
+        item.isFinal ===
+        true,
 
       finalInvite:
-        item.isFinal === true,
+        item.isFinal ===
+        true,
 
       seasonYear:
         item.isFinal
@@ -2130,7 +2349,8 @@
           .serverTimestamp(),
 
       confirmedAt:
-        status === "confirmed"
+        status ===
+          "confirmed"
           ? fb.firestore
               .FieldValue
               .serverTimestamp()
@@ -2154,10 +2374,6 @@
       entryType:
         payload.entryType,
 
-      /*
-       * SOLO також зберігає
-       * командну прив'язку.
-       */
       teamId:
         payload.teamId,
 
@@ -2205,10 +2421,10 @@
     await db.runTransaction(
       async transaction => {
 
-        /*
-         * FINAL:
-         * перевіряємо qualification.
-         */
+        // =====================================================
+        // FINAL QUALIFICATION
+        // =====================================================
+
         if (item.isFinal) {
           const year =
             getSeasonYearFromItem(
@@ -2227,8 +2443,12 @@
                 "finalQualifications"
               )
               .doc(year)
-              .collection("teams")
-              .doc(profile.teamId);
+              .collection(
+                "teams"
+              )
+              .doc(
+                profile.teamId
+              );
 
           const qualificationSnap =
             await transaction.get(
@@ -2250,7 +2470,8 @@
           if (
             normalizeLower(
               q.status
-            ) !== "invited"
+            ) !==
+            "invited"
           ) {
             throw new Error(
               "Право участі у фіналі зараз неактивне."
@@ -2261,38 +2482,65 @@
             q.competitionId &&
             normalize(
               q.competitionId
-            ) !== item.compId
+            ) !==
+              item.compId
           ) {
             throw new Error(
               "Кваліфікація належить іншому фіналу."
             );
           }
+
+          if (
+            q.stageId &&
+            normalize(
+              q.stageId
+            ) !==
+              normalize(
+                item.stageKey
+              )
+          ) {
+            throw new Error(
+              "Кваліфікація належить іншому етапу."
+            );
+          }
         }
 
-        /*
-         * Не перезаписуємо
-         * існуючу заявку.
-         */
-        const existing =
+        // =====================================================
+        // DUPLICATE CHECK
+        // =====================================================
+        //
+        // КРИТИЧНЕ ВИПРАВЛЕННЯ:
+        //
+        // registrations тут НЕ читаємо.
+        //
+        // Звичайний користувач може отримати
+        // permission-denied на GET приватного
+        // неіснуючого registration doc.
+        //
+        // public_participants має allow read: true,
+        // тому перевіряємо дубль тут.
+        // =====================================================
+
+        const existingPublic =
           await transaction.get(
-            registrationRef
+            publicRef
           );
 
-        if (existing.exists) {
+        if (
+          existingPublic.exists
+        ) {
           throw new Error(
-            payload.entryType === "solo"
+            payload.entryType ===
+              "solo"
               ? "Ви вже подали заявку на це змагання."
               : "Ваша команда вже подала заявку на це змагання."
           );
         }
 
-        /*
-         * Однією транзакцією:
-         *
-         * registrations
-         * +
-         * public_participants
-         */
+        // =====================================================
+        // CREATE BOTH DOCUMENTS
+        // =====================================================
+
         transaction.set(
           registrationRef,
           payload
@@ -2325,6 +2573,7 @@
             "Підозра на бота.",
             false
           );
+
           return;
         }
 
@@ -2336,6 +2585,7 @@
             "Увійдіть у акаунт.",
             false
           );
+
           return;
         }
 
@@ -2347,16 +2597,18 @@
             "Оберіть змагання або етап.",
             false
           );
+
           return;
         }
 
-        /*
-         * TEAM + SOLO:
-         * команда обов'язкова.
-         */
+        // =====================================================
+        // TEAM LINK
+        // =====================================================
+
         if (!profile.teamId) {
           setMsg(
-            item.entryType === "solo"
+            item.entryType ===
+              "solo"
               ? "Для SOLO ваш профіль повинен бути прив’язаний до команди."
               : "Спочатку приєднайтесь до команди в «Мій кабінет».",
             false
@@ -2374,8 +2626,13 @@
           return;
         }
 
+        // =====================================================
+        // SOLO NAME
+        // =====================================================
+
         if (
-          item.entryType === "solo" &&
+          item.entryType ===
+            "solo" &&
           !getParticipantName()
         ) {
           setMsg(
@@ -2385,6 +2642,10 @@
 
           return;
         }
+
+        // =====================================================
+        // RULES CHECKBOX
+        // =====================================================
 
         if (
           rulesChk &&
@@ -2398,7 +2659,15 @@
           return;
         }
 
-        if (!canSubmitItem(item)) {
+        // =====================================================
+        // AVAILABILITY
+        // =====================================================
+
+        if (
+          !canSubmitItem(
+            item
+          )
+        ) {
           setMsg(
             "Реєстрація зараз недоступна.",
             false
@@ -2446,17 +2715,22 @@
             .collection(
               "registrations"
             )
-            .doc(docId);
+            .doc(
+              docId
+            );
 
         const publicRef =
           db
             .collection(
               "public_participants"
             )
-            .doc(docId);
+            .doc(
+              docId
+            );
 
         try {
           setLoading(true);
+
           setMsg("");
 
           await createRegistration({
@@ -2478,7 +2752,8 @@
             );
 
           } else if (
-            entryType === "solo"
+            entryType ===
+            "solo"
           ) {
             setMsg(
               item.payEnabled
@@ -2521,9 +2796,10 @@
             )
           ) {
             setMsg(
-              entryType === "solo"
-                ? "Firebase не дозволив SOLO-заявку. Перевірте Firestore Rules: SOLO повинен дозволяти teamId вашої команди."
-                : "Firebase не дозволив заявку. Перевірте Firestore Rules.",
+              entryType ===
+                "solo"
+                ? "Firebase не дозволив створити SOLO-заявку."
+                : "Firebase не дозволив створити заявку.",
               false
             );
 
@@ -2550,9 +2826,11 @@
     auth.onAuthStateChanged(
       async user => {
         currentUser =
-          user || null;
+          user ||
+          null;
 
-        profile = null;
+        profile =
+          null;
 
         if (!user) {
           if (profileSummary) {
@@ -2570,7 +2848,9 @@
         }
 
         try {
-          await loadProfile(user);
+          await loadProfile(
+            user
+          );
 
           await loadFinalAccess();
 
@@ -2606,11 +2886,6 @@
         '<p class="form__hint">Завантаження списку...</p>';
     }
 
-    /*
-     * Не беремо Firebase
-     * раніше, ніж firebase-init.js
-     * реально його створив.
-     */
     await waitForFirebase();
 
     startAuthListener();
@@ -2636,7 +2911,8 @@
     }
 
     if (submitBtn) {
-      submitBtn.disabled = true;
+      submitBtn.disabled =
+        true;
     }
   }
 

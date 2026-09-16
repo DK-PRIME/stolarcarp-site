@@ -4,8 +4,11 @@
 // ✅ TEAM + SOLO
 // ✅ TEAM -> teamId + teamName
 // ✅ SOLO -> uid + participantName
+// ✅ SOLO canonical name -> Прізвище Ім'я
 // ✅ SOLO "Учасник" НЕ вважається справжнім ім'ям
+// ✅ SOLO structured registration -> lastName + firstName
 // ✅ SOLO fallback -> users/{uid}
+// ✅ SOLO legacy name використовується тільки після structured/profile
 // ✅ SOLO одразу синхронізується в stageResults для LIVE
 // ✅ Вага кожної риби окремо
 // ✅ Галочка "Амур" біля кожної риби
@@ -31,6 +34,7 @@
 // ✅ Stalker Solo:
 //    • використовує uid як ID учасника
 //    • у LIVE передає participantName
+//    • participantName = Прізвище Ім'я
 //    • teamName НЕ використовується як ім'я
 //
 // ✅ Stalker Teams:
@@ -116,12 +120,6 @@
     return isSoloMode()
       ? "Учасник"
       : "Команда";
-  }
-
-  function entitiesLabel(){
-    return isSoloMode()
-      ? "Учасники"
-      : "Команди";
   }
 
   function entityCountLabel(count){
@@ -704,15 +702,20 @@
   // =========================================================
 
   /*
-   * Це НЕ справжні імена.
+   * Єдиний правильний формат SOLO:
    *
-   * Якщо в старій заявці записано:
+   * ПРІЗВИЩЕ ІМ'Я
    *
-   * participantName: "Учасник"
+   * Наприклад:
    *
-   * ми НЕ повинні його приймати.
-   * Треба йти в users/{uid}.
+   * lastName  = "Цьотар"
+   * firstName = "Василь"
+   *
+   * => "Цьотар Василь"
+   *
+   * По батькові не використовуємо.
    */
+
   function isPlaceholderParticipantName(value){
     const v =
       normLower(value)
@@ -785,6 +788,103 @@
     return name;
   }
 
+  /*
+   * Основне джерело ПІБ.
+   *
+   * Завжди:
+   *
+   * lastName + firstName
+   *
+   * Тобто:
+   * Прізвище Ім'я
+   */
+  function canonicalParticipantNameFromObject(
+    data,
+    oldTeamName = ""
+  ){
+    const d =
+      data || {};
+
+    const firstName =
+      validParticipantName(
+        d.firstName ||
+        d.firstname ||
+        d.first_name ||
+        d.givenName ||
+        "",
+        oldTeamName
+      );
+
+    const lastName =
+      validParticipantName(
+        d.lastName ||
+        d.lastname ||
+        d.last_name ||
+        d.surname ||
+        d.familyName ||
+        "",
+        oldTeamName
+      );
+
+    if (
+      firstName &&
+      lastName
+    ) {
+      return (
+        `${lastName} ${firstName}`
+      );
+    }
+
+    return "";
+  }
+
+  /*
+   * Legacy fallback.
+   *
+   * Старий текст НЕ перевертаємо,
+   * НЕ скорочуємо
+   * і НЕ намагаємось вгадати,
+   * де ім'я / прізвище / по батькові.
+   *
+   * Це використовується тільки тоді,
+   * коли немає нормальних structured fields.
+   */
+  function legacyParticipantNameFromObject(
+    data,
+    oldTeamName = ""
+  ){
+    const d =
+      data || {};
+
+    const candidates = [
+      d.participantName,
+      d.fullName,
+      d.userName,
+      d.name,
+      d.displayName,
+      d.captain
+    ];
+
+    for (
+      const candidate
+      of candidates
+    ) {
+      const found =
+        validParticipantName(
+          candidate,
+          oldTeamName
+        );
+
+      if (
+        found
+      ) {
+        return found;
+      }
+    }
+
+    return "";
+  }
+
   async function getUserNameByUid(uid){
     const id =
       norm(uid);
@@ -820,65 +920,28 @@
           {};
 
         /*
-         * Спочатку пробуємо окремі
-         * Ім'я + Прізвище.
+         * 1. ПРАВИЛЬНІ structured fields:
+         *
+         * lastName + firstName
          */
-        const first =
-          validParticipantName(
-            u.firstName ||
-            u.firstname ||
-            u.first_name ||
-            ""
+        name =
+          canonicalParticipantNameFromObject(
+            u
           );
 
-        const last =
-          validParticipantName(
-            u.lastName ||
-            u.lastname ||
-            u.last_name ||
-            u.surname ||
-            ""
-          );
-
+        /*
+         * 2. Якщо structured fields немає —
+         * використовуємо legacy ПІБ як є.
+         *
+         * Нічого не переставляємо.
+         */
         if (
-          first &&
-          last
+          !name
         ) {
           name =
-            `${first} ${last}`;
-
-        } else {
-          /*
-           * Потім повне ім'я.
-           *
-           * EMAIL спеціально
-           * не використовуємо.
-           */
-          const candidates = [
-            u.fullName,
-            u.displayName,
-            u.userName,
-            u.name
-          ];
-
-          for (
-            const candidate
-            of candidates
-          ) {
-            const found =
-              validParticipantName(
-                candidate
-              );
-
-            if (
-              found
-            ) {
-              name =
-                found;
-
-              break;
-            }
-          }
+            legacyParticipantNameFromObject(
+              u
+            );
         }
       }
 
@@ -914,74 +977,42 @@
       );
 
     // -------------------------------------------------------
-    // 1. FIRST NAME + LAST NAME З РЕЄСТРАЦІЇ
+    // 1. STRUCTURED FIELDS З REGISTRATION
+    //
+    // lastName + firstName
+    //
+    // Найвищий пріоритет.
     // -------------------------------------------------------
 
-    const first =
-      validParticipantName(
-        r.firstName ||
-        r.firstname ||
-        r.first_name ||
-        "",
-        oldTeamName
-      );
-
-    const last =
-      validParticipantName(
-        r.lastName ||
-        r.lastname ||
-        r.last_name ||
-        r.surname ||
-        "",
+    const registrationCanonical =
+      canonicalParticipantNameFromObject(
+        r,
         oldTeamName
       );
 
     if (
-      first &&
-      last
+      registrationCanonical
     ) {
-      return (
-        `${first} ${last}`
-      );
+      return registrationCanonical;
     }
 
     // -------------------------------------------------------
-    // 2. ПЕРСОНАЛЬНІ ПОЛЯ З REGISTRATION
-    // -------------------------------------------------------
-
-    const registrationCandidates = [
-      r.participantName,
-      r.fullName,
-      r.userName,
-      r.name
-    ];
-
-    for (
-      const candidate
-      of registrationCandidates
-    ) {
-      const found =
-        validParticipantName(
-          candidate,
-          oldTeamName
-        );
-
-      if (
-        found
-      ) {
-        return found;
-      }
-    }
-
-    // -------------------------------------------------------
-    // 3. users/{uid}
+    // 2. users/{uid}
     //
-    // КЛЮЧОВИЙ FALLBACK.
+    // ВАЖЛИВО:
     //
-    // Якщо registration містить:
-    // participantName = "Учасник"
+    // профіль читаємо ДО старого participantName.
     //
-    // сюди ми ТЕПЕР точно дійдемо.
+    // Тому стара заявка:
+    //
+    // participantName = "Василь Цьотар"
+    //
+    // не переб'є профіль:
+    //
+    // firstName = "Василь"
+    // lastName  = "Цьотар"
+    //
+    // => "Цьотар Василь"
     // -------------------------------------------------------
 
     const profileName =
@@ -1002,40 +1033,29 @@
     }
 
     // -------------------------------------------------------
-    // 4. DISPLAY NAME
+    // 3. LEGACY REGISTRATION
+    //
+    // Тільки якщо немає structured registration
+    // і немає нормального users/{uid}.
+    //
+    // Нічого не переставляємо.
     // -------------------------------------------------------
 
-    const display =
-      validParticipantName(
-        r.displayName,
+    const legacyName =
+      legacyParticipantNameFromObject(
+        r,
         oldTeamName
       );
 
     if (
-      display
+      legacyName
     ) {
-      return display;
-    }
-
-    // -------------------------------------------------------
-    // 5. CAPTAIN
-    // -------------------------------------------------------
-
-    const captain =
-      validParticipantName(
-        r.captain,
-        oldTeamName
-      );
-
-    if (
-      captain
-    ) {
-      return captain;
+      return legacyName;
     }
 
     /*
      * Тільки якщо реально
-     * ніде немає імені.
+     * ніде немає нормального імені.
      */
     return "Учасник";
   }
@@ -1732,11 +1752,11 @@
                   d.id;
 
                 /*
-                 * ТУТ тепер:
+                 * Ім'я SOLO:
                  *
-                 * "Учасник" буде відкинуто,
-                 * а реальне ім'я підтягується
-                 * з users/{uid}.
+                 * 1. registration lastName + firstName
+                 * 2. users/{uid} lastName + firstName
+                 * 3. legacy registration
                  */
                 const participantName =
                   await resolveSoloParticipantName(
@@ -3739,8 +3759,7 @@
     /*
      * КЛЮЧОВЕ ДЛЯ LIVE.
      *
-     * Для SOLO одразу записуємо
-     * реальні:
+     * Для SOLO одразу записуємо:
      *
      * uid
      * participantName

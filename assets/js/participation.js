@@ -3,9 +3,16 @@
 //
 // ✅ TEAM + SOLO
 // ✅ TEAM -> назва команди
-// ✅ SOLO -> ім'я та прізвище учасника
+// ✅ SOLO -> ТІЛЬКИ ім'я + прізвище учасника
+// ✅ SOLO нічого не скорочує
+// ✅ SOLO нічого не міняє місцями без причини
+// ✅ firstName + lastName мають найвищий пріоритет
+// ✅ Legacy ПІБ:
+//    "Цьотар Василь Богданович" -> "Василь Цьотар"
+//    "Василь Богданович Цьотар" -> "Василь Цьотар"
 // ✅ "Учасник" / "Participant" не вважається справжнім ім'ям
 // ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як SOLO
+// ✅ Stalker Solo -> SOLO
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
 // ✅ SOLO не відкриває popup команди
@@ -15,10 +22,15 @@
 (function () {
   "use strict";
 
-  const $ = id => document.getElementById(id);
+  const $ = id =>
+    document.getElementById(
+      id
+    );
 
   const esc = s =>
-    String(s ?? "").replace(
+    String(
+      s ?? ""
+    ).replace(
       /[&<>"']/g,
       m => ({
         "&": "&amp;",
@@ -30,21 +42,31 @@
     );
 
   const norm = v =>
-    String(v ?? "")
-      .replace(/\s+/g, " ")
+    String(
+      v ?? ""
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
       .trim();
 
   const normLower = v =>
-    norm(v).toLowerCase();
+    norm(
+      v
+    ).toLowerCase();
 
-  const isPaidStatus = status =>
-    [
-      "confirmed",
-      "paid",
-      "payment_confirmed"
-    ].includes(
-      normLower(status)
-    );
+  const isPaidStatus =
+    status =>
+      [
+        "confirmed",
+        "paid",
+        "payment_confirmed"
+      ].includes(
+        normLower(
+          status
+        )
+      );
 
   const ALLOWED_STATUSES =
     new Set([
@@ -122,10 +144,19 @@
         competition?.engine?.baseFormat ||
         ""
       )
-        .replace(/\s+/g, "")
-        .replace(/_/g, "-");
+        .replace(
+          /\s+/g,
+          ""
+        )
+        .replace(
+          /_/g,
+          "-"
+        );
 
-    return format === "stalker-solo"
+    return (
+      format ===
+      "stalker-solo"
+    )
       ? "solo"
       : "team";
   }
@@ -157,10 +188,18 @@
     return (
       event?.isFinal === true ||
       key === "final" ||
-      key.includes("final") ||
-      key.includes("фінал") ||
-      text.includes("final") ||
-      text.includes("фінал")
+      key.includes(
+        "final"
+      ) ||
+      key.includes(
+        "фінал"
+      ) ||
+      text.includes(
+        "final"
+      ) ||
+      text.includes(
+        "фінал"
+      )
     );
   }
 
@@ -188,7 +227,8 @@
      * джерелом істини.
      */
     if (
-      meta.entryType === "solo"
+      meta.entryType ===
+      "solo"
     ) {
       return "solo";
     }
@@ -257,7 +297,9 @@
           .collection(
             "competitions"
           )
-          .doc(compId)
+          .doc(
+            compId
+          )
           .get();
 
       if (
@@ -280,7 +322,9 @@
             : [];
 
         const wantedStage =
-          norm(stageId) ||
+          norm(
+            stageId
+          ) ||
           "main";
 
         event =
@@ -298,7 +342,8 @@
                 wantedStage
               );
             }
-          ) || null;
+          ) ||
+          null;
 
         if (
           event
@@ -321,7 +366,8 @@
         format =
           normLower(
             event?.format ||
-            event?.engine?.baseFormat ||
+            event?.engine
+              ?.baseFormat ||
             competition.format ||
             competition.engine
               ?.baseFormat ||
@@ -351,7 +397,9 @@
 
     return {
       title:
-        norm(title) ||
+        norm(
+          title
+        ) ||
         "Змагання",
 
       stageTitle:
@@ -391,7 +439,9 @@
           .collection(
             "competitions"
           )
-          .doc(compId)
+          .doc(
+            compId
+          )
           .get();
 
       if (
@@ -419,7 +469,9 @@
               e?.stageId ||
               e?.id
             ) ===
-            norm(stageId)
+            norm(
+              stageId
+            )
         );
 
       const value =
@@ -446,7 +498,9 @@
             );
 
       if (
-        Number.isFinite(n) &&
+        Number.isFinite(
+          n
+        ) &&
         n > 0
       ) {
         max =
@@ -461,17 +515,6 @@
   // =========================================================
   // PERSON NAME HELPERS
   // =========================================================
-
-  /*
-   * Такі значення НЕ є ім'ям.
-   *
-   * Тобто якщо в Firestore:
-   *
-   * participantName: "Учасник"
-   *
-   * ми НЕ зупиняємось на цьому,
-   * а шукаємо справжнє ПІБ далі.
-   */
 
   function isPlaceholderPersonName(
     value
@@ -554,8 +597,12 @@
      */
     if (
       team &&
-      normLower(name) ===
-        normLower(team)
+      normLower(
+        name
+      ) ===
+        normLower(
+          team
+        )
     ) {
       return "";
     }
@@ -563,7 +610,17 @@
     return name;
   }
 
-  function personNameFromObject(
+  // =========================================================
+  // STRUCTURED FIRST + LAST
+  // =========================================================
+
+  /*
+   * Найнадійніше джерело SOLO.
+   *
+   * НІКОЛИ не використовуємо
+   * middleName / patronymic.
+   */
+  function structuredPersonName(
     data
   ) {
     const d =
@@ -572,12 +629,19 @@
 
     const firstName =
       validPersonalName(
-        d.firstName
+        d.firstName ||
+        d.givenName ||
+        d.first_name ||
+        ""
       );
 
     const lastName =
       validPersonalName(
-        d.lastName
+        d.lastName ||
+        d.surname ||
+        d.familyName ||
+        d.last_name ||
+        ""
       );
 
     if (
@@ -587,6 +651,169 @@
       return (
         `${firstName} ${lastName}`
       );
+    }
+
+    return "";
+  }
+
+  // =========================================================
+  // LEGACY PATRONYMIC
+  // =========================================================
+
+  /*
+   * Визначаємо по батькові,
+   * щоб нормально обробити
+   * старі повні ПІБ.
+   *
+   * Богданович
+   * Миколайович
+   * Іванович
+   * Петрівна
+   * Іванівна
+   */
+  function isPatronymicPart(
+    value
+  ) {
+    const s =
+      normLower(
+        value
+      );
+
+    if (
+      !s
+    ) {
+      return false;
+    }
+
+    return (
+      /(?:ович|евич|євич|йович)$/i.test(
+        s
+      ) ||
+      /(?:івна|ївна|овна|евна|євна)$/i.test(
+        s
+      )
+    );
+  }
+
+  /*
+   * Legacy:
+   *
+   * "Цьотар Василь Богданович"
+   * -> "Василь Цьотар"
+   *
+   * "Василь Богданович Цьотар"
+   * -> "Василь Цьотар"
+   *
+   * Для двох слів нічого
+   * не перевертаємо навмання.
+   */
+  function normalizeLegacySoloName(
+    value
+  ) {
+    const raw =
+      norm(
+        value
+      );
+
+    if (
+      !raw ||
+      isPlaceholderPersonName(
+        raw
+      )
+    ) {
+      return "";
+    }
+
+    const parts =
+      raw
+        .split(
+          " "
+        )
+        .filter(
+          Boolean
+        );
+
+    if (
+      parts.length ===
+      3
+    ) {
+      const patronymicIndex =
+        parts.findIndex(
+          isPatronymicPart
+        );
+
+      /*
+       * Прізвище Ім'я По-батькові
+       *
+       * Цьотар Василь Богданович
+       */
+      if (
+        patronymicIndex ===
+        2
+      ) {
+        return (
+          `${parts[1]} ${parts[0]}`
+        );
+      }
+
+      /*
+       * Ім'я По-батькові Прізвище
+       *
+       * Василь Богданович Цьотар
+       */
+      if (
+        patronymicIndex ===
+        1
+      ) {
+        return (
+          `${parts[0]} ${parts[2]}`
+        );
+      }
+
+      /*
+       * Нетиповий випадок:
+       * По-батькові Ім'я Прізвище
+       */
+      if (
+        patronymicIndex ===
+        0
+      ) {
+        return (
+          `${parts[1]} ${parts[2]}`
+        );
+      }
+    }
+
+    /*
+     * Якщо структура невідома —
+     * НЕ вгадуємо порядок.
+     */
+    return raw;
+  }
+
+  // =========================================================
+  // NORMAL PERSON NAME
+  // =========================================================
+
+  function personNameFromObject(
+    data
+  ) {
+    const d =
+      data ||
+      {};
+
+    /*
+     * №1 — firstName + lastName.
+     */
+    const structured =
+      structuredPersonName(
+        d
+      );
+
+    if (
+      structured
+    ) {
+      return structured;
     }
 
     const teamName =
@@ -625,83 +852,37 @@
     return "";
   }
 
-  /*
-   * Наприклад:
-   *
-   * Роман Дячок
-   * -> Дячок Роман
-   *
-   * якщо довге:
-   *
-   * Олександр Коваленко
-   * -> Коваленко О.
-   */
+  // =========================================================
+  // SOLO DISPLAY NAME
+  // =========================================================
 
+  /*
+   * ВАЖЛИВО:
+   *
+   * Старої логіки:
+   *
+   * Коваленко О.
+   * Чуловський Я.
+   *
+   * БІЛЬШЕ НЕМАЄ.
+   *
+   * Нічого не скорочуємо.
+   */
   function formatSoloName(
-    value,
-    maxChars = 18
+    value
   ) {
     const raw =
-      norm(
+      normalizeLegacySoloName(
         value
       );
 
     if (
-      !raw ||
-      isPlaceholderPersonName(
-        raw
-      )
+      !raw
     ) {
       return "Учасник";
     }
 
-    const parts =
-      raw
-        .split(" ")
-        .filter(
-          Boolean
-        );
-
-    if (
-      parts.length < 2
-    ) {
-      return raw;
-    }
-
-    /*
-     * У профілі очікуємо:
-     * Ім'я Прізвище
-     *
-     * або:
-     * Ім'я По-батькові Прізвище.
-     */
-
-    const firstName =
-      parts[0];
-
-    const lastName =
-      parts[
-        parts.length - 1
-      ];
-
-    const full =
-      `${lastName} ${firstName}`;
-
-    if (
-      full.length <=
-      maxChars
-    ) {
-      return full;
-    }
-
-    const initial =
-      firstName
-        .charAt(0)
-        .toUpperCase();
-
-    return initial
-      ? `${lastName} ${initial}.`
-      : lastName;
+    return raw;
   }
 
   // =========================================================
@@ -744,17 +925,57 @@
           .collection(
             "users"
           )
-          .doc(id)
+          .doc(
+            id
+          )
           .get();
 
       if (
         snap.exists
       ) {
-        name =
-          personNameFromObject(
-            snap.data() ||
-            {}
+        const user =
+          snap.data() ||
+          {};
+
+        /*
+         * №1:
+         * structured first + last.
+         */
+        const structured =
+          structuredPersonName(
+            user
           );
+
+        if (
+          structured
+        ) {
+          name =
+            structured;
+
+        } else {
+          /*
+           * №2:
+           * legacy ПІБ із профілю.
+           */
+          const legacy =
+            personNameFromObject(
+              user
+            );
+
+          name =
+            formatSoloName(
+              legacy
+            );
+
+          if (
+            isPlaceholderPersonName(
+              name
+            )
+          ) {
+            name =
+              "";
+          }
+        }
       }
 
     } catch (e) {
@@ -762,10 +983,9 @@
        * На публічній сторінці
        * users може бути закрита Rules.
        *
-       * Тоді ім'я повинно бути
-       * у public_participants.
+       * Тоді ім'я беремо
+       * із public_participants.
        */
-
       console.warn(
         "[participation] user name fallback skipped:",
         id,
@@ -782,18 +1002,9 @@
     return name;
   }
 
-  /*
-   * UID беремо не тільки з поля uid.
-   *
-   * Підтримує:
-   * participantUid
-   * userId
-   * registeredByUid
-   *
-   * і canonical document ID:
-   *
-   * comp__main__solo__UID
-   */
+  // =========================================================
+  // UID
+  // =========================================================
 
   function uidFromPublicDoc(
     doc,
@@ -1018,7 +1229,10 @@
       }
 
       members.sort(
-        (a, b) => {
+        (
+          a,
+          b
+        ) => {
           const aCap =
             a.role ===
               "captain" ||
@@ -1223,7 +1437,8 @@
         () => {
           if (
             window.scMeals &&
-            typeof window.scMeals
+            typeof window
+              .scMeals
               .openMeals ===
               "function"
           ) {
@@ -1240,7 +1455,8 @@
         () => {
           if (
             window.scMeals &&
-            typeof window.scMeals
+            typeof window
+              .scMeals
               .openOrder ===
               "function"
           ) {
@@ -1257,7 +1473,8 @@
         () => {
           if (
             window.scMeals &&
-            typeof window.scMeals
+            typeof window
+              .scMeals
               .openList ===
               "function"
           ) {
@@ -1274,7 +1491,8 @@
         () => {
           if (
             window.scMeals &&
-            typeof window.scMeals
+            typeof window
+              .scMeals
               .clearOrders ===
               "function"
           ) {
@@ -1286,7 +1504,8 @@
 
     if (
       window.scMeals &&
-      typeof window.scMeals
+      typeof window
+        .scMeals
         .setContext ===
         "function" &&
       window.scMealContext
@@ -1356,6 +1575,38 @@
   function participantDisplayName(
     row
   ) {
+    /*
+     * Після normalizeParticipantRow()
+     * participantName уже має бути
+     * canonical.
+     */
+    const direct =
+      norm(
+        row?.participantName
+      );
+
+    if (
+      direct &&
+      !isPlaceholderPersonName(
+        direct
+      )
+    ) {
+      return formatSoloName(
+        direct
+      );
+    }
+
+    const structured =
+      structuredPersonName(
+        row
+      );
+
+    if (
+      structured
+    ) {
+      return structured;
+    }
+
     const raw =
       personNameFromObject(
         row
@@ -1443,37 +1694,32 @@
         );
 
       /*
-       * Спочатку шукаємо нормальне
-       * персональне ім'я в самому
-       * public_participants.
+       * №1.
+       *
+       * Найкраще джерело:
+       * firstName + lastName
+       * прямо в public_participants.
        */
       let participantName =
-        personNameFromObject(
+        structuredPersonName(
           r
         );
 
       /*
-       * "Учасник" — це заглушка.
+       * №2.
        *
-       * Так само якщо випадково
-       * participantName === teamName.
+       * Якщо structured fields
+       * у public немає —
+       * пробуємо users/{uid}.
        *
-       * Тоді пробуємо users/{uid}.
+       * Це важливо для старих заявок,
+       * де participantName може бути:
+       *
+       * "Цьотар Василь Богданович"
+       * або інший legacy формат.
        */
       if (
-        !participantName ||
-        isPlaceholderPersonName(
-          participantName
-        ) ||
-        (
-          teamName &&
-          normLower(
-            participantName
-          ) ===
-            normLower(
-              teamName
-            )
-        )
+        !participantName
       ) {
         const fromUser =
           await getUserDisplayName(
@@ -1489,12 +1735,47 @@
       }
 
       /*
-       * КЛЮЧОВЕ:
+       * №3.
        *
-       * У SOLO НІКОЛИ
-       * не підставляємо teamName
-       * як ім'я людини.
+       * Якщо users закрита Rules
+       * або профіль не дав імені —
+       * беремо legacy public fields.
        */
+      if (
+        !participantName
+      ) {
+        const legacy =
+          personNameFromObject(
+            r
+          );
+
+        if (
+          legacy
+        ) {
+          participantName =
+            formatSoloName(
+              legacy
+            );
+        }
+      }
+
+      /*
+       * Ніколи не використовуємо
+       * teamName як ім'я SOLO.
+       */
+      if (
+        teamName &&
+        participantName &&
+        normLower(
+          participantName
+        ) ===
+          normLower(
+            teamName
+          )
+      ) {
+        participantName =
+          "";
+      }
 
       if (
         !participantName ||
@@ -1505,6 +1786,16 @@
         participantName =
           "Учасник";
       }
+
+      /*
+       * Остання canonical нормалізація.
+       *
+       * Тут уже НЕМАЄ скорочення.
+       */
+      participantName =
+        formatSoloName(
+          participantName
+        );
 
       return {
         participantDocId:
@@ -1518,7 +1809,8 @@
         legacyConvertedToSolo:
           normLower(
             r.entryType
-          ) !== "solo",
+          ) !==
+          "solo",
 
         entryType:
           "solo",
@@ -1716,16 +2008,18 @@
 
     try {
       if (
-        typeof value.toMillis ===
-        "function"
+        typeof value
+          .toMillis ===
+          "function"
       ) {
         return value
           .toMillis();
       }
 
       if (
-        typeof value.toDate ===
-        "function"
+        typeof value
+          .toDate ===
+          "function"
       ) {
         return value
           .toDate()
@@ -1787,16 +2081,12 @@
       return a;
     }
 
-    /*
-     * Справжній новий SOLO
-     * кращий за legacy TEAM,
-     * який ми трактуємо як SOLO.
-     */
     if (
       a.legacyConvertedToSolo !==
       b.legacyConvertedToSolo
     ) {
-      return a.legacyConvertedToSolo
+      return a
+        .legacyConvertedToSolo
         ? b
         : a;
     }
@@ -1863,7 +2153,9 @@
         map.set(
           key,
           chooseBetterRow(
-            map.get(key),
+            map.get(
+              key
+            ),
             row
           )
         );
@@ -1960,11 +2252,12 @@
         <span
           class="name"
           title="${esc(
-            row.participantName ||
             name
           )}"
         >
-          ${esc(name)}
+          ${esc(
+            name
+          )}
         </span>
 
         <span
@@ -2155,7 +2448,10 @@
     };
 
     rows.sort(
-      (a, b) => {
+      (
+        a,
+        b
+      ) => {
         const aRank =
           rank[
             normLower(
@@ -2330,13 +2626,6 @@
       // PUBLIC PARTICIPANTS
       // =====================================================
 
-      /*
-       * entryType спеціально
-       * НЕ додаємо в where,
-       * щоб legacy SOLO теж
-       * потрапив у список.
-       */
-
       const snap =
         await db
           .collection(
@@ -2477,7 +2766,8 @@
 
       if (
         window.scMeals &&
-        typeof window.scMeals
+        typeof window
+          .scMeals
           .setContext ===
           "function"
       ) {

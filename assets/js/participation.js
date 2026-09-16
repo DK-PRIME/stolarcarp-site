@@ -3,13 +3,15 @@
 //
 // ✅ TEAM + SOLO
 // ✅ TEAM -> назва команди
-// ✅ SOLO -> ТІЛЬКИ ім'я + прізвище учасника
+// ✅ SOLO -> ТІЛЬКИ Прізвище + Ім'я
 // ✅ SOLO нічого не скорочує
-// ✅ SOLO нічого не міняє місцями без причини
-// ✅ firstName + lastName мають найвищий пріоритет
+// ✅ middleName / по батькові не показуємо
+// ✅ structured fields:
+//    lastName + firstName
 // ✅ Legacy ПІБ:
-//    "Цьотар Василь Богданович" -> "Василь Цьотар"
-//    "Василь Богданович Цьотар" -> "Василь Цьотар"
+//    "Цьотар Василь Богданович" -> "Цьотар Василь"
+//    "Василь Богданович Цьотар" -> "Цьотар Василь"
+// ✅ Legacy 2 слова не переставляємо навмання
 // ✅ "Учасник" / "Participant" не вважається справжнім ім'ям
 // ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як SOLO
 // ✅ Stalker Solo -> SOLO
@@ -611,14 +613,21 @@
   }
 
   // =========================================================
-  // STRUCTURED FIRST + LAST
+  // STRUCTURED LAST + FIRST
   // =========================================================
 
   /*
-   * Найнадійніше джерело SOLO.
+   * CANONICAL SOLO DISPLAY:
    *
-   * НІКОЛИ не використовуємо
-   * middleName / patronymic.
+   * Прізвище Ім'я
+   *
+   * firstName: "Василь"
+   * lastName:  "Цьотар"
+   *
+   * -> "Цьотар Василь"
+   *
+   * middleName / patronymic
+   * НЕ використовуємо.
    */
   function structuredPersonName(
     data
@@ -649,7 +658,7 @@
       lastName
     ) {
       return (
-        `${firstName} ${lastName}`
+        `${lastName} ${firstName}`
       );
     }
 
@@ -661,9 +670,7 @@
   // =========================================================
 
   /*
-   * Визначаємо по батькові,
-   * щоб нормально обробити
-   * старі повні ПІБ.
+   * Визначаємо по батькові.
    *
    * Богданович
    * Миколайович
@@ -695,17 +702,34 @@
     );
   }
 
+  // =========================================================
+  // LEGACY SOLO NAME
+  // =========================================================
+
   /*
-   * Legacy:
+   * Приводимо старі ПІБ
+   * до canonical:
+   *
+   * Прізвище Ім'я
    *
    * "Цьотар Василь Богданович"
-   * -> "Василь Цьотар"
+   * -> "Цьотар Василь"
    *
    * "Василь Богданович Цьотар"
-   * -> "Василь Цьотар"
+   * -> "Цьотар Василь"
    *
-   * Для двох слів нічого
-   * не перевертаємо навмання.
+   * ДВА СЛОВА:
+   *
+   * "Мілян Андрій"
+   * -> "Мілян Андрій"
+   *
+   * "Дячок Роман"
+   * -> "Дячок Роман"
+   *
+   * Їх не переставляємо,
+   * бо без structured fields
+   * неможливо надійно визначити
+   * порядок.
    */
   function normalizeLegacySoloName(
     value
@@ -733,6 +757,21 @@
           Boolean
         );
 
+    /*
+     * Уже два слова.
+     *
+     * Не вгадуємо.
+     */
+    if (
+      parts.length ===
+      2
+    ) {
+      return raw;
+    }
+
+    /*
+     * Повне ПІБ.
+     */
     if (
       parts.length ===
       3
@@ -743,50 +782,54 @@
         );
 
       /*
-       * Прізвище Ім'я По-батькові
+       * Прізвище Ім'я По батькові
        *
        * Цьотар Василь Богданович
+       * -> Цьотар Василь
        */
       if (
         patronymicIndex ===
         2
       ) {
         return (
-          `${parts[1]} ${parts[0]}`
+          `${parts[0]} ${parts[1]}`
         );
       }
 
       /*
-       * Ім'я По-батькові Прізвище
+       * Ім'я По батькові Прізвище
        *
        * Василь Богданович Цьотар
+       * -> Цьотар Василь
        */
       if (
         patronymicIndex ===
         1
       ) {
         return (
-          `${parts[0]} ${parts[2]}`
+          `${parts[2]} ${parts[0]}`
         );
       }
 
       /*
-       * Нетиповий випадок:
-       * По-батькові Ім'я Прізвище
+       * По батькові Ім'я Прізвище
+       *
+       * Богданович Василь Цьотар
+       * -> Цьотар Василь
        */
       if (
         patronymicIndex ===
         0
       ) {
         return (
-          `${parts[1]} ${parts[2]}`
+          `${parts[2]} ${parts[1]}`
         );
       }
     }
 
     /*
      * Якщо структура невідома —
-     * НЕ вгадуємо порядок.
+     * нічого не вигадуємо.
      */
     return raw;
   }
@@ -803,7 +846,10 @@
       {};
 
     /*
-     * №1 — firstName + lastName.
+     * №1.
+     *
+     * Найнадійніше:
+     * lastName + firstName.
      */
     const structured =
       structuredPersonName(
@@ -823,6 +869,9 @@
         ""
       );
 
+    /*
+     * Legacy fallback.
+     */
     const candidates = [
       d.participantName,
       d.fullName,
@@ -857,16 +906,15 @@
   // =========================================================
 
   /*
-   * ВАЖЛИВО:
+   * НІЯКИХ:
    *
-   * Старої логіки:
-   *
-   * Коваленко О.
    * Чуловський Я.
+   * Мазуркевич Р.
    *
-   * БІЛЬШЕ НЕМАЄ.
+   * Повністю:
    *
-   * Нічого не скорочуємо.
+   * Чуловський Ярослав
+   * Мазуркевич Роман
    */
   function formatSoloName(
     value
@@ -938,8 +986,13 @@
           {};
 
         /*
-         * №1:
-         * structured first + last.
+         * №1.
+         *
+         * Якщо є firstName + lastName,
+         * це головне джерело.
+         *
+         * Вивід:
+         * lastName firstName.
          */
         const structured =
           structuredPersonName(
@@ -954,8 +1007,9 @@
 
         } else {
           /*
-           * №2:
-           * legacy ПІБ із профілю.
+           * №2.
+           *
+           * Legacy повний ПІБ.
            */
           const legacy =
             personNameFromObject(
@@ -983,8 +1037,8 @@
        * На публічній сторінці
        * users може бути закрита Rules.
        *
-       * Тоді ім'я беремо
-       * із public_participants.
+       * Тоді ім'я повинно бути
+       * у public_participants.
        */
       console.warn(
         "[participation] user name fallback skipped:",
@@ -1577,8 +1631,9 @@
   ) {
     /*
      * Після normalizeParticipantRow()
-     * participantName уже має бути
-     * canonical.
+     * participantName уже canonical:
+     *
+     * Прізвище Ім'я.
      */
     const direct =
       norm(
@@ -1696,9 +1751,12 @@
       /*
        * №1.
        *
-       * Найкраще джерело:
-       * firstName + lastName
-       * прямо в public_participants.
+       * Якщо public_participants уже має
+       * firstName + lastName:
+       *
+       * lastName + firstName
+       *
+       * Це canonical.
        */
       let participantName =
         structuredPersonName(
@@ -1709,14 +1767,10 @@
        * №2.
        *
        * Якщо structured fields
-       * у public немає —
-       * пробуємо users/{uid}.
+       * немає — беремо users/{uid}.
        *
-       * Це важливо для старих заявок,
-       * де participantName може бути:
-       *
-       * "Цьотар Василь Богданович"
-       * або інший legacy формат.
+       * Там теж canonical:
+       * lastName + firstName.
        */
       if (
         !participantName
@@ -1737,9 +1791,8 @@
       /*
        * №3.
        *
-       * Якщо users закрита Rules
-       * або профіль не дав імені —
-       * беремо legacy public fields.
+       * Legacy fallback:
+       * participantName / fullName / etc.
        */
       if (
         !participantName
@@ -1760,8 +1813,8 @@
       }
 
       /*
-       * Ніколи не використовуємо
-       * teamName як ім'я SOLO.
+       * У SOLO teamName
+       * ніколи не є ім'ям учасника.
        */
       if (
         teamName &&
@@ -1788,9 +1841,9 @@
       }
 
       /*
-       * Остання canonical нормалізація.
+       * Фінальна нормалізація.
        *
-       * Тут уже НЕМАЄ скорочення.
+       * Ніяких скорочень.
        */
       participantName =
         formatSoloName(
@@ -2081,6 +2134,11 @@
       return a;
     }
 
+    /*
+     * Новий canonical SOLO
+     * кращий за legacy TEAM,
+     * який трактуємо як SOLO.
+     */
     if (
       a.legacyConvertedToSolo !==
       b.legacyConvertedToSolo
@@ -2626,6 +2684,12 @@
       // PUBLIC PARTICIPANTS
       // =====================================================
 
+      /*
+       * entryType спеціально
+       * НЕ ставимо у where,
+       * щоб legacy SOLO
+       * теж потрапив сюди.
+       */
       const snap =
         await db
           .collection(

@@ -1,8 +1,14 @@
 // assets/js/meal_orders.js
 // STOLAR CARP • Харчування 2 доби
+// ✅ актуальний сектор береться з stageResults після жеребкування
+// ✅ побажання показуються в загальному списку
+// ✅ окреме read-only посилання для пані Іри
+// ✅ без подвійних click-handler'ів
 
 (function () {
   "use strict";
+
+  console.log("✅ meal_orders.js LOADED v20260917-draw-notes-ira-link");
 
   let ctx = window.scMealContext || null;
   let currentUser = null;
@@ -11,101 +17,233 @@
   let mealIsOpen = false;
 
   const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
-  const PAID_STATUSES = ["confirmed", "paid", "payment_confirmed"];
+  const PAID_STATUSES = [
+    "confirmed",
+    "paid",
+    "payment_confirmed"
+  ];
 
-  const $ = id => document.getElementById(id);
+  const $ = (id) =>
+    document.getElementById(id);
 
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, m => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-  }[m]));
+  const esc = (s) =>
+    String(s ?? "").replace(/[&<>"']/g, (m) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[m]));
 
-  const norm = v => String(v ?? "").trim();
+  const norm = (v) =>
+    String(v ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const clean = (v) =>
+    norm(v).toLowerCase();
 
   function num(v) {
     const n = Number(v);
-    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+
+    return Number.isFinite(n) && n > 0
+      ? Math.floor(n)
+      : 0;
   }
 
   function safeId(v) {
-    return String(v || "").replace(/[\/#?\[\]]/g, "_");
+    return String(v || "")
+      .replace(/[\/#?\[\]]/g, "_");
   }
 
-  function orderId(compId, stageId, teamId) {
-    return safeId(`${compId}__${stageId}__${teamId}`);
+  function orderId(
+    compId,
+    stageId,
+    teamId
+  ) {
+    return safeId(
+      `${compId}__${stageId}__${teamId}`
+    );
+  }
+
+  function stageResultsId(
+    compId,
+    stageId
+  ) {
+    return `${norm(compId)}__${norm(stageId) || "main"}`;
   }
 
   function mealSettingsId() {
-    if (!ctx?.competitionId || !ctx?.stageId) return "";
-    return safeId(`${ctx.competitionId}__${ctx.stageId}`);
+    if (
+      !ctx?.competitionId ||
+      !ctx?.stageId
+    ) {
+      return "";
+    }
+
+    return safeId(
+      `${ctx.competitionId}__${ctx.stageId}`
+    );
   }
 
-  function setStatus(text, ok = true) {
-    const el = $("mealStatus");
+  function setStatus(
+    text,
+    ok = true
+  ) {
+    const el =
+      $("mealStatus");
+
     if (!el) return;
-    el.textContent = text || "";
-    el.className = "mealStatus " + (text ? (ok ? "ok" : "err") : "");
+
+    el.textContent =
+      text || "";
+
+    el.className =
+      "mealStatus " +
+      (
+        text
+          ? (ok ? "ok" : "err")
+          : ""
+      );
   }
 
-  function setPopupStatus(text, ok = true) {
-    const el = $("mealPopupStatus");
+  function setPopupStatus(
+    text,
+    ok = true
+  ) {
+    const el =
+      $("mealPopupStatus");
+
     if (!el) return;
-    el.textContent = text || "";
-    el.className = "mealStatus " + (text ? (ok ? "ok" : "err") : "");
+
+    el.textContent =
+      text || "";
+
+    el.className =
+      "mealStatus " +
+      (
+        text
+          ? (ok ? "ok" : "err")
+          : ""
+      );
   }
 
-  function openPopup(title, html) {
-    if ($("mealPopupTitle")) $("mealPopupTitle").textContent = title;
-    if ($("mealPopupBody")) $("mealPopupBody").innerHTML = html;
-    if ($("mealPopup")) $("mealPopup").style.display = "flex";
+  function openPopup(
+    title,
+    html
+  ) {
+    if ($("mealPopupTitle")) {
+      $("mealPopupTitle").textContent =
+        title;
+    }
+
+    if ($("mealPopupBody")) {
+      $("mealPopupBody").innerHTML =
+        html;
+    }
+
+    if ($("mealPopup")) {
+      $("mealPopup").style.display =
+        "flex";
+    }
   }
 
   function closePopup() {
-    if ($("mealPopup")) $("mealPopup").style.display = "none";
+    if ($("mealPopup")) {
+      $("mealPopup").style.display =
+        "none";
+    }
   }
 
   async function waitReady() {
-    if (window.scReady) await window.scReady;
-
-    if (!window.scDb || !window.scAuth || !window.firebase) {
-      throw new Error("Firebase не готовий");
+    if (window.scReady) {
+      await window.scReady;
     }
 
-    return { db: window.scDb, auth: window.scAuth, fb: window.firebase };
+    if (
+      !window.scDb ||
+      !window.scAuth ||
+      !window.firebase
+    ) {
+      throw new Error(
+        "Firebase не готовий"
+      );
+    }
+
+    return {
+      db: window.scDb,
+      auth: window.scAuth,
+      fb: window.firebase
+    };
   }
 
-  async function waitMealContext(maxMs = 10000) {
-    const started = Date.now();
+  async function waitMealContext(
+    maxMs = 10000
+  ) {
+    const started =
+      Date.now();
 
-    while (Date.now() - started < maxMs) {
-      ctx = window.scMealContext || ctx;
+    while (
+      Date.now() - started <
+      maxMs
+    ) {
+      ctx =
+        window.scMealContext ||
+        ctx;
 
-      if (ctx && ctx.competitionId && ctx.stageId && Array.isArray(ctx.teams)) {
+      if (
+        ctx &&
+        ctx.competitionId &&
+        ctx.stageId &&
+        Array.isArray(ctx.teams)
+      ) {
         return ctx;
       }
 
-      await new Promise(r => setTimeout(r, 150));
+      await new Promise(
+        (r) =>
+          setTimeout(
+            r,
+            150
+          )
+      );
     }
 
-    throw new Error("Нема competitionId/stageId");
+    throw new Error(
+      "Нема competitionId/stageId"
+    );
   }
 
   async function getAuthUser() {
-    const { auth } = await waitReady();
+    const { auth } =
+      await waitReady();
 
-    if (auth.currentUser) return auth.currentUser;
+    if (auth.currentUser) {
+      return auth.currentUser;
+    }
 
-    return new Promise(resolve => {
-      const unsub = auth.onAuthStateChanged(user => {
-        unsub();
-        resolve(user || null);
-      });
-    });
+    return new Promise(
+      (resolve) => {
+        const unsub =
+          auth.onAuthStateChanged(
+            (user) => {
+              unsub();
+
+              resolve(
+                user || null
+              );
+            }
+          );
+      }
+    );
   }
 
   async function loadUserData() {
-    const { db } = await waitReady();
+    const { db } =
+      await waitReady();
 
-    currentUser = await getAuthUser();
+    currentUser =
+      await getAuthUser();
 
     if (!currentUser) {
       userTeamId = "";
@@ -113,94 +251,258 @@
       return;
     }
 
-    const snap = await db.collection("users").doc(currentUser.uid).get();
-    const u = snap.exists ? (snap.data() || {}) : {};
+    const snap =
+      await db
+        .collection("users")
+        .doc(currentUser.uid)
+        .get();
 
-    userTeamId = norm(u.teamId || u.currentTeamId || "");
-    canManageMeals = currentUser.uid === FOOD_OWNER_UID;
+    const u =
+      snap.exists
+        ? (snap.data() || {})
+        : {};
+
+    userTeamId =
+      norm(
+        u.teamId ||
+        u.currentTeamId ||
+        ""
+      );
+
+    canManageMeals =
+      currentUser.uid ===
+      FOOD_OWNER_UID;
   }
 
   async function loadMealGate() {
-    const { db } = await waitReady();
-    const id = mealSettingsId();
+    const { db } =
+      await waitReady();
+
+    const id =
+      mealSettingsId();
 
     if (!id) {
       mealIsOpen = false;
       return false;
     }
 
-    const snap = await db.collection("mealSettings").doc(id).get();
-    const d = snap.exists ? (snap.data() || {}) : {};
+    const snap =
+      await db
+        .collection("mealSettings")
+        .doc(id)
+        .get();
 
-    mealIsOpen = d.isOpen === true;
+    const d =
+      snap.exists
+        ? (snap.data() || {})
+        : {};
+
+    mealIsOpen =
+      d.isOpen === true;
+
     return mealIsOpen;
   }
 
-  async function setMealGate(isOpen) {
-    const { db, fb } = await waitReady();
-    const id = mealSettingsId();
+  async function setMealGate(
+    isOpen
+  ) {
+    const {
+      db,
+      fb
+    } = await waitReady();
 
-    if (!id) throw new Error("Нема competitionId/stageId");
+    const id =
+      mealSettingsId();
 
-    await db.collection("mealSettings").doc(id).set({
-      competitionId: ctx.competitionId,
-      stageId: ctx.stageId,
-      isOpen: !!isOpen,
-      updatedAt: fb.firestore.FieldValue.serverTimestamp(),
-      updatedBy: currentUser ? currentUser.uid : ""
-    }, { merge: true });
+    if (!id) {
+      throw new Error(
+        "Нема competitionId/stageId"
+      );
+    }
 
-    mealIsOpen = !!isOpen;
+    await db
+      .collection("mealSettings")
+      .doc(id)
+      .set({
+        competitionId:
+          ctx.competitionId,
+
+        stageId:
+          ctx.stageId,
+
+        isOpen:
+          !!isOpen,
+
+        updatedAt:
+          fb.firestore
+            .FieldValue
+            .serverTimestamp(),
+
+        updatedBy:
+          currentUser
+            ? currentUser.uid
+            : ""
+      }, {
+        merge: true
+      });
+
+    mealIsOpen =
+      !!isOpen;
   }
 
   function applyVisibility() {
-    const openWrap = $("mealOpenWrap");
-    const mealBox = $("mealBox");
-    const orderBtn = $("btnOpenMealOrder");
-    const listBtn = $("btnOpenMealList");
-    const clearBtn = $("btnClearMealOrders");
+    const openWrap =
+      $("mealOpenWrap");
 
-    if (openWrap) openWrap.hidden = mealIsOpen || !canManageMeals;
-    if (mealBox) mealBox.hidden = !mealIsOpen;
+    const mealBox =
+      $("mealBox");
 
-    if (orderBtn) orderBtn.hidden = !mealIsOpen;
-    if (listBtn) listBtn.hidden = !mealIsOpen;
-    if (clearBtn) clearBtn.hidden = !(mealIsOpen && canManageMeals);
+    const orderBtn =
+      $("btnOpenMealOrder");
 
-    if (!mealIsOpen) setStatus("");
-    if (mealIsOpen) setStatus("Харчування відкрите.", true);
+    const listBtn =
+      $("btnOpenMealList");
+
+    const clearBtn =
+      $("btnClearMealOrders");
+
+    if (openWrap) {
+      openWrap.hidden =
+        mealIsOpen ||
+        !canManageMeals;
+    }
+
+    if (mealBox) {
+      mealBox.hidden =
+        !mealIsOpen;
+    }
+
+    if (orderBtn) {
+      orderBtn.hidden =
+        !mealIsOpen;
+    }
+
+    if (listBtn) {
+      listBtn.hidden =
+        !mealIsOpen;
+    }
+
+    if (clearBtn) {
+      clearBtn.hidden =
+        !(
+          mealIsOpen &&
+          canManageMeals
+        );
+    }
+
+    if (!mealIsOpen) {
+      setStatus("");
+    }
+
+    if (mealIsOpen) {
+      setStatus(
+        "Харчування відкрите.",
+        true
+      );
+    }
   }
 
   function getMainPaidTeams() {
-    if (!ctx || !Array.isArray(ctx.teams)) return [];
+    if (
+      !ctx ||
+      !Array.isArray(ctx.teams)
+    ) {
+      return [];
+    }
 
-    const maxTeams = Number(ctx.maxTeams || 21);
+    const maxTeams =
+      Number(
+        ctx.maxTeams || 21
+      );
 
     return ctx.teams
-      .filter(t => PAID_STATUSES.includes(norm(t.status).toLowerCase()))
-      .slice(0, maxTeams);
+      .filter(
+        (t) =>
+          PAID_STATUSES.includes(
+            norm(t.status)
+              .toLowerCase()
+          )
+      )
+      .slice(
+        0,
+        maxTeams
+      );
   }
 
   function getMyTeam() {
-    const mainPaidTeams = getMainPaidTeams();
+    const mainPaidTeams =
+      getMainPaidTeams();
 
     if (userTeamId) {
-      const byTeamId = mainPaidTeams.find(t => norm(t.teamId) === userTeamId);
-      if (byTeamId) return byTeamId;
+      const byTeamId =
+        mainPaidTeams.find(
+          (t) =>
+            norm(t.teamId) ===
+            userTeamId
+        );
+
+      if (byTeamId) {
+        return byTeamId;
+      }
     }
 
     if (currentUser) {
-      const byUid = mainPaidTeams.find(t => norm(t.uid) === currentUser.uid);
-      if (byUid) return byUid;
+      const byUid =
+        mainPaidTeams.find(
+          (t) =>
+            norm(t.uid) ===
+            currentUser.uid
+        );
+
+      if (byUid) {
+        return byUid;
+      }
     }
 
     return null;
   }
 
   function teamDrawKey(t) {
-    const z = norm(t.drawZone || t.zone).toUpperCase();
-    const s = norm(t.drawSector || t.sector);
-    return norm(t.drawKey) || (z && s ? `${z}${s}` : "");
+    const z =
+      norm(
+        t?.drawZone ||
+        t?.zone
+      ).toUpperCase();
+
+    const sRaw =
+      norm(
+        t?.drawSector ||
+        t?.sector
+      );
+
+    const direct =
+      norm(
+        t?.drawKey
+      );
+
+    if (direct) {
+      return direct.toUpperCase();
+    }
+
+    if (
+      !z ||
+      !sRaw
+    ) {
+      return "";
+    }
+
+    const s =
+      sRaw.replace(
+        /^[ABC]/i,
+        ""
+      );
+
+    return `${z}${s}`;
   }
 
   function totalOrder(o) {
@@ -214,46 +516,184 @@
     );
   }
 
-  async function readMyOrder(team) {
-    const { db } = await waitReady();
-    const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
-    const snap = await db.collection("mealOrders").doc(id).get();
-    return snap.exists ? (snap.data() || {}) : null;
+  async function readMyOrder(
+    team
+  ) {
+    const { db } =
+      await waitReady();
+
+    const id =
+      orderId(
+        ctx.competitionId,
+        ctx.stageId,
+        team.teamId
+      );
+
+    const snap =
+      await db
+        .collection("mealOrders")
+        .doc(id)
+        .get();
+
+    return snap.exists
+      ? (snap.data() || {})
+      : null;
   }
 
-  function orderFormHtml(team, old) {
-    const d1 = old?.day1 || {};
-    const d2 = old?.day2 || {};
-    const note = old?.note || "";
+  function orderFormHtml(
+    team,
+    old
+  ) {
+    const d1 =
+      old?.day1 || {};
+
+    const d2 =
+      old?.day2 || {};
+
+    const note =
+      old?.note || "";
 
     return `
-      <div class="mealDayTitle">Команда: ${esc(team.teamName || "—")} · ${esc(teamDrawKey(team) || "сектор не вказано")}</div>
-
-      <div class="mealDayTitle">Доба 1</div>
-      <div class="mealGrid">
-        <div class="mealField"><label>Обід</label><input id="mealD1Lunch" type="number" min="0" max="20" value="${esc(d1.lunch || 0)}"></div>
-        <div class="mealField"><label>Вечеря</label><input id="mealD1Dinner" type="number" min="0" max="20" value="${esc(d1.dinner || 0)}"></div>
-        <div class="mealField"><label>Сніданок</label><input id="mealD1Breakfast" type="number" min="0" max="20" value="${esc(d1.breakfast || 0)}"></div>
+      <div class="mealDayTitle">
+        Команда:
+        ${esc(
+          team.teamName ||
+          team.team ||
+          "—"
+        )}
+        ·
+        ${esc(
+          teamDrawKey(team) ||
+          "сектор ще не визначено"
+        )}
       </div>
 
-      <div class="mealDayTitle">Доба 2</div>
+      <div class="mealDayTitle">
+        Доба 1
+      </div>
+
       <div class="mealGrid">
-        <div class="mealField"><label>Обід</label><input id="mealD2Lunch" type="number" min="0" max="20" value="${esc(d2.lunch || 0)}"></div>
-        <div class="mealField"><label>Вечеря</label><input id="mealD2Dinner" type="number" min="0" max="20" value="${esc(d2.dinner || 0)}"></div>
-        <div class="mealField"><label>Сніданок</label><input id="mealD2Breakfast" type="number" min="0" max="20" value="${esc(d2.breakfast || 0)}"></div>
+
+        <div class="mealField">
+          <label>Обід</label>
+          <input
+            id="mealD1Lunch"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d1.lunch || 0)}"
+          >
+        </div>
+
+        <div class="mealField">
+          <label>Вечеря</label>
+          <input
+            id="mealD1Dinner"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d1.dinner || 0)}"
+          >
+        </div>
+
+        <div class="mealField">
+          <label>Сніданок</label>
+          <input
+            id="mealD1Breakfast"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d1.breakfast || 0)}"
+          >
+        </div>
+
+      </div>
+
+      <div class="mealDayTitle">
+        Доба 2
+      </div>
+
+      <div class="mealGrid">
+
+        <div class="mealField">
+          <label>Обід</label>
+          <input
+            id="mealD2Lunch"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d2.lunch || 0)}"
+          >
+        </div>
+
+        <div class="mealField">
+          <label>Вечеря</label>
+          <input
+            id="mealD2Dinner"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d2.dinner || 0)}"
+          >
+        </div>
+
+        <div class="mealField">
+          <label>Сніданок</label>
+          <input
+            id="mealD2Breakfast"
+            type="number"
+            min="0"
+            max="20"
+            value="${esc(d2.breakfast || 0)}"
+          >
+        </div>
+
       </div>
 
       <div class="mealField">
-        <label>Коментар</label>
-        <textarea id="mealNote" placeholder="Наприклад: без цибулі, без мʼяса тощо">${esc(note)}</textarea>
+
+        <label>
+          Побажання до харчування
+        </label>
+
+        <textarea
+          id="mealNote"
+          placeholder="Наприклад: без цибулі, без мʼяса тощо"
+        >${esc(note)}</textarea>
+
       </div>
 
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">
-        <button class="mealBtn mealBtn--primary" id="btnSaveMealOrder" type="button">Зберегти заявку</button>
-        <button class="mealBtn" id="btnCloseMealPopup" type="button">Закрити</button>
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:14px;
+        "
+      >
+
+        <button
+          class="mealBtn mealBtn--primary"
+          id="btnSaveMealOrder"
+          type="button"
+        >
+          Зберегти заявку
+        </button>
+
+        <button
+          class="mealBtn"
+          id="btnCloseMealPopup"
+          type="button"
+        >
+          Закрити
+        </button>
+
       </div>
 
-      <div class="mealStatus" id="mealPopupStatus"></div>
+      <div
+        class="mealStatus"
+        id="mealPopupStatus"
+      ></div>
     `;
   }
 
@@ -262,164 +702,786 @@
       await waitMealContext();
       await loadUserData();
       await loadMealGate();
+
       applyVisibility();
 
-      if (!mealIsOpen) return;
+      if (!mealIsOpen) {
+        return;
+      }
 
       if (!currentUser) {
-        setStatus("Увійди в кабінет, щоб подати заявку.", false);
+        setStatus(
+          "Увійди в кабінет, щоб подати заявку.",
+          false
+        );
+
         return;
       }
 
-      const team = getMyTeam();
+      const team =
+        getMyTeam();
 
       if (!team) {
-        setStatus("Заявку можуть подати тільки оплачені команди основного списку.", false);
+        setStatus(
+          "Заявку можуть подати тільки оплачені команди основного списку.",
+          false
+        );
+
         return;
       }
 
-      const old = await readMyOrder(team);
+      const old =
+        await readMyOrder(
+          team
+        );
 
-      openPopup("🍽 Заявка на харчування", orderFormHtml(team, old));
+      openPopup(
+        "🍽 Заявка на харчування",
+        orderFormHtml(
+          team,
+          old
+        )
+      );
 
-      if ($("btnCloseMealPopup")) $("btnCloseMealPopup").onclick = closePopup;
-      if ($("btnSaveMealOrder")) $("btnSaveMealOrder").onclick = () => saveOrder(team);
+      if ($("btnCloseMealPopup")) {
+        $("btnCloseMealPopup").onclick =
+          closePopup;
+      }
+
+      if ($("btnSaveMealOrder")) {
+        $("btnSaveMealOrder").onclick =
+          () =>
+            saveOrder(
+              team,
+              old
+            );
+      }
 
     } catch (e) {
       console.error(e);
-      setStatus("Помилка відкриття заявки: " + (e.message || e), false);
+
+      setStatus(
+        "Помилка відкриття заявки: " +
+        (e.message || e),
+        false
+      );
     }
   }
 
-  async function saveOrder(team) {
+  async function saveOrder(
+    team,
+    oldOrder = null
+  ) {
     try {
       await waitMealContext();
 
-      const { db, fb } = await waitReady();
+      const {
+        db,
+        fb
+      } = await waitReady();
 
       const day1 = {
-        lunch: num($("mealD1Lunch")?.value),
-        dinner: num($("mealD1Dinner")?.value),
-        breakfast: num($("mealD1Breakfast")?.value)
+        lunch:
+          num(
+            $("mealD1Lunch")
+              ?.value
+          ),
+
+        dinner:
+          num(
+            $("mealD1Dinner")
+              ?.value
+          ),
+
+        breakfast:
+          num(
+            $("mealD1Breakfast")
+              ?.value
+          )
       };
 
       const day2 = {
-        lunch: num($("mealD2Lunch")?.value),
-        dinner: num($("mealD2Dinner")?.value),
-        breakfast: num($("mealD2Breakfast")?.value)
+        lunch:
+          num(
+            $("mealD2Lunch")
+              ?.value
+          ),
+
+        dinner:
+          num(
+            $("mealD2Dinner")
+              ?.value
+          ),
+
+        breakfast:
+          num(
+            $("mealD2Breakfast")
+              ?.value
+          )
       };
+
+      const drawKey =
+        teamDrawKey(team);
+
+      const zone =
+        norm(
+          team.drawZone ||
+          team.zone
+        ).toUpperCase();
+
+      const sector =
+        norm(
+          team.drawSector ||
+          team.sector
+        ).replace(
+          /^[ABC]/i,
+          ""
+        );
 
       const data = {
-        competitionId: ctx.competitionId,
-        stageId: ctx.stageId,
-        teamId: team.teamId,
-        teamName: team.teamName || "—",
-        zone: norm(team.drawZone || team.zone).toUpperCase(),
-        sector: norm(team.drawSector || team.sector),
-        drawKey: teamDrawKey(team),
+        competitionId:
+          ctx.competitionId,
+
+        stageId:
+          ctx.stageId,
+
+        teamId:
+          team.teamId,
+
+        teamName:
+          team.teamName ||
+          team.team ||
+          "—",
+
+        zone,
+
+        sector,
+
+        drawKey,
+
         day1,
+
         day2,
-        note: norm($("mealNote")?.value),
-        uid: currentUser.uid,
-        status: totalOrder({ day1, day2 }) > 0 ? "submitted" : "empty",
-        updatedAt: fb.firestore.FieldValue.serverTimestamp(),
-        createdAt: fb.firestore.FieldValue.serverTimestamp()
+
+        note:
+          norm(
+            $("mealNote")
+              ?.value
+          ),
+
+        uid:
+          currentUser.uid,
+
+        status:
+          totalOrder({
+            day1,
+            day2
+          }) > 0
+            ? "submitted"
+            : "empty",
+
+        updatedAt:
+          fb.firestore
+            .FieldValue
+            .serverTimestamp()
       };
 
-      const id = orderId(ctx.competitionId, ctx.stageId, team.teamId);
-      await db.collection("mealOrders").doc(id).set(data, { merge: true });
+      if (
+        !oldOrder?.createdAt
+      ) {
+        data.createdAt =
+          fb.firestore
+            .FieldValue
+            .serverTimestamp();
+      }
 
-      setPopupStatus("✅ Заявку збережено.", true);
-      setStatus("✅ Заявку на харчування збережено.", true);
+      const id =
+        orderId(
+          ctx.competitionId,
+          ctx.stageId,
+          team.teamId
+        );
+
+      await db
+        .collection("mealOrders")
+        .doc(id)
+        .set(
+          data,
+          {
+            merge: true
+          }
+        );
+
+      setPopupStatus(
+        "✅ Заявку збережено.",
+        true
+      );
+
+      setStatus(
+        "✅ Заявку на харчування збережено.",
+        true
+      );
 
     } catch (e) {
       console.error(e);
-      setPopupStatus("❌ " + (e.message || e), false);
+
+      setPopupStatus(
+        "❌ " +
+        (e.message || e),
+        false
+      );
     }
   }
 
-  function sortOrders(a, b) {
-    const zOrder = { A: 1, B: 2, C: 3 };
-    const za = zOrder[String(a.zone || "").toUpperCase()] || 9;
-    const zb = zOrder[String(b.zone || "").toUpperCase()] || 9;
+  function parseDraw(team) {
+    const zone =
+      norm(
+        team?.drawZone ||
+        team?.zone
+      ).toUpperCase();
 
-    if (za !== zb) return za - zb;
+    const sectorRaw =
+      norm(
+        team?.drawSector ||
+        team?.sector
+      );
 
-    const sa = Number(a.sector || 999);
-    const sb = Number(b.sector || 999);
+    const direct =
+      norm(
+        team?.drawKey
+      ).toUpperCase();
 
-    if (sa !== sb) return sa - sb;
+    if (direct) {
+      const m =
+        direct.match(
+          /^([ABC])(\d+)$/i
+        );
 
-    return String(a.teamName || "").localeCompare(String(b.teamName || ""), "uk");
+      if (m) {
+        return {
+          zone:
+            m[1].toUpperCase(),
+
+          sector:
+            m[2],
+
+          drawKey:
+            `${m[1].toUpperCase()}${m[2]}`
+        };
+      }
+    }
+
+    if (
+      zone &&
+      sectorRaw
+    ) {
+      const sector =
+        sectorRaw.replace(
+          /^[ABC]/i,
+          ""
+        );
+
+      return {
+        zone,
+        sector,
+        drawKey:
+          `${zone}${sector}`
+      };
+    }
+
+    return {
+      zone: "",
+      sector: "",
+      drawKey: ""
+    };
+  }
+
+  async function loadDrawMap() {
+    const { db } =
+      await waitReady();
+
+    const id =
+      stageResultsId(
+        ctx.competitionId,
+        ctx.stageId
+      );
+
+    try {
+      const snap =
+        await db
+          .collection("stageResults")
+          .doc(id)
+          .get();
+
+      const data =
+        snap.exists
+          ? (snap.data() || {})
+          : {};
+
+      const teams =
+        Array.isArray(data.teams)
+          ? data.teams
+          : [];
+
+      const byId =
+        new Map();
+
+      const byName =
+        new Map();
+
+      teams.forEach(
+        (team) => {
+          const draw =
+            parseDraw(team);
+
+          if (!draw.drawKey) {
+            return;
+          }
+
+          const item = {
+            ...draw,
+
+            teamId:
+              norm(
+                team.teamId ||
+                team.entityId
+              ),
+
+            teamName:
+              norm(
+                team.teamName ||
+                team.team ||
+                team.displayName
+              )
+          };
+
+          if (item.teamId) {
+            byId.set(
+              item.teamId,
+              item
+            );
+          }
+
+          if (item.teamName) {
+            byName.set(
+              clean(
+                item.teamName
+              ),
+              item
+            );
+          }
+        }
+      );
+
+      return {
+        byId,
+        byName
+      };
+
+    } catch (e) {
+      console.warn(
+        "[Meals] draw map error:",
+        e
+      );
+
+      return {
+        byId:
+          new Map(),
+
+        byName:
+          new Map()
+      };
+    }
+  }
+
+  function applyCurrentDraw(
+    order,
+    drawMap
+  ) {
+    const byId =
+      drawMap?.byId ||
+      new Map();
+
+    const byName =
+      drawMap?.byName ||
+      new Map();
+
+    let draw =
+      null;
+
+    const teamId =
+      norm(
+        order.teamId
+      );
+
+    const teamName =
+      clean(
+        order.teamName
+      );
+
+    if (
+      teamId &&
+      byId.has(teamId)
+    ) {
+      draw =
+        byId.get(teamId);
+    }
+
+    if (
+      !draw &&
+      teamName &&
+      byName.has(teamName)
+    ) {
+      draw =
+        byName.get(teamName);
+    }
+
+    if (!draw) {
+      return order;
+    }
+
+    return {
+      ...order,
+
+      zone:
+        draw.zone,
+
+      sector:
+        draw.sector,
+
+      drawKey:
+        draw.drawKey
+    };
+  }
+
+  function sortOrders(
+    a,
+    b
+  ) {
+    const zOrder = {
+      A: 1,
+      B: 2,
+      C: 3
+    };
+
+    const za =
+      zOrder[
+        String(
+          a.zone || ""
+        ).toUpperCase()
+      ] || 9;
+
+    const zb =
+      zOrder[
+        String(
+          b.zone || ""
+        ).toUpperCase()
+      ] || 9;
+
+    if (za !== zb) {
+      return za - zb;
+    }
+
+    const sa =
+      Number(
+        a.sector || 999
+      );
+
+    const sb =
+      Number(
+        b.sector || 999
+      );
+
+    if (sa !== sb) {
+      return sa - sb;
+    }
+
+    return String(
+      a.teamName || ""
+    ).localeCompare(
+      String(
+        b.teamName || ""
+      ),
+      "uk"
+    );
   }
 
   async function loadOrders() {
     await waitMealContext();
 
-    const { db } = await waitReady();
+    const { db } =
+      await waitReady();
 
-    const snap = await db.collection("mealOrders")
-      .where("competitionId", "==", ctx.competitionId)
-      .where("stageId", "==", ctx.stageId)
-      .get();
+    const [
+      snap,
+      drawMap
+    ] = await Promise.all([
+      db
+        .collection("mealOrders")
+        .where(
+          "competitionId",
+          "==",
+          ctx.competitionId
+        )
+        .where(
+          "stageId",
+          "==",
+          ctx.stageId
+        )
+        .get(),
+
+      loadDrawMap()
+    ]);
 
     const rows = [];
 
-    snap.forEach(doc => {
-      const d = doc.data() || {};
-      if (d.status !== "submitted") return;
-      if (totalOrder(d) <= 0) return;
-      rows.push(d);
-    });
+    snap.forEach(
+      (doc) => {
+        const d =
+          doc.data() || {};
 
-    rows.sort(sortOrders);
+        if (
+          d.status !==
+          "submitted"
+        ) {
+          return;
+        }
+
+        if (
+          totalOrder(d) <= 0
+        ) {
+          return;
+        }
+
+        rows.push(
+          applyCurrentDraw(
+            {
+              id: doc.id,
+              ...d
+            },
+            drawMap
+          )
+        );
+      }
+    );
+
+    rows.sort(
+      sortOrders
+    );
+
     return rows;
+  }
+
+  function iraMealUrl() {
+    if (
+      !ctx?.competitionId ||
+      !ctx?.stageId
+    ) {
+      return "";
+    }
+
+    try {
+      const url =
+        new URL(
+          "meal_ira.html",
+          document.baseURI
+        );
+
+      url.searchParams.set(
+        "competitionId",
+        ctx.competitionId
+      );
+
+      url.searchParams.set(
+        "stageId",
+        ctx.stageId
+      );
+
+      return url.href;
+
+    } catch {
+      return (
+        "meal_ira.html" +
+        "?competitionId=" +
+        encodeURIComponent(
+          ctx.competitionId
+        ) +
+        "&stageId=" +
+        encodeURIComponent(
+          ctx.stageId
+        )
+      );
+    }
+  }
+
+  async function copyIraLink() {
+    const url =
+      iraMealUrl();
+
+    if (!url) return;
+
+    try {
+      await navigator
+        .clipboard
+        .writeText(url);
+
+      setPopupStatus(
+        "✅ Посилання для пані Іри скопійовано.",
+        true
+      );
+
+    } catch {
+      window.prompt(
+        "Скопіюй посилання для пані Іри:",
+        url
+      );
+    }
   }
 
   function listHtml(rows) {
     if (!rows.length) {
-      return `<div class="team-loading">Заявок на харчування ще немає.</div>`;
+      return `
+        <div class="team-loading">
+          Заявок на харчування ще немає.
+        </div>
+      `;
     }
 
-    const totals = { d1l:0, d1d:0, d1b:0, d2l:0, d2d:0, d2b:0 };
+    const totals = {
+      d1l: 0,
+      d1d: 0,
+      d1b: 0,
+      d2l: 0,
+      d2d: 0,
+      d2b: 0
+    };
 
-    const body = rows.map(r => {
-      const d1 = r.day1 || {};
-      const d2 = r.day2 || {};
+    const body =
+      rows.map(
+        (r) => {
+          const d1 =
+            r.day1 || {};
 
-      const d1l = num(d1.lunch);
-      const d1d = num(d1.dinner);
-      const d1b = num(d1.breakfast);
-      const d2l = num(d2.lunch);
-      const d2d = num(d2.dinner);
-      const d2b = num(d2.breakfast);
+          const d2 =
+            r.day2 || {};
 
-      totals.d1l += d1l;
-      totals.d1d += d1d;
-      totals.d1b += d1b;
-      totals.d2l += d2l;
-      totals.d2d += d2d;
-      totals.d2b += d2b;
+          const d1l =
+            num(d1.lunch);
 
-      const sector = r.drawKey || ((r.zone || "") + (r.sector || "")) || "—";
+          const d1d =
+            num(d1.dinner);
 
-      return `
-        <tr>
-          <td class="m-sector">${esc(sector)}</td>
-          <td class="m-team">${esc(r.teamName || "—")}</td>
-          <td>${d1l || ""}</td>
-          <td>${d1d || ""}</td>
-          <td>${d1b || ""}</td>
-          <td>${d2l || ""}</td>
-          <td>${d2d || ""}</td>
-          <td>${d2b || ""}</td>
-        </tr>
-      `;
-    }).join("");
+          const d1b =
+            num(d1.breakfast);
+
+          const d2l =
+            num(d2.lunch);
+
+          const d2d =
+            num(d2.dinner);
+
+          const d2b =
+            num(d2.breakfast);
+
+          totals.d1l += d1l;
+          totals.d1d += d1d;
+          totals.d1b += d1b;
+          totals.d2l += d2l;
+          totals.d2d += d2d;
+          totals.d2b += d2b;
+
+          const sector =
+            r.drawKey ||
+            (
+              (r.zone || "") +
+              (r.sector || "")
+            ) ||
+            "—";
+
+          const note =
+            norm(r.note);
+
+          return `
+            <tr>
+
+              <td class="m-sector">
+                ${esc(sector)}
+              </td>
+
+              <td class="m-team">
+
+                <div>
+                  ${esc(
+                    r.teamName ||
+                    "—"
+                  )}
+                </div>
+
+                ${
+                  note
+                    ? `
+                      <div
+                        style="
+                          margin-top:3px;
+                          font-size:.78em;
+                          color:#facc15;
+                          white-space:normal;
+                          line-height:1.25;
+                        "
+                      >
+                        ⚠ ${esc(note)}
+                      </div>
+                    `
+                    : ""
+                }
+
+              </td>
+
+              <td>${d1l || ""}</td>
+              <td>${d1d || ""}</td>
+              <td>${d1b || ""}</td>
+              <td>${d2l || ""}</td>
+              <td>${d2d || ""}</td>
+              <td>${d2b || ""}</td>
+
+            </tr>
+          `;
+        }
+      ).join("");
+
+    const share = `
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin:0 0 12px;
+        "
+      >
+
+        <button
+          class="mealBtn mealBtn--primary"
+          id="btnCopyIraMealLink"
+          type="button"
+        >
+          🔗 Посилання для пані Іри
+        </button>
+
+      </div>
+
+      <div
+        class="mealStatus"
+        id="mealPopupStatus"
+      ></div>
+    `;
 
     return `
+      ${share}
+
       <div class="mealScreenTableWrap">
+
         <table class="mealScreenTable">
+
           <thead>
             <tr>
               <th>С</th>
@@ -432,19 +1494,30 @@
               <th>2С</th>
             </tr>
           </thead>
-          <tbody>${body}</tbody>
+
+          <tbody>
+            ${body}
+          </tbody>
+
           <tfoot>
             <tr>
-              <td colspan="2">Разом</td>
+
+              <td colspan="2">
+                Разом
+              </td>
+
               <td>${totals.d1l}</td>
               <td>${totals.d1d}</td>
               <td>${totals.d1b}</td>
               <td>${totals.d2l}</td>
               <td>${totals.d2d}</td>
               <td>${totals.d2b}</td>
+
             </tr>
           </tfoot>
+
         </table>
+
       </div>
     `;
   }
@@ -454,18 +1527,46 @@
       await waitMealContext();
       await loadUserData();
       await loadMealGate();
+
       applyVisibility();
 
-      if (!mealIsOpen) return;
+      if (!mealIsOpen) {
+        return;
+      }
 
-      openPopup("🍽 Харчування", `<div class="team-loading">Завантаження…</div>`);
+      openPopup(
+        "🍽 Харчування",
+        `
+          <div class="team-loading">
+            Завантаження…
+          </div>
+        `
+      );
 
-      const rows = await loadOrders();
-      if ($("mealPopupBody")) $("mealPopupBody").innerHTML = listHtml(rows);
+      const rows =
+        await loadOrders();
+
+      if ($("mealPopupBody")) {
+        $("mealPopupBody").innerHTML =
+          listHtml(rows);
+      }
+
+      if ($("btnCopyIraMealLink")) {
+        $("btnCopyIraMealLink").onclick =
+          copyIraLink;
+      }
 
     } catch (e) {
       console.error(e);
-      openPopup("Помилка", `<div class="team-loading">❌ ${esc(e.message || e)}</div>`);
+
+      openPopup(
+        "Помилка",
+        `
+          <div class="team-loading">
+            ❌ ${esc(e.message || e)}
+          </div>
+        `
+      );
     }
   }
 
@@ -475,17 +1576,31 @@
       await loadUserData();
 
       if (!canManageMeals) {
-        alert("Ця кнопка доступна тільки відповідальному.");
+        alert(
+          "Ця кнопка доступна тільки відповідальному."
+        );
+
         return;
       }
 
-      await setMealGate(true);
+      await setMealGate(
+        true
+      );
+
       await loadMealGate();
+
       applyVisibility();
 
     } catch (e) {
-      console.error("[Meals] openMeals error:", e);
-      alert("Не вдалося відкрити харчування: " + (e.message || e));
+      console.error(
+        "[Meals] openMeals error:",
+        e
+      );
+
+      alert(
+        "Не вдалося відкрити харчування: " +
+        (e.message || e)
+      );
     }
   }
 
@@ -495,48 +1610,93 @@
       await loadUserData();
 
       if (!canManageMeals) {
-        setStatus("Очищення недоступне.", false);
+        setStatus(
+          "Очищення недоступне.",
+          false
+        );
+
         return;
       }
 
-      if (!confirm("Точно видалити всі заявки і закрити харчування?")) return;
+      if (
+        !confirm(
+          "Точно видалити всі заявки і закрити харчування?"
+        )
+      ) {
+        return;
+      }
 
-      const { db } = await waitReady();
+      const { db } =
+        await waitReady();
 
-      const snap = await db.collection("mealOrders")
-        .where("competitionId", "==", ctx.competitionId)
-        .where("stageId", "==", ctx.stageId)
-        .get();
+      const snap =
+        await db
+          .collection("mealOrders")
+          .where(
+            "competitionId",
+            "==",
+            ctx.competitionId
+          )
+          .where(
+            "stageId",
+            "==",
+            ctx.stageId
+          )
+          .get();
 
-      let batch = db.batch();
+      let batch =
+        db.batch();
+
       let count = 0;
       let total = 0;
 
-      for (const doc of snap.docs) {
-        batch.delete(doc.ref);
+      for (
+        const doc of snap.docs
+      ) {
+        batch.delete(
+          doc.ref
+        );
+
         count++;
         total++;
 
         if (count >= 400) {
           await batch.commit();
-          batch = db.batch();
+
+          batch =
+            db.batch();
+
           count = 0;
         }
       }
 
-      if (count > 0) await batch.commit();
+      if (count > 0) {
+        await batch.commit();
+      }
 
-      await setMealGate(false);
+      await setMealGate(
+        false
+      );
+
       await loadMealGate();
 
       closePopup();
+
       applyVisibility();
 
-      setStatus(`✅ Заявки видалено: ${total}`, true);
+      setStatus(
+        `✅ Заявки видалено: ${total}`,
+        true
+      );
 
     } catch (e) {
       console.error(e);
-      setStatus("Помилка очищення: " + (e.message || e), false);
+
+      setStatus(
+        "Помилка очищення: " +
+        (e.message || e),
+        false
+      );
     }
   }
 
@@ -545,41 +1705,80 @@
       await waitMealContext();
       await loadUserData();
       await loadMealGate();
+
       applyVisibility();
 
-      if ($("btnMealGateOpen")) $("btnMealGateOpen").onclick = openMeals;
-      if ($("btnOpenMealOrder")) $("btnOpenMealOrder").onclick = openOrder;
-      if ($("btnOpenMealList")) $("btnOpenMealList").onclick = openList;
-      if ($("btnClearMealOrders")) $("btnClearMealOrders").onclick = clearOrders;
+      if ($("btnMealGateOpen")) {
+        $("btnMealGateOpen").onclick =
+          openMeals;
+      }
+
+      if ($("btnOpenMealOrder")) {
+        $("btnOpenMealOrder").onclick =
+          openOrder;
+      }
+
+      if ($("btnOpenMealList")) {
+        $("btnOpenMealList").onclick =
+          openList;
+      }
+
+      if ($("btnClearMealOrders")) {
+        $("btnClearMealOrders").onclick =
+          clearOrders;
+      }
 
     } catch (e) {
-      console.warn("[Meals] refresh error:", e);
+      console.warn(
+        "[Meals] refresh error:",
+        e
+      );
+
       mealIsOpen = false;
+
       applyVisibility();
     }
   }
 
-  function setContext(nextCtx) {
-    ctx = nextCtx || ctx;
+  function setContext(
+    nextCtx
+  ) {
+    ctx =
+      nextCtx ||
+      ctx;
+
     refreshAdminButtons();
   }
 
-  document.addEventListener("click", e => {
-    if (e.target.id === "btnMealGateOpen") openMeals();
-    if (e.target.id === "btnOpenMealOrder") openOrder();
-    if (e.target.id === "btnOpenMealList") openList();
-    if (e.target.id === "btnClearMealOrders") clearOrders();
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (
+        e.target.id ===
+        "mealPopupClose"
+      ) {
+        closePopup();
+      }
 
-    if (e.target.id === "mealPopupClose") closePopup();
-    if (e.target.id === "btnCloseMealPopup") closePopup();
+      if (
+        e.target.id ===
+        "btnCloseMealPopup"
+      ) {
+        closePopup();
+      }
 
-    const popup = $("mealPopup");
-    const content = $("mealPopupContent");
+      const popup =
+        $("mealPopup");
 
-    if (popup?.style.display === "flex" && e.target === popup && !content?.contains(e.target)) {
-      closePopup();
+      if (
+        popup?.style.display ===
+          "flex" &&
+        e.target === popup
+      ) {
+        closePopup();
+      }
     }
-  });
+  );
 
   window.scMeals = {
     setContext,
@@ -589,17 +1788,42 @@
     refreshAdminButtons,
     loadMealGate,
     setMealGate,
-    openMeals
+    openMeals,
+    iraMealUrl
   };
 
-  if (ctx) setContext(ctx);
+  if (ctx) {
+    setContext(ctx);
+  }
 
-  const boot = setInterval(() => {
-    if (window.scMealContext && window.scMealContext.competitionId && window.scMealContext.stageId) {
-      clearInterval(boot);
-      setContext(window.scMealContext);
-    }
-  }, 200);
+  const boot =
+    setInterval(
+      () => {
+        if (
+          window.scMealContext &&
+          window.scMealContext
+            .competitionId &&
+          window.scMealContext
+            .stageId
+        ) {
+          clearInterval(
+            boot
+          );
 
-  setTimeout(() => clearInterval(boot), 12000);
+          setContext(
+            window.scMealContext
+          );
+        }
+      },
+      200
+    );
+
+  setTimeout(
+    () =>
+      clearInterval(
+        boot
+      ),
+    12000
+  );
+
 })();

@@ -7,7 +7,18 @@
 // ✅ SOLO не залежить від teamId
 // ✅ Користувач без команди теж бачить свої SOLO заявки
 // ✅ "Учасник" НЕ вважається справжнім ім'ям
-// ✅ SOLO ім'я береться з registration/public_participants або профілю
+//
+// ✅ SOLO canonical name:
+//    firstName + lastName
+// ✅ НІЧОГО не перевертаємо
+// ✅ НІЧОГО не скорочуємо
+// ✅ middleName / по батькові не використовуємо
+//
+// ✅ SOLO ім'я:
+//    1. firstName + lastName із registration/public
+//    2. firstName + lastName із users profile
+//    3. legacy participantName/fullName як fallback
+//
 // ✅ Legacy SOLO з entryType:"team" правильно визначається через competition
 // ✅ Stalker Solo -> SOLO
 // ✅ Stalker Teams -> TEAM
@@ -258,7 +269,26 @@
     return name;
   }
 
-  function personNameFromObject(
+  // =========================================================
+  // CANONICAL FIRST + LAST
+  // =========================================================
+
+  /*
+   * ГОЛОВНЕ правило SOLO:
+   *
+   * firstName + lastName
+   *
+   * Приклад:
+   *
+   * firstName = "Василь"
+   * lastName  = "Цьотар"
+   *
+   * => "Василь Цьотар"
+   *
+   * middleName / patronymic
+   * тут НЕ використовується.
+   */
+  function firstLastNameFromObject(
     data
   ) {
     const d =
@@ -284,6 +314,31 @@
       );
     }
 
+    return "";
+  }
+
+  function personNameFromObject(
+    data
+  ) {
+    const d =
+      data ||
+      {};
+
+    /*
+     * Завжди спочатку
+     * структуровані поля.
+     */
+    const structured =
+      firstLastNameFromObject(
+        d
+      );
+
+    if (
+      structured
+    ) {
+      return structured;
+    }
+
     const teamName =
       norm(
         d.teamName ||
@@ -291,6 +346,13 @@
         ""
       );
 
+    /*
+     * Legacy fallback.
+     *
+     * ВАЖЛИВО:
+     * ці поля НЕ розбираємо
+     * по словах.
+     */
     const candidates = [
       d.participantName,
       d.fullName,
@@ -318,16 +380,31 @@
     return "";
   }
 
+  // =========================================================
+  // SOLO DISPLAY NAME
+  // =========================================================
+
   /*
+   * РАНІШЕ тут було:
+   *
    * Роман Дячок
    * -> Дячок Роман
    *
-   * Олександр Коваленко
+   * а довгі імена:
    * -> Коваленко О.
+   *
+   * Це було неправильно.
+   *
+   * ТЕПЕР:
+   *
+   * "Василь Цьотар"
+   * -> "Василь Цьотар"
+   *
+   * Нічого не переставляємо.
+   * Нічого не скорочуємо.
    */
   function formatSoloName(
-    value,
-    maxChars = 20
+    value
   ) {
     const raw =
       norm(
@@ -343,50 +420,57 @@
       return "Учасник";
     }
 
-    const parts =
-      raw
-        .split(" ")
-        .filter(Boolean);
-
-    if (
-      parts.length < 2
-    ) {
-      return raw;
-    }
-
-    const firstName =
-      parts[0];
-
-    const lastName =
-      parts[
-        parts.length - 1
-      ];
-
-    const full =
-      `${lastName} ${firstName}`;
-
-    if (
-      full.length <=
-      maxChars
-    ) {
-      return full;
-    }
-
-    const initial =
-      firstName
-        .charAt(0)
-        .toUpperCase();
-
-    return initial
-      ? `${lastName} ${initial}.`
-      : lastName;
+    return raw;
   }
 
   function resolveSoloIdentityName(
     row
   ) {
     /*
-     * 1. Спочатку сама заявка.
+     * 1.
+     * Якщо сама заявка вже має
+     * canonical firstName + lastName —
+     * використовуємо їх.
+     */
+    const rowStructured =
+      firstLastNameFromObject(
+        row ||
+        {}
+      );
+
+    if (
+      rowStructured
+    ) {
+      return rowStructured;
+    }
+
+    /*
+     * 2.
+     * Це сторінка "Моя участь".
+     *
+     * Якщо в старій заявці
+     * participantName записаний
+     * неправильно / старим форматом,
+     * актуальні firstName + lastName
+     * профілю мають пріоритет.
+     */
+    const profileStructured =
+      firstLastNameFromObject(
+        currentProfile ||
+        {}
+      );
+
+    if (
+      profileStructured
+    ) {
+      return profileStructured;
+    }
+
+    /*
+     * 3.
+     * Legacy ім'я із самої заявки.
+     *
+     * Нічого не парсимо.
      */
     const fromRow =
       personNameFromObject(
@@ -400,9 +484,8 @@
     }
 
     /*
-     * 2. Це сторінка "Моя участь",
-     * тому можемо брати ПІБ
-     * поточного користувача.
+     * 4.
+     * Legacy profile fallback.
      */
     const fromProfile =
       personNameFromObject(
@@ -417,7 +500,8 @@
     }
 
     /*
-     * 3. Email тільки як
+     * 5.
+     * Email тільки як
      * аварійний fallback.
      */
     const email =
@@ -1357,8 +1441,7 @@
 
           identityName =
             formatSoloName(
-              rawName,
-              20
+              rawName
             );
 
         } else {
@@ -1435,11 +1518,7 @@
                       color:#e5e7eb;
                     "
                     title="${esc(
-                      isSolo
-                        ? resolveSoloIdentityName(
-                            it
-                          )
-                        : identityName
+                      identityName
                     )}"
                   >
                     ${esc(identityName)}
@@ -1652,8 +1731,6 @@
         true;
 
       /*
-       * КЛЮЧОВА ЗМІНА.
-       *
        * Competition/event —
        * джерело істини.
        *
@@ -1688,10 +1765,6 @@
          * У "Моя участь" SOLO
          * показуємо ТІЛЬКИ
          * поточного користувача.
-         *
-         * Це особливо важливо,
-         * якщо legacy SOLO документ
-         * ще має старий teamId.
          */
         if (
           !uid ||
@@ -1712,36 +1785,19 @@
         it.teamName =
           null;
 
-        let participantName =
-          personNameFromObject(
+        /*
+         * КЛЮЧОВО:
+         *
+         * беремо canonical SOLO name
+         * через єдину функцію.
+         *
+         * Вона дає пріоритет
+         * firstName + lastName.
+         */
+        const participantName =
+          resolveSoloIdentityName(
             it
           );
-
-        /*
-         * Якщо в public document:
-         *
-         * participantName: "Учасник"
-         *
-         * беремо ім'я з профілю.
-         */
-        if (
-          !participantName
-        ) {
-          participantName =
-            personNameFromObject(
-              currentProfile ||
-              {}
-            );
-        }
-
-        if (
-          !participantName
-        ) {
-          participantName =
-            norm(
-              currentUser?.email
-            );
-        }
 
         it.participantName =
           participantName ||
@@ -2092,24 +2148,15 @@
     }
 
     /*
-     * КЛЮЧОВА ЗМІНА.
-     *
      * Шукаємо ПО UID,
      * але НЕ фільтруємо тут
      * entryType === solo.
      *
-     * Чому?
-     *
      * Старий Stalker Solo
-     * міг мати:
+     * міг мати entryType:"team".
      *
-     * entryType: "team"
-     *
-     * Але competition уже
-     * говорить, що це SOLO.
-     *
-     * Тип визначимо пізніше
-     * через competitions.
+     * Тип визначимо через
+     * competitions.
      */
     const unsub =
       db
@@ -2247,6 +2294,9 @@
         u.lastName
       );
 
+    /*
+     * canonical SOLO profile name.
+     */
     let fullName =
       "";
 
@@ -2258,6 +2308,10 @@
         `${firstName} ${lastName}`;
 
     } else {
+      /*
+       * Legacy fallback.
+       * Нічого не переставляємо.
+       */
       fullName =
         personNameFromObject(
           u

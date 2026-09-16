@@ -2,181 +2,90 @@
 // STOLAR CARP • Registration
 //
 // =========================================================
-// ЗВИЧАЙНІ ЕТАПИ
+// ЛОГІКА
 // =========================================================
 //
-// ✅ stage-1 / stage-2 / stage-3 / ... працюють як раніше
-// ✅ Manual registration dates
-// ✅ registration.openDate / registration.closeDate
-// ✅ regOpen / regClose та legacy aliases
-// ✅ Opening date = 00:00
-// ✅ Closing date = 23:59:59
-// ✅ Pending / Open / Closed
-// ✅ Finished stages hidden
-// ✅ Payment UI
-// ✅ Payment visible BEFORE registration opens
-// ✅ Season + one-off competitions
+// TEAM
+// • користувач повинен мати teamId
+// • teamId повинен існувати в teams
+// • одна заявка на команду
+// • displayName = teamName
 //
-// =========================================================
-// TEAM / SOLO
-// =========================================================
+// SOLO
+// • користувач ТЕЖ повинен мати teamId
+// • teamId/teamName зберігаються як прив'язка
+// • окрема заявка по UID
+// • participantName = Ім'я Прізвище
+// • displayName = participantName
+// • кілька людей однієї команди можуть зареєструватись
 //
-// ✅ competition.entryType = team / solo
-// ✅ event.entryType = team / solo
-// ✅ stalker-solo автоматично fallback -> solo
-// ✅ SOLO реєструється по UID користувача
-// ✅ TEAM реєструється по teamId
-// ✅ кілька людей з однієї команди можуть подати SOLO заявки
-// ✅ SOLO зберігає participantName
-// ✅ public_participants теж зберігає participantName
-// ✅ повторна заявка не перезаписує існуючу
-//
-// =========================================================
-// ФІНАЛ
-// =========================================================
-//
-// Фінал залишається КОМАНДНИМ і працює через:
-//
-// finalQualifications/{year}/teams/{teamId}
-//
-// status:
-//
-// invited   -> можна подати заявку
-// reserve   -> резерв
-// declined  -> відмова
-// confirmed -> підтверджено
+// FINAL
+// • тільки TEAM
+// • доступ через finalQualifications/{year}/teams/{teamId}
 //
 // =========================================================
 
-(function () {
+(async function () {
   "use strict";
-
-  // =========================================================
-  // FIREBASE
-  // =========================================================
-
-  const auth = window.scAuth;
-  const db = window.scDb;
-  const fb = window.firebase;
 
   // =========================================================
   // DOM
   // =========================================================
 
-  const form =
-    document.getElementById("regForm");
+  const $ = id => document.getElementById(id);
 
-  const eventOptionsEl =
-    document.getElementById("eventOptions");
+  const form = $("regForm");
+  const eventOptionsEl = $("eventOptions");
+  const msgEl = $("msg");
+  const submitBtn = $("submitBtn");
+  const spinnerEl = $("spinner");
+  const hpInput = $("hp");
+  const profileSummary = $("profileSummary");
+  const rulesChk = $("rules");
 
-  const msgEl =
-    document.getElementById("msg");
-
-  const submitBtn =
-    document.getElementById("submitBtn");
-
-  const spinnerEl =
-    document.getElementById("spinner");
-
-  const hpInput =
-    document.getElementById("hp");
-
-  const profileSummary =
-    document.getElementById("profileSummary");
-
-  const rulesChk =
-    document.getElementById("rules");
-
-  const copyPayBtn =
-    document.getElementById("copyCard");
-
-  const payBoxEl =
-    document.getElementById("cardNum");
-
-  const payAmountEl =
-    document.getElementById("payAmount");
-
-  const payCurrEl =
-    document.getElementById("payCurrency");
-
-  const payDetailsEl =
-    document.getElementById("payDetails");
-
-  // =========================================================
-  // FIREBASE CHECK
-  // =========================================================
-
-  if (!auth || !db || !fb) {
-    if (eventOptionsEl) {
-      eventOptionsEl.innerHTML =
-        '<p class="form__hint" style="color:#ff6c6c;">Firebase init не завантажився.</p>';
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = true;
-    }
-
-    return;
-  }
-
-  // =========================================================
-  // SETTINGS
-  // =========================================================
-
-  /*
-   * Новий cache key.
-   *
-   * Важливо:
-   * старий кеш міг пам'ятати Stalker Solo
-   * як командне змагання.
-   */
-  const COMP_CACHE_KEY =
-    "sc_competitions_cache_v10_solo_entry_type";
-
-  const TEAM_CACHE_PREFIX =
-    "sc_team_cache_";
-
-  const TEAM_CACHE_TTL_MS =
-    24 * 60 * 60 * 1000;
-
-  const FINISHED_HIDE_GRACE_MS =
-    24 * 60 * 60 * 1000;
-
-  const FINAL_QUALIFICATIONS_COLLECTION =
-    "finalQualifications";
+  const copyPayBtn = $("copyCard");
+  const payBoxEl = $("cardNum");
+  const payAmountEl = $("payAmount");
+  const payCurrEl = $("payCurrency");
+  const payDetailsEl = $("payDetails");
 
   // =========================================================
   // STATE
   // =========================================================
 
+  let auth = null;
+  let db = null;
+  let fb = null;
+
   let currentUser = null;
   let profile = null;
 
   let lastItems = [];
-
-  let nearestUpcomingValue = null;
-
   let activePayCopyText = "";
 
-  /*
-   * competitionId||stageId
-   */
-  const finalAccessByEvent =
-    new Map();
+  const finalAccessByEvent = new Map();
 
-  let finalAccessRequestId = 0;
+  const FINISHED_HIDE_GRACE_MS =
+    24 * 60 * 60 * 1000;
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+  const sleep = ms =>
+    new Promise(resolve =>
+      setTimeout(resolve, ms)
+    );
+
+  function normalize(value) {
+    return String(
+      value ?? ""
+    ).trim();
+  }
+
+  function normalizeLower(value) {
+    return normalize(value)
+      .toLowerCase();
   }
 
   function firstDefined(...values) {
@@ -193,64 +102,13 @@
     return null;
   }
 
-  function normalize(value) {
-    return String(
-      value ?? ""
-    ).trim();
-  }
-
-  function normalizeLower(value) {
-    return normalize(value)
-      .toLowerCase();
-  }
-
-  function setMsg(
-    text,
-    ok = true
-  ) {
-    if (!msgEl) {
-      return;
-    }
-
-    msgEl.textContent =
-      text || "";
-
-    msgEl.classList.remove(
-      "ok",
-      "err"
-    );
-
-    if (text) {
-      msgEl.classList.add(
-        ok ? "ok" : "err"
-      );
-    }
-  }
-
-  function setLoading(value) {
-    if (spinnerEl) {
-      spinnerEl.classList.toggle(
-        "spinner--on",
-        Boolean(value)
-      );
-    }
-
-    refreshSubmitState();
-  }
-
-  function fmtDate(date) {
-    if (!date) {
-      return "—";
-    }
-
-    return date.toLocaleDateString(
-      "uk-UA",
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-      }
-    );
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function normalizeMoney(value) {
@@ -279,13 +137,8 @@
   }
 
   function normalizeBoolean(value) {
-    if (value === true) {
-      return true;
-    }
-
-    if (value === false) {
-      return false;
-    }
+    if (value === true) return true;
+    if (value === false) return false;
 
     if (
       value === 1 ||
@@ -301,31 +154,83 @@
       return false;
     }
 
-    const text =
-      normalizeLower(value);
+    return [
+      "true",
+      "yes",
+      "on"
+    ].includes(
+      normalizeLower(value)
+    );
+  }
 
-    if (
-      text === "true" ||
-      text === "yes" ||
-      text === "on"
-    ) {
-      return true;
+  function setMsg(
+    text,
+    ok = true
+  ) {
+    if (!msgEl) return;
+
+    msgEl.textContent =
+      text || "";
+
+    msgEl.classList.remove(
+      "ok",
+      "err"
+    );
+
+    if (text) {
+      msgEl.classList.add(
+        ok ? "ok" : "err"
+      );
+    }
+  }
+
+  function setLoading(value) {
+    if (spinnerEl) {
+      spinnerEl.classList.toggle(
+        "spinner--on",
+        Boolean(value)
+      );
     }
 
-    return false;
+    refreshSubmitState();
+  }
+
+  // =========================================================
+  // FIREBASE WAIT
+  // =========================================================
+
+  async function waitForFirebase() {
+    for (let i = 0; i < 150; i++) {
+      if (
+        window.scAuth &&
+        window.scDb &&
+        window.firebase
+      ) {
+        auth = window.scAuth;
+        db = window.scDb;
+        fb = window.firebase;
+
+        return;
+      }
+
+      await sleep(100);
+    }
+
+    throw new Error(
+      "Firebase init не завантажився."
+    );
   }
 
   // =========================================================
   // DATES
   // =========================================================
 
-  function parseDateYMDLocal(
+  function parseDateYMD(
     value,
     endOfDay = false
   ) {
     const match =
-      String(value || "")
-        .trim()
+      normalize(value)
         .match(
           /^(\d{4})-(\d{2})-(\d{2})$/
         );
@@ -334,61 +239,24 @@
       return null;
     }
 
-    const year =
-      Number(match[1]);
-
-    const month =
-      Number(match[2]);
-
-    const day =
-      Number(match[3]);
-
-    if (
-      !year ||
-      !month ||
-      !day
-    ) {
-      return null;
-    }
-
-    const date =
-      endOfDay
-        ? new Date(
-            year,
-            month - 1,
-            day,
-            23,
-            59,
-            59,
-            999
-          )
-        : new Date(
-            year,
-            month - 1,
-            day,
-            0,
-            0,
-            0,
-            0
-          );
-
-    return Number.isFinite(
-      date.getTime()
-    )
-      ? date
-      : null;
+    return new Date(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 999 : 0
+    );
   }
 
   function toDateMaybe(
     value,
-    options = {}
+    endOfDay = false
   ) {
     if (!value) {
       return null;
     }
-
-    const endOfDay =
-      options.endOfDay === true;
 
     try {
       if (
@@ -402,375 +270,66 @@
       }
 
       if (
+        typeof value.toDate ===
+        "function"
+      ) {
+        return value.toDate();
+      }
+
+      if (
+        typeof value.seconds ===
+        "number"
+      ) {
+        return new Date(
+          value.seconds * 1000
+        );
+      }
+
+      if (
         typeof value ===
         "string"
       ) {
-        const raw =
-          value.trim();
-
         const dateOnly =
-          parseDateYMDLocal(
-            raw,
+          parseDateYMD(
+            value,
             endOfDay
           );
 
         if (dateOnly) {
           return dateOnly;
         }
-
-        const parsed =
-          new Date(raw);
-
-        return Number.isFinite(
-          parsed.getTime()
-        )
-          ? parsed
-          : null;
       }
 
-      if (
-        value &&
-        typeof value.toDate ===
-          "function"
-      ) {
-        const parsed =
-          value.toDate();
+      const date =
+        new Date(value);
 
-        return Number.isFinite(
-          parsed.getTime()
-        )
-          ? parsed
-          : null;
-      }
+      return Number.isFinite(
+        date.getTime()
+      )
+        ? date
+        : null;
 
-      if (
-        value &&
-        typeof value.seconds ===
-          "number"
-      ) {
-        const parsed =
-          new Date(
-            value.seconds * 1000
-          );
+    } catch {
+      return null;
+    }
+  }
 
-        return Number.isFinite(
-          parsed.getTime()
-        )
-          ? parsed
-          : null;
-      }
+  function fmtDate(value) {
+    const date =
+      toDateMaybe(value);
 
-      if (
-        typeof value ===
-        "number"
-      ) {
-        const parsed =
-          new Date(value);
-
-        return Number.isFinite(
-          parsed.getTime()
-        )
-          ? parsed
-          : null;
-      }
-
-    } catch (error) {
-      console.warn(
-        "[Registration] toDateMaybe:",
-        error
-      );
+    if (!date) {
+      return "—";
     }
 
-    return null;
-  }
-
-  function nowLocal() {
-    return new Date();
-  }
-
-  // =========================================================
-  // COMPETITION DATES
-  // =========================================================
-
-  function getRunDatesFromEvent(
-    event,
-    competition
-  ) {
-    const eventSchedule =
-      event?.schedule || {};
-
-    const compSchedule =
-      competition?.schedule || {};
-
-    const startAt =
-      firstDefined(
-        event?.startAt,
-        event?.startDate,
-
-        eventSchedule.startAt,
-        eventSchedule.startDate,
-
-        competition?.startAt,
-        competition?.startDate,
-
-        compSchedule.startAt,
-        compSchedule.startDate
-      );
-
-    const endAt =
-      firstDefined(
-        event?.finishAt,
-        event?.finishDate,
-
-        event?.endAt,
-        event?.endDate,
-
-        eventSchedule.finishAt,
-        eventSchedule.finishDate,
-
-        eventSchedule.endAt,
-        eventSchedule.endDate,
-
-        competition?.finishAt,
-        competition?.finishDate,
-
-        competition?.endAt,
-        competition?.endDate,
-
-        compSchedule.finishAt,
-        compSchedule.finishDate,
-
-        compSchedule.endAt,
-        compSchedule.endDate
-      );
-
-    return {
-      startAt,
-      endAt
-    };
-  }
-
-  function getRegDatesFromEvent(
-    event,
-    competition
-  ) {
-    const eventRegistration =
-      event?.registration || {};
-
-    const compRegistration =
-      competition?.registration || {};
-
-    const regOpenAt =
-      firstDefined(
-        event?.regOpenAt,
-        event?.regOpenDate,
-        event?.regOpen,
-
-        event?.registrationOpenAt,
-        event?.registrationOpenDate,
-
-        eventRegistration.openAt,
-        eventRegistration.openDate,
-
-        competition?.regOpenAt,
-        competition?.regOpenDate,
-        competition?.regOpen,
-
-        competition?.registrationOpenAt,
-        competition?.registrationOpenDate,
-
-        compRegistration.openAt,
-        compRegistration.openDate
-      );
-
-    const regCloseAt =
-      firstDefined(
-        event?.regCloseAt,
-        event?.regCloseDate,
-        event?.regClose,
-
-        event?.registrationCloseAt,
-        event?.registrationCloseDate,
-
-        eventRegistration.closeAt,
-        eventRegistration.closeDate,
-
-        competition?.regCloseAt,
-        competition?.regCloseDate,
-        competition?.regClose,
-
-        competition?.registrationCloseAt,
-        competition?.registrationCloseDate,
-
-        compRegistration.closeAt,
-        compRegistration.closeDate
-      );
-
-    return {
-      regOpenAt,
-      regCloseAt
-    };
-  }
-
-  function getRegistrationMode(
-    event,
-    competition
-  ) {
-    return String(
-      firstDefined(
-        event?.registration?.mode,
-        event?.regMode,
-
-        competition?.registration?.mode,
-        competition?.regMode,
-
-        "auto"
-      )
-    )
-      .trim()
-      .toLowerCase();
-  }
-
-  function getManualOpenFlag(
-    event,
-    competition
-  ) {
-    const value =
-      firstDefined(
-        event?.manualOpen,
-        event?.registration?.manualOpen,
-
-        competition?.manualOpen,
-        competition?.registration?.manualOpen,
-
-        false
-      );
-
-    return normalizeBoolean(value);
-  }
-
-  // =========================================================
-  // PAYMENT
-  // =========================================================
-
-  function getPaymentData(
-    event,
-    competition
-  ) {
-    const eventPayment =
-      event?.payment || {};
-
-    const compPayment =
-      competition?.payment || {};
-
-    const enabledRaw =
-      firstDefined(
-        eventPayment.enabled,
-
-        event?.payEnabled,
-        event?.paymentEnabled,
-
-        compPayment.enabled,
-
-        competition?.payEnabled,
-        competition?.paymentEnabled,
-
-        false
-      );
-
-    const priceRaw =
-      firstDefined(
-        eventPayment.price,
-        eventPayment.amount,
-
-        event?.price,
-        event?.fee,
-        event?.entryFee,
-        event?.amount,
-        event?.paymentAmount,
-
-        compPayment.price,
-        compPayment.amount,
-
-        competition?.price,
-        competition?.fee,
-        competition?.entryFee,
-        competition?.amount,
-        competition?.paymentAmount,
-
-        null
-      );
-
-    const currency =
-      String(
-        firstDefined(
-          eventPayment.currency,
-
-          event?.currency,
-          event?.paymentCurrency,
-
-          compPayment.currency,
-
-          competition?.currency,
-          competition?.paymentCurrency,
-
-          "UAH"
-        )
-      )
-        .trim()
-        .toUpperCase();
-
-    const details =
-      String(
-        firstDefined(
-          eventPayment.details,
-          eventPayment.payDetails,
-
-          event?.payDetails,
-          event?.paymentDetails,
-          event?.paymentText,
-          event?.requisites,
-          event?.bankDetails,
-          event?.card,
-          event?.cardNumber,
-
-          compPayment.details,
-          compPayment.payDetails,
-
-          competition?.payDetails,
-          competition?.paymentDetails,
-          competition?.paymentText,
-          competition?.requisites,
-          competition?.bankDetails,
-          competition?.card,
-          competition?.cardNumber,
-
-          ""
-        )
-      ).trim();
-
-    const price =
-      normalizeMoney(
-        priceRaw
-      );
-
-    const payEnabled =
-      normalizeBoolean(
-        enabledRaw
-      ) ||
-      (
-        price !== null &&
-        price > 0
-      ) ||
-      Boolean(details);
-
-    return {
-      payEnabled,
-      price,
-      currency,
-      payDetails:
-        details
-    };
+    return date.toLocaleDateString(
+      "uk-UA",
+      {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric"
+      }
+    );
   }
 
   // =========================================================
@@ -781,300 +340,93 @@
     event,
     competition
   ) {
-    /*
-     * 1. Якщо новий entryType уже записаний —
-     * використовуємо його.
-     */
-    const explicitType =
+    const explicit =
       normalizeLower(
         firstDefined(
           event?.entryType,
-          competition?.entryType,
-          ""
+          competition?.entryType
         )
       );
 
     if (
-      explicitType === "solo" ||
-      explicitType === "team"
+      explicit === "solo" ||
+      explicit === "team"
     ) {
-      return explicitType;
+      return explicit;
     }
 
-    /*
-     * 2. Backward compatibility.
-     *
-     * Уже створений stalker-solo міг
-     * ще не мати entryType.
-     */
     const format =
       normalizeLower(
         firstDefined(
           event?.format,
           competition?.format,
-          competition?.engine?.baseFormat,
-          ""
+          competition?.engine?.baseFormat
         )
       );
 
-    if (
-      format === "stalker-solo"
-    ) {
-      return "solo";
-    }
-
-    /*
-     * 3. Старі змагання не чіпаємо.
-     */
-    return "team";
+    return format === "stalker-solo"
+      ? "solo"
+      : "team";
   }
 
   // =========================================================
-  // FINAL DETECTOR
+  // FINAL
   // =========================================================
 
   function isFinalEvent(
     eventKey,
     event
   ) {
-    const rawKey =
+    const text =
       normalizeLower(
-        eventKey
-      );
-
-    const rawText =
-      normalizeLower(
-        `${
-          event?.key || ""
-        } ${
-          event?.stageId || ""
-        } ${
-          event?.id || ""
-        } ${
-          event?.title || ""
-        } ${
-          event?.name || ""
-        } ${
-          event?.label || ""
-        }`
+        [
+          eventKey,
+          event?.key,
+          event?.stageId,
+          event?.id,
+          event?.title,
+          event?.name,
+          event?.label
+        ].join(" ")
       );
 
     return (
       event?.isFinal === true ||
-      rawKey === "final" ||
-      rawKey.includes("final") ||
-      rawKey.includes("фінал") ||
-      rawText.includes("final") ||
-      rawText.includes("фінал")
+      text.includes("final") ||
+      text.includes("фінал")
     );
   }
-
-  // =========================================================
-  // SEASON YEAR
-  // =========================================================
 
   function getSeasonYearFromItem(
     item
   ) {
-    const directYear =
-      normalize(
-        item?.year
-      );
-
     if (
       /^\d{4}$/.test(
-        directYear
+        normalize(item?.year)
       )
     ) {
-      return directYear;
-    }
-
-    const text =
-      normalize(
-        `${
-          item?.compId || ""
-        } ${
-          item?.compTitle || ""
-        } ${
-          item?.stageTitle || ""
-        }`
+      return normalize(
+        item.year
       );
+    }
 
     const match =
-      text.match(
-        /\b(20\d{2})\b/
-      );
+      [
+        item?.compId,
+        item?.compTitle,
+        item?.stageTitle
+      ]
+        .join(" ")
+        .match(
+          /\b20\d{2}\b/
+        );
 
-    if (match) {
-      return match[1];
-    }
-
-    return "";
+    return match
+      ? match[0]
+      : "";
   }
 
-  function getFinalQualificationRef(
-    item,
-    teamId
-  ) {
-    const seasonYear =
-      getSeasonYearFromItem(
-        item
-      );
-
-    if (
-      !seasonYear ||
-      !teamId
-    ) {
-      return null;
-    }
-
-    return db
-      .collection(
-        FINAL_QUALIFICATIONS_COLLECTION
-      )
-      .doc(
-        seasonYear
-      )
-      .collection("teams")
-      .doc(teamId);
-  }
-
-  // =========================================================
-  // EVENT STATE
-  // =========================================================
-
-  function isFinishedEvent(
-    item
-  ) {
-    const endAt =
-      toDateMaybe(
-        item?.endAt
-      );
-
-    if (!endAt) {
-      return false;
-    }
-
-    return (
-      nowLocal().getTime() >
-      endAt.getTime() +
-        FINISHED_HIDE_GRACE_MS
-    );
-  }
-
-  function visibleItemsOnly(
-    items
-  ) {
-    return (
-      items || []
-    ).filter(
-      item =>
-        !isFinishedEvent(item)
-    );
-  }
-
-  function getRegistrationState(
-    item
-  ) {
-    if (!item) {
-      return "unavailable";
-    }
-
-    if (
-      isFinishedEvent(item)
-    ) {
-      return "closed";
-    }
-
-    const now =
-      nowLocal();
-
-    const mode =
-      String(
-        item.regMode ||
-        "auto"
-      ).toLowerCase();
-
-    const openAt =
-      toDateMaybe(
-        item.regOpenAt,
-        {
-          endOfDay: false
-        }
-      );
-
-    const closeAt =
-      toDateMaybe(
-        item.regCloseAt,
-        {
-          endOfDay: true
-        }
-      );
-
-    if (
-      openAt &&
-      closeAt
-    ) {
-      if (
-        now < openAt
-      ) {
-        return "pending";
-      }
-
-      if (
-        now > closeAt
-      ) {
-        return "closed";
-      }
-
-      return "open";
-    }
-
-    if (
-      openAt &&
-      !closeAt
-    ) {
-      return now >= openAt
-        ? "open"
-        : "pending";
-    }
-
-    if (
-      !openAt &&
-      closeAt
-    ) {
-      return now <= closeAt
-        ? "open"
-        : "closed";
-    }
-
-    if (
-      mode === "manual" &&
-      item.manualOpen === true
-    ) {
-      return "open";
-    }
-
-    return "unavailable";
-  }
-
-  function isOpenWindow(
-    item
-  ) {
-    return (
-      getRegistrationState(
-        item
-      ) === "open"
-    );
-  }
-
-  // =========================================================
-  // EVENT KEY
-  // =========================================================
-
-  function eventValue(
-    item
-  ) {
+  function eventValue(item) {
     return (
       `${item?.compId || ""}||` +
       `${item?.stageKey || ""}`
@@ -1082,485 +434,114 @@
   }
 
   // =========================================================
-  // REGISTRATION DOC ID
+  // PAYMENT
   // =========================================================
 
-  function buildRegDocId({
-    competitionId,
-    stageId,
-    entryType,
-    uid,
-    teamId
-  }) {
-    const stage =
-      stageId ||
-      "main";
-
-    /*
-     * SOLO:
-     * окрема заявка на кожного UID.
-     */
-    if (
-      entryType === "solo"
-    ) {
-      return (
-        `${competitionId}__` +
-        `${stage}__solo__` +
-        `${uid || ""}`
-      );
-    }
-
-    /*
-     * TEAM:
-     * одна заявка на teamId.
-     */
-    return (
-      `${competitionId}__` +
-      `${stage}__team__` +
-      `${teamId || ""}`
-    );
-  }
-
-  // =========================================================
-  // FINAL ACCESS
-  // =========================================================
-
-  function emptyFinalAccess(
-    status = "not_invited"
+  function getPaymentData(
+    event,
+    competition
   ) {
+    const ep =
+      event?.payment || {};
+
+    const cp =
+      competition?.payment || {};
+
+    const price =
+      normalizeMoney(
+        firstDefined(
+          ep.price,
+          ep.amount,
+
+          event?.price,
+          event?.fee,
+          event?.entryFee,
+          event?.amount,
+          event?.paymentAmount,
+
+          cp.price,
+          cp.amount,
+
+          competition?.price,
+          competition?.fee,
+          competition?.entryFee,
+          competition?.amount,
+          competition?.paymentAmount
+        )
+      );
+
+    const details =
+      normalize(
+        firstDefined(
+          ep.details,
+          ep.payDetails,
+
+          event?.payDetails,
+          event?.paymentDetails,
+          event?.paymentText,
+          event?.requisites,
+          event?.bankDetails,
+          event?.card,
+          event?.cardNumber,
+
+          cp.details,
+          cp.payDetails,
+
+          competition?.payDetails,
+          competition?.paymentDetails,
+          competition?.paymentText,
+          competition?.requisites,
+          competition?.bankDetails,
+          competition?.card,
+          competition?.cardNumber
+        )
+      );
+
+    const enabled =
+      normalizeBoolean(
+        firstDefined(
+          ep.enabled,
+
+          event?.payEnabled,
+          event?.paymentEnabled,
+
+          cp.enabled,
+
+          competition?.payEnabled,
+          competition?.paymentEnabled
+        )
+      ) ||
+      (
+        price !== null &&
+        price > 0
+      ) ||
+      Boolean(details);
+
     return {
-      qualificationExists:
-        false,
+      payEnabled:
+        enabled,
 
-      inviteExists:
-        false,
+      price,
 
-      inviteStatus:
-        status,
+      currency:
+        normalize(
+          firstDefined(
+            ep.currency,
+            event?.currency,
+            event?.paymentCurrency,
+            cp.currency,
+            competition?.currency,
+            competition?.paymentCurrency,
+            "UAH"
+          )
+        ).toUpperCase(),
 
-      rank:
-        0,
-
-      seasonYear:
-        "",
-
-      competitionId:
-        "",
-
-      stageId:
-        "",
-
-      registrationExists:
-        false,
-
-      registrationStatus:
-        "",
-
-      registrationId:
-        ""
+      payDetails:
+        details
     };
   }
 
-  function getFinalAccess(
-    item
-  ) {
-    if (
-      !item?.isFinal
-    ) {
-      return null;
-    }
-
-    return (
-      finalAccessByEvent.get(
-        eventValue(item)
-      ) ||
-      emptyFinalAccess()
-    );
-  }
-
-  async function loadFinalAccess(
-    items = lastItems
-  ) {
-    const requestId =
-      ++finalAccessRequestId;
-
-    const finalItems =
-      (
-        items || []
-      ).filter(
-        item =>
-          item.isFinal === true
-      );
-
-    finalAccessByEvent.clear();
-
-    if (
-      !finalItems.length
-    ) {
-      return;
-    }
-
-    if (
-      !currentUser ||
-      !profile
-    ) {
-      finalItems.forEach(
-        item => {
-          finalAccessByEvent.set(
-            eventValue(item),
-            emptyFinalAccess(
-              "login_required"
-            )
-          );
-        }
-      );
-
-      return;
-    }
-
-    if (
-      !profile.teamId
-    ) {
-      finalItems.forEach(
-        item => {
-          finalAccessByEvent.set(
-            eventValue(item),
-            emptyFinalAccess(
-              "no_team"
-            )
-          );
-        }
-      );
-
-      return;
-    }
-
-    await Promise.all(
-      finalItems.map(
-        async item => {
-          const competitionId =
-            normalize(
-              item.compId
-            );
-
-          const stageId =
-            normalize(
-              item.stageKey
-            ) || "final";
-
-          const seasonYear =
-            getSeasonYearFromItem(
-              item
-            );
-
-          const teamId =
-            profile.teamId;
-
-          /*
-           * Фінал залишається командним.
-           */
-          const registrationId =
-            buildRegDocId({
-              competitionId,
-              stageId,
-
-              entryType:
-                "team",
-
-              uid:
-                profile.uid,
-
-              teamId
-            });
-
-          if (
-            !seasonYear
-          ) {
-            finalAccessByEvent.set(
-              eventValue(item),
-              emptyFinalAccess(
-                "season_missing"
-              )
-            );
-
-            return;
-          }
-
-          const qualificationRef =
-            getFinalQualificationRef(
-              item,
-              teamId
-            );
-
-          if (
-            !qualificationRef
-          ) {
-            finalAccessByEvent.set(
-              eventValue(item),
-              emptyFinalAccess(
-                "season_missing"
-              )
-            );
-
-            return;
-          }
-
-          try {
-            const [
-              qualificationSnap,
-              registrationSnap
-            ] =
-              await Promise.all([
-                qualificationRef.get(),
-
-                db
-                  .collection(
-                    "registrations"
-                  )
-                  .doc(
-                    registrationId
-                  )
-                  .get()
-              ]);
-
-            if (
-              requestId !==
-              finalAccessRequestId
-            ) {
-              return;
-            }
-
-            const qualificationData =
-              qualificationSnap.exists
-                ? (
-                    qualificationSnap.data() ||
-                    {}
-                  )
-                : {};
-
-            const regData =
-              registrationSnap.exists
-                ? (
-                    registrationSnap.data() ||
-                    {}
-                  )
-                : {};
-
-            let qualificationValid =
-              qualificationSnap.exists;
-
-            if (
-              qualificationValid &&
-              qualificationData.teamId &&
-              normalize(
-                qualificationData.teamId
-              ) !== teamId
-            ) {
-              qualificationValid =
-                false;
-            }
-
-            if (
-              qualificationValid &&
-              qualificationData.seasonYear &&
-              normalize(
-                qualificationData.seasonYear
-              ) !== seasonYear
-            ) {
-              qualificationValid =
-                false;
-            }
-
-            if (
-              qualificationValid &&
-              qualificationData.competitionId &&
-              normalize(
-                qualificationData.competitionId
-              ) !== competitionId
-            ) {
-              qualificationValid =
-                false;
-            }
-
-            if (
-              qualificationValid &&
-              qualificationData.stageId &&
-              normalize(
-                qualificationData.stageId
-              ) !== stageId
-            ) {
-              qualificationValid =
-                false;
-            }
-
-            finalAccessByEvent.set(
-              eventValue(item),
-              {
-                qualificationExists:
-                  qualificationValid,
-
-                inviteExists:
-                  qualificationValid,
-
-                inviteStatus:
-                  qualificationValid
-                    ? normalizeLower(
-                        qualificationData.status ||
-                        "reserve"
-                      )
-                    : "not_invited",
-
-                rank:
-                  qualificationValid
-                    ? Number(
-                        qualificationData.rank ||
-                        qualificationData.place ||
-                        0
-                      )
-                    : 0,
-
-                seasonYear,
-                competitionId,
-                stageId,
-
-                registrationExists:
-                  registrationSnap.exists,
-
-                registrationStatus:
-                  registrationSnap.exists
-                    ? normalizeLower(
-                        regData.status
-                      )
-                    : "",
-
-                registrationId,
-
-                qualificationRef
-              }
-            );
-
-          } catch (error) {
-            console.warn(
-              "[Registration] final qualification access:",
-              seasonYear,
-              competitionId,
-              stageId,
-              error
-            );
-
-            finalAccessByEvent.set(
-              eventValue(item),
-              emptyFinalAccess(
-                "error"
-              )
-            );
-          }
-        }
-      )
-    );
-  }
-
-  // =========================================================
-  // FINAL ACCESS LOGIC
-  // =========================================================
-
-  function canRegisterFinal(
-    item
-  ) {
-    if (
-      !item?.isFinal
-    ) {
-      return true;
-    }
-
-    const access =
-      getFinalAccess(item);
-
-    if (!access) {
-      return false;
-    }
-
-    if (
-      access.registrationExists
-    ) {
-      return false;
-    }
-
-    return (
-      access.qualificationExists ===
-        true &&
-      access.inviteStatus ===
-        "invited"
-    );
-  }
-
-  function canSubmitItem(
-    item
-  ) {
-    if (!item) {
-      return false;
-    }
-
-    if (
-      isFinishedEvent(item)
-    ) {
-      return false;
-    }
-
-    if (
-      !isOpenWindow(item)
-    ) {
-      return false;
-    }
-
-    if (
-      item.isFinal &&
-      !canRegisterFinal(item)
-    ) {
-      return false;
-    }
-
-    return true;
-  }
-
-  // =========================================================
-  // PAYMENT UI
-  // =========================================================
-
-  function formatCardLikeText(
-    text
-  ) {
-    const raw =
-      String(
-        text || ""
-      ).trim();
-
-    if (
-      /^\d{16}$/.test(raw)
-    ) {
-      return raw.replace(
-        /(\d{4})(?=\d)/g,
-        "$1 "
-      );
-    }
-
-    return raw;
-  }
-
-  function setPayUIFromSelected(
-    item
-  ) {
-    const hasAnyUI =
-      Boolean(
-        payBoxEl ||
-        payAmountEl ||
-        payDetailsEl
-      );
-
-    if (!hasAnyUI) {
-      return;
-    }
-
+  function setPayUI(item) {
     if (!item) {
       activePayCopyText = "";
 
@@ -1587,29 +568,8 @@
       return;
     }
 
-    const payEnabled =
-      item.payEnabled === true;
-
-    const price =
-      normalizeMoney(
-        item.price
-      );
-
-    const currency =
-      String(
-        item.currency ||
-        "UAH"
-      ).toUpperCase();
-
-    const details =
-      String(
-        item.payDetails ||
-        ""
-      ).trim();
-
-    if (!payEnabled) {
-      activePayCopyText =
-        "";
+    if (!item.payEnabled) {
+      activePayCopyText = "";
 
       if (payAmountEl) {
         payAmountEl.textContent =
@@ -1618,7 +578,7 @@
 
       if (payCurrEl) {
         payCurrEl.textContent =
-          currency;
+          item.currency || "UAH";
       }
 
       if (payDetailsEl) {
@@ -1634,171 +594,40 @@
       return;
     }
 
-    const amountText =
-      price === null
-        ? "—"
-        : String(price);
-
-    const detailsText =
-      details ||
-      "Реквізити не задані адміністратором.";
+    const details =
+      item.payDetails ||
+      "Реквізити не задані.";
 
     activePayCopyText =
-      details;
+      item.payDetails || "";
 
     if (payAmountEl) {
       payAmountEl.textContent =
-        amountText;
+        item.price === null
+          ? "—"
+          : String(item.price);
     }
 
     if (payCurrEl) {
       payCurrEl.textContent =
-        currency;
+        item.currency || "UAH";
     }
 
     if (payDetailsEl) {
       payDetailsEl.textContent =
-        formatCardLikeText(
-          detailsText
-        );
+        details;
     }
 
     if (payBoxEl) {
       payBoxEl.textContent =
-        formatCardLikeText(
-          detailsText
-        );
+        details;
     }
-  }
-
-  function getDefaultPaymentItem(
-    items
-  ) {
-    const visibleItems =
-      visibleItemsOnly(
-        items
-      );
-
-    if (
-      !visibleItems.length
-    ) {
-      return null;
-    }
-
-    const picked =
-      document.querySelector(
-        'input[name="stagePick"]:checked'
-      );
-
-    if (picked) {
-      const selected =
-        visibleItems.find(
-          item =>
-            eventValue(item) ===
-            String(picked.value)
-        );
-
-      if (selected) {
-        return selected;
-      }
-    }
-
-    const openItem =
-      visibleItems.find(
-        item =>
-          getRegistrationState(
-            item
-          ) === "open"
-      );
-
-    if (openItem) {
-      return openItem;
-    }
-
-    const pending =
-      visibleItems
-        .filter(
-          item =>
-            getRegistrationState(
-              item
-            ) ===
-            "pending"
-        )
-        .map(
-          item => ({
-            item,
-
-            openAt:
-              toDateMaybe(
-                item.regOpenAt,
-                {
-                  endOfDay: false
-                }
-              )
-          })
-        )
-        .filter(
-          row =>
-            row.openAt
-        )
-        .sort(
-          (a, b) =>
-            a.openAt.getTime() -
-            b.openAt.getTime()
-        );
-
-    if (
-      pending.length
-    ) {
-      return pending[0].item;
-    }
-
-    const paymentConfigured =
-      visibleItems.find(
-        item =>
-          item.payEnabled ===
-            true ||
-          normalizeMoney(
-            item.price
-          ) !== null ||
-          normalize(
-            item.payDetails
-          )
-      );
-
-    if (
-      paymentConfigured
-    ) {
-      return paymentConfigured;
-    }
-
-    return (
-      visibleItems[0] ||
-      null
-    );
-  }
-
-  function refreshPaymentUI(
-    items = lastItems
-  ) {
-    setPayUIFromSelected(
-      getDefaultPaymentItem(
-        items
-      )
-    );
   }
 
   if (copyPayBtn) {
-    copyPayBtn.addEventListener(
-      "click",
+    copyPayBtn.onclick =
       async () => {
-        const text =
-          String(
-            activePayCopyText ||
-            ""
-          ).trim();
-
-        if (!text) {
+        if (!activePayCopyText) {
           alert(
             "Нема реквізитів для копіювання."
           );
@@ -1807,11 +636,12 @@
         }
 
         try {
-          await navigator
-            .clipboard
-            .writeText(text);
+          await navigator.clipboard
+            .writeText(
+              activePayCopyText
+            );
 
-          const previousText =
+          const old =
             copyPayBtn.textContent;
 
           copyPayBtn.textContent =
@@ -1820,1218 +650,21 @@
           setTimeout(
             () => {
               copyPayBtn.textContent =
-                previousText ||
-                "Скопіювати реквізити";
+                old;
             },
             1200
           );
 
         } catch {
           alert(
-            "Не вдалося скопіювати. Скопіюйте вручну."
+            "Не вдалося скопіювати."
           );
         }
-      }
-    );
-  }
-
-  // =========================================================
-  // UPCOMING
-  // =========================================================
-
-  function calcNearestUpcoming(
-    items
-  ) {
-    let best = null;
-
-    const now =
-      nowLocal();
-
-    visibleItemsOnly(
-      items
-    ).forEach(
-      item => {
-        const openAt =
-          toDateMaybe(
-            item.regOpenAt,
-            {
-              endOfDay: false
-            }
-          );
-
-        if (
-          !openAt ||
-          openAt <= now
-        ) {
-          return;
-        }
-
-        const value =
-          eventValue(item);
-
-        if (
-          !best ||
-          openAt < best.openAt
-        ) {
-          best = {
-            value,
-            openAt
-          };
-        }
-      }
-    );
-
-    nearestUpcomingValue =
-      best
-        ? best.value
-        : null;
-  }
-
-  // =========================================================
-  // STATUS UI
-  // =========================================================
-
-  function statusLamp(
-    item,
-    value
-  ) {
-    if (item?.isFinal) {
-      const access =
-        getFinalAccess(item);
-
-      if (
-        access?.registrationExists
-      ) {
-        return "lamp-green";
-      }
-
-      if (
-        access?.inviteStatus ===
-        "invited"
-      ) {
-        return isOpenWindow(
-          item
-        )
-          ? "lamp-green"
-          : "lamp-yellow";
-      }
-
-      if (
-        access?.inviteStatus ===
-        "reserve"
-      ) {
-        return "lamp-yellow";
-      }
-
-      return "lamp-red";
-    }
-
-    const state =
-      getRegistrationState(
-        item
-      );
-
-    if (
-      state === "open"
-    ) {
-      return "lamp-green";
-    }
-
-    if (
-      state === "pending" &&
-      nearestUpcomingValue &&
-      value ===
-        nearestUpcomingValue
-    ) {
-      return "lamp-yellow";
-    }
-
-    return "lamp-red";
-  }
-
-  function getNormalStatusUI(
-    item
-  ) {
-    const state =
-      getRegistrationState(
-        item
-      );
-
-    if (
-      state === "open"
-    ) {
-      return {
-        state,
-        short: "Відкрито",
-        badge: "ВІДКРИТО",
-        text:
-          "Реєстрація відкрита ✅",
-        badgeClass:
-          "pill-b--open"
       };
-    }
-
-    if (
-      state === "pending"
-    ) {
-      return {
-        state,
-        short: "Очікується",
-        badge: "ОЧІКУЄТЬСЯ",
-        text:
-          "Реєстрація ще не розпочалася.",
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      state === "closed"
-    ) {
-      return {
-        state,
-        short: "Закрито",
-        badge: "ЗАКРИТО",
-        text:
-          "Реєстрація завершена.",
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    return {
-      state,
-      short:
-        "Недоступно",
-      badge:
-        "НЕДОСТУПНО",
-      text:
-        "Дати реєстрації не налаштовані.",
-      badgeClass:
-        "pill-b--closed"
-    };
-  }
-
-  function getFinalStatusUI(
-    item
-  ) {
-    const access =
-      getFinalAccess(item);
-
-    const normalState =
-      getRegistrationState(
-        item
-      );
-
-    if (
-      access?.inviteStatus ===
-      "login_required"
-    ) {
-      return {
-        state:
-          "final-login",
-
-        short:
-          "Фінал",
-
-        badge:
-          "ЗА РЕЙТИНГОМ",
-
-        text:
-          "Увійдіть у акаунт, щоб перевірити право участі у фіналі.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "no_team"
-    ) {
-      return {
-        state:
-          "final-no-team",
-
-        short:
-          "Фінал",
-
-        badge:
-          "НЕМА КОМАНДИ",
-
-        text:
-          "Фінал доступний тільки команді, яка отримала право участі.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "season_missing"
-    ) {
-      return {
-        state:
-          "final-season-missing",
-
-        short:
-          "Фінал",
-
-        badge:
-          "ПОМИЛКА СЕЗОНУ",
-
-        text:
-          "Для цього фіналу не визначено рік сезону. Перевірте year або seasonYear у competitions.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.registrationExists
-    ) {
-      const status =
-        access.registrationStatus;
-
-      if (
-        status ===
-        "confirmed"
-      ) {
-        return {
-          state:
-            "final-confirmed",
-
-          short:
-            "Підтверджено",
-
-          badge:
-            "ПІДТВЕРДЖЕНО",
-
-          text:
-            "Участь вашої команди у фіналі вже підтверджена ✅",
-
-          badgeClass:
-            "pill-b--open"
-        };
-      }
-
-      if (
-        status ===
-        "pending_payment"
-      ) {
-        return {
-          state:
-            "final-pending-payment",
-
-          short:
-            "Заявка подана",
-
-          badge:
-            "ОЧІКУЄ ОПЛАТУ",
-
-          text:
-            "Заявка на фінал уже подана. Очікується підтвердження оплати.",
-
-          badgeClass:
-            "pill-b--closed"
-        };
-      }
-
-      if (
-        status ===
-        "cancelled"
-      ) {
-        return {
-          state:
-            "final-cancelled",
-
-          short:
-            "Скасовано",
-
-          badge:
-            "СКАСОВАНО",
-
-          text:
-            "Заявку на фінал скасовано.",
-
-          badgeClass:
-            "pill-b--closed"
-        };
-      }
-
-      return {
-        state:
-          "final-existing",
-
-        short:
-          "Заявка подана",
-
-        badge:
-          "ЗАЯВКА Є",
-
-        text:
-          "Заявка на фінал уже існує.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "invited"
-    ) {
-      const rankText =
-        access.rank > 0
-          ? ` Ваше місце у рейтингу — №${access.rank}.`
-          : "";
-
-      if (
-        normalState ===
-        "pending"
-      ) {
-        return {
-          state:
-            "final-invited-pending",
-
-          short:
-            "Фіналіст",
-
-          badge:
-            "ФІНАЛІСТ",
-
-          text:
-            `Ваша команда отримала право участі у фіналі.${rankText} Реєстрація ще не розпочалася.`,
-
-          badgeClass:
-            "pill-b--closed"
-        };
-      }
-
-      if (
-        normalState ===
-        "closed"
-      ) {
-        return {
-          state:
-            "final-invited-closed",
-
-          short:
-            "Закрито",
-
-          badge:
-            "ФІНАЛІСТ",
-
-          text:
-            `Ваша команда отримала право участі у фіналі.${rankText} Термін реєстрації завершений.`,
-
-          badgeClass:
-            "pill-b--closed"
-        };
-      }
-
-      if (
-        normalState ===
-        "open"
-      ) {
-        return {
-          state:
-            "final-invited-open",
-
-          short:
-            "Фіналіст",
-
-          badge:
-            "ФІНАЛІСТ",
-
-          text:
-            `Ваша команда отримала право участі у фіналі.${rankText} Можна подавати заявку ✅`,
-
-          badgeClass:
-            "pill-b--open"
-        };
-      }
-
-      return {
-        state:
-          "final-invited-unavailable",
-
-        short:
-          "Фіналіст",
-
-        badge:
-          "ФІНАЛІСТ",
-
-        text:
-          `Ваша команда отримала право участі у фіналі.${rankText} Дати реєстрації ще не налаштовані.`,
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "reserve"
-    ) {
-      return {
-        state:
-          "final-reserve",
-
-        short:
-          "Резерв",
-
-        badge:
-          access.rank > 0
-            ? `РЕЗЕРВ №${access.rank}`
-            : "РЕЗЕРВ",
-
-        text:
-          access.rank > 0
-            ? `Ваша команда зараз №${access.rank} у рейтингу сезону. Очікуйте, якщо звільниться місце у TOP-18.`
-            : "Ваша команда перебуває у резерві. Очікуйте звільнення місця у фіналі.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "declined"
-    ) {
-      return {
-        state:
-          "final-declined",
-
-        short:
-          "Відмова",
-
-        badge:
-          "ВІДМОВА",
-
-        text:
-          "Ваша команда відмовилася від участі у фіналі.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "confirmed"
-    ) {
-      return {
-        state:
-          "final-confirmed",
-
-        short:
-          "Підтверджено",
-
-        badge:
-          "ПІДТВЕРДЖЕНО",
-
-        text:
-          "Участь вашої команди у фіналі вже підтверджена ✅",
-
-        badgeClass:
-          "pill-b--open"
-      };
-    }
-
-    if (
-      access?.inviteStatus ===
-      "error"
-    ) {
-      return {
-        state:
-          "final-error",
-
-        short:
-          "Помилка",
-
-        badge:
-          "ПЕРЕВІРКА",
-
-        text:
-          "Не вдалося перевірити фінальну кваліфікацію.",
-
-        badgeClass:
-          "pill-b--closed"
-      };
-    }
-
-    return {
-      state:
-        "final-not-invited",
-
-      short:
-        "Фінал",
-
-      badge:
-        "ЗА РЕЙТИНГОМ",
-
-      text:
-        "Реєстрація у фінал доступна тільки командам, які отримали право участі за рейтингом сезону.",
-
-      badgeClass:
-        "pill-b--closed"
-    };
-  }
-
-  function getStatusUI(
-    item
-  ) {
-    if (item?.isFinal) {
-      return getFinalStatusUI(
-        item
-      );
-    }
-
-    return getNormalStatusUI(
-      item
-    );
   }
 
   // =========================================================
-  // SUBMIT STATE
-  // =========================================================
-
-  function refreshSubmitState() {
-    if (!submitBtn) {
-      return;
-    }
-
-    const loading =
-      spinnerEl &&
-      spinnerEl.classList.contains(
-        "spinner--on"
-      );
-
-    if (loading) {
-      submitBtn.disabled =
-        true;
-
-      return;
-    }
-
-    const picked =
-      document.querySelector(
-        'input[name="stagePick"]:checked'
-      );
-
-    const rulesOk =
-      rulesChk
-        ? rulesChk.checked === true
-        : true;
-
-    const selectedValue =
-      picked
-        ? String(
-            picked.value
-          )
-        : "";
-
-    const selectedItem =
-      selectedValue
-        ? lastItems.find(
-            item =>
-              eventValue(item) ===
-              selectedValue
-          )
-        : null;
-
-    const canSubmit =
-      Boolean(
-        currentUser &&
-        profile &&
-        picked &&
-        rulesOk &&
-        selectedItem &&
-        canSubmitItem(
-          selectedItem
-        )
-      );
-
-    submitBtn.disabled =
-      !canSubmit;
-  }
-
-  // =========================================================
-  // TEAM CACHE
-  // =========================================================
-
-  function getTeamCacheKey(
-    teamId
-  ) {
-    return (
-      TEAM_CACHE_PREFIX +
-      String(teamId || "")
-    );
-  }
-
-  function readTeamNameCache(
-    teamId
-  ) {
-    try {
-      const raw =
-        localStorage.getItem(
-          getTeamCacheKey(
-            teamId
-          )
-        );
-
-      if (!raw) {
-        return null;
-      }
-
-      const object =
-        JSON.parse(raw);
-
-      if (
-        !object ||
-        !object.name ||
-        !object.ts
-      ) {
-        return null;
-      }
-
-      if (
-        Date.now() -
-          object.ts >
-        TEAM_CACHE_TTL_MS
-      ) {
-        return null;
-      }
-
-      return String(
-        object.name
-      );
-
-    } catch {
-      return null;
-    }
-  }
-
-  function writeTeamNameCache(
-    teamId,
-    name
-  ) {
-    try {
-      localStorage.setItem(
-        getTeamCacheKey(
-          teamId
-        ),
-        JSON.stringify({
-          ts:
-            Date.now(),
-
-          name:
-            String(
-              name || ""
-            )
-        })
-      );
-
-    } catch {}
-  }
-
-  async function getTeamName(
-    teamId
-  ) {
-    if (!teamId) {
-      return "";
-    }
-
-    const cached =
-      readTeamNameCache(
-        teamId
-      );
-
-    if (cached) {
-      return cached;
-    }
-
-    const teamSnap =
-      await db
-        .collection("teams")
-        .doc(teamId)
-        .get();
-
-    const name =
-      teamSnap.exists
-        ? String(
-            (
-              teamSnap.data() ||
-              {}
-            ).name ||
-            ""
-          )
-        : "";
-
-    if (name) {
-      writeTeamNameCache(
-        teamId,
-        name
-      );
-    }
-
-    return name;
-  }
-
-  // =========================================================
-  // PROFILE SUMMARY
-  // =========================================================
-
-  function renderProfileSummary(
-    selectedItem = null
-  ) {
-    if (
-      !profileSummary ||
-      !profile
-    ) {
-      return;
-    }
-
-    const participantName =
-      String(
-        profile.fullName ||
-        profile.captain ||
-        profile.email ||
-        ""
-      ).trim();
-
-    /*
-     * SOLO
-     */
-    if (
-      selectedItem?.entryType ===
-      "solo" &&
-      !selectedItem?.isFinal
-    ) {
-      profileSummary.innerHTML =
-        `Учасник: <b>${
-          escapeHtml(
-            participantName ||
-            "—"
-          )
-        }</b><br>` +
-
-        `Телефон: <b>${
-          escapeHtml(
-            profile.phone ||
-            "не вказано"
-          )
-        }</b>`;
-
-      return;
-    }
-
-    /*
-     * TEAM / FINAL
-     */
-    if (
-      selectedItem?.entryType ===
-        "team" ||
-      selectedItem?.isFinal
-    ) {
-      profileSummary.innerHTML =
-        `Команда: <b>${
-          escapeHtml(
-            profile.teamId
-              ? profile.teamName
-              : "— (нема команди)"
-          )
-        }</b><br>` +
-
-        `Заявник: <b>${
-          escapeHtml(
-            participantName ||
-            "—"
-          )
-        }</b><br>` +
-
-        `Телефон: <b>${
-          escapeHtml(
-            profile.phone ||
-            "не вказано"
-          )
-        }</b>`;
-
-      return;
-    }
-
-    /*
-     * Поки нічого не вибрано.
-     */
-    profileSummary.innerHTML =
-      `Користувач: <b>${
-        escapeHtml(
-          participantName ||
-          "—"
-        )
-      }</b><br>` +
-
-      `Телефон: <b>${
-        escapeHtml(
-          profile.phone ||
-          "не вказано"
-        )
-      }</b>`;
-  }
-
-  // =========================================================
-  // PROFILE
-  // =========================================================
-
-  async function loadProfile(
-    user
-  ) {
-    const userSnap =
-      await db
-        .collection("users")
-        .doc(user.uid)
-        .get();
-
-    if (
-      !userSnap.exists
-    ) {
-      throw new Error(
-        "Нема профілю. Зайдіть на сторінку «Акаунт» і створіть профіль."
-      );
-    }
-
-    const userData =
-      userSnap.data() ||
-      {};
-
-    const teamId =
-      userData.teamId ||
-      null;
-
-    const teamName =
-      teamId
-        ? await getTeamName(
-            teamId
-          )
-        : "";
-
-    profile = {
-      uid:
-        user.uid,
-
-      email:
-        user.email ||
-        "",
-
-      fullName:
-        String(
-          userData.fullName ||
-          ""
-        ).trim(),
-
-      teamId,
-
-      teamName:
-        String(
-          teamName ||
-          "Без назви"
-        ).trim(),
-
-      captain:
-        String(
-          userData.fullName ||
-          user.email ||
-          ""
-        ).trim(),
-
-      phone:
-        String(
-          userData.phone ||
-          ""
-        ).trim()
-    };
-
-    renderProfileSummary(
-      null
-    );
-  }
-
-  // =========================================================
-  // CACHE
-  // =========================================================
-
-  function normalizeDateForCache(
-    value
-  ) {
-    const date =
-      toDateMaybe(
-        value
-      );
-
-    if (date) {
-      return date.toISOString();
-    }
-
-    return (
-      typeof value === "string"
-    )
-      ? value
-      : null;
-  }
-
-  function hydrateItemFromCache(
-    item
-  ) {
-    return {
-      ...item,
-
-      startAt:
-        toDateMaybe(
-          item.startAt
-        ),
-
-      endAt:
-        toDateMaybe(
-          item.endAt
-        ),
-
-      regOpenAt:
-        item.regOpenAt ||
-        null,
-
-      regCloseAt:
-        item.regCloseAt ||
-        null,
-
-      payEnabled:
-        item.payEnabled === true,
-
-      price:
-        normalizeMoney(
-          item.price
-        ),
-
-      currency:
-        String(
-          item.currency ||
-          "UAH"
-        ).toUpperCase(),
-
-      payDetails:
-        String(
-          item.payDetails ||
-          ""
-        ).trim(),
-
-      entryType:
-        item.entryType === "solo"
-          ? "solo"
-          : "team",
-
-      isFinal:
-        item.isFinal === true
-    };
-  }
-
-  function clearOldCompetitionCaches() {
-    try {
-      Object
-        .keys(localStorage)
-        .forEach(
-          key => {
-            if (
-              key.startsWith(
-                "sc_competitions_cache_"
-              ) &&
-              key !==
-                COMP_CACHE_KEY
-            ) {
-              localStorage
-                .removeItem(key);
-            }
-          }
-        );
-
-    } catch {}
-  }
-
-  async function tryRenderCompetitionsFromCache() {
-    try {
-      const raw =
-        localStorage.getItem(
-          COMP_CACHE_KEY
-        );
-
-      if (!raw) {
-        return false;
-      }
-
-      const object =
-        JSON.parse(raw);
-
-      if (
-        !object ||
-        !Array.isArray(
-          object.items
-        ) ||
-        !object.ts
-      ) {
-        return false;
-      }
-
-      const items =
-        visibleItemsOnly(
-          object.items.map(
-            hydrateItemFromCache
-          )
-        );
-
-      lastItems =
-        items;
-
-      calcNearestUpcoming(
-        items
-      );
-
-      await loadFinalAccess(
-        items
-      );
-
-      renderItems(
-        items
-      );
-
-      refreshSubmitState();
-
-      if (eventOptionsEl) {
-        const hint =
-          document.createElement(
-            "div"
-          );
-
-        hint.className =
-          "form__hint";
-
-        hint.style.marginTop =
-          "8px";
-
-        hint.textContent =
-          "Оновлюю список…";
-
-        eventOptionsEl.appendChild(
-          hint
-        );
-      }
-
-      return true;
-
-    } catch (error) {
-      console.warn(
-        "[Registration] cache:",
-        error
-      );
-
-      return false;
-    }
-  }
-
-  function saveCompetitionsToCache(
-    items
-  ) {
-    try {
-      const packed =
-        visibleItemsOnly(
-          items
-        ).map(
-          item => ({
-            ...item,
-
-            finalAccess:
-              undefined,
-
-            startAt:
-              item.startAt
-                ? item.startAt
-                    .toISOString()
-                : null,
-
-            endAt:
-              item.endAt
-                ? item.endAt
-                    .toISOString()
-                : null,
-
-            regOpenAt:
-              normalizeDateForCache(
-                item.regOpenAt
-              ),
-
-            regCloseAt:
-              normalizeDateForCache(
-                item.regCloseAt
-              ),
-
-            payEnabled:
-              item.payEnabled ===
-              true,
-
-            price:
-              item.price === 0 ||
-              item.price
-                ? item.price
-                : null,
-
-            currency:
-              String(
-                item.currency ||
-                "UAH"
-              ).toUpperCase(),
-
-            payDetails:
-              String(
-                item.payDetails ||
-                ""
-              ).trim(),
-
-            entryType:
-              item.entryType === "solo"
-                ? "solo"
-                : "team",
-
-            regMode:
-              item.regMode ||
-              "auto",
-
-            manualOpen:
-              item.manualOpen ===
-              true,
-
-            isFinal:
-              item.isFinal ===
-              true
-          })
-        );
-
-      localStorage.setItem(
-        COMP_CACHE_KEY,
-        JSON.stringify({
-          ts:
-            Date.now(),
-
-          items:
-            packed
-        })
-      );
-
-    } catch {}
-  }
-
-  // =========================================================
-  // BUILD COMPETITION ITEM
+  // COMPETITION BUILD
   // =========================================================
 
   function buildCompetitionItem({
@@ -3046,42 +679,13 @@
     const ev =
       event || {};
 
-    const brand =
-      c.brand ||
-      "STOLAR CARP";
-
-    const yearRaw =
-      firstDefined(
-        ev.year,
-        ev.seasonYear,
-        c.year,
-        c.seasonYear,
-        ""
-      );
-
-    const year =
-      normalize(
-        yearRaw
-      );
-
-    const compTitle =
-      c.name ||
-      c.title ||
-      (
-        year
-          ? `Season ${year}`
-          : compId
-      );
-
     const eventKey =
       event
         ? (
             ev.key ||
             ev.stageId ||
             ev.id ||
-            `stage-${
-              eventIndex + 1
-            }`
+            `stage-${eventIndex + 1}`
           )
         : null;
 
@@ -3093,39 +697,17 @@
           )
         : false;
 
-    const stageTitle =
-      event
-        ? (
-            ev.title ||
-            ev.name ||
-            ev.label ||
-            (
-              finalEvent
-                ? "Фінал"
-                : `Етап ${
-                    eventIndex + 1
-                  }`
-            )
-          )
-        : null;
+    const eventSchedule =
+      ev.schedule || {};
 
-    const {
-      startAt,
-      endAt
-    } =
-      getRunDatesFromEvent(
-        ev,
-        c
-      );
+    const compSchedule =
+      c.schedule || {};
 
-    const {
-      regOpenAt,
-      regCloseAt
-    } =
-      getRegDatesFromEvent(
-        ev,
-        c
-      );
+    const eventRegistration =
+      ev.registration || {};
+
+    const compRegistration =
+      c.registration || {};
 
     const payment =
       getPaymentData(
@@ -3133,62 +715,136 @@
         c
       );
 
-    /*
-     * Фінал у чинній системі
-     * завжди командний.
-     */
-    const entryType =
-      finalEvent
-        ? "team"
-        : entryTypeFromEvent(
-            ev,
-            c
-          );
-
     return {
       compId,
-      brand,
-      year,
-      compTitle,
+
+      year:
+        normalize(
+          firstDefined(
+            ev.year,
+            ev.seasonYear,
+            c.year,
+            c.seasonYear
+          )
+        ),
+
+      brand:
+        c.brand ||
+        "STOLAR CARP",
+
+      compTitle:
+        c.name ||
+        c.title ||
+        compId,
 
       stageKey:
         eventKey
-          ? String(
-              eventKey
-            )
+          ? String(eventKey)
           : null,
 
-      stageTitle,
+      stageTitle:
+        event
+          ? (
+              ev.title ||
+              ev.name ||
+              ev.label ||
+              (
+                finalEvent
+                  ? "Фінал"
+                  : `Етап ${eventIndex + 1}`
+              )
+            )
+          : null,
 
       isFinal:
         finalEvent,
 
-      entryType,
+      entryType:
+        finalEvent
+          ? "team"
+          : entryTypeFromEvent(
+              ev,
+              c
+            ),
 
       startAt:
         toDateMaybe(
-          startAt
+          firstDefined(
+            ev.startAt,
+            ev.startDate,
+            eventSchedule.startAt,
+            eventSchedule.startDate,
+            c.startAt,
+            c.startDate,
+            compSchedule.startAt,
+            compSchedule.startDate
+          )
         ),
 
       endAt:
         toDateMaybe(
-          endAt
+          firstDefined(
+            ev.finishAt,
+            ev.finishDate,
+            ev.endAt,
+            ev.endDate,
+            eventSchedule.finishAt,
+            eventSchedule.finishDate,
+            c.finishAt,
+            c.finishDate,
+            c.endAt,
+            c.endDate,
+            compSchedule.finishAt,
+            compSchedule.finishDate
+          )
+        ),
+
+      regOpenAt:
+        firstDefined(
+          ev.regOpen,
+          ev.regOpenDate,
+          ev.registrationOpenDate,
+          eventRegistration.openDate,
+
+          c.regOpen,
+          c.regOpenDate,
+          c.registrationOpenDate,
+          compRegistration.openDate
+        ),
+
+      regCloseAt:
+        firstDefined(
+          ev.regClose,
+          ev.regCloseDate,
+          ev.registrationCloseDate,
+          eventRegistration.closeDate,
+
+          c.regClose,
+          c.regCloseDate,
+          c.registrationCloseDate,
+          compRegistration.closeDate
         ),
 
       regMode:
-        getRegistrationMode(
-          ev,
-          c
+        normalizeLower(
+          firstDefined(
+            eventRegistration.mode,
+            ev.regMode,
+            compRegistration.mode,
+            c.regMode,
+            "auto"
+          )
         ),
 
       manualOpen:
-        getManualOpenFlag(
-          ev,
-          c
+        normalizeBoolean(
+          firstDefined(
+            eventRegistration.manualOpen,
+            ev.manualOpen,
+            compRegistration.manualOpen,
+            c.manualOpen
+          )
         ),
-
-      regOpenAt,
-      regCloseAt,
 
       payEnabled:
         payment.payEnabled,
@@ -3200,357 +856,871 @@
         payment.currency,
 
       payDetails:
-        payment.payDetails,
-
-      format:
-        String(
-          ev.format ||
-          c.format ||
-          "classic"
-        ).toLowerCase(),
-
-      competitionType:
-        String(
-          c.type ||
-          "season"
-        ).toLowerCase()
+        payment.payDetails
     };
   }
 
   // =========================================================
-  // LOAD COMPETITIONS
+  // REGISTRATION STATE
   // =========================================================
 
-  async function loadCompetitionsFresh() {
+  function isFinishedEvent(item) {
+    if (!item?.endAt) {
+      return false;
+    }
+
+    return (
+      Date.now() >
+      item.endAt.getTime() +
+        FINISHED_HIDE_GRACE_MS
+    );
+  }
+
+  function visibleItemsOnly(
+    array
+  ) {
+    return (
+      array || []
+    ).filter(
+      item =>
+        !isFinishedEvent(item)
+    );
+  }
+
+  function getRegistrationState(
+    item
+  ) {
+    if (!item) {
+      return "unavailable";
+    }
+
     if (
-      !eventOptionsEl
+      isFinishedEvent(item)
+    ) {
+      return "closed";
+    }
+
+    const now =
+      new Date();
+
+    const openAt =
+      toDateMaybe(
+        item.regOpenAt,
+        false
+      );
+
+    const closeAt =
+      toDateMaybe(
+        item.regCloseAt,
+        true
+      );
+
+    if (
+      openAt &&
+      now < openAt
+    ) {
+      return "pending";
+    }
+
+    if (
+      closeAt &&
+      now > closeAt
+    ) {
+      return "closed";
+    }
+
+    if (
+      openAt ||
+      closeAt
+    ) {
+      return "open";
+    }
+
+    if (
+      item.regMode === "manual" &&
+      item.manualOpen
+    ) {
+      return "open";
+    }
+
+    return "unavailable";
+  }
+
+  // =========================================================
+  // PROFILE
+  // =========================================================
+
+  async function loadProfile(
+    user
+  ) {
+    const snap =
+      await db
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if (!snap.exists) {
+      throw new Error(
+        "Нема профілю. Зайдіть у «Мій кабінет»."
+      );
+    }
+
+    const data =
+      snap.data() || {};
+
+    const teamId =
+      normalize(
+        data.teamId
+      );
+
+    let teamName = "";
+
+    if (teamId) {
+      const teamSnap =
+        await db
+          .collection("teams")
+          .doc(teamId)
+          .get();
+
+      if (teamSnap.exists) {
+        teamName =
+          normalize(
+            (
+              teamSnap.data() ||
+              {}
+            ).name
+          );
+      }
+    }
+
+    profile = {
+      uid:
+        user.uid,
+
+      email:
+        user.email || "",
+
+      fullName:
+        normalize(
+          data.fullName ||
+          data.name
+        ),
+
+      phone:
+        normalize(
+          data.phone
+        ),
+
+      teamId:
+        teamId || null,
+
+      teamName
+    };
+
+    renderProfileSummary();
+  }
+
+  function getParticipantName() {
+    return normalize(
+      profile?.fullName ||
+      profile?.email
+    );
+  }
+
+  function hasTeam() {
+    return Boolean(
+      profile?.teamId &&
+      profile?.teamName
+    );
+  }
+
+  function renderProfileSummary(
+    selectedItem = null
+  ) {
+    if (
+      !profileSummary ||
+      !profile
     ) {
       return;
     }
 
-    try {
-      const snapshot =
-        await db
-          .collection(
-            "competitions"
-          )
-          .get();
+    const participantName =
+      getParticipantName();
 
-      const items = [];
+    if (
+      selectedItem?.entryType ===
+        "solo" &&
+      !selectedItem?.isFinal
+    ) {
+      profileSummary.innerHTML =
+        `Учасник: <b>${escapeHtml(
+          participantName || "—"
+        )}</b><br>` +
 
-      snapshot.forEach(
-        docSnap => {
-          const competition =
-            docSnap.data() ||
-            {};
+        `Телефон: <b>${escapeHtml(
+          profile.phone ||
+          "не вказано"
+        )}</b>`;
 
-          const compId =
-            docSnap.id;
+      return;
+    }
 
-          const events =
-            Array.isArray(
-              competition.events
-            )
-              ? competition.events
-              : [];
+    if (
+      selectedItem?.entryType ===
+        "team" ||
+      selectedItem?.isFinal
+    ) {
+      profileSummary.innerHTML =
+        `Команда: <b>${escapeHtml(
+          profile.teamName ||
+          "— (нема команди)"
+        )}</b><br>` +
 
-          if (events.length) {
-            events.forEach(
-              (
-                event,
-                index
-              ) => {
-                items.push(
-                  buildCompetitionItem({
-                    competition,
-                    compId,
-                    event,
-                    eventIndex:
-                      index
-                  })
-                );
-              }
-            );
+        `Заявник: <b>${escapeHtml(
+          participantName || "—"
+        )}</b><br>` +
 
-          } else {
-            items.push(
-              buildCompetitionItem({
-                competition,
-                compId
-              })
-            );
-          }
-        }
+        `Телефон: <b>${escapeHtml(
+          profile.phone ||
+          "не вказано"
+        )}</b>`;
+
+      return;
+    }
+
+    profileSummary.innerHTML =
+      `Користувач: <b>${escapeHtml(
+        participantName || "—"
+      )}</b><br>` +
+
+      `Телефон: <b>${escapeHtml(
+        profile.phone ||
+        "не вказано"
+      )}</b>`;
+  }
+
+  // =========================================================
+  // REGISTRATION ID
+  // =========================================================
+
+  function buildRegDocId({
+    competitionId,
+    stageId,
+    entryType,
+    uid,
+    teamId
+  }) {
+    const stage =
+      stageId || "main";
+
+    if (
+      entryType === "solo"
+    ) {
+      return (
+        `${competitionId}__` +
+        `${stage}__solo__` +
+        `${uid}`
+      );
+    }
+
+    return (
+      `${competitionId}__` +
+      `${stage}__team__` +
+      `${teamId}`
+    );
+  }
+
+  // =========================================================
+  // FINAL ACCESS
+  // =========================================================
+
+  async function loadFinalAccess() {
+    finalAccessByEvent.clear();
+
+    const finalItems =
+      lastItems.filter(
+        item =>
+          item.isFinal
       );
 
-      const visibleItems =
-        visibleItemsOnly(
-          items
-        );
-
-      visibleItems.sort(
-        (a, b) => {
-          const timeA =
-            a.startAt
-              ? a.startAt
-                  .getTime()
-              : Number.MAX_SAFE_INTEGER;
-
-          const timeB =
-            b.startAt
-              ? b.startAt
-                  .getTime()
-              : Number.MAX_SAFE_INTEGER;
-
-          if (
-            timeA !== timeB
-          ) {
-            return (
-              timeA - timeB
-            );
-          }
-
-          return String(
-            a.compTitle ||
-            ""
-          ).localeCompare(
-            String(
-              b.compTitle ||
-              ""
-            ),
-            "uk"
-          );
-        }
-      );
-
-      lastItems =
-        visibleItems;
-
-      calcNearestUpcoming(
-        visibleItems
-      );
-
-      await loadFinalAccess(
-        visibleItems
-      );
-
-      renderItems(
-        visibleItems
-      );
-
-      refreshSubmitState();
-
-      saveCompetitionsToCache(
-        visibleItems
-      );
-
-    } catch (error) {
-      console.error(
-        "[Registration] loadCompetitionsFresh:",
-        error
-      );
+    for (
+      const item of finalItems
+    ) {
+      const key =
+        eventValue(item);
 
       if (
-        eventOptionsEl &&
-        !lastItems.length
+        !currentUser ||
+        !profile
       ) {
-        eventOptionsEl.innerHTML =
-          '<p class="form__hint" style="color:#ff6c6c;">Не вдалося завантажити змагання. Перевірте Firestore Rules та доступ.</p>';
+        finalAccessByEvent.set(
+          key,
+          {
+            status:
+              "login_required",
+
+            registrationExists:
+              false,
+
+            rank:
+              0
+          }
+        );
+
+        continue;
       }
 
-      if (submitBtn) {
-        submitBtn.disabled =
-          true;
+      if (!hasTeam()) {
+        finalAccessByEvent.set(
+          key,
+          {
+            status:
+              "no_team",
+
+            registrationExists:
+              false,
+
+            rank:
+              0
+          }
+        );
+
+        continue;
+      }
+
+      const year =
+        getSeasonYearFromItem(
+          item
+        );
+
+      if (!year) {
+        finalAccessByEvent.set(
+          key,
+          {
+            status:
+              "error",
+
+            registrationExists:
+              false,
+
+            rank:
+              0
+          }
+        );
+
+        continue;
+      }
+
+      const stageId =
+        normalize(
+          item.stageKey
+        ) || "final";
+
+      const regId =
+        buildRegDocId({
+          competitionId:
+            item.compId,
+
+          stageId,
+
+          entryType:
+            "team",
+
+          uid:
+            profile.uid,
+
+          teamId:
+            profile.teamId
+        });
+
+      try {
+        const [
+          qualificationSnap,
+          registrationSnap
+        ] =
+          await Promise.all([
+            db
+              .collection(
+                "finalQualifications"
+              )
+              .doc(year)
+              .collection("teams")
+              .doc(profile.teamId)
+              .get(),
+
+            db
+              .collection(
+                "registrations"
+              )
+              .doc(regId)
+              .get()
+          ]);
+
+        const q =
+          qualificationSnap.exists
+            ? qualificationSnap.data() || {}
+            : {};
+
+        let valid =
+          qualificationSnap.exists;
+
+        if (
+          valid &&
+          q.teamId &&
+          normalize(q.teamId) !==
+            profile.teamId
+        ) {
+          valid = false;
+        }
+
+        if (
+          valid &&
+          q.competitionId &&
+          normalize(
+            q.competitionId
+          ) !== item.compId
+        ) {
+          valid = false;
+        }
+
+        if (
+          valid &&
+          q.stageId &&
+          normalize(q.stageId) !==
+            stageId
+        ) {
+          valid = false;
+        }
+
+        const regData =
+          registrationSnap.exists
+            ? registrationSnap.data() || {}
+            : {};
+
+        finalAccessByEvent.set(
+          key,
+          {
+            status:
+              valid
+                ? normalizeLower(
+                    q.status ||
+                    "reserve"
+                  )
+                : "not_invited",
+
+            rank:
+              valid
+                ? Number(
+                    q.rank ||
+                    q.place ||
+                    0
+                  )
+                : 0,
+
+            registrationExists:
+              registrationSnap.exists,
+
+            registrationStatus:
+              normalizeLower(
+                regData.status
+              )
+          }
+        );
+
+      } catch (error) {
+        console.warn(
+          "[Registration] final access:",
+          error
+        );
+
+        finalAccessByEvent.set(
+          key,
+          {
+            status:
+              "error",
+
+            registrationExists:
+              false,
+
+            rank:
+              0
+          }
+        );
       }
     }
+  }
+
+  function getFinalAccess(item) {
+    return (
+      finalAccessByEvent.get(
+        eventValue(item)
+      ) || null
+    );
+  }
+
+  function canRegisterFinal(item) {
+    const access =
+      getFinalAccess(item);
+
+    return Boolean(
+      access &&
+      access.status ===
+        "invited" &&
+      !access.registrationExists
+    );
+  }
+
+  function canSubmitItem(item) {
+    if (!item) {
+      return false;
+    }
+
+    if (
+      getRegistrationState(item) !==
+      "open"
+    ) {
+      return false;
+    }
+
+    if (
+      item.isFinal &&
+      !canRegisterFinal(item)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  // =========================================================
+  // STATUS UI
+  // =========================================================
+
+  function getStatusUI(item) {
+    if (item.isFinal) {
+      const access =
+        getFinalAccess(item);
+
+      if (
+        access?.registrationExists
+      ) {
+        if (
+          access.registrationStatus ===
+          "confirmed"
+        ) {
+          return {
+            short:
+              "Підтверджено",
+
+            badge:
+              "ПІДТВЕРДЖЕНО",
+
+            text:
+              "Участь у фіналі підтверджена ✅",
+
+            badgeClass:
+              "pill-b--open",
+
+            lamp:
+              "lamp-green"
+          };
+        }
+
+        return {
+          short:
+            "Заявка подана",
+
+          badge:
+            "ЗАЯВКА Є",
+
+          text:
+            "Заявка на фінал уже подана.",
+
+          badgeClass:
+            "pill-b--closed",
+
+          lamp:
+            "lamp-green"
+        };
+      }
+
+      if (
+        access?.status ===
+        "invited"
+      ) {
+        return {
+          short:
+            "Фіналіст",
+
+          badge:
+            "ФІНАЛІСТ",
+
+          text:
+            access.rank
+              ? `Ваша команда має право участі у фіналі. Місце у рейтингу №${access.rank}.`
+              : "Ваша команда має право участі у фіналі.",
+
+          badgeClass:
+            canRegisterFinal(item)
+              ? "pill-b--open"
+              : "pill-b--closed",
+
+          lamp:
+            getRegistrationState(item) ===
+              "open"
+              ? "lamp-green"
+              : "lamp-yellow"
+        };
+      }
+
+      if (
+        access?.status ===
+        "reserve"
+      ) {
+        return {
+          short:
+            "Резерв",
+
+          badge:
+            access.rank
+              ? `РЕЗЕРВ №${access.rank}`
+              : "РЕЗЕРВ",
+
+          text:
+            "Команда перебуває у резерві.",
+
+          badgeClass:
+            "pill-b--closed",
+
+          lamp:
+            "lamp-yellow"
+        };
+      }
+
+      if (
+        access?.status ===
+        "declined"
+      ) {
+        return {
+          short:
+            "Відмова",
+
+          badge:
+            "ВІДМОВА",
+
+          text:
+            "Команда відмовилась від участі.",
+
+          badgeClass:
+            "pill-b--closed",
+
+          lamp:
+            "lamp-red"
+        };
+      }
+
+      return {
+        short:
+          "Фінал",
+
+        badge:
+          "ЗА РЕЙТИНГОМ",
+
+        text:
+          "Реєстрація доступна тільки командам, які отримали право участі.",
+
+        badgeClass:
+          "pill-b--closed",
+
+        lamp:
+          "lamp-red"
+      };
+    }
+
+    const state =
+      getRegistrationState(item);
+
+    if (state === "open") {
+      return {
+        short:
+          "Відкрито",
+
+        badge:
+          "ВІДКРИТО",
+
+        text:
+          "Реєстрація відкрита ✅",
+
+        badgeClass:
+          "pill-b--open",
+
+        lamp:
+          "lamp-green"
+      };
+    }
+
+    if (state === "pending") {
+      return {
+        short:
+          "Очікується",
+
+        badge:
+          "ОЧІКУЄТЬСЯ",
+
+        text:
+          "Реєстрація ще не розпочалась.",
+
+        badgeClass:
+          "pill-b--closed",
+
+        lamp:
+          "lamp-yellow"
+      };
+    }
+
+    return {
+      short:
+        "Закрито",
+
+      badge:
+        "ЗАКРИТО",
+
+      text:
+        state === "unavailable"
+          ? "Дати реєстрації не налаштовані."
+          : "Реєстрація завершена.",
+
+      badgeClass:
+        "pill-b--closed",
+
+      lamp:
+        "lamp-red"
+    };
   }
 
   // =========================================================
   // RENDER
   // =========================================================
 
-  function renderItems(
-    items
-  ) {
-    if (
-      !eventOptionsEl
-    ) {
-      return;
-    }
-
-    const previousPicked =
+  function getSelectedItem() {
+    const picked =
       document.querySelector(
         'input[name="stagePick"]:checked'
       );
 
-    const previousPickedValue =
-      previousPicked
-        ? String(
-            previousPicked.value
-          )
+    if (!picked) {
+      return null;
+    }
+
+    return (
+      lastItems.find(
+        item =>
+          eventValue(item) ===
+          picked.value
+      ) || null
+    );
+  }
+
+  function renderItems() {
+    if (!eventOptionsEl) {
+      return;
+    }
+
+    const oldSelected =
+      getSelectedItem();
+
+    const oldValue =
+      oldSelected
+        ? eventValue(oldSelected)
         : "";
 
     eventOptionsEl.innerHTML =
       "";
 
-    const visibleItems =
+    const visible =
       visibleItemsOnly(
-        items
+        lastItems
       );
 
-    if (
-      !visibleItems.length
-    ) {
+    if (!visible.length) {
       eventOptionsEl.innerHTML =
-        '<p class="form__hint">Наразі немає відкритих або майбутніх етапів для реєстрації.</p>';
+        '<p class="form__hint">Наразі немає доступних змагань.</p>';
 
-      setPayUIFromSelected(
-        null
-      );
-
-      if (submitBtn) {
-        submitBtn.disabled =
-          true;
-      }
+      setPayUI(null);
+      refreshSubmitState();
 
       return;
     }
 
-    visibleItems.forEach(
-      item => {
-        const open =
-          canSubmitItem(item);
+    visible.forEach(item => {
+      const value =
+        eventValue(item);
 
-        const status =
-          getStatusUI(item);
+      const status =
+        getStatusUI(item);
 
-        const value =
-          eventValue(item);
+      const enabled =
+        canSubmitItem(item);
 
-        const lamp =
-          statusLamp(
-            item,
-            value
-          );
-
-        const titleText =
-          `${
-            item.brand
-              ? item.brand +
-                " · "
-              : ""
-          }${
-            item.compTitle
-          }` +
-          (
-            item.stageTitle
-              ? ` — ${
-                  item.stageTitle
-                }`
-              : ""
-          );
-
-        const dateLine =
-          `${
-            fmtDate(
-              item.startAt
-            )
-          } — ${
-            fmtDate(
-              item.endAt
-            )
-          }`;
-
-        const regOpen =
-          toDateMaybe(
-            item.regOpenAt,
-            {
-              endOfDay: false
-            }
-          );
-
-        const regClose =
-          toDateMaybe(
-            item.regCloseAt,
-            {
-              endOfDay: true
-            }
-          );
-
-        const registrationDatesLine =
-          regOpen ||
-          regClose
-            ? `Реєстрація: ${
-                fmtDate(regOpen)
-              } — ${
-                fmtDate(regClose)
-              }`
-            : "Дати реєстрації не задані";
-
-        const label =
-          document.createElement(
-            "label"
-          );
-
-        label.className =
-          "event-item" +
-          (
-            open
-              ? ""
-              : " is-closed"
-          );
-
-        if (
-          item.isFinal
-        ) {
-          label.classList.add(
-            "event-item--final"
-          );
-        }
-
-        label.setAttribute(
-          "role",
-          "button"
+      const label =
+        document.createElement(
+          "label"
         );
 
-        label.style.cursor =
-          open
-            ? "pointer"
-            : "default";
+      label.className =
+        "event-item" +
+        (
+          enabled
+            ? ""
+            : " is-closed"
+        );
 
-        const shouldRemainChecked =
-          open &&
-          previousPickedValue ===
-            value;
+      if (item.isFinal) {
+        label.classList.add(
+          "event-item--final"
+        );
+      }
 
-        label.innerHTML = `
-          <input
-            type="radio"
-            name="stagePick"
-            value="${escapeHtml(
-              value
-            )}"
-            ${
-              open
-                ? ""
-                : "disabled"
-            }
-            ${
-              shouldRemainChecked
-                ? "checked"
-                : ""
-            }
-            style="
-              flex:0 0 auto;
-              margin-top:4px;
-            "
-          >
+      const checked =
+        enabled &&
+        oldValue === value;
+
+      const title =
+        `${item.brand} · ${item.compTitle}` +
+        (
+          item.stageTitle
+            ? ` — ${item.stageTitle}`
+            : ""
+        );
+
+      label.innerHTML = `
+        <input
+          type="radio"
+          name="stagePick"
+          value="${escapeHtml(value)}"
+          ${enabled ? "" : "disabled"}
+          ${checked ? "checked" : ""}
+          style="
+            flex:0 0 auto;
+            margin-top:4px;
+          "
+        >
+
+        <div
+          class="event-content"
+          style="
+            min-width:0;
+            flex:1;
+          "
+        >
 
           <div
-            class="event-content"
             style="
-              min-width:0;
-              flex:1;
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              gap:10px;
+              margin-bottom:8px;
             "
           >
 
@@ -3558,145 +1728,248 @@
               style="
                 display:flex;
                 align-items:center;
-                justify-content:space-between;
-                gap:10px;
-                margin-bottom:8px;
+                gap:8px;
               "
             >
+              <span
+                class="lamp ${status.lamp}"
+              ></span>
 
-              <div
+              <span
                 style="
-                  display:flex;
-                  align-items:center;
-                  gap:8px;
-                  min-width:0;
+                  font-size:12px;
+                  color:var(--muted);
+                  font-weight:800;
                 "
               >
-
-                <span
-                  class="lamp ${lamp}"
-                  style="
-                    flex:0 0 auto;
-                  "
-                ></span>
-
-                <span
-                  style="
-                    font-size:12px;
-                    color:var(--muted);
-                    font-weight:800;
-                    white-space:nowrap;
-                  "
-                >
-                  ${escapeHtml(
-                    status.short
-                  )}
-                </span>
-
-              </div>
-
-              <div
-                class="event-badges"
-                style="
-                  display:flex;
-                  gap:6px;
-                  flex-wrap:wrap;
-                  justify-content:flex-end;
-                  flex:0 0 auto;
-                "
-              >
-
-                <span
-                  class="pill-b ${
-                    status.badgeClass
-                  }"
-                >
-                  ${escapeHtml(
-                    status.badge
-                  )}
-                </span>
-
-              </div>
-
+                ${escapeHtml(status.short)}
+              </span>
             </div>
 
-            <div
-              style="
-                font-weight:900;
-                font-size:16px;
-                line-height:1.28;
-                letter-spacing:.02em;
-                color:#f3f4f6;
-                white-space:normal;
-                overflow-wrap:break-word;
-              "
+            <span
+              class="pill-b ${status.badgeClass}"
             >
-              ${escapeHtml(
-                titleText
-              )}
-            </div>
-
-            <div
-              style="
-                margin-top:7px;
-                color:var(--muted);
-                font-size:13px;
-                line-height:1.35;
-              "
-            >
-              ${escapeHtml(
-                dateLine
-              )}
-            </div>
-
-            <div
-              style="
-                margin-top:5px;
-                color:var(--muted);
-                font-size:12px;
-                line-height:1.35;
-              "
-            >
-              ${escapeHtml(
-                registrationDatesLine
-              )}
-            </div>
-
-            <div
-              style="
-                margin-top:7px;
-                color:${
-                  item.isFinal &&
-                  canRegisterFinal(item)
-                    ? "#fde68a"
-                    : "var(--muted)"
-                };
-                font-size:13px;
-                line-height:1.45;
-                font-weight:${
-                  item.isFinal
-                    ? "700"
-                    : "400"
-                };
-              "
-            >
-              ${escapeHtml(
-                status.text
-              )}
-            </div>
+              ${escapeHtml(status.badge)}
+            </span>
 
           </div>
-        `;
 
-        eventOptionsEl.appendChild(
-          label
+          <div
+            style="
+              font-weight:900;
+              font-size:16px;
+              line-height:1.28;
+              color:#f3f4f6;
+            "
+          >
+            ${escapeHtml(title)}
+          </div>
+
+          <div
+            style="
+              margin-top:7px;
+              color:var(--muted);
+              font-size:13px;
+            "
+          >
+            ${escapeHtml(
+              fmtDate(item.startAt)
+            )}
+            —
+            ${escapeHtml(
+              fmtDate(item.endAt)
+            )}
+          </div>
+
+          <div
+            style="
+              margin-top:5px;
+              color:var(--muted);
+              font-size:12px;
+            "
+          >
+            Реєстрація:
+            ${escapeHtml(
+              fmtDate(item.regOpenAt)
+            )}
+            —
+            ${escapeHtml(
+              fmtDate(item.regCloseAt)
+            )}
+          </div>
+
+          <div
+            style="
+              margin-top:7px;
+              color:var(--muted);
+              font-size:13px;
+              line-height:1.4;
+            "
+          >
+            ${escapeHtml(status.text)}
+          </div>
+
+        </div>
+      `;
+
+      eventOptionsEl.appendChild(
+        label
+      );
+    });
+
+    const selected =
+      getSelectedItem();
+
+    const defaultPaymentItem =
+      selected ||
+      visible.find(
+        item =>
+          getRegistrationState(item) ===
+          "open"
+      ) ||
+      visible[0];
+
+    setPayUI(
+      defaultPaymentItem
+    );
+
+    refreshSubmitState();
+  }
+
+  // =========================================================
+  // LOAD COMPETITIONS
+  // =========================================================
+
+  async function loadCompetitions() {
+    const snapshot =
+      await db
+        .collection("competitions")
+        .get();
+
+    const result = [];
+
+    snapshot.forEach(docSnap => {
+      const competition =
+        docSnap.data() || {};
+
+      const events =
+        Array.isArray(
+          competition.events
+        )
+          ? competition.events
+          : [];
+
+      if (events.length) {
+        events.forEach(
+          (event, index) => {
+            result.push(
+              buildCompetitionItem({
+                competition,
+
+                compId:
+                  docSnap.id,
+
+                event,
+
+                eventIndex:
+                  index
+              })
+            );
+          }
+        );
+
+      } else {
+        result.push(
+          buildCompetitionItem({
+            competition,
+
+            compId:
+              docSnap.id
+          })
         );
       }
-    );
+    });
 
-    refreshPaymentUI(
-      visibleItems
-    );
+    result.sort((a, b) => {
+      const ta =
+        a.startAt
+          ? a.startAt.getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+      const tb =
+        b.startAt
+          ? b.startAt.getTime()
+          : Number.MAX_SAFE_INTEGER;
+
+      return ta - tb;
+    });
+
+    lastItems =
+      visibleItemsOnly(
+        result
+      );
+
+    await loadFinalAccess();
+
+    renderItems();
+  }
+
+  // =========================================================
+  // SUBMIT BUTTON
+  // =========================================================
+
+  function refreshSubmitState() {
+    if (!submitBtn) {
+      return;
+    }
+
+    if (
+      spinnerEl?.classList.contains(
+        "spinner--on"
+      )
+    ) {
+      submitBtn.disabled = true;
+      return;
+    }
+
+    const item =
+      getSelectedItem();
+
+    const rulesOk =
+      rulesChk
+        ? rulesChk.checked
+        : true;
+
+    /*
+     * ВАЖЛИВО:
+     *
+     * TEAM і SOLO обидва
+     * вимагають реальну команду.
+     */
+    const teamOk =
+      Boolean(
+        profile &&
+        profile.teamId &&
+        profile.teamName
+      );
+
+    const participantOk =
+      !item ||
+      item.entryType !== "solo" ||
+      Boolean(
+        getParticipantName()
+      );
+
+    submitBtn.disabled =
+      !(
+        currentUser &&
+        profile &&
+        item &&
+        rulesOk &&
+        teamOk &&
+        participantOk &&
+        canSubmitItem(item)
+      );
   }
 
   // =========================================================
@@ -3706,142 +1979,50 @@
   document.addEventListener(
     "change",
     event => {
-      const target =
-        event.target;
-
-      if (!target) {
-        return;
-      }
-
       if (
-        target.name ===
+        event.target?.name ===
         "stagePick"
       ) {
-        const picked =
-          document.querySelector(
-            'input[name="stagePick"]:checked'
+        const item =
+          getSelectedItem();
+
+        renderProfileSummary(
+          item
+        );
+
+        setPayUI(
+          item
+        );
+
+        if (
+          item &&
+          !hasTeam()
+        ) {
+          setMsg(
+            item.entryType === "solo"
+              ? "Для SOLO ваш профіль повинен бути прив’язаний до команди. На змаганнях буде показано ваше ім’я та прізвище."
+              : "Спочатку приєднайтесь до команди в «Мій кабінет».",
+            false
           );
 
-        const selectedValue =
-          picked
-            ? String(
-                picked.value
-              )
-            : "";
+        } else if (
+          item?.entryType === "solo" &&
+          !getParticipantName()
+        ) {
+          setMsg(
+            "Для SOLO потрібно вказати ім’я та прізвище у «Мій кабінет».",
+            false
+          );
 
-        const selectedItem =
-          selectedValue
-            ? lastItems.find(
-                item =>
-                  eventValue(item) ===
-                  selectedValue
-              )
-            : null;
-
-        /*
-         * НОВЕ:
-         * при SOLO показуємо ім'я людини,
-         * при TEAM — команду.
-         */
-        renderProfileSummary(
-          selectedItem
-        );
-
-        setPayUIFromSelected(
-          selectedItem ||
-          getDefaultPaymentItem(
-            lastItems
-          )
-        );
-
-        if (selectedItem) {
-          if (
-            selectedItem.isFinal
-          ) {
-            const finalStatus =
-              getFinalStatusUI(
-                selectedItem
-              );
-
-            if (
-              !canRegisterFinal(
-                selectedItem
-              )
-            ) {
-              setMsg(
-                finalStatus.text,
-                false
-              );
-
-            } else {
-              const state =
-                getRegistrationState(
-                  selectedItem
-                );
-
-              if (
-                state === "pending"
-              ) {
-                setMsg(
-                  "Ви маєте право участі у фіналі, але реєстрація ще не розпочалася.",
-                  false
-                );
-
-              } else if (
-                state === "closed"
-              ) {
-                setMsg(
-                  "Ви маєте право участі у фіналі, але реєстрація вже завершена.",
-                  false
-                );
-
-              } else {
-                setMsg("");
-              }
-            }
-
-          } else {
-            const state =
-              getRegistrationState(
-                selectedItem
-              );
-
-            if (
-              state === "pending"
-            ) {
-              setMsg(
-                "Реєстрація на це змагання ще не розпочалася.",
-                false
-              );
-
-            } else if (
-              state === "closed"
-            ) {
-              setMsg(
-                "Реєстрація на це змагання вже завершена.",
-                false
-              );
-
-            } else if (
-              state ===
-              "unavailable"
-            ) {
-              setMsg(
-                "Дати реєстрації для цього змагання не налаштовані.",
-                false
-              );
-
-            } else {
-              setMsg("");
-            }
-          }
+        } else {
+          setMsg("");
         }
       }
 
       if (
-        target.name ===
+        event.target?.name ===
           "stagePick" ||
-        target.id ===
+        event.target?.id ===
           "rules"
       ) {
         refreshSubmitState();
@@ -3850,188 +2031,159 @@
   );
 
   // =========================================================
-  // INITIAL LOAD
+  // PAYLOAD
   // =========================================================
 
-  if (
-    eventOptionsEl
-  ) {
-    eventOptionsEl.innerHTML =
-      '<p class="form__hint">Завантаження списку...</p>';
-  }
-
-  clearOldCompetitionCaches();
-
-  tryRenderCompetitionsFromCache();
-
-  setTimeout(
-    () => {
-      loadCompetitionsFresh();
-    },
-    50
-  );
-
-  // =========================================================
-  // AUTH
-  // =========================================================
-
-  auth.onAuthStateChanged(
-    async user => {
-      currentUser =
-        user || null;
-
-      profile = null;
-
-      finalAccessByEvent.clear();
-
-      setMsg("");
-
-      refreshSubmitState();
-
-      if (!user) {
-        if (submitBtn) {
-          submitBtn.disabled =
-            true;
-        }
-
-        if (
-          profileSummary
-        ) {
-          profileSummary.textContent =
-            "Ви не залогінені. Зайдіть у «Мій кабінет» і поверніться сюди.";
-        }
-
-        setMsg(
-          "Увійдіть у акаунт, щоб подати заявку.",
-          false
-        );
-
-        await loadFinalAccess(
-          lastItems
-        );
-
-        renderItems(
-          lastItems
-        );
-
-        return;
-      }
-
-      try {
-        await loadProfile(
-          user
-        );
-
-        await loadFinalAccess(
-          lastItems
-        );
-
-        renderItems(
-          lastItems
-        );
-
-        refreshSubmitState();
-
-      } catch (error) {
-        console.error(
-          "[Registration] profile:",
-          error
-        );
-
-        if (submitBtn) {
-          submitBtn.disabled =
-            true;
-        }
-
-        setMsg(
-          error.message ||
-          "Помилка профілю.",
-          false
-        );
-      }
-    }
-  );
-
-  // =========================================================
-  // PUBLIC PAYLOAD
-  // =========================================================
-
-  function buildPublicPayload({
-    uid,
-    competitionId,
-    stageId,
+  function buildRegistrationPayload({
+    item,
     entryType,
-    teamId,
-    teamName,
-    participantName,
-    status,
-    finalQualification = false,
-    seasonYear = null
+    status
   }) {
+    const participantName =
+      getParticipantName();
+
     return {
       uid:
-        uid || null,
+        profile.uid,
 
-      competitionId,
+      competitionId:
+        item.compId,
 
       stageId:
-        stageId || null,
+        item.stageKey ||
+        null,
 
-      entryType:
-        entryType || "team",
-
-      teamId:
-        entryType === "team"
-          ? teamId || null
-          : null,
-
-      teamName:
-        entryType === "team"
-          ? teamName || null
-          : null,
+      entryType,
 
       /*
-       * НОВЕ:
-       * ім'я SOLO учасника.
+       * TEAM + SOLO:
+       * реальна прив'язка до команди.
+       */
+      teamId:
+        profile.teamId,
+
+      teamName:
+        profile.teamName,
+
+      /*
+       * SOLO:
+       * ім'я конкретного учасника.
        */
       participantName:
         entryType === "solo"
-          ? participantName || null
+          ? participantName
           : null,
 
       /*
-       * Універсальне поле для майбутніх
-       * списків / таблиць.
+       * Що показуємо в таблицях.
        */
       displayName:
         entryType === "solo"
-          ? participantName || null
-          : teamName || null,
+          ? participantName
+          : profile.teamName,
 
-      status:
-        status ||
-        "pending_payment",
+      captain:
+        entryType === "solo"
+          ? participantName
+          : participantName,
+
+      phone:
+        profile.phone || "",
+
+      payEnabled:
+        item.payEnabled === true,
+
+      price:
+        item.price,
+
+      currency:
+        item.currency ||
+        "UAH",
+
+      payDetails:
+        item.payDetails ||
+        "",
 
       finalQualification:
-        finalQualification ===
-        true,
+        item.isFinal === true,
 
       finalInvite:
-        finalQualification ===
-        true,
+        item.isFinal === true,
 
       seasonYear:
-        finalQualification
-          ? (
-              seasonYear ||
-              null
+        item.isFinal
+          ? getSeasonYearFromItem(
+              item
             )
           : null,
 
       source:
-        finalQualification
+        item.isFinal
           ? "final_qualification_registration"
           : "registration",
+
+      status,
+
+      createdAt:
+        fb.firestore
+          .FieldValue
+          .serverTimestamp(),
+
+      confirmedAt:
+        status === "confirmed"
+          ? fb.firestore
+              .FieldValue
+              .serverTimestamp()
+          : null
+    };
+  }
+
+  function buildPublicPayload(
+    payload
+  ) {
+    return {
+      uid:
+        payload.uid,
+
+      competitionId:
+        payload.competitionId,
+
+      stageId:
+        payload.stageId,
+
+      entryType:
+        payload.entryType,
+
+      /*
+       * SOLO також зберігає
+       * командну прив'язку.
+       */
+      teamId:
+        payload.teamId,
+
+      teamName:
+        payload.teamName,
+
+      participantName:
+        payload.participantName,
+
+      displayName:
+        payload.displayName,
+
+      status:
+        payload.status,
+
+      finalQualification:
+        payload.finalQualification,
+
+      finalInvite:
+        payload.finalInvite,
+
+      seasonYear:
+        payload.seasonYear,
+
+      source:
+        payload.source,
 
       createdAt:
         fb.firestore
@@ -4041,264 +2193,123 @@
   }
 
   // =========================================================
-  // VERIFY FINAL BEFORE WRITE
+  // CREATE REGISTRATION
   // =========================================================
 
-  async function createFinalRegistration({
-    selectedItem,
+  async function createRegistration({
+    item,
     registrationRef,
+    publicRef,
     payload
   }) {
-    if (
-      !selectedItem?.isFinal
-    ) {
-      throw new Error(
-        "Це не фінал."
-      );
-    }
-
-    if (
-      !profile?.teamId
-    ) {
-      throw new Error(
-        "Команда не визначена."
-      );
-    }
-
-    const seasonYear =
-      getSeasonYearFromItem(
-        selectedItem
-      );
-
-    if (
-      !seasonYear
-    ) {
-      throw new Error(
-        "Для фіналу не визначено сезон."
-      );
-    }
-
-    const competitionId =
-      normalize(
-        selectedItem.compId
-      );
-
-    const stageId =
-      normalize(
-        selectedItem.stageKey
-      ) || "final";
-
-    const qualificationRef =
-      getFinalQualificationRef(
-        selectedItem,
-        profile.teamId
-      );
-
-    if (
-      !qualificationRef
-    ) {
-      throw new Error(
-        "Не вдалося визначити фінальну кваліфікацію."
-      );
-    }
-
     await db.runTransaction(
       async transaction => {
-        const qualificationSnap =
-          await transaction.get(
-            qualificationRef
-          );
 
-        if (
-          !qualificationSnap.exists
-        ) {
-          throw new Error(
-            "Ваша команда не має права участі у цьому фіналі."
-          );
-        }
+        /*
+         * FINAL:
+         * перевіряємо qualification.
+         */
+        if (item.isFinal) {
+          const year =
+            getSeasonYearFromItem(
+              item
+            );
 
-        const qualification =
-          qualificationSnap.data() ||
-          {};
+          if (!year) {
+            throw new Error(
+              "Не визначено сезон фіналу."
+            );
+          }
 
-        const qualificationStatus =
-          normalizeLower(
-            qualification.status
-          );
+          const qualificationRef =
+            db
+              .collection(
+                "finalQualifications"
+              )
+              .doc(year)
+              .collection("teams")
+              .doc(profile.teamId);
 
-        const qualificationTeamId =
-          normalize(
-            qualification.teamId
-          );
+          const qualificationSnap =
+            await transaction.get(
+              qualificationRef
+            );
 
-        const qualificationCompetitionId =
-          normalize(
-            qualification.competitionId
-          );
-
-        const qualificationStageId =
-          normalize(
-            qualification.stageId
-          );
-
-        const qualificationSeason =
-          normalize(
-            qualification.seasonYear
-          );
-
-        if (
-          qualificationTeamId &&
-          qualificationTeamId !==
-            profile.teamId
-        ) {
-          throw new Error(
-            "Фінальна кваліфікація належить іншій команді."
-          );
-        }
-
-        if (
-          qualificationSeason &&
-          qualificationSeason !==
-            seasonYear
-        ) {
-          throw new Error(
-            "Фінальна кваліфікація належить іншому сезону."
-          );
-        }
-
-        if (
-          qualificationCompetitionId &&
-          qualificationCompetitionId !==
-            competitionId
-        ) {
-          throw new Error(
-            "Фінальна кваліфікація належить іншому змаганню."
-          );
-        }
-
-        if (
-          qualificationStageId &&
-          qualificationStageId !==
-            stageId
-        ) {
-          throw new Error(
-            "Фінальна кваліфікація належить іншому фіналу."
-          );
-        }
-
-        if (
-          qualificationStatus !==
-          "invited"
-        ) {
           if (
-            qualificationStatus ===
-            "reserve"
+            !qualificationSnap.exists
           ) {
             throw new Error(
-              "Ваша команда зараз у резерві. Очікуйте звільнення місця."
+              "Ваша команда не має права участі у фіналі."
+            );
+          }
+
+          const q =
+            qualificationSnap.data() ||
+            {};
+
+          if (
+            normalizeLower(
+              q.status
+            ) !== "invited"
+          ) {
+            throw new Error(
+              "Право участі у фіналі зараз неактивне."
             );
           }
 
           if (
-            qualificationStatus ===
-            "declined"
+            q.competitionId &&
+            normalize(
+              q.competitionId
+            ) !== item.compId
           ) {
             throw new Error(
-              "Команда відмовилася від участі у фіналі."
+              "Кваліфікація належить іншому фіналу."
             );
           }
-
-          if (
-            qualificationStatus ===
-            "confirmed"
-          ) {
-            throw new Error(
-              "Участь у фіналі вже підтверджена."
-            );
-          }
-
-          throw new Error(
-            "Право участі у фіналі зараз неактивне."
-          );
         }
 
-        const existingReg =
+        /*
+         * Не перезаписуємо
+         * існуючу заявку.
+         */
+        const existing =
           await transaction.get(
             registrationRef
           );
 
-        if (
-          existingReg.exists
-        ) {
+        if (existing.exists) {
           throw new Error(
-            "Заявка на фінал уже подана."
+            payload.entryType === "solo"
+              ? "Ви вже подали заявку на це змагання."
+              : "Ваша команда вже подала заявку на це змагання."
           );
         }
 
+        /*
+         * Однією транзакцією:
+         *
+         * registrations
+         * +
+         * public_participants
+         */
         transaction.set(
           registrationRef,
-          payload,
-          {
-            merge: false
-          }
+          payload
+        );
+
+        transaction.set(
+          publicRef,
+          buildPublicPayload(
+            payload
+          )
         );
       }
     );
   }
 
   // =========================================================
-  // NORMAL REGISTRATION
-  // =========================================================
-
-  /*
-   * Важливо:
-   * set(... merge:false) сам по собі
-   * ПЕРЕЗАПИСУЄ існуючий документ.
-   *
-   * Тому звичайну реєстрацію теж
-   * створюємо через transaction.
-   */
-  async function createNormalRegistration({
-    registrationRef,
-    payload
-  }) {
-    await db.runTransaction(
-      async transaction => {
-        const existingSnap =
-          await transaction.get(
-            registrationRef
-          );
-
-        if (
-          existingSnap.exists
-        ) {
-          if (
-            payload.entryType ===
-            "solo"
-          ) {
-            throw new Error(
-              "Ви вже подали заявку на це змагання."
-            );
-          }
-
-          throw new Error(
-            "Ваша команда вже подала заявку на це змагання."
-          );
-        }
-
-        transaction.set(
-          registrationRef,
-          payload,
-          {
-            merge: false
-          }
-        );
-      }
-    );
-  }
-
-  // =========================================================
-  // FORM SUBMIT
+  // SUBMIT
   // =========================================================
 
   if (form) {
@@ -4308,14 +2319,12 @@
         event.preventDefault();
 
         if (
-          hpInput &&
-          hpInput.value
+          hpInput?.value
         ) {
           setMsg(
-            "Підозра на бота. Заявка не відправлена.",
+            "Підозра на бота.",
             false
           );
-
           return;
         }
 
@@ -4327,41 +2336,38 @@
             "Увійдіть у акаунт.",
             false
           );
-
           return;
         }
 
-        const picked =
-          document.querySelector(
-            'input[name="stagePick"]:checked'
-          );
+        const item =
+          getSelectedItem();
 
-        if (!picked) {
+        if (!item) {
           setMsg(
             "Оберіть змагання або етап.",
             false
           );
+          return;
+        }
+
+        /*
+         * TEAM + SOLO:
+         * команда обов'язкова.
+         */
+        if (!profile.teamId) {
+          setMsg(
+            item.entryType === "solo"
+              ? "Для SOLO ваш профіль повинен бути прив’язаний до команди."
+              : "Спочатку приєднайтесь до команди в «Мій кабінет».",
+            false
+          );
 
           return;
         }
 
-        const selectedValue =
-          String(
-            picked.value
-          );
-
-        const selectedItem =
-          lastItems.find(
-            item =>
-              eventValue(item) ===
-              selectedValue
-          );
-
-        if (
-          !selectedItem
-        ) {
+        if (!profile.teamName) {
           setMsg(
-            "Не знайдено вибране змагання.",
+            "Не знайдено вашу команду в Firebase.",
             false
           );
 
@@ -4369,34 +2375,11 @@
         }
 
         if (
-          isFinishedEvent(
-            selectedItem
-          ) ||
-          !isOpenWindow(
-            selectedItem
-          )
+          item.entryType === "solo" &&
+          !getParticipantName()
         ) {
           setMsg(
-            "Це змагання зараз недоступне для реєстрації.",
-            false
-          );
-
-          return;
-        }
-
-        if (
-          selectedItem.isFinal &&
-          !canRegisterFinal(
-            selectedItem
-          )
-        ) {
-          const finalStatus =
-            getFinalStatusUI(
-              selectedItem
-            );
-
-          setMsg(
-            finalStatus.text,
+            "Для SOLO потрібно вказати ім’я та прізвище.",
             false
           );
 
@@ -4415,130 +2398,28 @@
           return;
         }
 
-        const [
-          competitionId,
-          stageKeyRaw
-        ] =
-          selectedValue.split(
-            "||"
-          );
-
-        const stageId =
-          String(
-            stageKeyRaw ||
-            ""
-          ).trim() ||
-          null;
-
-        /*
-         * Фінал завжди командний.
-         */
-        const entryType =
-          selectedItem.isFinal
-            ? "team"
-            : (
-                selectedItem.entryType ||
-                "team"
-              );
-
-        // =====================================================
-        // TEAM CHECK
-        // =====================================================
-
-        if (
-          entryType === "team"
-        ) {
-          if (
-            !profile.teamId
-          ) {
-            setMsg(
-              "Це командне змагання. Спочатку приєднайтесь до команди в «Мій кабінет».",
-              false
-            );
-
-            return;
-          }
-
-          if (
-            !profile.teamName
-          ) {
-            setMsg(
-              "Не знайдено назву команди. Перевірте teams/{teamId}.name.",
-              false
-            );
-
-            return;
-          }
-        }
-
-        // =====================================================
-        // PARTICIPANT NAME
-        // =====================================================
-
-        const participantName =
-          String(
-            profile.fullName ||
-            profile.captain ||
-            profile.email ||
-            ""
-          ).trim();
-
-        /*
-         * Для SOLO обов'язково повинно
-         * бути ім'я учасника.
-         */
-        if (
-          entryType === "solo" &&
-          !participantName
-        ) {
+        if (!canSubmitItem(item)) {
           setMsg(
-            "Для SOLO потрібно вказати ім'я та прізвище у «Мій кабінет».",
+            "Реєстрація зараз недоступна.",
             false
           );
 
           return;
         }
 
-        // =====================================================
-        // PAYMENT
-        // =====================================================
-
-        const payment = {
-          payEnabled:
-            selectedItem.payEnabled ===
-            true,
-
-          price:
-            normalizeMoney(
-              selectedItem.price
-            ),
-
-          currency:
-            String(
-              selectedItem.currency ||
-              "UAH"
-            ).toUpperCase(),
-
-          payDetails:
-            String(
-              selectedItem.payDetails ||
-              ""
-            ).trim()
-        };
-
-        const status =
-          payment.payEnabled
-            ? "pending_payment"
-            : "confirmed";
-
-        // =====================================================
-        // REGISTRATION ID
-        // =====================================================
+        const entryType =
+          item.isFinal
+            ? "team"
+            : item.entryType;
 
         const docId =
           buildRegDocId({
-            competitionId,
-            stageId,
+            competitionId:
+              item.compId,
+
+            stageId:
+              item.stageKey,
+
             entryType,
 
             uid:
@@ -4548,6 +2429,18 @@
               profile.teamId
           });
 
+        const status =
+          item.payEnabled
+            ? "pending_payment"
+            : "confirmed";
+
+        const payload =
+          buildRegistrationPayload({
+            item,
+            entryType,
+            status
+          });
+
         const registrationRef =
           db
             .collection(
@@ -4555,264 +2448,61 @@
             )
             .doc(docId);
 
-        const finalSeasonYear =
-          selectedItem.isFinal
-            ? getSeasonYearFromItem(
-                selectedItem
-              )
-            : null;
-
-        // =====================================================
-        // PAYLOAD
-        // =====================================================
-
-        const payload = {
-          uid:
-            profile.uid,
-
-          competitionId,
-
-          stageId:
-            stageId || null,
-
-          entryType,
-
-          /*
-           * TEAM
-           */
-          teamId:
-            entryType === "team"
-              ? profile.teamId
-              : null,
-
-          teamName:
-            entryType === "team"
-              ? profile.teamName
-              : null,
-
-          /*
-           * SOLO
-           */
-          participantName:
-            entryType === "solo"
-              ? participantName
-              : null,
-
-          /*
-           * Універсальне ім'я:
-           * корисне далі для таблиць.
-           */
-          displayName:
-            entryType === "solo"
-              ? participantName
-              : profile.teamName,
-
-          captain:
-            entryType === "team"
-              ? profile.captain
-              : participantName,
-
-          phone:
-            profile.phone ||
-            "",
-
-          payEnabled:
-            payment.payEnabled,
-
-          price:
-            payment.price,
-
-          currency:
-            payment.currency,
-
-          payDetails:
-            payment.payDetails,
-
-          finalQualification:
-            selectedItem.isFinal ===
-            true,
-
-          finalInvite:
-            selectedItem.isFinal ===
-            true,
-
-          seasonYear:
-            finalSeasonYear,
-
-          source:
-            selectedItem.isFinal
-              ? "final_qualification_registration"
-              : "registration",
-
-          finalQualificationRank:
-            selectedItem.isFinal
-              ? Number(
-                  getFinalAccess(
-                    selectedItem
-                  )?.rank ||
-                  0
-                )
-              : null,
-
-          status,
-
-          createdAt:
-            fb.firestore
-              .FieldValue
-              .serverTimestamp(),
-
-          confirmedAt:
-            status === "confirmed"
-              ? fb.firestore
-                  .FieldValue
-                  .serverTimestamp()
-              : null
-        };
+        const publicRef =
+          db
+            .collection(
+              "public_participants"
+            )
+            .doc(docId);
 
         try {
           setLoading(true);
           setMsg("");
 
-          // =================================================
-          // WRITE REGISTRATION
-          // =================================================
+          await createRegistration({
+            item,
+            registrationRef,
+            publicRef,
+            payload
+          });
 
-          if (
-            selectedItem.isFinal
-          ) {
-            await createFinalRegistration({
-              selectedItem,
-              registrationRef,
-              payload
-            });
+          const participantName =
+            getParticipantName();
 
-          } else {
-            await createNormalRegistration({
-              registrationRef,
-              payload
-            });
-          }
-
-          // =================================================
-          // PUBLIC MIRROR
-          // =================================================
-
-          try {
-            const publicRef =
-              db
-                .collection(
-                  "public_participants"
-                )
-                .doc(docId);
-
-            const publicPayload =
-              buildPublicPayload({
-                uid:
-                  profile.uid,
-
-                competitionId,
-
-                stageId,
-
-                entryType,
-
-                teamId:
-                  entryType === "team"
-                    ? profile.teamId
-                    : null,
-
-                teamName:
-                  entryType === "team"
-                    ? profile.teamName
-                    : null,
-
-                /*
-                 * НОВЕ
-                 */
-                participantName:
-                  entryType === "solo"
-                    ? participantName
-                    : null,
-
-                status,
-
-                finalQualification:
-                  selectedItem.isFinal ===
-                  true,
-
-                seasonYear:
-                  finalSeasonYear
-              });
-
-            await publicRef.set(
-              publicPayload,
-              {
-                merge: false
-              }
-            );
-
-          } catch (
-            mirrorError
-          ) {
-            console.warn(
-              "[Registration] public_participants:",
-              mirrorError
-            );
-          }
-
-          // =================================================
-          // SUCCESS
-          // =================================================
-
-          if (
-            selectedItem.isFinal
-          ) {
+          if (item.isFinal) {
             setMsg(
-              payment.payEnabled
+              item.payEnabled
                 ? "Заявка на Фінал подана ✔ Очікується підтвердження оплати."
                 : "Участь у Фіналі підтверджена ✔",
               true
             );
 
           } else if (
-            entryType ===
-            "solo"
+            entryType === "solo"
           ) {
             setMsg(
-              payment.payEnabled
-                ? `Заявка учасника «${participantName}» подана ✔ Підтвердження буде після перевірки оплати.`
-                : `Заявка учасника «${participantName}» подана і підтверджена ✔`,
+              item.payEnabled
+                ? `Заявка учасника «${participantName}» подана ✔ Очікується підтвердження оплати.`
+                : `Заявка учасника «${participantName}» підтверджена ✔`,
               true
             );
 
           } else {
             setMsg(
-              payment.payEnabled
-                ? "Заявка подана ✔ Підтвердження буде після перевірки оплати."
-                : "Заявка подана і підтверджена ✔",
+              item.payEnabled
+                ? "Заявка команди подана ✔ Очікується підтвердження оплати."
+                : "Заявка команди підтверджена ✔",
               true
             );
           }
 
           form.reset();
 
-          renderProfileSummary(
-            null
-          );
+          renderProfileSummary();
 
-          if (
-            selectedItem.isFinal
-          ) {
-            await loadFinalAccess(
-              lastItems
-            );
-          }
+          await loadFinalAccess();
 
-          renderItems(
-            lastItems
-          );
-
-          refreshSubmitState();
+          renderItems();
 
         } catch (error) {
           console.error(
@@ -4821,84 +2511,26 @@
           );
 
           const code =
-            String(
-              error?.code ||
-              ""
-            ).toLowerCase();
-
-          const message =
-            String(
-              error?.message ||
-              ""
-            ).trim();
-
-          // =================================================
-          // FINAL ERROR
-          // =================================================
+            normalizeLower(
+              error?.code
+            );
 
           if (
-            selectedItem.isFinal &&
-            message
-          ) {
-            setMsg(
-              message,
-              false
-            );
-
-          // =================================================
-          // DUPLICATE
-          // =================================================
-
-          } else if (
-            message ===
-              "Ви вже подали заявку на це змагання." ||
-            message ===
-              "Ваша команда вже подала заявку на це змагання."
-          ) {
-            setMsg(
-              message,
-              false
-            );
-
-          // =================================================
-          // FIRESTORE RULES
-          // =================================================
-
-          } else if (
             code.includes(
               "permission"
             )
           ) {
-            if (
-              selectedItem.isFinal
-            ) {
-              setMsg(
-                "Firebase не дозволив реєстрацію у фінал. Перевірте finalQualifications цього сезону та Firestore Rules.",
-                false
-              );
-
-            } else if (
-              entryType ===
-              "solo"
-            ) {
-              setMsg(
-                "Firebase не дозволив SOLO-реєстрацію. Потрібно перевірити Firestore Rules для registrations.",
-                false
-              );
-
-            } else {
-              setMsg(
-                "Заявка вже існує або дані команди не збігаються з профілем. Перевірте «Мій кабінет».",
-                false
-              );
-            }
+            setMsg(
+              entryType === "solo"
+                ? "Firebase не дозволив SOLO-заявку. Перевірте Firestore Rules: SOLO повинен дозволяти teamId вашої команди."
+                : "Firebase не дозволив заявку. Перевірте Firestore Rules.",
+              false
+            );
 
           } else {
             setMsg(
-              `Помилка відправки заявки. (${
-                error?.code ||
-                "no-code"
-              })`,
+              error?.message ||
+              "Не вдалося подати заявку.",
               false
             );
           }
@@ -4908,6 +2540,104 @@
         }
       }
     );
+  }
+
+  // =========================================================
+  // AUTH
+  // =========================================================
+
+  function startAuthListener() {
+    auth.onAuthStateChanged(
+      async user => {
+        currentUser =
+          user || null;
+
+        profile = null;
+
+        if (!user) {
+          if (profileSummary) {
+            profileSummary.textContent =
+              "Увійдіть у акаунт, щоб подати заявку.";
+          }
+
+          await loadFinalAccess();
+
+          renderItems();
+
+          refreshSubmitState();
+
+          return;
+        }
+
+        try {
+          await loadProfile(user);
+
+          await loadFinalAccess();
+
+          renderItems();
+
+          renderProfileSummary();
+
+        } catch (error) {
+          console.error(
+            "[Registration] profile:",
+            error
+          );
+
+          setMsg(
+            error?.message ||
+            "Помилка профілю.",
+            false
+          );
+        }
+
+        refreshSubmitState();
+      }
+    );
+  }
+
+  // =========================================================
+  // INIT
+  // =========================================================
+
+  try {
+    if (eventOptionsEl) {
+      eventOptionsEl.innerHTML =
+        '<p class="form__hint">Завантаження списку...</p>';
+    }
+
+    /*
+     * Не беремо Firebase
+     * раніше, ніж firebase-init.js
+     * реально його створив.
+     */
+    await waitForFirebase();
+
+    startAuthListener();
+
+    await loadCompetitions();
+
+    console.info(
+      "[STOLAR CARP] Registration ready"
+    );
+
+  } catch (error) {
+    console.error(
+      "[Registration] init:",
+      error
+    );
+
+    if (eventOptionsEl) {
+      eventOptionsEl.innerHTML =
+        `<p class="form__hint" style="color:#ff6c6c;">${escapeHtml(
+          error?.message ||
+          "Помилка запуску."
+        )}</p>`;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
   }
 
 })();

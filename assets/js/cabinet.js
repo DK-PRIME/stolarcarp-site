@@ -6,25 +6,39 @@
 // ✅ lastName = Прізвище
 // ✅ fullName = Прізвище Ім'я
 // ✅ legacy fullName не розбиваємо автоматично
+//
+// ✅ редагування:
+//    - Прізвище
+//    - Ім'я
+//    - Телефон
+//    - Місто
+//
 // ✅ SOLO public_participants синхронізується при зміні ПІБ
-// ✅ TEAM-заявки не перейменовуються
-// ✅ "Моя участь" = TEAM + SOLO
-// ✅ завершені змагання ховаємо по competitions/{id}.schedule.finishAt
-// ✅ settings/app більше НЕ використовується для "Моя участь"
-// ✅ public_participants читається двома простими паралельними запитами
-// ✅ team/members не перепідписуються при кожній зміні users/{uid}
-// ✅ competition docs кешуються і читаються паралельно
+// ✅ TEAM-заявки НЕ перейменовуються
+//
+// ✅ профіль
+// ✅ аватар
+// ✅ команда
+// ✅ склад команди
+//
+// ❌ cabinet.js НЕ працює з "Моя участь"
+// ❌ cabinet.js НЕ читає competitions
+// ❌ cabinet.js НЕ читає registrations
+// ❌ cabinet.js НЕ рендерить #myCompetitions
+//
+// ✅ "Моя участь" повністю належить:
+//    assets/js/my_participation.js
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ cabinet.js LOADED v20260916-current-participation-v6"
+    "✅ cabinet.js LOADED v20260916-cabinet-core-v8"
   );
 
-  // =========================
+  // =========================================================
   // BURGER MENU
-  // =========================
+  // =========================================================
 
   const burger =
     document.getElementById(
@@ -42,17 +56,18 @@
   ) {
     burger.addEventListener(
       "click",
-      () =>
+      () => {
         nav.classList.toggle(
           "open"
-        )
+        );
+      }
     );
 
     nav.addEventListener(
       "click",
-      e => {
+      event => {
         if (
-          e.target.classList.contains(
+          event.target.classList.contains(
             "nav__link"
           )
         ) {
@@ -64,26 +79,32 @@
     );
   }
 
+  // =========================================================
+  // ADMIN
+  // =========================================================
+
   const ADMIN_UID =
     "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
-  // =========================
+  // =========================================================
   // FIREBASE WAIT
-  // =========================
+  // =========================================================
 
   async function waitFirebase(
     maxMs = 12000
   ) {
-    const t0 =
+    const startedAt =
       Date.now();
 
     while (
-      Date.now() - t0 <
+      Date.now() -
+        startedAt <
       maxMs
     ) {
       if (
         window.scAuth &&
-        window.scDb
+        window.scDb &&
+        window.firebase
       ) {
         return;
       }
@@ -102,9 +123,9 @@
     );
   }
 
-  // =========================
-  // CACHE SYSTEM
-  // =========================
+  // =========================================================
+  // CACHE
+  // =========================================================
 
   const Cache = {
     data: {
@@ -117,13 +138,7 @@
       members:
         [],
 
-      competitions:
-        [],
-
       userLastUpdate:
-        0,
-
-      compsLastUpdate:
         0
     },
 
@@ -131,25 +146,12 @@
       maxAgeMs = 60000
     ) {
       return Boolean(
-        this.data
-          .userLastUpdate &&
-        Date.now() -
-          this.data
-            .userLastUpdate <
+        this.data.userLastUpdate &&
+        (
+          Date.now() -
+            this.data.userLastUpdate <
           maxAgeMs
-      );
-    },
-
-    isCompsValid(
-      maxAgeMs = 300000
-    ) {
-      return Boolean(
-        this.data
-          .compsLastUpdate &&
-        Date.now() -
-          this.data
-            .compsLastUpdate <
-          maxAgeMs
+        )
       );
     },
 
@@ -174,17 +176,11 @@
       value
     ) {
       this.data.members =
-        value;
-    },
-
-    setComps(
-      value
-    ) {
-      this.data.competitions =
-        value;
-
-      this.data.compsLastUpdate =
-        Date.now();
+        Array.isArray(
+          value
+        )
+          ? value
+          : [];
     },
 
     get(
@@ -206,21 +202,15 @@
         members:
           [],
 
-        competitions:
-          [],
-
         userLastUpdate:
-          0,
-
-        compsLastUpdate:
           0
       };
     }
   };
 
-  // =========================
+  // =========================================================
   // DOM
-  // =========================
+  // =========================================================
 
   const statusEl =
     document.getElementById(
@@ -292,14 +282,9 @@
       "membersContainer"
     );
 
-  const myPartListEl =
-    document.getElementById(
-      "myCompetitions"
-    );
-
-  // =========================
+  // =========================================================
   // PROFILE EDIT DOM
-  // =========================
+  // =========================================================
 
   const editProfileBtn =
     document.getElementById(
@@ -346,9 +331,9 @@
       "profileEditMsg"
     );
 
-  // =========================
+  // =========================================================
   // STATE
-  // =========================
+  // =========================================================
 
   let isEditingProfile =
     false;
@@ -371,27 +356,19 @@
   let activeTeamId =
     "__INIT__";
 
-  let activeParticipationKey =
-    "";
-
-  let participationLoadSeq =
-    0;
-
-  const competitionDocCache =
-    new Map();
-
-  // =========================
+  // =========================================================
   // HELPERS
-  // =========================
+  // =========================================================
 
   function setStatus(
-    t
+    text
   ) {
     if (
       statusEl
     ) {
       statusEl.textContent =
-        t || "";
+        text ||
+        "";
     }
   }
 
@@ -414,10 +391,11 @@
   }
 
   function norm(
-    v
+    value
   ) {
     return String(
-      v ?? ""
+      value ??
+      ""
     )
       .replace(
         /\s+/g,
@@ -427,10 +405,10 @@
   }
 
   function normLower(
-    v
+    value
   ) {
     return norm(
-      v
+      value
     )
       .toLowerCase();
   }
@@ -453,10 +431,10 @@
   }
 
   function escapeHtml(
-    str
+    value
   ) {
     return String(
-      str ||
+      value ||
       ""
     )
       .replace(
@@ -494,102 +472,15 @@
     }
   }
 
-  function toMillis(
-    value
-  ) {
-    if (
-      !value
-    ) {
-      return 0;
-    }
-
-    try {
-      if (
-        typeof value
-          .toMillis ===
-        "function"
-      ) {
-        return value
-          .toMillis();
-      }
-
-      if (
-        typeof value
-          .toDate ===
-        "function"
-      ) {
-        return value
-          .toDate()
-          .getTime();
-      }
-
-      if (
-        typeof value ===
-        "number"
-      ) {
-        return Number.isFinite(
-          value
-        )
-          ? value
-          : 0;
-      }
-
-      if (
-        typeof value ===
-          "object"
-        &&
-        Number.isFinite(
-          value.seconds
-        )
-      ) {
-        return (
-          value.seconds *
-          1000
-        );
-      }
-
-      if (
-        typeof value ===
-          "object"
-        &&
-        Number.isFinite(
-          value._seconds
-        )
-      ) {
-        return (
-          value._seconds *
-          1000
-        );
-      }
-
-      const d =
-        new Date(
-          value
-        );
-
-      const ms =
-        d.getTime();
-
-      return Number.isNaN(
-        ms
-      )
-        ? 0
-        : ms;
-
-    } catch {
-      return 0;
-    }
-  }
-
-  // =========================
+  // =========================================================
   // NAME HELPERS
-  // =========================
+  // =========================================================
 
   function cleanNamePart(
-    v
+    value
   ) {
     return String(
-      v ||
+      value ||
       ""
     )
       .trim()
@@ -603,6 +494,11 @@
       );
   }
 
+  /*
+   * CANONICAL:
+   *
+   * Прізвище Ім'я
+   */
   function buildFullName(
     lastName,
     firstName
@@ -629,11 +525,21 @@
     );
   }
 
+  /*
+   * Відображення:
+   *
+   * 1. lastName + firstName
+   * 2. legacy fullName
+   * 3. legacy name
+   *
+   * Старий fullName
+   * автоматично НЕ ділимо.
+   */
   function getDisplayName(
-    u
+    userData
   ) {
     const data =
-      u ||
+      userData ||
       {};
 
     const canonical =
@@ -662,10 +568,10 @@
   }
 
   function cleanPhone(
-    v
+    value
   ) {
     return String(
-      v ||
+      value ||
       ""
     )
       .trim()
@@ -684,10 +590,10 @@
   }
 
   function cleanCity(
-    v
+    value
   ) {
     return String(
-      v ||
+      value ||
       ""
     )
       .trim()
@@ -701,9 +607,9 @@
       );
   }
 
-  // =========================
+  // =========================================================
   // SOLO PUBLIC SYNC
-  // =========================
+  // =========================================================
 
   function isSoloPublicDoc(
     docId,
@@ -735,6 +641,12 @@
     return false;
   }
 
+  /*
+   * Оновлюємо ТІЛЬКИ SOLO
+   * public_participants.
+   *
+   * TEAM-заявки не чіпаємо.
+   */
   async function syncSoloPublicParticipants(
     db,
     uid,
@@ -835,6 +747,9 @@
           displayName:
             fullName,
 
+          /*
+           * Legacy compatibility.
+           */
           captain:
             fullName
         };
@@ -877,9 +792,9 @@
     };
   }
 
-  // =========================
+  // =========================================================
   // AVATAR
-  // =========================
+  // =========================================================
 
   function setAvatarUrl(
     url
@@ -891,11 +806,16 @@
       return;
     }
 
+    const cleanUrl =
+      norm(
+        url
+      );
+
     if (
-      url
+      cleanUrl
     ) {
       avatarImgEl.src =
-        url;
+        cleanUrl;
 
       avatarImgEl.style.display =
         "block";
@@ -910,25 +830,30 @@
           "pointer";
       }
 
-    } else {
-      avatarImgEl.style.display =
-        "none";
+      return;
+    }
 
-      avatarPhEl.style.display =
-        "block";
+    avatarImgEl.removeAttribute(
+      "src"
+    );
 
-      if (
-        avatarWrapper
-      ) {
-        avatarWrapper.style.cursor =
-          "default";
-      }
+    avatarImgEl.style.display =
+      "none";
+
+    avatarPhEl.style.display =
+      "block";
+
+    if (
+      avatarWrapper
+    ) {
+      avatarWrapper.style.cursor =
+        "default";
     }
   }
 
-  // =========================
+  // =========================================================
   // CLEANUP
-  // =========================
+  // =========================================================
 
   function stopTeamSubscriptions() {
     if (
@@ -967,20 +892,14 @@
 
     activeTeamId =
       "__INIT__";
-
-    activeParticipationKey =
-      "";
-
-    participationLoadSeq +=
-      1;
   }
 
-  // =========================
-  // PROFILE EDIT
-  // =========================
+  // =========================================================
+  // PROFILE EDIT HELPERS
+  // =========================================================
 
   function setEditMsg(
-    txt,
+    text,
     type
   ) {
     if (
@@ -990,7 +909,7 @@
     }
 
     profileEditMsg.textContent =
-      txt ||
+      text ||
       "";
 
     profileEditMsg.classList.remove(
@@ -1018,12 +937,16 @@
   }
 
   function fillProfileInputs(
-    u
+    userData
   ) {
     const data =
-      u ||
+      userData ||
       {};
 
+    /*
+     * Legacy fullName
+     * НЕ ділимо.
+     */
     if (
       lastNameInput
     ) {
@@ -1062,7 +985,7 @@
   }
 
   function openEditProfile(
-    u
+    userData
   ) {
     if (
       !profileEditBox ||
@@ -1074,12 +997,16 @@
       return;
     }
 
+    const data =
+      userData ||
+      lastProfileSnap ||
+      {};
+
     isEditingProfile =
       true;
 
     lastProfileSnap =
-      u ||
-      lastProfileSnap;
+      data;
 
     profileEditBox.style.display =
       "block";
@@ -1106,22 +1033,21 @@
     }
 
     fillProfileInputs(
-      u ||
-      {}
+      data
     );
 
     if (
       getDisplayName(
-        u
+        data
       )
       &&
       (
         !norm(
-          u?.lastName
+          data.lastName
         )
         ||
         !norm(
-          u?.firstName
+          data.firstName
         )
       )
     ) {
@@ -1130,12 +1056,13 @@
         ""
       );
 
-    } else {
-      setEditMsg(
-        "",
-        ""
-      );
+      return;
     }
+
+    setEditMsg(
+      "",
+      ""
+    );
   }
 
   function closeEditProfile() {
@@ -1176,23 +1103,27 @@
     );
   }
 
-  // =========================
+  // =========================================================
   // USER RENDER
-  // =========================
+  // =========================================================
 
   function renderUserInfo(
-    u
+    userData
   ) {
+    const data =
+      userData ||
+      {};
+
     const name =
       getDisplayName(
-        u
+        data
       )
       ||
       "Без імені";
 
     const city =
       norm(
-        u?.city
+        data.city
       );
 
     if (
@@ -1223,6 +1154,9 @@
       }
     }
 
+    /*
+     * Legacy HTML support.
+     */
     if (
       captainTextEl
     ) {
@@ -1240,7 +1174,7 @@
     ) {
       userRoleEl.textContent =
         roleText(
-          u?.role
+          data.role
         );
     }
 
@@ -1248,27 +1182,35 @@
       userPhoneEl
     ) {
       userPhoneEl.textContent =
-        u?.phone ||
+        norm(
+          data.phone
+        )
+        ||
         "—";
     }
 
     setAvatarUrl(
-      u?.avatarUrl ||
+      data.avatarUrl ||
+      data.photoURL ||
       ""
     );
 
+    /*
+     * Не перетираємо поля,
+     * поки людина редагує.
+     */
     if (
       !isEditingProfile
     ) {
       fillProfileInputs(
-        u
+        data
       );
     }
   }
 
-  // =========================
-  // POPUP SYSTEM
-  // =========================
+  // =========================================================
+  // AVATAR POPUP
+  // =========================================================
 
   function openImagePopup(
     imageUrl
@@ -1285,7 +1227,8 @@
 
     if (
       !popup ||
-      !popupImg
+      !popupImg ||
+      !imageUrl
     ) {
       return;
     }
@@ -1354,14 +1297,24 @@
 
     popup.addEventListener(
       "click",
-      closeImagePopup
+      event => {
+        if (
+          event.target ===
+          popup
+          ||
+          event.target.id ===
+            "avatarPopupImg"
+        ) {
+          closeImagePopup();
+        }
+      }
     );
 
     document.addEventListener(
       "keydown",
-      e => {
+      event => {
         if (
-          e.key ===
+          event.key ===
           "Escape"
         ) {
           closeImagePopup();
@@ -1370,9 +1323,9 @@
     );
   }
 
-  // =========================
+  // =========================================================
   // MEMBERS
-  // =========================
+  // =========================================================
 
   function renderMembers(
     list
@@ -1383,13 +1336,19 @@
       return;
     }
 
+    const members =
+      Array.isArray(
+        list
+      )
+        ? list
+        : [];
+
     membersEl.innerHTML =
       "";
 
     if (
-      !list ||
-      list.length ===
-        0
+      members.length ===
+      0
     ) {
       membersEl.innerHTML =
         '<div class="form__hint">Склад команди поки порожній.</div>';
@@ -1397,176 +1356,197 @@
       return;
     }
 
-    list.forEach(
-      m => {
-        const name =
-          getDisplayName(
-            m
-          )
-          ||
-          m.email
-          ||
-          "Учасник";
+    members
+      .slice()
+      .sort(
+        (
+          a,
+          b
+        ) => {
+          const aCaptain =
+            a?.role ===
+            "captain"
+              ? 1
+              : 0;
 
-        const role =
-          roleText(
-            m.role
-          );
-
-        const avatarUrl =
-          m.avatarUrl ||
-          "";
-
-        const hasAvatar =
-          Boolean(
-            avatarUrl
-          );
-
-        const row =
-          document.createElement(
-            "div"
-          );
-
-        row.className =
-          "card";
-
-        row.style.cssText =
-          "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
-
-        const avatarHtml =
-          hasAvatar
-            ? `
-              <div
-                class="member-avatar-wrap"
-                style="
-                  width:50px;
-                  height:50px;
-                  border-radius:50%;
-                  overflow:hidden;
-                  border:2px solid #facc15;
-                  cursor:pointer;
-                "
-              >
-                <img
-                  src="${escapeHtml(
-                    avatarUrl
-                  )}"
-                  style="
-                    width:100%;
-                    height:100%;
-                    object-fit:cover;
-                  "
-                  alt=""
-                >
-              </div>
-            `
-            : `
-              <div
-                style="
-                  width:50px;
-                  height:50px;
-                  border-radius:50%;
-                  background:#1f2937;
-                  display:flex;
-                  align-items:center;
-                  justify-content:center;
-                  font-size:24px;
-                "
-              >
-                👤
-              </div>
-            `;
-
-        row.innerHTML = `
-          ${avatarHtml}
-
-          <div>
-
-            <div style="font-weight:800">
-              ${escapeHtml(
-                name
-              )}
-            </div>
-
-            <div class="form__hint">
-              ${escapeHtml(
-                role
-              )}
-            </div>
-
-          </div>
-        `;
-
-        if (
-          hasAvatar
-        ) {
-          const avatarWrap =
-            row.querySelector(
-              ".member-avatar-wrap"
-            );
+          const bCaptain =
+            b?.role ===
+            "captain"
+              ? 1
+              : 0;
 
           if (
-            avatarWrap
+            aCaptain !==
+            bCaptain
           ) {
-            avatarWrap.addEventListener(
-              "click",
-              () => {
-                openImagePopup(
-                  avatarUrl
-                );
-              }
+            return (
+              bCaptain -
+              aCaptain
             );
           }
+
+          return getDisplayName(
+            a
+          ).localeCompare(
+            getDisplayName(
+              b
+            ),
+            "uk"
+          );
         }
-
-        membersEl.appendChild(
-          row
-        );
-      }
-    );
-  }
-
-  // =========================
-  // CACHE RENDER
-  // =========================
-
-  function renderCompsFromCache() {
-    const comps =
-      Cache.get(
-        "competitions"
-      );
-
-    if (
-      !Cache.isCompsValid()
-    ) {
-      return false;
-    }
-
-    renderMyParticipation(
-      Array.isArray(
-        comps
       )
-        ? comps
-        : []
-    );
+      .forEach(
+        member => {
+          const name =
+            getDisplayName(
+              member
+            )
+            ||
+            member.email
+            ||
+            "Учасник";
 
-    return true;
+          const role =
+            roleText(
+              member.role
+            );
+
+          const avatarUrl =
+            norm(
+              member.avatarUrl ||
+              member.photoURL ||
+              ""
+            );
+
+          const hasAvatar =
+            Boolean(
+              avatarUrl
+            );
+
+          const row =
+            document.createElement(
+              "div"
+            );
+
+          row.className =
+            "card";
+
+          row.style.cssText =
+            "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
+
+          const avatarHtml =
+            hasAvatar
+              ? `
+                <div
+                  class="member-avatar-wrap"
+                  style="
+                    width:50px;
+                    height:50px;
+                    border-radius:50%;
+                    overflow:hidden;
+                    border:2px solid #facc15;
+                    cursor:pointer;
+                    flex-shrink:0;
+                  "
+                >
+                  <img
+                    src="${escapeHtml(
+                      avatarUrl
+                    )}"
+                    alt=""
+                    style="
+                      width:100%;
+                      height:100%;
+                      object-fit:cover;
+                    "
+                  >
+                </div>
+              `
+              : `
+                <div
+                  style="
+                    width:50px;
+                    height:50px;
+                    border-radius:50%;
+                    background:#1f2937;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    font-size:24px;
+                    flex-shrink:0;
+                  "
+                >
+                  👤
+                </div>
+              `;
+
+          row.innerHTML = `
+            ${avatarHtml}
+
+            <div
+              style="
+                min-width:0;
+              "
+            >
+              <div
+                style="
+                  font-weight:800;
+                  overflow:hidden;
+                  text-overflow:ellipsis;
+                "
+              >
+                ${escapeHtml(
+                  name
+                )}
+              </div>
+
+              <div class="form__hint">
+                ${escapeHtml(
+                  role
+                )}
+              </div>
+            </div>
+          `;
+
+          if (
+            hasAvatar
+          ) {
+            const avatarWrap =
+              row.querySelector(
+                ".member-avatar-wrap"
+              );
+
+            if (
+              avatarWrap
+            ) {
+              avatarWrap.addEventListener(
+                "click",
+                event => {
+                  event.stopPropagation();
+
+                  openImagePopup(
+                    avatarUrl
+                  );
+                }
+              );
+            }
+          }
+
+          membersEl.appendChild(
+            row
+          );
+        }
+      );
   }
+
+  // =========================================================
+  // CACHE RENDER
+  // =========================================================
 
   function renderFromCache() {
     const user =
       Cache.get(
         "user"
-      );
-
-    const team =
-      Cache.get(
-        "team"
-      );
-
-    const members =
-      Cache.get(
-        "members"
       );
 
     if (
@@ -1581,13 +1561,26 @@
       user
     );
 
+    const team =
+      Cache.get(
+        "team"
+      );
+
+    const members =
+      Cache.get(
+        "members"
+      );
+
     if (
-      team &&
-      teamNameEl
+      team
     ) {
-      teamNameEl.textContent =
-        team.name ||
-        "Команда";
+      if (
+        teamNameEl
+      ) {
+        teamNameEl.textContent =
+          team.name ||
+          "Команда";
+      }
 
       if (
         team.joinCode &&
@@ -1599,6 +1592,27 @@
 
         joinCodeTextEl.textContent =
           team.joinCode;
+
+      } else if (
+        joinCodePillEl
+      ) {
+        joinCodePillEl.style.display =
+          "none";
+      }
+
+    } else {
+      if (
+        teamNameEl
+      ) {
+        teamNameEl.textContent =
+          "Без команди";
+      }
+
+      if (
+        joinCodePillEl
+      ) {
+        joinCodePillEl.style.display =
+          "none";
       }
     }
 
@@ -1609,982 +1623,9 @@
     return true;
   }
 
-  // =========================
-  // COMPETITIONS
-  // =========================
-
-  async function getCompetitionDoc(
-    db,
-    compId
-  ) {
-    const id =
-      norm(
-        compId
-      );
-
-    if (
-      !id
-    ) {
-      return null;
-    }
-
-    if (
-      competitionDocCache.has(
-        id
-      )
-    ) {
-      return competitionDocCache.get(
-        id
-      );
-    }
-
-    const promise =
-      db
-        .collection(
-          "competitions"
-        )
-        .doc(
-          id
-        )
-        .get()
-        .then(
-          snap => {
-            if (
-              !snap.exists
-            ) {
-              return null;
-            }
-
-            return {
-              id:
-                snap.id,
-
-              ...(
-                snap.data() ||
-                {}
-              )
-            };
-          }
-        )
-        .catch(
-          err => {
-            console.warn(
-              "[cabinet] competition:",
-              id,
-              err
-            );
-
-            return null;
-          }
-        );
-
-    competitionDocCache.set(
-      id,
-      promise
-    );
-
-    return promise;
-  }
-
-  function getCompetitionFinishMs(
-    competition
-  ) {
-    const c =
-      competition ||
-      {};
-
-    return (
-      toMillis(
-        c?.schedule?.finishAt
-      )
-      ||
-      toMillis(
-        c?.finishAt
-      )
-      ||
-      toMillis(
-        c?.endAt
-      )
-      ||
-      0
-    );
-  }
-
-  function getCompetitionStartMs(
-    competition
-  ) {
-    const c =
-      competition ||
-      {};
-
-    return (
-      toMillis(
-        c?.schedule?.startAt
-      )
-      ||
-      toMillis(
-        c?.startAt
-      )
-      ||
-      0
-    );
-  }
-
-  function isCompetitionFinished(
-    competition
-  ) {
-    const c =
-      competition ||
-      {};
-
-    /*
-     * ГОЛОВНЕ ДЖЕРЕЛО:
-     *
-     * schedule.finishAt
-     *
-     * Якщо дата є —
-     * status уже не вгадуємо.
-     */
-    const finishMs =
-      getCompetitionFinishMs(
-        c
-      );
-
-    if (
-      finishMs >
-      0
-    ) {
-      return (
-        finishMs <
-        Date.now()
-      );
-    }
-
-    /*
-     * Fallback тільки
-     * для старих документів,
-     * де finishAt відсутній.
-     */
-    const status =
-      normLower(
-        c.status ||
-        c.state ||
-        ""
-      );
-
-    return [
-      "finished",
-      "completed",
-      "ended",
-      "archived"
-    ].includes(
-      status
-    );
-  }
-
-  function getCompetitionTitle(
-    competition,
-    fallbackId
-  ) {
-    const c =
-      competition ||
-      {};
-
-    return norm(
-      c.name ||
-      c.title ||
-      fallbackId ||
-      "Змагання"
-    );
-  }
-
-  function getStageTitle(
-    competition,
-    stageId,
-    fallbackTitle = ""
-  ) {
-    const c =
-      competition ||
-      {};
-
-    const st =
-      norm(
-        stageId
-      ) ||
-      "main";
-
-    const events =
-      Array.isArray(
-        c.events
-      )
-        ? c.events
-        : [];
-
-    const ev =
-      events.find(
-        e => {
-          const eventId =
-            norm(
-              e?.key ||
-              e?.stageId ||
-              e?.id
-            );
-
-          return (
-            eventId ===
-            st
-          );
-        }
-      );
-
-    const fromCompetition =
-      norm(
-        ev?.title ||
-        ev?.name ||
-        ev?.label ||
-        ""
-      );
-
-    if (
-      fromCompetition
-    ) {
-      return fromCompetition;
-    }
-
-    if (
-      norm(
-        fallbackTitle
-      )
-    ) {
-      return norm(
-        fallbackTitle
-      );
-    }
-
-    return (
-      st ===
-      "main"
-        ? ""
-        : st
-    );
-  }
-
-  // =========================
-  // MY PARTICIPATION
-  // =========================
-
-  function niceTitleOnly(
-    it
-  ) {
-    const comp =
-      norm(
-        it.compTitle ||
-        it.competitionTitle ||
-        it.competitionName ||
-        it.competitionId ||
-        "Змагання"
-      );
-
-    const st =
-      norm(
-        it.stageTitle ||
-        (
-          it.stageId &&
-          it.stageId !==
-            "main"
-            ? it.stageId
-            : ""
-        )
-        ||
-        ""
-      );
-
-    return (
-      st
-        ? `${escapeHtml(
-            comp
-          )} · ${escapeHtml(
-            st
-          )}`
-        : escapeHtml(
-            comp
-          )
-    );
-  }
-
-  function renderMyParticipation(
-    items
-  ) {
-    if (
-      !myPartListEl
-    ) {
-      return;
-    }
-
-    myPartListEl.innerHTML =
-      "";
-
-    if (
-      !items ||
-      items.length ===
-        0
-    ) {
-      myPartListEl.innerHTML =
-        '<div class="cabinet-small-muted">Немає участі в актуальних змаганнях.</div>';
-
-      return;
-    }
-
-    items.forEach(
-      it => {
-        const compId =
-          norm(
-            it.competitionId
-          );
-
-        const stageId =
-          norm(
-            it.stageId
-          ) ||
-          "main";
-
-        const href =
-          `participation.html?comp=${encodeURIComponent(
-            compId
-          )}`
-          +
-          `&stage=${encodeURIComponent(
-            stageId
-          )}`;
-
-        const row =
-          document.createElement(
-            "a"
-          );
-
-        row.href =
-          href;
-
-        row.className =
-          "card";
-
-        row.style.cssText =
-          "display:block;padding:14px;margin-top:10px;text-decoration:none;";
-
-        row.innerHTML = `
-          <div
-            style="
-              font-weight:950;
-              line-height:1.25;
-              text-align:center;
-              background:linear-gradient(
-                90deg,
-                #facc15 0%,
-                #7f1d1d 100%
-              );
-              -webkit-background-clip:text;
-              background-clip:text;
-              color:transparent;
-              -webkit-text-fill-color:transparent;
-            "
-          >
-            ${niceTitleOnly(
-              it
-            )}
-          </div>
-        `;
-
-        myPartListEl.appendChild(
-          row
-        );
-      }
-    );
-  }
-
-  function rowPreference(
-    row
-  ) {
-    return (
-      isSoloPublicDoc(
-        row?.id,
-        row
-      )
-        ? 2
-        : 1
-    );
-  }
-
-  async function loadMyParticipation(
-    db,
-    teamId,
-    uid,
-    options = {}
-  ) {
-    if (
-      !myPartListEl
-    ) {
-      return;
-    }
-
-    const force =
-      options.force ===
-      true;
-
-    const cleanTeamId =
-      norm(
-        teamId
-      );
-
-    const cleanUid =
-      norm(
-        uid
-      );
-
-    const contextKey =
-      `${cleanUid}||${cleanTeamId}`;
-
-    if (
-      !cleanTeamId &&
-      !cleanUid
-    ) {
-      activeParticipationKey =
-        "";
-
-      Cache.setComps(
-        []
-      );
-
-      renderMyParticipation(
-        []
-      );
-
-      return;
-    }
-
-    if (
-      !force &&
-      activeParticipationKey ===
-        contextKey &&
-      Cache.isCompsValid()
-    ) {
-      renderMyParticipation(
-        Cache.get(
-          "competitions"
-        ) ||
-        []
-      );
-
-      return;
-    }
-
-    activeParticipationKey =
-      contextKey;
-
-    const seq =
-      ++participationLoadSeq;
-
-    if (
-      !Cache.isCompsValid()
-      ||
-      force
-    ) {
-      myPartListEl.innerHTML =
-        '<div class="cabinet-small-muted">Завантаження…</div>';
-    }
-
-    try {
-
-      // ===============================================
-      // TEAM + SOLO ПАРАЛЕЛЬНО
-      // ===============================================
-
-      const teamPromise =
-        cleanTeamId
-          ? db
-              .collection(
-                "public_participants"
-              )
-              .where(
-                "teamId",
-                "==",
-                cleanTeamId
-              )
-              .get()
-              .catch(
-                err => {
-                  console.warn(
-                    "[cabinet] TEAM participation:",
-                    err
-                  );
-
-                  return null;
-                }
-              )
-          : Promise.resolve(
-              null
-            );
-
-      const uidPromise =
-        cleanUid
-          ? db
-              .collection(
-                "public_participants"
-              )
-              .where(
-                "uid",
-                "==",
-                cleanUid
-              )
-              .get()
-              .catch(
-                err => {
-                  console.warn(
-                    "[cabinet] UID participation:",
-                    err
-                  );
-
-                  return null;
-                }
-              )
-          : Promise.resolve(
-              null
-            );
-
-      const [
-        teamSnap,
-        uidSnap
-      ] =
-        await Promise.all([
-          teamPromise,
-          uidPromise
-        ]);
-
-      if (
-        seq !==
-        participationLoadSeq
-      ) {
-        return;
-      }
-
-      // ===============================================
-      // DEDUPE ПО DOC ID
-      // ===============================================
-
-      const byDocId =
-        new Map();
-
-      if (
-        teamSnap
-      ) {
-        teamSnap.forEach(
-          doc => {
-            const data =
-              doc.data() ||
-              {};
-
-            /*
-             * По teamId
-             * беремо лише TEAM.
-             */
-            if (
-              normLower(
-                data.entryType
-              ) ===
-                "solo"
-              ||
-              isSoloPublicDoc(
-                doc.id,
-                data
-              )
-            ) {
-              return;
-            }
-
-            byDocId.set(
-              doc.id,
-              {
-                id:
-                  doc.id,
-
-                ...data
-              }
-            );
-          }
-        );
-      }
-
-      if (
-        uidSnap
-      ) {
-        uidSnap.forEach(
-          doc => {
-            const data =
-              doc.data() ||
-              {};
-
-            byDocId.set(
-              doc.id,
-              {
-                id:
-                  doc.id,
-
-                ...data
-              }
-            );
-          }
-        );
-      }
-
-      const allRows =
-        Array.from(
-          byDocId.values()
-        );
-
-      if (
-        !allRows.length
-      ) {
-        Cache.setComps(
-          []
-        );
-
-        renderMyParticipation(
-          []
-        );
-
-        return;
-      }
-
-      // ===============================================
-      // ONE COMPETITION/STAGE = ONE ROW
-      // ===============================================
-
-      const byCompetitionStage =
-        new Map();
-
-      allRows.forEach(
-        row => {
-          const compId =
-            norm(
-              row.competitionId
-            );
-
-          const stageId =
-            norm(
-              row.stageId
-            ) ||
-            "main";
-
-          if (
-            !compId
-          ) {
-            return;
-          }
-
-          const key =
-            `${compId}||${stageId}`;
-
-          const existing =
-            byCompetitionStage.get(
-              key
-            );
-
-          if (
-            !existing
-            ||
-            rowPreference(
-              row
-            ) >
-              rowPreference(
-                existing
-              )
-          ) {
-            byCompetitionStage.set(
-              key,
-              row
-            );
-          }
-        }
-      );
-
-      const uniq =
-        Array.from(
-          byCompetitionStage
-            .values()
-        );
-
-      if (
-        !uniq.length
-      ) {
-        Cache.setComps(
-          []
-        );
-
-        renderMyParticipation(
-          []
-        );
-
-        return;
-      }
-
-      // ===============================================
-      // COMPETITION DOCS ПАРАЛЕЛЬНО
-      // ===============================================
-
-      const uniqueCompIds =
-        Array.from(
-          new Set(
-            uniq
-              .map(
-                row =>
-                  norm(
-                    row.competitionId
-                  )
-              )
-              .filter(
-                Boolean
-              )
-          )
-        );
-
-      const competitionPairs =
-        await Promise.all(
-          uniqueCompIds.map(
-            async compId => {
-              const competition =
-                await getCompetitionDoc(
-                  db,
-                  compId
-                );
-
-              return [
-                compId,
-                competition
-              ];
-            }
-          )
-        );
-
-      if (
-        seq !==
-        participationLoadSeq
-      ) {
-        return;
-      }
-
-      const competitionMap =
-        new Map(
-          competitionPairs
-        );
-
-      // ===============================================
-      // FILTER FINISHED
-      // ===============================================
-
-      const visible =
-        [];
-
-      uniq.forEach(
-        row => {
-          const compId =
-            norm(
-              row.competitionId
-            );
-
-          const competition =
-            competitionMap.get(
-              compId
-            );
-
-          /*
-           * Якщо competition
-           * вже видалений —
-           * orphan не показуємо.
-           */
-          if (
-            !competition
-          ) {
-            return;
-          }
-
-          /*
-           * ГОЛОВНА ЛОГІКА:
-           *
-           * schedule.finishAt < now
-           * = завершене
-           * = не показуємо.
-           */
-          if (
-            isCompetitionFinished(
-              competition
-            )
-          ) {
-            return;
-          }
-
-          const stageId =
-            norm(
-              row.stageId
-            ) ||
-            "main";
-
-          visible.push({
-            ...row,
-
-            compTitle:
-              getCompetitionTitle(
-                competition,
-                compId
-              ),
-
-            stageTitle:
-              getStageTitle(
-                competition,
-                stageId,
-                row.stageName ||
-                row.stageTitle ||
-                ""
-              ),
-
-            _competitionStart:
-              getCompetitionStartMs(
-                competition
-              ),
-
-            _competitionFinish:
-              getCompetitionFinishMs(
-                competition
-              ),
-
-            _registrationTime:
-              toMillis(
-                row.updatedAt
-              )
-              ||
-              toMillis(
-                row.confirmedAt
-              )
-              ||
-              toMillis(
-                row.createdAt
-              )
-              ||
-              0
-          });
-        }
-      );
-
-      if (
-        seq !==
-        participationLoadSeq
-      ) {
-        return;
-      }
-
-      // ===============================================
-      // SORT
-      // ===============================================
-
-      visible.sort(
-        (
-          a,
-          b
-        ) => {
-          const aStart =
-            a._competitionStart ||
-            0;
-
-          const bStart =
-            b._competitionStart ||
-            0;
-
-          if (
-            aStart &&
-            bStart &&
-            aStart !==
-              bStart
-          ) {
-            return (
-              aStart -
-              bStart
-            );
-          }
-
-          if (
-            aStart &&
-            !bStart
-          ) {
-            return -1;
-          }
-
-          if (
-            !aStart &&
-            bStart
-          ) {
-            return 1;
-          }
-
-          return (
-            b._registrationTime -
-            a._registrationTime
-          );
-        }
-      );
-
-      Cache.setComps(
-        visible
-      );
-
-      renderMyParticipation(
-        visible
-      );
-
-    } catch (
-      err
-    ) {
-      console.error(
-        "[cabinet] participation load:",
-        err
-      );
-
-      if (
-        seq !==
-        participationLoadSeq
-      ) {
-        return;
-      }
-
-      const cached =
-        Cache.get(
-          "competitions"
-        );
-
-      if (
-        Array.isArray(
-          cached
-        )
-        &&
-        cached.length
-      ) {
-        renderMyParticipation(
-          cached
-        );
-
-      } else {
-        renderMyParticipation(
-          []
-        );
-      }
-
-      myPartListEl.insertAdjacentHTML(
-        "beforeend",
-        '<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Не вдалося оновити список участі.</div>'
-      );
-    }
-  }
-
-  // =========================
-  // TEAM & USER SUBSCRIPTIONS
-  // =========================
+  // =========================================================
+  // TEAM
+  // =========================================================
 
   function subscribeTeam(
     db,
@@ -2627,6 +1668,9 @@
       return;
     }
 
+    /*
+     * TEAM document.
+     */
     unsubTeam =
       db
         .collection(
@@ -2651,27 +1695,34 @@
                   "Команда";
               }
 
+              if (
+                joinCodePillEl
+              ) {
+                joinCodePillEl.style.display =
+                  "none";
+              }
+
               return;
             }
 
-            const t =
+            const team =
               snap.data() ||
               {};
 
             Cache.setTeam(
-              t
+              team
             );
 
             if (
               teamNameEl
             ) {
               teamNameEl.textContent =
-                t.name ||
+                team.name ||
                 "Команда";
             }
 
             if (
-              t.joinCode &&
+              team.joinCode &&
               joinCodePillEl &&
               joinCodeTextEl
             ) {
@@ -2679,7 +1730,7 @@
                 "inline-flex";
 
               joinCodeTextEl.textContent =
-                t.joinCode;
+                team.joinCode;
 
             } else if (
               joinCodePillEl
@@ -2697,6 +1748,9 @@
           }
         );
 
+    /*
+     * TEAM MEMBERS.
+     */
     unsubMembers =
       db
         .collection(
@@ -2713,13 +1767,13 @@
               [];
 
             qs.forEach(
-              d => {
+              doc => {
                 list.push({
                   id:
-                    d.id,
+                    doc.id,
 
                   ...(
-                    d.data() ||
+                    doc.data() ||
                     {}
                   )
                 });
@@ -2744,7 +1798,8 @@
             renderMembers(
               Cache.get(
                 "members"
-              ) ||
+              )
+              ||
               []
             );
           }
@@ -2760,11 +1815,15 @@
         teamId
       );
 
+    /*
+     * Якщо teamId не змінився —
+     * не створюємо нові listeners.
+     */
     if (
       nextTeamId ===
       activeTeamId
     ) {
-      return false;
+      return;
     }
 
     stopTeamSubscriptions();
@@ -2776,29 +1835,28 @@
       db,
       nextTeamId
     );
-
-    return true;
   }
 
+  // =========================================================
+  // USER
+  // =========================================================
+
   function subscribeUser(
-    auth,
     db,
     uid
   ) {
-    renderCompsFromCache();
-
-    const hasUserCache =
+    const hasCache =
       renderFromCache();
 
     if (
-      !hasUserCache
+      !hasCache
     ) {
       setStatus(
         "Завантаження…"
       );
-
-      showContent();
     }
+
+    showContent();
 
     unsubUser =
       db
@@ -2822,56 +1880,26 @@
               return;
             }
 
-            const u =
+            const userData =
               snap.data() ||
               {};
 
-            const teamId =
-              norm(
-                u.teamId
-              );
-
             Cache.setUser(
-              u
+              userData
             );
 
             lastProfileSnap =
-              u;
+              userData;
 
             renderUserInfo(
-              u
+              userData
             );
 
-            const teamChanged =
-              ensureTeamSubscription(
-                db,
-                teamId
-              );
-
-            const participationKey =
-              `${uid}||${teamId}`;
-
-            /*
-             * Зміна ПІБ / телефона /
-             * аватара не перезапускає
-             * "Мою участь".
-             */
-            if (
-              teamChanged
-              ||
-              activeParticipationKey !==
-                participationKey
-            ) {
-              loadMyParticipation(
-                db,
-                teamId,
-                uid,
-                {
-                  force:
-                    teamChanged
-                }
-              );
-            }
+            ensureTeamSubscription(
+              db,
+              userData.teamId ||
+              ""
+            );
 
             setStatus(
               "Кабінет завантажено."
@@ -2895,11 +1923,12 @@
 
           err => {
             console.error(
+              "[cabinet] user:",
               err
             );
 
             if (
-              !hasUserCache
+              !hasCache
             ) {
               setStatus(
                 "Помилка читання профілю."
@@ -2911,9 +1940,9 @@
         );
   }
 
-  // =========================
-  // CLOUDINARY WIDGET
-  // =========================
+  // =========================================================
+  // CLOUDINARY
+  // =========================================================
 
   function setupCloudinaryWidget(
     auth,
@@ -2940,14 +1969,14 @@
       !window.cloudinary
     ) {
       console.warn(
-        "Cloudinary Widget не доступний"
+        "[cabinet] Cloudinary Widget не доступний"
       );
 
       return;
     }
 
     function setMsg(
-      txt,
+      text,
       type
     ) {
       if (
@@ -2957,7 +1986,7 @@
       }
 
       msgEl.textContent =
-        txt ||
+        text ||
         "";
 
       msgEl.classList.remove(
@@ -3002,7 +2031,7 @@
         }
 
         const widget =
-          cloudinary
+          window.cloudinary
             .createUploadWidget(
               {
                 cloudName:
@@ -3089,6 +2118,7 @@
                   error
                 ) {
                   console.error(
+                    "[cabinet] cloudinary:",
                     error
                   );
 
@@ -3101,16 +2131,50 @@
                 }
 
                 if (
+                  !result ||
                   result.event !==
-                  "success"
+                    "success"
                 ) {
+                  return;
+                }
+
+                const secureUrl =
+                  norm(
+                    result.info
+                      ?.secure_url
+                  );
+
+                if (
+                  !secureUrl
+                ) {
+                  setMsg(
+                    "Cloudinary не повернув URL",
+                    "err"
+                  );
+
                   return;
                 }
 
                 try {
                   setMsg(
-                    "Зберігаю…"
+                    "Зберігаю…",
+                    ""
                   );
+
+                  const update = {
+                    avatarUrl:
+                      secureUrl
+                  };
+
+                  const ts =
+                    serverTimestamp();
+
+                  if (
+                    ts
+                  ) {
+                    update.updatedAt =
+                      ts;
+                  }
 
                   await db
                     .collection(
@@ -3120,11 +2184,7 @@
                       user.uid
                     )
                     .set(
-                      {
-                        avatarUrl:
-                          result.info
-                            .secure_url
-                      },
+                      update,
                       {
                         merge:
                           true
@@ -3132,8 +2192,7 @@
                     );
 
                   setAvatarUrl(
-                    result.info
-                      .secure_url
+                    secureUrl
                   );
 
                   setMsg(
@@ -3155,6 +2214,7 @@
                   err
                 ) {
                   console.error(
+                    "[cabinet] avatar save:",
                     err
                   );
 
@@ -3171,9 +2231,9 @@
     );
   }
 
-  // =========================
+  // =========================================================
   // PROFILE EDIT EVENTS
-  // =========================
+  // =========================================================
 
   function setupProfileEdit(
     auth,
@@ -3196,6 +2256,10 @@
       return;
     }
 
+    // ---------------------------------------------------------
+    // EDIT
+    // ---------------------------------------------------------
+
     editProfileBtn.addEventListener(
       "click",
       () => {
@@ -3203,15 +2267,20 @@
           lastProfileSnap ||
           Cache.get(
             "user"
-          )
+          ) ||
+          {}
         );
       }
     );
 
+    // ---------------------------------------------------------
+    // CANCEL
+    // ---------------------------------------------------------
+
     cancelProfileBtn.addEventListener(
       "click",
       () => {
-        const u =
+        const current =
           lastProfileSnap ||
           Cache.get(
             "user"
@@ -3219,12 +2288,16 @@
           {};
 
         fillProfileInputs(
-          u
+          current
         );
 
         closeEditProfile();
       }
     );
+
+    // ---------------------------------------------------------
+    // SAVE
+    // ---------------------------------------------------------
 
     saveProfileBtn.addEventListener(
       "click",
@@ -3333,15 +2406,19 @@
           {};
 
         const nameChanged =
-          norm(
-            previous.lastName
-          ) !==
+          (
+            norm(
+              previous.lastName
+            ) !==
             lastName
+          )
           ||
-          norm(
-            previous.firstName
-          ) !==
-            firstName;
+          (
+            norm(
+              previous.firstName
+            ) !==
+            firstName
+          );
 
         try {
           isSavingProfile =
@@ -3351,10 +2428,15 @@
             true;
 
           setEditMsg(
-            "Зберігаю…"
+            "Зберігаю…",
+            ""
           );
 
-          const localUpd = {
+          // ===================================================
+          // 1. USERS
+          // ===================================================
+
+          const localUpdate = {
             lastName,
             firstName,
             fullName,
@@ -3365,8 +2447,8 @@
               ""
           };
 
-          const firestoreUpd = {
-            ...localUpd
+          const firestoreUpdate = {
+            ...localUpdate
           };
 
           const ts =
@@ -3375,13 +2457,9 @@
           if (
             ts
           ) {
-            firestoreUpd.updatedAt =
+            firestoreUpdate.updatedAt =
               ts;
           }
-
-          // ===============================================
-          // 1. USERS
-          // ===============================================
 
           await db
             .collection(
@@ -3391,16 +2469,16 @@
               user.uid
             )
             .set(
-              firestoreUpd,
+              firestoreUpdate,
               {
                 merge:
                   true
               }
             );
 
-          // ===============================================
+          // ===================================================
           // 2. SOLO PUBLIC SYNC
-          // ===============================================
+          // ===================================================
 
           let publicSyncError =
             null;
@@ -3422,25 +2500,25 @@
                 );
 
             } catch (
-              syncErr
+              syncError
             ) {
               publicSyncError =
-                syncErr;
+                syncError;
 
               console.error(
                 "❌ SOLO public_participants sync error:",
-                syncErr
+                syncError
               );
             }
           }
 
-          // ===============================================
+          // ===================================================
           // 3. LOCAL CACHE
-          // ===============================================
+          // ===================================================
 
           lastProfileSnap = {
             ...previous,
-            ...localUpd
+            ...localUpdate
           };
 
           Cache.setUser(
@@ -3451,15 +2529,15 @@
             lastProfileSnap
           );
 
-          // ===============================================
+          // ===================================================
           // RESULT
-          // ===============================================
+          // ===================================================
 
           if (
             publicSyncError
           ) {
             setEditMsg(
-              `Профіль збережено: ${fullName}. Але SOLO-список не синхронізовано. Перевірте Firestore Rules.`,
+              `Профіль збережено: ${fullName}. Але SOLO-заявки не синхронізовано.`,
               "err"
             );
 
@@ -3491,10 +2569,11 @@
           );
 
         } catch (
-          e
+          error
         ) {
           console.error(
-            e
+            "[cabinet] profile save:",
+            error
           );
 
           setEditMsg(
@@ -3513,21 +2592,21 @@
     );
   }
 
-  // =========================
+  // =========================================================
   // INIT
-  // =========================
+  // =========================================================
 
   (async () => {
     try {
-      const hasComps =
-        renderCompsFromCache();
-
-      const hasUser =
+      /*
+       * Якщо є локальний кеш профілю —
+       * показуємо одразу.
+       */
+      const hasUserCache =
         renderFromCache();
 
       if (
-        hasComps ||
-        hasUser
+        hasUserCache
       ) {
         showContent();
 
@@ -3597,7 +2676,6 @@
           }
 
           subscribeUser(
-            auth,
             db,
             user.uid
           );
@@ -3617,17 +2695,18 @@
       );
 
     } catch (
-      err
+      error
     ) {
       console.error(
-        err
+        "[cabinet] init:",
+        error
       );
 
       setStatus(
         "Помилка: " +
         (
-          err?.message ||
-          err
+          error?.message ||
+          error
         )
       );
 

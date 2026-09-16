@@ -8,15 +8,16 @@
 // ✅ legacy fullName не розбиваємо автоматично
 // ✅ SOLO public_participants синхронізується при зміні ПІБ
 // ✅ TEAM-заявки не перейменовуються
-// ✅ "Моя участь" = TEAM + SOLO
-// ✅ оптимізація: без realtime listeners на public_participants
-// ✅ оптимізація: team/members не перепідписуються при кожній зміні users/{uid}
-// ✅ оптимізація: competition meta завантажується паралельно і кешується
+// ✅ "Моя участь" показує ТІЛЬКИ активне змагання/етап
+// ✅ activeCompetitionId + activeStageId беремо з settings/app
+// ✅ public_participants читаємо одним запитом по activeCompetitionId
+// ✅ team/members не перепідписуються при кожній зміні users/{uid}
+// ✅ competition meta кешується
 
 (function () {
   "use strict";
 
-  console.log("✅ cabinet.js LOADED v20260916-optimized-v3");
+  console.log("✅ cabinet.js LOADED v20260916-active-only-v5");
 
   // =========================
   // BURGER MENU
@@ -70,7 +71,10 @@
 
       await new Promise(
         (resolve) =>
-          setTimeout(resolve, 100)
+          setTimeout(
+            resolve,
+            100
+          )
       );
     }
 
@@ -158,7 +162,7 @@
   };
 
   // =========================
-  // DOM ELEMENTS
+  // DOM
   // =========================
 
   const statusEl =
@@ -307,26 +311,18 @@
   let unsubMembers =
     null;
 
-  /*
-   * Команда перепідписується
-   * тільки якщо teamId реально змінився.
-   */
   let activeTeamId =
     "__INIT__";
 
-  /*
-   * "Моя участь" тепер
-   * одноразове завантаження.
-   */
   let activeParticipationKey =
     "";
 
   let participationLoadSeq =
     0;
 
-  /*
-   * Кеш competition.
-   */
+  let activeAppContextPromise =
+    null;
+
   const competitionDocCache =
     new Map();
 
@@ -538,6 +534,130 @@
   }
 
   // =========================
+  // ACTIVE COMPETITION / STAGE
+  // =========================
+
+  async function getActiveAppContext(
+    db,
+    force = false
+  ) {
+    if (
+      !force &&
+      activeAppContextPromise
+    ) {
+      return activeAppContextPromise;
+    }
+
+    activeAppContextPromise =
+      (async () => {
+        try {
+          const snap =
+            await db
+              .collection(
+                "settings"
+              )
+              .doc(
+                "app"
+              )
+              .get();
+
+          if (
+            !snap.exists
+          ) {
+            return {
+              competitionId:
+                "",
+              stageId:
+                ""
+            };
+          }
+
+          const data =
+            snap.data() ||
+            {};
+
+          return {
+            competitionId:
+              norm(
+                data.activeCompetitionId
+              ),
+
+            stageId:
+              norm(
+                data.activeStageId
+              ) ||
+              "main"
+          };
+
+        } catch (
+          err
+        ) {
+          console.warn(
+            "[cabinet] settings/app:",
+            err
+          );
+
+          return {
+            competitionId:
+              "",
+            stageId:
+              ""
+          };
+        }
+      })();
+
+    return activeAppContextPromise;
+  }
+
+  function stageMatches(
+    rowStageId,
+    activeStageId
+  ) {
+    const rowStage =
+      norm(
+        rowStageId
+      ) ||
+      "main";
+
+    const wanted =
+      norm(
+        activeStageId
+      ) ||
+      "main";
+
+    const rowRaw =
+      rowStage.replace(
+        /^stage-/,
+        ""
+      );
+
+    const wantedRaw =
+      wanted.replace(
+        /^stage-/,
+        ""
+      );
+
+    return (
+      rowStage ===
+        wanted
+      ||
+      rowStage ===
+        `stage-${wantedRaw}`
+      ||
+      rowRaw ===
+        wantedRaw
+      ||
+      (
+        wanted ===
+          "main"
+        &&
+        rowStage ===
+          "main"
+      )
+    );
+  }
+
+  // =========================
   // SOLO PUBLIC SYNC
   // =========================
 
@@ -551,7 +671,8 @@
     if (
       normLower(
         d.entryType
-      ) === "solo"
+      ) ===
+      "solo"
     ) {
       return true;
     }
@@ -587,7 +708,6 @@
       return {
         found:
           0,
-
         updated:
           0
       };
@@ -611,7 +731,6 @@
       return {
         found:
           0,
-
         updated:
           0
       };
@@ -647,7 +766,6 @@
       return {
         found:
           snap.size,
-
         updated:
           0
       };
@@ -693,7 +811,6 @@
     return {
       found:
         snap.size,
-
       updated:
         refs.length
     };
@@ -791,16 +908,15 @@
     activeParticipationKey =
       "";
 
-    /*
-     * Скасовуємо логічно
-     * незавершені async loads.
-     */
+    activeAppContextPromise =
+      null;
+
     participationLoadSeq +=
       1;
   }
 
   // =========================
-  // PROFILE EDIT HELPERS
+  // PROFILE EDIT
   // =========================
 
   function setEditMsg(
@@ -843,9 +959,10 @@
       u || {};
 
     /*
-     * Legacy fullName
-     * НЕ розбиваємо.
+     * Старий fullName
+     * НЕ розділяємо автоматично.
      */
+
     if (
       lastNameInput
     ) {
@@ -926,15 +1043,20 @@
     }
 
     fillProfileInputs(
-      u || {}
+      u ||
+      {}
     );
 
     if (
-      getDisplayName(u) &&
+      getDisplayName(
+        u
+      )
+      &&
       (
         !norm(
           u?.lastName
-        ) ||
+        )
+        ||
         !norm(
           u?.firstName
         )
@@ -1152,7 +1274,8 @@
         () => {
           if (
             avatarImgEl.style.display !==
-              "none" &&
+              "none"
+            &&
             avatarImgEl.src
           ) {
             openImagePopup(
@@ -1182,7 +1305,7 @@
   }
 
   // =========================
-  // RENDER MEMBERS
+  // MEMBERS
   // =========================
 
   function renderMembers(list) {
@@ -1197,7 +1320,8 @@
 
     if (
       !list ||
-      list.length === 0
+      list.length ===
+        0
     ) {
       membersEl.innerHTML =
         '<div class="form__hint">Склад команди поки порожній.</div>';
@@ -1244,9 +1368,6 @@
             ? `
               <div
                 class="member-avatar-wrap"
-                data-avatar="${escapeHtml(
-                  avatarUrl
-                )}"
                 style="
                   width:50px;
                   height:50px;
@@ -1254,15 +1375,6 @@
                   overflow:hidden;
                   border:2px solid #facc15;
                   cursor:pointer;
-                  transition:transform .2s,box-shadow .2s;
-                "
-                onmouseover="
-                  this.style.transform='scale(1.05)';
-                  this.style.boxShadow='0 0 10px rgba(250,204,21,.4)'
-                "
-                onmouseout="
-                  this.style.transform='';
-                  this.style.boxShadow=''
                 "
               >
                 <img
@@ -1289,7 +1401,6 @@
                   align-items:center;
                   justify-content:center;
                   font-size:24px;
-                  cursor:default;
                 "
               >
                 👤
@@ -1301,11 +1412,15 @@
 
           <div>
             <div style="font-weight:800">
-              ${escapeHtml(name)}
+              ${escapeHtml(
+                name
+              )}
             </div>
 
             <div class="form__hint">
-              ${escapeHtml(role)}
+              ${escapeHtml(
+                role
+              )}
             </div>
           </div>
         `;
@@ -1350,20 +1465,20 @@
       );
 
     if (
-      Cache.isCompsValid()
+      !Cache.isCompsValid()
     ) {
-      renderMyParticipation(
-        Array.isArray(
-          comps
-        )
-          ? comps
-          : []
-      );
-
-      return true;
+      return false;
     }
 
-    return false;
+    renderMyParticipation(
+      Array.isArray(
+        comps
+      )
+        ? comps
+        : []
+    );
+
+    return true;
   }
 
   function renderFromCache() {
@@ -1422,31 +1537,8 @@
   }
 
   // =========================
-  // MY PARTICIPATION
+  // COMPETITION META
   // =========================
-
-  function toMillis(ts) {
-    if (
-      !ts
-    ) {
-      return 0;
-    }
-
-    if (
-      ts.toMillis
-    ) {
-      return ts.toMillis();
-    }
-
-    try {
-      return +new Date(
-        ts
-      );
-
-    } catch {
-      return 0;
-    }
-  }
 
   async function getCompetitionDoc(
     db,
@@ -1485,8 +1577,10 @@
         .then(
           snap =>
             snap.exists
-              ? snap.data() ||
-                {}
+              ? (
+                  snap.data() ||
+                  {}
+                )
               : null
         )
         .catch(
@@ -1555,7 +1649,8 @@
               "Змагання",
 
             stageTitle:
-              st === "main"
+              st ===
+                "main"
                 ? ""
                 : st
           };
@@ -1623,6 +1718,10 @@
     return promise;
   }
 
+  // =========================
+  // MY PARTICIPATION
+  // =========================
+
   function niceTitleOnly(it) {
     const comp =
       norm(
@@ -1647,8 +1746,14 @@
       );
 
     return st
-      ? `${escapeHtml(comp)} · ${escapeHtml(st)}`
-      : escapeHtml(comp);
+      ? `${escapeHtml(
+          comp
+        )} · ${escapeHtml(
+          st
+        )}`
+      : escapeHtml(
+          comp
+        );
   }
 
   function renderMyParticipation(
@@ -1669,7 +1774,7 @@
         0
     ) {
       myPartListEl.innerHTML =
-        '<div class="cabinet-small-muted">Поки що немає участі.</div>';
+        '<div class="cabinet-small-muted">Немає участі в активному змаганні.</div>';
 
       return;
     }
@@ -1726,7 +1831,9 @@
               -webkit-text-fill-color:transparent;
             "
           >
-            ${niceTitleOnly(it)}
+            ${niceTitleOnly(
+              it
+            )}
           </div>
         `;
 
@@ -1737,21 +1844,41 @@
     );
   }
 
-  function rowPreference(
-    row
+  function rowBelongsToUser(
+    docId,
+    data,
+    teamId,
+    uid
   ) {
-    /*
-     * Якщо на одному competition/stage
-     * є дубль TEAM + SOLO для UID,
-     * SOLO має пріоритет.
-     */
-    return (
-      normLower(
-        row?.entryType
-      ) === "solo"
-    )
-      ? 2
-      : 1;
+    const d =
+      data ||
+      {};
+
+    const isSolo =
+      isSoloPublicDoc(
+        docId,
+        d
+      );
+
+    if (
+      isSolo
+    ) {
+      return (
+        norm(
+          d.uid
+        ) ===
+        uid
+      );
+    }
+
+    return Boolean(
+      teamId
+      &&
+      norm(
+        d.teamId
+      ) ===
+      teamId
+    );
   }
 
   async function loadMyParticipation(
@@ -1780,9 +1907,6 @@
         uid
       );
 
-    const contextKey =
-      `${cleanUid}||${cleanTeamId}`;
-
     if (
       !cleanTeamId &&
       !cleanUid
@@ -1801,100 +1925,19 @@
       return;
     }
 
-    if (
-      !force &&
-      activeParticipationKey ===
-        contextKey &&
-      Cache.isCompsValid()
-    ) {
-      renderMyParticipation(
-        Cache.get(
-          "competitions"
-        ) ||
-        []
-      );
-
-      return;
-    }
-
-    activeParticipationKey =
-      contextKey;
-
     const seq =
       ++participationLoadSeq;
 
-    if (
-      !Cache.isCompsValid() ||
-      force
-    ) {
-      myPartListEl.innerHTML =
-        '<div class="cabinet-small-muted">Завантаження…</div>';
-    }
-
     try {
       /*
-       * Обидва запити йдуть ПАРАЛЕЛЬНО.
+       * 1. Беремо тільки
+       * активне змагання/етап.
        */
-      const teamPromise =
-        cleanTeamId
-          ? db
-              .collection(
-                "public_participants"
-              )
-              .where(
-                "teamId",
-                "==",
-                cleanTeamId
-              )
-              .get()
-              .catch(
-                err => {
-                  console.warn(
-                    "[cabinet] TEAM participation:",
-                    err
-                  );
-
-                  return null;
-                }
-              )
-          : Promise.resolve(
-              null
-            );
-
-      const uidPromise =
-        cleanUid
-          ? db
-              .collection(
-                "public_participants"
-              )
-              .where(
-                "uid",
-                "==",
-                cleanUid
-              )
-              .get()
-              .catch(
-                err => {
-                  console.warn(
-                    "[cabinet] UID participation:",
-                    err
-                  );
-
-                  return null;
-                }
-              )
-          : Promise.resolve(
-              null
-            );
-
-      const [
-        teamSnap,
-        uidSnap
-      ] =
-        await Promise.all([
-          teamPromise,
-          uidPromise
-        ]);
+      const active =
+        await getActiveAppContext(
+          db,
+          force
+        );
 
       if (
         seq !==
@@ -1903,140 +1946,138 @@
         return;
       }
 
-      /*
-       * Dedupe по Firestore doc ID.
-       */
-      const byDocId =
-        new Map();
+      const activeCompId =
+        norm(
+          active.competitionId
+        );
+
+      const activeStageId =
+        norm(
+          active.stageId
+        ) ||
+        "main";
+
+      const contextKey =
+        `${cleanUid}||${cleanTeamId}||${activeCompId}||${activeStageId}`;
 
       if (
-        teamSnap
+        !force
+        &&
+        activeParticipationKey ===
+          contextKey
+        &&
+        Cache.isCompsValid()
       ) {
-        teamSnap.forEach(
-          d => {
-            const data =
-              d.data() ||
-              {};
-
-            /*
-             * По teamId беремо
-             * лише TEAM.
-             *
-             * SOLO з тієї ж команди
-             * сюди не підмішуємо.
-             */
-            if (
-              normLower(
-                data.entryType
-              ) !== "team"
-            ) {
-              return;
-            }
-
-            byDocId.set(
-              d.id,
-              {
-                id:
-                  d.id,
-
-                ...data
-              }
-            );
-          }
+        renderMyParticipation(
+          Cache.get(
+            "competitions"
+          ) ||
+          []
         );
+
+        return;
+      }
+
+      activeParticipationKey =
+        contextKey;
+
+      /*
+       * Нема активного competitionId —
+       * нічого старого не показуємо.
+       */
+      if (
+        !activeCompId
+      ) {
+        Cache.setComps(
+          []
+        );
+
+        renderMyParticipation(
+          []
+        );
+
+        return;
       }
 
       if (
-        uidSnap
+        !Cache.isCompsValid() ||
+        force
       ) {
-        uidSnap.forEach(
-          d => {
-            byDocId.set(
-              d.id,
-              {
-                id:
-                  d.id,
-
-                ...(
-                  d.data() ||
-                  {}
-                )
-              }
-            );
-          }
-        );
+        myPartListEl.innerHTML =
+          '<div class="cabinet-small-muted">Завантаження…</div>';
       }
 
       /*
-       * Один competition/stage
-       * у списку показуємо один раз.
+       * 2. ОДИН запит:
+       * тільки activeCompetitionId.
        */
-      const byCompetitionStage =
-        new Map();
-
-      Array
-        .from(
-          byDocId.values()
-        )
-        .forEach(
-          row => {
-            const compId =
-              norm(
-                row.competitionId
-              );
-
-            const stageId =
-              norm(
-                row.stageId
-              ) ||
-              "main";
-
-            if (
-              !compId
-            ) {
-              return;
-            }
-
-            const key =
-              `${compId}||${stageId}`;
-
-            const existing =
-              byCompetitionStage.get(
-                key
-              );
-
-            if (
-              !existing ||
-              rowPreference(
-                row
-              ) >
-                rowPreference(
-                  existing
-                )
-            ) {
-              byCompetitionStage.set(
-                key,
-                row
-              );
-            }
-          }
-        );
-
-      const uniq =
-        Array.from(
-          byCompetitionStage.values()
-        );
+      const snap =
+        await db
+          .collection(
+            "public_participants"
+          )
+          .where(
+            "competitionId",
+            "==",
+            activeCompId
+          )
+          .get();
 
       if (
-        !uniq.length
+        seq !==
+        participationLoadSeq
       ) {
-        if (
-          seq !==
-          participationLoadSeq
-        ) {
-          return;
+        return;
+      }
+
+      const rows =
+        [];
+
+      snap.forEach(
+        doc => {
+          const data =
+            doc.data() ||
+            {};
+
+          /*
+           * Тільки наша команда
+           * або наш SOLO.
+           */
+          if (
+            !rowBelongsToUser(
+              doc.id,
+              data,
+              cleanTeamId,
+              cleanUid
+            )
+          ) {
+            return;
+          }
+
+          /*
+           * Тільки активний етап.
+           */
+          if (
+            !stageMatches(
+              data.stageId,
+              activeStageId
+            )
+          ) {
+            return;
+          }
+
+          rows.push({
+            id:
+              doc.id,
+
+            ...data
+          });
         }
+      );
 
+      if (
+        !rows.length
+      ) {
         Cache.setComps(
           []
         );
@@ -2049,55 +2090,48 @@
       }
 
       /*
-       * Всі competition meta
-       * завантажуються ПАРАЛЕЛЬНО.
+       * На одному active competition/stage
+       * показуємо один рядок.
+       *
+       * SOLO має пріоритет
+       * над legacy TEAM-дублем.
        */
-      const enriched =
-        await Promise.all(
-          uniq.map(
-            async it => {
-              const meta =
-                await getCompetitionMeta(
-                  db,
-                  norm(
-                    it.competitionId
-                  ),
-                  norm(
-                    it.stageId
-                  ) ||
-                    "main"
-                );
+      rows.sort(
+        (
+          a,
+          b
+        ) => {
+          const aSolo =
+            isSoloPublicDoc(
+              a.id,
+              a
+            )
+              ? 1
+              : 0;
 
-              return {
-                ...it,
+          const bSolo =
+            isSoloPublicDoc(
+              b.id,
+              b
+            )
+              ? 1
+              : 0;
 
-                compTitle:
-                  meta.compTitle ||
-                  it.competitionTitle ||
-                  it.competitionName ||
-                  norm(
-                    it.competitionId
-                  ),
+          return (
+            bSolo -
+            aSolo
+          );
+        }
+      );
 
-                stageTitle:
-                  meta.stageTitle ||
-                  it.stageName ||
-                  "",
+      const picked =
+        rows[0];
 
-                _sortTime:
-                  toMillis(
-                    it.updatedAt
-                  ) ||
-                  toMillis(
-                    it.confirmedAt
-                  ) ||
-                  toMillis(
-                    it.createdAt
-                  ) ||
-                  0
-              };
-            }
-          )
+      const meta =
+        await getCompetitionMeta(
+          db,
+          activeCompId,
+          activeStageId
         );
 
       if (
@@ -2107,21 +2141,35 @@
         return;
       }
 
-      enriched.sort(
-        (
-          a,
-          b
-        ) =>
-          b._sortTime -
-          a._sortTime
-      );
+      const result = [
+        {
+          ...picked,
+
+          competitionId:
+            activeCompId,
+
+          stageId:
+            activeStageId,
+
+          compTitle:
+            meta.compTitle ||
+            picked.competitionTitle ||
+            picked.competitionName ||
+            activeCompId,
+
+          stageTitle:
+            meta.stageTitle ||
+            picked.stageName ||
+            ""
+        }
+      ];
 
       Cache.setComps(
-        enriched
+        result
       );
 
       renderMyParticipation(
-        enriched
+        result
       );
 
     } catch (
@@ -2147,7 +2195,8 @@
       if (
         Array.isArray(
           cached
-        ) &&
+        )
+        &&
         cached.length
       ) {
         renderMyParticipation(
@@ -2160,14 +2209,10 @@
         );
       }
 
-      if (
-        myPartListEl
-      ) {
-        myPartListEl.insertAdjacentHTML(
-          "beforeend",
-          '<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Не вдалося оновити список участі.</div>'
-        );
-      }
+      myPartListEl.insertAdjacentHTML(
+        "beforeend",
+        '<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Не вдалося оновити активну участь.</div>'
+      );
     }
   }
 
@@ -2350,10 +2395,8 @@
       );
 
     /*
-     * Головна оптимізація:
-     *
-     * якщо teamId той самий —
-     * НІЧОГО не перепідписуємо.
+     * teamId не змінився —
+     * нічого не перепідписуємо.
      */
     if (
       nextTeamId ===
@@ -2437,30 +2480,20 @@
               u
             );
 
-            /*
-             * team + members
-             * перепідписуються тільки
-             * при зміні teamId.
-             */
             const teamChanged =
               ensureTeamSubscription(
                 db,
                 teamId
               );
 
-            const participationKey =
-              `${uid}||${teamId}`;
-
             /*
-             * Зміна ПІБ, телефона,
-             * міста або аватара
-             * більше НЕ перезапускає
-             * "Мою участь".
+             * Якщо listener users спрацював
+             * через ПІБ / телефон / аватар,
+             * участь вдруге не вантажимо.
              */
             if (
               teamChanged ||
-              activeParticipationKey !==
-                participationKey
+              !activeParticipationKey
             ) {
               loadMyParticipation(
                 db,
@@ -2600,168 +2633,169 @@
         }
 
         const widget =
-          cloudinary.createUploadWidget(
-            {
-              cloudName:
-                CLOUDINARY_CLOUD,
+          cloudinary
+            .createUploadWidget(
+              {
+                cloudName:
+                  CLOUDINARY_CLOUD,
 
-              uploadPreset:
-                CLOUDINARY_PRESET,
+                uploadPreset:
+                  CLOUDINARY_PRESET,
 
-              folder:
-                `avatars/${user.uid}`,
+                folder:
+                  `avatars/${user.uid}`,
 
-              sources: [
-                "local",
-                "camera"
-              ],
+                sources: [
+                  "local",
+                  "camera"
+                ],
 
-              multiple:
-                false,
+                multiple:
+                  false,
 
-              maxFileSize:
-                5000000,
+                maxFileSize:
+                  5000000,
 
-              cropping:
-                true,
+                cropping:
+                  true,
 
-              croppingAspectRatio:
-                1,
+                croppingAspectRatio:
+                  1,
 
-              showSkipCropButton:
-                false,
+                showSkipCropButton:
+                  false,
 
-              language:
-                "uk",
+                language:
+                  "uk",
 
-              styles: {
-                palette: {
-                  window:
-                    "#0f172a",
+                styles: {
+                  palette: {
+                    window:
+                      "#0f172a",
 
-                  sourceBg:
-                    "#1e293b",
+                    sourceBg:
+                      "#1e293b",
 
-                  windowBorder:
-                    "#facc15",
+                    windowBorder:
+                      "#facc15",
 
-                  tabIcon:
-                    "#facc15",
+                    tabIcon:
+                      "#facc15",
 
-                  inactiveTabIcon:
-                    "#94a3b8",
+                    inactiveTabIcon:
+                      "#94a3b8",
 
-                  menuIcons:
-                    "#facc15",
+                    menuIcons:
+                      "#facc15",
 
-                  link:
-                    "#facc15",
+                    link:
+                      "#facc15",
 
-                  action:
-                    "#facc15",
+                    action:
+                      "#facc15",
 
-                  inProgress:
-                    "#f97316",
+                    inProgress:
+                      "#f97316",
 
-                  complete:
-                    "#22c55e",
+                    complete:
+                      "#22c55e",
 
-                  error:
-                    "#ef4444",
+                    error:
+                      "#ef4444",
 
-                  textDark:
-                    "#020617",
+                    textDark:
+                      "#020617",
 
-                  textLight:
-                    "#e2e8f0"
+                    textLight:
+                      "#e2e8f0"
+                  }
                 }
-              }
-            },
+              },
 
-            async (
-              error,
-              result
-            ) => {
-              if (
-                error
-              ) {
-                console.error(
+              async (
+                error,
+                result
+              ) => {
+                if (
                   error
-                );
-
-                setMsg(
-                  "Помилка завантаження",
-                  "err"
-                );
-
-                return;
-              }
-
-              if (
-                result.event !==
-                "success"
-              ) {
-                return;
-              }
-
-              try {
-                setMsg(
-                  "Зберігаю…"
-                );
-
-                await db
-                  .collection(
-                    "users"
-                  )
-                  .doc(
-                    user.uid
-                  )
-                  .set(
-                    {
-                      avatarUrl:
-                        result.info
-                          .secure_url
-                    },
-                    {
-                      merge:
-                        true
-                    }
+                ) {
+                  console.error(
+                    error
                   );
 
-                setAvatarUrl(
-                  result.info
-                    .secure_url
-                );
+                  setMsg(
+                    "Помилка завантаження",
+                    "err"
+                  );
 
-                setMsg(
-                  "Аватар оновлено!",
-                  "ok"
-                );
+                  return;
+                }
 
-                setTimeout(
-                  () => {
-                    setMsg(
-                      "",
-                      ""
+                if (
+                  result.event !==
+                  "success"
+                ) {
+                  return;
+                }
+
+                try {
+                  setMsg(
+                    "Зберігаю…"
+                  );
+
+                  await db
+                    .collection(
+                      "users"
+                    )
+                    .doc(
+                      user.uid
+                    )
+                    .set(
+                      {
+                        avatarUrl:
+                          result.info
+                            .secure_url
+                      },
+                      {
+                        merge:
+                          true
+                      }
                     );
-                  },
-                  3000
-                );
 
-              } catch (
-                err
-              ) {
-                console.error(
+                  setAvatarUrl(
+                    result.info
+                      .secure_url
+                  );
+
+                  setMsg(
+                    "Аватар оновлено!",
+                    "ok"
+                  );
+
+                  setTimeout(
+                    () => {
+                      setMsg(
+                        "",
+                        ""
+                      );
+                    },
+                    3000
+                  );
+
+                } catch (
                   err
-                );
+                ) {
+                  console.error(
+                    err
+                  );
 
-                setMsg(
-                  "Помилка збереження",
-                  "err"
-                );
+                  setMsg(
+                    "Помилка збереження",
+                    "err"
+                  );
+                }
               }
-            }
-          );
+            );
 
         widget.open();
       }
@@ -2929,11 +2963,6 @@
           ) ||
           {};
 
-        /*
-         * SOLO public sync потрібен
-         * тільки якщо реально
-         * змінилося ім'я/прізвище.
-         */
         const nameChanged =
           norm(
             previous.lastName
@@ -2982,7 +3011,7 @@
           }
 
           // ===============================================
-          // 1. USERS — source of truth
+          // 1. USERS
           // ===============================================
 
           await db
@@ -3001,8 +3030,7 @@
             );
 
           // ===============================================
-          // 2. PUBLIC SOLO SYNC
-          // тільки якщо ПІБ змінився
+          // 2. SOLO PUBLIC SYNC
           // ===============================================
 
           let publicSyncError =

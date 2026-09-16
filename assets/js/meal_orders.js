@@ -1,32 +1,30 @@
 // assets/js/meal_orders.js
 // STOLAR CARP • Харчування 2 доби
 //
-// ✅ команди подають свої заявки
-// ✅ сектор автоматично береться з stageResults після жеребкування
-// ✅ побажання видно під командою
+// ✅ команди подають тільки власне харчування
+// ✅ Дячок Роман керує харчуванням зі свого звичайного кабінету
 // ✅ СУДДІ завжди є окремим рядком
-// ✅ суддів редагує тільки admin
+// ✅ кількість для суддів змінює тільки OWNER_UID
+// ✅ сектор команд автоматично береться з жеребкування
+// ✅ побажання видно під назвою команди
 // ✅ судді входять у загальний підсумок
-// ✅ public mirror для майбутньої meal-app
-// ✅ без подвійних click-handler
+// ✅ без role === "admin"
+// ✅ підготовка даних для окремої публічної meal-app
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-judges-v2");
+  console.log("✅ meal_orders.js LOADED v20260917-owner-judges-v3");
 
   let ctx = window.scMealContext || null;
 
   let currentUser = null;
   let userTeamId = "";
-  let userRole = "";
 
-  let canManageMeals = false;
-  let canManageJudges = false;
+  let isOwner = false;
   let mealIsOpen = false;
 
-  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-  const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+  const OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
 
   const JUDGES_ID = "__judges__";
 
@@ -36,21 +34,21 @@
     "payment_confirmed"
   ];
 
-  const $ = id =>
+  const $ = (id) =>
     document.getElementById(id);
 
-  const norm = value =>
+  const norm = (value) =>
     String(value ?? "")
       .replace(/\s+/g, " ")
       .trim();
 
-  const clean = value =>
+  const clean = (value) =>
     norm(value).toLowerCase();
 
-  const esc = value =>
+  const esc = (value) =>
     String(value ?? "").replace(
       /[&<>"']/g,
-      char => ({
+      (char) => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
@@ -82,6 +80,16 @@
     );
   }
 
+  function stageResultsId(
+    competitionId,
+    stageId
+  ) {
+    return (
+      `${norm(competitionId)}__` +
+      `${norm(stageId) || "main"}`
+    );
+  }
+
   function mealSettingsId() {
     if (
       !ctx?.competitionId ||
@@ -92,16 +100,6 @@
 
     return safeId(
       `${ctx.competitionId}__${ctx.stageId}`
-    );
-  }
-
-  function stageResultsId(
-    competitionId,
-    stageId
-  ) {
-    return (
-      `${norm(competitionId)}__` +
-      `${norm(stageId) || "main"}`
     );
   }
 
@@ -124,19 +122,25 @@
     text,
     ok = true
   ) {
-    const el = $("mealStatus");
+    const el =
+      $("mealStatus");
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
-    el.textContent = text || "";
+    el.textContent =
+      text || "";
 
     el.className =
       "mealStatus " +
       (
         text
-          ? ok
-            ? "ok"
-            : "err"
+          ? (
+              ok
+                ? "ok"
+                : "err"
+            )
           : ""
       );
   }
@@ -148,7 +152,9 @@
     const el =
       $("mealPopupStatus");
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     el.textContent =
       text || "";
@@ -157,9 +163,11 @@
       "mealStatus " +
       (
         text
-          ? ok
-            ? "ok"
-            : "err"
+          ? (
+              ok
+                ? "ok"
+                : "err"
+            )
           : ""
       );
   }
@@ -241,7 +249,7 @@
       }
 
       await new Promise(
-        resolve =>
+        (resolve) =>
           setTimeout(
             resolve,
             150
@@ -263,10 +271,10 @@
     }
 
     return new Promise(
-      resolve => {
+      (resolve) => {
         const unsub =
           auth.onAuthStateChanged(
-            user => {
+            (user) => {
               unsub();
 
               resolve(
@@ -286,53 +294,48 @@
       await getAuthUser();
 
     userTeamId = "";
-    userRole = "";
-    canManageMeals = false;
-    canManageJudges = false;
+    isOwner = false;
 
     if (!currentUser) {
       return;
     }
 
-    const snap =
-      await db
-        .collection("users")
-        .doc(currentUser.uid)
-        .get();
-
-    const data =
-      snap.exists
-        ? snap.data() || {}
-        : {};
-
-    userTeamId =
-      norm(
-        data.teamId ||
-        data.currentTeamId ||
-        ""
-      );
-
-    userRole =
-      clean(
-        data.role ||
-        ""
-      );
-
-    const isAdmin =
-      currentUser.uid === ADMIN_UID ||
-      userRole === "admin";
-
-    canManageJudges =
-      isAdmin;
-
-    canManageMeals =
-      isAdmin ||
+    isOwner =
       currentUser.uid ===
-        FOOD_OWNER_UID;
+      OWNER_UID;
+
+    try {
+      const snap =
+        await db
+          .collection("users")
+          .doc(currentUser.uid)
+          .get();
+
+      const data =
+        snap.exists
+          ? (
+              snap.data() ||
+              {}
+            )
+          : {};
+
+      userTeamId =
+        norm(
+          data.teamId ||
+          data.currentTeamId ||
+          ""
+        );
+
+    } catch (e) {
+      console.warn(
+        "[Meals] user data:",
+        e
+      );
+    }
   }
 
   // =========================================================
-  // OPEN / CLOSE MEALS
+  // OPEN / CLOSE
   // =========================================================
 
   async function loadMealGate() {
@@ -344,6 +347,7 @@
 
     if (!id) {
       mealIsOpen = false;
+
       return false;
     }
 
@@ -355,7 +359,10 @@
 
     const data =
       snap.exists
-        ? snap.data() || {}
+        ? (
+            snap.data() ||
+            {}
+          )
         : {};
 
     mealIsOpen =
@@ -365,16 +372,16 @@
   }
 
   async function publishMealAppState(
-    isOpen
+    isOpenValue
   ) {
-    try {
-      if (
-        !ctx?.competitionId ||
-        !ctx?.stageId
-      ) {
-        return;
-      }
+    if (
+      !ctx?.competitionId ||
+      !ctx?.stageId
+    ) {
+      return;
+    }
 
+    try {
       const {
         db,
         fb
@@ -391,7 +398,7 @@
             ctx.stageId,
 
           isOpen:
-            !!isOpen,
+            !!isOpenValue,
 
           updatedAt:
             fb.firestore
@@ -410,8 +417,14 @@
   }
 
   async function setMealGate(
-    isOpen
+    openValue
   ) {
+    if (!isOwner) {
+      throw new Error(
+        "Керування доступне тільки Дячок Роман"
+      );
+    }
+
     const {
       db,
       fb
@@ -437,7 +450,7 @@
           ctx.stageId,
 
         isOpen:
-          !!isOpen,
+          !!openValue,
 
         updatedAt:
           fb.firestore
@@ -445,13 +458,13 @@
             .serverTimestamp(),
 
         updatedBy:
-          currentUser?.uid || ""
+          currentUser.uid
       }, {
         merge: true
       });
 
     mealIsOpen =
-      !!isOpen;
+      !!openValue;
 
     await publishMealAppState(
       mealIsOpen
@@ -459,23 +472,24 @@
   }
 
   // =========================================================
-  // BUTTONS
+  // OWNER BUTTONS
   // =========================================================
 
   function ensureJudgesButton() {
-    let btn =
-      $("btnOpenJudgesMeal");
+    const mealBox =
+      $("mealBox");
 
     const listBtn =
       $("btnOpenMealList");
 
-    const mealBox =
-      $("mealBox");
+    if (!mealBox) {
+      return;
+    }
 
-    if (
-      !btn &&
-      mealBox
-    ) {
+    let btn =
+      $("btnOpenJudgesMeal");
+
+    if (!btn) {
       btn =
         document.createElement(
           "button"
@@ -495,7 +509,8 @@
         "👨‍⚖️ Судді";
 
       if (
-        listBtn?.parentNode
+        listBtn &&
+        listBtn.parentNode
       ) {
         listBtn.parentNode
           .insertBefore(
@@ -504,20 +519,20 @@
           );
 
       } else {
-        mealBox.appendChild(btn);
+        mealBox.appendChild(
+          btn
+        );
       }
     }
 
-    if (btn) {
-      btn.hidden =
-        !(
-          mealIsOpen &&
-          canManageJudges
-        );
+    btn.hidden =
+      !(
+        mealIsOpen &&
+        isOwner
+      );
 
-      btn.onclick =
-        openJudgesOrder;
-    }
+    btn.onclick =
+      openJudgesOrder;
   }
 
   function applyVisibility() {
@@ -539,7 +554,7 @@
     if (openWrap) {
       openWrap.hidden =
         mealIsOpen ||
-        !canManageMeals;
+        !isOwner;
     }
 
     if (mealBox) {
@@ -561,7 +576,7 @@
       clearBtn.hidden =
         !(
           mealIsOpen &&
-          canManageMeals
+          isOwner
         );
     }
 
@@ -572,6 +587,7 @@
         "Харчування відкрите.",
         true
       );
+
     } else {
       setStatus("");
     }
@@ -591,14 +607,17 @@
 
     const maxTeams =
       Number(
-        ctx.maxTeams || 21
+        ctx.maxTeams ||
+        21
       );
 
     return ctx.teams
       .filter(
-        team =>
+        (team) =>
           PAID_STATUSES.includes(
-            clean(team.status)
+            clean(
+              team.status
+            )
           )
       )
       .slice(
@@ -614,8 +633,10 @@
     if (userTeamId) {
       const byTeamId =
         teams.find(
-          team =>
-            norm(team.teamId) ===
+          (team) =>
+            norm(
+              team.teamId
+            ) ===
             userTeamId
         );
 
@@ -627,8 +648,10 @@
     if (currentUser) {
       const byUid =
         teams.find(
-          team =>
-            norm(team.uid) ===
+          (team) =>
+            norm(
+              team.uid
+            ) ===
             currentUser.uid
         );
 
@@ -659,7 +682,8 @@
       if (match) {
         return {
           zone:
-            match[1].toUpperCase(),
+            match[1]
+              .toUpperCase(),
 
           sector:
             match[2],
@@ -731,11 +755,16 @@
 
       const data =
         snap.exists
-          ? snap.data() || {}
+          ? (
+              snap.data() ||
+              {}
+            )
           : {};
 
       const teams =
-        Array.isArray(data.teams)
+        Array.isArray(
+          data.teams
+        )
           ? data.teams
           : [];
 
@@ -746,7 +775,7 @@
         new Map();
 
       teams.forEach(
-        team => {
+        (team) => {
           const draw =
             parseDraw(team);
 
@@ -798,13 +827,16 @@
 
     } catch (e) {
       console.warn(
-        "[Meals] draw error:",
+        "[Meals] draw map:",
         e
       );
 
       return {
-        byId: new Map(),
-        byName: new Map()
+        byId:
+          new Map(),
+
+        byName:
+          new Map()
       };
     }
   }
@@ -823,23 +855,33 @@
     let draw = null;
 
     const teamId =
-      norm(order.teamId);
+      norm(
+        order.teamId
+      );
 
     const teamName =
-      clean(order.teamName);
+      clean(
+        order.teamName
+      );
 
     if (
       teamId &&
-      drawMap.byId.has(teamId)
+      drawMap.byId.has(
+        teamId
+      )
     ) {
       draw =
-        drawMap.byId.get(teamId);
+        drawMap.byId.get(
+          teamId
+        );
     }
 
     if (
       !draw &&
       teamName &&
-      drawMap.byName.has(teamName)
+      drawMap.byName.has(
+        teamName
+      )
     ) {
       draw =
         drawMap.byName.get(
@@ -889,12 +931,15 @@
         .get();
 
     return snap.exists
-      ? snap.data() || {}
+      ? (
+          snap.data() ||
+          {}
+        )
       : null;
   }
 
   // =========================================================
-  // FORM
+  // FORM HELPERS
   // =========================================================
 
   function mealFieldsHtml(
@@ -1014,7 +1059,9 @@
     `;
   }
 
-  function readFields(prefix) {
+  function readFields(
+    prefix
+  ) {
     return {
       day1: {
         lunch:
@@ -1092,12 +1139,14 @@
         "meal"
       )}
 
-      <div style="
-        display:flex;
-        gap:8px;
-        flex-wrap:wrap;
-        margin-top:14px;
-      ">
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:14px;
+        "
+      >
 
         <button
           class="mealBtn mealBtn--primary"
@@ -1138,17 +1187,29 @@
         👨‍⚖️ СУДДІ
       </div>
 
+      <div
+        style="
+          margin-bottom:12px;
+          opacity:.8;
+          font-size:.9rem;
+        "
+      >
+        Кількість для суддів задає Дячок Роман.
+      </div>
+
       ${mealFieldsHtml(
         old,
         "judgeMeal"
       )}
 
-      <div style="
-        display:flex;
-        gap:8px;
-        flex-wrap:wrap;
-        margin-top:14px;
-      ">
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:14px;
+        "
+      >
 
         <button
           class="mealBtn mealBtn--primary"
@@ -1176,7 +1237,7 @@
   }
 
   // =========================================================
-  // PUBLIC MIRROR
+  // PUBLIC APP MIRROR
   // =========================================================
 
   async function publishPublicOrder(
@@ -1190,7 +1251,9 @@
       } = await waitReady();
 
       await db
-        .collection("mealPublicOrders")
+        .collection(
+          "mealPublicOrders"
+        )
         .doc(id)
         .set({
           competitionId:
@@ -1200,37 +1263,48 @@
             data.stageId,
 
           type:
-            data.type || "team",
+            data.type ||
+            "team",
 
           entityId:
-            data.entityId || "",
+            data.entityId ||
+            "",
 
           teamId:
-            data.teamId || null,
+            data.teamId ||
+            null,
 
           teamName:
-            data.teamName || "—",
+            data.teamName ||
+            "—",
 
           zone:
-            data.zone || "",
+            data.zone ||
+            "",
 
           sector:
-            data.sector || "",
+            data.sector ||
+            "",
 
           drawKey:
-            data.drawKey || "",
+            data.drawKey ||
+            "",
 
           day1:
-            data.day1 || {},
+            data.day1 ||
+            {},
 
           day2:
-            data.day2 || {},
+            data.day2 ||
+            {},
 
           note:
-            data.note || "",
+            data.note ||
+            "",
 
           status:
-            data.status || "empty",
+            data.status ||
+            "empty",
 
           updatedAt:
             fb.firestore
@@ -1298,15 +1372,23 @@
         )
       );
 
-      $("btnCloseMealPopup").onclick =
-        closePopup;
+      if (
+        $("btnCloseMealPopup")
+      ) {
+        $("btnCloseMealPopup").onclick =
+          closePopup;
+      }
 
-      $("btnSaveMealOrder").onclick =
-        () =>
-          saveOrder(
-            team,
-            old
-          );
+      if (
+        $("btnSaveMealOrder")
+      ) {
+        $("btnSaveMealOrder").onclick =
+          () =>
+            saveOrder(
+              team,
+              old
+            );
+      }
 
     } catch (e) {
       console.error(e);
@@ -1330,10 +1412,14 @@
       } = await waitReady();
 
       const fields =
-        readFields("meal");
+        readFields(
+          "meal"
+        );
 
       const draw =
-        parseDraw(team);
+        parseDraw(
+          team
+        );
 
       const data = {
         competitionId:
@@ -1452,9 +1538,9 @@
         return;
       }
 
-      if (!canManageJudges) {
+      if (!isOwner) {
         setStatus(
-          "Суддів може редагувати тільки адміністратор.",
+          "Суддів може змінювати тільки Дячок Роман.",
           false
         );
 
@@ -1468,15 +1554,27 @@
 
       openPopup(
         "👨‍⚖️ Харчування суддів",
-        judgesFormHtml(old)
+        judgesFormHtml(
+          old
+        )
       );
 
-      $("btnCloseMealPopup").onclick =
-        closePopup;
+      if (
+        $("btnCloseMealPopup")
+      ) {
+        $("btnCloseMealPopup").onclick =
+          closePopup;
+      }
 
-      $("btnSaveJudgesMeal").onclick =
-        () =>
-          saveJudgesOrder(old);
+      if (
+        $("btnSaveJudgesMeal")
+      ) {
+        $("btnSaveJudgesMeal").onclick =
+          () =>
+            saveJudgesOrder(
+              old
+            );
+      }
 
     } catch (e) {
       console.error(e);
@@ -1495,9 +1593,9 @@
     try {
       await loadUserData();
 
-      if (!canManageJudges) {
+      if (!isOwner) {
         throw new Error(
-          "admin-only"
+          "Доступ тільки для Дячок Роман"
         );
       }
 
@@ -1600,7 +1698,7 @@
       );
 
       setStatus(
-        "✅ Суддів додано до харчування.",
+        "✅ Суддів додано до загальної кількості.",
         true
       );
 
@@ -1616,7 +1714,7 @@
   }
 
   // =========================================================
-  // LOAD LIST
+  // LIST
   // =========================================================
 
   function emptyJudgesRow() {
@@ -1698,14 +1796,16 @@
 
     const za =
       zones[
-        norm(a.zone)
-          .toUpperCase()
+        norm(
+          a.zone
+        ).toUpperCase()
       ] || 9;
 
     const zb =
       zones[
-        norm(b.zone)
-          .toUpperCase()
+        norm(
+          b.zone
+        ).toUpperCase()
       ] || 9;
 
     if (za !== zb) {
@@ -1714,12 +1814,14 @@
 
     const sa =
       Number(
-        a.sector || 999
+        a.sector ||
+        999
       );
 
     const sb =
       Number(
-        b.sector || 999
+        b.sector ||
+        999
       );
 
     if (sa !== sb) {
@@ -1729,7 +1831,9 @@
     return norm(
       a.teamName
     ).localeCompare(
-      norm(b.teamName),
+      norm(
+        b.teamName
+      ),
       "uk"
     );
   }
@@ -1743,49 +1847,56 @@
     const [
       snap,
       drawMap
-    ] = await Promise.all([
-      db
-        .collection("mealOrders")
-        .where(
-          "competitionId",
-          "==",
-          ctx.competitionId
-        )
-        .where(
-          "stageId",
-          "==",
-          ctx.stageId
-        )
-        .get(),
+    ] =
+      await Promise.all([
+        db
+          .collection("mealOrders")
+          .where(
+            "competitionId",
+            "==",
+            ctx.competitionId
+          )
+          .where(
+            "stageId",
+            "==",
+            ctx.stageId
+          )
+          .get(),
 
-      loadDrawMap()
-    ]);
+        loadDrawMap()
+      ]);
 
     const rows = [];
 
-    let judges =
-      null;
+    let judges = null;
 
     snap.forEach(
-      doc => {
+      (doc) => {
         const data =
           doc.data() || {};
 
-        const isJudges =
-          data.type === "judges" ||
+        const judgesDoc =
+          data.type ===
+            "judges" ||
           data.entityId ===
             JUDGES_ID ||
           doc.id.endsWith(
             `__${JUDGES_ID}`
           );
 
-        if (isJudges) {
+        if (judgesDoc) {
           judges = {
-            id: doc.id,
+            id:
+              doc.id,
+
             ...data,
-            type: "judges",
+
+            type:
+              "judges",
+
             entityId:
               JUDGES_ID,
+
             teamName:
               "СУДДІ"
           };
@@ -1809,7 +1920,9 @@
         rows.push(
           applyCurrentDraw(
             {
-              id: doc.id,
+              id:
+                doc.id,
+
               ...data
             },
             drawMap
@@ -1818,13 +1931,7 @@
       }
     );
 
-    /*
-     * КЛЮЧОВА ЗМІНА:
-     *
-     * Судді є ЗАВЖДИ.
-     * Навіть якщо ще нічого
-     * не збережено.
-     */
+    // СУДДІ Є ЗАВЖДИ
     rows.push(
       judges ||
       emptyJudgesRow()
@@ -1836,10 +1943,6 @@
 
     return rows;
   }
-
-  // =========================================================
-  // LIST HTML
-  // =========================================================
 
   function listHtml(rows) {
     const totals = {
@@ -1854,8 +1957,8 @@
 
     const body =
       rows.map(
-        row => {
-          const isJudges =
+        (row) => {
+          const judges =
             row.type ===
             "judges";
 
@@ -1866,22 +1969,34 @@
             row.day2 || {};
 
           const d1l =
-            num(d1.lunch);
+            num(
+              d1.lunch
+            );
 
           const d1d =
-            num(d1.dinner);
+            num(
+              d1.dinner
+            );
 
           const d1b =
-            num(d1.breakfast);
+            num(
+              d1.breakfast
+            );
 
           const d2l =
-            num(d2.lunch);
+            num(
+              d2.lunch
+            );
 
           const d2d =
-            num(d2.dinner);
+            num(
+              d2.dinner
+            );
 
           const d2b =
-            num(d2.breakfast);
+            num(
+              d2.breakfast
+            );
 
           totals.d1l += d1l;
           totals.d1d += d1d;
@@ -1892,7 +2007,7 @@
           totals.d2b += d2b;
 
           const sector =
-            isJudges
+            judges
               ? "—"
               : (
                   row.drawKey ||
@@ -1904,12 +2019,14 @@
                 );
 
           const note =
-            norm(row.note);
+            norm(
+              row.note
+            );
 
-          const editJudges =
+          const editButton =
             (
-              isJudges &&
-              canManageJudges
+              judges &&
+              isOwner
             )
               ? `
                 <button
@@ -1917,7 +2034,7 @@
                   type="button"
                   class="mealBtn"
                   style="
-                    margin-top:5px;
+                    margin-top:6px;
                     padding:4px 8px;
                     font-size:.72rem;
                   "
@@ -1930,8 +2047,18 @@
           return `
             <tr
               ${
-                isJudges
-                  ? 'style="background:rgba(250,204,21,.06);"'
+                judges
+                  ? `
+                    style="
+                      background:
+                        rgba(
+                          250,
+                          204,
+                          21,
+                          .06
+                        );
+                    "
+                  `
                   : ""
               }
             >
@@ -1939,8 +2066,11 @@
               <td
                 class="m-sector"
                 style="${
-                  isJudges
-                    ? "color:#facc15;font-weight:900;"
+                  judges
+                    ? `
+                      color:#facc15;
+                      font-weight:900;
+                    `
                     : ""
                 }"
               >
@@ -1951,13 +2081,16 @@
 
                 <div
                   style="${
-                    isJudges
-                      ? "color:#facc15;font-weight:900;"
+                    judges
+                      ? `
+                        color:#facc15;
+                        font-weight:900;
+                      `
                       : ""
                   }"
                 >
                   ${
-                    isJudges
+                    judges
                       ? "👨‍⚖️ СУДДІ"
                       : esc(
                           row.teamName ||
@@ -1984,7 +2117,7 @@
                     : ""
                 }
 
-                ${editJudges}
+                ${editButton}
 
               </td>
 
@@ -1999,8 +2132,7 @@
             </tr>
           `;
         }
-      )
-      .join("");
+      ).join("");
 
     return `
       <div class="mealScreenTableWrap">
@@ -2074,17 +2206,20 @@
       const rows =
         await loadOrders();
 
-      if ($("mealPopupBody")) {
+      if (
         $("mealPopupBody")
-          .innerHTML =
-          listHtml(rows);
+      ) {
+        $("mealPopupBody").innerHTML =
+          listHtml(
+            rows
+          );
       }
 
-      const editJudges =
-        $("btnEditJudgesFromList");
-
-      if (editJudges) {
-        editJudges.onclick =
+      if (
+        $("btnEditJudgesFromList")
+      ) {
+        $("btnEditJudgesFromList")
+          .onclick =
           openJudgesOrder;
       }
 
@@ -2105,7 +2240,7 @@
   }
 
   // =========================================================
-  // OPEN MEALS
+  // OWNER OPEN
   // =========================================================
 
   async function openMeals() {
@@ -2113,9 +2248,9 @@
       await waitMealContext();
       await loadUserData();
 
-      if (!canManageMeals) {
+      if (!isOwner) {
         alert(
-          "Ця кнопка доступна тільки відповідальному або адміністратору."
+          "Відкрити харчування може тільки Дячок Роман."
         );
 
         return;
@@ -2150,7 +2285,9 @@
 
       const snap =
         await db
-          .collection("mealPublicOrders")
+          .collection(
+            "mealPublicOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -2204,9 +2341,9 @@
       await waitMealContext();
       await loadUserData();
 
-      if (!canManageMeals) {
+      if (!isOwner) {
         setStatus(
-          "Очищення недоступне.",
+          "Очищення доступне тільки Дячок Роман.",
           false
         );
 
@@ -2301,7 +2438,7 @@
   // INIT
   // =========================================================
 
-  async function refreshAdminButtons() {
+  async function refreshButtons() {
     try {
       await waitMealContext();
       await loadUserData();
@@ -2309,22 +2446,30 @@
 
       applyVisibility();
 
-      if ($("btnMealGateOpen")) {
+      if (
+        $("btnMealGateOpen")
+      ) {
         $("btnMealGateOpen").onclick =
           openMeals;
       }
 
-      if ($("btnOpenMealOrder")) {
+      if (
+        $("btnOpenMealOrder")
+      ) {
         $("btnOpenMealOrder").onclick =
           openOrder;
       }
 
-      if ($("btnOpenMealList")) {
+      if (
+        $("btnOpenMealList")
+      ) {
         $("btnOpenMealList").onclick =
           openList;
       }
 
-      if ($("btnClearMealOrders")) {
+      if (
+        $("btnClearMealOrders")
+      ) {
         $("btnClearMealOrders").onclick =
           clearOrders;
       }
@@ -2351,17 +2496,17 @@
       nextCtx ||
       ctx;
 
-    refreshAdminButtons();
+    refreshButtons();
   }
 
   document.addEventListener(
     "click",
-    event => {
+    (event) => {
       if (
         event.target.id ===
-        "mealPopupClose" ||
+          "mealPopupClose" ||
         event.target.id ===
-        "btnCloseMealPopup"
+          "btnCloseMealPopup"
       ) {
         closePopup();
 
@@ -2387,7 +2532,9 @@
     openList,
     openJudgesOrder,
     clearOrders,
-    refreshAdminButtons,
+    refreshButtons,
+    refreshAdminButtons:
+      refreshButtons,
     loadMealGate,
     setMealGate,
     openMeals
@@ -2402,10 +2549,14 @@
       () => {
         if (
           window.scMealContext &&
-          window.scMealContext.competitionId &&
-          window.scMealContext.stageId
+          window.scMealContext
+            .competitionId &&
+          window.scMealContext
+            .stageId
         ) {
-          clearInterval(boot);
+          clearInterval(
+            boot
+          );
 
           setContext(
             window.scMealContext
@@ -2417,7 +2568,9 @@
 
   setTimeout(
     () =>
-      clearInterval(boot),
+      clearInterval(
+        boot
+      ),
     12000
   );
 

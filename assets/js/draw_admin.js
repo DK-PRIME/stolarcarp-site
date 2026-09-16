@@ -7,10 +7,19 @@
 // ✅ Stalker Solo -> персональний учасник
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
-// ✅ registrations + fallback public_participants
-// ✅ if registration deleted -> save can restore it
+//
+// ✅ registrations = ГОЛОВНЕ джерело статусу
+// ✅ у жеребкування потрапляє ТІЛЬКИ status === "confirmed"
+// ✅ public_participants = тільки fallback, якщо registration реально відсутня
+// ✅ public fallback також допускається ТІЛЬКИ зі status === "confirmed"
+//
+// ✅ if confirmed registration deleted -> save can restore it from confirmed public mirror
 // ✅ unique sectors A1..C8
 // ✅ per-row save/clear
+//
+// ✅ ПОШУК НЕ ВПЛИВАЄ:
+//    • на список зайнятих секторів
+//    • на повний список teams у stageResults
 //
 // КРИТИЧНО:
 // ✅ stageResults ID = `${compId}__${stageKey}`
@@ -120,12 +129,23 @@
     stageMetaByKey:
       new Map(),
 
+    /*
+     * Тут ВИКЛЮЧНО confirmed.
+     */
     regsAllConfirmed:
       [],
 
+    /*
+     * Поточний stage + search.
+     * Використовується ТІЛЬКИ для UI.
+     */
     regsFiltered:
       [],
 
+    /*
+     * Сектори всього вибраного stage,
+     * а не тільки search results.
+     */
     usedSectorSet:
       new Set()
   };
@@ -635,6 +655,75 @@
   }
 
   // =========================================================
+  // CURRENT STAGE ROWS
+  // =========================================================
+
+  /*
+   * Повертає ВСІ confirmed для
+   * поточного competition + stage.
+   *
+   * ВАЖЛИВО:
+   * search q тут НЕ враховується.
+   *
+   * Це canonical список для:
+   * • occupied sectors
+   * • stageResults
+   * • total count
+   */
+  function getCurrentStageConfirmedRows() {
+    const selVal =
+      utils.currentStageValue();
+
+    const {
+      compId,
+      stageKey
+    } =
+      utils.parseStageValue(
+        selVal
+      );
+
+    if (
+      !compId
+    ) {
+      return [];
+    }
+
+    const wantedStage =
+      utils.norm(
+        stageKey
+      ) ||
+      "main";
+
+    return state
+      .regsAllConfirmed
+      .filter(
+        row => {
+          if (
+            utils.norm(
+              row.compId
+            ) !==
+            utils.norm(
+              compId
+            )
+          ) {
+            return false;
+          }
+
+          const rowStage =
+            utils.norm(
+              row.stageId
+            ) ||
+            "main";
+
+          return (
+            rowStage ===
+            wantedStage
+          );
+        }
+      );
+  }
+
+  // =========================================================
   // AUTH
   // =========================================================
 
@@ -1094,6 +1183,7 @@
                     value,
                     {
                       compId,
+
                       stageKey:
                         key,
 
@@ -1276,6 +1366,16 @@
           _source:
             source,
 
+          /*
+           * Зберігаємо status,
+           * щоб при debug було видно,
+           * що цей рядок confirmed.
+           */
+          status:
+            utils.normLower(
+              row.status
+            ),
+
           entryType:
             utils.normLower(
               row.entryType
@@ -1401,27 +1501,66 @@
         const byId =
           new Map();
 
+        /*
+         * КРИТИЧНО:
+         *
+         * registrations —
+         * головне джерело істини.
+         *
+         * Нам треба прочитати ВСІ registrations,
+         * а не тільки confirmed,
+         * бо ми повинні знати:
+         *
+         * чи існує приватна registration
+         * зі status pending / cancelled / reserve.
+         *
+         * Якщо вона існує —
+         * старий public_participants
+         * НЕ має права повернути її
+         * у жеребкування.
+         */
+        const existingRegistrationIds =
+          new Set();
+
         const regSnap =
           await db
             .collection(
               CONFIG.COLLECTIONS
                 .REGISTRATIONS
             )
-            .where(
-              "status",
-              "==",
-              "confirmed"
-            )
             .get();
 
         regSnap.forEach(
           docSnap => {
+            const raw =
+              docSnap.data() ||
+              {};
+
+            existingRegistrationIds.add(
+              docSnap.id
+            );
+
+            const status =
+              utils.normLower(
+                raw.status
+              );
+
+            /*
+             * У жеребкування:
+             * ТІЛЬКИ confirmed.
+             */
+            if (
+              status !==
+              "confirmed"
+            ) {
+              return;
+            }
+
             byId.set(
               docSnap.id,
               firestore.normalizeReg(
                 docSnap.id,
-                docSnap.data() ||
-                {},
+                raw,
                 "registrations"
               )
             );
@@ -1429,9 +1568,14 @@
         );
 
         /*
-         * Fallback:
-         * якщо registration зник,
-         * але public mirror залишився.
+         * PUBLIC fallback.
+         *
+         * Його задача:
+         * відновити випадково видалену
+         * confirmed registration.
+         *
+         * PUBLIC НІКОЛИ не перебиває
+         * status існуючої registration.
          */
         const pubSnap =
           await db
@@ -1452,15 +1596,170 @@
                 raw.status
               );
 
+            const privateExists =
+              existingRegistrationIds.has(
+                docSnap.id
+              );
+
+            /*
+             * Якщо registration існує,
+             * її status головний.
+             */
             if (
-              [
-                "cancelled",
-                "canceled",
-                "deleted",
-                "rejected"
-              ].includes(
-                status
-              )
+              privateExists
+            ) {
+              /*
+               * Доповнювати public даними
+               * можна ТІЛЬКИ якщо
+               * registration уже confirmed
+               * і присутня у byId.
+               */
+              if (
+                byId.has(
+                  docSnap.id
+                )
+              ) {
+                const pubRow =
+                  firestore.normalizeReg(
+                    docSnap.id,
+                    raw,
+                    "public_participants"
+                  );
+
+                const current =
+                  byId.get(
+                    docSnap.id
+                  );
+
+                if (
+                  !current.uid &&
+                  pubRow.uid
+                ) {
+                  current.uid =
+                    pubRow.uid;
+                }
+
+                if (
+                  !current.participantUid &&
+                  pubRow.participantUid
+                ) {
+                  current.participantUid =
+                    pubRow.participantUid;
+                }
+
+                if (
+                  !current.userId &&
+                  pubRow.userId
+                ) {
+                  current.userId =
+                    pubRow.userId;
+                }
+
+                if (
+                  !current.registeredByUid &&
+                  pubRow.registeredByUid
+                ) {
+                  current.registeredByUid =
+                    pubRow.registeredByUid;
+                }
+
+                if (
+                  !current.participantName &&
+                  pubRow.participantName
+                ) {
+                  current.participantName =
+                    pubRow.participantName;
+                }
+
+                if (
+                  !current.firstName &&
+                  pubRow.firstName
+                ) {
+                  current.firstName =
+                    pubRow.firstName;
+                }
+
+                if (
+                  !current.lastName &&
+                  pubRow.lastName
+                ) {
+                  current.lastName =
+                    pubRow.lastName;
+                }
+
+                if (
+                  !current.fullName &&
+                  pubRow.fullName
+                ) {
+                  current.fullName =
+                    pubRow.fullName;
+                }
+
+                if (
+                  !current.userName &&
+                  pubRow.userName
+                ) {
+                  current.userName =
+                    pubRow.userName;
+                }
+
+                if (
+                  !current.displayName &&
+                  pubRow.displayName
+                ) {
+                  current.displayName =
+                    pubRow.displayName;
+                }
+
+                /*
+                 * draw дані можна використати
+                 * як fallback, якщо в private
+                 * їх немає.
+                 */
+                if (
+                  !current.drawKey &&
+                  pubRow.drawKey
+                ) {
+                  current.drawKey =
+                    pubRow.drawKey;
+
+                  current.drawZone =
+                    pubRow.drawZone;
+
+                  current.drawSector =
+                    pubRow.drawSector;
+                }
+
+                /*
+                 * BF true не губимо.
+                 */
+                if (
+                  !current.bigFishTotal &&
+                  pubRow.bigFishTotal
+                ) {
+                  current.bigFishTotal =
+                    true;
+                }
+
+                byId.set(
+                  docSnap.id,
+                  current
+                );
+              }
+
+              return;
+            }
+
+            /*
+             * Private registration
+             * реально відсутня.
+             *
+             * Навіть тоді public fallback
+             * приймаємо ТІЛЬКИ confirmed.
+             */
+            if (
+              status !==
+              "confirmed"
             ) {
               return;
             }
@@ -1471,62 +1770,6 @@
                 raw,
                 "public_participants"
               );
-
-            if (
-              byId.has(
-                docSnap.id
-              )
-            ) {
-              /*
-               * Registration головний,
-               * але public може мати
-               * participantName/uid,
-               * яких немає у legacy reg.
-               */
-              const current =
-                byId.get(
-                  docSnap.id
-                );
-
-              if (
-                !current.uid &&
-                pubRow.uid
-              ) {
-                current.uid =
-                  pubRow.uid;
-              }
-
-              if (
-                !current.participantName &&
-                pubRow.participantName
-              ) {
-                current.participantName =
-                  pubRow.participantName;
-              }
-
-              if (
-                !current.displayName &&
-                pubRow.displayName
-              ) {
-                current.displayName =
-                  pubRow.displayName;
-              }
-
-              if (
-                !current.drawKey &&
-                pubRow.drawKey
-              ) {
-                current.drawKey =
-                  pubRow.drawKey;
-              }
-
-              byId.set(
-                docSnap.id,
-                current
-              );
-
-              return;
-            }
 
             byId.set(
               docSnap.id,
@@ -1542,7 +1785,7 @@
 
         /*
          * Admin має доступ до users.
-         * Завчасно підтягуємо ПІБ.
+         * Завчасно підтягуємо ПІБ SOLO.
          */
         await Promise.all(
           rows.map(
@@ -1574,6 +1817,13 @@
           )
         );
 
+        /*
+         * Тут гарантовано:
+         *
+         * або private confirmed,
+         * або confirmed public fallback
+         * при реально відсутній private reg.
+         */
         state.regsAllConfirmed =
           rows;
 
@@ -1615,6 +1865,14 @@
           ) ||
           "Учасник";
 
+        /*
+         * Цей метод викликається ТІЛЬКИ
+         * для рядка, який вже пройшов
+         * confirmed-фільтр.
+         *
+         * Тому status confirmed тут
+         * залишається правильним.
+         */
         const base = {
           status:
             "confirmed",
@@ -1944,15 +2202,6 @@
         const solo =
           isSoloMode();
 
-        /*
-         * КРИТИЧНЕ ВИПРАВЛЕННЯ:
-         *
-         * було:
-         * competition||main
-         *
-         * стало:
-         * competition__main
-         */
         const docId =
           stageResultsDocId(
             compId,
@@ -2083,8 +2332,22 @@
           );
         }
 
+        /*
+         * КРИТИЧНО:
+         *
+         * НЕ state.regsFiltered.
+         *
+         * regsFiltered може бути
+         * обрізаний пошуком.
+         *
+         * У LIVE повинні піти ВСІ
+         * confirmed для stage.
+         */
+        const stageRows =
+          getCurrentStageConfirmedRows();
+
         const teams =
-          state.regsFiltered.map(
+          stageRows.map(
             reg => {
               const drawKey =
                 utils.norm(
@@ -2431,11 +2694,6 @@
           )
           .set(
             {
-              /*
-               * КРИТИЧНО:
-               * activeKey тепер
-               * competition__main
-               */
               activeKey:
                 docId,
 
@@ -2472,12 +2730,22 @@
 
   const filters = {
 
+    /*
+     * КРИТИЧНО:
+     *
+     * used sectors будуємо
+     * по ВСЬОМУ поточному stage,
+     * а не по search results.
+     */
     rebuildUsedSectors:
       () => {
         state.usedSectorSet =
           new Set();
 
-        state.regsFiltered.forEach(
+        const stageRows =
+          getCurrentStageConfirmedRows();
+
+        stageRows.forEach(
           row => {
             const key =
               utils.norm(
@@ -2501,8 +2769,7 @@
           utils.currentStageValue();
 
         const {
-          compId,
-          stageKey
+          compId
         } =
           utils.parseStageValue(
             selVal
@@ -2529,38 +2796,19 @@
           return;
         }
 
+        /*
+         * Спочатку беремо ВСІ confirmed
+         * поточного stage.
+         */
+        const stageRows =
+          getCurrentStageConfirmedRows();
+
+        /*
+         * А вже потім search —
+         * тільки для відображення.
+         */
         state.regsFiltered =
-          state.regsAllConfirmed.filter(
-            row => {
-              if (
-                utils.norm(
-                  row.compId
-                ) !==
-                utils.norm(
-                  compId
-                )
-              ) {
-                return false;
-              }
-
-              const rowStage =
-                utils.norm(
-                  row.stageId
-                ) ||
-                "main";
-
-              const wantedStage =
-                utils.norm(
-                  stageKey
-                ) ||
-                "main";
-
-              return (
-                rowStage ===
-                wantedStage
-              );
-            }
-          );
+          [...stageRows];
 
         const q =
           utils
@@ -2692,19 +2940,22 @@
         if (
           els.countInfo
         ) {
-          const totalAll =
-            state
-              .regsAllConfirmed
-              .length;
+          /*
+           * totalConfirmed —
+           * тільки поточне змагання/етап.
+           *
+           * Не всі registrations системи.
+           */
+          const totalConfirmed =
+            stageRows.length;
 
-          const totalSelected =
+          const visible =
             state
               .regsFiltered
               .length;
 
           const restored =
-            state
-              .regsFiltered
+            stageRows
               .filter(
                 row =>
                   row._source ===
@@ -2717,14 +2968,34 @@
               ? "учасників"
               : "команд";
 
-          els.countInfo.textContent =
-            `Для вибраного: ${totalSelected} ${label} ` +
-            `(з підтверджених/резерву ${totalAll})` +
-            (
-              restored
-                ? ` · до відновлення: ${restored}`
-                : ""
-            );
+          /*
+           * Якщо search порожній —
+           * visible === totalConfirmed.
+           *
+           * Якщо search є —
+           * показуємо знайдено X із Y.
+           */
+          if (
+            q
+          ) {
+            els.countInfo.textContent =
+              `Знайдено: ${visible} із ${totalConfirmed} ${label}` +
+              (
+                restored
+                  ? ` · до відновлення: ${restored}`
+                  : ""
+              );
+
+          } else {
+            els.countInfo.textContent =
+              `Для вибраного: ${totalConfirmed} ${label}` +
+              ` · підтверджено: ${totalConfirmed}` +
+              (
+                restored
+                  ? ` · до відновлення: ${restored}`
+                  : ""
+              );
+          }
         }
       }
   };
@@ -3145,14 +3416,20 @@
         ) {
           utils.setMsg(
             isSoloMode()
-              ? "Учасника не знайдено в локальному списку."
-              : "Команду не знайдено в локальному списку.",
+              ? "Учасника не знайдено в підтверджених заявках."
+              : "Команду не знайдено в підтверджених заявках.",
             false
           );
 
           return;
         }
 
+        /*
+         * Перевірка зайнятого сектора
+         * виконується по ВСЬОМУ stage.
+         *
+         * Search тут нічого не приховає.
+         */
         if (
           sectorVal &&
           state
@@ -3162,8 +3439,7 @@
             )
         ) {
           const other =
-            state
-              .regsFiltered
+            getCurrentStageConfirmedRows()
               .find(
                 row =>
                   utils.norm(
@@ -3284,6 +3560,9 @@
           reg._source =
             "registrations";
 
+          reg.status =
+            "confirmed";
+
           reg.compId =
             compId;
 
@@ -3337,34 +3616,59 @@
               "";
           }
 
+          /*
+           * Спершу перебудовуємо UI/state.
+           */
           filters.apply();
 
           /*
-           * Тут створюється
-           * canonical LIVE:
+           * Потім LIVE.
            *
-           * comp__stage
+           * publishStageResultsTeams()
+           * сам бере ВСІ confirmed
+           * поточного stage,
+           * незалежно від search.
            */
           await firestore
             .publishStageResultsTeams();
 
-          render.setRowState(
-            wrap,
-            "is-ok"
-          );
+          /*
+           * Після filters.apply()
+           * DOM рядок міг бути
+           * перемальований.
+           *
+           * Тому шукаємо актуальний.
+           */
+          const freshWrap =
+            els.drawRows
+              ?.querySelector(
+                `.draw-row[data-docid="${CSS.escape(
+                  docId
+                )}"]`
+              ) ||
+            null;
 
-          render.setBtnIcon(
-            wrap,
-            "ok"
-          );
+          if (
+            freshWrap
+          ) {
+            render.setRowState(
+              freshWrap,
+              "is-ok"
+            );
 
-          render.showRowMsg(
-            wrap,
-            sectorVal
-              ? `Збережено ${utils.fmtTimeNow()}`
-              : `Очищено ${utils.fmtTimeNow()}`,
-            true
-          );
+            render.setBtnIcon(
+              freshWrap,
+              "ok"
+            );
+
+            render.showRowMsg(
+              freshWrap,
+              sectorVal
+                ? `Збережено ${utils.fmtTimeNow()}`
+                : `Очищено ${utils.fmtTimeNow()}`,
+              true
+            );
+          }
 
           utils.setMsg(
             sectorVal
@@ -3496,6 +3800,9 @@
             state.regsFiltered =
               [];
 
+            state.usedSectorSet =
+              new Set();
+
             render.list();
 
             return;
@@ -3521,6 +3828,9 @@
 
               state.regsFiltered =
                 [];
+
+              state.usedSectorSet =
+                new Set();
 
               render.list();
 

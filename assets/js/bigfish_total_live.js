@@ -1,54 +1,184 @@
 // assets/js/bigfish_total_live.js
 // STOLAR CARP • BigFish Total (public)
+//
+// ✅ TEAM -> ключ teamId
+// ✅ SOLO -> ключ UID
+// ✅ oneoff stageId null = main
 // ✅ old weights: [9.800]
 // ✅ new weights: [{ kg: 9.800, fishType: "carp" }]
-// ✅ logic unchanged: eligible only bigFishTotal == true
+// ✅ eligible: confirmed + bigFishTotal == true
 
 (function () {
   "use strict";
 
-  const btn     = document.getElementById("toggleBigFishBtn");
-  const wrap    = document.getElementById("bigFishWrap");
-  const tbody   = document.querySelector("#bigFishTable tbody");
-  const countEl = document.getElementById("bfCount");
+  const btn =
+    document.getElementById(
+      "toggleBigFishBtn"
+    );
 
-  if (!btn || !wrap || !tbody) return;
+  const wrap =
+    document.getElementById(
+      "bigFishWrap"
+    );
 
-  const db = window.scDb;
-  if (!db) return;
+  const tbody =
+    document.querySelector(
+      "#bigFishTable tbody"
+    );
 
-  function setOpen(isOpen) {
-    wrap.hidden = !isOpen;
-    btn.setAttribute("aria-expanded", String(isOpen));
-    btn.textContent = isOpen ? "Сховати BigFish Total" : "BigFish Total";
+  const countEl =
+    document.getElementById(
+      "bfCount"
+    );
+
+  if (
+    !btn ||
+    !wrap ||
+    !tbody
+  ) {
+    return;
   }
 
-  let isOpen = localStorage.getItem("bf-is-open") === "1";
+  const db =
+    window.scDb;
+
+  if (!db) {
+    return;
+  }
+
+  // =========================================================
+  // UI
+  // =========================================================
+
+  function setOpen(isOpen) {
+    wrap.hidden =
+      !isOpen;
+
+    btn.setAttribute(
+      "aria-expanded",
+      String(isOpen)
+    );
+
+    btn.textContent =
+      isOpen
+        ? "Сховати BigFish Total"
+        : "BigFish Total";
+  }
+
+  let isOpen =
+    localStorage.getItem(
+      "bf-is-open"
+    ) === "1";
+
   setOpen(isOpen);
 
-  btn.addEventListener("click", () => {
-    isOpen = !isOpen;
-    localStorage.setItem("bf-is-open", isOpen ? "1" : "0");
-    setOpen(isOpen);
-    if (isOpen) startSubscribe();
-  });
+  btn.addEventListener(
+    "click",
+    () => {
+      isOpen =
+        !isOpen;
 
-  const fmt = (v) =>
-    v === null || v === undefined || v === "" ? "—" : String(v);
+      localStorage.setItem(
+        "bf-is-open",
+        isOpen
+          ? "1"
+          : "0"
+      );
 
-  const fmtKg = (n) =>
-    Number.isFinite(n) && n > 0 ? n.toFixed(2) : "—";
+      setOpen(isOpen);
 
-  function fishWeight(val) {
-    if (typeof val === "number" || typeof val === "string") {
-      const n = Number(String(val).replace(",", "."));
-      return Number.isFinite(n) ? n : 0;
+      if (isOpen) {
+        startSubscribe();
+      }
+    }
+  );
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
+
+  const fmt = value =>
+    (
+      value === null ||
+      value === undefined ||
+      value === ""
+    )
+      ? "—"
+      : String(value);
+
+  const fmtKg = value =>
+    (
+      Number.isFinite(value) &&
+      value > 0
+    )
+      ? value.toFixed(2)
+      : "—";
+
+  function normalize(value) {
+    return String(
+      value ?? ""
+    ).trim();
+  }
+
+  /*
+   * ONE-OFF registration:
+   * stageId = null
+   *
+   * LIVE:
+   * stageId = main
+   *
+   * Для нас це один і той самий етап.
+   */
+  function normalizeStageId(value) {
+    return normalize(value) ||
+      "main";
+  }
+
+  function fishWeight(value) {
+    if (
+      typeof value === "number" ||
+      typeof value === "string"
+    ) {
+      const number =
+        Number(
+          String(value)
+            .replace(
+              ",",
+              "."
+            )
+        );
+
+      return Number.isFinite(
+        number
+      )
+        ? number
+        : 0;
     }
 
-    if (val && typeof val === "object") {
-      const raw = val.kg ?? val.weight ?? val.value ?? 0;
-      const n = Number(String(raw).replace(",", "."));
-      return Number.isFinite(n) ? n : 0;
+    if (
+      value &&
+      typeof value === "object"
+    ) {
+      const raw =
+        value.kg ??
+        value.weight ??
+        value.value ??
+        0;
+
+      const number =
+        Number(
+          String(raw)
+            .replace(
+              ",",
+              "."
+            )
+        );
+
+      return Number.isFinite(
+        number
+      )
+        ? number
+        : 0;
     }
 
     return 0;
@@ -66,244 +196,871 @@
       "";
 
     return {
-      compId: String(compId || ""),
-      stageId: String(stageId || "")
+      compId:
+        normalize(compId),
+
+      stageId:
+        normalizeStageId(
+          stageId
+        )
     };
   }
 
-  function byWeightDesc(a, b) {
-    return b.weight - a.weight;
+  // =========================================================
+  // PARTICIPANT KEY
+  // =========================================================
+
+  /*
+   * TEAM:
+   * використовує teamId.
+   *
+   * SOLO:
+   * використовує UID.
+   *
+   * Це важливо, бо кілька SOLO-учасників
+   * можуть бути з однієї команди.
+   */
+  function registrationParticipantKey(
+    registration
+  ) {
+    const entryType =
+      normalize(
+        registration?.entryType
+      ).toLowerCase();
+
+    if (
+      entryType === "solo"
+    ) {
+      return normalize(
+        registration?.uid
+      );
+    }
+
+    return normalize(
+      registration?.teamId
+    );
   }
 
-  function pickBest(list, excludedIds) {
-    const arr = (Array.isArray(list) ? list : [])
-      .filter(x => x && x.weight > 0)
-      .sort(byWeightDesc);
+  function registrationDisplayName(
+    registration
+  ) {
+    const entryType =
+      normalize(
+        registration?.entryType
+      ).toLowerCase();
 
-    for (const c of arr) {
-      if (!excludedIds.has(c.fishId)) return c;
+    if (
+      entryType === "solo"
+    ) {
+      return (
+        normalize(
+          registration?.displayName
+        ) ||
+        normalize(
+          registration?.participantName
+        ) ||
+        normalize(
+          registration?.name
+        ) ||
+        "—"
+      );
+    }
+
+    return (
+      normalize(
+        registration?.teamName
+      ) ||
+      normalize(
+        registration?.team
+      ) ||
+      normalize(
+        registration?.displayName
+      ) ||
+      normalize(
+        registration?.name
+      ) ||
+      "—"
+    );
+  }
+
+  /*
+   * Для weighings підтримуємо:
+   *
+   * SOLO:
+   * participantUid / uid / participantId /
+   * teamId (якщо LIVE використовує UID в teamId)
+   *
+   * TEAM:
+   * teamId
+   */
+  function weighingParticipantKey(
+    weighing,
+    eligibleParticipants
+  ) {
+    const candidates = [
+      weighing?.participantUid,
+      weighing?.uid,
+      weighing?.userId,
+      weighing?.participantId,
+      weighing?.teamId
+    ];
+
+    for (
+      const candidate of candidates
+    ) {
+      const id =
+        normalize(candidate);
+
+      if (
+        id &&
+        eligibleParticipants.has(id)
+      ) {
+        return id;
+      }
+    }
+
+    return "";
+  }
+
+  // =========================================================
+  // WINNERS
+  // =========================================================
+
+  function byWeightDesc(
+    a,
+    b
+  ) {
+    return (
+      b.weight -
+      a.weight
+    );
+  }
+
+  function pickBest(
+    list,
+    excludedIds
+  ) {
+    const arr =
+      (
+        Array.isArray(list)
+          ? list
+          : []
+      )
+        .filter(
+          item =>
+            item &&
+            item.weight > 0
+        )
+        .sort(
+          byWeightDesc
+        );
+
+    for (
+      const candidate of arr
+    ) {
+      if (
+        !excludedIds.has(
+          candidate.fishId
+        )
+      ) {
+        return candidate;
+      }
     }
 
     return null;
   }
 
-  function computeWinners(allFish) {
-    const excluded = new Set();
+  function computeWinners(
+    allFish
+  ) {
+    const excluded =
+      new Set();
 
-    const overall = pickBest(allFish, excluded);
-    if (overall) excluded.add(overall.fishId);
+    const overall =
+      pickBest(
+        allFish,
+        excluded
+      );
 
-    const day1 = pickBest(allFish.filter(f => f.day === 1), excluded);
-    if (day1) excluded.add(day1.fishId);
+    if (overall) {
+      excluded.add(
+        overall.fishId
+      );
+    }
 
-    const day2 = pickBest(allFish.filter(f => f.day === 2), excluded);
-    if (day2) excluded.add(day2.fishId);
+    const day1 =
+      pickBest(
+        allFish.filter(
+          fish =>
+            fish.day === 1
+        ),
+        excluded
+      );
 
-    return { day1, day2, overall };
+    if (day1) {
+      excluded.add(
+        day1.fishId
+      );
+    }
+
+    const day2 =
+      pickBest(
+        allFish.filter(
+          fish =>
+            fish.day === 2
+        ),
+        excluded
+      );
+
+    if (day2) {
+      excluded.add(
+        day2.fishId
+      );
+    }
+
+    return {
+      day1,
+      day2,
+      overall
+    };
   }
 
-  function render(eligibleTeamsMap, allFish, winners) {
-    const eligibleCount = eligibleTeamsMap.size;
-    if (countEl) countEl.textContent = `Учасників: ${eligibleCount}`;
+  // =========================================================
+  // RENDER
+  // =========================================================
+
+  function render(
+    eligibleParticipants,
+    allFish,
+    winners
+  ) {
+    const eligibleCount =
+      eligibleParticipants.size;
+
+    if (countEl) {
+      countEl.textContent =
+        `Учасників: ${eligibleCount}`;
+    }
 
     if (!eligibleCount) {
-      tbody.innerHTML = `<tr><td colspan="4">Немає підтверджених учасників BigFish Total.</td></tr>`;
+      tbody.innerHTML =
+        `<tr>
+          <td colspan="4">
+            Немає підтверджених учасників BigFish Total.
+          </td>
+        </tr>`;
+
       return;
     }
 
     if (!allFish.length) {
-      tbody.innerHTML = `<tr><td colspan="4">Учасники підтверджені, але уловів BigFish Total ще нема.</td></tr>`;
+      tbody.innerHTML =
+        `<tr>
+          <td colspan="4">
+            Учасники підтверджені, але уловів BigFish Total ще нема.
+          </td>
+        </tr>`;
+
       return;
     }
 
-    const perTeam = new Map();
+    const perParticipant =
+      new Map();
 
-    for (const [teamId, teamName] of eligibleTeamsMap.entries()) {
-      perTeam.set(teamId, {
-        teamId,
-        teamName,
-        d1: 0,
-        d2: 0,
-        all: 0
-      });
+    for (
+      const [
+        participantId,
+        participantName
+      ] of eligibleParticipants.entries()
+    ) {
+      perParticipant.set(
+        participantId,
+        {
+          teamId:
+            participantId,
+
+          teamName:
+            participantName,
+
+          d1:
+            0,
+
+          d2:
+            0,
+
+          all:
+            0
+        }
+      );
     }
 
-    for (const f of allFish) {
-      const t = perTeam.get(f.teamId);
-      if (!t) continue;
+    for (
+      const fish of allFish
+    ) {
+      const participant =
+        perParticipant.get(
+          fish.teamId
+        );
 
-      t.all = Math.max(t.all, f.weight);
+      if (!participant) {
+        continue;
+      }
 
-      if (f.day === 1) t.d1 = Math.max(t.d1, f.weight);
-      if (f.day === 2) t.d2 = Math.max(t.d2, f.weight);
+      participant.all =
+        Math.max(
+          participant.all,
+          fish.weight
+        );
+
+      if (
+        fish.day === 1
+      ) {
+        participant.d1 =
+          Math.max(
+            participant.d1,
+            fish.weight
+          );
+      }
+
+      if (
+        fish.day === 2
+      ) {
+        participant.d2 =
+          Math.max(
+            participant.d2,
+            fish.weight
+          );
+      }
     }
 
-    const list = Array.from(perTeam.values()).sort((a, b) =>
-      (b.all - a.all) ||
-      (b.d1 - a.d1) ||
-      (b.d2 - a.d2) ||
-      String(a.teamName).localeCompare(String(b.teamName), "uk")
-    );
+    const list =
+      Array.from(
+        perParticipant.values()
+      ).sort(
+        (a, b) =>
+          (
+            b.all -
+            a.all
+          ) ||
+          (
+            b.d1 -
+            a.d1
+          ) ||
+          (
+            b.d2 -
+            a.d2
+          ) ||
+          String(
+            a.teamName
+          ).localeCompare(
+            String(
+              b.teamName
+            ),
+            "uk"
+          )
+      );
 
-    const wOverallTeam = winners?.overall?.teamId || "";
-    const wDay1Team    = winners?.day1?.teamId || "";
-    const wDay2Team    = winners?.day2?.teamId || "";
+    const wOverallTeam =
+      winners?.overall?.teamId ||
+      "";
 
-    const wOverallW = winners?.overall?.weight ?? null;
-    const wDay1W    = winners?.day1?.weight ?? null;
-    const wDay2W    = winners?.day2?.weight ?? null;
+    const wDay1Team =
+      winners?.day1?.teamId ||
+      "";
 
-    tbody.innerHTML = list.map(t => {
-      const day1Cell = (t.teamId === wDay1Team && wDay1W !== null)
-        ? `<strong>${fmtKg(wDay1W)}</strong> 🏆`
-        : fmtKg(t.d1);
+    const wDay2Team =
+      winners?.day2?.teamId ||
+      "";
 
-      const day2Cell = (t.teamId === wDay2Team && wDay2W !== null)
-        ? `<strong>${fmtKg(wDay2W)}</strong> 🏆`
-        : fmtKg(t.d2);
+    const wOverallW =
+      winners?.overall?.weight ??
+      null;
 
-      const overallCell = (t.teamId === wOverallTeam && wOverallW !== null)
-        ? `<strong>${fmtKg(wOverallW)}</strong> 🏆`
-        : `<strong>${fmtKg(t.all)}</strong>`;
+    const wDay1W =
+      winners?.day1?.weight ??
+      null;
 
-      const isMaxRow = t.teamId === wOverallTeam;
+    const wDay2W =
+      winners?.day2?.weight ??
+      null;
 
-      return `
-        <tr class="${isMaxRow ? "bigfish-row--max" : ""}">
-          <td>${fmt(t.teamName)}</td>
-          <td>${day1Cell}</td>
-          <td>${day2Cell}</td>
-          <td>${overallCell}</td>
-        </tr>
-      `;
-    }).join("");
+    tbody.innerHTML =
+      list.map(
+        participant => {
+          const day1Cell =
+            (
+              participant.teamId ===
+                wDay1Team &&
+              wDay1W !== null
+            )
+              ? `<strong>${fmtKg(
+                  wDay1W
+                )}</strong> 🏆`
+              : fmtKg(
+                  participant.d1
+                );
+
+          const day2Cell =
+            (
+              participant.teamId ===
+                wDay2Team &&
+              wDay2W !== null
+            )
+              ? `<strong>${fmtKg(
+                  wDay2W
+                )}</strong> 🏆`
+              : fmtKg(
+                  participant.d2
+                );
+
+          const overallCell =
+            (
+              participant.teamId ===
+                wOverallTeam &&
+              wOverallW !== null
+            )
+              ? `<strong>${fmtKg(
+                  wOverallW
+                )}</strong> 🏆`
+              : `<strong>${fmtKg(
+                  participant.all
+                )}</strong>`;
+
+          const isMaxRow =
+            participant.teamId ===
+            wOverallTeam;
+
+          return `
+            <tr class="${
+              isMaxRow
+                ? "bigfish-row--max"
+                : ""
+            }">
+              <td>${fmt(
+                participant.teamName
+              )}</td>
+
+              <td>
+                ${day1Cell}
+              </td>
+
+              <td>
+                ${day2Cell}
+              </td>
+
+              <td>
+                ${overallCell}
+              </td>
+            </tr>
+          `;
+        }
+      ).join("");
   }
 
-  let started = false;
-  let unsubSettings = null;
-  let unsubRegs = null;
-  let unsubWeigh = null;
+  // =========================================================
+  // SUBSCRIPTIONS
+  // =========================================================
+
+  let started =
+    false;
+
+  let unsubSettings =
+    null;
+
+  let unsubRegs =
+    null;
+
+  let unsubWeigh =
+    null;
 
   function stopAllStageSubs() {
     if (unsubRegs) {
       unsubRegs();
-      unsubRegs = null;
+      unsubRegs =
+        null;
     }
 
     if (unsubWeigh) {
       unsubWeigh();
-      unsubWeigh = null;
+      unsubWeigh =
+        null;
     }
   }
 
   function startSubscribe() {
-    if (started) return;
-    started = true;
+    if (started) {
+      return;
+    }
 
-    unsubSettings = db.collection("settings").doc("app").onSnapshot(
-      (snap) => {
-        const app = snap.exists ? (snap.data() || {}) : {};
-        const { compId, stageId } = readStageFromApp(app);
+    started =
+      true;
 
-        stopAllStageSubs();
+    unsubSettings =
+      db
+        .collection(
+          "settings"
+        )
+        .doc(
+          "app"
+        )
+        .onSnapshot(
+          snap => {
+            const app =
+              snap.exists
+                ? (
+                    snap.data() ||
+                    {}
+                  )
+                : {};
 
-        if (!compId || !stageId) {
-          if (countEl) countEl.textContent = "Учасників: 0";
-          tbody.innerHTML = `<tr><td colspan="4">Немає активного етапу.</td></tr>`;
-          return;
-        }
+            const {
+              compId,
+              stageId
+            } =
+              readStageFromApp(
+                app
+              );
 
-        unsubRegs = db.collection("registrations")
-          .where("competitionId", "==", compId)
-          .where("stageId", "==", stageId)
-          .where("status", "==", "confirmed")
-          .where("bigFishTotal", "==", true)
-          .onSnapshot(
-            (qs) => {
-              const eligibleTeams = new Map();
+            stopAllStageSubs();
 
-              qs.forEach(doc => {
-                const r = doc.data() || {};
-                const teamId = String(r.teamId || "");
-                const teamName = String(r.teamName || r.team || r.name || "—");
-
-                if (teamId) eligibleTeams.set(teamId, teamName);
-              });
-
-              if (unsubWeigh) {
-                unsubWeigh();
-                unsubWeigh = null;
+            if (!compId) {
+              if (countEl) {
+                countEl.textContent =
+                  "Учасників: 0";
               }
 
-              unsubWeigh = db.collection("weighings")
-                .where("compId", "==", compId)
-                .where("stageId", "==", stageId)
-                .where("status", "==", "submitted")
+              tbody.innerHTML =
+                `<tr>
+                  <td colspan="4">
+                    Немає активного змагання.
+                  </td>
+                </tr>`;
+
+              return;
+            }
+
+            /*
+             * ВАЖЛИВО:
+             *
+             * stageId НЕ ставимо у Firestore query.
+             *
+             * Чому:
+             * ONE-OFF registration має stageId = null,
+             * а LIVE використовує stageId = main.
+             *
+             * Нижче нормалізуємо:
+             * null -> main.
+             */
+            unsubRegs =
+              db
+                .collection(
+                  "registrations"
+                )
+                .where(
+                  "competitionId",
+                  "==",
+                  compId
+                )
+                .where(
+                  "status",
+                  "==",
+                  "confirmed"
+                )
+                .where(
+                  "bigFishTotal",
+                  "==",
+                  true
+                )
                 .onSnapshot(
-                  (wqs) => {
-                    const allFish = [];
+                  qs => {
+                    const eligibleParticipants =
+                      new Map();
 
-                    wqs.forEach(d => {
-                      const w = d.data() || {};
-                      const teamId = String(w.teamId || "");
+                    qs.forEach(
+                      doc => {
+                        const registration =
+                          doc.data() ||
+                          {};
 
-                      if (!teamId || !eligibleTeams.has(teamId)) return;
+                        /*
+                         * null і main вважаємо
+                         * одним етапом.
+                         */
+                        if (
+                          normalizeStageId(
+                            registration.stageId
+                          ) !==
+                          normalizeStageId(
+                            stageId
+                          )
+                        ) {
+                          return;
+                        }
 
-                      const weighNo = Number(w.weighNo || 0);
-                      if (!(weighNo >= 1 && weighNo <= 4)) return;
+                        const participantId =
+                          registrationParticipantKey(
+                            registration
+                          );
 
-                      const day = weighNo <= 2 ? 1 : 2;
-                      const teamName = String(w.teamName || eligibleTeams.get(teamId) || "—");
-                      const weights = Array.isArray(w.weights) ? w.weights : [];
+                        if (!participantId) {
+                          return;
+                        }
 
-                      weights.forEach((val, idx) => {
-                        const weight = fishWeight(val);
-                        if (!Number.isFinite(weight) || weight <= 0) return;
+                        const participantName =
+                          registrationDisplayName(
+                            registration
+                          );
 
-                        allFish.push({
-                          fishId: `${d.id}::${idx}`,
-                          teamId,
-                          teamName,
-                          weighNo,
-                          day,
-                          weight
-                        });
-                      });
-                    });
+                        eligibleParticipants.set(
+                          participantId,
+                          participantName
+                        );
+                      }
+                    );
 
-                    const winners = computeWinners(allFish);
-                    render(eligibleTeams, allFish, winners);
+                    if (unsubWeigh) {
+                      unsubWeigh();
+
+                      unsubWeigh =
+                        null;
+                    }
+
+                    // =========================================
+                    // WEIGHINGS
+                    // =========================================
+
+                    unsubWeigh =
+                      db
+                        .collection(
+                          "weighings"
+                        )
+                        .where(
+                          "compId",
+                          "==",
+                          compId
+                        )
+                        .where(
+                          "stageId",
+                          "==",
+                          normalizeStageId(
+                            stageId
+                          )
+                        )
+                        .where(
+                          "status",
+                          "==",
+                          "submitted"
+                        )
+                        .onSnapshot(
+                          wqs => {
+                            const allFish =
+                              [];
+
+                            wqs.forEach(
+                              doc => {
+                                const weighing =
+                                  doc.data() ||
+                                  {};
+
+                                const participantId =
+                                  weighingParticipantKey(
+                                    weighing,
+                                    eligibleParticipants
+                                  );
+
+                                if (!participantId) {
+                                  return;
+                                }
+
+                                const weighNo =
+                                  Number(
+                                    weighing.weighNo ||
+                                    0
+                                  );
+
+                                if (
+                                  weighNo < 1 ||
+                                  weighNo > 4
+                                ) {
+                                  return;
+                                }
+
+                                const day =
+                                  weighNo <= 2
+                                    ? 1
+                                    : 2;
+
+                                const participantName =
+                                  eligibleParticipants.get(
+                                    participantId
+                                  ) ||
+                                  normalize(
+                                    weighing.teamName
+                                  ) ||
+                                  normalize(
+                                    weighing.participantName
+                                  ) ||
+                                  "—";
+
+                                const weights =
+                                  Array.isArray(
+                                    weighing.weights
+                                  )
+                                    ? weighing.weights
+                                    : [];
+
+                                weights.forEach(
+                                  (
+                                    value,
+                                    index
+                                  ) => {
+                                    const weight =
+                                      fishWeight(
+                                        value
+                                      );
+
+                                    if (
+                                      !Number.isFinite(
+                                        weight
+                                      ) ||
+                                      weight <= 0
+                                    ) {
+                                      return;
+                                    }
+
+                                    allFish.push({
+                                      fishId:
+                                        `${doc.id}::${index}`,
+
+                                      /*
+                                       * Тут teamId фактично є
+                                       * універсальним participant key:
+                                       *
+                                       * TEAM -> teamId
+                                       * SOLO -> UID
+                                       */
+                                      teamId:
+                                        participantId,
+
+                                      teamName:
+                                        participantName,
+
+                                      weighNo,
+
+                                      day,
+
+                                      weight
+                                    });
+                                  }
+                                );
+                              }
+                            );
+
+                            const winners =
+                              computeWinners(
+                                allFish
+                              );
+
+                            render(
+                              eligibleParticipants,
+                              allFish,
+                              winners
+                            );
+                          },
+                          error => {
+                            console.error(
+                              "[BigFish] weighings error:",
+                              error
+                            );
+
+                            tbody.innerHTML =
+                              `<tr>
+                                <td colspan="4">
+                                  Помилка читання weighings.
+                                </td>
+                              </tr>`;
+                          }
+                        );
+
+                    /*
+                     * Важливо показати учасника
+                     * одразу навіть до появи риби.
+                     */
+                    if (
+                      !eligibleParticipants.size
+                    ) {
+                      render(
+                        eligibleParticipants,
+                        [],
+                        {
+                          day1: null,
+                          day2: null,
+                          overall: null
+                        }
+                      );
+                    }
                   },
-                  (err) => {
-                    console.error("[BigFish] weighings error:", err);
-                    if (countEl) countEl.textContent = "Учасників: 0";
-                    tbody.innerHTML = `<tr><td colspan="4">Помилка читання weighings.</td></tr>`;
+                  error => {
+                    console.error(
+                      "[BigFish] registrations error:",
+                      error
+                    );
+
+                    if (countEl) {
+                      countEl.textContent =
+                        "Учасників: 0";
+                    }
+
+                    tbody.innerHTML =
+                      `<tr>
+                        <td colspan="4">
+                          Помилка читання registrations.
+                        </td>
+                      </tr>`;
                   }
                 );
-            },
-            (err) => {
-              console.error("[BigFish] registrations error:", err);
-              if (countEl) countEl.textContent = "Учасників: 0";
-              tbody.innerHTML = `<tr><td colspan="4">Помилка читання registrations.</td></tr>`;
+          },
+          error => {
+            console.error(
+              "[BigFish] settings/app error:",
+              error
+            );
+
+            if (countEl) {
+              countEl.textContent =
+                "Учасників: 0";
             }
-          );
-      },
-      (err) => {
-        console.error("[BigFish] settings/app error:", err);
-        if (countEl) countEl.textContent = "Учасників: 0";
-        tbody.innerHTML = `<tr><td colspan="4">Помилка налаштувань.</td></tr>`;
-      }
-    );
+
+            tbody.innerHTML =
+              `<tr>
+                <td colspan="4">
+                  Помилка налаштувань.
+                </td>
+              </tr>`;
+          }
+        );
   }
 
-  if (isOpen) startSubscribe();
+  // =========================================================
+  // START
+  // =========================================================
 
-  window.addEventListener("beforeunload", () => {
-    stopAllStageSubs();
+  if (isOpen) {
+    startSubscribe();
+  }
 
-    if (unsubSettings) {
-      unsubSettings();
-      unsubSettings = null;
+  window.addEventListener(
+    "beforeunload",
+    () => {
+      stopAllStageSubs();
+
+      if (unsubSettings) {
+        unsubSettings();
+
+        unsubSettings =
+          null;
+      }
     }
-  });
+  );
+
 })();

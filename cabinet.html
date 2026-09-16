@@ -108,7 +108,11 @@
 
 <header class="header">
   <div class="container header__row">
-    <a class="logo" href="index.html"><span class="logo__mark">SC</span><span class="logo__text">STOLAR CARP</span></a>
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+
     <nav class="nav">
       <a href="index.html" class="nav__link">Головна</a>
       <a href="rules.html" class="nav__link">Регламент</a>
@@ -121,7 +125,12 @@
       <a href="events/index.html" class="nav__link">Архів</a>
       <a href="cabinet.html" class="nav__link nav__link--active">Мій кабінет</a>
     </nav>
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+
+    <button class="burger" id="burger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </header>
 
@@ -129,111 +138,310 @@
 <section class="container">
 
 <div class="cabinet-hero">
-  <div class="cabinet-kicker"><span class="cabinet-kicker-dot"></span>STOLAR CARP · CABINET</div>
-  <h1 class="cabinet-title"><span>МІЙ КАБІНЕТ</span></h1>
-  <p class="cabinet-subtitle" id="cabinetStatus">Перевірка доступу до кабінету…</p>
+  <div class="cabinet-kicker">
+    <span class="cabinet-kicker-dot"></span>
+    STOLAR CARP · CABINET
+  </div>
+
+  <h1 class="cabinet-title">
+    <span>МІЙ КАБІНЕТ</span>
+  </h1>
+
+  <p class="cabinet-subtitle" id="cabinetStatus">
+    Перевірка доступу до кабінету…
+  </p>
 </div>
 
 <div class="cabinet-layout" id="cabinetContent" style="display:none;">
 
 <div class="card card--soft">
-<h2 class="card-title">Команда та профіль</h2>
+
+<h2 class="card-title">
+  Команда та профіль
+</h2>
 
 <div class="team-header">
-  <div class="team-avatar-wrap" id="avatarWrapper" title="Натисніть для збільшення">
-    <img id="cabinetAvatarImg" class="team-avatar" alt="Аватар">
-    <div id="cabinetAvatarPlaceholder" class="team-avatar-placeholder">SC</div>
+
+  <div
+    class="team-avatar-wrap"
+    id="avatarWrapper"
+    title="Натисніть для збільшення"
+  >
+    <img
+      id="cabinetAvatarImg"
+      class="team-avatar"
+      alt="Аватар"
+    >
+
+    <div
+      id="cabinetAvatarPlaceholder"
+      class="team-avatar-placeholder"
+    >
+      SC
+    </div>
   </div>
 
   <div class="team-main">
-    <div class="team-name" id="teamNameText">Команда…</div>
 
-    <div class="user-fullname" id="userFullName">—</div>
-    <div class="user-city" id="userCity" style="display:none;">—</div>
+    <div
+      class="team-name"
+      id="teamNameText"
+    >
+      Команда…
+    </div>
+
+    <div
+      class="user-fullname"
+      id="userFullName"
+    >
+      —
+    </div>
+
+    <div
+      class="user-city"
+      id="userCity"
+      style="display:none;"
+    >
+      —
+    </div>
 
     <div class="team-meta">
-      <div class="meta-pill"><strong>Роль:</strong> <span id="userRoleText">–</span></div>
-      <div class="meta-pill"><strong>Телефон:</strong> <span id="userPhoneText">–</span></div>
-      <div class="meta-pill" id="joinCodePill" style="display:none;">
-        <strong>Код команди:</strong> <span id="joinCodeText"></span>
+
+      <div class="meta-pill">
+        <strong>Роль:</strong>
+        <span id="userRoleText">–</span>
       </div>
+
+      <div class="meta-pill">
+        <strong>Телефон:</strong>
+        <span id="userPhoneText">–</span>
+      </div>
+
+      <div
+        class="meta-pill"
+        id="joinCodePill"
+        style="display:none;"
+      >
+        <strong>Код команди:</strong>
+        <span id="joinCodeText"></span>
+      </div>
+
     </div>
 
     <!-- ✅ РЕДАГУВАННЯ ПРОФІЛЮ -->
+
     <div class="profile-actions">
-      <button type="button" class="profile-btn" id="editProfileBtn">Редагувати дані</button>
-      <button type="button" class="profile-btn profile-btn--primary" id="saveProfileBtn" style="display:none;">Зберегти</button>
-      <button type="button" class="profile-btn" id="cancelProfileBtn" style="display:none;">Скасувати</button>
+
+      <button
+        type="button"
+        class="profile-btn"
+        id="editProfileBtn"
+      >
+        Редагувати дані
+      </button>
+
+      <button
+        type="button"
+        class="profile-btn profile-btn--primary"
+        id="saveProfileBtn"
+        style="display:none;"
+      >
+        Зберегти
+      </button>
+
+      <button
+        type="button"
+        class="profile-btn"
+        id="cancelProfileBtn"
+        style="display:none;"
+      >
+        Скасувати
+      </button>
+
     </div>
 
-    <div class="profile-editbox" id="profileEditBox">
+    <div
+      class="profile-editbox"
+      id="profileEditBox"
+    >
+
       <div class="profile-grid">
+
+        <!-- ✅ ПРІЗВИЩЕ -->
         <div>
-          <div class="profile-label">Імʼя та прізвище</div>
-          <input id="fullNameInput" class="profile-input" type="text" placeholder="Напр. Іван Петренко" maxlength="80">
+          <div class="profile-label">
+            Прізвище
+          </div>
+
+          <input
+            id="lastNameInput"
+            class="profile-input"
+            type="text"
+            placeholder="Напр. Петренко"
+            maxlength="40"
+            autocomplete="family-name"
+          >
+        </div>
+
+        <!-- ✅ ІМ'Я -->
+        <div>
+          <div class="profile-label">
+            Імʼя
+          </div>
+
+          <input
+            id="firstNameInput"
+            class="profile-input"
+            type="text"
+            placeholder="Напр. Іван"
+            maxlength="40"
+            autocomplete="given-name"
+          >
         </div>
 
         <div>
-          <div class="profile-label">Телефон</div>
-          <input id="phoneInput" class="profile-input" type="tel" placeholder="+380..." maxlength="25">
+          <div class="profile-label">
+            Телефон
+          </div>
+
+          <input
+            id="phoneInput"
+            class="profile-input"
+            type="tel"
+            placeholder="+380..."
+            maxlength="25"
+          >
         </div>
 
         <div>
-          <div class="profile-label">Місто проживання</div>
-          <input id="cityInput" class="profile-input" type="text" placeholder="Напр. Львів" maxlength="40">
+          <div class="profile-label">
+            Місто проживання
+          </div>
+
+          <input
+            id="cityInput"
+            class="profile-input"
+            type="text"
+            placeholder="Напр. Львів"
+            maxlength="40"
+          >
         </div>
+
       </div>
 
-      <div id="profileEditMsg" class="cabinet-small-muted"></div>
+      <div
+        id="profileEditMsg"
+        class="cabinet-small-muted"
+      ></div>
+
     </div>
 
     <!-- Cloudinary Widget -->
+
     <div class="avatar-section">
-      <div class="avatar-label">Аватар учасника</div>
-      <button type="button" class="avatar-small-btn" id="openCloudinaryWidget">
+
+      <div class="avatar-label">
+        Аватар учасника
+      </div>
+
+      <button
+        type="button"
+        class="avatar-small-btn"
+        id="openCloudinaryWidget"
+      >
         Змінити аватар
       </button>
-      <div id="avatarMsg" class="cabinet-small-muted"></div>
+
+      <div
+        id="avatarMsg"
+        class="cabinet-small-muted"
+      ></div>
+
     </div>
 
     <div id="cabinetMsg"></div>
+
   </div>
 </div>
 
 <div class="members-list">
-  <div class="members-title">Склад команди</div>
-  <div id="membersContainer">
-    <div class="cabinet-small-muted">Завантаження списку учасників…</div>
+
+  <div class="members-title">
+    Склад команди
   </div>
+
+  <div id="membersContainer">
+    <div class="cabinet-small-muted">
+      Завантаження списку учасників…
+    </div>
+  </div>
+
 </div>
+
 </div>
 
 <!-- МОЯ УЧАСТЬ -->
+
 <div class="card">
-  <h2 class="card-title">Моя участь</h2>
+
+  <h2 class="card-title">
+    Моя участь
+  </h2>
+
   <div id="myCompetitions">
-    <div class="cabinet-small-muted">Завантаження участі…</div>
+    <div class="cabinet-small-muted">
+      Завантаження участі…
+    </div>
   </div>
+
 </div>
 
 <!-- ДОСЯГНЕННЯ -->
+
 <div class="card">
-  <h2 class="card-title">Досягнення команди</h2>
-  <p class="card-subtitle">Підсумки виступів у сезоні STOLAR CARP</p>
+
+  <h2 class="card-title">
+    Досягнення команди
+  </h2>
+
+  <p class="card-subtitle">
+    Підсумки виступів у сезоні STOLAR CARP
+  </p>
 
   <div class="stats-grid">
+
     <div class="stat-card">
-      <div class="stat-label">Загальний улов</div>
-      <div class="stat-value"><span id="statTotalWeight">—</span><span class="stat-unit">кг</span></div>
+
+      <div class="stat-label">
+        Загальний улов
+      </div>
+
+      <div class="stat-value">
+        <span id="statTotalWeight">—</span>
+        <span class="stat-unit">кг</span>
+      </div>
+
     </div>
+
     <div class="stat-card">
-      <div class="stat-label">Big Fish</div>
-      <div class="stat-value"><span id="statBigFish">—</span><span class="stat-unit">кг</span></div>
+
+      <div class="stat-label">
+        Big Fish
+      </div>
+
+      <div class="stat-value">
+        <span id="statBigFish">—</span>
+        <span class="stat-unit">кг</span>
+      </div>
+
     </div>
+
   </div>
+
 </div>
 
 </div>
+
 </section>
 </main>
 
@@ -244,8 +452,13 @@
 </footer>
 
 <!-- AVATAR POPUP -->
+
 <div id="avatarPopup">
-  <img id="avatarPopupImg" src="" alt="Аватар повний розмір">
+  <img
+    id="avatarPopupImg"
+    src=""
+    alt="Аватар повний розмір"
+  >
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>

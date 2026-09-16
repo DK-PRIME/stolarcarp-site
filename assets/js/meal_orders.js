@@ -1,30 +1,36 @@
 // assets/js/meal_orders.js
 // STOLAR CARP • Харчування 2 доби
+// ✅ команди подають свої заявки
 // ✅ актуальний сектор береться з stageResults після жеребкування
-// ✅ побажання показуються в загальному списку
-// ✅ окреме read-only посилання для пані Іри
+// ✅ побажання показуються у списку
+// ✅ окреме харчування для СУДДІВ — тільки admin
 // ✅ без подвійних click-handler'ів
+// ✅ готує безпечний public mirror для окремої апки харчування
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-draw-notes-ira-link");
+  console.log("✅ meal_orders.js LOADED v20260917-judges-public-app-v1");
 
   let ctx = window.scMealContext || null;
   let currentUser = null;
   let userTeamId = "";
+  let userRole = "";
   let canManageMeals = false;
+  let canManageJudges = false;
   let mealIsOpen = false;
 
+  const ADMIN_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const FOOD_OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+  const JUDGES_ID = "__judges__";
+
   const PAID_STATUSES = [
     "confirmed",
     "paid",
     "payment_confirmed"
   ];
 
-  const $ = (id) =>
-    document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
 
   const esc = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (m) => ({
@@ -52,32 +58,19 @@
   }
 
   function safeId(v) {
-    return String(v || "")
-      .replace(/[\/#?\[\]]/g, "_");
+    return String(v || "").replace(/[\/#?\[\]]/g, "_");
   }
 
-  function orderId(
-    compId,
-    stageId,
-    teamId
-  ) {
-    return safeId(
-      `${compId}__${stageId}__${teamId}`
-    );
+  function orderId(compId, stageId, entityId) {
+    return safeId(`${compId}__${stageId}__${entityId}`);
   }
 
-  function stageResultsId(
-    compId,
-    stageId
-  ) {
+  function stageResultsId(compId, stageId) {
     return `${norm(compId)}__${norm(stageId) || "main"}`;
   }
 
   function mealSettingsId() {
-    if (
-      !ctx?.competitionId ||
-      !ctx?.stageId
-    ) {
+    if (!ctx?.competitionId || !ctx?.stageId) {
       return "";
     }
 
@@ -86,17 +79,14 @@
     );
   }
 
-  function setStatus(
-    text,
-    ok = true
-  ) {
-    const el =
-      $("mealStatus");
+  function setStatus(text, ok = true) {
+    const el = $("mealStatus");
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
-    el.textContent =
-      text || "";
+    el.textContent = text || "";
 
     el.className =
       "mealStatus " +
@@ -107,17 +97,14 @@
       );
   }
 
-  function setPopupStatus(
-    text,
-    ok = true
-  ) {
-    const el =
-      $("mealPopupStatus");
+  function setPopupStatus(text, ok = true) {
+    const el = $("mealPopupStatus");
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
-    el.textContent =
-      text || "";
+    el.textContent = text || "";
 
     el.className =
       "mealStatus " +
@@ -128,30 +115,23 @@
       );
   }
 
-  function openPopup(
-    title,
-    html
-  ) {
+  function openPopup(title, html) {
     if ($("mealPopupTitle")) {
-      $("mealPopupTitle").textContent =
-        title;
+      $("mealPopupTitle").textContent = title;
     }
 
     if ($("mealPopupBody")) {
-      $("mealPopupBody").innerHTML =
-        html;
+      $("mealPopupBody").innerHTML = html;
     }
 
     if ($("mealPopup")) {
-      $("mealPopup").style.display =
-        "flex";
+      $("mealPopup").style.display = "flex";
     }
   }
 
   function closePopup() {
     if ($("mealPopup")) {
-      $("mealPopup").style.display =
-        "none";
+      $("mealPopup").style.display = "none";
     }
   }
 
@@ -177,11 +157,8 @@
     };
   }
 
-  async function waitMealContext(
-    maxMs = 10000
-  ) {
-    const started =
-      Date.now();
+  async function waitMealContext(maxMs = 10000) {
+    const started = Date.now();
 
     while (
       Date.now() - started <
@@ -247,7 +224,10 @@
 
     if (!currentUser) {
       userTeamId = "";
+      userRole = "";
       canManageMeals = false;
+      canManageJudges = false;
+
       return;
     }
 
@@ -269,9 +249,25 @@
         ""
       );
 
+    userRole =
+      clean(
+        u.role ||
+        ""
+      );
+
+    const isAdmin =
+      currentUser.uid ===
+        ADMIN_UID ||
+      userRole ===
+        "admin";
+
+    canManageJudges =
+      isAdmin;
+
     canManageMeals =
       currentUser.uid ===
-      FOOD_OWNER_UID;
+        FOOD_OWNER_UID ||
+      isAdmin;
   }
 
   async function loadMealGate() {
@@ -283,12 +279,15 @@
 
     if (!id) {
       mealIsOpen = false;
+
       return false;
     }
 
     const snap =
       await db
-        .collection("mealSettings")
+        .collection(
+          "mealSettings"
+        )
         .doc(id)
         .get();
 
@@ -303,9 +302,54 @@
     return mealIsOpen;
   }
 
-  async function setMealGate(
-    isOpen
-  ) {
+  async function publishMealAppState(isOpen) {
+    if (
+      !ctx?.competitionId ||
+      !ctx?.stageId
+    ) {
+      return;
+    }
+
+    try {
+      const {
+        db,
+        fb
+      } = await waitReady();
+
+      await db
+        .collection(
+          "mealPublic"
+        )
+        .doc(
+          "current"
+        )
+        .set({
+          competitionId:
+            ctx.competitionId,
+
+          stageId:
+            ctx.stageId,
+
+          isOpen:
+            !!isOpen,
+
+          updatedAt:
+            fb.firestore
+              .FieldValue
+              .serverTimestamp()
+        }, {
+          merge: true
+        });
+
+    } catch (e) {
+      console.warn(
+        "[Meals] public current mirror skipped:",
+        e?.message || e
+      );
+    }
+  }
+
+  async function setMealGate(isOpen) {
     const {
       db,
       fb
@@ -321,7 +365,9 @@
     }
 
     await db
-      .collection("mealSettings")
+      .collection(
+        "mealSettings"
+      )
       .doc(id)
       .set({
         competitionId:
@@ -348,6 +394,70 @@
 
     mealIsOpen =
       !!isOpen;
+
+    await publishMealAppState(
+      mealIsOpen
+    );
+  }
+
+  function ensureJudgesButton() {
+    const mealBox =
+      $("mealBox");
+
+    const listBtn =
+      $("btnOpenMealList");
+
+    let btn =
+      $("btnOpenJudgesMeal");
+
+    if (
+      !btn &&
+      mealBox
+    ) {
+      btn =
+        document.createElement(
+          "button"
+        );
+
+      btn.id =
+        "btnOpenJudgesMeal";
+
+      btn.type =
+        "button";
+
+      btn.className =
+        listBtn?.className ||
+        "mealBtn";
+
+      btn.textContent =
+        "👨‍⚖️ Судді";
+
+      if (
+        listBtn?.parentNode
+      ) {
+        listBtn.parentNode
+          .insertBefore(
+            btn,
+            listBtn.nextSibling
+          );
+
+      } else {
+        mealBox.appendChild(
+          btn
+        );
+      }
+    }
+
+    if (btn) {
+      btn.hidden =
+        !(
+          mealIsOpen &&
+          canManageJudges
+        );
+
+      btn.onclick =
+        openJudgesOrder;
+    }
   }
 
   function applyVisibility() {
@@ -394,6 +504,8 @@
           canManageMeals
         );
     }
+
+    ensureJudgesButton();
 
     if (!mealIsOpen) {
       setStatus("");
@@ -442,7 +554,9 @@
       const byTeamId =
         mainPaidTeams.find(
           (t) =>
-            norm(t.teamId) ===
+            norm(
+              t.teamId
+            ) ===
             userTeamId
         );
 
@@ -455,7 +569,9 @@
       const byUid =
         mainPaidTeams.find(
           (t) =>
-            norm(t.uid) ===
+            norm(
+              t.uid
+            ) ===
             currentUser.uid
         );
 
@@ -468,41 +584,41 @@
   }
 
   function teamDrawKey(t) {
-    const z =
+    const direct =
+      norm(
+        t?.drawKey
+      ).toUpperCase();
+
+    if (direct) {
+      return direct;
+    }
+
+    const zone =
       norm(
         t?.drawZone ||
         t?.zone
       ).toUpperCase();
 
-    const sRaw =
+    const sectorRaw =
       norm(
         t?.drawSector ||
         t?.sector
       );
 
-    const direct =
-      norm(
-        t?.drawKey
-      );
-
-    if (direct) {
-      return direct.toUpperCase();
-    }
-
     if (
-      !z ||
-      !sRaw
+      !zone ||
+      !sectorRaw
     ) {
       return "";
     }
 
-    const s =
-      sRaw.replace(
+    const sector =
+      sectorRaw.replace(
         /^[ABC]/i,
         ""
       );
 
-    return `${z}${s}`;
+    return `${zone}${sector}`;
   }
 
   function totalOrder(o) {
@@ -516,9 +632,7 @@
     );
   }
 
-  async function readMyOrder(
-    team
-  ) {
+  async function readOrderByEntity(entityId) {
     const { db } =
       await waitReady();
 
@@ -526,12 +640,14 @@
       orderId(
         ctx.competitionId,
         ctx.stageId,
-        team.teamId
+        entityId
       );
 
     const snap =
       await db
-        .collection("mealOrders")
+        .collection(
+          "mealOrders"
+        )
         .doc(id)
         .get();
 
@@ -540,9 +656,9 @@
       : null;
   }
 
-  function orderFormHtml(
-    team,
-    old
+  function mealFieldsHtml(
+    old,
+    prefix = "meal"
   ) {
     const d1 =
       old?.day1 || {};
@@ -555,20 +671,6 @@
 
     return `
       <div class="mealDayTitle">
-        Команда:
-        ${esc(
-          team.teamName ||
-          team.team ||
-          "—"
-        )}
-        ·
-        ${esc(
-          teamDrawKey(team) ||
-          "сектор ще не визначено"
-        )}
-      </div>
-
-      <div class="mealDayTitle">
         Доба 1
       </div>
 
@@ -576,33 +678,36 @@
 
         <div class="mealField">
           <label>Обід</label>
+
           <input
-            id="mealD1Lunch"
+            id="${prefix}D1Lunch"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d1.lunch || 0)}"
           >
         </div>
 
         <div class="mealField">
           <label>Вечеря</label>
+
           <input
-            id="mealD1Dinner"
+            id="${prefix}D1Dinner"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d1.dinner || 0)}"
           >
         </div>
 
         <div class="mealField">
           <label>Сніданок</label>
+
           <input
-            id="mealD1Breakfast"
+            id="${prefix}D1Breakfast"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d1.breakfast || 0)}"
           >
         </div>
@@ -617,33 +722,36 @@
 
         <div class="mealField">
           <label>Обід</label>
+
           <input
-            id="mealD2Lunch"
+            id="${prefix}D2Lunch"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d2.lunch || 0)}"
           >
         </div>
 
         <div class="mealField">
           <label>Вечеря</label>
+
           <input
-            id="mealD2Dinner"
+            id="${prefix}D2Dinner"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d2.dinner || 0)}"
           >
         </div>
 
         <div class="mealField">
           <label>Сніданок</label>
+
           <input
-            id="mealD2Breakfast"
+            id="${prefix}D2Breakfast"
             type="number"
             min="0"
-            max="20"
+            max="50"
             value="${esc(d2.breakfast || 0)}"
           >
         </div>
@@ -657,11 +765,41 @@
         </label>
 
         <textarea
-          id="mealNote"
+          id="${prefix}Note"
           placeholder="Наприклад: без цибулі, без мʼяса тощо"
         >${esc(note)}</textarea>
 
       </div>
+    `;
+  }
+
+  function orderFormHtml(
+    team,
+    old
+  ) {
+    return `
+      <div class="mealDayTitle">
+
+        Команда:
+        ${esc(
+          team.teamName ||
+          team.team ||
+          "—"
+        )}
+
+        ·
+
+        ${esc(
+          teamDrawKey(team) ||
+          "сектор ще не визначено"
+        )}
+
+      </div>
+
+      ${mealFieldsHtml(
+        old,
+        "meal"
+      )}
 
       <div
         style="
@@ -695,6 +833,120 @@
         id="mealPopupStatus"
       ></div>
     `;
+  }
+
+  function judgesFormHtml(old) {
+    return `
+      <div
+        class="mealDayTitle"
+        style="
+          color:#facc15;
+        "
+      >
+        👨‍⚖️ СУДДІ
+      </div>
+
+      <div
+        class="hint"
+        style="
+          margin-bottom:10px;
+        "
+      >
+        Цю кількість може змінювати
+        тільки адміністратор.
+      </div>
+
+      ${mealFieldsHtml(
+        old,
+        "judgeMeal"
+      )}
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:14px;
+        "
+      >
+
+        <button
+          class="mealBtn mealBtn--primary"
+          id="btnSaveJudgesMeal"
+          type="button"
+        >
+          Зберегти суддів
+        </button>
+
+        <button
+          class="mealBtn"
+          id="btnCloseMealPopup"
+          type="button"
+        >
+          Закрити
+        </button>
+
+      </div>
+
+      <div
+        class="mealStatus"
+        id="mealPopupStatus"
+      ></div>
+    `;
+  }
+
+  function readFields(prefix) {
+    const day1 = {
+      lunch:
+        num(
+          $(`${prefix}D1Lunch`)
+            ?.value
+        ),
+
+      dinner:
+        num(
+          $(`${prefix}D1Dinner`)
+            ?.value
+        ),
+
+      breakfast:
+        num(
+          $(`${prefix}D1Breakfast`)
+            ?.value
+        )
+    };
+
+    const day2 = {
+      lunch:
+        num(
+          $(`${prefix}D2Lunch`)
+            ?.value
+        ),
+
+      dinner:
+        num(
+          $(`${prefix}D2Dinner`)
+            ?.value
+        ),
+
+      breakfast:
+        num(
+          $(`${prefix}D2Breakfast`)
+            ?.value
+        )
+    };
+
+    const note =
+      norm(
+        $(`${prefix}Note`)
+          ?.value
+      );
+
+    return {
+      day1,
+      day2,
+      note
+    };
   }
 
   async function openOrder() {
@@ -731,8 +983,8 @@
       }
 
       const old =
-        await readMyOrder(
-          team
+        await readOrderByEntity(
+          team.teamId
         );
 
       openPopup(
@@ -743,13 +995,19 @@
         )
       );
 
-      if ($("btnCloseMealPopup")) {
-        $("btnCloseMealPopup").onclick =
+      if (
+        $("btnCloseMealPopup")
+      ) {
+        $("btnCloseMealPopup")
+          .onclick =
           closePopup;
       }
 
-      if ($("btnSaveMealOrder")) {
-        $("btnSaveMealOrder").onclick =
+      if (
+        $("btnSaveMealOrder")
+      ) {
+        $("btnSaveMealOrder")
+          .onclick =
           () =>
             saveOrder(
               team,
@@ -768,6 +1026,94 @@
     }
   }
 
+  async function publishPublicOrder(
+    privateData,
+    id
+  ) {
+    try {
+      const {
+        db,
+        fb
+      } = await waitReady();
+
+      const publicData = {
+        competitionId:
+          privateData.competitionId,
+
+        stageId:
+          privateData.stageId,
+
+        type:
+          privateData.type ||
+          "team",
+
+        entityId:
+          privateData.entityId ||
+          privateData.teamId ||
+          "",
+
+        teamId:
+          privateData.teamId ||
+          null,
+
+        teamName:
+          privateData.teamName ||
+          "—",
+
+        zone:
+          privateData.zone ||
+          "",
+
+        sector:
+          privateData.sector ||
+          "",
+
+        drawKey:
+          privateData.drawKey ||
+          "",
+
+        day1:
+          privateData.day1 ||
+          {},
+
+        day2:
+          privateData.day2 ||
+          {},
+
+        note:
+          privateData.note ||
+          "",
+
+        status:
+          privateData.status ||
+          "empty",
+
+        updatedAt:
+          fb.firestore
+            .FieldValue
+            .serverTimestamp()
+      };
+
+      await db
+        .collection(
+          "mealPublicOrders"
+        )
+        .doc(id)
+        .set(
+          publicData,
+          {
+            merge: true
+          }
+        );
+
+    } catch (e) {
+      console.warn(
+        "[Meals] public order mirror skipped:",
+        e?.message || e
+      );
+    }
+  }
+
   async function saveOrder(
     team,
     oldOrder = null
@@ -780,48 +1126,14 @@
         fb
       } = await waitReady();
 
-      const day1 = {
-        lunch:
-          num(
-            $("mealD1Lunch")
-              ?.value
-          ),
-
-        dinner:
-          num(
-            $("mealD1Dinner")
-              ?.value
-          ),
-
-        breakfast:
-          num(
-            $("mealD1Breakfast")
-              ?.value
-          )
-      };
-
-      const day2 = {
-        lunch:
-          num(
-            $("mealD2Lunch")
-              ?.value
-          ),
-
-        dinner:
-          num(
-            $("mealD2Dinner")
-              ?.value
-          ),
-
-        breakfast:
-          num(
-            $("mealD2Breakfast")
-              ?.value
-          )
-      };
-
-      const drawKey =
-        teamDrawKey(team);
+      const {
+        day1,
+        day2,
+        note
+      } =
+        readFields(
+          "meal"
+        );
 
       const zone =
         norm(
@@ -838,12 +1150,23 @@
           ""
         );
 
+      const drawKey =
+        teamDrawKey(
+          team
+        );
+
       const data = {
         competitionId:
           ctx.competitionId,
 
         stageId:
           ctx.stageId,
+
+        type:
+          "team",
+
+        entityId:
+          team.teamId,
 
         teamId:
           team.teamId,
@@ -863,11 +1186,7 @@
 
         day2,
 
-        note:
-          norm(
-            $("mealNote")
-              ?.value
-          ),
+        note,
 
         uid:
           currentUser.uid,
@@ -903,7 +1222,9 @@
         );
 
       await db
-        .collection("mealOrders")
+        .collection(
+          "mealOrders"
+        )
         .doc(id)
         .set(
           data,
@@ -911,6 +1232,11 @@
             merge: true
           }
         );
+
+      await publishPublicOrder(
+        data,
+        id
+      );
 
       setPopupStatus(
         "✅ Заявку збережено.",
@@ -933,19 +1259,205 @@
     }
   }
 
-  function parseDraw(team) {
-    const zone =
-      norm(
-        team?.drawZone ||
-        team?.zone
-      ).toUpperCase();
+  async function openJudgesOrder() {
+    try {
+      await waitMealContext();
+      await loadUserData();
+      await loadMealGate();
 
-    const sectorRaw =
-      norm(
-        team?.drawSector ||
-        team?.sector
+      applyVisibility();
+
+      if (!mealIsOpen) {
+        return;
+      }
+
+      if (!canManageJudges) {
+        setStatus(
+          "Суддів може редагувати тільки адміністратор.",
+          false
+        );
+
+        return;
+      }
+
+      const old =
+        await readOrderByEntity(
+          JUDGES_ID
+        );
+
+      openPopup(
+        "👨‍⚖️ Харчування суддів",
+        judgesFormHtml(
+          old
+        )
       );
 
+      if (
+        $("btnCloseMealPopup")
+      ) {
+        $("btnCloseMealPopup")
+          .onclick =
+          closePopup;
+      }
+
+      if (
+        $("btnSaveJudgesMeal")
+      ) {
+        $("btnSaveJudgesMeal")
+          .onclick =
+          () =>
+            saveJudgesOrder(
+              old
+            );
+      }
+
+    } catch (e) {
+      console.error(e);
+
+      setStatus(
+        "Помилка харчування суддів: " +
+        (e.message || e),
+        false
+      );
+    }
+  }
+
+  async function saveJudgesOrder(
+    oldOrder = null
+  ) {
+    try {
+      await waitMealContext();
+      await loadUserData();
+
+      if (!canManageJudges) {
+        throw new Error(
+          "admin-only"
+        );
+      }
+
+      const {
+        db,
+        fb
+      } = await waitReady();
+
+      const {
+        day1,
+        day2,
+        note
+      } =
+        readFields(
+          "judgeMeal"
+        );
+
+      const data = {
+        competitionId:
+          ctx.competitionId,
+
+        stageId:
+          ctx.stageId,
+
+        type:
+          "judges",
+
+        entityId:
+          JUDGES_ID,
+
+        teamId:
+          null,
+
+        teamName:
+          "СУДДІ",
+
+        zone:
+          "",
+
+        sector:
+          "",
+
+        drawKey:
+          "СУДДІ",
+
+        day1,
+
+        day2,
+
+        note,
+
+        uid:
+          currentUser.uid,
+
+        status:
+          totalOrder({
+            day1,
+            day2
+          }) > 0
+            ? "submitted"
+            : "empty",
+
+        updatedAt:
+          fb.firestore
+            .FieldValue
+            .serverTimestamp(),
+
+        updatedBy:
+          currentUser.uid
+      };
+
+      if (
+        !oldOrder?.createdAt
+      ) {
+        data.createdAt =
+          fb.firestore
+            .FieldValue
+            .serverTimestamp();
+      }
+
+      const id =
+        orderId(
+          ctx.competitionId,
+          ctx.stageId,
+          JUDGES_ID
+        );
+
+      await db
+        .collection(
+          "mealOrders"
+        )
+        .doc(id)
+        .set(
+          data,
+          {
+            merge: true
+          }
+        );
+
+      await publishPublicOrder(
+        data,
+        id
+      );
+
+      setPopupStatus(
+        "✅ Харчування суддів збережено.",
+        true
+      );
+
+      setStatus(
+        "✅ Суддів додано до загального харчування.",
+        true
+      );
+
+    } catch (e) {
+      console.error(e);
+
+      setPopupStatus(
+        "❌ " +
+        (e.message || e),
+        false
+      );
+    }
+  }
+
+  function parseDraw(team) {
     const direct =
       norm(
         team?.drawKey
@@ -960,7 +1472,8 @@
       if (m) {
         return {
           zone:
-            m[1].toUpperCase(),
+            m[1]
+              .toUpperCase(),
 
           sector:
             m[2],
@@ -970,6 +1483,18 @@
         };
       }
     }
+
+    const zone =
+      norm(
+        team?.drawZone ||
+        team?.zone
+      ).toUpperCase();
+
+    const sectorRaw =
+      norm(
+        team?.drawSector ||
+        team?.sector
+      );
 
     if (
       zone &&
@@ -983,7 +1508,9 @@
 
       return {
         zone,
+
         sector,
+
         drawKey:
           `${zone}${sector}`
       };
@@ -1009,7 +1536,9 @@
     try {
       const snap =
         await db
-          .collection("stageResults")
+          .collection(
+            "stageResults"
+          )
           .doc(id)
           .get();
 
@@ -1019,7 +1548,9 @@
           : {};
 
       const teams =
-        Array.isArray(data.teams)
+        Array.isArray(
+          data.teams
+        )
           ? data.teams
           : [];
 
@@ -1032,9 +1563,13 @@
       teams.forEach(
         (team) => {
           const draw =
-            parseDraw(team);
+            parseDraw(
+              team
+            );
 
-          if (!draw.drawKey) {
+          if (
+            !draw.drawKey
+          ) {
             return;
           }
 
@@ -1055,14 +1590,18 @@
               )
           };
 
-          if (item.teamId) {
+          if (
+            item.teamId
+          ) {
             byId.set(
               item.teamId,
               item
             );
           }
 
-          if (item.teamName) {
+          if (
+            item.teamName
+          ) {
             byName.set(
               clean(
                 item.teamName
@@ -1098,6 +1637,13 @@
     order,
     drawMap
   ) {
+    if (
+      order?.type ===
+      "judges"
+    ) {
+      return order;
+    }
+
     const byId =
       drawMap?.byId ||
       new Map();
@@ -1121,19 +1667,27 @@
 
     if (
       teamId &&
-      byId.has(teamId)
+      byId.has(
+        teamId
+      )
     ) {
       draw =
-        byId.get(teamId);
+        byId.get(
+          teamId
+        );
     }
 
     if (
       !draw &&
       teamName &&
-      byName.has(teamName)
+      byName.has(
+        teamName
+      )
     ) {
       draw =
-        byName.get(teamName);
+        byName.get(
+          teamName
+        );
     }
 
     if (!draw) {
@@ -1158,6 +1712,24 @@
     a,
     b
   ) {
+    if (
+      a?.type ===
+        "judges" &&
+      b?.type !==
+        "judges"
+    ) {
+      return 1;
+    }
+
+    if (
+      b?.type ===
+        "judges" &&
+      a?.type !==
+        "judges"
+    ) {
+      return -1;
+    }
+
     const zOrder = {
       A: 1,
       B: 2,
@@ -1178,7 +1750,9 @@
         ).toUpperCase()
       ] || 9;
 
-    if (za !== zb) {
+    if (
+      za !== zb
+    ) {
       return za - zb;
     }
 
@@ -1192,7 +1766,9 @@
         b.sector || 999
       );
 
-    if (sa !== sb) {
+    if (
+      sa !== sb
+    ) {
       return sa - sb;
     }
 
@@ -1215,25 +1791,29 @@
     const [
       snap,
       drawMap
-    ] = await Promise.all([
-      db
-        .collection("mealOrders")
-        .where(
-          "competitionId",
-          "==",
-          ctx.competitionId
-        )
-        .where(
-          "stageId",
-          "==",
-          ctx.stageId
-        )
-        .get(),
+    ] =
+      await Promise.all([
+        db
+          .collection(
+            "mealOrders"
+          )
+          .where(
+            "competitionId",
+            "==",
+            ctx.competitionId
+          )
+          .where(
+            "stageId",
+            "==",
+            ctx.stageId
+          )
+          .get(),
 
-      loadDrawMap()
-    ]);
+        loadDrawMap()
+      ]);
 
-    const rows = [];
+    const rows =
+      [];
 
     snap.forEach(
       (doc) => {
@@ -1256,7 +1836,9 @@
         rows.push(
           applyCurrentDraw(
             {
-              id: doc.id,
+              id:
+                doc.id,
+
               ...d
             },
             drawMap
@@ -1270,72 +1852,6 @@
     );
 
     return rows;
-  }
-
-  function iraMealUrl() {
-    if (
-      !ctx?.competitionId ||
-      !ctx?.stageId
-    ) {
-      return "";
-    }
-
-    try {
-      const url =
-        new URL(
-          "meal_ira.html",
-          document.baseURI
-        );
-
-      url.searchParams.set(
-        "competitionId",
-        ctx.competitionId
-      );
-
-      url.searchParams.set(
-        "stageId",
-        ctx.stageId
-      );
-
-      return url.href;
-
-    } catch {
-      return (
-        "meal_ira.html" +
-        "?competitionId=" +
-        encodeURIComponent(
-          ctx.competitionId
-        ) +
-        "&stageId=" +
-        encodeURIComponent(
-          ctx.stageId
-        )
-      );
-    }
-  }
-
-  async function copyIraLink() {
-    const url =
-      iraMealUrl();
-
-    if (!url) return;
-
-    try {
-      await navigator
-        .clipboard
-        .writeText(url);
-
-      setPopupStatus(
-        "✅ Посилання для пані Іри скопійовано.",
-        true
-      );
-
-    } catch {
-      window.prompt(
-        "Скопіюй посилання для пані Іри:",
-        url
-      );
-    }
   }
 
   function listHtml(rows) {
@@ -1366,51 +1882,97 @@
             r.day2 || {};
 
           const d1l =
-            num(d1.lunch);
+            num(
+              d1.lunch
+            );
 
           const d1d =
-            num(d1.dinner);
+            num(
+              d1.dinner
+            );
 
           const d1b =
-            num(d1.breakfast);
+            num(
+              d1.breakfast
+            );
 
           const d2l =
-            num(d2.lunch);
+            num(
+              d2.lunch
+            );
 
           const d2d =
-            num(d2.dinner);
+            num(
+              d2.dinner
+            );
 
           const d2b =
-            num(d2.breakfast);
+            num(
+              d2.breakfast
+            );
 
-          totals.d1l += d1l;
-          totals.d1d += d1d;
-          totals.d1b += d1b;
-          totals.d2l += d2l;
-          totals.d2d += d2d;
-          totals.d2b += d2b;
+          totals.d1l +=
+            d1l;
+
+          totals.d1d +=
+            d1d;
+
+          totals.d1b +=
+            d1b;
+
+          totals.d2l +=
+            d2l;
+
+          totals.d2d +=
+            d2d;
+
+          totals.d2b +=
+            d2b;
+
+          const isJudges =
+            r.type ===
+            "judges";
 
           const sector =
-            r.drawKey ||
-            (
-              (r.zone || "") +
-              (r.sector || "")
-            ) ||
-            "—";
+            isJudges
+              ? "СУДДІ"
+              : (
+                  r.drawKey ||
+                  (
+                    (r.zone || "") +
+                    (r.sector || "")
+                  ) ||
+                  "—"
+                );
 
           const note =
-            norm(r.note);
+            norm(
+              r.note
+            );
 
           return `
             <tr>
 
-              <td class="m-sector">
+              <td
+                class="m-sector"
+                style="${
+                  isJudges
+                    ? "color:#facc15;font-weight:900;"
+                    : ""
+                }"
+              >
                 ${esc(sector)}
               </td>
 
               <td class="m-team">
 
-                <div>
+                <div
+                  style="${
+                    isJudges
+                      ? "color:#facc15;font-weight:900;"
+                      : ""
+                  }"
+                >
                   ${esc(
                     r.teamName ||
                     "—"
@@ -1440,6 +2002,7 @@
               <td>${d1l || ""}</td>
               <td>${d1d || ""}</td>
               <td>${d1b || ""}</td>
+
               <td>${d2l || ""}</td>
               <td>${d2d || ""}</td>
               <td>${d2b || ""}</td>
@@ -1449,35 +2012,7 @@
         }
       ).join("");
 
-    const share = `
-      <div
-        style="
-          display:flex;
-          gap:8px;
-          flex-wrap:wrap;
-          margin:0 0 12px;
-        "
-      >
-
-        <button
-          class="mealBtn mealBtn--primary"
-          id="btnCopyIraMealLink"
-          type="button"
-        >
-          🔗 Посилання для пані Іри
-        </button>
-
-      </div>
-
-      <div
-        class="mealStatus"
-        id="mealPopupStatus"
-      ></div>
-    `;
-
     return `
-      ${share}
-
       <div class="mealScreenTableWrap">
 
         <table class="mealScreenTable">
@@ -1509,6 +2044,7 @@
               <td>${totals.d1l}</td>
               <td>${totals.d1d}</td>
               <td>${totals.d1b}</td>
+
               <td>${totals.d2l}</td>
               <td>${totals.d2d}</td>
               <td>${totals.d2b}</td>
@@ -1546,14 +2082,14 @@
       const rows =
         await loadOrders();
 
-      if ($("mealPopupBody")) {
-        $("mealPopupBody").innerHTML =
-          listHtml(rows);
-      }
-
-      if ($("btnCopyIraMealLink")) {
-        $("btnCopyIraMealLink").onclick =
-          copyIraLink;
+      if (
+        $("mealPopupBody")
+      ) {
+        $("mealPopupBody")
+          .innerHTML =
+          listHtml(
+            rows
+          );
       }
 
     } catch (e) {
@@ -1577,7 +2113,7 @@
 
       if (!canManageMeals) {
         alert(
-          "Ця кнопка доступна тільки відповідальному."
+          "Ця кнопка доступна тільки відповідальному або адміністратору."
         );
 
         return;
@@ -1600,6 +2136,70 @@
       alert(
         "Не вдалося відкрити харчування: " +
         (e.message || e)
+      );
+    }
+  }
+
+  async function deletePublicOrdersForCurrentStage() {
+    try {
+      const { db } =
+        await waitReady();
+
+      const snap =
+        await db
+          .collection(
+            "mealPublicOrders"
+          )
+          .where(
+            "competitionId",
+            "==",
+            ctx.competitionId
+          )
+          .where(
+            "stageId",
+            "==",
+            ctx.stageId
+          )
+          .get();
+
+      let batch =
+        db.batch();
+
+      let count =
+        0;
+
+      for (
+        const doc of snap.docs
+      ) {
+        batch.delete(
+          doc.ref
+        );
+
+        count++;
+
+        if (
+          count >= 400
+        ) {
+          await batch.commit();
+
+          batch =
+            db.batch();
+
+          count =
+            0;
+        }
+      }
+
+      if (
+        count > 0
+      ) {
+        await batch.commit();
+      }
+
+    } catch (e) {
+      console.warn(
+        "[Meals] public clear skipped:",
+        e?.message || e
       );
     }
   }
@@ -1631,7 +2231,9 @@
 
       const snap =
         await db
-          .collection("mealOrders")
+          .collection(
+            "mealOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -1647,8 +2249,11 @@
       let batch =
         db.batch();
 
-      let count = 0;
-      let total = 0;
+      let count =
+        0;
+
+      let total =
+        0;
 
       for (
         const doc of snap.docs
@@ -1660,19 +2265,26 @@
         count++;
         total++;
 
-        if (count >= 400) {
+        if (
+          count >= 400
+        ) {
           await batch.commit();
 
           batch =
             db.batch();
 
-          count = 0;
+          count =
+            0;
         }
       }
 
-      if (count > 0) {
+      if (
+        count > 0
+      ) {
         await batch.commit();
       }
+
+      await deletePublicOrdersForCurrentStage();
 
       await setMealGate(
         false
@@ -1708,25 +2320,39 @@
 
       applyVisibility();
 
-      if ($("btnMealGateOpen")) {
-        $("btnMealGateOpen").onclick =
+      if (
+        $("btnMealGateOpen")
+      ) {
+        $("btnMealGateOpen")
+          .onclick =
           openMeals;
       }
 
-      if ($("btnOpenMealOrder")) {
-        $("btnOpenMealOrder").onclick =
+      if (
+        $("btnOpenMealOrder")
+      ) {
+        $("btnOpenMealOrder")
+          .onclick =
           openOrder;
       }
 
-      if ($("btnOpenMealList")) {
-        $("btnOpenMealList").onclick =
+      if (
+        $("btnOpenMealList")
+      ) {
+        $("btnOpenMealList")
+          .onclick =
           openList;
       }
 
-      if ($("btnClearMealOrders")) {
-        $("btnClearMealOrders").onclick =
+      if (
+        $("btnClearMealOrders")
+      ) {
+        $("btnClearMealOrders")
+          .onclick =
           clearOrders;
       }
+
+      ensureJudgesButton();
 
     } catch (e) {
       console.warn(
@@ -1734,15 +2360,14 @@
         e
       );
 
-      mealIsOpen = false;
+      mealIsOpen =
+        false;
 
       applyVisibility();
     }
   }
 
-  function setContext(
-    nextCtx
-  ) {
+  function setContext(nextCtx) {
     ctx =
       nextCtx ||
       ctx;
@@ -1784,16 +2409,18 @@
     setContext,
     openOrder,
     openList,
+    openJudgesOrder,
     clearOrders,
     refreshAdminButtons,
     loadMealGate,
     setMealGate,
-    openMeals,
-    iraMealUrl
+    openMeals
   };
 
   if (ctx) {
-    setContext(ctx);
+    setContext(
+      ctx
+    );
   }
 
   const boot =

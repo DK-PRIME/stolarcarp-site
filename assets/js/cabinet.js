@@ -7,16 +7,30 @@
 // ✅ fullName = Прізвище Ім'я
 // ✅ старий fullName підтримується тільки для відображення
 // ✅ старий fullName НЕ розбивається автоматично
-// ✅ після редагування Firebase має structured fields:
-//    firstName
-//    lastName
-//    fullName
+//
+// ✅ PROFILE SAVE:
+//    users/{uid}
+//      firstName
+//      lastName
+//      fullName
+//
+// ✅ SOLO PUBLIC SYNC:
+//    public_participants
+//      firstName
+//      lastName
+//      fullName
+//      participantName
+//      displayName
+//      captain
+//
+// ✅ TEAM-заявки не перейменовуються
+// ✅ "Моя участь" показує TEAM + SOLO
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ cabinet.js LOADED v20260916-structured-name"
+    "✅ cabinet.js LOADED v20260916-structured-name-public-sync"
   );
 
   // =========================
@@ -24,25 +38,15 @@
   // =========================
 
   const burger =
-    document.getElementById(
-      "burger"
-    );
+    document.getElementById("burger");
 
   const nav =
-    document.querySelector(
-      ".nav"
-    );
+    document.querySelector(".nav");
 
-  if (
-    burger &&
-    nav
-  ) {
+  if (burger && nav) {
     burger.addEventListener(
       "click",
-      () =>
-        nav.classList.toggle(
-          "open"
-        )
+      () => nav.classList.toggle("open")
     );
 
     nav.addEventListener(
@@ -53,9 +57,7 @@
             "nav__link"
           )
         ) {
-          nav.classList.remove(
-            "open"
-          );
+          nav.classList.remove("open");
         }
       }
     );
@@ -71,8 +73,7 @@
   async function waitFirebase(
     maxMs = 12000
   ) {
-    const t0 =
-      Date.now();
+    const t0 = Date.now();
 
     while (
       Date.now() - t0 <
@@ -87,10 +88,7 @@
 
       await new Promise(
         resolve =>
-          setTimeout(
-            resolve,
-            100
-          )
+          setTimeout(resolve, 100)
       );
     }
 
@@ -105,23 +103,12 @@
 
   const Cache = {
     data: {
-      user:
-        null,
-
-      team:
-        null,
-
-      members:
-        [],
-
-      competitions:
-        [],
-
-      userLastUpdate:
-        0,
-
-      compsLastUpdate:
-        0
+      user: null,
+      team: null,
+      members: [],
+      competitions: [],
+      userLastUpdate: 0,
+      compsLastUpdate: 0
     },
 
     isUserValid(
@@ -182,23 +169,12 @@
 
     clear() {
       this.data = {
-        user:
-          null,
-
-        team:
-          null,
-
-        members:
-          [],
-
-        competitions:
-          [],
-
-        userLastUpdate:
-          0,
-
-        compsLastUpdate:
-          0
+        user: null,
+        team: null,
+        members: [],
+        competitions: [],
+        userLastUpdate: 0,
+        compsLastUpdate: 0
       };
     }
   };
@@ -306,12 +282,6 @@
       "profileEditBox"
     );
 
-  /*
-   * НОВІ structured fields.
-   *
-   * lastName  = Прізвище
-   * firstName = Ім'я
-   */
   const lastNameInput =
     document.getElementById(
       "lastNameInput"
@@ -363,27 +333,21 @@
   // =========================
 
   function setStatus(t) {
-    if (
-      statusEl
-    ) {
+    if (statusEl) {
       statusEl.textContent =
         t || "";
     }
   }
 
   function showContent() {
-    if (
-      contentEl
-    ) {
+    if (contentEl) {
       contentEl.style.display =
         "block";
     }
   }
 
   function hideContent() {
-    if (
-      contentEl
-    ) {
+    if (contentEl) {
       contentEl.style.display =
         "none";
     }
@@ -392,7 +356,14 @@
   function norm(v) {
     return String(
       v ?? ""
-    ).trim();
+    )
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function normLower(v) {
+    return norm(v)
+      .toLowerCase();
   }
 
   function roleText(role) {
@@ -411,26 +382,11 @@
     return String(
       str || ""
     )
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#039;"
-      );
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function serverTimestamp() {
@@ -455,36 +411,24 @@
       v || ""
     )
       .trim()
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        40
-      );
+      .replace(/\s+/g, " ")
+      .slice(0, 40);
   }
 
   /*
-   * Єдиний canonical формат:
+   * CANONICAL:
    *
    * Прізвище Ім'я
-   *
-   * lastName + firstName
    */
   function buildFullName(
     lastName,
     firstName
   ) {
     const last =
-      cleanNamePart(
-        lastName
-      );
+      cleanNamePart(lastName);
 
     const first =
-      cleanNamePart(
-        firstName
-      );
+      cleanNamePart(firstName);
 
     if (
       !last ||
@@ -496,15 +440,6 @@
     return `${last} ${first}`;
   }
 
-  /*
-   * Для ВІДОБРАЖЕННЯ:
-   *
-   * 1. structured fields
-   * 2. legacy fullName
-   * 3. legacy name
-   *
-   * Старий fullName НЕ розбираємо.
-   */
   function getDisplayName(u) {
     const data =
       u || {};
@@ -515,19 +450,13 @@
         data.firstName
       );
 
-    if (
-      canonical
-    ) {
+    if (canonical) {
       return canonical;
     }
 
     return (
-      norm(
-        data.fullName
-      ) ||
-      norm(
-        data.name
-      ) ||
+      norm(data.fullName) ||
+      norm(data.name) ||
       ""
     );
   }
@@ -541,14 +470,8 @@
         /[^\d+\-\s()]/g,
         ""
       )
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        25
-      );
+      .replace(/\s+/g, " ")
+      .slice(0, 25);
   }
 
   function cleanCity(v) {
@@ -556,14 +479,218 @@
       v || ""
     )
       .trim()
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        40
+      .replace(/\s+/g, " ")
+      .slice(0, 40);
+  }
+
+  // =========================
+  // SOLO PUBLIC SYNC
+  // =========================
+
+  /*
+   * Визначаємо, чи public_participants
+   * документ належить SOLO.
+   *
+   * TEAM-записи тут НЕ чіпаємо.
+   */
+  function isSoloPublicDoc(
+    docId,
+    data
+  ) {
+    const d =
+      data || {};
+
+    const entryType =
+      normLower(
+        d.entryType
       );
+
+    if (
+      entryType === "solo"
+    ) {
+      return true;
+    }
+
+    /*
+     * Канонічний ID SOLO-запису.
+     */
+    if (
+      norm(docId)
+        .includes("__solo__")
+    ) {
+      return true;
+    }
+
+    /*
+     * Legacy SOLO:
+     * немає teamId,
+     * але є особисте ім'я.
+     */
+    if (
+      !norm(d.teamId) &&
+      (
+        norm(
+          d.participantName
+        ) ||
+        norm(
+          d.firstName
+        ) ||
+        norm(
+          d.lastName
+        )
+      )
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /*
+   * Після редагування кабінету
+   * оновлюємо SOLO-заявки користувача.
+   *
+   * У public_participants пишемо:
+   *
+   * firstName
+   * lastName
+   * fullName
+   * participantName
+   * displayName
+   * captain
+   *
+   * Всі значення:
+   * Прізвище Ім'я
+   */
+  async function syncSoloPublicParticipants(
+    db,
+    uid,
+    firstName,
+    lastName,
+    fullName
+  ) {
+    const userUid =
+      norm(uid);
+
+    if (!userUid) {
+      return {
+        found: 0,
+        updated: 0
+      };
+    }
+
+    const snap =
+      await db
+        .collection(
+          "public_participants"
+        )
+        .where(
+          "uid",
+          "==",
+          userUid
+        )
+        .get();
+
+    if (snap.empty) {
+      return {
+        found: 0,
+        updated: 0
+      };
+    }
+
+    const refs =
+      [];
+
+    snap.forEach(
+      doc => {
+        const data =
+          doc.data() ||
+          {};
+
+        if (
+          !isSoloPublicDoc(
+            doc.id,
+            data
+          )
+        ) {
+          return;
+        }
+
+        refs.push(
+          doc.ref
+        );
+      }
+    );
+
+    if (!refs.length) {
+      return {
+        found: snap.size,
+        updated: 0
+      };
+    }
+
+    /*
+     * Для одного користувача
+     * тут буде дуже мало документів,
+     * тому один batch достатній.
+     */
+    const batch =
+      db.batch();
+
+    refs.forEach(
+      ref => {
+        const publicUpd = {
+          firstName,
+          lastName,
+
+          fullName,
+
+          participantName:
+            fullName,
+
+          displayName:
+            fullName,
+
+          /*
+           * У SOLO captain — це теж
+           * ім'я самого учасника.
+           *
+           * Лишаємо для legacy-модулів.
+           */
+          captain:
+            fullName
+        };
+
+        const ts =
+          serverTimestamp();
+
+        if (ts) {
+          publicUpd.updatedAt =
+            ts;
+        }
+
+        batch.set(
+          ref,
+          publicUpd,
+          {
+            merge: true
+          }
+        );
+      }
+    );
+
+    await batch.commit();
+
+    console.log(
+      "✅ SOLO public_participants synced:",
+      refs.length,
+      fullName
+    );
+
+    return {
+      found: snap.size,
+      updated: refs.length
+    };
   }
 
   // =========================
@@ -578,9 +705,7 @@
       return;
     }
 
-    if (
-      url
-    ) {
+    if (url) {
       avatarImgEl.src =
         url;
 
@@ -590,9 +715,7 @@
       avatarPhEl.style.display =
         "none";
 
-      if (
-        avatarWrapper
-      ) {
+      if (avatarWrapper) {
         avatarWrapper.style.cursor =
           "pointer";
       }
@@ -604,9 +727,7 @@
       avatarPhEl.style.display =
         "block";
 
-      if (
-        avatarWrapper
-      ) {
+      if (avatarWrapper) {
         avatarWrapper.style.cursor =
           "default";
       }
@@ -667,9 +788,7 @@
     txt,
     type
   ) {
-    if (
-      !profileEditMsg
-    ) {
+    if (!profileEditMsg) {
       return;
     }
 
@@ -681,17 +800,13 @@
       "err"
     );
 
-    if (
-      type === "ok"
-    ) {
+    if (type === "ok") {
       profileEditMsg.classList.add(
         "ok"
       );
     }
 
-    if (
-      type === "err"
-    ) {
+    if (type === "err") {
       profileEditMsg.classList.add(
         "err"
       );
@@ -703,44 +818,31 @@
       u || {};
 
     /*
-     * ВАЖЛИВО:
-     *
-     * Якщо structured fields ще немає,
-     * НЕ намагаємося ділити старий fullName.
-     *
-     * Користувач сам один раз правильно
-     * заповнить Прізвище та Ім'я.
+     * Старий fullName
+     * НЕ розділяємо автоматично.
      */
-    if (
-      lastNameInput
-    ) {
+    if (lastNameInput) {
       lastNameInput.value =
         norm(
           data.lastName
         );
     }
 
-    if (
-      firstNameInput
-    ) {
+    if (firstNameInput) {
       firstNameInput.value =
         norm(
           data.firstName
         );
     }
 
-    if (
-      phoneInput
-    ) {
+    if (phoneInput) {
       phoneInput.value =
         norm(
           data.phone
         );
     }
 
-    if (
-      cityInput
-    ) {
+    if (cityInput) {
       cityInput.value =
         norm(
           data.city
@@ -769,23 +871,17 @@
     profileEditBox.style.display =
       "block";
 
-    if (
-      editProfileBtn
-    ) {
+    if (editProfileBtn) {
       editProfileBtn.style.display =
         "none";
     }
 
-    if (
-      saveProfileBtn
-    ) {
+    if (saveProfileBtn) {
       saveProfileBtn.style.display =
         "inline-flex";
     }
 
-    if (
-      cancelProfileBtn
-    ) {
+    if (cancelProfileBtn) {
       cancelProfileBtn.style.display =
         "inline-flex";
     }
@@ -794,11 +890,6 @@
       u || {}
     );
 
-    /*
-     * Якщо це старий профіль:
-     * fullName є,
-     * але firstName/lastName ще немає.
-     */
     if (
       getDisplayName(u) &&
       (
@@ -827,30 +918,22 @@
     isEditingProfile =
       false;
 
-    if (
-      profileEditBox
-    ) {
+    if (profileEditBox) {
       profileEditBox.style.display =
         "none";
     }
 
-    if (
-      editProfileBtn
-    ) {
+    if (editProfileBtn) {
       editProfileBtn.style.display =
         "inline-flex";
     }
 
-    if (
-      saveProfileBtn
-    ) {
+    if (saveProfileBtn) {
       saveProfileBtn.style.display =
         "none";
     }
 
-    if (
-      cancelProfileBtn
-    ) {
+    if (cancelProfileBtn) {
       cancelProfileBtn.style.display =
         "none";
     }
@@ -867,9 +950,7 @@
 
   function renderUserInfo(u) {
     const name =
-      getDisplayName(
-        u
-      ) ||
+      getDisplayName(u) ||
       "Без імені";
 
     const city =
@@ -877,19 +958,13 @@
         u?.city
       );
 
-    if (
-      userFullNameEl
-    ) {
+    if (userFullNameEl) {
       userFullNameEl.textContent =
         name;
     }
 
-    if (
-      userCityEl
-    ) {
-      if (
-        city
-      ) {
+    if (userCityEl) {
+      if (city) {
         userCityEl.textContent =
           city;
 
@@ -905,12 +980,7 @@
       }
     }
 
-    /*
-     * Старий HTML теж підтримуємо.
-     */
-    if (
-      captainTextEl
-    ) {
+    if (captainTextEl) {
       const cityDot =
         city
           ? ` · ${city}`
@@ -921,18 +991,14 @@
         cityDot;
     }
 
-    if (
-      userRoleEl
-    ) {
+    if (userRoleEl) {
       userRoleEl.textContent =
         roleText(
           u?.role
         );
     }
 
-    if (
-      userPhoneEl
-    ) {
+    if (userPhoneEl) {
       userPhoneEl.textContent =
         u?.phone ||
         "—";
@@ -943,10 +1009,6 @@
       ""
     );
 
-    /*
-     * Не перезаписуємо поля,
-     * поки користувач редагує.
-     */
     if (
       !isEditingProfile
     ) {
@@ -996,9 +1058,7 @@
         "avatarPopup"
       );
 
-    if (
-      !popup
-    ) {
+    if (!popup) {
       return;
     }
 
@@ -1015,9 +1075,7 @@
         "avatarPopup"
       );
 
-    if (
-      !popup
-    ) {
+    if (!popup) {
       return;
     }
 
@@ -1064,9 +1122,7 @@
   // =========================
 
   function renderMembers(list) {
-    if (
-      !membersEl
-    ) {
+    if (!membersEl) {
       return;
     }
 
@@ -1086,9 +1142,7 @@
     list.forEach(
       m => {
         const name =
-          getDisplayName(
-            m
-          ) ||
+          getDisplayName(m) ||
           m.email ||
           "Учасник";
 
@@ -1187,17 +1241,13 @@
           </div>
         `;
 
-        if (
-          hasAvatar
-        ) {
+        if (hasAvatar) {
           const avatarWrap =
             row.querySelector(
               ".member-avatar-wrap"
             );
 
-          if (
-            avatarWrap
-          ) {
+          if (avatarWrap) {
             avatarWrap.addEventListener(
               "click",
               () =>
@@ -1293,19 +1343,13 @@
             team.joinCode;
         }
 
-      } else if (
-        !team
-      ) {
-        if (
-          teamNameEl
-        ) {
+      } else if (!team) {
+        if (teamNameEl) {
           teamNameEl.textContent =
             "Без команди";
         }
 
-        if (
-          joinCodePillEl
-        ) {
+        if (joinCodePillEl) {
           joinCodePillEl.style.display =
             "none";
         }
@@ -1326,22 +1370,16 @@
   // =========================
 
   function toMillis(ts) {
-    if (
-      !ts
-    ) {
+    if (!ts) {
       return 0;
     }
 
-    if (
-      ts.toMillis
-    ) {
+    if (ts.toMillis) {
       return ts.toMillis();
     }
 
     try {
-      return +new Date(
-        ts
-      );
+      return +new Date(ts);
 
     } catch {
       return 0;
@@ -1349,9 +1387,7 @@
   }
 
   const compMetaCache =
-    Object.create(
-      null
-    );
+    Object.create(null);
 
   async function getCompetitionMeta(
     db,
@@ -1359,9 +1395,7 @@
     stageId
   ) {
     const st =
-      norm(
-        stageId
-      ) ||
+      norm(stageId) ||
       "main";
 
     const key =
@@ -1390,9 +1424,7 @@
           )
           .get();
 
-      if (
-        cSnap.exists
-      ) {
+      if (cSnap.exists) {
         const c =
           cSnap.data() ||
           {};
@@ -1418,8 +1450,7 @@
                 e?.key ||
                 e?.stageId ||
                 e?.id
-              ) ===
-              st
+              ) === st
           );
 
         stageTitle =
@@ -1473,8 +1504,7 @@
         it.stageTitle ||
         (
           it.stageId &&
-          it.stageId !==
-            "main"
+          it.stageId !== "main"
             ? it.stageId
             : ""
         ) ||
@@ -1489,9 +1519,7 @@
   function renderMyParticipation(
     items
   ) {
-    if (
-      !myPartListEl
-    ) {
+    if (!myPartListEl) {
       return;
     }
 
@@ -1570,6 +1598,19 @@
     );
   }
 
+  /*
+   * TEAM + SOLO одночасно.
+   *
+   * TEAM:
+   * teamId + entryType=team
+   *
+   * SOLO:
+   * uid
+   *
+   * Якщо uid-query поверне також TEAM
+   * документ капітана — дублі прибираємо
+   * по Firestore document ID.
+   */
   function subscribeMyParticipation(
     db,
     teamId,
@@ -1585,9 +1626,7 @@
         null;
     }
 
-    if (
-      !myPartListEl
-    ) {
+    if (!myPartListEl) {
       return;
     }
 
@@ -1609,187 +1648,359 @@
       return;
     }
 
-    if (
-      !hasCache
-    ) {
+    if (!hasCache) {
       myPartListEl.innerHTML =
         `<div class="cabinet-small-muted">Завантаження…</div>`;
     }
 
-    const q =
-      teamId
-        ? db
-            .collection(
-              "public_participants"
-            )
-            .where(
-              "teamId",
-              "==",
-              teamId
-            )
-            .where(
-              "entryType",
-              "==",
-              "team"
-            )
-        : db
-            .collection(
-              "public_participants"
-            )
-            .where(
-              "uid",
-              "==",
-              uid
-            );
+    let teamRows =
+      [];
 
-    unsubRegs =
-      q.onSnapshot(
-        async qs => {
-          const rows =
-            [];
+    let uidRows =
+      [];
 
-          qs.forEach(
-            d =>
-              rows.push({
-                id:
-                  d.id,
+    let teamReady =
+      !teamId;
 
-                ...(
-                  d.data() ||
-                  {}
-                )
-              })
-          );
+    let uidReady =
+      !uid;
 
+    let unsubTeamRegs =
+      null;
+
+    let unsubUidRegs =
+      null;
+
+    let renderToken =
+      0;
+
+    async function rebuild() {
+      if (
+        !teamReady ||
+        !uidReady
+      ) {
+        return;
+      }
+
+      const token =
+        ++renderToken;
+
+      /*
+       * Спочатку dedupe по ID документа.
+       */
+      const byDocId =
+        new Map();
+
+      [
+        ...teamRows,
+        ...uidRows
+      ].forEach(
+        row => {
           if (
-            !rows.length
+            !row?.id
           ) {
-            Cache.setComps(
-              []
+            return;
+          }
+
+          byDocId.set(
+            row.id,
+            row
+          );
+        }
+      );
+
+      const rows =
+        Array.from(
+          byDocId.values()
+        );
+
+      if (!rows.length) {
+        Cache.setComps(
+          []
+        );
+
+        renderMyParticipation(
+          []
+        );
+
+        return;
+      }
+
+      /*
+       * Один competition/stage
+       * показуємо один раз.
+       */
+      const map =
+        Object.create(null);
+
+      rows.forEach(
+        r => {
+          const c =
+            norm(
+              r.competitionId
             );
 
-            renderMyParticipation(
-              []
-            );
+          const s =
+            norm(
+              r.stageId
+            ) ||
+            "main";
+
+          if (!c) {
+            return;
+          }
+
+          const k =
+            `${c}||${s}`;
+
+          /*
+           * Якщо вже є рядок —
+           * SOLO цього UID має пріоритет
+           * над випадковим дублем.
+           */
+          if (!map[k]) {
+            map[k] =
+              r;
 
             return;
           }
 
-          const map =
-            Object.create(
-              null
+          const oldType =
+            normLower(
+              map[k].entryType
             );
 
-          rows.forEach(
-            r => {
-              const c =
-                norm(
-                  r.competitionId
-                );
-
-              const s =
-                norm(
-                  r.stageId
-                ) ||
-                "main";
-
-              if (
-                !c
-              ) {
-                return;
-              }
-
-              const k =
-                `${c}||${s}`;
-
-              if (
-                !map[k]
-              ) {
-                map[k] =
-                  r;
-              }
-            }
-          );
-
-          const uniq =
-            Object.values(
-              map
+          const newType =
+            normLower(
+              r.entryType
             );
-
-          for (
-            const it
-            of uniq
-          ) {
-            const meta =
-              await getCompetitionMeta(
-                db,
-                norm(
-                  it.competitionId
-                ),
-                norm(
-                  it.stageId
-                ) ||
-                  "main"
-              );
-
-            it.compTitle =
-              meta.compTitle ||
-              it.competitionTitle ||
-              it.competitionName ||
-              norm(
-                it.competitionId
-              );
-
-            it.stageTitle =
-              meta.stageTitle ||
-              it.stageName ||
-              "";
-
-            it.updatedAt =
-              it.updatedAt ||
-              it.confirmedAt ||
-              it.createdAt ||
-              null;
-          }
-
-          uniq.sort(
-            (a, b) =>
-              toMillis(
-                b.updatedAt
-              ) -
-              toMillis(
-                a.updatedAt
-              )
-          );
-
-          Cache.setComps(
-            uniq
-          );
-
-          renderMyParticipation(
-            uniq
-          );
-        },
-
-        err => {
-          console.warn(
-            err
-          );
 
           if (
-            !hasCache
+            oldType !== "solo" &&
+            newType === "solo"
           ) {
-            renderMyParticipation(
-              Cache.get(
-                "competitions"
-              )
-            );
-
-            myPartListEl.innerHTML +=
-              `<div class="cabinet-small-muted" style="color:#ef4444;margin-top:8px;">Офлайн-режим. Дані можуть бути застарілими.</div>`;
+            map[k] =
+              r;
           }
         }
       );
+
+      const uniq =
+        Object.values(
+          map
+        );
+
+      for (
+        const it
+        of uniq
+      ) {
+        const meta =
+          await getCompetitionMeta(
+            db,
+            norm(
+              it.competitionId
+            ),
+            norm(
+              it.stageId
+            ) ||
+              "main"
+          );
+
+        /*
+         * Якщо між await прийшов
+         * новіший snapshot —
+         * старий rebuild не рендеримо.
+         */
+        if (
+          token !==
+          renderToken
+        ) {
+          return;
+        }
+
+        it.compTitle =
+          meta.compTitle ||
+          it.competitionTitle ||
+          it.competitionName ||
+          norm(
+            it.competitionId
+          );
+
+        it.stageTitle =
+          meta.stageTitle ||
+          it.stageName ||
+          "";
+
+        it.updatedAt =
+          it.updatedAt ||
+          it.confirmedAt ||
+          it.createdAt ||
+          null;
+      }
+
+      if (
+        token !==
+        renderToken
+      ) {
+        return;
+      }
+
+      uniq.sort(
+        (a, b) =>
+          toMillis(
+            b.updatedAt
+          ) -
+          toMillis(
+            a.updatedAt
+          )
+      );
+
+      Cache.setComps(
+        uniq
+      );
+
+      renderMyParticipation(
+        uniq
+      );
+    }
+
+    if (teamId) {
+      const qTeam =
+        db
+          .collection(
+            "public_participants"
+          )
+          .where(
+            "teamId",
+            "==",
+            teamId
+          )
+          .where(
+            "entryType",
+            "==",
+            "team"
+          );
+
+      unsubTeamRegs =
+        qTeam.onSnapshot(
+          qs => {
+            teamRows =
+              [];
+
+            qs.forEach(
+              d => {
+                teamRows.push({
+                  id:
+                    d.id,
+
+                  ...(
+                    d.data() ||
+                    {}
+                  )
+                });
+              }
+            );
+
+            teamReady =
+              true;
+
+            rebuild();
+
+          },
+          err => {
+            console.warn(
+              "[cabinet] TEAM participation:",
+              err
+            );
+
+            teamRows =
+              [];
+
+            teamReady =
+              true;
+
+            rebuild();
+          }
+        );
+    }
+
+    if (uid) {
+      const qUid =
+        db
+          .collection(
+            "public_participants"
+          )
+          .where(
+            "uid",
+            "==",
+            uid
+          );
+
+      unsubUidRegs =
+        qUid.onSnapshot(
+          qs => {
+            uidRows =
+              [];
+
+            qs.forEach(
+              d => {
+                uidRows.push({
+                  id:
+                    d.id,
+
+                  ...(
+                    d.data() ||
+                    {}
+                  )
+                });
+              }
+            );
+
+            uidReady =
+              true;
+
+            rebuild();
+
+          },
+          err => {
+            console.warn(
+              "[cabinet] UID participation:",
+              err
+            );
+
+            uidRows =
+              [];
+
+            uidReady =
+              true;
+
+            rebuild();
+          }
+        );
+    }
+
+    unsubRegs =
+      () => {
+        if (
+          typeof unsubTeamRegs ===
+          "function"
+        ) {
+          unsubTeamRegs();
+        }
+
+        if (
+          typeof unsubUidRegs ===
+          "function"
+        ) {
+          unsubUidRegs();
+        }
+
+        unsubTeamRegs =
+          null;
+
+        unsubUidRegs =
+          null;
+      };
   }
 
   // =========================
@@ -1800,9 +2011,7 @@
     db,
     teamId
   ) {
-    if (
-      !teamId
-    ) {
+    if (!teamId) {
       Cache.setTeam(
         null
       );
@@ -1811,16 +2020,12 @@
         []
       );
 
-      if (
-        teamNameEl
-      ) {
+      if (teamNameEl) {
         teamNameEl.textContent =
           "Без команди";
       }
 
-      if (
-        joinCodePillEl
-      ) {
+      if (joinCodePillEl) {
         joinCodePillEl.style.display =
           "none";
       }
@@ -1895,9 +2100,7 @@
               t
             );
 
-            if (
-              teamNameEl
-            ) {
+            if (teamNameEl) {
               teamNameEl.textContent =
                 t.name ||
                 "Команда";
@@ -1984,9 +2187,7 @@
     const hasUserCache =
       renderFromCache();
 
-    if (
-      !hasUserCache
-    ) {
+    if (!hasUserCache) {
       setStatus(
         "Завантаження…"
       );
@@ -2057,6 +2258,13 @@
                 null
             );
 
+            /*
+             * Тепер функція сама читає:
+             *
+             * TEAM по teamId
+             * +
+             * SOLO по uid
+             */
             subscribeMyParticipation(
               db,
               u.teamId ||
@@ -2089,9 +2297,7 @@
               err
             );
 
-            if (
-              !hasUserCache
-            ) {
+            if (!hasUserCache) {
               setStatus(
                 "Помилка читання профілю."
               );
@@ -2141,9 +2347,7 @@
       txt,
       type
     ) {
-      if (
-        !msgEl
-      ) {
+      if (!msgEl) {
         return;
       }
 
@@ -2155,17 +2359,13 @@
         "err"
       );
 
-      if (
-        type === "ok"
-      ) {
+      if (type === "ok") {
         msgEl.classList.add(
           "ok"
         );
       }
 
-      if (
-        type === "err"
-      ) {
+      if (type === "err") {
         msgEl.classList.add(
           "err"
         );
@@ -2178,9 +2378,7 @@
         const user =
           auth.currentUser;
 
-        if (
-          !user
-        ) {
+        if (!user) {
           setMsg(
             "Увійдіть у акаунт",
             "err"
@@ -2272,9 +2470,7 @@
               error,
               result
             ) => {
-              if (
-                error
-              ) {
+              if (error) {
                 console.error(
                   error
                 );
@@ -2337,9 +2533,7 @@
                   3000
                 );
 
-              } catch (
-                err
-              ) {
+              } catch (err) {
                 console.error(
                   err
                 );
@@ -2365,10 +2559,6 @@
     auth,
     db
   ) {
-    /*
-     * Перевіряємо також нові
-     * firstName / lastName inputs.
-     */
     if (
       !editProfileBtn ||
       !saveProfileBtn ||
@@ -2440,9 +2630,7 @@
         const user =
           auth.currentUser;
 
-        if (
-          !user
-        ) {
+        if (!user) {
           setEditMsg(
             "Увійдіть у акаунт.",
             "err"
@@ -2451,12 +2639,6 @@
           return;
         }
 
-        /*
-         * ОКРЕМО:
-         *
-         * lastName = Прізвище
-         * firstName = Ім'я
-         */
         const lastName =
           cleanNamePart(
             lastNameInput.value
@@ -2477,9 +2659,7 @@
             cityInput.value
           );
 
-        if (
-          !lastName
-        ) {
+        if (!lastName) {
           setEditMsg(
             "Вкажіть прізвище.",
             "err"
@@ -2490,9 +2670,7 @@
           return;
         }
 
-        if (
-          !firstName
-        ) {
+        if (!firstName) {
           setEditMsg(
             "Вкажіть імʼя.",
             "err"
@@ -2503,9 +2681,7 @@
           return;
         }
 
-        if (
-          !phone
-        ) {
+        if (!phone) {
           setEditMsg(
             "Вкажіть номер телефону.",
             "err"
@@ -2516,20 +2692,13 @@
           return;
         }
 
-        /*
-         * Canonical:
-         *
-         * Прізвище Ім'я
-         */
         const fullName =
           buildFullName(
             lastName,
             firstName
           );
 
-        if (
-          !fullName
-        ) {
+        if (!fullName) {
           setEditMsg(
             "Не вдалося сформувати ПІБ.",
             "err"
@@ -2549,16 +2718,10 @@
             "Зберігаю…"
           );
 
-          /*
-           * Firebase:
-           *
-           * lastName  = Прізвище
-           * firstName = Ім'я
-           * fullName  = Прізвище Ім'я
-           *
-           * fullName залишаємо для
-           * backward compatibility.
-           */
+          // ================================================
+          // 1. USERS
+          // ================================================
+
           const upd = {
             lastName,
             firstName,
@@ -2574,9 +2737,7 @@
           const ts =
             serverTimestamp();
 
-          if (
-            ts
-          ) {
+          if (ts) {
             upd.updatedAt =
               ts;
           }
@@ -2596,12 +2757,40 @@
               }
             );
 
-          /*
-           * Локально теж одразу
-           * оновлюємо snapshot,
-           * хоча Firestore listener
-           * потім підтягне актуальні дані.
-           */
+          // ================================================
+          // 2. PUBLIC SOLO SYNC
+          // ================================================
+
+          let publicSyncError =
+            null;
+
+          let publicSyncResult =
+            null;
+
+          try {
+            publicSyncResult =
+              await syncSoloPublicParticipants(
+                db,
+                user.uid,
+                firstName,
+                lastName,
+                fullName
+              );
+
+          } catch (syncErr) {
+            publicSyncError =
+              syncErr;
+
+            console.error(
+              "❌ SOLO public_participants sync error:",
+              syncErr
+            );
+          }
+
+          // ================================================
+          // 3. LOCAL CACHE
+          // ================================================
+
           lastProfileSnap = {
             ...(
               lastProfileSnap ||
@@ -2618,20 +2807,55 @@
             lastProfileSnap
           );
 
-          setEditMsg(
-            `Збережено: ${fullName}`,
-            "ok"
-          );
+          // ================================================
+          // RESULT
+          // ================================================
+
+          if (
+            publicSyncError
+          ) {
+            /*
+             * users уже збережено.
+             *
+             * Не кажемо, що все пропало.
+             * Просто чесно повідомляємо,
+             * що public sync не пройшов.
+             */
+            setEditMsg(
+              `Профіль збережено: ${fullName}. Але SOLO-список не синхронізовано. Перевірте Firestore Rules.`,
+              "err"
+            );
+
+            return;
+          }
+
+          if (
+            publicSyncResult?.updated >
+            0
+          ) {
+            setEditMsg(
+              `Збережено: ${fullName}. SOLO-заявки оновлено.`,
+              "ok"
+            );
+
+          } else {
+            /*
+             * Якщо SOLO-заявок у людини
+             * ще немає — це абсолютно нормально.
+             */
+            setEditMsg(
+              `Збережено: ${fullName}`,
+              "ok"
+            );
+          }
 
           setTimeout(
             () =>
               closeEditProfile(),
-            700
+            900
           );
 
-        } catch (
-          e
-        ) {
+        } catch (e) {
           console.error(
             e
           );
@@ -2658,9 +2882,6 @@
 
   (async () => {
     try {
-      /*
-       * 1. Спочатку кеш.
-       */
       const hasComps =
         renderCompsFromCache();
 
@@ -2683,9 +2904,6 @@
         );
       }
 
-      /*
-       * 2. Firebase.
-       */
       await waitFirebase();
 
       const auth =
@@ -2698,9 +2916,7 @@
         user => {
           cleanup();
 
-          if (
-            !user
-          ) {
+          if (!user) {
             Cache.clear();
 
             setStatus(
@@ -2761,9 +2977,7 @@
         db
       );
 
-    } catch (
-      err
-    ) {
+    } catch (err) {
       console.error(
         err
       );

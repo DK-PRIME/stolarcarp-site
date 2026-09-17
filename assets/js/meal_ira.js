@@ -2,26 +2,37 @@
 // STOLAR CARP • Пані Іра • Харчування
 // READ ONLY
 //
-// ✅ TEAM -> назва команди + сектор
-// ✅ SOLO -> ПІБ учасника + сектор
-// ✅ SOLO шукається по UID
-// ✅ TEAM шукається по teamId
-// ✅ сектор оновлюється LIVE з жеребкування
-// ✅ підтримка:
-//    stageResults/{comp__stage}.teams
-//    stageResults/{comp__stage}/teams/{id}
-// ✅ побажання видно під учасником / командою
+// ✅ одна постійна сторінка meal_ira.html
+// ✅ НЕ потрібні competitionId/stageId в URL
+// ✅ активне харчування береться з mealPublic/current
+// ✅ автоматично перемикається на нове змагання
+// ✅ TEAM -> назва команди
+// ✅ SOLO -> ПІБ учасника
+// ✅ сектор береться з актуального жеребкування
 // ✅ заявки оновлюються LIVE
+// ✅ побажання видно під командою / учасником
+// ✅ після закриття показує порожній список
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260917-solo-sector-v2"
+    "✅ meal_ira.js LOADED v20260917-permanent-v3"
   );
 
+  /*
+   * УВАГА:
+   * тут має бути UID акаунта,
+   * під яким заходить пані Іра.
+   *
+   * Зараз залишаю значення,
+   * яке було у твоєму файлі.
+   */
   const FOOD_OWNER_UID =
     "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+
+  const JUDGES_ID =
+    "__judges__";
 
   const $ = id =>
     document.getElementById(id);
@@ -52,6 +63,7 @@
 
   let competitionId = "";
   let stageId = "";
+  let mealIsOpen = false;
 
   let orders = [];
 
@@ -59,10 +71,20 @@
   let subDrawRows = [];
 
   let drawMap = {
-    byId: new Map(),
-    byName: new Map()
+    byUid:
+      new Map(),
+
+    byEntity:
+      new Map(),
+
+    byTeamId:
+      new Map(),
+
+    byName:
+      new Map()
   };
 
+  let unsubCurrent = null;
   let unsubOrders = null;
   let unsubDrawParent = null;
   let unsubDrawTeams = null;
@@ -72,7 +94,8 @@
   // =========================================================
 
   function num(value) {
-    const n = Number(value);
+    const n =
+      Number(value);
 
     return (
       Number.isFinite(n) &&
@@ -105,44 +128,109 @@
 
   function isJudges(row) {
     return (
-      row?.type === "judges" ||
-      row?.entityId === "__judges__"
+      clean(row?.type) ===
+        "judges" ||
+      norm(row?.entityId) ===
+        JUDGES_ID
     );
   }
 
   function isSolo(row) {
     return (
-      clean(row?.type) === "solo" ||
-      clean(row?.entryType) === "solo"
+      clean(row?.entryType) ===
+        "solo" ||
+      clean(row?.type) ===
+        "solo"
     );
   }
 
-  // =========================================================
-  // DISPLAY NAME
-  // =========================================================
-
   function rowName(row) {
     if (isJudges(row)) {
-      return "👨‍⚖️ СУДДІ";
+      return "СУДДІ";
     }
 
     if (isSolo(row)) {
       return norm(
         row?.participantName ||
         row?.displayName ||
-        row?.name ||
         row?.teamName ||
+        row?.name ||
         "—"
       );
     }
 
     return norm(
       row?.teamName ||
-      row?.team ||
       row?.displayName ||
-      row?.participantName ||
+      row?.team ||
       "—"
     );
+  }
+
+  // =========================================================
+  // UI STATE
+  // =========================================================
+
+  function setState(
+    text,
+    type = ""
+  ) {
+    const el =
+      $("state");
+
+    if (!el) {
+      return;
+    }
+
+    el.textContent =
+      text || "";
+
+    el.className =
+      `state ${type}`.trim();
+  }
+
+  function showContent() {
+    if ($("content")) {
+      $("content").hidden =
+        false;
+    }
+  }
+
+  function clearTable(
+    message =
+      "Заявок на харчування ще немає."
+  ) {
+    const tbody =
+      $("mealBody");
+
+    const tfoot =
+      $("mealFoot");
+
+    const count =
+      $("orderCount");
+
+    if (count) {
+      count.textContent =
+        "0";
+    }
+
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td
+            colspan="8"
+            class="empty"
+          >
+            ${esc(message)}
+          </td>
+        </tr>
+      `;
+    }
+
+    if (tfoot) {
+      tfoot.innerHTML =
+        "";
+    }
   }
 
   // =========================================================
@@ -164,7 +252,8 @@
       if (match) {
         return {
           zone:
-            match[1].toUpperCase(),
+            match[1]
+              .toUpperCase(),
 
           sector:
             match[2],
@@ -184,7 +273,8 @@
     const sectorRaw =
       norm(
         item?.drawSector ||
-        item?.sector
+        item?.sector ||
+        item?.place
       );
 
     if (
@@ -213,40 +303,14 @@
     };
   }
 
-  function addId(
-    map,
-    value,
-    row
-  ) {
-    const key =
-      norm(value);
-
-    if (key) {
-      map.set(
-        key,
-        row
-      );
-    }
-  }
-
-  function addName(
-    map,
-    value,
-    row
-  ) {
-    const key =
-      clean(value);
-
-    if (key) {
-      map.set(
-        key,
-        row
-      );
-    }
-  }
-
   function rebuildDrawMap() {
-    const byId =
+    const byUid =
+      new Map();
+
+    const byEntity =
+      new Map();
+
+    const byTeamId =
       new Map();
 
     const byName =
@@ -265,105 +329,81 @@
         return;
       }
 
+      const uid =
+        norm(
+          item.uid ||
+          item.participantUid ||
+          item.userId
+        );
+
+      const entityId =
+        norm(
+          item.entityId
+        );
+
+      const teamId =
+        norm(
+          item.teamId
+        );
+
+      const displayName =
+        norm(
+          item.participantName ||
+          item.displayName ||
+          item.teamName ||
+          item.team ||
+          item.name
+        );
+
       const row = {
         ...draw,
-
-        teamId:
-          norm(
-            item.teamId
-          ),
-
-        uid:
-          norm(
-            item.uid ||
-            item.participantUid
-          ),
-
-        entityId:
-          norm(
-            item.entityId
-          ),
-
-        teamName:
-          norm(
-            item.teamName ||
-            item.team
-          ),
-
-        participantName:
-          norm(
-            item.participantName ||
-            item.displayName ||
-            item.name
-          )
+        uid,
+        entityId,
+        teamId,
+        displayName
       };
 
-      /*
-       * TEAM
-       */
-      addId(
-        byId,
-        item.teamId,
-        row
-      );
+      if (uid) {
+        byUid.set(
+          uid,
+          row
+        );
+      }
+
+      if (entityId) {
+        byEntity.set(
+          entityId,
+          row
+        );
+      }
 
       /*
-       * SOLO / participant
+       * У SOLO може бути кілька
+       * людей з одним teamId,
+       * тому teamId тут лише fallback.
        */
-      addId(
-        byId,
-        item.uid,
-        row
-      );
+      if (
+        teamId &&
+        !byTeamId.has(teamId)
+      ) {
+        byTeamId.set(
+          teamId,
+          row
+        );
+      }
 
-      addId(
-        byId,
-        item.participantUid,
-        row
-      );
-
-      addId(
-        byId,
-        item.entityId,
-        row
-      );
-
-      /*
-       * Fallback по назвах
-       */
-      addName(
-        byName,
-        item.participantName,
-        row
-      );
-
-      addName(
-        byName,
-        item.displayName,
-        row
-      );
-
-      addName(
-        byName,
-        item.teamName,
-        row
-      );
-
-      addName(
-        byName,
-        item.team,
-        row
-      );
-
-      addName(
-        byName,
-        item.name,
-        row
-      );
+      if (displayName) {
+        byName.set(
+          clean(displayName),
+          row
+        );
+      }
     });
 
     drawMap = {
-      byId,
+      byUid,
+      byEntity,
+      byTeamId,
       byName
     };
 
@@ -377,72 +417,118 @@
 
     let draw = null;
 
+    const solo =
+      isSolo(order);
+
+    const uid =
+      norm(
+        order.uid ||
+        order.participantUid
+      );
+
+    const entityId =
+      norm(
+        order.entityId
+      );
+
+    const teamId =
+      norm(
+        order.teamId
+      );
+
+    const displayName =
+      clean(
+        rowName(order)
+      );
+
     /*
      * SOLO:
-     * головний ключ — UID / entityId.
-     *
-     * TEAM:
-     * головний ключ — teamId.
+     * UID -> entityId -> ім'я -> teamId fallback
      */
-    const idCandidates = [
-      order?.entityId,
-      order?.participantUid,
-      order?.uid,
-      order?.teamId
-    ];
-
-    for (
-      const candidate of
-      idCandidates
-    ) {
-      const key =
-        norm(candidate);
-
+    if (solo) {
       if (
-        key &&
-        drawMap.byId.has(key)
+        uid &&
+        drawMap.byUid.has(uid)
       ) {
         draw =
-          drawMap.byId.get(key);
-
-        break;
+          drawMap.byUid.get(uid);
       }
-    }
 
-    /*
-     * Fallback по ПІБ / назві.
-     */
-    if (!draw) {
-      const nameCandidates = [
-        order?.participantName,
-        order?.displayName,
-        order?.teamName,
-        order?.team
-      ];
-
-      for (
-        const candidate of
-        nameCandidates
+      if (
+        !draw &&
+        entityId &&
+        drawMap.byEntity.has(
+          entityId
+        )
       ) {
-        const key =
-          clean(candidate);
+        draw =
+          drawMap.byEntity.get(
+            entityId
+          );
+      }
 
-        if (
-          key &&
-          drawMap.byName.has(key)
-        ) {
-          draw =
-            drawMap.byName.get(key);
+      if (
+        !draw &&
+        displayName &&
+        drawMap.byName.has(
+          displayName
+        )
+      ) {
+        draw =
+          drawMap.byName.get(
+            displayName
+          );
+      }
 
-          break;
-        }
+      if (
+        !draw &&
+        teamId &&
+        drawMap.byTeamId.has(
+          teamId
+        )
+      ) {
+        draw =
+          drawMap.byTeamId.get(
+            teamId
+          );
       }
     }
 
     /*
-     * Якщо LIVE-жереб ще не знайшли,
-     * залишаємо сектор, який уже
-     * був записаний у mealOrders.
+     * TEAM:
+     * teamId -> ім'я
+     */
+    if (!solo) {
+      if (
+        teamId &&
+        drawMap.byTeamId.has(
+          teamId
+        )
+      ) {
+        draw =
+          drawMap.byTeamId.get(
+            teamId
+          );
+      }
+
+      if (
+        !draw &&
+        displayName &&
+        drawMap.byName.has(
+          displayName
+        )
+      ) {
+        draw =
+          drawMap.byName.get(
+            displayName
+          );
+      }
+    }
+
+    /*
+     * Якщо жереб ще не знайдений,
+     * залишаємо сектор,
+     * записаний у заявці.
      */
     if (!draw) {
       return order;
@@ -457,12 +543,6 @@
       sector:
         draw.sector,
 
-      drawZone:
-        draw.zone,
-
-      drawSector:
-        draw.sector,
-
       drawKey:
         draw.drawKey
     };
@@ -472,7 +552,10 @@
   // SORT
   // =========================================================
 
-  function sortOrders(a, b) {
+  function sortOrders(
+    a,
+    b
+  ) {
     if (
       isJudges(a) &&
       !isJudges(b)
@@ -487,22 +570,24 @@
       return -1;
     }
 
-    const zoneOrder = {
+    const zones = {
       A: 1,
       B: 2,
       C: 3
     };
 
     const za =
-      zoneOrder[
-        norm(a.zone)
-          .toUpperCase()
+      zones[
+        norm(
+          a.zone
+        ).toUpperCase()
       ] || 9;
 
     const zb =
-      zoneOrder[
-        norm(b.zone)
-          .toUpperCase()
+      zones[
+        norm(
+          b.zone
+        ).toUpperCase()
       ] || 9;
 
     if (za !== zb) {
@@ -533,28 +618,6 @@
   }
 
   // =========================================================
-  // STATE
-  // =========================================================
-
-  function setState(
-    text,
-    type = ""
-  ) {
-    const el =
-      $("state");
-
-    if (!el) {
-      return;
-    }
-
-    el.textContent =
-      text || "";
-
-    el.className =
-      `state ${type}`.trim();
-  }
-
-  // =========================================================
   // RENDER
   // =========================================================
 
@@ -572,6 +635,14 @@
       !tbody ||
       !tfoot
     ) {
+      return;
+    }
+
+    if (!mealIsOpen) {
+      clearTable(
+        "Харчування зараз не відкрите."
+      );
+
       return;
     }
 
@@ -597,20 +668,9 @@
     }
 
     if (!rows.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td
-            colspan="8"
-            class="empty"
-          >
-            Заявок на харчування
-            ще немає.
-          </td>
-        </tr>
-      `;
-
-      tfoot.innerHTML =
-        "";
+      clearTable(
+        "Заявок на харчування ще немає."
+      );
 
       return;
     }
@@ -634,30 +694,52 @@
           row.day2 || {};
 
         const d1l =
-          num(d1.lunch);
+          num(
+            d1.lunch
+          );
 
         const d1d =
-          num(d1.dinner);
+          num(
+            d1.dinner
+          );
 
         const d1b =
-          num(d1.breakfast);
+          num(
+            d1.breakfast
+          );
 
         const d2l =
-          num(d2.lunch);
+          num(
+            d2.lunch
+          );
 
         const d2d =
-          num(d2.dinner);
+          num(
+            d2.dinner
+          );
 
         const d2b =
-          num(d2.breakfast);
+          num(
+            d2.breakfast
+          );
 
-        totals.d1l += d1l;
-        totals.d1d += d1d;
-        totals.d1b += d1b;
+        totals.d1l +=
+          d1l;
 
-        totals.d2l += d2l;
-        totals.d2d += d2d;
-        totals.d2b += d2b;
+        totals.d1d +=
+          d1d;
+
+        totals.d1b +=
+          d1b;
+
+        totals.d2l +=
+          d2l;
+
+        totals.d2d +=
+          d2d;
+
+        totals.d2b +=
+          d2b;
 
         const sector =
           isJudges(row)
@@ -677,13 +759,13 @@
                 "—"
               );
 
+        const name =
+          rowName(row);
+
         const note =
           norm(
             row.note
           );
-
-        const name =
-          rowName(row);
 
         return `
           <tr>
@@ -695,7 +777,11 @@
             <td class="team">
 
               <div class="team-name">
-                ${esc(name)}
+                ${
+                  isJudges(row)
+                    ? "👨‍⚖️ СУДДІ"
+                    : esc(name)
+                }
               </div>
 
               ${
@@ -704,8 +790,9 @@
                     <div
                       style="
                         margin-top:2px;
-                        font-size:.72em;
-                        opacity:.6;
+                        color:#94a3b8;
+                        font-size:.72rem;
+                        font-weight:700;
                       "
                     >
                       SOLO
@@ -762,6 +849,13 @@
   // =========================================================
 
   async function loadTitle() {
+    if (
+      !competitionId ||
+      !stageId
+    ) {
+      return;
+    }
+
     try {
       const snap =
         await db
@@ -807,13 +901,30 @@
             stageId
         );
 
-      const stageTitle =
+      let stageTitle =
         norm(
           event?.title ||
           event?.name ||
           event?.label ||
-          stageId
+          ""
         );
+
+      /*
+       * Для oneoff / main
+       * не пишемо просто "main".
+       */
+      if (
+        !stageTitle &&
+        stageId === "main"
+      ) {
+        stageTitle =
+          "Основне змагання";
+      }
+
+      if (!stageTitle) {
+        stageTitle =
+          stageId;
+      }
 
       if (
         $("competitionTitle")
@@ -831,19 +942,72 @@
           stageTitle;
       }
 
-    } catch (error) {
+    } catch (e) {
       console.warn(
         "[meal_ira] title:",
-        error
+        e
       );
     }
   }
 
   // =========================================================
-  // REALTIME DRAW
+  // STOP CURRENT LISTENERS
+  // =========================================================
+
+  function stopCompetitionListeners() {
+    try {
+      unsubOrders?.();
+    } catch {}
+
+    try {
+      unsubDrawParent?.();
+    } catch {}
+
+    try {
+      unsubDrawTeams?.();
+    } catch {}
+
+    unsubOrders =
+      null;
+
+    unsubDrawParent =
+      null;
+
+    unsubDrawTeams =
+      null;
+
+    orders = [];
+
+    parentDrawRows = [];
+    subDrawRows = [];
+
+    drawMap = {
+      byUid:
+        new Map(),
+
+      byEntity:
+        new Map(),
+
+      byTeamId:
+        new Map(),
+
+      byName:
+        new Map()
+    };
+  }
+
+  // =========================================================
+  // DRAW REALTIME
   // =========================================================
 
   function startDrawRealtime() {
+    if (
+      !competitionId ||
+      !stageId
+    ) {
+      return;
+    }
+
     const resultRef =
       db
         .collection(
@@ -857,7 +1021,7 @@
         );
 
     /*
-     * Старий / сумісний формат:
+     * Сумісність зі старим форматом:
      * stageResults/{id}.teams[]
      */
     unsubDrawParent =
@@ -890,13 +1054,11 @@
 
     /*
      * Канонічний формат:
-     * stageResults/{id}/teams/{entity}
+     * stageResults/{id}/teams/{entityId}
      */
     unsubDrawTeams =
       resultRef
-        .collection(
-          "teams"
-        )
+        .collection("teams")
         .onSnapshot(
           snap => {
             subDrawRows =
@@ -927,10 +1089,25 @@
   }
 
   // =========================================================
-  // REALTIME ORDERS
+  // ORDERS REALTIME
   // =========================================================
 
   function startOrdersRealtime() {
+    if (
+      !competitionId ||
+      !stageId
+    ) {
+      return;
+    }
+
+    /*
+     * Зараз читаємо mealOrders,
+     * бо це вже існуюча робоча база.
+     *
+     * Пізніше можемо перевести Іру
+     * повністю на mealPublicOrders,
+     * коли доробимо Rules.
+     */
     unsubOrders =
       db
         .collection(
@@ -982,9 +1159,188 @@
         );
   }
 
-  function startRealtime() {
+  function startCompetitionListeners() {
+    stopCompetitionListeners();
+
+    if (!mealIsOpen) {
+      render();
+      return;
+    }
+
     startDrawRealtime();
     startOrdersRealtime();
+  }
+
+  // =========================================================
+  // CURRENT MEAL
+  // =========================================================
+
+  function startCurrentMealRealtime() {
+    /*
+     * Це серце постійної сторінки Іри.
+     *
+     * meal_orders.js при відкритті харчування
+     * записує сюди:
+     *
+     * mealPublic/current
+     * {
+     *   competitionId,
+     *   stageId,
+     *   isOpen:true
+     * }
+     */
+
+    unsubCurrent =
+      db
+        .collection(
+          "mealPublic"
+        )
+        .doc("current")
+        .onSnapshot(
+          async snap => {
+            const data =
+              snap.exists
+                ? (
+                    snap.data() ||
+                    {}
+                  )
+                : {};
+
+            const nextCompetitionId =
+              norm(
+                data.competitionId
+              );
+
+            const nextStageId =
+              norm(
+                data.stageId
+              );
+
+            const nextIsOpen =
+              data.isOpen === true;
+
+            const changed =
+              nextCompetitionId !==
+                competitionId ||
+              nextStageId !==
+                stageId;
+
+            competitionId =
+              nextCompetitionId;
+
+            stageId =
+              nextStageId;
+
+            mealIsOpen =
+              nextIsOpen;
+
+            showContent();
+
+            /*
+             * Ще жодного харчування
+             * не було створено.
+             */
+            if (
+              !competitionId ||
+              !stageId
+            ) {
+              stopCompetitionListeners();
+
+              if (
+                $("competitionTitle")
+              ) {
+                $("competitionTitle")
+                  .textContent =
+                  "STOLAR CARP";
+              }
+
+              if (
+                $("stageTitle")
+              ) {
+                $("stageTitle")
+                  .textContent =
+                  "Харчування зараз не відкрите";
+              }
+
+              setState(
+                "Очікую відкриття харчування.",
+                ""
+              );
+
+              clearTable(
+                "Харчування зараз не відкрите."
+              );
+
+              return;
+            }
+
+            /*
+             * Назву перезавантажуємо
+             * при зміні змагання/етапу.
+             */
+            if (changed) {
+              await loadTitle();
+            }
+
+            if (!mealIsOpen) {
+              stopCompetitionListeners();
+
+              setState(
+                "Харчування завершено.",
+                ""
+              );
+
+              clearTable(
+                "Харчування зараз не відкрите."
+              );
+
+              return;
+            }
+
+            setState(
+              "Харчування відкрите · оновлення LIVE",
+              "ok"
+            );
+
+            startCompetitionListeners();
+          },
+          error => {
+            console.error(
+              "[meal_ira] mealPublic/current:",
+              error
+            );
+
+            setState(
+              "Не вдалося визначити активне харчування.",
+              "err"
+            );
+          }
+        );
+  }
+
+  // =========================================================
+  // AUTH
+  // =========================================================
+
+  async function getAuthUser() {
+    if (auth.currentUser) {
+      return auth.currentUser;
+    }
+
+    return new Promise(
+      resolve => {
+        const unsub =
+          auth.onAuthStateChanged(
+            user => {
+              unsub();
+
+              resolve(
+                user || null
+              );
+            }
+          );
+      }
+    );
   }
 
   // =========================================================
@@ -992,37 +1348,6 @@
   // =========================================================
 
   async function boot() {
-    const params =
-      new URLSearchParams(
-        location.search
-      );
-
-    competitionId =
-      norm(
-        params.get(
-          "competitionId"
-        )
-      );
-
-    stageId =
-      norm(
-        params.get(
-          "stageId"
-        )
-      );
-
-    if (
-      !competitionId ||
-      !stageId
-    ) {
-      setState(
-        "Посилання неповне: немає competitionId або stageId.",
-        "err"
-      );
-
-      return;
-    }
-
     try {
       if (window.scReady) {
         await window.scReady;
@@ -1044,31 +1369,7 @@
       }
 
       const user =
-        await new Promise(
-          resolve => {
-            if (
-              auth.currentUser
-            ) {
-              resolve(
-                auth.currentUser
-              );
-
-              return;
-            }
-
-            const unsub =
-              auth.onAuthStateChanged(
-                current => {
-                  unsub();
-
-                  resolve(
-                    current ||
-                    null
-                  );
-                }
-              );
-          }
-        );
+        await getAuthUser();
 
       if (!user) {
         setState(
@@ -1091,33 +1392,39 @@
         FOOD_OWNER_UID
       ) {
         setState(
-          "Це посилання доступне тільки пані Ірі.",
+          "Ця сторінка доступна тільки пані Ірі.",
           "err"
         );
 
         return;
       }
 
-      if ($("content")) {
-        $("content").hidden =
-          false;
+      if (
+        $("loginLink")
+      ) {
+        $("loginLink").hidden =
+          true;
       }
 
-      await loadTitle();
+      showContent();
 
-      startRealtime();
+      clearTable(
+        "Перевіряю активне харчування…"
+      );
 
-    } catch (error) {
+      startCurrentMealRealtime();
+
+    } catch (e) {
       console.error(
         "[meal_ira] boot:",
-        error
+        e
       );
 
       setState(
         "Помилка: " +
         (
-          error?.message ||
-          error
+          e?.message ||
+          e
         ),
         "err"
       );
@@ -1131,16 +1438,10 @@
   window.addEventListener(
     "beforeunload",
     () => {
-      try {
-        unsubOrders?.();
-      } catch {}
+      stopCompetitionListeners();
 
       try {
-        unsubDrawParent?.();
-      } catch {}
-
-      try {
-        unsubDrawTeams?.();
+        unsubCurrent?.();
       } catch {}
     }
   );

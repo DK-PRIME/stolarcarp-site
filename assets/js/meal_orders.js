@@ -16,10 +16,27 @@
 // ✅ кількість суддів змінює OWNER_UID
 // ✅ сектор автоматично береться з жеребкування
 //
-// ✅ ВАЖЛИВО:
-//    • побажання НЕ показуються у загальному списку учасників
-//    • побажання залишаються в mealOrders
-//    • побажання передаються в mealPublicOrders для сторінки Іри
+// ✅ ПУБЛІЧНИЙ СПИСОК:
+//    • НЕ показує повідомлення / побажання
+//    • тільки сектор, команда/учасник, кількість їжі
+//
+// ✅ ПОВІДОМЛЕННЯ ІРІ:
+//    • кожне нове повідомлення = окремий документ
+//      mealPublicOrderEvents
+//    • #1 / #2 / #3 / #4 не перезаписуються
+//    • зберігається точний час
+//    • TEAM прив'язка по teamId
+//    • SOLO прив'язка по UID/entityId
+//    • старий note лишається як legacy/fallback
+//
+// ✅ після успішного надсилання поле повідомлення очищається
+// ✅ повторний Save без нового тексту НЕ створює дубль
+//
+// ✅ "Очистити харчування":
+//    • mealOrders
+//    • mealPublicOrders
+//    • mealPublicOrderEvents
+//    • закриває харчування
 //
 // ✅ прозорий 0 через placeholder
 // ✅ компактний popup для телефону
@@ -28,7 +45,7 @@
   "use strict";
 
   console.log(
-    "✅ meal_orders.js LOADED v20260918-public-list-clean-v7"
+    "✅ meal_orders.js LOADED v20260918-message-history-v8"
   );
 
   let ctx =
@@ -85,20 +102,11 @@
     ).replace(
       /[&<>"']/g,
       char => ({
-        "&":
-          "&amp;",
-
-        "<":
-          "&lt;",
-
-        ">":
-          "&gt;",
-
-        '"':
-          "&quot;",
-
-        "'":
-          "&#39;"
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
       }[char])
     );
 
@@ -215,17 +223,14 @@
       );
 
     if (
-      explicit ===
-      "solo"
+      explicit === "solo"
     ) {
       return true;
     }
 
     if (
-      explicit ===
-        "team" ||
-      explicit ===
-        "judges"
+      explicit === "team" ||
+      explicit === "judges"
     ) {
       return false;
     }
@@ -241,8 +246,7 @@
     if (
       clean(
         item?.format
-      ) ===
-      "stalker-solo"
+      ) === "stalker-solo"
     ) {
       return true;
     }
@@ -497,9 +501,7 @@
     ok = true
   ) {
     const el =
-      $(
-        "mealPopupStatus"
-      );
+      $("mealPopupStatus");
 
     if (!el) {
       return;
@@ -917,9 +919,7 @@
     }
 
     let btn =
-      $(
-        "btnOpenJudgesMeal"
-      );
+      $("btnOpenJudgesMeal");
 
     if (
       !btn
@@ -978,19 +978,13 @@
       $("mealBox");
 
     const orderBtn =
-      $(
-        "btnOpenMealOrder"
-      );
+      $("btnOpenMealOrder");
 
     const listBtn =
-      $(
-        "btnOpenMealList"
-      );
+      $("btnOpenMealList");
 
     const clearBtn =
-      $(
-        "btnClearMealOrders"
-      );
+      $("btnClearMealOrders");
 
     if (
       openWrap
@@ -1074,6 +1068,10 @@
               )
         );
 
+    /*
+     * SOLO:
+     * кожен учасник окремий.
+     */
     if (
       paid.some(
         item =>
@@ -1101,6 +1099,10 @@
     const items =
       getMainPaidTeams();
 
+    /*
+     * SOLO:
+     * спочатку тільки UID.
+     */
     if (
       currentUser
     ) {
@@ -1122,6 +1124,9 @@
       }
     }
 
+    /*
+     * TEAM fallback.
+     */
     if (
       userTeamId
     ) {
@@ -1678,9 +1683,35 @@
       old?.day2 ||
       {};
 
+    /*
+     * Для учасника поле повідомлення
+     * ЗАВЖДИ починається порожнім.
+     *
+     * Старе повідомлення не підтягуємо,
+     * бо кожен новий текст = новий event.
+     *
+     * Для суддів залишаємо legacy note.
+     */
+    const participantMessage =
+      prefix === "meal";
+
     const note =
-      old?.note ||
-      "";
+      participantMessage
+        ? ""
+        : (
+            old?.note ||
+            ""
+          );
+
+    const noteLabel =
+      participantMessage
+        ? "Нове повідомлення Ірі"
+        : "Побажання до харчування";
+
+    const notePlaceholder =
+      participantMessage
+        ? "Наприклад: візьміть кока-колу, каву, мінералку..."
+        : "Наприклад: без цибулі, без мʼяса тощо";
 
     return `
       <div class="mealDayTitle">
@@ -1822,12 +1853,12 @@
       <div class="mealField">
 
         <label>
-          Побажання до харчування
+          ${esc(noteLabel)}
         </label>
 
         <textarea
           id="${prefix}Note"
-          placeholder="Наприклад: без цибулі, без мʼяса тощо"
+          placeholder="${esc(notePlaceholder)}"
         >${esc(note)}</textarea>
 
       </div>
@@ -2030,45 +2061,178 @@
   }
 
   // =========================================================
-  // PUBLIC APP
+  // PUBLIC ORDER
   // =========================================================
 
   async function publishPublicOrder(
     data,
     id
   ) {
-    try {
-      const {
-        db,
-        fb
-      } =
-        await waitReady();
+    const {
+      db,
+      fb
+    } =
+      await waitReady();
 
-      const solo =
-        data.entryType ===
-        "solo";
+    const solo =
+      data.entryType ===
+      "solo";
 
-      const publicName =
-        solo
-          ? (
-              data.displayName ||
-              data.participantName ||
-              "—"
-            )
-          : (
-              data.teamName ||
-              data.displayName ||
-              "—"
-            );
+    const publicName =
+      solo
+        ? (
+            data.displayName ||
+            data.participantName ||
+            "—"
+          )
+        : (
+            data.teamName ||
+            data.displayName ||
+            "—"
+          );
 
+    await db
+      .collection(
+        "mealPublicOrders"
+      )
+      .doc(
+        id
+      )
+      .set(
+        {
+          competitionId:
+            data.competitionId,
+
+          stageId:
+            data.stageId,
+
+          type:
+            data.type ||
+            "team",
+
+          entryType:
+            data.entryType ||
+            data.type ||
+            "team",
+
+          entityId:
+            data.entityId ||
+            "",
+
+          uid:
+            data.uid ||
+            "",
+
+          teamId:
+            data.teamId ||
+            null,
+
+          /*
+           * SOLO:
+           * teamName для Іри =
+           * ім'я самого учасника.
+           */
+          teamName:
+            publicName,
+
+          affiliationTeamName:
+            data.teamName ||
+            "",
+
+          participantName:
+            data.participantName ||
+            "",
+
+          displayName:
+            data.displayName ||
+            publicName,
+
+          zone:
+            data.zone ||
+            "",
+
+          sector:
+            data.sector ||
+            "",
+
+          drawKey:
+            data.drawKey ||
+            "",
+
+          day1:
+            data.day1 ||
+            {},
+
+          day2:
+            data.day2 ||
+            {},
+
+          /*
+           * Legacy/fallback:
+           * тут лежить останній текст.
+           *
+           * Повна історія —
+           * mealPublicOrderEvents.
+           */
+          note:
+            data.note ||
+            "",
+
+          status:
+            data.status ||
+            "empty",
+
+          updatedAt:
+            fb.firestore
+              .FieldValue
+              .serverTimestamp()
+        },
+        {
+          merge:
+            true
+        }
+      );
+  }
+
+  // =========================================================
+  // MESSAGE HISTORY FOR IRA
+  // =========================================================
+
+  async function publishMessageEvent(
+    data,
+    orderDocId,
+    messageText
+  ) {
+    const text =
+      norm(
+        messageText
+      );
+
+    if (
+      !text
+    ) {
+      return null;
+    }
+
+    const {
+      db,
+      fb
+    } =
+      await waitReady();
+
+    /*
+     * КОЖЕН виклик add() =
+     * НОВИЙ окремий документ.
+     *
+     * Нічого старого тут
+     * не перезаписується.
+     */
+    const ref =
       await db
         .collection(
-          "mealPublicOrders"
+          "mealPublicOrderEvents"
         )
-        .doc(
-          id
-        )
-        .set(
+        .add(
           {
             competitionId:
               data.competitionId,
@@ -2076,8 +2240,12 @@
             stageId:
               data.stageId,
 
+            orderId:
+              orderDocId,
+
             type:
               data.type ||
+              data.entryType ||
               "team",
 
             entryType:
@@ -2097,10 +2265,10 @@
               data.teamId ||
               null,
 
+            /*
+             * Реальна назва команди.
+             */
             teamName:
-              publicName,
-
-            affiliationTeamName:
               data.teamName ||
               "",
 
@@ -2110,7 +2278,9 @@
 
             displayName:
               data.displayName ||
-              publicName,
+              data.participantName ||
+              data.teamName ||
+              "—",
 
             zone:
               data.zone ||
@@ -2124,45 +2294,30 @@
               data.drawKey ||
               "",
 
-            day1:
-              data.day1 ||
-              {},
-
-            day2:
-              data.day2 ||
-              {},
+            /*
+             * Текст саме цього
+             * окремого повідомлення.
+             */
+            message:
+              text,
 
             /*
-             * ВАЖЛИВО:
-             * note залишається тут.
-             * Його читає сторінка Іри.
+             * Локальний час потрібен
+             * як fallback, поки
+             * serverTimestamp
+             * ще не підтягнувся.
              */
-            note:
-              data.note ||
-              "",
+            clientCreatedAt:
+              Date.now(),
 
-            status:
-              data.status ||
-              "empty",
-
-            updatedAt:
+            createdAt:
               fb.firestore
                 .FieldValue
                 .serverTimestamp()
-          },
-          {
-            merge:
-              true
           }
         );
 
-    } catch (e) {
-      console.warn(
-        "[Meals] public mirror:",
-        e?.message ||
-        e
-      );
-    }
+    return ref;
   }
 
   // =========================================================
@@ -2233,6 +2388,11 @@
           entityId
         );
 
+      /*
+       * Legacy SOLO fallback:
+       * стара тестова заявка
+       * могла бути записана по teamId.
+       */
       if (
         !old &&
         isSoloParticipant(
@@ -2298,7 +2458,29 @@
     item,
     oldOrder
   ) {
+    const saveBtn =
+      $("btnSaveMealOrder");
+
     try {
+      /*
+       * Захист від подвійного tap.
+       */
+      if (
+        saveBtn?.disabled
+      ) {
+        return;
+      }
+
+      if (
+        saveBtn
+      ) {
+        saveBtn.disabled =
+          true;
+
+        saveBtn.textContent =
+          "Зберігаю…";
+      }
+
       const {
         db,
         fb
@@ -2308,6 +2490,17 @@
       const fields =
         readFields(
           "meal"
+        );
+
+      /*
+       * Текст, введений САМЕ ЗАРАЗ.
+       *
+       * Це буде нове:
+       * #1 / #2 / #3 / #4...
+       */
+      const newMessage =
+        norm(
+          fields.note
         );
 
       const solo =
@@ -2365,6 +2558,45 @@
               )
             );
 
+      const id =
+        orderId(
+          ctx.competitionId,
+          ctx.stageId,
+          entityId
+        );
+
+      /*
+       * Читаємо АКТУАЛЬНИЙ документ.
+       *
+       * Це важливо, якщо людина
+       * кілька разів натискає Save
+       * у тому самому відкритому popup.
+       */
+      const currentSnap =
+        await db
+          .collection(
+            "mealOrders"
+          )
+          .doc(
+            id
+          )
+          .get();
+
+      const currentData =
+        currentSnap.exists
+          ? (
+              currentSnap.data() ||
+              {}
+            )
+          : {};
+
+      const previousNote =
+        norm(
+          currentData.note ||
+          oldOrder?.note ||
+          ""
+        );
+
       const data = {
         competitionId:
           ctx.competitionId,
@@ -2421,11 +2653,16 @@
           fields.day2,
 
         /*
-         * Побажання зберігаємо.
-         * Воно потрібне Ірі.
+         * В основному документі
+         * зберігаємо ОСТАННЄ
+         * повідомлення для legacy.
+         *
+         * Якщо нового тексту немає,
+         * старе не стираємо.
          */
         note:
-          fields.note,
+          newMessage ||
+          previousNote,
 
         status:
           totalOrder(
@@ -2440,7 +2677,11 @@
             .serverTimestamp()
       };
 
+      /*
+       * createdAt тільки один раз.
+       */
       if (
+        !currentSnap.exists &&
         !oldOrder?.createdAt
       ) {
         data.createdAt =
@@ -2449,12 +2690,9 @@
             .serverTimestamp();
       }
 
-      const id =
-        orderId(
-          ctx.competitionId,
-          ctx.stageId,
-          entityId
-        );
+      // -----------------------------------------------------
+      // 1. ОСНОВНА ЗАЯВКА
+      // -----------------------------------------------------
 
       await db
         .collection(
@@ -2471,13 +2709,53 @@
           }
         );
 
+      // -----------------------------------------------------
+      // 2. PUBLIC ДЛЯ ІРИ
+      // -----------------------------------------------------
+
       await publishPublicOrder(
         data,
         id
       );
 
+      // -----------------------------------------------------
+      // 3. ОКРЕМИЙ EVENT ПОВІДОМЛЕННЯ
+      // -----------------------------------------------------
+
+      if (
+        newMessage
+      ) {
+        await publishMessageEvent(
+          data,
+          id,
+          newMessage
+        );
+      }
+
+      /*
+       * Успішно відправили —
+       * поле очищаємо.
+       *
+       * Наступний текст буде
+       * вже #2 / #3 / #4...
+       */
+      const noteInput =
+        $("mealNote");
+
+      if (
+        noteInput
+      ) {
+        noteInput.value =
+          "";
+      }
+
       setPopupStatus(
-        "✅ Заявку збережено.",
+        newMessage
+          ? (
+              "✅ Заявку збережено. " +
+              "Повідомлення Ірі відправлено."
+            )
+          : "✅ Заявку збережено.",
         true
       );
 
@@ -2497,6 +2775,7 @@
 
     } catch (e) {
       console.error(
+        "[Meals] save order:",
         e
       );
 
@@ -2508,6 +2787,17 @@
         ),
         false
       );
+
+    } finally {
+      if (
+        saveBtn
+      ) {
+        saveBtn.disabled =
+          false;
+
+        saveBtn.textContent =
+          "Зберегти заявку";
+      }
     }
   }
 
@@ -3123,14 +3413,12 @@
   // PUBLIC PARTICIPANT LIST
   //
   // ВАЖЛИВО:
-  // Тут НЕ показуємо note / побажання.
+  // Тут НЕ показуємо note / повідомлення.
   //
-  // Учасники бачать тільки:
+  // Учасники бачать:
   // • сектор
   // • команда / учасник
   // • кількість харчування
-  //
-  // Побажання бачить тільки Іра через mealPublicOrders.
   // =========================================================
 
   function listHtml(
@@ -3522,77 +3810,134 @@
   }
 
   // =========================================================
-  // CLEAR
+  // CLEAR HELPERS
   // =========================================================
 
   async function deletePublicOrders() {
-    try {
-      const {
-        db
-      } =
-        await waitReady();
+    const {
+      db
+    } =
+      await waitReady();
 
-      const snap =
-        await db
-          .collection(
-            "mealPublicOrders"
-          )
-          .where(
-            "competitionId",
-            "==",
-            ctx.competitionId
-          )
-          .where(
-            "stageId",
-            "==",
-            ctx.stageId
-          )
-          .get();
+    const snap =
+      await db
+        .collection(
+          "mealPublicOrders"
+        )
+        .where(
+          "competitionId",
+          "==",
+          ctx.competitionId
+        )
+        .where(
+          "stageId",
+          "==",
+          ctx.stageId
+        )
+        .get();
 
-      let batch =
-        db.batch();
+    let batch =
+      db.batch();
 
-      let count =
-        0;
+    let count =
+      0;
 
-      for (
-        const doc of
-        snap.docs
-      ) {
-        batch.delete(
-          doc.ref
-        );
+    for (
+      const doc of
+      snap.docs
+    ) {
+      batch.delete(
+        doc.ref
+      );
 
-        count++;
-
-        if (
-          count >= 400
-        ) {
-          await batch
-            .commit();
-
-          batch =
-            db.batch();
-
-          count =
-            0;
-        }
-      }
+      count++;
 
       if (
-        count > 0
+        count >= 400
       ) {
         await batch
           .commit();
-      }
 
-    } catch (e) {
-      console.warn(
-        "[Meals] public clear:",
-        e
-      );
+        batch =
+          db.batch();
+
+        count =
+          0;
+      }
+    }
+
+    if (
+      count > 0
+    ) {
+      await batch
+        .commit();
     }
   }
+
+  async function deletePublicOrderEvents() {
+    const {
+      db
+    } =
+      await waitReady();
+
+    const snap =
+      await db
+        .collection(
+          "mealPublicOrderEvents"
+        )
+        .where(
+          "competitionId",
+          "==",
+          ctx.competitionId
+        )
+        .where(
+          "stageId",
+          "==",
+          ctx.stageId
+        )
+        .get();
+
+    let batch =
+      db.batch();
+
+    let count =
+      0;
+
+    for (
+      const doc of
+      snap.docs
+    ) {
+      batch.delete(
+        doc.ref
+      );
+
+      count++;
+
+      if (
+        count >= 400
+      ) {
+        await batch
+          .commit();
+
+        batch =
+          db.batch();
+
+        count =
+          0;
+      }
+    }
+
+    if (
+      count > 0
+    ) {
+      await batch
+        .commit();
+    }
+  }
+
+  // =========================================================
+  // CLEAR
+  // =========================================================
 
   async function clearOrders() {
     try {
@@ -3613,7 +3958,7 @@
 
       if (
         !confirm(
-          "Точно видалити всі заявки і закрити харчування?"
+          "Точно видалити всі заявки, повідомлення і закрити харчування?"
         )
       ) {
         return;
@@ -3659,7 +4004,6 @@
         );
 
         count++;
-
         total++;
 
         if (
@@ -3683,8 +4027,21 @@
           .commit();
       }
 
+      /*
+       * Видаляємо публічні заявки.
+       */
       await deletePublicOrders();
 
+      /*
+       * Видаляємо ВСЮ історію
+       * #1 / #2 / #3 / #4...
+       */
+      await deletePublicOrderEvents();
+
+      /*
+       * І тільки після успішного
+       * очищення все закриваємо.
+       */
       await setMealGate(
         false
       );
@@ -3696,12 +4053,13 @@
       applyVisibility();
 
       setStatus(
-        `✅ Заявки видалено: ${total}`,
+        `✅ Харчування очищено. Заявок видалено: ${total}`,
         true
       );
 
     } catch (e) {
       console.error(
+        "[Meals] clear:",
         e
       );
 

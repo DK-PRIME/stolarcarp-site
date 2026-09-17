@@ -15,22 +15,37 @@
 // ✅ СУДДІ окремим рядком
 // ✅ кількість суддів змінює OWNER_UID
 // ✅ сектор автоматично береться з жеребкування
-// ✅ побажання видно у списку
+//
+// ✅ ВАЖЛИВО:
+//    • побажання НЕ показуються у загальному списку учасників
+//    • побажання залишаються в mealOrders
+//    • побажання передаються в mealPublicOrders для сторінки Іри
+//
 // ✅ прозорий 0 через placeholder
 // ✅ компактний popup для телефону
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-solo-v6");
+  console.log(
+    "✅ meal_orders.js LOADED v20260918-public-list-clean-v7"
+  );
 
-  let ctx = window.scMealContext || null;
+  let ctx =
+    window.scMealContext ||
+    null;
 
-  let currentUser = null;
-  let userTeamId = "";
+  let currentUser =
+    null;
 
-  let isOwner = false;
-  let mealIsOpen = false;
+  let userTeamId =
+    "";
+
+  let isOwner =
+    false;
+
+  let mealIsOpen =
+    false;
 
   const OWNER_UID =
     "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
@@ -45,31 +60,53 @@
   ];
 
   const $ = id =>
-    document.getElementById(id);
+    document.getElementById(
+      id
+    );
 
   const norm = value =>
-    String(value ?? "")
-      .replace(/\s+/g, " ")
+    String(
+      value ?? ""
+    )
+      .replace(
+        /\s+/g,
+        " "
+      )
       .trim();
 
   const clean = value =>
-    norm(value).toLowerCase();
+    norm(
+      value
+    ).toLowerCase();
 
   const esc = value =>
-    String(value ?? "").replace(
+    String(
+      value ?? ""
+    ).replace(
       /[&<>"']/g,
       char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
+        "&":
+          "&amp;",
+
+        "<":
+          "&lt;",
+
+        ">":
+          "&gt;",
+
+        '"':
+          "&quot;",
+
+        "'":
+          "&#39;"
       }[char])
     );
 
   function num(value) {
     const n =
-      Number(value);
+      Number(
+        value
+      );
 
     return (
       Number.isFinite(n) &&
@@ -79,9 +116,13 @@
       : 0;
   }
 
-  function mealInputValue(value) {
+  function mealInputValue(
+    value
+  ) {
     const n =
-      num(value);
+      num(
+        value
+      );
 
     return n > 0
       ? String(n)
@@ -89,7 +130,10 @@
   }
 
   function safeId(value) {
-    return String(value || "")
+    return String(
+      value ||
+      ""
+    )
       .replace(
         /[\/#?\[\]]/g,
         "_"
@@ -131,12 +175,29 @@
 
   function totalOrder(order) {
     return (
-      num(order?.day1?.lunch) +
-      num(order?.day1?.dinner) +
-      num(order?.day1?.breakfast) +
-      num(order?.day2?.lunch) +
-      num(order?.day2?.dinner) +
-      num(order?.day2?.breakfast)
+      num(
+        order?.day1?.lunch
+      ) +
+
+      num(
+        order?.day1?.dinner
+      ) +
+
+      num(
+        order?.day1?.breakfast
+      ) +
+
+      num(
+        order?.day2?.lunch
+      ) +
+
+      num(
+        order?.day2?.dinner
+      ) +
+
+      num(
+        order?.day2?.breakfast
+      )
     );
   }
 
@@ -144,46 +205,67 @@
   // TEAM / SOLO
   // =========================================================
 
-  function isSoloParticipant(item) {
+  function isSoloParticipant(
+    item
+  ) {
     const explicit =
       clean(
         item?.entryType ||
         item?.type
       );
 
-    if (explicit === "solo") {
+    if (
+      explicit ===
+      "solo"
+    ) {
       return true;
     }
 
     if (
-      explicit === "team" ||
-      explicit === "judges"
+      explicit ===
+        "team" ||
+      explicit ===
+        "judges"
     ) {
       return false;
     }
 
     if (
-      norm(item?.participantName)
+      norm(
+        item?.participantName
+      )
     ) {
       return true;
     }
 
     if (
-      clean(item?.format) ===
+      clean(
+        item?.format
+      ) ===
       "stalker-solo"
     ) {
       return true;
     }
 
     return (
-      clean(ctx?.entryType) === "solo" ||
-      clean(ctx?.format) ===
-        "stalker-solo"
+      clean(
+        ctx?.entryType
+      ) === "solo" ||
+
+      clean(
+        ctx?.format
+      ) === "stalker-solo"
     );
   }
 
-  function mealDisplayName(item) {
-    if (isSoloParticipant(item)) {
+  function mealDisplayName(
+    item
+  ) {
+    if (
+      isSoloParticipant(
+        item
+      )
+    ) {
       return norm(
         item?.participantName ||
         item?.displayName ||
@@ -204,7 +286,9 @@
     );
   }
 
-  function mealTeamName(item) {
+  function mealTeamName(
+    item
+  ) {
     return norm(
       item?.teamName ||
       item?.team ||
@@ -212,8 +296,14 @@
     );
   }
 
-  function mealEntityId(item) {
-    if (isSoloParticipant(item)) {
+  function mealEntityId(
+    item
+  ) {
+    if (
+      isSoloParticipant(
+        item
+      )
+    ) {
       return norm(
         item?.uid ||
         item?.participantUid ||
@@ -245,7 +335,9 @@
     }
 
     const style =
-      document.createElement("style");
+      document.createElement(
+        "style"
+      );
 
     style.id =
       "scMealCompactStyles";
@@ -362,7 +454,10 @@
       }
     `;
 
-    document.head.appendChild(style);
+    document.head
+      .appendChild(
+        style
+      );
   }
 
   // =========================================================
@@ -376,10 +471,13 @@
     const el =
       $("mealStatus");
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     el.textContent =
-      text || "";
+      text ||
+      "";
 
     el.className =
       "mealStatus " +
@@ -399,12 +497,17 @@
     ok = true
   ) {
     const el =
-      $("mealPopupStatus");
+      $(
+        "mealPopupStatus"
+      );
 
-    if (!el) return;
+    if (!el) {
+      return;
+    }
 
     el.textContent =
-      text || "";
+      text ||
+      "";
 
     el.className =
       "mealStatus " +
@@ -425,28 +528,43 @@
   ) {
     ensureCompactStyles();
 
-    if ($("mealPopupTitle")) {
-      $("mealPopupTitle").textContent =
+    if (
+      $("mealPopupTitle")
+    ) {
+      $("mealPopupTitle")
+        .textContent =
         title;
     }
 
-    if ($("mealPopupBody")) {
-      $("mealPopupBody").innerHTML =
+    if (
+      $("mealPopupBody")
+    ) {
+      $("mealPopupBody")
+        .innerHTML =
         html;
 
-      $("mealPopupBody").scrollTop =
+      $("mealPopupBody")
+        .scrollTop =
         0;
     }
 
-    if ($("mealPopup")) {
-      $("mealPopup").style.display =
+    if (
+      $("mealPopup")
+    ) {
+      $("mealPopup")
+        .style
+        .display =
         "flex";
     }
   }
 
   function closePopup() {
-    if ($("mealPopup")) {
-      $("mealPopup").style.display =
+    if (
+      $("mealPopup")
+    ) {
+      $("mealPopup")
+        .style
+        .display =
         "none";
     }
   }
@@ -456,7 +574,9 @@
   // =========================================================
 
   async function waitReady() {
-    if (window.scReady) {
+    if (
+      window.scReady
+    ) {
       await window.scReady;
     }
 
@@ -489,7 +609,8 @@
       Date.now();
 
     while (
-      Date.now() - started <
+      Date.now() -
+        started <
       maxMs
     ) {
       ctx =
@@ -499,7 +620,9 @@
       if (
         ctx?.competitionId &&
         ctx?.stageId &&
-        Array.isArray(ctx?.teams)
+        Array.isArray(
+          ctx?.teams
+        )
       ) {
         return ctx;
       }
@@ -519,10 +642,14 @@
   }
 
   async function getAuthUser() {
-    const { auth } =
+    const {
+      auth
+    } =
       await waitReady();
 
-    if (auth.currentUser) {
+    if (
+      auth.currentUser
+    ) {
       return auth.currentUser;
     }
 
@@ -534,7 +661,8 @@
               unsub();
 
               resolve(
-                user || null
+                user ||
+                null
               );
             }
           );
@@ -543,7 +671,9 @@
   }
 
   async function loadUserData() {
-    const { db } =
+    const {
+      db
+    } =
       await waitReady();
 
     currentUser =
@@ -555,7 +685,9 @@
     isOwner =
       false;
 
-    if (!currentUser) {
+    if (
+      !currentUser
+    ) {
       return;
     }
 
@@ -566,8 +698,12 @@
     try {
       const snap =
         await db
-          .collection("users")
-          .doc(currentUser.uid)
+          .collection(
+            "users"
+          )
+          .doc(
+            currentUser.uid
+          )
           .get();
 
       const data =
@@ -598,13 +734,17 @@
   // =========================================================
 
   async function loadMealGate() {
-    const { db } =
+    const {
+      db
+    } =
       await waitReady();
 
     const id =
       mealSettingsId();
 
-    if (!id) {
+    if (
+      !id
+    ) {
       mealIsOpen =
         false;
 
@@ -613,8 +753,12 @@
 
     const snap =
       await db
-        .collection("mealSettings")
-        .doc(id)
+        .collection(
+          "mealSettings"
+        )
+        .doc(
+          id
+        )
         .get();
 
     const data =
@@ -626,7 +770,8 @@
         : {};
 
     mealIsOpen =
-      data.isOpen === true;
+      data.isOpen ===
+      true;
 
     return mealIsOpen;
   }
@@ -649,8 +794,12 @@
         await waitReady();
 
       await db
-        .collection("mealPublic")
-        .doc("current")
+        .collection(
+          "mealPublic"
+        )
+        .doc(
+          "current"
+        )
         .set(
           {
             competitionId:
@@ -668,14 +817,16 @@
                 .serverTimestamp()
           },
           {
-            merge: true
+            merge:
+              true
           }
         );
 
     } catch (e) {
       console.warn(
         "[Meals] mealPublic/current:",
-        e?.message || e
+        e?.message ||
+        e
       );
     }
   }
@@ -683,7 +834,9 @@
   async function setMealGate(
     openValue
   ) {
-    if (!isOwner) {
+    if (
+      !isOwner
+    ) {
       throw new Error(
         "Керування доступне тільки Дячок Роман"
       );
@@ -698,15 +851,21 @@
     const id =
       mealSettingsId();
 
-    if (!id) {
+    if (
+      !id
+    ) {
       throw new Error(
         "Нема competitionId/stageId"
       );
     }
 
     await db
-      .collection("mealSettings")
-      .doc(id)
+      .collection(
+        "mealSettings"
+      )
+      .doc(
+        id
+      )
       .set(
         {
           competitionId:
@@ -727,7 +886,8 @@
             currentUser.uid
         },
         {
-          merge: true
+          merge:
+            true
         }
       );
 
@@ -750,14 +910,20 @@
     const listBtn =
       $("btnOpenMealList");
 
-    if (!mealBox) {
+    if (
+      !mealBox
+    ) {
       return;
     }
 
     let btn =
-      $("btnOpenJudgesMeal");
+      $(
+        "btnOpenJudgesMeal"
+      );
 
-    if (!btn) {
+    if (
+      !btn
+    ) {
       btn =
         document.createElement(
           "button"
@@ -787,9 +953,10 @@
           );
 
       } else {
-        mealBox.appendChild(
-          btn
-        );
+        mealBox
+          .appendChild(
+            btn
+          );
       }
     }
 
@@ -811,36 +978,52 @@
       $("mealBox");
 
     const orderBtn =
-      $("btnOpenMealOrder");
+      $(
+        "btnOpenMealOrder"
+      );
 
     const listBtn =
-      $("btnOpenMealList");
+      $(
+        "btnOpenMealList"
+      );
 
     const clearBtn =
-      $("btnClearMealOrders");
+      $(
+        "btnClearMealOrders"
+      );
 
-    if (openWrap) {
+    if (
+      openWrap
+    ) {
       openWrap.hidden =
         mealIsOpen ||
         !isOwner;
     }
 
-    if (mealBox) {
+    if (
+      mealBox
+    ) {
       mealBox.hidden =
         !mealIsOpen;
     }
 
-    if (orderBtn) {
+    if (
+      orderBtn
+    ) {
       orderBtn.hidden =
         !mealIsOpen;
     }
 
-    if (listBtn) {
+    if (
+      listBtn
+    ) {
       listBtn.hidden =
         !mealIsOpen;
     }
 
-    if (clearBtn) {
+    if (
+      clearBtn
+    ) {
       clearBtn.hidden =
         !(
           mealIsOpen &&
@@ -850,13 +1033,18 @@
 
     ensureJudgesButton();
 
-    if (mealIsOpen) {
+    if (
+      mealIsOpen
+    ) {
       setStatus(
         "Харчування відкрите.",
         true
       );
+
     } else {
-      setStatus("");
+      setStatus(
+        ""
+      );
     }
   }
 
@@ -867,27 +1055,31 @@
   function getMainPaidTeams() {
     if (
       !ctx ||
-      !Array.isArray(ctx.teams)
+      !Array.isArray(
+        ctx.teams
+      )
     ) {
       return [];
     }
 
     const paid =
-      ctx.teams.filter(
-        item =>
-          PAID_STATUSES.includes(
-            clean(item.status)
-          )
-      );
+      ctx.teams
+        .filter(
+          item =>
+            PAID_STATUSES
+              .includes(
+                clean(
+                  item.status
+                )
+              )
+        );
 
-    /*
-     * Для SOLO не обрізаємо по maxTeams,
-     * бо кожен учасник окремий.
-     */
     if (
       paid.some(
         item =>
-          isSoloParticipant(item)
+          isSoloParticipant(
+            item
+          )
       )
     ) {
       return paid;
@@ -909,13 +1101,9 @@
     const items =
       getMainPaidTeams();
 
-    /*
-     * Спочатку шукаємо по UID.
-     *
-     * Це критично для SOLO:
-     * кілька людей можуть мати один teamId.
-     */
-    if (currentUser) {
+    if (
+      currentUser
+    ) {
       const byUid =
         items.find(
           item =>
@@ -927,24 +1115,32 @@
             currentUser.uid
         );
 
-      if (byUid) {
+      if (
+        byUid
+      ) {
         return byUid;
       }
     }
 
-    /*
-     * TEAM fallback.
-     */
-    if (userTeamId) {
+    if (
+      userTeamId
+    ) {
       const byTeamId =
         items.find(
           item =>
-            !isSoloParticipant(item) &&
-            norm(item.teamId) ===
-              userTeamId
+            !isSoloParticipant(
+              item
+            ) &&
+
+            norm(
+              item.teamId
+            ) ===
+            userTeamId
         );
 
-      if (byTeamId) {
+      if (
+        byTeamId
+      ) {
         return byTeamId;
       }
     }
@@ -956,19 +1152,26 @@
   // DRAW
   // =========================================================
 
-  function parseDraw(item) {
+  function parseDraw(
+    item
+  ) {
     const direct =
       norm(
         item?.drawKey
-      ).toUpperCase();
+      )
+        .toUpperCase();
 
-    if (direct) {
+    if (
+      direct
+    ) {
       const match =
         direct.match(
           /^([ABC])(\d+)$/i
         );
 
-      if (match) {
+      if (
+        match
+      ) {
         return {
           zone:
             match[1]
@@ -987,7 +1190,8 @@
       norm(
         item?.drawZone ||
         item?.zone
-      ).toUpperCase();
+      )
+        .toUpperCase();
 
     const sectorRaw =
       norm(
@@ -1008,26 +1212,38 @@
 
       return {
         zone,
+
         sector,
+
         drawKey:
           `${zone}${sector}`
       };
     }
 
     return {
-      zone: "",
-      sector: "",
-      drawKey: ""
+      zone:
+        "",
+
+      sector:
+        "",
+
+      drawKey:
+        ""
     };
   }
 
-  function teamDrawKey(item) {
-    return parseDraw(item)
-      .drawKey;
+  function teamDrawKey(
+    item
+  ) {
+    return parseDraw(
+      item
+    ).drawKey;
   }
 
   async function loadDrawMap() {
-    const { db } =
+    const {
+      db
+    } =
       await waitReady();
 
     const id =
@@ -1048,15 +1264,23 @@
     const byName =
       new Map();
 
-    function addRow(item) {
-      if (!item) {
+    function addRow(
+      item
+    ) {
+      if (
+        !item
+      ) {
         return;
       }
 
       const draw =
-        parseDraw(item);
+        parseDraw(
+          item
+        );
 
-      if (!draw.drawKey) {
+      if (
+        !draw.drawKey
+      ) {
         return;
       }
 
@@ -1081,38 +1305,45 @@
         );
 
       const displayName =
-        mealDisplayName(item);
+        mealDisplayName(
+          item
+        );
 
       const row = {
         ...draw,
+
         uid,
+
         entityId,
+
         teamId,
+
         displayName
       };
 
-      if (uid) {
+      if (
+        uid
+      ) {
         byUid.set(
           uid,
           row
         );
       }
 
-      if (entityId) {
+      if (
+        entityId
+      ) {
         byEntity.set(
           entityId,
           row
         );
       }
 
-      /*
-       * Не перезаписуємо teamId.
-       * У SOLO може бути кілька людей
-       * з однієї команди.
-       */
       if (
         teamId &&
-        !byTeamId.has(teamId)
+        !byTeamId.has(
+          teamId
+        )
       ) {
         byTeamId.set(
           teamId,
@@ -1120,9 +1351,13 @@
         );
       }
 
-      if (displayName) {
+      if (
+        displayName
+      ) {
         byName.set(
-          clean(displayName),
+          clean(
+            displayName
+          ),
           row
         );
       }
@@ -1131,49 +1366,58 @@
     try {
       const stageRef =
         db
-          .collection("stageResults")
-          .doc(id);
+          .collection(
+            "stageResults"
+          )
+          .doc(
+            id
+          );
 
       const parentSnap =
-        await stageRef.get();
+        await stageRef
+          .get();
 
-      if (parentSnap.exists) {
+      if (
+        parentSnap.exists
+      ) {
         const data =
           parentSnap.data() ||
           {};
 
         if (
-          Array.isArray(data.teams)
+          Array.isArray(
+            data.teams
+          )
         ) {
-          data.teams.forEach(
-            addRow
-          );
+          data.teams
+            .forEach(
+              addRow
+            );
         }
       }
 
-      /*
-       * Підтримка canonical
-       * stageResults/{id}/teams.
-       */
       try {
         const teamsSnap =
           await stageRef
-            .collection("teams")
+            .collection(
+              "teams"
+            )
             .get();
 
-        teamsSnap.forEach(
-          doc => {
-            addRow({
-              entityId:
-                doc.id,
+        teamsSnap
+          .forEach(
+            doc => {
+              addRow({
+                entityId:
+                  doc.id,
 
-              ...(
-                doc.data() ||
-                {}
-              )
-            });
-          }
-        );
+                ...(
+                  doc.data() ||
+                  {}
+                )
+              });
+            }
+          );
 
       } catch (e) {
         console.warn(
@@ -1191,8 +1435,11 @@
 
     return {
       byUid,
+
       byEntity,
+
       byTeamId,
+
       byName
     };
   }
@@ -1202,7 +1449,8 @@
     drawMap
   ) {
     if (
-      item?.type === "judges"
+      item?.type ===
+      "judges"
     ) {
       return item;
     }
@@ -1211,7 +1459,9 @@
       null;
 
     const solo =
-      isSoloParticipant(item);
+      isSoloParticipant(
+        item
+      );
 
     const uid =
       norm(
@@ -1234,20 +1484,24 @@
 
     const displayName =
       clean(
-        mealDisplayName(item)
+        mealDisplayName(
+          item
+        )
       );
 
-    /*
-     * SOLO:
-     * UID -> entityId -> ім'я -> teamId fallback.
-     */
-    if (solo) {
+    if (
+      solo
+    ) {
       if (
         uid &&
-        drawMap.byUid.has(uid)
+        drawMap.byUid.has(
+          uid
+        )
       ) {
         draw =
-          drawMap.byUid.get(uid);
+          drawMap.byUid.get(
+            uid
+          );
       }
 
       if (
@@ -1290,10 +1544,9 @@
       }
     }
 
-    /*
-     * TEAM.
-     */
-    if (!solo) {
+    if (
+      !solo
+    ) {
       if (
         teamId &&
         drawMap.byTeamId.has(
@@ -1320,7 +1573,9 @@
       }
     }
 
-    if (!draw) {
+    if (
+      !draw
+    ) {
       return item;
     }
 
@@ -1338,11 +1593,17 @@
     };
   }
 
-  async function withCurrentDraw(item) {
+  async function withCurrentDraw(
+    item
+  ) {
     const direct =
-      parseDraw(item);
+      parseDraw(
+        item
+      );
 
-    if (direct.drawKey) {
+    if (
+      direct.drawKey
+    ) {
       return {
         ...item,
         ...direct
@@ -1365,10 +1626,14 @@
   async function readOrderByEntity(
     entityId
   ) {
-    const { db } =
+    const {
+      db
+    } =
       await waitReady();
 
-    if (!entityId) {
+    if (
+      !entityId
+    ) {
       return null;
     }
 
@@ -1381,8 +1646,12 @@
 
     const snap =
       await db
-        .collection("mealOrders")
-        .doc(id)
+        .collection(
+          "mealOrders"
+        )
+        .doc(
+          id
+        )
         .get();
 
     return snap.exists
@@ -1422,6 +1691,7 @@
 
         <div class="mealField">
           <label>Обід</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D1Lunch"
@@ -1441,6 +1711,7 @@
 
         <div class="mealField">
           <label>Вечеря</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D1Dinner"
@@ -1460,6 +1731,7 @@
 
         <div class="mealField">
           <label>Сніданок</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D1Breakfast"
@@ -1487,6 +1759,7 @@
 
         <div class="mealField">
           <label>Обід</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D2Lunch"
@@ -1506,6 +1779,7 @@
 
         <div class="mealField">
           <label>Вечеря</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D2Dinner"
@@ -1525,6 +1799,7 @@
 
         <div class="mealField">
           <label>Сніданок</label>
+
           <input
             class="mealQtyInput"
             id="${prefix}D2Breakfast"
@@ -1545,6 +1820,7 @@
       </div>
 
       <div class="mealField">
+
         <label>
           Побажання до харчування
         </label>
@@ -1553,11 +1829,14 @@
           id="${prefix}Note"
           placeholder="Наприклад: без цибулі, без мʼяса тощо"
         >${esc(note)}</textarea>
+
       </div>
     `;
   }
 
-  function readFields(prefix) {
+  function readFields(
+    prefix
+  ) {
     return {
       day1: {
         lunch:
@@ -1619,14 +1898,20 @@
     old
   ) {
     const solo =
-      isSoloParticipant(item);
+      isSoloParticipant(
+        item
+      );
 
     const displayName =
-      mealDisplayName(item) ||
+      mealDisplayName(
+        item
+      ) ||
       "—";
 
     const sector =
-      teamDrawKey(item) ||
+      teamDrawKey(
+        item
+      ) ||
       "сектор ще не визначено";
 
     return `
@@ -1690,7 +1975,9 @@
     `;
   }
 
-  function judgesFormHtml(old) {
+  function judgesFormHtml(
+    old
+  ) {
     return `
       <div
         class="mealDayTitle"
@@ -1759,17 +2046,8 @@
 
       const solo =
         data.entryType ===
-          "solo";
+        "solo";
 
-      /*
-       * Для Іри:
-       *
-       * SOLO:
-       * teamName = ім'я учасника
-       *
-       * affiliationTeamName =
-       * реальна команда.
-       */
       const publicName =
         solo
           ? (
@@ -1787,7 +2065,9 @@
         .collection(
           "mealPublicOrders"
         )
-        .doc(id)
+        .doc(
+          id
+        )
         .set(
           {
             competitionId:
@@ -1817,10 +2097,6 @@
               data.teamId ||
               null,
 
-            /*
-             * Ірин старий екран може
-             * читати саме teamName.
-             */
             teamName:
               publicName,
 
@@ -1856,6 +2132,11 @@
               data.day2 ||
               {},
 
+            /*
+             * ВАЖЛИВО:
+             * note залишається тут.
+             * Його читає сторінка Іри.
+             */
             note:
               data.note ||
               "",
@@ -1870,14 +2151,16 @@
                 .serverTimestamp()
           },
           {
-            merge: true
+            merge:
+              true
           }
         );
 
     } catch (e) {
       console.warn(
         "[Meals] public mirror:",
-        e?.message || e
+        e?.message ||
+        e
       );
     }
   }
@@ -1889,16 +2172,22 @@
   async function openOrder() {
     try {
       await waitMealContext();
+
       await loadUserData();
+
       await loadMealGate();
 
       applyVisibility();
 
-      if (!mealIsOpen) {
+      if (
+        !mealIsOpen
+      ) {
         return;
       }
 
-      if (!currentUser) {
+      if (
+        !currentUser
+      ) {
         setStatus(
           "Увійди в кабінет, щоб подати заявку.",
           false
@@ -1910,7 +2199,9 @@
       let item =
         getMyTeam();
 
-      if (!item) {
+      if (
+        !item
+      ) {
         setStatus(
           "Заявку можуть подати тільки підтверджені учасники.",
           false
@@ -1919,44 +2210,39 @@
         return;
       }
 
-      /*
-       * Дотягуємо актуальний сектор.
-       */
       item =
         await withCurrentDraw(
           item
         );
 
       const entityId =
-        mealEntityId(item);
+        mealEntityId(
+          item
+        );
 
-      if (!entityId) {
+      if (
+        !entityId
+      ) {
         throw new Error(
           "Не вдалося визначити учасника."
         );
       }
 
-      /*
-       * Нова схема:
-       *
-       * TEAM -> teamId
-       * SOLO -> uid
-       */
       let old =
         await readOrderByEntity(
           entityId
         );
 
-      /*
-       * Fallback старої тестової
-       * SOLO заявки по teamId.
-       */
       if (
         !old &&
-        isSoloParticipant(item) &&
+        isSoloParticipant(
+          item
+        ) &&
         item.teamId &&
         entityId !==
-          norm(item.teamId)
+          norm(
+            item.teamId
+          )
       ) {
         old =
           await readOrderByEntity(
@@ -1975,14 +2261,16 @@
       if (
         $("btnCloseMealPopup")
       ) {
-        $("btnCloseMealPopup").onclick =
+        $("btnCloseMealPopup")
+          .onclick =
           closePopup;
       }
 
       if (
         $("btnSaveMealOrder")
       ) {
-        $("btnSaveMealOrder").onclick =
+        $("btnSaveMealOrder")
+          .onclick =
           () =>
             saveOrder(
               item,
@@ -1991,7 +2279,9 @@
       }
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       setStatus(
         "Помилка: " +
@@ -2021,7 +2311,9 @@
         );
 
       const solo =
-        isSoloParticipant(item);
+        isSoloParticipant(
+          item
+        );
 
       const entryType =
         solo
@@ -2029,18 +2321,18 @@
           : "team";
 
       const entityId =
-        mealEntityId(item);
+        mealEntityId(
+          item
+        );
 
-      if (!entityId) {
+      if (
+        !entityId
+      ) {
         throw new Error(
           "Не вдалося визначити ID учасника."
         );
       }
 
-      /*
-       * Ще раз беремо актуальний сектор
-       * безпосередньо перед Save.
-       */
       const withDraw =
         await withCurrentDraw(
           item
@@ -2090,19 +2382,13 @@
         uid:
           currentUser.uid,
 
-        /*
-         * SOLO теж зберігає
-         * реальний teamId.
-         */
         teamId:
           norm(
             withDraw.teamId ||
             userTeamId
-          ) || null,
+          ) ||
+          null,
 
-        /*
-         * Реальна команда.
-         */
         teamName:
           realTeamName ||
           (
@@ -2111,23 +2397,14 @@
               : displayName
           ),
 
-        /*
-         * SOLO identity.
-         */
         participantName:
           participantName ||
           "",
 
-        /*
-         * Що показуємо.
-         */
         displayName:
           displayName ||
           "—",
 
-        /*
-         * Сектор для Іри.
-         */
         zone:
           draw.zone,
 
@@ -2143,11 +2420,17 @@
         day2:
           fields.day2,
 
+        /*
+         * Побажання зберігаємо.
+         * Воно потрібне Ірі.
+         */
         note:
           fields.note,
 
         status:
-          totalOrder(fields) > 0
+          totalOrder(
+            fields
+          ) > 0
             ? "submitted"
             : "empty",
 
@@ -2157,7 +2440,9 @@
             .serverTimestamp()
       };
 
-      if (!oldOrder?.createdAt) {
+      if (
+        !oldOrder?.createdAt
+      ) {
         data.createdAt =
           fb.firestore
             .FieldValue
@@ -2172,12 +2457,17 @@
         );
 
       await db
-        .collection("mealOrders")
-        .doc(id)
+        .collection(
+          "mealOrders"
+        )
+        .doc(
+          id
+        )
         .set(
           data,
           {
-            merge: true
+            merge:
+              true
           }
         );
 
@@ -2193,13 +2483,22 @@
 
       setStatus(
         solo
-          ? `✅ Харчування: ${displayName} · ${draw.drawKey || "сектор —"}`
-          : `✅ Харчування команди збережено · ${draw.drawKey || "сектор —"}`,
+          ? (
+              `✅ Харчування: ` +
+              `${displayName} · ` +
+              `${draw.drawKey || "сектор —"}`
+            )
+          : (
+              `✅ Харчування команди збережено · ` +
+              `${draw.drawKey || "сектор —"}`
+            ),
         true
       );
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       setPopupStatus(
         "❌ " +
@@ -2219,14 +2518,20 @@
   async function openJudgesOrder() {
     try {
       await waitMealContext();
+
       await loadUserData();
+
       await loadMealGate();
 
-      if (!mealIsOpen) {
+      if (
+        !mealIsOpen
+      ) {
         return;
       }
 
-      if (!isOwner) {
+      if (
+        !isOwner
+      ) {
         setStatus(
           "Суддів може змінювати тільки Дячок Роман.",
           false
@@ -2250,14 +2555,16 @@
       if (
         $("btnCloseMealPopup")
       ) {
-        $("btnCloseMealPopup").onclick =
+        $("btnCloseMealPopup")
+          .onclick =
           closePopup;
       }
 
       if (
         $("btnSaveJudgesMeal")
       ) {
-        $("btnSaveJudgesMeal").onclick =
+        $("btnSaveJudgesMeal")
+          .onclick =
           () =>
             saveJudgesOrder(
               old
@@ -2265,7 +2572,9 @@
       }
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       setStatus(
         "Помилка: " +
@@ -2284,7 +2593,9 @@
     try {
       await loadUserData();
 
-      if (!isOwner) {
+      if (
+        !isOwner
+      ) {
         throw new Error(
           "Доступ тільки для Дячок Роман"
         );
@@ -2351,7 +2662,9 @@
           currentUser.uid,
 
         status:
-          totalOrder(fields) > 0
+          totalOrder(
+            fields
+          ) > 0
             ? "submitted"
             : "empty",
 
@@ -2364,7 +2677,9 @@
             .serverTimestamp()
       };
 
-      if (!oldOrder?.createdAt) {
+      if (
+        !oldOrder?.createdAt
+      ) {
         data.createdAt =
           fb.firestore
             .FieldValue
@@ -2379,12 +2694,17 @@
         );
 
       await db
-        .collection("mealOrders")
-        .doc(id)
+        .collection(
+          "mealOrders"
+        )
+        .doc(
+          id
+        )
         .set(
           data,
           {
-            merge: true
+            merge:
+              true
           }
         );
 
@@ -2404,7 +2724,9 @@
       );
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       setPopupStatus(
         "❌ " +
@@ -2458,15 +2780,25 @@
         "",
 
       day1: {
-        lunch: 0,
-        dinner: 0,
-        breakfast: 0
+        lunch:
+          0,
+
+        dinner:
+          0,
+
+        breakfast:
+          0
       },
 
       day2: {
-        lunch: 0,
-        dinner: 0,
-        breakfast: 0
+        lunch:
+          0,
+
+        dinner:
+          0,
+
+        breakfast:
+          0
       },
 
       note:
@@ -2480,9 +2812,12 @@
     };
   }
 
-  function orderDisplayName(row) {
+  function orderDisplayName(
+    row
+  ) {
     if (
-      row.type === "judges"
+      row.type ===
+      "judges"
     ) {
       return "СУДДІ";
     }
@@ -2500,40 +2835,55 @@
     b
   ) {
     if (
-      a.type === "judges" &&
-      b.type !== "judges"
+      a.type ===
+        "judges" &&
+      b.type !==
+        "judges"
     ) {
       return 1;
     }
 
     if (
-      b.type === "judges" &&
-      a.type !== "judges"
+      b.type ===
+        "judges" &&
+      a.type !==
+        "judges"
     ) {
       return -1;
     }
 
     const zones = {
-      A: 1,
-      B: 2,
-      C: 3
+      A:
+        1,
+
+      B:
+        2,
+
+      C:
+        3
     };
 
     const za =
       zones[
         norm(
           a.zone
-        ).toUpperCase()
-      ] || 9;
+        )
+          .toUpperCase()
+      ] ||
+      9;
 
     const zb =
       zones[
         norm(
           b.zone
-        ).toUpperCase()
-      ] || 9;
+        )
+          .toUpperCase()
+      ] ||
+      9;
 
-    if (za !== zb) {
+    if (
+      za !== zb
+    ) {
       return za - zb;
     }
 
@@ -2549,33 +2899,42 @@
         999
       );
 
-    if (sa !== sb) {
+    if (
+      sa !== sb
+    ) {
       return sa - sb;
     }
 
-    return orderDisplayName(a)
+    return orderDisplayName(
+      a
+    )
       .localeCompare(
-        orderDisplayName(b),
+        orderDisplayName(
+          b
+        ),
         "uk"
       );
   }
 
-  function rowUpdatedMs(row) {
+  function rowUpdatedMs(
+    row
+  ) {
     const ts =
       row?.updatedAt;
 
     if (
       ts &&
       typeof ts.toMillis ===
-        "function"
+      "function"
     ) {
-      return ts.toMillis();
+      return ts
+        .toMillis();
     }
 
     if (
       ts &&
       typeof ts.seconds ===
-        "number"
+      "number"
     ) {
       return (
         ts.seconds *
@@ -2589,7 +2948,9 @@
   async function loadOrders() {
     await waitMealContext();
 
-    const { db } =
+    const {
+      db
+    } =
       await waitReady();
 
     const [
@@ -2598,7 +2959,9 @@
     ] =
       await Promise.all([
         db
-          .collection("mealOrders")
+          .collection(
+            "mealOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -2635,13 +2998,17 @@
         const judgesDoc =
           data.type ===
             "judges" ||
+
           data.entityId ===
             JUDGES_ID ||
+
           doc.id.endsWith(
             `__${JUDGES_ID}`
           );
 
-        if (judgesDoc) {
+        if (
+          judgesDoc
+        ) {
           judges = {
             ...data,
 
@@ -2672,7 +3039,9 @@
         }
 
         if (
-          totalOrder(data) <= 0
+          totalOrder(
+            data
+          ) <= 0
         ) {
           return;
         }
@@ -2683,15 +3052,10 @@
             drawMap
           );
 
-        /*
-         * Дедуп старих тестових SOLO:
-         *
-         * якщо стара заявка була по teamId,
-         * а нова вже по uid —
-         * у таблиці показуємо одну.
-         */
         const solo =
-          isSoloParticipant(row);
+          isSoloParticipant(
+            row
+          );
 
         const identity =
           solo
@@ -2715,19 +3079,25 @@
               );
 
         const existing =
-          rowsByIdentity.get(
-            identity
-          );
+          rowsByIdentity
+            .get(
+              identity
+            );
 
         if (
           !existing ||
-          rowUpdatedMs(row) >=
-            rowUpdatedMs(existing)
-        ) {
-          rowsByIdentity.set(
-            identity,
+          rowUpdatedMs(
             row
-          );
+          ) >=
+          rowUpdatedMs(
+            existing
+          )
+        ) {
+          rowsByIdentity
+            .set(
+              identity,
+              row
+            );
         }
       }
     );
@@ -2749,15 +3119,41 @@
     return rows;
   }
 
-  function listHtml(rows) {
-    const totals = {
-      d1l: 0,
-      d1d: 0,
-      d1b: 0,
+  // =========================================================
+  // PUBLIC PARTICIPANT LIST
+  //
+  // ВАЖЛИВО:
+  // Тут НЕ показуємо note / побажання.
+  //
+  // Учасники бачать тільки:
+  // • сектор
+  // • команда / учасник
+  // • кількість харчування
+  //
+  // Побажання бачить тільки Іра через mealPublicOrders.
+  // =========================================================
 
-      d2l: 0,
-      d2d: 0,
-      d2b: 0
+  function listHtml(
+    rows
+  ) {
+    const totals = {
+      d1l:
+        0,
+
+      d1d:
+        0,
+
+      d1b:
+        0,
+
+      d2l:
+        0,
+
+      d2d:
+        0,
+
+      d2b:
+        0
     };
 
     const body =
@@ -2768,36 +3164,60 @@
             "judges";
 
           const d1 =
-            row.day1 || {};
+            row.day1 ||
+            {};
 
           const d2 =
-            row.day2 || {};
+            row.day2 ||
+            {};
 
           const d1l =
-            num(d1.lunch);
+            num(
+              d1.lunch
+            );
 
           const d1d =
-            num(d1.dinner);
+            num(
+              d1.dinner
+            );
 
           const d1b =
-            num(d1.breakfast);
+            num(
+              d1.breakfast
+            );
 
           const d2l =
-            num(d2.lunch);
+            num(
+              d2.lunch
+            );
 
           const d2d =
-            num(d2.dinner);
+            num(
+              d2.dinner
+            );
 
           const d2b =
-            num(d2.breakfast);
+            num(
+              d2.breakfast
+            );
 
-          totals.d1l += d1l;
-          totals.d1d += d1d;
-          totals.d1b += d1b;
+          totals.d1l +=
+            d1l;
 
-          totals.d2l += d2l;
-          totals.d2d += d2d;
-          totals.d2b += d2b;
+          totals.d1d +=
+            d1d;
+
+          totals.d1b +=
+            d1b;
+
+          totals.d2l +=
+            d2l;
+
+          totals.d2d +=
+            d2d;
+
+          totals.d2b +=
+            d2b;
 
           const sector =
             judges
@@ -2818,11 +3238,8 @@
                 );
 
           const displayName =
-            orderDisplayName(row);
-
-          const note =
-            norm(
-              row.note
+            orderDisplayName(
+              row
             );
 
           return `
@@ -2873,42 +3290,43 @@
                   ${
                     judges
                       ? "👨‍⚖️ СУДДІ"
-                      : esc(displayName)
+                      : esc(
+                          displayName
+                        )
                   }
                 </div>
 
-                ${
-                  note
-                    ? `
-                      <div
-                        style="
-                          margin-top:3px;
-                          color:#facc15;
-                          font-size:.78em;
-                          line-height:1.25;
-                          white-space:normal;
-                        "
-                      >
-                        ⚠ ${esc(note)}
-                      </div>
-                    `
-                    : ""
-                }
-
               </td>
 
-              <td>${d1l || ""}</td>
-              <td>${d1d || ""}</td>
-              <td>${d1b || ""}</td>
+              <td>
+                ${d1l || ""}
+              </td>
 
-              <td>${d2l || ""}</td>
-              <td>${d2d || ""}</td>
-              <td>${d2b || ""}</td>
+              <td>
+                ${d1d || ""}
+              </td>
+
+              <td>
+                ${d1b || ""}
+              </td>
+
+              <td>
+                ${d2l || ""}
+              </td>
+
+              <td>
+                ${d2d || ""}
+              </td>
+
+              <td>
+                ${d2b || ""}
+              </td>
 
             </tr>
           `;
         }
-      ).join("");
+      )
+      .join("");
 
     return `
       <div class="mealScreenTableWrap">
@@ -2916,40 +3334,85 @@
         <table class="mealScreenTable">
 
           <thead>
+
             <tr>
-              <th>С</th>
-              <th>Команда / учасник</th>
 
-              <th>1О</th>
-              <th>1В</th>
-              <th>1С</th>
+              <th>
+                С
+              </th>
 
-              <th>2О</th>
-              <th>2В</th>
-              <th>2С</th>
+              <th>
+                Команда / учасник
+              </th>
+
+              <th>
+                1О
+              </th>
+
+              <th>
+                1В
+              </th>
+
+              <th>
+                1С
+              </th>
+
+              <th>
+                2О
+              </th>
+
+              <th>
+                2В
+              </th>
+
+              <th>
+                2С
+              </th>
+
             </tr>
+
           </thead>
 
           <tbody>
+
             ${body}
+
           </tbody>
 
           <tfoot>
+
             <tr>
 
               <td colspan="2">
                 Разом
               </td>
 
-              <td>${totals.d1l}</td>
-              <td>${totals.d1d}</td>
-              <td>${totals.d1b}</td>
+              <td>
+                ${totals.d1l}
+              </td>
 
-              <td>${totals.d2l}</td>
-              <td>${totals.d2d}</td>
-              <td>${totals.d2b}</td>
+              <td>
+                ${totals.d1d}
+              </td>
+
+              <td>
+                ${totals.d1b}
+              </td>
+
+              <td>
+                ${totals.d2l}
+              </td>
+
+              <td>
+                ${totals.d2d}
+              </td>
+
+              <td>
+                ${totals.d2b}
+              </td>
 
             </tr>
+
           </tfoot>
 
         </table>
@@ -2961,12 +3424,16 @@
   async function openList() {
     try {
       await waitMealContext();
+
       await loadUserData();
+
       await loadMealGate();
 
       applyVisibility();
 
-      if (!mealIsOpen) {
+      if (
+        !mealIsOpen
+      ) {
         return;
       }
 
@@ -2985,19 +3452,25 @@
       if (
         $("mealPopupBody")
       ) {
-        $("mealPopupBody").innerHTML =
-          listHtml(rows);
+        $("mealPopupBody")
+          .innerHTML =
+          listHtml(
+            rows
+          );
       }
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       openPopup(
         "Помилка",
         `
           <div class="team-loading">
             ❌ ${esc(
-              e.message || e
+              e.message ||
+              e
             )}
           </div>
         `
@@ -3012,9 +3485,12 @@
   async function openMeals() {
     try {
       await waitMealContext();
+
       await loadUserData();
 
-      if (!isOwner) {
+      if (
+        !isOwner
+      ) {
         alert(
           "Відкрити харчування може тільки Дячок Роман."
         );
@@ -3022,14 +3498,18 @@
         return;
       }
 
-      await setMealGate(true);
+      await setMealGate(
+        true
+      );
 
       await loadMealGate();
 
       applyVisibility();
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       alert(
         "Не вдалося відкрити харчування: " +
@@ -3047,7 +3527,9 @@
 
   async function deletePublicOrders() {
     try {
-      const { db } =
+      const {
+        db
+      } =
         await waitReady();
 
       const snap =
@@ -3074,7 +3556,8 @@
         0;
 
       for (
-        const doc of snap.docs
+        const doc of
+        snap.docs
       ) {
         batch.delete(
           doc.ref
@@ -3082,8 +3565,11 @@
 
         count++;
 
-        if (count >= 400) {
-          await batch.commit();
+        if (
+          count >= 400
+        ) {
+          await batch
+            .commit();
 
           batch =
             db.batch();
@@ -3093,8 +3579,11 @@
         }
       }
 
-      if (count > 0) {
-        await batch.commit();
+      if (
+        count > 0
+      ) {
+        await batch
+          .commit();
       }
 
     } catch (e) {
@@ -3108,9 +3597,12 @@
   async function clearOrders() {
     try {
       await waitMealContext();
+
       await loadUserData();
 
-      if (!isOwner) {
+      if (
+        !isOwner
+      ) {
         setStatus(
           "Очищення доступне тільки Дячок Роман.",
           false
@@ -3127,12 +3619,16 @@
         return;
       }
 
-      const { db } =
+      const {
+        db
+      } =
         await waitReady();
 
       const snap =
         await db
-          .collection("mealOrders")
+          .collection(
+            "mealOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -3155,17 +3651,22 @@
         0;
 
       for (
-        const doc of snap.docs
+        const doc of
+        snap.docs
       ) {
         batch.delete(
           doc.ref
         );
 
         count++;
+
         total++;
 
-        if (count >= 400) {
-          await batch.commit();
+        if (
+          count >= 400
+        ) {
+          await batch
+            .commit();
 
           batch =
             db.batch();
@@ -3175,13 +3676,18 @@
         }
       }
 
-      if (count > 0) {
-        await batch.commit();
+      if (
+        count > 0
+      ) {
+        await batch
+          .commit();
       }
 
       await deletePublicOrders();
 
-      await setMealGate(false);
+      await setMealGate(
+        false
+      );
 
       await loadMealGate();
 
@@ -3195,7 +3701,9 @@
       );
 
     } catch (e) {
-      console.error(e);
+      console.error(
+        e
+      );
 
       setStatus(
         "Помилка очищення: " +
@@ -3215,28 +3723,42 @@
   async function refreshButtons() {
     try {
       await waitMealContext();
+
       await loadUserData();
+
       await loadMealGate();
 
       applyVisibility();
 
-      if ($("btnMealGateOpen")) {
-        $("btnMealGateOpen").onclick =
+      if (
+        $("btnMealGateOpen")
+      ) {
+        $("btnMealGateOpen")
+          .onclick =
           openMeals;
       }
 
-      if ($("btnOpenMealOrder")) {
-        $("btnOpenMealOrder").onclick =
+      if (
+        $("btnOpenMealOrder")
+      ) {
+        $("btnOpenMealOrder")
+          .onclick =
           openOrder;
       }
 
-      if ($("btnOpenMealList")) {
-        $("btnOpenMealList").onclick =
+      if (
+        $("btnOpenMealList")
+      ) {
+        $("btnOpenMealList")
+          .onclick =
           openList;
       }
 
-      if ($("btnClearMealOrders")) {
-        $("btnClearMealOrders").onclick =
+      if (
+        $("btnClearMealOrders")
+      ) {
+        $("btnClearMealOrders")
+          .onclick =
           clearOrders;
       }
 
@@ -3255,7 +3777,9 @@
     }
   }
 
-  function setContext(nextCtx) {
+  function setContext(
+    nextCtx
+  ) {
     ctx =
       nextCtx ||
       ctx;
@@ -3273,6 +3797,7 @@
           "btnCloseMealPopup"
       ) {
         closePopup();
+
         return;
       }
 
@@ -3282,7 +3807,8 @@
       if (
         popup?.style.display ===
           "flex" &&
-        event.target === popup
+        event.target ===
+          popup
       ) {
         closePopup();
       }
@@ -3293,22 +3819,33 @@
 
   window.scMeals = {
     setContext,
+
     openOrder,
+
     openList,
+
     openJudgesOrder,
+
     clearOrders,
+
     refreshButtons,
 
     refreshAdminButtons:
       refreshButtons,
 
     loadMealGate,
+
     setMealGate,
+
     openMeals
   };
 
-  if (ctx) {
-    setContext(ctx);
+  if (
+    ctx
+  ) {
+    setContext(
+      ctx
+    );
   }
 
   const boot =
@@ -3321,7 +3858,9 @@
           window.scMealContext
             .stageId
         ) {
-          clearInterval(boot);
+          clearInterval(
+            boot
+          );
 
           setContext(
             window.scMealContext
@@ -3333,7 +3872,9 @@
 
   setTimeout(
     () =>
-      clearInterval(boot),
+      clearInterval(
+        boot
+      ),
     12000
   );
 

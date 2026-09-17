@@ -1,18 +1,23 @@
 <!doctype html>
 <html lang="uk">
+
 <head>
-  <meta charset="utf-8" />
+
+  <meta charset="utf-8">
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1"
-  />
+  >
 
-  <title>Харчування · STOLAR CARP</title>
+  <title>
+    Харчування · STOLAR CARP
+  </title>
 
   <link
     rel="stylesheet"
     href="assets/css/main.css"
-  />
+  >
 
   <script
     defer
@@ -20,14 +25,17 @@
   ></script>
 
   <style>
+
     body{
       margin:0;
+
       background:
         radial-gradient(
           circle at top,
           #111827 0,
           #020617 55%
         );
+
       color:#e5e7eb;
     }
 
@@ -36,18 +44,25 @@
         1100px,
         calc(100% - 20px)
       );
+
       margin:0 auto;
-      padding:18px 0 60px;
+
+      padding:
+        18px 0 60px;
     }
 
     .ira-head{
       padding:18px;
+
       border:
         1px solid
         rgba(148,163,184,.28);
+
       border-radius:20px;
+
       background:
         rgba(15,23,42,.92);
+
       box-shadow:
         0 18px 45px
         rgba(0,0,0,.45);
@@ -55,20 +70,27 @@
 
     .ira-title{
       margin:0;
+
       font-size:1.7rem;
+
       font-weight:900;
+
       color:#facc15;
     }
 
     .ira-sub{
       margin-top:6px;
+
       color:#cbd5e1;
+
       line-height:1.45;
     }
 
     .state{
       margin-top:12px;
+
       font-size:.95rem;
+
       color:#94a3b8;
     }
 
@@ -80,44 +102,40 @@
       color:#ef4444;
     }
 
-    .login-link{
-      display:inline-flex;
-      margin-top:14px;
-      padding:10px 14px;
-      border-radius:12px;
-      text-decoration:none;
-      font-weight:800;
-      color:#111827;
-      background:
-        linear-gradient(
-          135deg,
-          #facc15,
-          #f97316
-        );
-    }
-
     .card{
       margin-top:14px;
+
       padding:10px;
+
       border-radius:20px;
+
       border:
         1px solid
         rgba(148,163,184,.28);
+
       background:
         rgba(15,23,42,.92);
+
       box-shadow:
         0 18px 45px
         rgba(0,0,0,.45);
+
       overflow:hidden;
     }
 
     .summary{
       display:flex;
+
       align-items:center;
+
       justify-content:
         space-between;
+
       gap:12px;
-      padding:8px 6px 14px;
+
+      padding:
+        8px 6px 14px;
+
       color:#cbd5e1;
     }
 
@@ -127,16 +145,22 @@
 
     .table-wrap{
       overflow-x:auto;
+
       -webkit-overflow-scrolling:
         touch;
     }
 
     table{
       width:100%;
+
       min-width:680px;
+
       border-collapse:
         collapse;
-      table-layout:fixed;
+
+      table-layout:
+        fixed;
+
       font-size:.88rem;
     }
 
@@ -145,14 +169,20 @@
       border:
         1px solid
         rgba(148,163,184,.22);
-      padding:8px 6px;
+
+      padding:
+        8px 6px;
+
       text-align:center;
+
       vertical-align:middle;
     }
 
     th{
       color:#facc15;
+
       font-weight:900;
+
       background:
         rgba(2,6,23,.68);
     }
@@ -179,38 +209,50 @@
 
     .sector{
       color:#facc15;
+
       font-weight:900;
+
       font-size:1rem;
     }
 
     .team{
       text-align:left;
+
       white-space:normal;
     }
 
     .team-name{
       color:#f8fafc;
+
       font-weight:800;
     }
 
     .note{
       margin-top:5px;
+
       color:#facc15;
+
       font-size:.82rem;
+
       line-height:1.3;
+
       font-weight:700;
     }
 
     tfoot td{
       color:#facc15;
+
       font-weight:900;
+
       background:
         rgba(30,41,59,.95);
     }
 
     .empty{
       padding:24px;
+
       color:#94a3b8;
+
       text-align:center;
     }
 
@@ -218,14 +260,16 @@
 
       .ira-wrap{
         width:min(
-          100% - 12px,
+          calc(100% - 12px),
           1100px
         );
+
         padding-top:10px;
       }
 
       .ira-head{
         padding:14px;
+
         border-radius:16px;
       }
 
@@ -235,6 +279,7 @@
 
       .card{
         padding:6px;
+
         border-radius:16px;
       }
 
@@ -244,10 +289,13 @@
 
       th,
       td{
-        padding:7px 4px;
+        padding:
+          7px 4px;
       }
     }
+
   </style>
+
 </head>
 
 <body>
@@ -269,7 +317,7 @@
       <br>
 
       <span id="stageTitle">
-        Завантаження…
+        Очікую активне харчування…
       </span>
 
     </div>
@@ -278,17 +326,8 @@
       id="state"
       class="state"
     >
-      Перевіряю доступ…
+      Завантаження…
     </div>
-
-    <a
-      id="loginLink"
-      class="login-link"
-      href="auth.html"
-      hidden
-    >
-      Увійти в STOLAR CARP
-    </a>
 
   </section>
 
@@ -301,15 +340,17 @@
     <div class="summary">
 
       <span>
+
         Заявок:
+
         <strong id="orderCount">
           0
         </strong>
+
       </span>
 
       <span>
-        Сектори оновлюються
-        після жеребкування
+        Оновлення LIVE
       </span>
 
     </div>
@@ -319,29 +360,56 @@
       <table>
 
         <thead>
+
           <tr>
-            <th>С</th>
+
             <th>
-              Команда / побажання
+              С
             </th>
-            <th>1О</th>
-            <th>1В</th>
-            <th>1С</th>
-            <th>2О</th>
-            <th>2В</th>
-            <th>2С</th>
+
+            <th>
+              Команда / учасник
+            </th>
+
+            <th>
+              1О
+            </th>
+
+            <th>
+              1В
+            </th>
+
+            <th>
+              1С
+            </th>
+
+            <th>
+              2О
+            </th>
+
+            <th>
+              2В
+            </th>
+
+            <th>
+              2С
+            </th>
+
           </tr>
+
         </thead>
 
         <tbody id="mealBody">
 
           <tr>
+
             <td
               colspan="8"
               class="empty"
             >
               Завантаження…
             </td>
+
           </tr>
 
         </tbody>
@@ -357,13 +425,35 @@
 
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-<script src="assets/js/firebase-init.js"></script>
+<!-- FIREBASE -->
 
-<script src="assets/js/meal_ira.js?v=20260917-1"></script>
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"
+></script>
+
+<script
+  src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
+></script>
+
+
+<!-- STOLAR CARP FIREBASE -->
+
+<script
+  src="assets/js/firebase-init.js"
+></script>
+
+
+<!-- ПУБЛІЧНА СТОРІНКА ІРИ -->
+
+<script
+  src="assets/js/meal_ira.js?v=20260917-4"
+></script>
 
 </body>
+
 </html>

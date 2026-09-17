@@ -1,6 +1,7 @@
 // assets/js/my_participation.js
 // STOLAR CARP • Моя участь
 //
+// ✅ OPTIMIZED
 // ✅ TEAM + SOLO
 // ✅ TEAM — показує участь команди
 // ✅ SOLO — показує тільки особисту заявку користувача
@@ -24,14 +25,31 @@
 //    "Цьотар Василь Богданович" -> "Цьотар Василь"
 //    "Василь Богданович Цьотар" -> "Цьотар Василь"
 //
-// ✅ Legacy SOLO з entryType:"team" правильно визначається через competition
+// ✅ Legacy SOLO з entryType:"team"
+//    правильно визначається через competition
+//
 // ✅ Stalker Solo -> SOLO
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
+//
 // ✅ Показує тільки поточні та майбутні змагання
 // ✅ Завершені етапи автоматично зникають
 // ✅ Нічого не видаляє з Firestore
 // ✅ Якщо дати немає — запис не ховається
+//
+// ===========================================================
+// OPTIMIZATION
+// ===========================================================
+//
+// ✅ НЕ читаємо competition послідовно
+// ✅ НЕ читаємо той самий competition окремо для кожного stage
+// ✅ 1 Firestore read = 1 competitionId
+// ✅ competitions завантажуються паралельно
+// ✅ SOLO query стартує паралельно з users/{uid}
+// ✅ TEAM / SOLO snapshots завчасно прогрівають competition cache
+// ✅ cache тільки в RAM до перезавантаження сторінки
+// ✅ realtime public_participants залишається
+//
 
 (function () {
   "use strict";
@@ -63,6 +81,28 @@
   let renderRequestId = 0;
 
   // =========================================================
+  // COMPETITION CACHE
+  //
+  // Це НЕ localStorage.
+  // Це звичайна пам'ять сторінки.
+  //
+  // competitionDocCache:
+  // compId -> competition document data
+  //
+  // competitionPromiseCache:
+  // compId -> Promise поки документ завантажується
+  //
+  // Завдяки Promise cache одночасні rebuild-и
+  // не запускають дубльовані Firestore reads.
+  // =========================================================
+
+  const competitionDocCache =
+    new Map();
+
+  const competitionPromiseCache =
+    new Map();
+
+  // =========================================================
   // FIREBASE
   // =========================================================
 
@@ -88,7 +128,7 @@
         resolve =>
           setTimeout(
             resolve,
-            100
+            50
           )
       );
     }
@@ -179,7 +219,9 @@
 
   function isPaidStatus(status) {
     const s =
-      normLower(status);
+      normLower(
+        status
+      );
 
     return (
       s === "confirmed" ||
@@ -278,19 +320,6 @@
   // CANONICAL LAST + FIRST
   // =========================================================
 
-  /*
-   * ГОЛОВНЕ правило SOLO:
-   *
-   * lastName + firstName
-   *
-   * firstName = "Василь"
-   * lastName  = "Цьотар"
-   *
-   * => "Цьотар Василь"
-   *
-   * middleName / patronymic
-   * не використовуємо.
-   */
   function lastFirstNameFromObject(
     data
   ) {
@@ -339,9 +368,7 @@
         value
       );
 
-    if (
-      !s
-    ) {
+    if (!s) {
       return false;
     }
 
@@ -359,19 +386,6 @@
   // LEGACY SOLO NAME
   // =========================================================
 
-  /*
-   * "Цьотар Василь Богданович"
-   * -> "Цьотар Василь"
-   *
-   * "Василь Богданович Цьотар"
-   * -> "Цьотар Василь"
-   *
-   * "Мілян Андрій"
-   * -> "Мілян Андрій"
-   *
-   * Два слова не переставляємо
-   * без структурованих полів.
-   */
   function normalizeLegacySoloName(
     value
   ) {
@@ -409,8 +423,6 @@
         );
 
       /*
-       * Прізвище Ім'я По батькові
-       *
        * Цьотар Василь Богданович
        * -> Цьотар Василь
        */
@@ -423,8 +435,6 @@
       }
 
       /*
-       * Ім'я По батькові Прізвище
-       *
        * Василь Богданович Цьотар
        * -> Цьотар Василь
        */
@@ -437,8 +447,6 @@
       }
 
       /*
-       * По батькові Ім'я Прізвище
-       *
        * Богданович Василь Цьотар
        * -> Цьотар Василь
        */
@@ -465,12 +473,6 @@
       data ||
       {};
 
-    /*
-     * №1.
-     * Структуровані поля:
-     *
-     * lastName + firstName.
-     */
     const structured =
       lastFirstNameFromObject(
         d
@@ -489,10 +491,6 @@
         ""
       );
 
-    /*
-     * №2.
-     * Legacy fallback.
-     */
     const candidates = [
       d.participantName,
       d.fullName,
@@ -530,15 +528,6 @@
   // SOLO DISPLAY NAME
   // =========================================================
 
-  /*
-   * Ніяких скорочень.
-   *
-   * "Цьотар Василь"
-   * -> "Цьотар Василь"
-   *
-   * "Цьотар Василь Богданович"
-   * -> "Цьотар Василь"
-   */
   function formatSoloName(
     value
   ) {
@@ -547,9 +536,7 @@
         value
       );
 
-    if (
-      !raw
-    ) {
+    if (!raw) {
       return "Учасник";
     }
 
@@ -565,9 +552,8 @@
   ) {
     /*
      * 1.
-     * Якщо заявка вже має
-     * firstName + lastName —
-     * це головне джерело.
+     * public_participants:
+     * lastName + firstName
      */
     const rowStructured =
       lastFirstNameFromObject(
@@ -583,8 +569,8 @@
 
     /*
      * 2.
-     * Актуальний профіль
-     * поточного користувача.
+     * users profile:
+     * lastName + firstName
      */
     const profileStructured =
       lastFirstNameFromObject(
@@ -600,7 +586,7 @@
 
     /*
      * 3.
-     * Legacy ім'я із заявки.
+     * Legacy row
      */
     const fromRow =
       personNameFromObject(
@@ -619,7 +605,7 @@
 
     /*
      * 4.
-     * Legacy profile fallback.
+     * Legacy profile
      */
     const fromProfile =
       personNameFromObject(
@@ -639,8 +625,7 @@
 
     /*
      * 5.
-     * Email тільки як
-     * аварійний fallback.
+     * Email fallback
      */
     const email =
       norm(
@@ -706,7 +691,7 @@
         ? 0
         : d.getTime();
 
-    } catch {
+    } catch (_) {
       return 0;
     }
   }
@@ -956,7 +941,7 @@
         "uk-UA"
       );
 
-    } catch {
+    } catch (_) {
       return "—";
     }
   }
@@ -1053,8 +1038,7 @@
       );
 
     if (
-      format ===
-      "stalker-solo"
+      format === "stalker-solo"
     ) {
       return "solo";
     }
@@ -1063,11 +1047,8 @@
   }
 
   // =========================================================
-  // COMPETITION META
+  // COMPETITION DATE HELPERS
   // =========================================================
-
-  const metaCache =
-    Object.create(null);
 
   function readStartDate(obj) {
     if (!obj) {
@@ -1121,25 +1102,240 @@
     );
   }
 
-  async function getCompetitionMeta(
-    compId,
-    stageId
+  // =========================================================
+  // FAST COMPETITION DOCUMENT READ
+  //
+  // ГОЛОВНА ОПТИМІЗАЦІЯ:
+  //
+  // Було:
+  // compId + stageId -> Firestore GET
+  //
+  // Стало:
+  // compId -> Firestore GET
+  //
+  // Один competition документ містить всі events,
+  // тому нема сенсу читати його повторно для stage-1,
+  // stage-2, final і т.д.
+  // =========================================================
+
+  async function getCompetitionDocument(
+    compId
   ) {
-    const st =
-      norm(stageId) ||
-      "main";
+    const id =
+      norm(
+        compId
+      );
 
-    const key =
-      `${compId}||${st}`;
+    if (!id) {
+      return null;
+    }
 
+    /*
+     * Уже є готовий документ.
+     *
+     * Map.has важливий:
+     * навіть null для неіснуючого документа
+     * є валідним кешованим результатом.
+     */
     if (
-      metaCache[key]
+      competitionDocCache.has(
+        id
+      )
     ) {
-      return metaCache[key];
+      return (
+        competitionDocCache.get(
+          id
+        )
+      );
+    }
+
+    /*
+     * Документ уже прямо зараз
+     * завантажується іншим rebuild.
+     *
+     * Не запускаємо другий GET.
+     */
+    if (
+      competitionPromiseCache.has(
+        id
+      )
+    ) {
+      return (
+        competitionPromiseCache.get(
+          id
+        )
+      );
     }
 
     const db =
       window.scDb;
+
+    const promise =
+      db
+        .collection(
+          "competitions"
+        )
+        .doc(id)
+        .get()
+        .then(
+          snap => {
+            const data =
+              snap.exists
+                ? (
+                    snap.data() ||
+                    {}
+                  )
+                : null;
+
+            competitionDocCache.set(
+              id,
+              data
+            );
+
+            return data;
+          }
+        )
+        .catch(
+          e => {
+            /*
+             * Помилку НЕ кешуємо назавжди.
+             * Наступний rebuild зможе повторити GET.
+             */
+            console.warn(
+              "[my_participation] Competition read error:",
+              id,
+              e
+            );
+
+            return null;
+          }
+        )
+        .finally(
+          () => {
+            competitionPromiseCache.delete(
+              id
+            );
+          }
+        );
+
+    competitionPromiseCache.set(
+      id,
+      promise
+    );
+
+    return promise;
+  }
+
+  // =========================================================
+  // PRELOAD COMPETITIONS IN PARALLEL
+  // =========================================================
+
+  async function preloadCompetitionDocuments(
+    rows
+  ) {
+    if (
+      !Array.isArray(rows) ||
+      rows.length === 0
+    ) {
+      return;
+    }
+
+    const ids =
+      new Set();
+
+    rows.forEach(
+      row => {
+        const compId =
+          norm(
+            row?.competitionId
+          );
+
+        if (
+          compId
+        ) {
+          ids.add(
+            compId
+          );
+        }
+      }
+    );
+
+    if (
+      ids.size === 0
+    ) {
+      return;
+    }
+
+    /*
+     * ВАЖЛИВО:
+     *
+     * Тут усі competitions стартують ОДНОЧАСНО.
+     *
+     * Немає:
+     * await competition1
+     * await competition2
+     * await competition3
+     *
+     * Є:
+     * Promise.all(...)
+     */
+    await Promise.all(
+      Array
+        .from(ids)
+        .map(
+          compId =>
+            getCompetitionDocument(
+              compId
+            )
+        )
+    );
+  }
+
+  // =========================================================
+  // WARM CACHE
+  //
+  // Викликається одразу після TEAM / SOLO snapshot.
+  //
+  // Не чекаємо завершення.
+  // Поки другий snapshot приходить,
+  // competitions уже вантажаться.
+  // =========================================================
+
+  function warmCompetitionDocuments(
+    rows
+  ) {
+    preloadCompetitionDocuments(
+      rows
+    ).catch(
+      e => {
+        console.warn(
+          "[my_participation] Competition warmup:",
+          e
+        );
+      }
+    );
+  }
+
+  // =========================================================
+  // COMPETITION META FROM ALREADY LOADED DOCUMENT
+  //
+  // Тут Firestore READ вже НЕМАЄ.
+  // Це проста синхронна JS-функція.
+  // =========================================================
+
+  function competitionMetaFromDocument(
+    competition,
+    stageId
+  ) {
+    const st =
+      norm(
+        stageId
+      ) ||
+      "main";
+
+    const c =
+      competition ||
+      {};
 
     let compTitle =
       "";
@@ -1162,146 +1358,132 @@
     let isFinal =
       false;
 
-    try {
-      const cSnap =
-        await db
-          .collection(
-            "competitions"
-          )
-          .doc(compId)
-          .get();
+    compTitle =
+      norm(
+        c.name ||
+        c.title ||
+        c.competitionName ||
+        ""
+      );
+
+    const events =
+      Array.isArray(
+        c.events
+      )
+        ? c.events
+        : [];
+
+    const ev =
+      events.find(
+        event => {
+          const evId =
+            norm(
+              event?.key ||
+              event?.stageId ||
+              event?.id
+            );
+
+          return (
+            evId === st
+          );
+        }
+      ) || null;
+
+    isFinal =
+      isFinalMeta(
+        ev,
+        st
+      );
+
+    entryType =
+      entryTypeFromCompetition(
+        ev,
+        c,
+        st
+      );
+
+    format =
+      normalizeFormat(
+        ev?.format ||
+        ev?.engine?.baseFormat ||
+        c.format ||
+        c.engine?.baseFormat ||
+        "classic"
+      );
+
+    if (
+      ev
+    ) {
+      stageTitle =
+        norm(
+          ev.title ||
+          ev.name ||
+          ev.label ||
+          ""
+        );
+
+      const startValue =
+        readStartDate(
+          ev
+        ) ||
+        readStartDate(
+          c
+        );
+
+      const endValue =
+        readEndDate(
+          ev
+        ) ||
+        readEndDate(
+          c
+        ) ||
+        startValue;
+
+      startMillis =
+        dateValueToMillis(
+          startValue,
+          false
+        );
+
+      endMillis =
+        dateValueToMillis(
+          endValue,
+          true
+        );
+
+    } else {
+      const startValue =
+        readStartDate(
+          c
+        );
+
+      const endValue =
+        readEndDate(
+          c
+        ) ||
+        startValue;
+
+      startMillis =
+        dateValueToMillis(
+          startValue,
+          false
+        );
+
+      endMillis =
+        dateValueToMillis(
+          endValue,
+          true
+        );
 
       if (
-        cSnap.exists
+        st !== "main"
       ) {
-        const c =
-          cSnap.data() ||
-          {};
-
-        compTitle =
-          norm(
-            c.name ||
-            c.title ||
-            c.competitionName ||
-            ""
-          );
-
-        const events =
-          Array.isArray(
-            c.events
-          )
-            ? c.events
-            : [];
-
-        const ev =
-          events.find(
-            e => {
-              const evId =
-                norm(
-                  e?.key ||
-                  e?.stageId ||
-                  e?.id
-                );
-
-              return (
-                evId === st
-              );
-            }
-          ) || null;
-
-        isFinal =
-          isFinalMeta(
-            ev,
-            st
-          );
-
-        entryType =
-          entryTypeFromCompetition(
-            ev,
-            c,
-            st
-          );
-
-        format =
-          normalizeFormat(
-            ev?.format ||
-            ev?.engine?.baseFormat ||
-            c.format ||
-            c.engine?.baseFormat ||
-            "classic"
-          );
-
-        if (
-          ev
-        ) {
-          stageTitle =
-            norm(
-              ev.title ||
-              ev.name ||
-              ev.label ||
-              ""
-            );
-
-          const startValue =
-            readStartDate(ev) ||
-            readStartDate(c);
-
-          const endValue =
-            readEndDate(ev) ||
-            readEndDate(c) ||
-            startValue;
-
-          startMillis =
-            dateValueToMillis(
-              startValue,
-              false
-            );
-
-          endMillis =
-            dateValueToMillis(
-              endValue,
-              true
-            );
-
-        } else {
-          const startValue =
-            readStartDate(c);
-
-          const endValue =
-            readEndDate(c) ||
-            startValue;
-
-          startMillis =
-            dateValueToMillis(
-              startValue,
-              false
-            );
-
-          endMillis =
-            dateValueToMillis(
-              endValue,
-              true
-            );
-
-          if (
-            st !== "main"
-          ) {
-            stageTitle =
-              st;
-          }
-        }
+        stageTitle =
+          st;
       }
-
-    } catch (e) {
-      console.warn(
-        "[my_participation] Competition meta read error:",
-        compId,
-        st,
-        e
-      );
     }
 
-    const res = {
+    return {
       compTitle,
       stageTitle,
 
@@ -1312,11 +1494,6 @@
       format,
       isFinal
     };
-
-    metaCache[key] =
-      res;
-
-    return res;
   }
 
   // =========================================================
@@ -1342,8 +1519,7 @@
     if (
       !stage &&
       it.stageId &&
-      it.stageId !==
-        "main"
+      it.stageId !== "main"
     ) {
       const m =
         String(
@@ -1396,6 +1572,10 @@
       );
     }
 
+    /*
+     * Якщо дати немає —
+     * запис не ховаємо.
+     */
     return true;
   }
 
@@ -1418,9 +1598,7 @@
   function rowUid(
     row
   ) {
-    if (
-      !row
-    ) {
+    if (!row) {
       return "";
     }
 
@@ -1461,7 +1639,9 @@
     return "";
   }
 
-  function rowTime(row) {
+  function rowTime(
+    row
+  ) {
     return toMillis(
       row.updatedAt ||
       row.confirmedAt ||
@@ -1554,8 +1734,7 @@
           );
 
         const isSolo =
-          entryType ===
-          "solo";
+          entryType === "solo";
 
         const identityLabel =
           isSolo
@@ -1791,11 +1970,38 @@
         byDocId
       );
 
+    /*
+     * =====================================================
+     * ГОЛОВНА ОПТИМІЗАЦІЯ
+     * =====================================================
+     *
+     * Спочатку збираємо всі competitionId.
+     *
+     * Потім ОДНИМ Promise.all()
+     * паралельно дочитуємо відсутні.
+     *
+     * Після цього нижче вже НІ ОДНОГО
+     * await всередині циклу немає.
+     */
+    await preloadCompetitionDocuments(
+      rawRows
+    );
+
+    if (
+      requestId !==
+      renderRequestId
+    ) {
+      return;
+    }
+
     const rows =
       [];
 
     // =====================================================
-    // LOAD META + NORMALIZE
+    // NORMALIZE
+    //
+    // Тут тільки RAM + JS.
+    // Firestore GET тут уже нема.
     // =====================================================
 
     for (
@@ -1823,18 +2029,20 @@
         continue;
       }
 
+      const competition =
+        competitionDocCache.has(
+          compId
+        )
+          ? competitionDocCache.get(
+              compId
+            )
+          : null;
+
       const meta =
-        await getCompetitionMeta(
-          compId,
+        competitionMetaFromDocument(
+          competition,
           stageId
         );
-
-      if (
-        requestId !==
-        renderRequestId
-      ) {
-        return;
-      }
 
       it.compTitle =
         meta.compTitle ||
@@ -1861,11 +2069,10 @@
         "classic";
 
       it.isFinal =
-        meta.isFinal ===
-        true;
+        meta.isFinal === true;
 
       /*
-       * Competition/event —
+       * competition / event —
        * джерело істини.
        */
       it.entryType =
@@ -1889,9 +2096,8 @@
           );
 
         /*
-         * У "Моя участь" SOLO
-         * показуємо тільки
-         * поточного користувача.
+         * SOLO —
+         * тільки поточний користувач.
          */
         if (
           !uid ||
@@ -1912,10 +2118,6 @@
         it.teamName =
           null;
 
-        /*
-         * Canonical:
-         * Прізвище Ім'я.
-         */
         const participantName =
           resolveSoloIdentityName(
             it
@@ -2001,8 +2203,7 @@
           "";
 
         if (
-          entryType ===
-          "solo"
+          entryType === "solo"
         ) {
           identity =
             rowUid(
@@ -2207,6 +2408,16 @@
             teamLoaded =
               true;
 
+            /*
+             * Не чекаємо SOLO.
+             *
+             * Одразу починаємо тягнути
+             * competitions у фоні.
+             */
+            warmCompetitionDocuments(
+              rows
+            );
+
             rebuildParticipation();
           },
 
@@ -2254,11 +2465,13 @@
     }
 
     /*
-     * Шукаємо по UID.
+     * entryType НЕ фільтруємо.
      *
-     * entryType тут не фільтруємо,
-     * бо старий Stalker Solo
+     * Legacy Stalker Solo
      * міг мати entryType:"team".
+     *
+     * Правильний тип визначаємо
+     * через competition.
      */
     const unsub =
       db
@@ -2304,6 +2517,14 @@
 
             soloLoaded =
               true;
+
+            /*
+             * Так само одразу гріємо
+             * competitions.
+             */
+            warmCompetitionDocuments(
+              rows
+            );
 
             rebuildParticipation();
           },
@@ -2353,10 +2574,45 @@
     soloLoaded =
       false;
 
+    currentUser =
+      user;
+
+    currentProfile =
+      null;
+
     showMuted(
       "Завантаження участі…"
     );
 
+    /*
+     * =====================================================
+     * OPTIMIZATION
+     * =====================================================
+     *
+     * Раніше:
+     *
+     * 1. await users/{uid}
+     * 2. тільки потім UID public_participants
+     *
+     * Тепер:
+     *
+     * UID public_participants стартує ВІДРАЗУ.
+     * Паралельно читаємо users/{uid}.
+     *
+     * Для SOLO teamId взагалі не потрібен.
+     */
+    subscribeSoloParticipation(
+      db,
+      user.uid
+    );
+
+    /*
+     * Profile потрібен для:
+     *
+     * - teamId
+     * - canonical SOLO name
+     * - teamName
+     */
     const uSnap =
       await db
         .collection(
@@ -2366,6 +2622,18 @@
           user.uid
         )
         .get();
+
+    /*
+     * Поки ми чекали profile,
+     * користувач міг вийти / змінитись.
+     */
+    if (
+      !currentUser ||
+      currentUser.uid !==
+        user.uid
+    ) {
+      return;
+    }
 
     if (
       !uSnap.exists
@@ -2396,14 +2664,13 @@
         u.lastName
       );
 
-    /*
-     * Canonical SOLO profile name:
-     *
-     * Прізвище Ім'я.
-     */
     let fullName =
       "";
 
+    /*
+     * Canonical:
+     * Прізвище Ім'я
+     */
     if (
       firstName &&
       lastName
@@ -2412,17 +2679,11 @@
         `${lastName} ${firstName}`;
 
     } else {
-      /*
-       * Legacy fallback.
-       */
       fullName =
         personNameFromObject(
           u
         );
     }
-
-    currentUser =
-      user;
 
     currentProfile = {
       uid:
@@ -2452,19 +2713,12 @@
     };
 
     /*
-     * TEAM участь.
+     * Тепер знаємо teamId —
+     * запускаємо TEAM query.
      */
     subscribeTeamParticipation(
       db,
       teamId
-    );
-
-    /*
-     * SOLO / legacy SOLO.
-     */
-    subscribeSoloParticipation(
-      db,
-      user.uid
     );
   }
 
@@ -2484,6 +2738,12 @@
         .onAuthStateChanged(
           async user => {
             stopSubscriptions();
+
+            /*
+             * Скасовуємо старий
+             * async rebuild.
+             */
+            renderRequestId++;
 
             currentUser =
               user ||

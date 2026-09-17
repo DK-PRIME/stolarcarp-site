@@ -11,11 +11,17 @@
 // ✅ у таблиці немає кнопок редагування суддів
 // ✅ без role === "admin"
 // ✅ підготовка даних для окремої публічної meal-app
+//
+// ✅ FIX:
+// • 0 у полях тепер placeholder, а не реальне значення
+// • ввів цифру -> 0 одразу зникає
+// • стер цифру -> прозорий 0 знову з'являється
+// • popup став значно компактнішим на телефоні
 
 (function () {
   "use strict";
 
-  console.log("✅ meal_orders.js LOADED v20260917-owner-judges-v4");
+  console.log("✅ meal_orders.js LOADED v20260917-compact-v5");
 
   let ctx = window.scMealContext || null;
 
@@ -25,9 +31,11 @@
   let isOwner = false;
   let mealIsOpen = false;
 
-  const OWNER_UID = "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
+  const OWNER_UID =
+    "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
 
-  const JUDGES_ID = "__judges__";
+  const JUDGES_ID =
+    "__judges__";
 
   const PAID_STATUSES = [
     "confirmed",
@@ -35,40 +43,65 @@
     "payment_confirmed"
   ];
 
-  const $ = (id) =>
+  const $ = id =>
     document.getElementById(id);
 
-  const norm = (value) =>
+  const norm = value =>
     String(value ?? "")
       .replace(/\s+/g, " ")
       .trim();
 
-  const clean = (value) =>
+  const clean = value =>
     norm(value).toLowerCase();
 
-  const esc = (value) =>
-    String(value ?? "").replace(
-      /[&<>"']/g,
-      (char) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      }[char])
-    );
+  const esc = value =>
+    String(value ?? "")
+      .replace(
+        /[&<>"']/g,
+        char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char])
+      );
 
   function num(value) {
-    const n = Number(value);
+    const n =
+      Number(value);
 
-    return Number.isFinite(n) && n > 0
+    return (
+      Number.isFinite(n) &&
+      n > 0
+    )
       ? Math.floor(n)
       : 0;
   }
 
+  /*
+   * Для input:
+   *
+   * 0 -> порожнє value
+   * >0 -> реальна цифра
+   *
+   * Нуль показується через placeholder.
+   */
+  function mealInputValue(value) {
+    const n =
+      num(value);
+
+    return n > 0
+      ? String(n)
+      : "";
+  }
+
   function safeId(value) {
     return String(value || "")
-      .replace(/[\/#?\[\]]/g, "_");
+      .replace(
+        /[\/#?\[\]]/g,
+        "_"
+      );
   }
 
   function orderId(
@@ -112,6 +145,153 @@
       num(order?.day2?.lunch) +
       num(order?.day2?.dinner) +
       num(order?.day2?.breakfast)
+    );
+  }
+
+  // =========================================================
+  // COMPACT POPUP STYLES
+  // =========================================================
+
+  function ensureCompactStyles() {
+    if (
+      document.getElementById(
+        "scMealCompactStyles"
+      )
+    ) {
+      return;
+    }
+
+    const style =
+      document.createElement(
+        "style"
+      );
+
+    style.id =
+      "scMealCompactStyles";
+
+    style.textContent = `
+      /* ================================================
+         STOLAR CARP • compact meal popup
+         ================================================ */
+
+      #mealPopup {
+        padding: 8px !important;
+        overflow: hidden !important;
+      }
+
+      #mealPopupBody {
+        max-height: calc(100dvh - 145px) !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 6px !important;
+      }
+
+      #mealPopupBody .mealDayTitle {
+        margin: 8px 0 6px !important;
+        line-height: 1.2 !important;
+      }
+
+      #mealPopupBody .mealGrid {
+        display: grid !important;
+        grid-template-columns:
+          repeat(3, minmax(0, 1fr)) !important;
+
+        gap: 7px !important;
+        margin: 0 0 8px !important;
+      }
+
+      #mealPopupBody .mealField {
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 8px !important;
+        border-radius: 14px !important;
+      }
+
+      #mealPopupBody .mealGrid .mealField label {
+        display: block !important;
+        margin: 0 0 5px !important;
+        font-size: 13px !important;
+        line-height: 1.15 !important;
+        white-space: nowrap;
+      }
+
+      #mealPopupBody .mealQtyInput {
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 44px !important;
+        min-height: 44px !important;
+        box-sizing: border-box !important;
+        padding: 0 11px !important;
+        font-size: 18px !important;
+        line-height: 44px !important;
+      }
+
+      /*
+       * Саме цей 0 є прозорим.
+       * Він НЕ записаний у value.
+       */
+      #mealPopupBody .mealQtyInput::placeholder {
+        opacity: .30 !important;
+      }
+
+      #mealPopupBody textarea {
+        min-height: 68px !important;
+        height: 68px !important;
+        padding: 9px 11px !important;
+        box-sizing: border-box !important;
+        resize: vertical;
+      }
+
+      #mealPopupBody .mealBtn {
+        min-height: 46px !important;
+        padding: 9px 14px !important;
+      }
+
+      #mealPopupBody .mealStatus {
+        margin-top: 6px !important;
+      }
+
+      @media (max-width: 430px) {
+        #mealPopup {
+          padding: 5px !important;
+        }
+
+        #mealPopupBody {
+          max-height:
+            calc(100dvh - 130px) !important;
+        }
+
+        #mealPopupBody .mealGrid {
+          gap: 5px !important;
+        }
+
+        #mealPopupBody .mealField {
+          padding: 6px !important;
+          border-radius: 12px !important;
+        }
+
+        #mealPopupBody .mealGrid .mealField label {
+          font-size: 12px !important;
+        }
+
+        #mealPopupBody .mealQtyInput {
+          height: 42px !important;
+          min-height: 42px !important;
+          line-height: 42px !important;
+          padding: 0 9px !important;
+          font-size: 17px !important;
+        }
+
+        #mealPopupBody textarea {
+          min-height: 62px !important;
+          height: 62px !important;
+        }
+      }
+    `;
+
+    document.head.appendChild(
+      style
     );
   }
 
@@ -177,6 +357,8 @@
     title,
     html
   ) {
+    ensureCompactStyles();
+
     if ($("mealPopupTitle")) {
       $("mealPopupTitle").textContent =
         title;
@@ -185,6 +367,9 @@
     if ($("mealPopupBody")) {
       $("mealPopupBody").innerHTML =
         html;
+
+      $("mealPopupBody").scrollTop =
+        0;
     }
 
     if ($("mealPopup")) {
@@ -220,9 +405,14 @@
     }
 
     return {
-      db: window.scDb,
-      auth: window.scAuth,
-      fb: window.firebase
+      db:
+        window.scDb,
+
+      auth:
+        window.scAuth,
+
+      fb:
+        window.firebase
     };
   }
 
@@ -250,7 +440,7 @@
       }
 
       await new Promise(
-        (resolve) =>
+        resolve =>
           setTimeout(
             resolve,
             150
@@ -272,10 +462,10 @@
     }
 
     return new Promise(
-      (resolve) => {
+      resolve => {
         const unsub =
           auth.onAuthStateChanged(
-            (user) => {
+            user => {
               unsub();
 
               resolve(
@@ -294,8 +484,11 @@
     currentUser =
       await getAuthUser();
 
-    userTeamId = "";
-    isOwner = false;
+    userTeamId =
+      "";
+
+    isOwner =
+      false;
 
     if (!currentUser) {
       return;
@@ -347,14 +540,17 @@
       mealSettingsId();
 
     if (!id) {
-      mealIsOpen = false;
+      mealIsOpen =
+        false;
 
       return false;
     }
 
     const snap =
       await db
-        .collection("mealSettings")
+        .collection(
+          "mealSettings"
+        )
         .doc(id)
         .get();
 
@@ -386,28 +582,37 @@
       const {
         db,
         fb
-      } = await waitReady();
+      } =
+        await waitReady();
 
       await db
-        .collection("mealPublic")
-        .doc("current")
-        .set({
-          competitionId:
-            ctx.competitionId,
+        .collection(
+          "mealPublic"
+        )
+        .doc(
+          "current"
+        )
+        .set(
+          {
+            competitionId:
+              ctx.competitionId,
 
-          stageId:
-            ctx.stageId,
+            stageId:
+              ctx.stageId,
 
-          isOpen:
-            !!isOpenValue,
+            isOpen:
+              !!isOpenValue,
 
-          updatedAt:
-            fb.firestore
-              .FieldValue
-              .serverTimestamp()
-        }, {
-          merge: true
-        });
+            updatedAt:
+              fb.firestore
+                .FieldValue
+                .serverTimestamp()
+          },
+          {
+            merge:
+              true
+          }
+        );
 
     } catch (e) {
       console.warn(
@@ -429,7 +634,8 @@
     const {
       db,
       fb
-    } = await waitReady();
+    } =
+      await waitReady();
 
     const id =
       mealSettingsId();
@@ -441,28 +647,34 @@
     }
 
     await db
-      .collection("mealSettings")
+      .collection(
+        "mealSettings"
+      )
       .doc(id)
-      .set({
-        competitionId:
-          ctx.competitionId,
+      .set(
+        {
+          competitionId:
+            ctx.competitionId,
 
-        stageId:
-          ctx.stageId,
+          stageId:
+            ctx.stageId,
 
-        isOpen:
-          !!openValue,
+          isOpen:
+            !!openValue,
 
-        updatedAt:
-          fb.firestore
-            .FieldValue
-            .serverTimestamp(),
+          updatedAt:
+            fb.firestore
+              .FieldValue
+              .serverTimestamp(),
 
-        updatedBy:
-          currentUser.uid
-      }, {
-        merge: true
-      });
+          updatedBy:
+            currentUser.uid
+        },
+        {
+          merge:
+            true
+        }
+      );
 
     mealIsOpen =
       !!openValue;
@@ -614,7 +826,7 @@
 
     return ctx.teams
       .filter(
-        (team) =>
+        team =>
           PAID_STATUSES.includes(
             clean(
               team.status
@@ -634,7 +846,7 @@
     if (userTeamId) {
       const byTeamId =
         teams.find(
-          (team) =>
+          team =>
             norm(
               team.teamId
             ) ===
@@ -649,7 +861,7 @@
     if (currentUser) {
       const byUid =
         teams.find(
-          (team) =>
+          team =>
             norm(
               team.uid
             ) ===
@@ -726,15 +938,21 @@
     }
 
     return {
-      zone: "",
-      sector: "",
-      drawKey: ""
+      zone:
+        "",
+
+      sector:
+        "",
+
+      drawKey:
+        ""
     };
   }
 
   function teamDrawKey(team) {
-    return parseDraw(team)
-      .drawKey;
+    return parseDraw(
+      team
+    ).drawKey;
   }
 
   async function loadDrawMap() {
@@ -750,7 +968,9 @@
     try {
       const snap =
         await db
-          .collection("stageResults")
+          .collection(
+            "stageResults"
+          )
           .doc(id)
           .get();
 
@@ -776,7 +996,7 @@
         new Map();
 
       teams.forEach(
-        (team) => {
+        team => {
           const draw =
             parseDraw(team);
 
@@ -853,7 +1073,8 @@
       return order;
     }
 
-    let draw = null;
+    let draw =
+      null;
 
     const teamId =
       norm(
@@ -927,7 +1148,9 @@
 
     const snap =
       await db
-        .collection("mealOrders")
+        .collection(
+          "mealOrders"
+        )
         .doc(id)
         .get();
 
@@ -940,7 +1163,7 @@
   }
 
   // =========================================================
-  // FORM HELPERS
+  // FORM
   // =========================================================
 
   function mealFieldsHtml(
@@ -948,13 +1171,16 @@
     prefix
   ) {
     const d1 =
-      old?.day1 || {};
+      old?.day1 ||
+      {};
 
     const d2 =
-      old?.day2 || {};
+      old?.day2 ||
+      {};
 
     const note =
-      old?.note || "";
+      old?.note ||
+      "";
 
     return `
       <div class="mealDayTitle">
@@ -967,11 +1193,19 @@
           <label>Обід</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D1Lunch"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d1.lunch || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d1.lunch
+              )
+            )}"
           >
         </div>
 
@@ -979,11 +1213,19 @@
           <label>Вечеря</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D1Dinner"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d1.dinner || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d1.dinner
+              )
+            )}"
           >
         </div>
 
@@ -991,11 +1233,19 @@
           <label>Сніданок</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D1Breakfast"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d1.breakfast || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d1.breakfast
+              )
+            )}"
           >
         </div>
 
@@ -1011,11 +1261,19 @@
           <label>Обід</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D2Lunch"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d2.lunch || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d2.lunch
+              )
+            )}"
           >
         </div>
 
@@ -1023,11 +1281,19 @@
           <label>Вечеря</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D2Dinner"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d2.dinner || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d2.dinner
+              )
+            )}"
           >
         </div>
 
@@ -1035,11 +1301,19 @@
           <label>Сніданок</label>
 
           <input
+            class="mealQtyInput"
             id="${prefix}D2Breakfast"
             type="number"
+            inputmode="numeric"
             min="0"
             max="50"
-            value="${esc(d2.breakfast || 0)}"
+            step="1"
+            placeholder="0"
+            value="${esc(
+              mealInputValue(
+                d2.breakfast
+              )
+            )}"
           >
         </div>
 
@@ -1060,54 +1334,59 @@
     `;
   }
 
-  function readFields(
-    prefix
-  ) {
+  function readFields(prefix) {
     return {
       day1: {
         lunch:
           num(
-            $(`${prefix}D1Lunch`)
-              ?.value
+            $(
+              `${prefix}D1Lunch`
+            )?.value
           ),
 
         dinner:
           num(
-            $(`${prefix}D1Dinner`)
-              ?.value
+            $(
+              `${prefix}D1Dinner`
+            )?.value
           ),
 
         breakfast:
           num(
-            $(`${prefix}D1Breakfast`)
-              ?.value
+            $(
+              `${prefix}D1Breakfast`
+            )?.value
           )
       },
 
       day2: {
         lunch:
           num(
-            $(`${prefix}D2Lunch`)
-              ?.value
+            $(
+              `${prefix}D2Lunch`
+            )?.value
           ),
 
         dinner:
           num(
-            $(`${prefix}D2Dinner`)
-              ?.value
+            $(
+              `${prefix}D2Dinner`
+            )?.value
           ),
 
         breakfast:
           num(
-            $(`${prefix}D2Breakfast`)
-              ?.value
+            $(
+              `${prefix}D2Breakfast`
+            )?.value
           )
       },
 
       note:
         norm(
-          $(`${prefix}Note`)
-            ?.value
+          $(
+            `${prefix}Note`
+          )?.value
         )
     };
   }
@@ -1144,8 +1423,7 @@
         style="
           display:flex;
           gap:8px;
-          flex-wrap:wrap;
-          margin-top:14px;
+          margin-top:8px;
         "
       >
 
@@ -1153,6 +1431,7 @@
           class="mealBtn mealBtn--primary"
           id="btnSaveMealOrder"
           type="button"
+          style="flex:1;"
         >
           Зберегти заявку
         </button>
@@ -1161,6 +1440,7 @@
           class="mealBtn"
           id="btnCloseMealPopup"
           type="button"
+          style="flex:0 0 auto;"
         >
           Закрити
         </button>
@@ -1174,9 +1454,7 @@
     `;
   }
 
-  function judgesFormHtml(
-    old
-  ) {
+  function judgesFormHtml(old) {
     return `
       <div
         class="mealDayTitle"
@@ -1197,8 +1475,7 @@
         style="
           display:flex;
           gap:8px;
-          flex-wrap:wrap;
-          margin-top:14px;
+          margin-top:8px;
         "
       >
 
@@ -1206,6 +1483,7 @@
           class="mealBtn mealBtn--primary"
           id="btnSaveJudgesMeal"
           type="button"
+          style="flex:1;"
         >
           Зберегти суддів
         </button>
@@ -1214,6 +1492,7 @@
           class="mealBtn"
           id="btnCloseMealPopup"
           type="button"
+          style="flex:0 0 auto;"
         >
           Закрити
         </button>
@@ -1239,71 +1518,76 @@
       const {
         db,
         fb
-      } = await waitReady();
+      } =
+        await waitReady();
 
       await db
         .collection(
           "mealPublicOrders"
         )
         .doc(id)
-        .set({
-          competitionId:
-            data.competitionId,
+        .set(
+          {
+            competitionId:
+              data.competitionId,
 
-          stageId:
-            data.stageId,
+            stageId:
+              data.stageId,
 
-          type:
-            data.type ||
-            "team",
+            type:
+              data.type ||
+              "team",
 
-          entityId:
-            data.entityId ||
-            "",
+            entityId:
+              data.entityId ||
+              "",
 
-          teamId:
-            data.teamId ||
-            null,
+            teamId:
+              data.teamId ||
+              null,
 
-          teamName:
-            data.teamName ||
-            "—",
+            teamName:
+              data.teamName ||
+              "—",
 
-          zone:
-            data.zone ||
-            "",
+            zone:
+              data.zone ||
+              "",
 
-          sector:
-            data.sector ||
-            "",
+            sector:
+              data.sector ||
+              "",
 
-          drawKey:
-            data.drawKey ||
-            "",
+            drawKey:
+              data.drawKey ||
+              "",
 
-          day1:
-            data.day1 ||
-            {},
+            day1:
+              data.day1 ||
+              {},
 
-          day2:
-            data.day2 ||
-            {},
+            day2:
+              data.day2 ||
+              {},
 
-          note:
-            data.note ||
-            "",
+            note:
+              data.note ||
+              "",
 
-          status:
-            data.status ||
-            "empty",
+            status:
+              data.status ||
+              "empty",
 
-          updatedAt:
-            fb.firestore
-              .FieldValue
-              .serverTimestamp()
-        }, {
-          merge: true
-        });
+            updatedAt:
+              fb.firestore
+                .FieldValue
+                .serverTimestamp()
+          },
+          {
+            merge:
+              true
+          }
+        );
 
     } catch (e) {
       console.warn(
@@ -1386,7 +1670,10 @@
 
       setStatus(
         "Помилка: " +
-        (e.message || e),
+        (
+          e.message ||
+          e
+        ),
         false
       );
     }
@@ -1400,7 +1687,8 @@
       const {
         db,
         fb
-      } = await waitReady();
+      } =
+        await waitReady();
 
       const fields =
         readFields(
@@ -1480,12 +1768,15 @@
         );
 
       await db
-        .collection("mealOrders")
+        .collection(
+          "mealOrders"
+        )
         .doc(id)
         .set(
           data,
           {
-            merge: true
+            merge:
+              true
           }
         );
 
@@ -1509,7 +1800,10 @@
 
       setPopupStatus(
         "❌ " +
-        (e.message || e),
+        (
+          e.message ||
+          e
+        ),
         false
       );
     }
@@ -1572,7 +1866,10 @@
 
       setStatus(
         "Помилка: " +
-        (e.message || e),
+        (
+          e.message ||
+          e
+        ),
         false
       );
     }
@@ -1593,7 +1890,8 @@
       const {
         db,
         fb
-      } = await waitReady();
+      } =
+        await waitReady();
 
       const fields =
         readFields(
@@ -1669,12 +1967,15 @@
         );
 
       await db
-        .collection("mealOrders")
+        .collection(
+          "mealOrders"
+        )
         .doc(id)
         .set(
           data,
           {
-            merge: true
+            merge:
+              true
           }
         );
 
@@ -1698,7 +1999,10 @@
 
       setPopupStatus(
         "❌ " +
-        (e.message || e),
+        (
+          e.message ||
+          e
+        ),
         false
       );
     }
@@ -1739,15 +2043,25 @@
         "",
 
       day1: {
-        lunch: 0,
-        dinner: 0,
-        breakfast: 0
+        lunch:
+          0,
+
+        dinner:
+          0,
+
+        breakfast:
+          0
       },
 
       day2: {
-        lunch: 0,
-        dinner: 0,
-        breakfast: 0
+        lunch:
+          0,
+
+        dinner:
+          0,
+
+        breakfast:
+          0
       },
 
       note:
@@ -1780,9 +2094,14 @@
     }
 
     const zones = {
-      A: 1,
-      B: 2,
-      C: 3
+      A:
+        1,
+
+      B:
+        2,
+
+      C:
+        3
     };
 
     const za =
@@ -1841,7 +2160,9 @@
     ] =
       await Promise.all([
         db
-          .collection("mealOrders")
+          .collection(
+            "mealOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -1857,14 +2178,17 @@
         loadDrawMap()
       ]);
 
-    const rows = [];
+    const rows =
+      [];
 
-    let judges = null;
+    let judges =
+      null;
 
     snap.forEach(
-      (doc) => {
+      doc => {
         const data =
-          doc.data() || {};
+          doc.data() ||
+          {};
 
         const judgesDoc =
           data.type ===
@@ -1903,7 +2227,8 @@
         }
 
         if (
-          totalOrder(data) <= 0
+          totalOrder(data) <=
+          0
         ) {
           return;
         }
@@ -1937,27 +2262,39 @@
 
   function listHtml(rows) {
     const totals = {
-      d1l: 0,
-      d1d: 0,
-      d1b: 0,
+      d1l:
+        0,
 
-      d2l: 0,
-      d2d: 0,
-      d2b: 0
+      d1d:
+        0,
+
+      d1b:
+        0,
+
+      d2l:
+        0,
+
+      d2d:
+        0,
+
+      d2b:
+        0
     };
 
     const body =
       rows.map(
-        (row) => {
+        row => {
           const judges =
             row.type ===
             "judges";
 
           const d1 =
-            row.day1 || {};
+            row.day1 ||
+            {};
 
           const d2 =
-            row.day2 || {};
+            row.day2 ||
+            {};
 
           const d1l =
             num(
@@ -1989,13 +2326,23 @@
               d2.breakfast
             );
 
-          totals.d1l += d1l;
-          totals.d1d += d1d;
-          totals.d1b += d1b;
+          totals.d1l +=
+            d1l;
 
-          totals.d2l += d2l;
-          totals.d2d += d2d;
-          totals.d2b += d2b;
+          totals.d1d +=
+            d1d;
+
+          totals.d1b +=
+            d1b;
+
+          totals.d2l +=
+            d2l;
+
+          totals.d2d +=
+            d2d;
+
+          totals.d2b +=
+            d2b;
 
           const sector =
             judges
@@ -2003,8 +2350,14 @@
               : (
                   row.drawKey ||
                   (
-                    (row.zone || "") +
-                    (row.sector || "")
+                    (
+                      row.zone ||
+                      ""
+                    ) +
+                    (
+                      row.sector ||
+                      ""
+                    )
                   ) ||
                   "—"
                 );
@@ -2191,7 +2544,8 @@
         `
           <div class="team-loading">
             ❌ ${esc(
-              e.message || e
+              e.message ||
+              e
             )}
           </div>
         `
@@ -2229,7 +2583,10 @@
 
       alert(
         "Не вдалося відкрити харчування: " +
-        (e.message || e)
+        (
+          e.message ||
+          e
+        )
       );
     }
   }
@@ -2263,7 +2620,8 @@
       let batch =
         db.batch();
 
-      let count = 0;
+      let count =
+        0;
 
       for (
         const doc of snap.docs
@@ -2280,7 +2638,8 @@
           batch =
             db.batch();
 
-          count = 0;
+          count =
+            0;
         }
       }
 
@@ -2323,7 +2682,9 @@
 
       const snap =
         await db
-          .collection("mealOrders")
+          .collection(
+            "mealOrders"
+          )
           .where(
             "competitionId",
             "==",
@@ -2339,8 +2700,11 @@
       let batch =
         db.batch();
 
-      let count = 0;
-      let total = 0;
+      let count =
+        0;
+
+      let total =
+        0;
 
       for (
         const doc of snap.docs
@@ -2358,7 +2722,8 @@
           batch =
             db.batch();
 
-          count = 0;
+          count =
+            0;
         }
       }
 
@@ -2388,7 +2753,10 @@
 
       setStatus(
         "Помилка очищення: " +
-        (e.message || e),
+        (
+          e.message ||
+          e
+        ),
         false
       );
     }
@@ -2449,9 +2817,7 @@
     }
   }
 
-  function setContext(
-    nextCtx
-  ) {
+  function setContext(nextCtx) {
     ctx =
       nextCtx ||
       ctx;
@@ -2461,7 +2827,7 @@
 
   document.addEventListener(
     "click",
-    (event) => {
+    event => {
       if (
         event.target.id ===
           "mealPopupClose" ||
@@ -2479,12 +2845,16 @@
       if (
         popup?.style.display ===
           "flex" &&
-        event.target === popup
+        event.target ===
+          popup
       ) {
         closePopup();
       }
     }
   );
+
+  // Стиль підключаємо один раз.
+  ensureCompactStyles();
 
   window.scMeals = {
     setContext,
@@ -2493,8 +2863,10 @@
     openJudgesOrder,
     clearOrders,
     refreshButtons,
+
     refreshAdminButtons:
       refreshButtons,
+
     loadMealGate,
     setMealGate,
     openMeals

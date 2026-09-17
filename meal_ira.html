@@ -38,14 +38,60 @@
     }
 
     body{
+      --page-bg-1:#111827;
+      --page-bg-2:#020617;
+
+      --card:#0f172a;
+      --card-soft:#020617;
+
+      --text:#e5e7eb;
+      --text-main:#f8fafc;
+      --muted:#94a3b8;
+
+      --border:rgba(148,163,184,.28);
+      --border-soft:rgba(148,163,184,.20);
+
+      --yellow:#facc15;
+      --green:#22c55e;
+      --red:#ef4444;
+
+      margin:0;
+
       background:
         radial-gradient(
           circle at top,
-          #111827 0,
-          #020617 55%
+          var(--page-bg-1) 0,
+          var(--page-bg-2) 55%
         );
 
-      color:#e5e7eb;
+      color:var(--text);
+
+      transition:
+        background .2s ease,
+        color .2s ease;
+    }
+
+    /* =====================================================
+       LIGHT MODE
+       ===================================================== */
+
+    body.light-mode{
+      --page-bg-1:#ffffff;
+      --page-bg-2:#eef2f7;
+
+      --card:#ffffff;
+      --card-soft:#f8fafc;
+
+      --text:#1e293b;
+      --text-main:#0f172a;
+      --muted:#64748b;
+
+      --border:rgba(71,85,105,.22);
+      --border-soft:rgba(71,85,105,.16);
+
+      --yellow:#b77900;
+      --green:#15803d;
+      --red:#dc2626;
     }
 
     .ira-wrap{
@@ -63,27 +109,35 @@
        ===================================================== */
 
     .ira-head{
+      position:relative;
+
       padding:
         11px 12px;
 
+      padding-right:116px;
+
       border:
         1px solid
-        rgba(148,163,184,.28);
+        var(--border);
 
       border-radius:16px;
 
       background:
-        rgba(15,23,42,.94);
+        color-mix(
+          in srgb,
+          var(--card) 94%,
+          transparent
+        );
 
       box-shadow:
         0 12px 30px
-        rgba(0,0,0,.35);
+        rgba(0,0,0,.18);
     }
 
     .ira-title{
       margin:0;
 
-      color:#facc15;
+      color:var(--yellow);
 
       font-size:1.28rem;
 
@@ -95,7 +149,7 @@
     .ira-sub{
       margin-top:7px;
 
-      color:#cbd5e1;
+      color:var(--muted);
 
       font-size:.88rem;
 
@@ -103,19 +157,19 @@
     }
 
     #competitionTitle{
-      color:#f8fafc;
+      color:var(--text-main);
 
       font-weight:900;
     }
 
     #stageTitle{
-      color:#cbd5e1;
+      color:var(--muted);
     }
 
     .state{
       margin-top:8px;
 
-      color:#94a3b8;
+      color:var(--muted);
 
       font-size:.80rem;
 
@@ -123,11 +177,105 @@
     }
 
     .state.ok{
-      color:#22c55e;
+      color:var(--green);
     }
 
     .state.err{
-      color:#ef4444;
+      color:var(--red);
+    }
+
+    /* =====================================================
+       HEADER ACTIONS
+       ===================================================== */
+
+    .head-actions{
+      position:absolute;
+
+      top:9px;
+      right:9px;
+
+      display:flex;
+
+      align-items:center;
+
+      gap:5px;
+    }
+
+    .head-btn{
+      min-height:34px;
+
+      padding:
+        5px 8px;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:10px;
+
+      background:
+        var(--card-soft);
+
+      color:var(--text-main);
+
+      font-size:.72rem;
+
+      font-weight:900;
+
+      cursor:pointer;
+    }
+
+    .head-btn:active{
+      transform:scale(.97);
+    }
+
+    .theme-btn{
+      width:38px;
+
+      padding:
+        5px 2px;
+
+      font-size:1rem;
+    }
+
+    .message-btn{
+      position:relative;
+
+      white-space:nowrap;
+    }
+
+    .message-badge{
+      position:absolute;
+
+      top:-7px;
+      right:-6px;
+
+      display:none;
+
+      min-width:18px;
+      height:18px;
+
+      padding:
+        0 5px;
+
+      align-items:center;
+      justify-content:center;
+
+      border-radius:20px;
+
+      background:#ef4444;
+
+      color:#ffffff;
+
+      font-size:.58rem;
+
+      line-height:18px;
+
+      font-weight:900;
+    }
+
+    .message-badge.show{
+      display:flex;
     }
 
     /* =====================================================
@@ -141,18 +289,22 @@
 
       border:
         1px solid
-        rgba(250,204,21,.28);
+        color-mix(
+          in srgb,
+          var(--yellow) 28%,
+          transparent
+        );
 
       border-radius:15px;
 
       background:
-        rgba(15,23,42,.94);
+        var(--card);
     }
 
     .price-title{
       margin-bottom:7px;
 
-      color:#facc15;
+      color:var(--yellow);
 
       font-size:.82rem;
 
@@ -173,18 +325,18 @@
 
       border:
         1px solid
-        rgba(148,163,184,.20);
+        var(--border-soft);
 
       border-radius:11px;
 
       background:
-        rgba(2,6,23,.32);
+        var(--card-soft);
     }
 
     .price-day-title{
       margin-bottom:5px;
 
-      color:#cbd5e1;
+      color:var(--text);
 
       font-size:.70rem;
 
@@ -211,7 +363,7 @@
 
       margin-bottom:2px;
 
-      color:#94a3b8;
+      color:var(--muted);
 
       font-size:.58rem;
 
@@ -230,15 +382,16 @@
 
       border:
         1px solid
-        rgba(148,163,184,.35);
+        var(--border);
 
       border-radius:7px;
 
       outline:none;
 
-      background:#0f172a;
+      background:
+        var(--card);
 
-      color:#facc15;
+      color:var(--yellow);
 
       font-size:.72rem;
 
@@ -248,7 +401,7 @@
     }
 
     .ira-price-input:focus{
-      border-color:#facc15;
+      border-color:var(--yellow);
     }
 
     /* =====================================================
@@ -258,7 +411,7 @@
     .delivery-time{
       margin-top:4px;
 
-      color:#22c55e;
+      color:var(--green);
 
       font-size:.54rem;
 
@@ -276,7 +429,7 @@
 
       margin-bottom:1px;
 
-      color:#94a3b8;
+      color:var(--muted);
 
       font-size:.46rem;
 
@@ -294,16 +447,16 @@
 
       border:
         1px solid
-        rgba(148,163,184,.28);
+        var(--border);
 
       border-radius:15px;
 
       background:
-        rgba(15,23,42,.94);
+        var(--card);
 
       box-shadow:
         0 12px 30px
-        rgba(0,0,0,.35);
+        rgba(0,0,0,.14);
 
       overflow:hidden;
     }
@@ -321,17 +474,17 @@
       padding:
         5px 4px 8px;
 
-      color:#cbd5e1;
+      color:var(--text);
 
       font-size:.72rem;
     }
 
     .summary strong{
-      color:#facc15;
+      color:var(--yellow);
     }
 
     #moneyTotal{
-      color:#22c55e;
+      color:var(--green);
 
       font-weight:900;
     }
@@ -362,7 +515,7 @@
     td{
       border:
         1px solid
-        rgba(148,163,184,.25);
+        var(--border-soft);
 
       padding:
         5px 1px;
@@ -375,10 +528,10 @@
     }
 
     th{
-      color:#facc15;
+      color:var(--yellow);
 
       background:
-        rgba(2,6,23,.78);
+        var(--card-soft);
 
       font-weight:900;
 
@@ -387,11 +540,11 @@
 
     td{
       background:
-        rgba(2,6,23,.34);
+        var(--card);
     }
 
     .sector{
-      color:#facc15;
+      color:var(--yellow);
 
       font-size:.70rem;
 
@@ -410,7 +563,7 @@
     }
 
     .team-name{
-      color:#f8fafc;
+      color:var(--text-main);
 
       font-size:.69rem;
 
@@ -428,9 +581,13 @@
 
       border-top:
         1px dashed
-        rgba(250,204,21,.38);
+        color-mix(
+          in srgb,
+          var(--yellow) 38%,
+          transparent
+        );
 
-      color:#facc15;
+      color:var(--yellow);
 
       font-size:.57rem;
 
@@ -459,15 +616,16 @@
 
       border:
         1px solid
-        rgba(148,163,184,.35);
+        var(--border);
 
       border-radius:6px;
 
       outline:none;
 
-      background:#0f172a;
+      background:
+        var(--card-soft);
 
-      color:#f8fafc;
+      color:var(--text-main);
 
       font-size:.62rem;
 
@@ -477,11 +635,11 @@
     }
 
     .ira-extra-input:focus{
-      border-color:#facc15;
+      border-color:var(--yellow);
     }
 
     .row-money{
-      color:#22c55e;
+      color:var(--green);
 
       font-size:.65rem;
 
@@ -491,10 +649,10 @@
     }
 
     tfoot td{
-      color:#facc15;
+      color:var(--yellow);
 
       background:
-        rgba(30,41,59,.98);
+        var(--card-soft);
 
       font-weight:900;
     }
@@ -503,11 +661,282 @@
       padding:
         18px 5px;
 
-      color:#94a3b8;
+      color:var(--muted);
 
       font-size:.76rem;
 
       text-align:center;
+    }
+
+    /* =====================================================
+       MESSAGES MODAL
+       ===================================================== */
+
+    .messages-modal{
+      position:fixed;
+
+      inset:0;
+
+      z-index:9999;
+
+      display:none;
+
+      align-items:flex-end;
+
+      justify-content:center;
+
+      padding:8px;
+
+      background:
+        rgba(2,6,23,.65);
+
+      backdrop-filter:
+        blur(3px);
+    }
+
+    .messages-modal.open{
+      display:flex;
+    }
+
+    .messages-box{
+      width:100%;
+      max-width:650px;
+
+      max-height:
+        min(82vh, 760px);
+
+      overflow:hidden;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:
+        18px 18px 10px 10px;
+
+      background:
+        var(--card);
+
+      color:
+        var(--text);
+
+      box-shadow:
+        0 20px 60px
+        rgba(0,0,0,.35);
+    }
+
+    .messages-head{
+      display:flex;
+
+      align-items:center;
+
+      justify-content:
+        space-between;
+
+      gap:8px;
+
+      padding:
+        12px;
+
+      border-bottom:
+        1px solid
+        var(--border-soft);
+    }
+
+    .messages-title{
+      color:
+        var(--text-main);
+
+      font-size:1rem;
+
+      font-weight:900;
+    }
+
+    .messages-close{
+      width:34px;
+      height:34px;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:10px;
+
+      background:
+        var(--card-soft);
+
+      color:
+        var(--text-main);
+
+      font-size:1.15rem;
+
+      font-weight:900;
+
+      cursor:pointer;
+    }
+
+    .messages-summary{
+      padding:
+        8px 12px;
+
+      color:
+        var(--muted);
+
+      font-size:.72rem;
+
+      border-bottom:
+        1px solid
+        var(--border-soft);
+    }
+
+    #messageList{
+      max-height:
+        calc(82vh - 110px);
+
+      overflow-y:auto;
+
+      padding:8px;
+    }
+
+    .message-empty{
+      padding:
+        25px 10px;
+
+      color:
+        var(--muted);
+
+      text-align:center;
+
+      font-size:.82rem;
+    }
+
+    /*
+     * Ці класи потім заповнює JS.
+     */
+
+    .message-item{
+      margin-bottom:7px;
+
+      padding:10px;
+
+      border:
+        1px solid
+        var(--border-soft);
+
+      border-radius:12px;
+
+      background:
+        var(--card-soft);
+    }
+
+    .message-item.unread{
+      border:
+        2px solid
+        var(--green);
+
+      box-shadow:
+        0 0 0 2px
+        color-mix(
+          in srgb,
+          var(--green) 10%,
+          transparent
+        );
+    }
+
+    .message-top{
+      display:flex;
+
+      align-items:flex-start;
+
+      justify-content:
+        space-between;
+
+      gap:8px;
+    }
+
+    .message-owner{
+      color:
+        var(--text-main);
+
+      font-size:.82rem;
+
+      font-weight:900;
+    }
+
+    .message-number{
+      color:
+        var(--yellow);
+
+      font-weight:900;
+    }
+
+    .message-new{
+      display:inline-block;
+
+      margin-left:4px;
+
+      padding:
+        2px 5px;
+
+      border-radius:999px;
+
+      background:
+        var(--green);
+
+      color:#ffffff;
+
+      font-size:.55rem;
+
+      font-weight:900;
+    }
+
+    .message-time{
+      margin-top:3px;
+
+      color:
+        var(--muted);
+
+      font-size:.62rem;
+    }
+
+    .message-text{
+      margin-top:7px;
+
+      color:
+        var(--text-main);
+
+      font-size:.80rem;
+
+      line-height:1.35;
+
+      font-weight:700;
+    }
+
+    /* =====================================================
+       PHONE
+       ===================================================== */
+
+    @media(max-width:500px){
+
+      .ira-head{
+        padding-right:105px;
+      }
+
+      .message-btn{
+        padding:
+          5px 6px;
+
+        font-size:.64rem;
+      }
+
+      .theme-btn{
+        width:34px;
+      }
+
+      .price-days{
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
+      }
     }
 
     @media(max-width:370px){
@@ -541,6 +970,14 @@
       .delivery-time{
         font-size:.49rem;
       }
+
+      .ira-head{
+        padding-right:96px;
+      }
+
+      .message-btn{
+        font-size:.58rem;
+      }
     }
 
   </style>
@@ -551,7 +988,41 @@
 
 <main class="ira-wrap">
 
+  <!-- ===================================================
+       HEADER
+       =================================================== -->
+
   <section class="ira-head">
+
+    <div class="head-actions">
+
+      <button
+        id="messagesBtn"
+        class="head-btn message-btn"
+        type="button"
+      >
+        🔔 Повідомлення
+
+        <span
+          id="messageBadge"
+          class="message-badge"
+        >
+          0
+        </span>
+
+      </button>
+
+      <button
+        id="themeToggle"
+        class="head-btn theme-btn"
+        type="button"
+        aria-label="Змінити тему"
+        title="Світла / темна тема"
+      >
+        ☀️
+      </button>
+
+    </div>
 
     <h1 class="ira-title">
       🍽 Харчування
@@ -597,9 +1068,7 @@
 
     <div class="price-days">
 
-      <!-- =================================================
-           ДОБА 1
-           ================================================= -->
+      <!-- ДОБА 1 -->
 
       <div class="price-day">
 
@@ -608,8 +1077,6 @@
         </div>
 
         <div class="price-grid">
-
-          <!-- ОБІД -->
 
           <div class="price-field">
 
@@ -640,8 +1107,6 @@
           </div>
 
 
-          <!-- ВЕЧЕРЯ -->
-
           <div class="price-field">
 
             <label>
@@ -670,8 +1135,6 @@
 
           </div>
 
-
-          <!-- СНІДАНОК -->
 
           <div class="price-field">
 
@@ -706,9 +1169,7 @@
       </div>
 
 
-      <!-- =================================================
-           ДОБА 2
-           ================================================= -->
+      <!-- ДОБА 2 -->
 
       <div class="price-day">
 
@@ -717,8 +1178,6 @@
         </div>
 
         <div class="price-grid">
-
-          <!-- ОБІД -->
 
           <div class="price-field">
 
@@ -749,8 +1208,6 @@
           </div>
 
 
-          <!-- ВЕЧЕРЯ -->
-
           <div class="price-field">
 
             <label>
@@ -779,8 +1236,6 @@
 
           </div>
 
-
-          <!-- СНІДАНОК -->
 
           <div class="price-field">
 
@@ -820,7 +1275,7 @@
 
 
   <!-- ===================================================
-       ТАБЛИЦЯ
+       TABLE
        =================================================== -->
 
   <section
@@ -879,37 +1334,19 @@
 
           <tr>
 
-            <th>
-              С
-            </th>
+            <th>С</th>
 
             <th>
               Учасник
             </th>
 
-            <th>
-              1О
-            </th>
+            <th>1О</th>
+            <th>1В</th>
+            <th>1С</th>
 
-            <th>
-              1В
-            </th>
-
-            <th>
-              1С
-            </th>
-
-            <th>
-              2О
-            </th>
-
-            <th>
-              2В
-            </th>
-
-            <th>
-              2С
-            </th>
+            <th>2О</th>
+            <th>2В</th>
+            <th>2С</th>
 
             <th>
               Доп.
@@ -950,6 +1387,57 @@
 </main>
 
 
+<!-- =====================================================
+     MESSAGES / REPORT
+     ===================================================== -->
+
+<div
+  id="messagesModal"
+  class="messages-modal"
+>
+
+  <div class="messages-box">
+
+    <div class="messages-head">
+
+      <div class="messages-title">
+        🔔 Повідомлення команд
+      </div>
+
+      <button
+        id="messagesClose"
+        class="messages-close"
+        type="button"
+      >
+        ×
+      </button>
+
+    </div>
+
+    <div
+      id="messagesSummary"
+      class="messages-summary"
+    >
+      Нових повідомлень немає
+    </div>
+
+    <div id="messageList">
+
+      <div class="message-empty">
+        Повідомлень ще немає.
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     FIREBASE
+     ===================================================== -->
+
 <script
   src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
 ></script>
@@ -966,9 +1454,179 @@
   src="assets/js/firebase-init.js"
 ></script>
 
+
+<!-- =====================================================
+     PUBLIC IRA JS
+     ===================================================== -->
+
 <script
-  src="assets/js/meal_ira.js?v=20260917-6"
+  src="assets/js/meal_ira.js?v=20260917-7"
 ></script>
+
+
+<!-- =====================================================
+     THEME + MODAL UI
+     ===================================================== -->
+
+<script>
+
+(function(){
+
+  "use strict";
+
+  const THEME_KEY =
+    "sc_ira_theme";
+
+  const body =
+    document.body;
+
+  const themeToggle =
+    document.getElementById(
+      "themeToggle"
+    );
+
+  const messagesBtn =
+    document.getElementById(
+      "messagesBtn"
+    );
+
+  const messagesModal =
+    document.getElementById(
+      "messagesModal"
+    );
+
+  const messagesClose =
+    document.getElementById(
+      "messagesClose"
+    );
+
+
+  // =====================================================
+  // THEME
+  // =====================================================
+
+  function applyTheme(theme){
+
+    const light =
+      theme === "light";
+
+    body.classList.toggle(
+      "light-mode",
+      light
+    );
+
+    if(themeToggle){
+
+      themeToggle.textContent =
+        light
+          ? "🌙"
+          : "☀️";
+
+      themeToggle.title =
+        light
+          ? "Увімкнути темну тему"
+          : "Увімкнути світлу тему";
+    }
+  }
+
+
+  let savedTheme =
+    "light";
+
+  try{
+
+    savedTheme =
+      localStorage.getItem(
+        THEME_KEY
+      ) || "light";
+
+  }catch{}
+
+
+  applyTheme(
+    savedTheme
+  );
+
+
+  themeToggle?.addEventListener(
+    "click",
+    () => {
+
+      const next =
+        body.classList.contains(
+          "light-mode"
+        )
+          ? "dark"
+          : "light";
+
+      applyTheme(
+        next
+      );
+
+      try{
+
+        localStorage.setItem(
+          THEME_KEY,
+          next
+        );
+
+      }catch{}
+
+    }
+  );
+
+
+  // =====================================================
+  // MESSAGES MODAL
+  // =====================================================
+
+  function openMessages(){
+
+    messagesModal?.classList.add(
+      "open"
+    );
+
+  }
+
+
+  function closeMessages(){
+
+    messagesModal?.classList.remove(
+      "open"
+    );
+
+  }
+
+
+  messagesBtn?.addEventListener(
+    "click",
+    openMessages
+  );
+
+
+  messagesClose?.addEventListener(
+    "click",
+    closeMessages
+  );
+
+
+  messagesModal?.addEventListener(
+    "click",
+    event => {
+
+      if(
+        event.target ===
+        messagesModal
+      ){
+        closeMessages();
+      }
+
+    }
+  );
+
+})();
+
+</script>
 
 </body>
 

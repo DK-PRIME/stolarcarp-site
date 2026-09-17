@@ -112,9 +112,7 @@
       position:relative;
 
       padding:
-        11px 12px;
-
-      padding-right:116px;
+        11px 58px 11px 12px;
 
       border:
         1px solid
@@ -123,11 +121,7 @@
       border-radius:16px;
 
       background:
-        color-mix(
-          in srgb,
-          var(--card) 94%,
-          transparent
-        );
+        var(--card);
 
       box-shadow:
         0 12px 30px
@@ -185,97 +179,41 @@
     }
 
     /* =====================================================
-       HEADER ACTIONS
+       THEME BUTTON
        ===================================================== */
 
-    .head-actions{
+    .theme-btn{
       position:absolute;
 
-      top:9px;
-      right:9px;
+      top:10px;
+      right:10px;
+
+      width:40px;
+      height:38px;
 
       display:flex;
 
       align-items:center;
-
-      gap:5px;
-    }
-
-    .head-btn{
-      min-height:34px;
-
-      padding:
-        5px 8px;
+      justify-content:center;
 
       border:
         1px solid
         var(--border);
 
-      border-radius:10px;
+      border-radius:11px;
 
       background:
         var(--card-soft);
 
       color:var(--text-main);
 
-      font-size:.72rem;
-
-      font-weight:900;
+      font-size:1.05rem;
 
       cursor:pointer;
     }
 
-    .head-btn:active{
-      transform:scale(.97);
-    }
-
-    .theme-btn{
-      width:38px;
-
-      padding:
-        5px 2px;
-
-      font-size:1rem;
-    }
-
-    .message-btn{
-      position:relative;
-
-      white-space:nowrap;
-    }
-
-    .message-badge{
-      position:absolute;
-
-      top:-7px;
-      right:-6px;
-
-      display:none;
-
-      min-width:18px;
-      height:18px;
-
-      padding:
-        0 5px;
-
-      align-items:center;
-      justify-content:center;
-
-      border-radius:20px;
-
-      background:#ef4444;
-
-      color:#ffffff;
-
-      font-size:.58rem;
-
-      line-height:18px;
-
-      font-weight:900;
-    }
-
-    .message-badge.show{
-      display:flex;
+    .theme-btn:active{
+      transform:scale(.96);
     }
 
     /* =====================================================
@@ -289,11 +227,7 @@
 
       border:
         1px solid
-        color-mix(
-          in srgb,
-          var(--yellow) 28%,
-          transparent
-        );
+        rgba(183,121,0,.35);
 
       border-radius:15px;
 
@@ -315,7 +249,7 @@
       display:grid;
 
       grid-template-columns:
-        repeat(2, minmax(0,1fr));
+        repeat(2,minmax(0,1fr));
 
       gap:6px;
     }
@@ -347,7 +281,7 @@
       display:grid;
 
       grid-template-columns:
-        repeat(3, minmax(0,1fr));
+        repeat(3,minmax(0,1fr));
 
       gap:4px;
     }
@@ -368,8 +302,6 @@
       font-size:.58rem;
 
       font-weight:800;
-
-      text-align:center;
     }
 
     .ira-price-input{
@@ -543,6 +475,27 @@
         var(--card);
     }
 
+    /* =====================================================
+       НОВЕ ПОВІДОМЛЕННЯ = ПІДСВІЧУЄМО ВЕСЬ РЯДОК
+       ===================================================== */
+
+    tr.meal-row-unread td{
+      background:
+        rgba(34,197,94,.10);
+    }
+
+    body.light-mode
+    tr.meal-row-unread td{
+      background:
+        rgba(34,197,94,.12);
+    }
+
+    tr.meal-row-unread td:first-child{
+      box-shadow:
+        inset 3px 0 0
+        var(--green);
+    }
+
     .sector{
       color:var(--yellow);
 
@@ -574,6 +527,20 @@
       overflow-wrap:anywhere;
     }
 
+    .solo-label{
+      margin-top:2px;
+
+      color:var(--muted);
+
+      font-size:.55rem;
+
+      font-weight:700;
+    }
+
+    /* =====================================================
+       ПОТОЧНЕ ПОБАЖАННЯ
+       ===================================================== */
+
     .note{
       margin-top:4px;
 
@@ -581,11 +548,7 @@
 
       border-top:
         1px dashed
-        color-mix(
-          in srgb,
-          var(--yellow) 38%,
-          transparent
-        );
+        rgba(183,121,0,.30);
 
       color:var(--yellow);
 
@@ -598,6 +561,91 @@
       white-space:normal;
 
       overflow-wrap:anywhere;
+    }
+
+    /* =====================================================
+       ПОВІДОМЛЕННЯ У ПОЛІ КОМАНДИ
+       ===================================================== */
+
+    .team-messages-btn{
+      display:inline-flex;
+
+      align-items:center;
+
+      gap:4px;
+
+      max-width:100%;
+
+      margin-top:5px;
+
+      padding:
+        4px 6px;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:7px;
+
+      background:
+        var(--card-soft);
+
+      color:
+        var(--text-main);
+
+      font-size:.56rem;
+
+      line-height:1;
+
+      font-weight:900;
+
+      cursor:pointer;
+
+      white-space:nowrap;
+    }
+
+    .team-messages-btn.has-unread{
+      border-color:
+        var(--green);
+
+      background:
+        rgba(34,197,94,.14);
+
+      color:
+        var(--green);
+    }
+
+    .team-messages-badge{
+      display:inline-flex;
+
+      min-width:16px;
+      height:16px;
+
+      padding:
+        0 4px;
+
+      align-items:center;
+      justify-content:center;
+
+      border-radius:999px;
+
+      background:
+        var(--red);
+
+      color:#ffffff;
+
+      font-size:.52rem;
+
+      font-weight:900;
+    }
+
+    .team-message-total{
+      color:
+        var(--muted);
+
+      font-size:.52rem;
+
+      font-weight:700;
     }
 
     /* =====================================================
@@ -669,7 +717,7 @@
     }
 
     /* =====================================================
-       MESSAGES MODAL
+       ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ
        ===================================================== */
 
     .messages-modal{
@@ -703,7 +751,7 @@
       max-width:650px;
 
       max-height:
-        min(82vh, 760px);
+        min(84vh,760px);
 
       overflow:hidden;
 
@@ -735,24 +783,42 @@
 
       gap:8px;
 
-      padding:
-        12px;
+      padding:12px;
 
       border-bottom:
         1px solid
         var(--border-soft);
     }
 
+    .messages-owner-wrap{
+      min-width:0;
+    }
+
     .messages-title{
       color:
         var(--text-main);
 
-      font-size:1rem;
+      font-size:.95rem;
+
+      line-height:1.15;
 
       font-weight:900;
     }
 
+    .messages-sector{
+      margin-top:3px;
+
+      color:
+        var(--yellow);
+
+      font-size:.68rem;
+
+      font-weight:800;
+    }
+
     .messages-close{
+      flex:0 0 auto;
+
       width:34px;
       height:34px;
 
@@ -776,22 +842,54 @@
     }
 
     .messages-summary{
+      display:flex;
+
+      align-items:center;
+
+      justify-content:
+        space-between;
+
+      gap:8px;
+
       padding:
         8px 12px;
 
       color:
         var(--muted);
 
-      font-size:.72rem;
+      font-size:.70rem;
 
       border-bottom:
         1px solid
         var(--border-soft);
     }
 
+    .report-btn{
+      padding:
+        5px 8px;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:8px;
+
+      background:
+        var(--card-soft);
+
+      color:
+        var(--text-main);
+
+      font-size:.64rem;
+
+      font-weight:900;
+
+      cursor:pointer;
+    }
+
     #messageList{
       max-height:
-        calc(82vh - 110px);
+        calc(84vh - 125px);
 
       overflow-y:auto;
 
@@ -809,10 +907,6 @@
 
       font-size:.82rem;
     }
-
-    /*
-     * Ці класи потім заповнює JS.
-     */
 
     .message-item{
       margin-bottom:7px;
@@ -834,13 +928,8 @@
         2px solid
         var(--green);
 
-      box-shadow:
-        0 0 0 2px
-        color-mix(
-          in srgb,
-          var(--green) 10%,
-          transparent
-        );
+      background:
+        rgba(34,197,94,.08);
     }
 
     .message-top{
@@ -854,18 +943,11 @@
       gap:8px;
     }
 
-    .message-owner{
-      color:
-        var(--text-main);
-
-      font-size:.82rem;
-
-      font-weight:900;
-    }
-
     .message-number{
       color:
         var(--yellow);
+
+      font-size:.75rem;
 
       font-weight:900;
     }
@@ -885,18 +967,18 @@
 
       color:#ffffff;
 
-      font-size:.55rem;
+      font-size:.52rem;
 
       font-weight:900;
     }
 
     .message-time{
-      margin-top:3px;
-
       color:
         var(--muted);
 
-      font-size:.62rem;
+      font-size:.61rem;
+
+      text-align:right;
     }
 
     .message-text{
@@ -913,31 +995,8 @@
     }
 
     /* =====================================================
-       PHONE
+       SMALL PHONE
        ===================================================== */
-
-    @media(max-width:500px){
-
-      .ira-head{
-        padding-right:105px;
-      }
-
-      .message-btn{
-        padding:
-          5px 6px;
-
-        font-size:.64rem;
-      }
-
-      .theme-btn{
-        width:34px;
-      }
-
-      .price-days{
-        grid-template-columns:
-          repeat(2,minmax(0,1fr));
-      }
-    }
 
     @media(max-width:370px){
 
@@ -971,12 +1030,11 @@
         font-size:.49rem;
       }
 
-      .ira-head{
-        padding-right:96px;
-      }
+      .team-messages-btn{
+        padding:
+          3px 4px;
 
-      .message-btn{
-        font-size:.58rem;
+        font-size:.51rem;
       }
     }
 
@@ -994,35 +1052,15 @@
 
   <section class="ira-head">
 
-    <div class="head-actions">
-
-      <button
-        id="messagesBtn"
-        class="head-btn message-btn"
-        type="button"
-      >
-        🔔 Повідомлення
-
-        <span
-          id="messageBadge"
-          class="message-badge"
-        >
-          0
-        </span>
-
-      </button>
-
-      <button
-        id="themeToggle"
-        class="head-btn theme-btn"
-        type="button"
-        aria-label="Змінити тему"
-        title="Світла / темна тема"
-      >
-        ☀️
-      </button>
-
-    </div>
+    <button
+      id="themeToggle"
+      class="theme-btn"
+      type="button"
+      aria-label="Змінити тему"
+      title="Світла / темна тема"
+    >
+      ☀️
+    </button>
 
     <h1 class="ira-title">
       🍽 Харчування
@@ -1053,7 +1091,7 @@
 
 
   <!-- ===================================================
-       ЦІНИ + ЧАС ДОСТАВКИ
+       ЦІНИ + ДОСТАВКА
        =================================================== -->
 
   <section
@@ -1388,7 +1426,7 @@
 
 
 <!-- =====================================================
-     MESSAGES / REPORT
+     ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ / УЧАСНИКА
      ===================================================== -->
 
 <div
@@ -1400,8 +1438,21 @@
 
     <div class="messages-head">
 
-      <div class="messages-title">
-        🔔 Повідомлення команд
+      <div class="messages-owner-wrap">
+
+        <div
+          id="messagesOwner"
+          class="messages-title"
+        >
+          Повідомлення
+        </div>
+
+        <div
+          id="messagesSector"
+          class="messages-sector"
+        >
+        </div>
+
       </div>
 
       <button
@@ -1414,11 +1465,20 @@
 
     </div>
 
-    <div
-      id="messagesSummary"
-      class="messages-summary"
-    >
-      Нових повідомлень немає
+    <div class="messages-summary">
+
+      <span id="messagesSummary">
+        Повідомлень немає
+      </span>
+
+      <button
+        id="messagesReportBtn"
+        class="report-btn"
+        type="button"
+      >
+        📋 Звіт
+      </button>
+
     </div>
 
     <div id="messageList">
@@ -1456,16 +1516,16 @@
 
 
 <!-- =====================================================
-     PUBLIC IRA JS
+     IRA JS
      ===================================================== -->
 
 <script
-  src="assets/js/meal_ira.js?v=20260917-7"
+  src="assets/js/meal_ira.js?v=20260917-8"
 ></script>
 
 
 <!-- =====================================================
-     THEME + MODAL UI
+     THEME
      ===================================================== -->
 
 <script>
@@ -1480,30 +1540,11 @@
   const body =
     document.body;
 
-  const themeToggle =
+  const btn =
     document.getElementById(
       "themeToggle"
     );
 
-  const messagesBtn =
-    document.getElementById(
-      "messagesBtn"
-    );
-
-  const messagesModal =
-    document.getElementById(
-      "messagesModal"
-    );
-
-  const messagesClose =
-    document.getElementById(
-      "messagesClose"
-    );
-
-
-  // =====================================================
-  // THEME
-  // =====================================================
 
   function applyTheme(theme){
 
@@ -1515,27 +1556,28 @@
       light
     );
 
-    if(themeToggle){
+    if(btn){
 
-      themeToggle.textContent =
+      btn.textContent =
         light
           ? "🌙"
           : "☀️";
 
-      themeToggle.title =
+      btn.title =
         light
           ? "Увімкнути темну тему"
           : "Увімкнути світлу тему";
     }
+
   }
 
 
-  let savedTheme =
+  let theme =
     "light";
 
   try{
 
-    savedTheme =
+    theme =
       localStorage.getItem(
         THEME_KEY
       ) || "light";
@@ -1544,11 +1586,11 @@
 
 
   applyTheme(
-    savedTheme
+    theme
   );
 
 
-  themeToggle?.addEventListener(
+  btn?.addEventListener(
     "click",
     () => {
 
@@ -1571,55 +1613,6 @@
         );
 
       }catch{}
-
-    }
-  );
-
-
-  // =====================================================
-  // MESSAGES MODAL
-  // =====================================================
-
-  function openMessages(){
-
-    messagesModal?.classList.add(
-      "open"
-    );
-
-  }
-
-
-  function closeMessages(){
-
-    messagesModal?.classList.remove(
-      "open"
-    );
-
-  }
-
-
-  messagesBtn?.addEventListener(
-    "click",
-    openMessages
-  );
-
-
-  messagesClose?.addEventListener(
-    "click",
-    closeMessages
-  );
-
-
-  messagesModal?.addEventListener(
-    "click",
-    event => {
-
-      if(
-        event.target ===
-        messagesModal
-      ){
-        closeMessages();
-      }
 
     }
   );

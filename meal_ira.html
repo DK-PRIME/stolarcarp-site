@@ -112,7 +112,7 @@
       position:relative;
 
       padding:
-        11px 58px 11px 12px;
+        11px 104px 11px 12px;
 
       border:
         1px solid
@@ -179,15 +179,24 @@
     }
 
     /* =====================================================
-       THEME
+       HEADER BUTTONS
        ===================================================== */
 
-    .theme-btn{
+    .head-actions{
       position:absolute;
 
       top:10px;
       right:10px;
 
+      display:flex;
+
+      align-items:center;
+
+      gap:6px;
+    }
+
+    .theme-btn,
+    .global-envelope-btn{
       width:40px;
       height:38px;
 
@@ -195,6 +204,8 @@
 
       align-items:center;
       justify-content:center;
+
+      padding:0;
 
       border:
         1px solid
@@ -212,8 +223,102 @@
       cursor:pointer;
     }
 
-    .theme-btn:active{
+    .theme-btn:active,
+    .global-envelope-btn:active{
       transform:scale(.96);
+    }
+
+    /* =====================================================
+       ГЛОБАЛЬНИЙ КОНВЕРТ
+       ===================================================== */
+
+    .global-envelope-btn{
+      display:none;
+
+      position:relative;
+
+      color:var(--yellow);
+
+      border-color:var(--yellow);
+
+      background:
+        rgba(250,204,21,.12);
+    }
+
+    .global-envelope-btn.show{
+      display:flex;
+    }
+
+    .global-envelope-btn.unread{
+      animation:
+        globalEnvelopePulse
+        1s
+        infinite;
+    }
+
+    .global-envelope-btn.unread
+    .global-envelope-icon{
+      animation:
+        globalEnvelopeShake
+        1s
+        infinite;
+    }
+
+    .global-envelope-icon{
+      display:block;
+
+      font-size:1.15rem;
+
+      line-height:1;
+    }
+
+    @keyframes globalEnvelopePulse{
+
+      0%{
+        box-shadow:
+          0 0 0 0
+          rgba(250,204,21,.55);
+      }
+
+      50%{
+        box-shadow:
+          0 0 0 7px
+          rgba(250,204,21,.08);
+      }
+
+      100%{
+        box-shadow:
+          0 0 0 0
+          rgba(250,204,21,0);
+      }
+    }
+
+    @keyframes globalEnvelopeShake{
+
+      0%,
+      100%{
+        transform:
+          rotate(0deg)
+          scale(1);
+      }
+
+      25%{
+        transform:
+          rotate(-10deg)
+          scale(1.10);
+      }
+
+      50%{
+        transform:
+          rotate(10deg)
+          scale(1.18);
+      }
+
+      75%{
+        transform:
+          rotate(-6deg)
+          scale(1.08);
+      }
     }
 
     /* =====================================================
@@ -481,15 +586,38 @@
       font-weight:900;
     }
 
+    /* =====================================================
+       TEAM CELL
+       ===================================================== */
+
     .team{
-      padding-left:4px;
-      padding-right:2px;
+      padding:
+        4px 4px 4px 5px;
 
       text-align:left;
 
       white-space:normal;
 
       overflow:visible;
+    }
+
+    .team-line{
+      display:flex;
+
+      align-items:center;
+
+      justify-content:
+        space-between;
+
+      gap:4px;
+
+      width:100%;
+    }
+
+    .team-name-wrap{
+      min-width:0;
+
+      flex:1 1 auto;
     }
 
     .team-name{
@@ -509,13 +637,15 @@
 
       color:var(--muted);
 
-      font-size:.55rem;
+      font-size:.52rem;
+
+      line-height:1;
 
       font-weight:700;
     }
 
     /* =====================================================
-       UNREAD ROW
+       НЕПРОЧИТАНИЙ РЯДОК
        ===================================================== */
 
     tr.meal-row-unread td{
@@ -536,24 +666,22 @@
     }
 
     /* =====================================================
-       ENVELOPE
+       ICON БІЛЯ ІМЕНІ
        ===================================================== */
 
-    .team-message-envelope{
-      position:relative;
+    .team-message-action{
+      flex:
+        0 0 28px;
+
+      width:28px;
+      height:28px;
 
       display:inline-flex;
 
       align-items:center;
+      justify-content:center;
 
-      gap:5px;
-
-      max-width:100%;
-
-      margin-top:5px;
-
-      padding:
-        4px 7px;
+      padding:0;
 
       border:
         1px solid
@@ -567,64 +695,47 @@
       color:
         var(--text-main);
 
-      font-size:.56rem;
+      font-size:.92rem;
 
       line-height:1;
-
-      font-weight:900;
 
       cursor:pointer;
-
-      white-space:nowrap;
-
-      transition:
-        transform .15s ease,
-        border-color .15s ease,
-        background .15s ease;
     }
 
-    .team-message-envelope:active{
+    .team-message-action:active{
       transform:
-        scale(.96);
-    }
-
-    .envelope-icon{
-      display:inline-block;
-
-      font-size:.90rem;
-
-      line-height:1;
+        scale(.94);
     }
 
     /* =====================================================
-       НОВИЙ КОНВЕРТ БЛИМАЄ
+       НОВЕ = КОНВЕРТ
        ===================================================== */
 
-    .team-message-envelope.has-unread{
+    .team-message-action.has-unread{
       border-color:
         var(--yellow);
 
       background:
-        rgba(250,204,21,.12);
+        rgba(250,204,21,.14);
 
       color:
         var(--yellow);
 
       animation:
-        envelopePulse
+        rowEnvelopePulse
         1.05s
         infinite;
     }
 
-    .team-message-envelope.has-unread
-    .envelope-icon{
+    .team-message-action.has-unread
+    .team-action-icon{
       animation:
-        envelopeShake
+        rowEnvelopeShake
         1.05s
         infinite;
     }
 
-    @keyframes envelopePulse{
+    @keyframes rowEnvelopePulse{
 
       0%{
         box-shadow:
@@ -634,7 +745,7 @@
 
       50%{
         box-shadow:
-          0 0 0 5px
+          0 0 0 4px
           rgba(250,204,21,.08);
       }
 
@@ -645,134 +756,82 @@
       }
     }
 
-    @keyframes envelopeShake{
+    @keyframes rowEnvelopeShake{
 
       0%,
       100%{
         transform:
-          rotate(0deg)
-          scale(1);
+          rotate(0deg);
       }
 
-      25%{
+      30%{
         transform:
-          rotate(-8deg)
-          scale(1.10);
+          rotate(-9deg)
+          scale(1.12);
       }
 
-      50%{
+      60%{
         transform:
-          rotate(8deg)
-          scale(1.16);
-      }
-
-      75%{
-        transform:
-          rotate(-5deg)
-          scale(1.08);
+          rotate(9deg)
+          scale(1.12);
       }
     }
 
     /* =====================================================
-       BADGE
+       ПРОЧИТАНО = ЗВІТ
        ===================================================== */
 
-    .team-message-badge{
-      display:inline-flex;
+    .team-message-action.is-report{
+      color:
+        var(--green);
 
-      min-width:17px;
-      height:17px;
+      border-color:
+        rgba(34,197,94,.35);
 
-      padding:
-        0 4px;
+      background:
+        rgba(34,197,94,.07);
+
+      animation:none;
+    }
+
+    .team-action-icon{
+      display:block;
+
+      line-height:1;
+    }
+
+    /* =====================================================
+       EXTRA — ТІЛЬКИ ВИВІД
+       ===================================================== */
+
+    .ira-extra-total{
+      display:flex;
 
       align-items:center;
       justify-content:center;
 
-      border-radius:999px;
-
-      background:
-        var(--red);
-
-      color:#ffffff;
-
-      font-size:.52rem;
-
-      font-weight:900;
-    }
-
-    /* =====================================================
-       ПРОЧИТАНО / ЗВІТ
-       ===================================================== */
-
-    .team-message-envelope.is-read{
-      border-color:
-        var(--border);
-
-      background:
-        var(--card-soft);
-
-      color:
-        var(--muted);
-
-      animation:none;
-    }
-
-    .team-message-envelope.is-read
-    .envelope-icon{
-      animation:none;
-    }
-
-    .team-message-total{
-      display:block;
-
-      margin-top:2px;
-
-      color:var(--muted);
-
-      font-size:.51rem;
-
-      line-height:1.2;
-
-      font-weight:700;
-    }
-
-    /* =====================================================
-       EXTRA
-       ===================================================== */
-
-    .ira-extra-input{
       width:100%;
 
-      min-width:0;
-
-      height:27px;
+      min-height:27px;
 
       padding:
-        1px 2px;
-
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:6px;
-
-      outline:none;
-
-      background:
-        var(--card-soft);
+        2px 1px;
 
       color:var(--text-main);
 
-      font-size:.62rem;
+      font-size:.60rem;
 
-      font-weight:800;
+      line-height:1.1;
+
+      font-weight:900;
 
       text-align:center;
+
+      white-space:nowrap;
     }
 
-    .ira-extra-input:focus{
-      border-color:var(--yellow);
+    .ira-extra-total.has-value{
+      color:var(--yellow);
     }
 
     .row-money{
@@ -840,7 +899,7 @@
       max-width:650px;
 
       max-height:
-        min(86vh,780px);
+        min(88vh,800px);
 
       overflow:hidden;
 
@@ -931,15 +990,6 @@
     }
 
     .messages-summary{
-      display:flex;
-
-      align-items:center;
-
-      justify-content:
-        space-between;
-
-      gap:8px;
-
       padding:
         8px 12px;
 
@@ -953,32 +1003,9 @@
         var(--border-soft);
     }
 
-    .report-btn{
-      padding:
-        5px 8px;
-
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:8px;
-
-      background:
-        var(--card-soft);
-
-      color:
-        var(--text-main);
-
-      font-size:.64rem;
-
-      font-weight:900;
-
-      cursor:pointer;
-    }
-
     #messageList{
       max-height:
-        calc(86vh - 125px);
+        calc(88vh - 115px);
 
       overflow-y:auto;
 
@@ -1090,42 +1117,138 @@
     }
 
     /* =====================================================
-       REPORT HEADER
+       ЗВІТ / ВАРТІСТЬ ДОДАТКОВОГО ЗАМОВЛЕННЯ
        ===================================================== */
 
-    .report-head{
-      margin-bottom:8px;
+    .report-block{
+      margin-top:10px;
 
-      padding:9px;
+      padding:10px;
+
+      border:
+        1px solid
+        rgba(34,197,94,.30);
+
+      border-radius:12px;
+
+      background:
+        rgba(34,197,94,.06);
+    }
+
+    .report-title{
+      color:
+        var(--text-main);
+
+      font-size:.82rem;
+
+      font-weight:900;
+    }
+
+    .report-help{
+      margin-top:4px;
+
+      color:
+        var(--muted);
+
+      font-size:.64rem;
+
+      line-height:1.35;
+    }
+
+    .report-cost-row{
+      display:flex;
+
+      align-items:center;
+
+      gap:7px;
+
+      margin-top:9px;
+    }
+
+    .report-cost-input{
+      min-width:0;
+
+      flex:1 1 auto;
+
+      height:38px;
+
+      padding:
+        0 10px;
 
       border:
         1px solid
         var(--border);
 
-      border-radius:10px;
+      border-radius:9px;
+
+      outline:none;
 
       background:
-        var(--card-soft);
+        var(--card);
+
+      color:
+        var(--yellow);
+
+      font-size:.90rem;
+
+      font-weight:900;
+
+      text-align:center;
     }
 
-    .report-head-title{
-      color:
-        var(--text-main);
+    .report-cost-input:focus{
+      border-color:
+        var(--yellow);
+    }
 
-      font-size:.80rem;
+    .report-save-btn{
+      flex:
+        0 0 auto;
+
+      height:38px;
+
+      padding:
+        0 12px;
+
+      border:
+        1px solid
+        rgba(34,197,94,.40);
+
+      border-radius:9px;
+
+      background:
+        rgba(34,197,94,.12);
+
+      color:
+        var(--green);
+
+      font-size:.72rem;
+
+      font-weight:900;
+
+      cursor:pointer;
+    }
+
+    .report-total{
+      margin-top:8px;
+
+      color:
+        var(--green);
+
+      font-size:.72rem;
 
       font-weight:900;
     }
 
-    .report-head-meta{
-      margin-top:3px;
+    .report-status{
+      margin-top:5px;
+
+      min-height:16px;
 
       color:
         var(--muted);
 
       font-size:.62rem;
-
-      line-height:1.3;
     }
 
     /* =====================================================
@@ -1133,6 +1256,16 @@
        ===================================================== */
 
     @media(max-width:370px){
+
+      .ira-head{
+        padding-right:98px;
+      }
+
+      .theme-btn,
+      .global-envelope-btn{
+        width:37px;
+        height:36px;
+      }
 
       table{
         font-size:.56rem;
@@ -1148,8 +1281,21 @@
         font-size:.63rem;
       }
 
-      .ira-extra-input{
-        font-size:.56rem;
+      .solo-label{
+        font-size:.49rem;
+      }
+
+      .team-message-action{
+        flex-basis:25px;
+
+        width:25px;
+        height:25px;
+
+        font-size:.80rem;
+      }
+
+      .ira-extra-total{
+        font-size:.54rem;
       }
 
       .row-money{
@@ -1160,15 +1306,8 @@
         font-size:.49rem;
       }
 
-      .team-message-envelope{
-        padding:
-          3px 5px;
-
-        font-size:.50rem;
-      }
-
-      .envelope-icon{
-        font-size:.80rem;
+      .report-cost-input{
+        font-size:.82rem;
       }
     }
 
@@ -1186,15 +1325,39 @@
 
   <section class="ira-head">
 
-    <button
-      id="themeToggle"
-      class="theme-btn"
-      type="button"
-      aria-label="Змінити тему"
-      title="Світла / темна тема"
-    >
-      ☀️
-    </button>
+    <div class="head-actions">
+
+      <!--
+        Один глобальний конверт.
+        JS покаже його тільки тоді,
+        коли десь є непрочитане повідомлення.
+      -->
+
+      <button
+        id="globalEnvelopeBtn"
+        class="global-envelope-btn"
+        type="button"
+        aria-label="Є нові повідомлення"
+        title="Є нові повідомлення"
+      >
+        <span class="global-envelope-icon">
+          ✉️
+        </span>
+      </button>
+
+
+      <button
+        id="themeToggle"
+        class="theme-btn"
+        type="button"
+        aria-label="Змінити тему"
+        title="Світла / темна тема"
+      >
+        ☀️
+      </button>
+
+    </div>
+
 
     <h1 class="ira-title">
       🍽 Харчування
@@ -1225,7 +1388,7 @@
 
 
   <!-- ===================================================
-       ЦІНА + ЧАС ДОСТАВКИ
+       ЦІНА + ДОСТАВКА
        =================================================== -->
 
   <section
@@ -1240,7 +1403,10 @@
 
     <div class="price-days">
 
-      <!-- ДОБА 1 -->
+
+      <!-- =================================================
+           ДОБА 1
+           ================================================= -->
 
       <div class="price-day">
 
@@ -1249,6 +1415,7 @@
         </div>
 
         <div class="price-grid">
+
 
           <div class="price-field">
 
@@ -1341,7 +1508,9 @@
       </div>
 
 
-      <!-- ДОБА 2 -->
+      <!-- =================================================
+           ДОБА 2
+           ================================================= -->
 
       <div class="price-day">
 
@@ -1350,6 +1519,7 @@
         </div>
 
         <div class="price-grid">
+
 
           <div class="price-field">
 
@@ -1478,6 +1648,7 @@
 
     </div>
 
+
     <div class="table-wrap">
 
       <table>
@@ -1502,23 +1673,42 @@
 
         </colgroup>
 
+
         <thead>
 
           <tr>
 
-            <th>С</th>
+            <th>
+              С
+            </th>
 
             <th>
               Учасник
             </th>
 
-            <th>1О</th>
-            <th>1В</th>
-            <th>1С</th>
+            <th>
+              1О
+            </th>
 
-            <th>2О</th>
-            <th>2В</th>
-            <th>2С</th>
+            <th>
+              1В
+            </th>
+
+            <th>
+              1С
+            </th>
+
+            <th>
+              2О
+            </th>
+
+            <th>
+              2В
+            </th>
+
+            <th>
+              2С
+            </th>
 
             <th>
               Доп.
@@ -1531,6 +1721,7 @@
           </tr>
 
         </thead>
+
 
         <tbody id="mealBody">
 
@@ -1547,6 +1738,7 @@
 
         </tbody>
 
+
         <tfoot id="mealFoot">
         </tfoot>
 
@@ -1560,7 +1752,7 @@
 
 
 <!-- =====================================================
-     ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ / SOLO
+     ПОВІДОМЛЕННЯ / ЗВІТ КОНКРЕТНОЇ КОМАНДИ
      ===================================================== -->
 
 <div
@@ -1589,6 +1781,7 @@
 
       </div>
 
+
       <button
         id="messagesClose"
         class="messages-close"
@@ -1600,20 +1793,11 @@
     </div>
 
 
-    <div class="messages-summary">
-
-      <span id="messagesSummary">
-        Повідомлень немає
-      </span>
-
-      <button
-        id="messagesReportBtn"
-        class="report-btn"
-        type="button"
-      >
-        📋 Звіт
-      </button>
-
+    <div
+      id="messagesSummary"
+      class="messages-summary"
+    >
+      Повідомлень немає
     </div>
 
 
@@ -1656,7 +1840,7 @@
      ===================================================== -->
 
 <script
-  src="assets/js/meal_ira.js?v=20260918-9"
+  src="assets/js/meal_ira.js?v=20260918-10"
 ></script>
 
 

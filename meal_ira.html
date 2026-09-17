@@ -179,7 +179,7 @@
     }
 
     /* =====================================================
-       THEME BUTTON
+       THEME
        ===================================================== */
 
     .theme-btn{
@@ -337,7 +337,7 @@
     }
 
     /* =====================================================
-       DELIVERY TIME
+       DELIVERY
        ===================================================== */
 
     .delivery-time{
@@ -434,11 +434,9 @@
     table{
       width:100%;
 
-      border-collapse:
-        collapse;
+      border-collapse:collapse;
 
-      table-layout:
-        fixed;
+      table-layout:fixed;
 
       font-size:.62rem;
     }
@@ -473,27 +471,6 @@
     td{
       background:
         var(--card);
-    }
-
-    /* =====================================================
-       НОВЕ ПОВІДОМЛЕННЯ = ПІДСВІЧУЄМО ВЕСЬ РЯДОК
-       ===================================================== */
-
-    tr.meal-row-unread td{
-      background:
-        rgba(34,197,94,.10);
-    }
-
-    body.light-mode
-    tr.meal-row-unread td{
-      background:
-        rgba(34,197,94,.12);
-    }
-
-    tr.meal-row-unread td:first-child{
-      box-shadow:
-        inset 3px 0 0
-        var(--green);
     }
 
     .sector{
@@ -538,54 +515,51 @@
     }
 
     /* =====================================================
-       ПОТОЧНЕ ПОБАЖАННЯ
+       UNREAD ROW
        ===================================================== */
 
-    .note{
-      margin-top:4px;
+    tr.meal-row-unread td{
+      background:
+        rgba(250,204,21,.08);
+    }
 
-      padding-top:3px;
+    body.light-mode
+    tr.meal-row-unread td{
+      background:
+        rgba(250,204,21,.10);
+    }
 
-      border-top:
-        1px dashed
-        rgba(183,121,0,.30);
-
-      color:var(--yellow);
-
-      font-size:.57rem;
-
-      line-height:1.2;
-
-      font-weight:800;
-
-      white-space:normal;
-
-      overflow-wrap:anywhere;
+    tr.meal-row-unread td:first-child{
+      box-shadow:
+        inset 3px 0 0
+        var(--yellow);
     }
 
     /* =====================================================
-       ПОВІДОМЛЕННЯ У ПОЛІ КОМАНДИ
+       ENVELOPE
        ===================================================== */
 
-    .team-messages-btn{
+    .team-message-envelope{
+      position:relative;
+
       display:inline-flex;
 
       align-items:center;
 
-      gap:4px;
+      gap:5px;
 
       max-width:100%;
 
       margin-top:5px;
 
       padding:
-        4px 6px;
+        4px 7px;
 
       border:
         1px solid
         var(--border);
 
-      border-radius:7px;
+      border-radius:8px;
 
       background:
         var(--card-soft);
@@ -602,24 +576,112 @@
       cursor:pointer;
 
       white-space:nowrap;
+
+      transition:
+        transform .15s ease,
+        border-color .15s ease,
+        background .15s ease;
     }
 
-    .team-messages-btn.has-unread{
+    .team-message-envelope:active{
+      transform:
+        scale(.96);
+    }
+
+    .envelope-icon{
+      display:inline-block;
+
+      font-size:.90rem;
+
+      line-height:1;
+    }
+
+    /* =====================================================
+       НОВИЙ КОНВЕРТ БЛИМАЄ
+       ===================================================== */
+
+    .team-message-envelope.has-unread{
       border-color:
-        var(--green);
+        var(--yellow);
 
       background:
-        rgba(34,197,94,.14);
+        rgba(250,204,21,.12);
 
       color:
-        var(--green);
+        var(--yellow);
+
+      animation:
+        envelopePulse
+        1.05s
+        infinite;
     }
 
-    .team-messages-badge{
+    .team-message-envelope.has-unread
+    .envelope-icon{
+      animation:
+        envelopeShake
+        1.05s
+        infinite;
+    }
+
+    @keyframes envelopePulse{
+
+      0%{
+        box-shadow:
+          0 0 0 0
+          rgba(250,204,21,.45);
+      }
+
+      50%{
+        box-shadow:
+          0 0 0 5px
+          rgba(250,204,21,.08);
+      }
+
+      100%{
+        box-shadow:
+          0 0 0 0
+          rgba(250,204,21,0);
+      }
+    }
+
+    @keyframes envelopeShake{
+
+      0%,
+      100%{
+        transform:
+          rotate(0deg)
+          scale(1);
+      }
+
+      25%{
+        transform:
+          rotate(-8deg)
+          scale(1.10);
+      }
+
+      50%{
+        transform:
+          rotate(8deg)
+          scale(1.16);
+      }
+
+      75%{
+        transform:
+          rotate(-5deg)
+          scale(1.08);
+      }
+    }
+
+    /* =====================================================
+       BADGE
+       ===================================================== */
+
+    .team-message-badge{
       display:inline-flex;
 
-      min-width:16px;
-      height:16px;
+      min-width:17px;
+      height:17px;
 
       padding:
         0 4px;
@@ -639,11 +701,38 @@
       font-weight:900;
     }
 
-    .team-message-total{
+    /* =====================================================
+       ПРОЧИТАНО / ЗВІТ
+       ===================================================== */
+
+    .team-message-envelope.is-read{
+      border-color:
+        var(--border);
+
+      background:
+        var(--card-soft);
+
       color:
         var(--muted);
 
-      font-size:.52rem;
+      animation:none;
+    }
+
+    .team-message-envelope.is-read
+    .envelope-icon{
+      animation:none;
+    }
+
+    .team-message-total{
+      display:block;
+
+      margin-top:2px;
+
+      color:var(--muted);
+
+      font-size:.51rem;
+
+      line-height:1.2;
 
       font-weight:700;
     }
@@ -717,7 +806,7 @@
     }
 
     /* =====================================================
-       ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ
+       MESSAGE MODAL
        ===================================================== */
 
     .messages-modal{
@@ -736,7 +825,7 @@
       padding:8px;
 
       background:
-        rgba(2,6,23,.65);
+        rgba(2,6,23,.68);
 
       backdrop-filter:
         blur(3px);
@@ -751,7 +840,7 @@
       max-width:650px;
 
       max-height:
-        min(84vh,760px);
+        min(86vh,780px);
 
       overflow:hidden;
 
@@ -770,7 +859,7 @@
 
       box-shadow:
         0 20px 60px
-        rgba(0,0,0,.35);
+        rgba(0,0,0,.38);
     }
 
     .messages-head{
@@ -798,7 +887,7 @@
       color:
         var(--text-main);
 
-      font-size:.95rem;
+      font-size:.96rem;
 
       line-height:1.15;
 
@@ -889,7 +978,7 @@
 
     #messageList{
       max-height:
-        calc(84vh - 125px);
+        calc(86vh - 125px);
 
       overflow-y:auto;
 
@@ -907,6 +996,10 @@
 
       font-size:.82rem;
     }
+
+    /* =====================================================
+       MESSAGE CARD
+       ===================================================== */
 
     .message-item{
       margin-bottom:7px;
@@ -926,10 +1019,10 @@
     .message-item.unread{
       border:
         2px solid
-        var(--green);
+        var(--yellow);
 
       background:
-        rgba(34,197,94,.08);
+        rgba(250,204,21,.08);
     }
 
     .message-top{
@@ -947,7 +1040,7 @@
       color:
         var(--yellow);
 
-      font-size:.75rem;
+      font-size:.78rem;
 
       font-weight:900;
     }
@@ -963,7 +1056,7 @@
       border-radius:999px;
 
       background:
-        var(--green);
+        var(--red);
 
       color:#ffffff;
 
@@ -978,6 +1071,8 @@
 
       font-size:.61rem;
 
+      line-height:1.25;
+
       text-align:right;
     }
 
@@ -987,11 +1082,50 @@
       color:
         var(--text-main);
 
-      font-size:.80rem;
+      font-size:.82rem;
 
-      line-height:1.35;
+      line-height:1.4;
 
       font-weight:700;
+    }
+
+    /* =====================================================
+       REPORT HEADER
+       ===================================================== */
+
+    .report-head{
+      margin-bottom:8px;
+
+      padding:9px;
+
+      border:
+        1px solid
+        var(--border);
+
+      border-radius:10px;
+
+      background:
+        var(--card-soft);
+    }
+
+    .report-head-title{
+      color:
+        var(--text-main);
+
+      font-size:.80rem;
+
+      font-weight:900;
+    }
+
+    .report-head-meta{
+      margin-top:3px;
+
+      color:
+        var(--muted);
+
+      font-size:.62rem;
+
+      line-height:1.3;
     }
 
     /* =====================================================
@@ -1014,10 +1148,6 @@
         font-size:.63rem;
       }
 
-      .note{
-        font-size:.53rem;
-      }
-
       .ira-extra-input{
         font-size:.56rem;
       }
@@ -1030,11 +1160,15 @@
         font-size:.49rem;
       }
 
-      .team-messages-btn{
+      .team-message-envelope{
         padding:
-          3px 4px;
+          3px 5px;
 
-        font-size:.51rem;
+        font-size:.50rem;
+      }
+
+      .envelope-icon{
+        font-size:.80rem;
       }
     }
 
@@ -1091,7 +1225,7 @@
 
 
   <!-- ===================================================
-       ЦІНИ + ДОСТАВКА
+       ЦІНА + ЧАС ДОСТАВКИ
        =================================================== -->
 
   <section
@@ -1426,7 +1560,7 @@
 
 
 <!-- =====================================================
-     ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ / УЧАСНИКА
+     ПОВІДОМЛЕННЯ КОНКРЕТНОЇ КОМАНДИ / SOLO
      ===================================================== -->
 
 <div
@@ -1465,6 +1599,7 @@
 
     </div>
 
+
     <div class="messages-summary">
 
       <span id="messagesSummary">
@@ -1480,6 +1615,7 @@
       </button>
 
     </div>
+
 
     <div id="messageList">
 
@@ -1516,11 +1652,11 @@
 
 
 <!-- =====================================================
-     IRA JS
+     IRA
      ===================================================== -->
 
 <script
-  src="assets/js/meal_ira.js?v=20260917-8"
+  src="assets/js/meal_ira.js?v=20260918-9"
 ></script>
 
 
@@ -1567,6 +1703,7 @@
         light
           ? "Увімкнути темну тему"
           : "Увімкнути світлу тему";
+
     }
 
   }

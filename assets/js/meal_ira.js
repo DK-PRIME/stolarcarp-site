@@ -2,85 +2,77 @@
 // STOLAR CARP • Пані Іра • Харчування
 // READ ONLY
 //
-// ✅ окрема сторінка
-// ✅ тільки акаунт пані Іри
+// ✅ TEAM -> назва команди + сектор
+// ✅ SOLO -> ПІБ учасника + сектор
+// ✅ SOLO шукається по UID
+// ✅ TEAM шукається по teamId
+// ✅ сектор оновлюється LIVE з жеребкування
+// ✅ підтримка:
+//    stageResults/{comp__stage}.teams
+//    stageResults/{comp__stage}/teams/{id}
+// ✅ побажання видно під учасником / командою
 // ✅ заявки оновлюються LIVE
-// ✅ сектор береться з актуального жеребу
-// ✅ побажання видно під командою
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260917"
+    "✅ meal_ira.js LOADED v20260917-solo-sector-v2"
   );
 
   const FOOD_OWNER_UID =
     "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
 
-  const $ =
-    (id) =>
-      document.getElementById(
-        id
+  const $ = id =>
+    document.getElementById(id);
+
+  const norm = value =>
+    String(value ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const clean = value =>
+    norm(value).toLowerCase();
+
+  const esc = value =>
+    String(value ?? "")
+      .replace(
+        /[&<>"']/g,
+        char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char])
       );
 
-  const norm =
-    (v) =>
-      String(v ?? "")
-        .replace(/\s+/g, " ")
-        .trim();
+  let db = null;
+  let auth = null;
 
-  const clean =
-    (v) =>
-      norm(v)
-        .toLowerCase();
+  let competitionId = "";
+  let stageId = "";
 
-  const esc =
-    (s) =>
-      String(s ?? "")
-        .replace(
-          /[&<>"']/g,
-          (m) => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-          }[m])
-        );
+  let orders = [];
 
-  let db =
-    null;
-
-  let auth =
-    null;
-
-  let competitionId =
-    "";
-
-  let stageId =
-    "";
-
-  let orders =
-    [];
+  let parentDrawRows = [];
+  let subDrawRows = [];
 
   let drawMap = {
-    byId:
-      new Map(),
-
-    byName:
-      new Map()
+    byId: new Map(),
+    byName: new Map()
   };
 
-  let unsubOrders =
-    null;
+  let unsubOrders = null;
+  let unsubDrawParent = null;
+  let unsubDrawTeams = null;
 
-  let unsubDraw =
-    null;
+  // =========================================================
+  // BASIC
+  // =========================================================
 
-  function num(v) {
-    const n =
-      Number(v);
+  function num(value) {
+    const n = Number(value);
 
     return (
       Number.isFinite(n) &&
@@ -90,14 +82,14 @@
       : 0;
   }
 
-  function totalOrder(o) {
+  function totalOrder(order) {
     return (
-      num(o?.day1?.lunch) +
-      num(o?.day1?.dinner) +
-      num(o?.day1?.breakfast) +
-      num(o?.day2?.lunch) +
-      num(o?.day2?.dinner) +
-      num(o?.day2?.breakfast)
+      num(order?.day1?.lunch) +
+      num(order?.day1?.dinner) +
+      num(order?.day1?.breakfast) +
+      num(order?.day2?.lunch) +
+      num(order?.day2?.dinner) +
+      num(order?.day2?.breakfast)
     );
   }
 
@@ -111,44 +103,88 @@
     );
   }
 
-  function parseDraw(
-    team
-  ) {
+  function isJudges(row) {
+    return (
+      row?.type === "judges" ||
+      row?.entityId === "__judges__"
+    );
+  }
+
+  function isSolo(row) {
+    return (
+      clean(row?.type) === "solo" ||
+      clean(row?.entryType) === "solo"
+    );
+  }
+
+  // =========================================================
+  // DISPLAY NAME
+  // =========================================================
+
+  function rowName(row) {
+    if (isJudges(row)) {
+      return "👨‍⚖️ СУДДІ";
+    }
+
+    if (isSolo(row)) {
+      return norm(
+        row?.participantName ||
+        row?.displayName ||
+        row?.name ||
+        row?.teamName ||
+        "—"
+      );
+    }
+
+    return norm(
+      row?.teamName ||
+      row?.team ||
+      row?.displayName ||
+      row?.participantName ||
+      "—"
+    );
+  }
+
+  // =========================================================
+  // DRAW
+  // =========================================================
+
+  function parseDraw(item) {
     const direct =
       norm(
-        team?.drawKey
+        item?.drawKey
       ).toUpperCase();
 
     if (direct) {
-      const m =
+      const match =
         direct.match(
-          /^([ABC])(\d+)$/i
+          /^([ABC])\s*(\d+)$/i
         );
 
-      if (m) {
+      if (match) {
         return {
           zone:
-            m[1].toUpperCase(),
+            match[1].toUpperCase(),
 
           sector:
-            m[2],
+            match[2],
 
           drawKey:
-            `${m[1].toUpperCase()}${m[2]}`
+            `${match[1].toUpperCase()}${match[2]}`
         };
       }
     }
 
     const zone =
       norm(
-        team?.drawZone ||
-        team?.zone
+        item?.drawZone ||
+        item?.zone
       ).toUpperCase();
 
     const sectorRaw =
       norm(
-        team?.drawSector ||
-        team?.sector
+        item?.drawSector ||
+        item?.sector
       );
 
     if (
@@ -157,13 +193,14 @@
     ) {
       const sector =
         sectorRaw.replace(
-          /^[ABC]/i,
+          /^[ABC]\s*/i,
           ""
         );
 
       return {
         zone,
         sector,
+
         drawKey:
           `${zone}${sector}`
       };
@@ -176,119 +213,237 @@
     };
   }
 
-  function buildDrawMap(
-    data
+  function addId(
+    map,
+    value,
+    row
   ) {
-    const teams =
-      Array.isArray(
-        data?.teams
-      )
-        ? data.teams
-        : [];
+    const key =
+      norm(value);
 
+    if (key) {
+      map.set(
+        key,
+        row
+      );
+    }
+  }
+
+  function addName(
+    map,
+    value,
+    row
+  ) {
+    const key =
+      clean(value);
+
+    if (key) {
+      map.set(
+        key,
+        row
+      );
+    }
+  }
+
+  function rebuildDrawMap() {
     const byId =
       new Map();
 
     const byName =
       new Map();
 
-    teams.forEach(
-      (team) => {
-        const draw =
-          parseDraw(team);
+    const allRows = [
+      ...parentDrawRows,
+      ...subDrawRows
+    ];
 
-        if (
-          !draw.drawKey
-        ) {
-          return;
-        }
+    allRows.forEach(item => {
+      const draw =
+        parseDraw(item);
 
-        const item = {
-          ...draw,
-
-          teamId:
-            norm(
-              team.teamId ||
-              team.entityId
-            ),
-
-          teamName:
-            norm(
-              team.teamName ||
-              team.team ||
-              team.displayName
-            )
-        };
-
-        if (
-          item.teamId
-        ) {
-          byId.set(
-            item.teamId,
-            item
-          );
-        }
-
-        if (
-          item.teamName
-        ) {
-          byName.set(
-            clean(
-              item.teamName
-            ),
-            item
-          );
-        }
+      if (!draw.drawKey) {
+        return;
       }
-    );
 
-    return {
+      const row = {
+        ...draw,
+
+        teamId:
+          norm(
+            item.teamId
+          ),
+
+        uid:
+          norm(
+            item.uid ||
+            item.participantUid
+          ),
+
+        entityId:
+          norm(
+            item.entityId
+          ),
+
+        teamName:
+          norm(
+            item.teamName ||
+            item.team
+          ),
+
+        participantName:
+          norm(
+            item.participantName ||
+            item.displayName ||
+            item.name
+          )
+      };
+
+      /*
+       * TEAM
+       */
+      addId(
+        byId,
+        item.teamId,
+        row
+      );
+
+      /*
+       * SOLO / participant
+       */
+      addId(
+        byId,
+        item.uid,
+        row
+      );
+
+      addId(
+        byId,
+        item.participantUid,
+        row
+      );
+
+      addId(
+        byId,
+        item.entityId,
+        row
+      );
+
+      /*
+       * Fallback по назвах
+       */
+      addName(
+        byName,
+        item.participantName,
+        row
+      );
+
+      addName(
+        byName,
+        item.displayName,
+        row
+      );
+
+      addName(
+        byName,
+        item.teamName,
+        row
+      );
+
+      addName(
+        byName,
+        item.team,
+        row
+      );
+
+      addName(
+        byName,
+        item.name,
+        row
+      );
+    });
+
+    drawMap = {
       byId,
       byName
     };
+
+    render();
   }
 
-  function withCurrentDraw(
-    order
-  ) {
-    let draw =
-      null;
-
-    const teamId =
-      norm(
-        order.teamId
-      );
-
-    const teamName =
-      clean(
-        order.teamName
-      );
-
-    if (
-      teamId &&
-      drawMap.byId.has(
-        teamId
-      )
-    ) {
-      draw =
-        drawMap.byId.get(
-          teamId
-        );
+  function withCurrentDraw(order) {
+    if (isJudges(order)) {
+      return order;
     }
 
-    if (
-      !draw &&
-      teamName &&
-      drawMap.byName.has(
-        teamName
-      )
+    let draw = null;
+
+    /*
+     * SOLO:
+     * головний ключ — UID / entityId.
+     *
+     * TEAM:
+     * головний ключ — teamId.
+     */
+    const idCandidates = [
+      order?.entityId,
+      order?.participantUid,
+      order?.uid,
+      order?.teamId
+    ];
+
+    for (
+      const candidate of
+      idCandidates
     ) {
-      draw =
-        drawMap.byName.get(
-          teamName
-        );
+      const key =
+        norm(candidate);
+
+      if (
+        key &&
+        drawMap.byId.has(key)
+      ) {
+        draw =
+          drawMap.byId.get(key);
+
+        break;
+      }
     }
 
+    /*
+     * Fallback по ПІБ / назві.
+     */
+    if (!draw) {
+      const nameCandidates = [
+        order?.participantName,
+        order?.displayName,
+        order?.teamName,
+        order?.team
+      ];
+
+      for (
+        const candidate of
+        nameCandidates
+      ) {
+        const key =
+          clean(candidate);
+
+        if (
+          key &&
+          drawMap.byName.has(key)
+        ) {
+          draw =
+            drawMap.byName.get(key);
+
+          break;
+        }
+      }
+    }
+
+    /*
+     * Якщо LIVE-жереб ще не знайшли,
+     * залишаємо сектор, який уже
+     * був записаний у mealOrders.
+     */
     if (!draw) {
       return order;
     }
@@ -302,66 +457,84 @@
       sector:
         draw.sector,
 
+      drawZone:
+        draw.zone,
+
+      drawSector:
+        draw.sector,
+
       drawKey:
         draw.drawKey
     };
   }
 
-  function sortOrders(
-    a,
-    b
-  ) {
-    const zOrder = {
+  // =========================================================
+  // SORT
+  // =========================================================
+
+  function sortOrders(a, b) {
+    if (
+      isJudges(a) &&
+      !isJudges(b)
+    ) {
+      return 1;
+    }
+
+    if (
+      isJudges(b) &&
+      !isJudges(a)
+    ) {
+      return -1;
+    }
+
+    const zoneOrder = {
       A: 1,
       B: 2,
       C: 3
     };
 
     const za =
-      zOrder[
-        norm(
-          a.zone
-        ).toUpperCase()
+      zoneOrder[
+        norm(a.zone)
+          .toUpperCase()
       ] || 9;
 
     const zb =
-      zOrder[
-        norm(
-          b.zone
-        ).toUpperCase()
+      zoneOrder[
+        norm(b.zone)
+          .toUpperCase()
       ] || 9;
 
-    if (
-      za !== zb
-    ) {
+    if (za !== zb) {
       return za - zb;
     }
 
     const sa =
       Number(
-        a.sector || 999
+        a.sector ||
+        999
       );
 
     const sb =
       Number(
-        b.sector || 999
+        b.sector ||
+        999
       );
 
-    if (
-      sa !== sb
-    ) {
+    if (sa !== sb) {
       return sa - sb;
     }
 
-    return norm(
-      a.teamName
-    ).localeCompare(
-      norm(
-        b.teamName
-      ),
-      "uk"
-    );
+    return rowName(a)
+      .localeCompare(
+        rowName(b),
+        "uk"
+      );
   }
+
+  // =========================================================
+  // STATE
+  // =========================================================
 
   function setState(
     text,
@@ -380,6 +553,10 @@
     el.className =
       `state ${type}`.trim();
   }
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   function render() {
     const tbody =
@@ -400,11 +577,10 @@
 
     const rows =
       orders
-        .filter(
-          (o) =>
-            o.status ===
-              "submitted" &&
-            totalOrder(o) > 0
+        .filter(order =>
+          order.status ===
+            "submitted" &&
+          totalOrder(order) > 0
         )
         .map(
           withCurrentDraw
@@ -420,9 +596,7 @@
         );
     }
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       tbody.innerHTML = `
         <tr>
           <td
@@ -445,121 +619,124 @@
       d1l: 0,
       d1d: 0,
       d1b: 0,
+
       d2l: 0,
       d2d: 0,
       d2b: 0
     };
 
     tbody.innerHTML =
-      rows.map(
-        (r) => {
-          const d1 =
-            r.day1 || {};
+      rows.map(row => {
+        const d1 =
+          row.day1 || {};
 
-          const d2 =
-            r.day2 || {};
+        const d2 =
+          row.day2 || {};
 
-          const d1l =
-            num(
-              d1.lunch
-            );
+        const d1l =
+          num(d1.lunch);
 
-          const d1d =
-            num(
-              d1.dinner
-            );
+        const d1d =
+          num(d1.dinner);
 
-          const d1b =
-            num(
-              d1.breakfast
-            );
+        const d1b =
+          num(d1.breakfast);
 
-          const d2l =
-            num(
-              d2.lunch
-            );
+        const d2l =
+          num(d2.lunch);
 
-          const d2d =
-            num(
-              d2.dinner
-            );
+        const d2d =
+          num(d2.dinner);
 
-          const d2b =
-            num(
-              d2.breakfast
-            );
+        const d2b =
+          num(d2.breakfast);
 
-          totals.d1l +=
-            d1l;
+        totals.d1l += d1l;
+        totals.d1d += d1d;
+        totals.d1b += d1b;
 
-          totals.d1d +=
-            d1d;
+        totals.d2l += d2l;
+        totals.d2d += d2d;
+        totals.d2b += d2b;
 
-          totals.d1b +=
-            d1b;
+        const sector =
+          isJudges(row)
+            ? "—"
+            : (
+                row.drawKey ||
+                (
+                  (
+                    row.zone ||
+                    ""
+                  ) +
+                  (
+                    row.sector ||
+                    ""
+                  )
+                ) ||
+                "—"
+              );
 
-          totals.d2l +=
-            d2l;
+        const note =
+          norm(
+            row.note
+          );
 
-          totals.d2d +=
-            d2d;
+        const name =
+          rowName(row);
 
-          totals.d2b +=
-            d2b;
+        return `
+          <tr>
 
-          const sector =
-            r.drawKey ||
-            (
-              (r.zone || "") +
-              (r.sector || "")
-            ) ||
-            "—";
+            <td class="sector">
+              ${esc(sector)}
+            </td>
 
-          const note =
-            norm(
-              r.note
-            );
+            <td class="team">
 
-          return `
-            <tr>
+              <div class="team-name">
+                ${esc(name)}
+              </div>
 
-              <td class="sector">
-                ${esc(sector)}
-              </td>
+              ${
+                isSolo(row)
+                  ? `
+                    <div
+                      style="
+                        margin-top:2px;
+                        font-size:.72em;
+                        opacity:.6;
+                      "
+                    >
+                      SOLO
+                    </div>
+                  `
+                  : ""
+              }
 
-              <td class="team">
+              ${
+                note
+                  ? `
+                    <div class="note">
+                      ⚠ ${esc(note)}
+                    </div>
+                  `
+                  : ""
+              }
 
-                <div class="team-name">
-                  ${esc(
-                    r.teamName ||
-                    "—"
-                  )}
-                </div>
+            </td>
 
-                ${
-                  note
-                    ? `
-                      <div class="note">
-                        ⚠ ${esc(note)}
-                      </div>
-                    `
-                    : ""
-                }
+            <td>${d1l || ""}</td>
+            <td>${d1d || ""}</td>
+            <td>${d1b || ""}</td>
 
-              </td>
+            <td>${d2l || ""}</td>
+            <td>${d2d || ""}</td>
+            <td>${d2b || ""}</td>
 
-              <td>${d1l || ""}</td>
-              <td>${d1d || ""}</td>
-              <td>${d1b || ""}</td>
-
-              <td>${d2l || ""}</td>
-              <td>${d2d || ""}</td>
-              <td>${d2b || ""}</td>
-
-            </tr>
-          `;
-        }
-      ).join("");
+          </tr>
+        `;
+      }).join("");
 
     tfoot.innerHTML = `
       <tr>
@@ -568,33 +745,21 @@
           Разом
         </td>
 
-        <td>
-          ${totals.d1l}
-        </td>
+        <td>${totals.d1l}</td>
+        <td>${totals.d1d}</td>
+        <td>${totals.d1b}</td>
 
-        <td>
-          ${totals.d1d}
-        </td>
-
-        <td>
-          ${totals.d1b}
-        </td>
-
-        <td>
-          ${totals.d2l}
-        </td>
-
-        <td>
-          ${totals.d2d}
-        </td>
-
-        <td>
-          ${totals.d2b}
-        </td>
+        <td>${totals.d2l}</td>
+        <td>${totals.d2d}</td>
+        <td>${totals.d2b}</td>
 
       </tr>
     `;
   }
+
+  // =========================================================
+  // TITLE
+  // =========================================================
 
   async function loadTitle() {
     try {
@@ -608,34 +773,45 @@
           )
           .get();
 
-      const c =
+      const competition =
         snap.exists
-          ? (snap.data() || {})
+          ? (
+              snap.data() ||
+              {}
+            )
           : {};
 
       const title =
         norm(
-          c.name ||
+          competition.name ||
+          competition.title ||
           competitionId
         );
 
       const events =
-        Array.isArray(c.events)
-          ? c.events
+        Array.isArray(
+          competition.events
+        )
+          ? competition.events
           : [];
 
-      const ev =
+      const event =
         events.find(
-          (x, i) =>
+          (item, index) =>
             norm(
-              x?.key ||
-              `stage-${i + 1}`
-            ) === stageId
+              item?.key ||
+              item?.stageId ||
+              item?.id ||
+              `stage-${index + 1}`
+            ) ===
+            stageId
         );
 
       const stageTitle =
         norm(
-          ev?.name ||
+          event?.title ||
+          event?.name ||
+          event?.label ||
           stageId
         );
 
@@ -655,16 +831,20 @@
           stageTitle;
       }
 
-    } catch (e) {
+    } catch (error) {
       console.warn(
-        "[meal_ira] title error:",
-        e
+        "[meal_ira] title:",
+        error
       );
     }
   }
 
-  function startRealtime() {
-    const drawRef =
+  // =========================================================
+  // REALTIME DRAW
+  // =========================================================
+
+  function startDrawRealtime() {
+    const resultRef =
       db
         .collection(
           "stageResults"
@@ -676,30 +856,82 @@
           )
         );
 
-    unsubDraw =
-      drawRef.onSnapshot(
-        (snap) => {
-          drawMap =
-            buildDrawMap(
-              snap.exists
-                ? (
-                    snap.data() ||
-                    {}
-                  )
-                : {}
-            );
+    /*
+     * Старий / сумісний формат:
+     * stageResults/{id}.teams[]
+     */
+    unsubDrawParent =
+      resultRef.onSnapshot(
+        snap => {
+          const data =
+            snap.exists
+              ? (
+                  snap.data() ||
+                  {}
+                )
+              : {};
 
-          render();
+          parentDrawRows =
+            Array.isArray(
+              data.teams
+            )
+              ? data.teams
+              : [];
+
+          rebuildDrawMap();
         },
-        (e) => {
+        error => {
           console.warn(
-            "[meal_ira] draw snapshot error:",
-            e
+            "[meal_ira] parent draw:",
+            error
           );
         }
       );
 
-    const q =
+    /*
+     * Канонічний формат:
+     * stageResults/{id}/teams/{entity}
+     */
+    unsubDrawTeams =
+      resultRef
+        .collection(
+          "teams"
+        )
+        .onSnapshot(
+          snap => {
+            subDrawRows =
+              snap.docs.map(
+                doc => ({
+                  id:
+                    doc.id,
+
+                  entityId:
+                    doc.id,
+
+                  ...(
+                    doc.data() ||
+                    {}
+                  )
+                })
+              );
+
+            rebuildDrawMap();
+          },
+          error => {
+            console.warn(
+              "[meal_ira] teams draw:",
+              error
+            );
+          }
+        );
+  }
+
+  // =========================================================
+  // REALTIME ORDERS
+  // =========================================================
+
+  function startOrdersRealtime() {
+    unsubOrders =
       db
         .collection(
           "mealOrders"
@@ -713,61 +945,68 @@
           "stageId",
           "==",
           stageId
-        );
+        )
+        .onSnapshot(
+          snap => {
+            orders =
+              snap.docs.map(
+                doc => ({
+                  id:
+                    doc.id,
 
-    unsubOrders =
-      q.onSnapshot(
-        (snap) => {
-          orders =
-            snap.docs.map(
-              (doc) => ({
-                id:
-                  doc.id,
+                  ...(
+                    doc.data() ||
+                    {}
+                  )
+                })
+              );
 
-                ...(
-                  doc.data() ||
-                  {}
-                )
-              })
+            render();
+
+            setState(
+              "Оновлюється автоматично",
+              "ok"
+            );
+          },
+          error => {
+            console.error(
+              "[meal_ira] orders:",
+              error
             );
 
-          render();
-
-          setState(
-            "Оновлюється автоматично",
-            "ok"
-          );
-        },
-        (e) => {
-          console.error(
-            "[meal_ira] orders snapshot error:",
-            e
-          );
-
-          setState(
-            "Немає доступу до списку харчування.",
-            "err"
-          );
-        }
-      );
+            setState(
+              "Немає доступу до списку харчування.",
+              "err"
+            );
+          }
+        );
   }
 
+  function startRealtime() {
+    startDrawRealtime();
+    startOrdersRealtime();
+  }
+
+  // =========================================================
+  // BOOT
+  // =========================================================
+
   async function boot() {
-    const qs =
+    const params =
       new URLSearchParams(
         location.search
       );
 
     competitionId =
       norm(
-        qs.get(
+        params.get(
           "competitionId"
         )
       );
 
     stageId =
       norm(
-        qs.get(
+        params.get(
           "stageId"
         )
       );
@@ -785,9 +1024,7 @@
     }
 
     try {
-      if (
-        window.scReady
-      ) {
+      if (window.scReady) {
         await window.scReady;
       }
 
@@ -808,7 +1045,7 @@
 
       const user =
         await new Promise(
-          (resolve) => {
+          resolve => {
             if (
               auth.currentUser
             ) {
@@ -821,11 +1058,12 @@
 
             const unsub =
               auth.onAuthStateChanged(
-                (u) => {
+                current => {
                   unsub();
 
                   resolve(
-                    u || null
+                    current ||
+                    null
                   );
                 }
               );
@@ -869,30 +1107,40 @@
 
       startRealtime();
 
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error(
+        "[meal_ira] boot:",
+        error
+      );
 
       setState(
         "Помилка: " +
-        (e.message || e),
+        (
+          error?.message ||
+          error
+        ),
         "err"
       );
     }
   }
 
+  // =========================================================
+  // CLEANUP
+  // =========================================================
+
   window.addEventListener(
     "beforeunload",
     () => {
       try {
-        if (unsubOrders) {
-          unsubOrders();
-        }
+        unsubOrders?.();
       } catch {}
 
       try {
-        if (unsubDraw) {
-          unsubDraw();
-        }
+        unsubDrawParent?.();
+      } catch {}
+
+      try {
+        unsubDrawTeams?.();
       } catch {}
     }
   );

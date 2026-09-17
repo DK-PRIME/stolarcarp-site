@@ -1,38 +1,25 @@
 // assets/js/meal_ira.js
 // STOLAR CARP • Пані Іра • Харчування
-// READ ONLY
+// PUBLIC • READ ONLY
 //
+// ✅ без входу
+// ✅ без реєстрації
 // ✅ одна постійна сторінка meal_ira.html
-// ✅ НЕ потрібні competitionId/stageId в URL
-// ✅ активне харчування береться з mealPublic/current
-// ✅ автоматично перемикається на нове змагання
+// ✅ активне харчування = mealPublic/current
+// ✅ заявки = mealPublicOrders
 // ✅ TEAM -> назва команди
-// ✅ SOLO -> ПІБ учасника
-// ✅ сектор береться з актуального жеребкування
-// ✅ заявки оновлюються LIVE
-// ✅ побажання видно під командою / учасником
-// ✅ після закриття показує порожній список
+// ✅ SOLO -> ім'я учасника
+// ✅ сектор показується
+// ✅ побажання показуються
+// ✅ LIVE оновлення
+// ✅ після очищення список порожній
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260917-permanent-v3"
+    "✅ meal_ira.js LOADED v20260917-public-v4"
   );
-
-  /*
-   * УВАГА:
-   * тут має бути UID акаунта,
-   * під яким заходить пані Іра.
-   *
-   * Зараз залишаю значення,
-   * яке було у твоєму файлі.
-   */
-  const FOOD_OWNER_UID =
-    "T1BNuXaDM2f2Tf8KZosgFlAGmTu1";
-
-  const JUDGES_ID =
-    "__judges__";
 
   const $ = id =>
     document.getElementById(id);
@@ -59,7 +46,6 @@
       );
 
   let db = null;
-  let auth = null;
 
   let competitionId = "";
   let stageId = "";
@@ -67,27 +53,8 @@
 
   let orders = [];
 
-  let parentDrawRows = [];
-  let subDrawRows = [];
-
-  let drawMap = {
-    byUid:
-      new Map(),
-
-    byEntity:
-      new Map(),
-
-    byTeamId:
-      new Map(),
-
-    byName:
-      new Map()
-  };
-
   let unsubCurrent = null;
   let unsubOrders = null;
-  let unsubDrawParent = null;
-  let unsubDrawTeams = null;
 
   // =========================================================
   // BASIC
@@ -116,22 +83,12 @@
     );
   }
 
-  function stageResultsId(
-    compId,
-    stageKey
-  ) {
-    return (
-      `${norm(compId)}__` +
-      `${norm(stageKey) || "main"}`
-    );
-  }
-
   function isJudges(row) {
     return (
       clean(row?.type) ===
         "judges" ||
       norm(row?.entityId) ===
-        JUDGES_ID
+        "__judges__"
     );
   }
 
@@ -154,7 +111,6 @@
         row?.participantName ||
         row?.displayName ||
         row?.teamName ||
-        row?.name ||
         "—"
       );
     }
@@ -162,13 +118,52 @@
     return norm(
       row?.teamName ||
       row?.displayName ||
-      row?.team ||
       "—"
     );
   }
 
+  function rowSector(row) {
+    if (isJudges(row)) {
+      return "—";
+    }
+
+    const direct =
+      norm(
+        row?.drawKey
+      ).toUpperCase();
+
+    if (direct) {
+      return direct;
+    }
+
+    const zone =
+      norm(
+        row?.zone
+      ).toUpperCase();
+
+    const sector =
+      norm(
+        row?.sector
+      );
+
+    if (
+      zone &&
+      sector
+    ) {
+      return (
+        zone +
+        sector.replace(
+          /^[ABC]/i,
+          ""
+        )
+      );
+    }
+
+    return "—";
+  }
+
   // =========================================================
-  // UI STATE
+  // STATE
   // =========================================================
 
   function setState(
@@ -234,321 +229,6 @@
   }
 
   // =========================================================
-  // DRAW
-  // =========================================================
-
-  function parseDraw(item) {
-    const direct =
-      norm(
-        item?.drawKey
-      ).toUpperCase();
-
-    if (direct) {
-      const match =
-        direct.match(
-          /^([ABC])\s*(\d+)$/i
-        );
-
-      if (match) {
-        return {
-          zone:
-            match[1]
-              .toUpperCase(),
-
-          sector:
-            match[2],
-
-          drawKey:
-            `${match[1].toUpperCase()}${match[2]}`
-        };
-      }
-    }
-
-    const zone =
-      norm(
-        item?.drawZone ||
-        item?.zone
-      ).toUpperCase();
-
-    const sectorRaw =
-      norm(
-        item?.drawSector ||
-        item?.sector ||
-        item?.place
-      );
-
-    if (
-      zone &&
-      sectorRaw
-    ) {
-      const sector =
-        sectorRaw.replace(
-          /^[ABC]\s*/i,
-          ""
-        );
-
-      return {
-        zone,
-        sector,
-
-        drawKey:
-          `${zone}${sector}`
-      };
-    }
-
-    return {
-      zone: "",
-      sector: "",
-      drawKey: ""
-    };
-  }
-
-  function rebuildDrawMap() {
-    const byUid =
-      new Map();
-
-    const byEntity =
-      new Map();
-
-    const byTeamId =
-      new Map();
-
-    const byName =
-      new Map();
-
-    const allRows = [
-      ...parentDrawRows,
-      ...subDrawRows
-    ];
-
-    allRows.forEach(item => {
-      const draw =
-        parseDraw(item);
-
-      if (!draw.drawKey) {
-        return;
-      }
-
-      const uid =
-        norm(
-          item.uid ||
-          item.participantUid ||
-          item.userId
-        );
-
-      const entityId =
-        norm(
-          item.entityId
-        );
-
-      const teamId =
-        norm(
-          item.teamId
-        );
-
-      const displayName =
-        norm(
-          item.participantName ||
-          item.displayName ||
-          item.teamName ||
-          item.team ||
-          item.name
-        );
-
-      const row = {
-        ...draw,
-        uid,
-        entityId,
-        teamId,
-        displayName
-      };
-
-      if (uid) {
-        byUid.set(
-          uid,
-          row
-        );
-      }
-
-      if (entityId) {
-        byEntity.set(
-          entityId,
-          row
-        );
-      }
-
-      /*
-       * У SOLO може бути кілька
-       * людей з одним teamId,
-       * тому teamId тут лише fallback.
-       */
-      if (
-        teamId &&
-        !byTeamId.has(teamId)
-      ) {
-        byTeamId.set(
-          teamId,
-          row
-        );
-      }
-
-      if (displayName) {
-        byName.set(
-          clean(displayName),
-          row
-        );
-      }
-    });
-
-    drawMap = {
-      byUid,
-      byEntity,
-      byTeamId,
-      byName
-    };
-
-    render();
-  }
-
-  function withCurrentDraw(order) {
-    if (isJudges(order)) {
-      return order;
-    }
-
-    let draw = null;
-
-    const solo =
-      isSolo(order);
-
-    const uid =
-      norm(
-        order.uid ||
-        order.participantUid
-      );
-
-    const entityId =
-      norm(
-        order.entityId
-      );
-
-    const teamId =
-      norm(
-        order.teamId
-      );
-
-    const displayName =
-      clean(
-        rowName(order)
-      );
-
-    /*
-     * SOLO:
-     * UID -> entityId -> ім'я -> teamId fallback
-     */
-    if (solo) {
-      if (
-        uid &&
-        drawMap.byUid.has(uid)
-      ) {
-        draw =
-          drawMap.byUid.get(uid);
-      }
-
-      if (
-        !draw &&
-        entityId &&
-        drawMap.byEntity.has(
-          entityId
-        )
-      ) {
-        draw =
-          drawMap.byEntity.get(
-            entityId
-          );
-      }
-
-      if (
-        !draw &&
-        displayName &&
-        drawMap.byName.has(
-          displayName
-        )
-      ) {
-        draw =
-          drawMap.byName.get(
-            displayName
-          );
-      }
-
-      if (
-        !draw &&
-        teamId &&
-        drawMap.byTeamId.has(
-          teamId
-        )
-      ) {
-        draw =
-          drawMap.byTeamId.get(
-            teamId
-          );
-      }
-    }
-
-    /*
-     * TEAM:
-     * teamId -> ім'я
-     */
-    if (!solo) {
-      if (
-        teamId &&
-        drawMap.byTeamId.has(
-          teamId
-        )
-      ) {
-        draw =
-          drawMap.byTeamId.get(
-            teamId
-          );
-      }
-
-      if (
-        !draw &&
-        displayName &&
-        drawMap.byName.has(
-          displayName
-        )
-      ) {
-        draw =
-          drawMap.byName.get(
-            displayName
-          );
-      }
-    }
-
-    /*
-     * Якщо жереб ще не знайдений,
-     * залишаємо сектор,
-     * записаний у заявці.
-     */
-    if (!draw) {
-      return order;
-    }
-
-    return {
-      ...order,
-
-      zone:
-        draw.zone,
-
-      sector:
-        draw.sector,
-
-      drawKey:
-        draw.drawKey
-    };
-  }
-
-  // =========================================================
   // SORT
   // =========================================================
 
@@ -570,21 +250,21 @@
       return -1;
     }
 
-    const zones = {
+    const zoneOrder = {
       A: 1,
       B: 2,
       C: 3
     };
 
     const za =
-      zones[
+      zoneOrder[
         norm(
           a.zone
         ).toUpperCase()
       ] || 9;
 
     const zb =
-      zones[
+      zoneOrder[
         norm(
           b.zone
         ).toUpperCase()
@@ -648,13 +328,11 @@
 
     const rows =
       orders
-        .filter(order =>
-          order.status ===
-            "submitted" &&
-          totalOrder(order) > 0
-        )
-        .map(
-          withCurrentDraw
+        .filter(
+          row =>
+            row.status ===
+              "submitted" &&
+            totalOrder(row) > 0
         )
         .sort(
           sortOrders
@@ -694,34 +372,22 @@
           row.day2 || {};
 
         const d1l =
-          num(
-            d1.lunch
-          );
+          num(d1.lunch);
 
         const d1d =
-          num(
-            d1.dinner
-          );
+          num(d1.dinner);
 
         const d1b =
-          num(
-            d1.breakfast
-          );
+          num(d1.breakfast);
 
         const d2l =
-          num(
-            d2.lunch
-          );
+          num(d2.lunch);
 
         const d2d =
-          num(
-            d2.dinner
-          );
+          num(d2.dinner);
 
         const d2b =
-          num(
-            d2.breakfast
-          );
+          num(d2.breakfast);
 
         totals.d1l +=
           d1l;
@@ -742,22 +408,7 @@
           d2b;
 
         const sector =
-          isJudges(row)
-            ? "—"
-            : (
-                row.drawKey ||
-                (
-                  (
-                    row.zone ||
-                    ""
-                  ) +
-                  (
-                    row.sector ||
-                    ""
-                  )
-                ) ||
-                "—"
-              );
+          rowSector(row);
 
         const name =
           rowName(row);
@@ -909,10 +560,6 @@
           ""
         );
 
-      /*
-       * Для oneoff / main
-       * не пишемо просто "main".
-       */
       if (
         !stageTitle &&
         stageId === "main"
@@ -942,176 +589,49 @@
           stageTitle;
       }
 
-    } catch (e) {
+    } catch (error) {
       console.warn(
         "[meal_ira] title:",
-        e
+        error
       );
     }
   }
 
   // =========================================================
-  // STOP CURRENT LISTENERS
+  // ORDERS
   // =========================================================
 
-  function stopCompetitionListeners() {
+  function stopOrdersRealtime() {
     try {
       unsubOrders?.();
     } catch {}
 
-    try {
-      unsubDrawParent?.();
-    } catch {}
-
-    try {
-      unsubDrawTeams?.();
-    } catch {}
-
     unsubOrders =
-      null;
-
-    unsubDrawParent =
-      null;
-
-    unsubDrawTeams =
       null;
 
     orders = [];
-
-    parentDrawRows = [];
-    subDrawRows = [];
-
-    drawMap = {
-      byUid:
-        new Map(),
-
-      byEntity:
-        new Map(),
-
-      byTeamId:
-        new Map(),
-
-      byName:
-        new Map()
-    };
   }
-
-  // =========================================================
-  // DRAW REALTIME
-  // =========================================================
-
-  function startDrawRealtime() {
-    if (
-      !competitionId ||
-      !stageId
-    ) {
-      return;
-    }
-
-    const resultRef =
-      db
-        .collection(
-          "stageResults"
-        )
-        .doc(
-          stageResultsId(
-            competitionId,
-            stageId
-          )
-        );
-
-    /*
-     * Сумісність зі старим форматом:
-     * stageResults/{id}.teams[]
-     */
-    unsubDrawParent =
-      resultRef.onSnapshot(
-        snap => {
-          const data =
-            snap.exists
-              ? (
-                  snap.data() ||
-                  {}
-                )
-              : {};
-
-          parentDrawRows =
-            Array.isArray(
-              data.teams
-            )
-              ? data.teams
-              : [];
-
-          rebuildDrawMap();
-        },
-        error => {
-          console.warn(
-            "[meal_ira] parent draw:",
-            error
-          );
-        }
-      );
-
-    /*
-     * Канонічний формат:
-     * stageResults/{id}/teams/{entityId}
-     */
-    unsubDrawTeams =
-      resultRef
-        .collection("teams")
-        .onSnapshot(
-          snap => {
-            subDrawRows =
-              snap.docs.map(
-                doc => ({
-                  id:
-                    doc.id,
-
-                  entityId:
-                    doc.id,
-
-                  ...(
-                    doc.data() ||
-                    {}
-                  )
-                })
-              );
-
-            rebuildDrawMap();
-          },
-          error => {
-            console.warn(
-              "[meal_ira] teams draw:",
-              error
-            );
-          }
-        );
-  }
-
-  // =========================================================
-  // ORDERS REALTIME
-  // =========================================================
 
   function startOrdersRealtime() {
+    stopOrdersRealtime();
+
     if (
       !competitionId ||
-      !stageId
+      !stageId ||
+      !mealIsOpen
     ) {
+      render();
       return;
     }
 
     /*
-     * Зараз читаємо mealOrders,
-     * бо це вже існуюча робоча база.
-     *
-     * Пізніше можемо перевести Іру
-     * повністю на mealPublicOrders,
-     * коли доробимо Rules.
+     * ВАЖЛИВО:
+     * Іра читає ТІЛЬКИ публічне дзеркало.
      */
     unsubOrders =
       db
         .collection(
-          "mealOrders"
+          "mealPublicOrders"
         )
         .where(
           "competitionId",
@@ -1147,28 +667,16 @@
           },
           error => {
             console.error(
-              "[meal_ira] orders:",
+              "[meal_ira] public orders:",
               error
             );
 
             setState(
-              "Немає доступу до списку харчування.",
+              "Не вдалося завантажити харчування.",
               "err"
             );
           }
         );
-  }
-
-  function startCompetitionListeners() {
-    stopCompetitionListeners();
-
-    if (!mealIsOpen) {
-      render();
-      return;
-    }
-
-    startDrawRealtime();
-    startOrdersRealtime();
   }
 
   // =========================================================
@@ -1177,17 +685,11 @@
 
   function startCurrentMealRealtime() {
     /*
-     * Це серце постійної сторінки Іри.
-     *
-     * meal_orders.js при відкритті харчування
-     * записує сюди:
+     * Постійна точка входу Іри.
      *
      * mealPublic/current
-     * {
-     *   competitionId,
-     *   stageId,
-     *   isOpen:true
-     * }
+     * автоматично каже:
+     * яке змагання зараз активне.
      */
 
     unsubCurrent =
@@ -1216,7 +718,7 @@
                 data.stageId
               );
 
-            const nextIsOpen =
+            const nextOpen =
               data.isOpen === true;
 
             const changed =
@@ -1232,19 +734,15 @@
               nextStageId;
 
             mealIsOpen =
-              nextIsOpen;
+              nextOpen;
 
             showContent();
 
-            /*
-             * Ще жодного харчування
-             * не було створено.
-             */
             if (
               !competitionId ||
               !stageId
             ) {
-              stopCompetitionListeners();
+              stopOrdersRealtime();
 
               if (
                 $("competitionTitle")
@@ -1259,11 +757,11 @@
               ) {
                 $("stageTitle")
                   .textContent =
-                  "Харчування зараз не відкрите";
+                  "Харчування";
               }
 
               setState(
-                "Очікую відкриття харчування.",
+                "Харчування зараз не відкрите.",
                 ""
               );
 
@@ -1274,16 +772,12 @@
               return;
             }
 
-            /*
-             * Назву перезавантажуємо
-             * при зміні змагання/етапу.
-             */
             if (changed) {
               await loadTitle();
             }
 
             if (!mealIsOpen) {
-              stopCompetitionListeners();
+              stopOrdersRealtime();
 
               setState(
                 "Харчування завершено.",
@@ -1298,15 +792,15 @@
             }
 
             setState(
-              "Харчування відкрите · оновлення LIVE",
+              "Харчування відкрите · LIVE",
               "ok"
             );
 
-            startCompetitionListeners();
+            startOrdersRealtime();
           },
           error => {
             console.error(
-              "[meal_ira] mealPublic/current:",
+              "[meal_ira] current:",
               error
             );
 
@@ -1316,31 +810,6 @@
             );
           }
         );
-  }
-
-  // =========================================================
-  // AUTH
-  // =========================================================
-
-  async function getAuthUser() {
-    if (auth.currentUser) {
-      return auth.currentUser;
-    }
-
-    return new Promise(
-      resolve => {
-        const unsub =
-          auth.onAuthStateChanged(
-            user => {
-              unsub();
-
-              resolve(
-                user || null
-              );
-            }
-          );
-      }
-    );
   }
 
   // =========================================================
@@ -1356,48 +825,17 @@
       db =
         window.scDb;
 
-      auth =
-        window.scAuth;
-
-      if (
-        !db ||
-        !auth
-      ) {
+      if (!db) {
         throw new Error(
           "Firebase не готовий"
         );
       }
 
-      const user =
-        await getAuthUser();
-
-      if (!user) {
-        setState(
-          "Спочатку увійдіть у свій акаунт STOLAR CARP.",
-          "err"
-        );
-
-        if (
-          $("loginLink")
-        ) {
-          $("loginLink").hidden =
-            false;
-        }
-
-        return;
-      }
-
-      if (
-        user.uid !==
-        FOOD_OWNER_UID
-      ) {
-        setState(
-          "Ця сторінка доступна тільки пані Ірі.",
-          "err"
-        );
-
-        return;
-      }
+      /*
+       * НІ auth.
+       * НІ login.
+       * НІ UID.
+       */
 
       if (
         $("loginLink")
@@ -1412,19 +850,24 @@
         "Перевіряю активне харчування…"
       );
 
+      setState(
+        "Завантаження…",
+        ""
+      );
+
       startCurrentMealRealtime();
 
-    } catch (e) {
+    } catch (error) {
       console.error(
         "[meal_ira] boot:",
-        e
+        error
       );
 
       setState(
         "Помилка: " +
         (
-          e?.message ||
-          e
+          error?.message ||
+          error
         ),
         "err"
       );
@@ -1438,7 +881,7 @@
   window.addEventListener(
     "beforeunload",
     () => {
-      stopCompetitionListeners();
+      stopOrdersRealtime();
 
       try {
         unsubCurrent?.();

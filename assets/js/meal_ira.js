@@ -1,24 +1,27 @@
 // assets/js/meal_ira.js
 // STOLAR CARP • Пані Іра • Харчування
-// PUBLIC • READ ONLY
+// PUBLIC • READ ONLY FIRESTORE
 //
 // ✅ без входу
-// ✅ без реєстрації
-// ✅ одна постійна сторінка meal_ira.html
-// ✅ активне харчування = mealPublic/current
-// ✅ заявки = mealPublicOrders
-// ✅ TEAM -> назва команди
-// ✅ SOLO -> ім'я учасника
-// ✅ сектор показується
-// ✅ побажання показуються
-// ✅ LIVE оновлення
-// ✅ після очищення список порожній
+// ✅ одна постійна сторінка
+// ✅ mealPublic/current
+// ✅ mealPublicOrders LIVE
+//
+// ✅ калькулятор Іри:
+//    • ціна кожного прийому їжі
+//    • додаткові послуги окремо по кожному учаснику
+//    • автоматичний підсумок по кожному рядку
+//    • загальний підсумок
+//
+// ✅ ціни та доппослуги НЕ пишуться у Firestore
+// ✅ зберігаються тільки локально на телефоні Іри
+// ✅ після закриття харчування очищаються
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260917-public-v4"
+    "✅ meal_ira.js LOADED v20260917-calculator-v6"
   );
 
   const $ = id =>
@@ -56,8 +59,20 @@
   let unsubCurrent = null;
   let unsubOrders = null;
 
+  let prices = {
+    d1l: 0,
+    d1d: 0,
+    d1b: 0,
+
+    d2l: 0,
+    d2d: 0,
+    d2b: 0
+  };
+
+  let extras = {};
+
   // =========================================================
-  // BASIC
+  // NUMBERS
   // =========================================================
 
   function num(value) {
@@ -72,6 +87,48 @@
       : 0;
   }
 
+  function moneyNum(value) {
+    const n =
+      Number(
+        String(
+          value ?? ""
+        )
+          .replace(",", ".")
+      );
+
+    return (
+      Number.isFinite(n) &&
+      n > 0
+    )
+      ? n
+      : 0;
+  }
+
+  function fmtMoney(value) {
+    const n =
+      moneyNum(value);
+
+    if (!n) {
+      return "0 ₴";
+    }
+
+    const rounded =
+      Math.round(
+        n * 100
+      ) / 100;
+
+    return (
+      rounded.toLocaleString(
+        "uk-UA",
+        {
+          maximumFractionDigits:
+            2
+        }
+      ) +
+      " ₴"
+    );
+  }
+
   function totalOrder(order) {
     return (
       num(order?.day1?.lunch) +
@@ -82,6 +139,10 @@
       num(order?.day2?.breakfast)
     );
   }
+
+  // =========================================================
+  // IDENTITY
+  // =========================================================
 
   function isJudges(row) {
     return (
@@ -162,6 +223,317 @@
     return "—";
   }
 
+  function rowKey(row) {
+    return norm(
+      row?.id ||
+      row?.entityId ||
+      row?.uid ||
+      row?.teamId ||
+      rowName(row)
+    );
+  }
+
+  // =========================================================
+  // LOCAL STORAGE
+  // =========================================================
+
+  function storageBase() {
+    if (
+      !competitionId ||
+      !stageId
+    ) {
+      return "";
+    }
+
+    return (
+      `sc_ira_meal_calc__` +
+      `${competitionId}__` +
+      `${stageId}`
+    );
+  }
+
+  function pricesKey() {
+    return (
+      storageBase() +
+      "__prices"
+    );
+  }
+
+  function extrasKey() {
+    return (
+      storageBase() +
+      "__extras"
+    );
+  }
+
+  function loadCalculator() {
+    prices = {
+      d1l: 0,
+      d1d: 0,
+      d1b: 0,
+
+      d2l: 0,
+      d2d: 0,
+      d2b: 0
+    };
+
+    extras = {};
+
+    if (!storageBase()) {
+      return;
+    }
+
+    try {
+      const raw =
+        localStorage.getItem(
+          pricesKey()
+        );
+
+      if (raw) {
+        prices = {
+          ...prices,
+          ...JSON.parse(raw)
+        };
+      }
+    } catch {}
+
+    try {
+      const raw =
+        localStorage.getItem(
+          extrasKey()
+        );
+
+      if (raw) {
+        extras =
+          JSON.parse(raw) ||
+          {};
+      }
+    } catch {}
+  }
+
+  function savePrices() {
+    if (!storageBase()) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        pricesKey(),
+        JSON.stringify(
+          prices
+        )
+      );
+    } catch {}
+  }
+
+  function saveExtras() {
+    if (!storageBase()) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(
+        extrasKey(),
+        JSON.stringify(
+          extras
+        )
+      );
+    } catch {}
+  }
+
+  function clearCalculator() {
+    if (!storageBase()) {
+      return;
+    }
+
+    try {
+      localStorage.removeItem(
+        pricesKey()
+      );
+
+      localStorage.removeItem(
+        extrasKey()
+      );
+    } catch {}
+
+    prices = {
+      d1l: 0,
+      d1d: 0,
+      d1b: 0,
+
+      d2l: 0,
+      d2d: 0,
+      d2b: 0
+    };
+
+    extras = {};
+  }
+
+  // =========================================================
+  // PRICE INPUTS
+  // =========================================================
+
+  function inputValue(value) {
+    const n =
+      moneyNum(value);
+
+    return n
+      ? String(n)
+      : "";
+  }
+
+  function fillPriceInputs() {
+    const map = {
+      priceD1Lunch:
+        "d1l",
+
+      priceD1Dinner:
+        "d1d",
+
+      priceD1Breakfast:
+        "d1b",
+
+      priceD2Lunch:
+        "d2l",
+
+      priceD2Dinner:
+        "d2d",
+
+      priceD2Breakfast:
+        "d2b"
+    };
+
+    Object.entries(
+      map
+    ).forEach(
+      ([id, key]) => {
+        const input =
+          $(id);
+
+        if (!input) {
+          return;
+        }
+
+        input.value =
+          inputValue(
+            prices[key]
+          );
+
+        input.dataset.priceKey =
+          key;
+      }
+    );
+  }
+
+  // =========================================================
+  // MONEY CALCULATION
+  // =========================================================
+
+  function rowMealMoney(row) {
+    const d1 =
+      row.day1 || {};
+
+    const d2 =
+      row.day2 || {};
+
+    return (
+      num(d1.lunch) *
+        moneyNum(prices.d1l)
+
+      +
+
+      num(d1.dinner) *
+        moneyNum(prices.d1d)
+
+      +
+
+      num(d1.breakfast) *
+        moneyNum(prices.d1b)
+
+      +
+
+      num(d2.lunch) *
+        moneyNum(prices.d2l)
+
+      +
+
+      num(d2.dinner) *
+        moneyNum(prices.d2d)
+
+      +
+
+      num(d2.breakfast) *
+        moneyNum(prices.d2b)
+    );
+  }
+
+  function rowExtraMoney(row) {
+    return moneyNum(
+      extras[
+        rowKey(row)
+      ]
+    );
+  }
+
+  function rowTotalMoney(row) {
+    return (
+      rowMealMoney(row) +
+      rowExtraMoney(row)
+    );
+  }
+
+  function visibleRows() {
+    return orders
+      .filter(
+        row =>
+          row.status ===
+            "submitted" &&
+          totalOrder(row) > 0
+      )
+      .sort(
+        sortOrders
+      );
+  }
+
+  function recalcMoney() {
+    const rows =
+      visibleRows();
+
+    let grandTotal =
+      0;
+
+    rows.forEach(
+      row => {
+        const key =
+          rowKey(row);
+
+        const total =
+          rowTotalMoney(row);
+
+        grandTotal +=
+          total;
+
+        const cell =
+          document.querySelector(
+            `[data-row-total="${CSS.escape(key)}"]`
+          );
+
+        if (cell) {
+          cell.textContent =
+            fmtMoney(total);
+        }
+      }
+    );
+
+    if ($("moneyTotal")) {
+      $("moneyTotal")
+        .textContent =
+        fmtMoney(
+          grandTotal
+        );
+    }
+  }
+
   // =========================================================
   // STATE
   // =========================================================
@@ -189,6 +561,11 @@
       $("content").hidden =
         false;
     }
+
+    if ($("priceCard")) {
+      $("priceCard").hidden =
+        !mealIsOpen;
+    }
   }
 
   function clearTable(
@@ -201,23 +578,29 @@
     const tfoot =
       $("mealFoot");
 
-    const count =
-      $("orderCount");
-
-    if (count) {
-      count.textContent =
+    if ($("orderCount")) {
+      $("orderCount")
+        .textContent =
         "0";
+    }
+
+    if ($("moneyTotal")) {
+      $("moneyTotal")
+        .textContent =
+        "0 ₴";
     }
 
     if (tbody) {
       tbody.innerHTML = `
         <tr>
+
           <td
-            colspan="8"
+            colspan="10"
             class="empty"
           >
             ${esc(message)}
           </td>
+
         </tr>
       `;
     }
@@ -250,21 +633,21 @@
       return -1;
     }
 
-    const zoneOrder = {
+    const zones = {
       A: 1,
       B: 2,
       C: 3
     };
 
     const za =
-      zoneOrder[
+      zones[
         norm(
           a.zone
         ).toUpperCase()
       ] || 9;
 
     const zb =
-      zoneOrder[
+      zones[
         norm(
           b.zone
         ).toUpperCase()
@@ -302,21 +685,7 @@
   // =========================================================
 
   function render() {
-    const tbody =
-      $("mealBody");
-
-    const tfoot =
-      $("mealFoot");
-
-    const countEl =
-      $("orderCount");
-
-    if (
-      !tbody ||
-      !tfoot
-    ) {
-      return;
-    }
+    showContent();
 
     if (!mealIsOpen) {
       clearTable(
@@ -326,20 +695,25 @@
       return;
     }
 
-    const rows =
-      orders
-        .filter(
-          row =>
-            row.status ===
-              "submitted" &&
-            totalOrder(row) > 0
-        )
-        .sort(
-          sortOrders
-        );
+    const tbody =
+      $("mealBody");
 
-    if (countEl) {
-      countEl.textContent =
+    const tfoot =
+      $("mealFoot");
+
+    if (
+      !tbody ||
+      !tfoot
+    ) {
+      return;
+    }
+
+    const rows =
+      visibleRows();
+
+    if ($("orderCount")) {
+      $("orderCount")
+        .textContent =
         String(
           rows.length
         );
@@ -360,121 +734,164 @@
 
       d2l: 0,
       d2d: 0,
-      d2b: 0
+      d2b: 0,
+
+      extra: 0,
+
+      money: 0
     };
 
     tbody.innerHTML =
-      rows.map(row => {
-        const d1 =
-          row.day1 || {};
+      rows.map(
+        row => {
+          const d1 =
+            row.day1 || {};
 
-        const d2 =
-          row.day2 || {};
+          const d2 =
+            row.day2 || {};
 
-        const d1l =
-          num(d1.lunch);
+          const d1l =
+            num(d1.lunch);
 
-        const d1d =
-          num(d1.dinner);
+          const d1d =
+            num(d1.dinner);
 
-        const d1b =
-          num(d1.breakfast);
+          const d1b =
+            num(d1.breakfast);
 
-        const d2l =
-          num(d2.lunch);
+          const d2l =
+            num(d2.lunch);
 
-        const d2d =
-          num(d2.dinner);
+          const d2d =
+            num(d2.dinner);
 
-        const d2b =
-          num(d2.breakfast);
+          const d2b =
+            num(d2.breakfast);
 
-        totals.d1l +=
-          d1l;
+          totals.d1l += d1l;
+          totals.d1d += d1d;
+          totals.d1b += d1b;
 
-        totals.d1d +=
-          d1d;
+          totals.d2l += d2l;
+          totals.d2d += d2d;
+          totals.d2b += d2b;
 
-        totals.d1b +=
-          d1b;
+          const key =
+            rowKey(row);
 
-        totals.d2l +=
-          d2l;
+          const extra =
+            rowExtraMoney(row);
 
-        totals.d2d +=
-          d2d;
+          const money =
+            rowTotalMoney(row);
 
-        totals.d2b +=
-          d2b;
+          totals.extra +=
+            extra;
 
-        const sector =
-          rowSector(row);
+          totals.money +=
+            money;
 
-        const name =
-          rowName(row);
+          const note =
+            norm(
+              row.note
+            );
 
-        const note =
-          norm(
-            row.note
-          );
+          const name =
+            rowName(row);
 
-        return `
-          <tr>
+          const sector =
+            rowSector(row);
 
-            <td class="sector">
-              ${esc(sector)}
-            </td>
+          return `
+            <tr>
 
-            <td class="team">
+              <td class="sector">
+                ${esc(sector)}
+              </td>
 
-              <div class="team-name">
+              <td class="team">
+
+                <div class="team-name">
+
+                  ${
+                    isJudges(row)
+                      ? "👨‍⚖️ СУДДІ"
+                      : esc(name)
+                  }
+
+                </div>
+
                 ${
-                  isJudges(row)
-                    ? "👨‍⚖️ СУДДІ"
-                    : esc(name)
+                  isSolo(row)
+                    ? `
+                      <div
+                        style="
+                          margin-top:2px;
+                          color:#94a3b8;
+                          font-size:.55rem;
+                          font-weight:700;
+                        "
+                      >
+                        SOLO
+                      </div>
+                    `
+                    : ""
                 }
-              </div>
 
-              ${
-                isSolo(row)
-                  ? `
-                    <div
-                      style="
-                        margin-top:2px;
-                        color:#94a3b8;
-                        font-size:.72rem;
-                        font-weight:700;
-                      "
-                    >
-                      SOLO
-                    </div>
-                  `
-                  : ""
-              }
+                ${
+                  note
+                    ? `
+                      <div class="note">
+                        ⚠ ${esc(note)}
+                      </div>
+                    `
+                    : ""
+                }
 
-              ${
-                note
-                  ? `
-                    <div class="note">
-                      ⚠ ${esc(note)}
-                    </div>
-                  `
-                  : ""
-              }
+              </td>
 
-            </td>
+              <td>${d1l || ""}</td>
+              <td>${d1d || ""}</td>
+              <td>${d1b || ""}</td>
 
-            <td>${d1l || ""}</td>
-            <td>${d1d || ""}</td>
-            <td>${d1b || ""}</td>
+              <td>${d2l || ""}</td>
+              <td>${d2d || ""}</td>
+              <td>${d2b || ""}</td>
 
-            <td>${d2l || ""}</td>
-            <td>${d2d || ""}</td>
-            <td>${d2b || ""}</td>
+              <td>
 
-          </tr>
-        `;
-      }).join("");
+                <input
+                  class="ira-extra-input"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  data-extra-key="${esc(key)}"
+                  value="${esc(
+                    inputValue(
+                      extra
+                    )
+                  )}"
+                >
+
+              </td>
+
+              <td
+                class="row-money"
+                data-row-total="${esc(key)}"
+              >
+                ${esc(
+                  fmtMoney(
+                    money
+                  )
+                )}
+              </td>
+
+            </tr>
+          `;
+        }
+      ).join("");
 
     tfoot.innerHTML = `
       <tr>
@@ -483,16 +900,54 @@
           Разом
         </td>
 
-        <td>${totals.d1l}</td>
-        <td>${totals.d1d}</td>
-        <td>${totals.d1b}</td>
+        <td>
+          ${totals.d1l}
+        </td>
 
-        <td>${totals.d2l}</td>
-        <td>${totals.d2d}</td>
-        <td>${totals.d2b}</td>
+        <td>
+          ${totals.d1d}
+        </td>
+
+        <td>
+          ${totals.d1b}
+        </td>
+
+        <td>
+          ${totals.d2l}
+        </td>
+
+        <td>
+          ${totals.d2d}
+        </td>
+
+        <td>
+          ${totals.d2b}
+        </td>
+
+        <td>
+          ${totals.extra
+            ? fmtMoney(
+                totals.extra
+              )
+            : ""}
+        </td>
+
+        <td>
+          ${fmtMoney(
+            totals.money
+          )}
+        </td>
 
       </tr>
     `;
+
+    if ($("moneyTotal")) {
+      $("moneyTotal")
+        .textContent =
+        fmtMoney(
+          totals.money
+        );
+    }
   }
 
   // =========================================================
@@ -573,17 +1028,13 @@
           stageId;
       }
 
-      if (
-        $("competitionTitle")
-      ) {
+      if ($("competitionTitle")) {
         $("competitionTitle")
           .textContent =
           title;
       }
 
-      if (
-        $("stageTitle")
-      ) {
+      if ($("stageTitle")) {
         $("stageTitle")
           .textContent =
           stageTitle;
@@ -598,7 +1049,7 @@
   }
 
   // =========================================================
-  // ORDERS
+  // ORDERS LIVE
   // =========================================================
 
   function stopOrdersRealtime() {
@@ -621,13 +1072,10 @@
       !mealIsOpen
     ) {
       render();
+
       return;
     }
 
-    /*
-     * ВАЖЛИВО:
-     * Іра читає ТІЛЬКИ публічне дзеркало.
-     */
     unsubOrders =
       db
         .collection(
@@ -667,7 +1115,7 @@
           },
           error => {
             console.error(
-              "[meal_ira] public orders:",
+              "[meal_ira] orders:",
               error
             );
 
@@ -684,20 +1132,14 @@
   // =========================================================
 
   function startCurrentMealRealtime() {
-    /*
-     * Постійна точка входу Іри.
-     *
-     * mealPublic/current
-     * автоматично каже:
-     * яке змагання зараз активне.
-     */
-
     unsubCurrent =
       db
         .collection(
           "mealPublic"
         )
-        .doc("current")
+        .doc(
+          "current"
+        )
         .onSnapshot(
           async snap => {
             const data =
@@ -719,7 +1161,8 @@
               );
 
             const nextOpen =
-              data.isOpen === true;
+              data.isOpen ===
+              true;
 
             const changed =
               nextCompetitionId !==
@@ -736,28 +1179,18 @@
             mealIsOpen =
               nextOpen;
 
-            showContent();
-
+            /*
+             * Нема активного харчування.
+             */
             if (
               !competitionId ||
               !stageId
             ) {
               stopOrdersRealtime();
 
-              if (
-                $("competitionTitle")
-              ) {
-                $("competitionTitle")
-                  .textContent =
-                  "STOLAR CARP";
-              }
-
-              if (
-                $("stageTitle")
-              ) {
-                $("stageTitle")
-                  .textContent =
-                  "Харчування";
+              if ($("priceCard")) {
+                $("priceCard").hidden =
+                  true;
               }
 
               setState(
@@ -772,12 +1205,34 @@
               return;
             }
 
+            /*
+             * Нове змагання / етап.
+             */
             if (changed) {
+              loadCalculator();
+
+              fillPriceInputs();
+
               await loadTitle();
             }
 
+            /*
+             * Харчування закрите.
+             *
+             * Очищаємо локальний
+             * калькулятор Іри.
+             */
             if (!mealIsOpen) {
               stopOrdersRealtime();
+
+              clearCalculator();
+
+              fillPriceInputs();
+
+              if ($("priceCard")) {
+                $("priceCard").hidden =
+                  true;
+              }
 
               setState(
                 "Харчування завершено.",
@@ -789,6 +1244,11 @@
               );
 
               return;
+            }
+
+            if ($("priceCard")) {
+              $("priceCard").hidden =
+                false;
             }
 
             setState(
@@ -813,6 +1273,75 @@
   }
 
   // =========================================================
+  // INPUT EVENTS
+  // =========================================================
+
+  document.addEventListener(
+    "input",
+    event => {
+      const target =
+        event.target;
+
+      /*
+       * Ціна прийому їжі.
+       */
+      if (
+        target.classList
+          .contains(
+            "ira-price-input"
+          )
+      ) {
+        const key =
+          target.dataset
+            .priceKey;
+
+        if (!key) {
+          return;
+        }
+
+        prices[key] =
+          moneyNum(
+            target.value
+          );
+
+        savePrices();
+
+        recalcMoney();
+
+        return;
+      }
+
+      /*
+       * Додаткова послуга
+       * конкретного рядка.
+       */
+      if (
+        target.classList
+          .contains(
+            "ira-extra-input"
+          )
+      ) {
+        const key =
+          target.dataset
+            .extraKey;
+
+        if (!key) {
+          return;
+        }
+
+        extras[key] =
+          moneyNum(
+            target.value
+          );
+
+        saveExtras();
+
+        recalcMoney();
+      }
+    }
+  );
+
+  // =========================================================
   // BOOT
   // =========================================================
 
@@ -831,20 +1360,15 @@
         );
       }
 
-      /*
-       * НІ auth.
-       * НІ login.
-       * НІ UID.
-       */
-
-      if (
-        $("loginLink")
-      ) {
-        $("loginLink").hidden =
-          true;
+      if ($("content")) {
+        $("content").hidden =
+          false;
       }
 
-      showContent();
+      if ($("priceCard")) {
+        $("priceCard").hidden =
+          true;
+      }
 
       clearTable(
         "Перевіряю активне харчування…"

@@ -1,38 +1,50 @@
 // assets/js/meal_ira.js
 // STOLAR CARP • Пані Іра • Харчування
-// PUBLIC • READ ONLY FIRESTORE
 //
-// ✅ без входу
-// ✅ одна постійна сторінка
+// PUBLIC • БЕЗ ВХОДУ
+//
 // ✅ mealPublic/current
 // ✅ mealPublicOrders LIVE
 //
-// ✅ калькулятор Іри:
+// ✅ калькулятор:
 //    • ціна кожного прийому їжі
-//    • додаткові послуги окремо по кожному учаснику
-//    • автоматичний підсумок по кожному рядку
-//    • загальний підсумок
+//    • додаткові послуги
+//    • сума по рядку
+//    • загальна сума
 //
-// ✅ mealPublicOrderEvents:
-//    • історія повідомлень #1 / #2 / #3...
-//    • повідомлення прив'язане до конкретного рядка
-//    • нове повідомлення підсвічує рядок
-//    • видно кількість НОВИХ
-//    • після відкриття повідомлення стають прочитаними
-//    • прочитане зберігається локально на телефоні Іри
-//    • звіт по конкретній команді / учаснику
+// ✅ повідомлення:
+//    • текст НЕ показується прямо у таблиці
+//    • нове повідомлення = ✉️ блимаючий конверт
+//    • кількість непрочитаних
+//    • #1 / #2 / #3...
+//    • дата + година
+//    • відкрила = прочитано
+//    • після прочитання = 📋 Звіт
+//    • нове повідомлення = конверт блимає знову
 //
-// ✅ ціни / доппослуги / прочитане:
-//    НЕ пишуться у Firestore
-// ✅ зберігаються локально на телефоні Іри
-// ✅ після закриття харчування очищаються
+// ✅ mealPublicOrderEvents — повна історія
+//
+// ✅ legacy fallback:
+//    якщо mealPublicOrderEvents ще порожня,
+//    старий row.note НЕ показуємо текстом,
+//    а ховаємо за конвертом.
+//
+// ✅ read state / prices / extras:
+//    локально на телефоні Іри
+//
+// ✅ після закриття харчування
+//    локальні дані цього харчування очищаються
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260917-messages-v8"
+    "✅ meal_ira.js LOADED v20260918-envelope-v9"
   );
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
 
   const $ = id =>
     document.getElementById(id);
@@ -69,6 +81,11 @@
   let mealIsOpen = false;
 
   let orders = [];
+
+  /*
+   * Повна історія повідомлень
+   * із Firestore.
+   */
   let messageEvents = [];
 
   let unsubCurrent = null;
@@ -88,25 +105,23 @@
   let extras = {};
 
   /*
-   * IDs повідомлень,
-   * які Іра вже відкривала.
+   * Які повідомлення Іра
+   * вже відкривала.
    */
   let readMessageIds =
     new Set();
 
   /*
-   * Який рядок зараз
-   * відкритий у модальному вікні.
+   * Який учасник зараз
+   * відкритий у модалці.
    */
-  let activeMessageRowKey = "";
+  let activeMessageRowKey =
+    "";
 
   /*
-   * Повідомлення, які були НОВИМИ
-   * саме в момент відкриття.
-   *
-   * Вони вже записуються як прочитані,
-   * але поки модалка відкрита,
-   * Іра бачить позначку НОВЕ.
+   * Саме ті повідомлення,
+   * які були новими
+   * на момент відкриття.
    */
   let activeFreshMessageIds =
     new Set();
@@ -177,6 +192,7 @@
       num(order?.day1?.lunch) +
       num(order?.day1?.dinner) +
       num(order?.day1?.breakfast) +
+
       num(order?.day2?.lunch) +
       num(order?.day2?.dinner) +
       num(order?.day2?.breakfast)
@@ -184,239 +200,7 @@
   }
 
   // =========================================================
-  // IDENTITY
-  // =========================================================
-
-  function isJudges(row) {
-    return (
-      clean(row?.type) ===
-        "judges" ||
-      norm(row?.entityId) ===
-        "__judges__"
-    );
-  }
-
-  function isSolo(row) {
-    return (
-      clean(row?.entryType) ===
-        "solo" ||
-      clean(row?.type) ===
-        "solo"
-    );
-  }
-
-  function rowName(row) {
-    if (isJudges(row)) {
-      return "СУДДІ";
-    }
-
-    if (isSolo(row)) {
-      return norm(
-        row?.participantName ||
-        row?.displayName ||
-        row?.teamName ||
-        "—"
-      );
-    }
-
-    return norm(
-      row?.teamName ||
-      row?.displayName ||
-      "—"
-    );
-  }
-
-  function rowSector(row) {
-    if (isJudges(row)) {
-      return "—";
-    }
-
-    const direct =
-      norm(
-        row?.drawKey
-      ).toUpperCase();
-
-    if (direct) {
-      return direct;
-    }
-
-    const zone =
-      norm(
-        row?.zone
-      ).toUpperCase();
-
-    const sector =
-      norm(
-        row?.sector
-      );
-
-    if (
-      zone &&
-      sector
-    ) {
-      return (
-        zone +
-        sector.replace(
-          /^[ABC]/i,
-          ""
-        )
-      );
-    }
-
-    return "—";
-  }
-
-  function rowKey(row) {
-    return norm(
-      row?.entityId ||
-      row?.uid ||
-      row?.teamId ||
-      row?.id ||
-      rowName(row)
-    );
-  }
-
-  function findRowByKey(key) {
-    return orders.find(
-      row =>
-        rowKey(row) ===
-        key
-    ) || null;
-  }
-
-  // =========================================================
-  // EVENT IDENTITY
-  // =========================================================
-
-  function eventText(event) {
-    return norm(
-      event?.message ||
-      event?.text ||
-      event?.note ||
-      event?.details ||
-      event?.orderText ||
-      ""
-    );
-  }
-
-  function eventBelongsToRow(
-    event,
-    row
-  ) {
-    if (
-      !event ||
-      !row ||
-      isJudges(row)
-    ) {
-      return false;
-    }
-
-    /*
-     * Якщо подія знає ID
-     * документа замовлення.
-     */
-    const eventOrderId =
-      norm(
-        event.orderId
-      );
-
-    if (
-      eventOrderId &&
-      eventOrderId ===
-        norm(row.id)
-    ) {
-      return true;
-    }
-
-    /*
-     * canonical entityId
-     */
-    const eventEntityId =
-      norm(
-        event.entityId
-      );
-
-    const rowEntityId =
-      norm(
-        row.entityId
-      );
-
-    if (
-      eventEntityId &&
-      rowEntityId &&
-      eventEntityId ===
-        rowEntityId
-    ) {
-      return true;
-    }
-
-    /*
-     * SOLO — головний ключ UID.
-     */
-    const eventUid =
-      norm(
-        event.uid ||
-        event.participantUid ||
-        event.userId
-      );
-
-    const rowUid =
-      norm(
-        row.uid ||
-        row.participantUid ||
-        row.userId
-      );
-
-    if (
-      eventUid &&
-      rowUid &&
-      eventUid === rowUid
-    ) {
-      return true;
-    }
-
-    /*
-     * TEAM — teamId.
-     */
-    const eventTeamId =
-      norm(
-        event.teamId
-      );
-
-    const rowTeamId =
-      norm(
-        row.teamId
-      );
-
-    if (
-      eventTeamId &&
-      rowTeamId &&
-      eventTeamId ===
-        rowTeamId
-    ) {
-      return true;
-    }
-
-    return false;
-  }
-
-  function eventsForRow(row) {
-    return messageEvents
-      .filter(
-        event =>
-          eventBelongsToRow(
-            event,
-            row
-          )
-      )
-      .filter(
-        event =>
-          eventText(event)
-      );
-  }
-
-  // =========================================================
-  // EVENT TIME
+  // TIMESTAMP
   // =========================================================
 
   function timestampMillis(value) {
@@ -471,20 +255,386 @@
       : 0;
   }
 
+  // =========================================================
+  // IDENTITY
+  // =========================================================
+
+  function isJudges(row) {
+    return (
+      clean(row?.type) ===
+        "judges" ||
+
+      norm(row?.entityId) ===
+        "__judges__"
+    );
+  }
+
+  function isSolo(row) {
+    return (
+      clean(row?.entryType) ===
+        "solo" ||
+
+      clean(row?.type) ===
+        "solo"
+    );
+  }
+
+  function rowName(row) {
+    if (
+      isJudges(row)
+    ) {
+      return "СУДДІ";
+    }
+
+    if (
+      isSolo(row)
+    ) {
+      return norm(
+        row?.participantName ||
+        row?.displayName ||
+        row?.teamName ||
+        "—"
+      );
+    }
+
+    return norm(
+      row?.teamName ||
+      row?.displayName ||
+      "—"
+    );
+  }
+
+  function rowSector(row) {
+    if (
+      isJudges(row)
+    ) {
+      return "—";
+    }
+
+    const direct =
+      norm(
+        row?.drawKey
+      )
+        .toUpperCase();
+
+    if (direct) {
+      return direct;
+    }
+
+    const zone =
+      norm(
+        row?.zone
+      )
+        .toUpperCase();
+
+    const sector =
+      norm(
+        row?.sector
+      );
+
+    if (
+      zone &&
+      sector
+    ) {
+      return (
+        zone +
+        sector.replace(
+          /^[ABC]/i,
+          ""
+        )
+      );
+    }
+
+    return "—";
+  }
+
+  function rowKey(row) {
+    return norm(
+      row?.entityId ||
+      row?.uid ||
+      row?.teamId ||
+      row?.id ||
+      rowName(row)
+    );
+  }
+
+  function findRowByKey(key) {
+    return (
+      orders.find(
+        row =>
+          rowKey(row) ===
+          key
+      ) ||
+      null
+    );
+  }
+
+  // =========================================================
+  // EVENT TEXT
+  // =========================================================
+
+  function eventText(event) {
+    return norm(
+      event?.message ||
+      event?.text ||
+      event?.note ||
+      event?.details ||
+      event?.orderText ||
+      ""
+    );
+  }
+
+  // =========================================================
+  // EVENT MATCH
+  // =========================================================
+
+  function eventBelongsToRow(
+    event,
+    row
+  ) {
+    if (
+      !event ||
+      !row ||
+      isJudges(row)
+    ) {
+      return false;
+    }
+
+    // -----------------------------------------------------
+    // orderId
+    // -----------------------------------------------------
+
+    const eventOrderId =
+      norm(
+        event.orderId
+      );
+
+    if (
+      eventOrderId &&
+      eventOrderId ===
+        norm(row.id)
+    ) {
+      return true;
+    }
+
+    // -----------------------------------------------------
+    // entityId
+    // -----------------------------------------------------
+
+    const eventEntityId =
+      norm(
+        event.entityId
+      );
+
+    const rowEntityId =
+      norm(
+        row.entityId
+      );
+
+    if (
+      eventEntityId &&
+      rowEntityId &&
+      eventEntityId ===
+        rowEntityId
+    ) {
+      return true;
+    }
+
+    // -----------------------------------------------------
+    // SOLO UID
+    // -----------------------------------------------------
+
+    const eventUid =
+      norm(
+        event.uid ||
+        event.participantUid ||
+        event.userId
+      );
+
+    const rowUid =
+      norm(
+        row.uid ||
+        row.participantUid ||
+        row.userId
+      );
+
+    if (
+      eventUid &&
+      rowUid &&
+      eventUid === rowUid
+    ) {
+      return true;
+    }
+
+    // -----------------------------------------------------
+    // TEAM ID
+    // -----------------------------------------------------
+
+    const eventTeamId =
+      norm(
+        event.teamId
+      );
+
+    const rowTeamId =
+      norm(
+        row.teamId
+      );
+
+    if (
+      eventTeamId &&
+      rowTeamId &&
+      eventTeamId ===
+        rowTeamId
+    ) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // =========================================================
+  // LEGACY NOTE FALLBACK
+  //
+  // Поки meal_orders.js ще не пише
+  // історію в mealPublicOrderEvents,
+  // старий row.note все одно буде
+  // показаний через КОНВЕРТ,
+  // а не прямо у таблиці.
+  // =========================================================
+
+  function legacyEventForRow(row) {
+    const text =
+      norm(
+        row?.note
+      );
+
+    if (
+      !text ||
+      isJudges(row)
+    ) {
+      return null;
+    }
+
+    const ms =
+      timestampMillis(
+        row?.updatedAt
+      ) ||
+      timestampMillis(
+        row?.createdAt
+      );
+
+    /*
+     * ID зміниться при новому Save,
+     * тому нове note знову стане
+     * непрочитаним.
+     */
+    const id =
+      [
+        "legacy",
+        rowKey(row),
+        ms || text
+      ]
+        .join("__");
+
+    return {
+      id,
+
+      _legacy:
+        true,
+
+      entityId:
+        row?.entityId ||
+        "",
+
+      uid:
+        row?.uid ||
+        "",
+
+      teamId:
+        row?.teamId ||
+        "",
+
+      orderId:
+        row?.id ||
+        "",
+
+      text,
+
+      createdAt:
+        row?.updatedAt ||
+        row?.createdAt ||
+        null
+    };
+  }
+
+  // =========================================================
+  // EVENTS FOR ROW
+  // =========================================================
+
+  function realEventsForRow(row) {
+    return messageEvents
+      .filter(
+        event =>
+          eventBelongsToRow(
+            event,
+            row
+          )
+      )
+      .filter(
+        event =>
+          eventText(event)
+      );
+  }
+
+  function eventsForRow(row) {
+    const real =
+      realEventsForRow(
+        row
+      );
+
+    /*
+     * Якщо вже є нормальна історія —
+     * legacy note більше не додаємо,
+     * щоб нічого не дублювати.
+     */
+    if (
+      real.length
+    ) {
+      return real;
+    }
+
+    const legacy =
+      legacyEventForRow(
+        row
+      );
+
+    return legacy
+      ? [legacy]
+      : [];
+  }
+
+  // =========================================================
+  // EVENT TIME
+  // =========================================================
+
   function eventMillis(event) {
     return (
       timestampMillis(
         event?.createdAt
       ) ||
+
       timestampMillis(
         event?.submittedAt
       ) ||
+
       timestampMillis(
         event?.clientCreatedAt
       ) ||
+
       timestampMillis(
         event?.createdAtISO
       ) ||
+
       timestampMillis(
         event?.updatedAt
       )
@@ -501,26 +651,20 @@
     const tb =
       eventMillis(b);
 
-    if (ta !== tb) {
+    if (
+      ta !== tb
+    ) {
       return ta - tb;
     }
 
-    return norm(a.id)
+    return norm(
+      a.id
+    )
       .localeCompare(
-        norm(b.id)
+        norm(
+          b.id
+        )
       );
-  }
-
-  function sortEventsNewFirst(
-    a,
-    b
-  ) {
-    return (
-      sortEventsOldFirst(
-        b,
-        a
-      )
-    );
   }
 
   function eventNumber(
@@ -537,7 +681,9 @@
       );
 
     if (
-      Number.isFinite(explicit) &&
+      Number.isFinite(
+        explicit
+      ) &&
       explicit > 0
     ) {
       return Math.floor(
@@ -554,8 +700,8 @@
     const index =
       sorted.findIndex(
         item =>
-          item.id ===
-          event.id
+          String(item.id) ===
+          String(event.id)
       );
 
     return (
@@ -567,7 +713,9 @@
 
   function fmtEventTime(event) {
     const ms =
-      eventMillis(event);
+      eventMillis(
+        event
+      );
 
     if (!ms) {
       return "час не вказано";
@@ -578,9 +726,6 @@
         .DateTimeFormat(
           "uk-UA",
           {
-            weekday:
-              "short",
-
             day:
               "2-digit",
 
@@ -601,6 +746,7 @@
           ",",
           " ·"
         );
+
     } catch {
       return new Date(ms)
         .toLocaleString(
@@ -610,7 +756,7 @@
   }
 
   // =========================================================
-  // LOCAL STORAGE
+  // STORAGE
   // =========================================================
 
   function storageBase() {
@@ -622,9 +768,10 @@
     }
 
     return (
-      `sc_ira_meal_calc__` +
-      `${competitionId}__` +
-      `${stageId}`
+      "sc_ira_meal_calc__" +
+      competitionId +
+      "__" +
+      stageId
     );
   }
 
@@ -665,9 +812,15 @@
     readMessageIds =
       new Set();
 
-    if (!storageBase()) {
+    if (
+      !storageBase()
+    ) {
       return;
     }
+
+    // -----------------------------------------------------
+    // PRICES
+    // -----------------------------------------------------
 
     try {
       const raw =
@@ -683,6 +836,10 @@
       }
     } catch {}
 
+    // -----------------------------------------------------
+    // EXTRAS
+    // -----------------------------------------------------
+
     try {
       const raw =
         localStorage.getItem(
@@ -695,6 +852,10 @@
           {};
       }
     } catch {}
+
+    // -----------------------------------------------------
+    // READ MESSAGES
+    // -----------------------------------------------------
 
     try {
       const raw =
@@ -718,11 +879,14 @@
             );
         }
       }
+
     } catch {}
   }
 
   function savePrices() {
-    if (!storageBase()) {
+    if (
+      !storageBase()
+    ) {
       return;
     }
 
@@ -737,7 +901,9 @@
   }
 
   function saveExtras() {
-    if (!storageBase()) {
+    if (
+      !storageBase()
+    ) {
       return;
     }
 
@@ -752,7 +918,9 @@
   }
 
   function saveReadMessages() {
-    if (!storageBase()) {
+    if (
+      !storageBase()
+    ) {
       return;
     }
 
@@ -767,23 +935,23 @@
   }
 
   function clearCalculator() {
-    if (!storageBase()) {
-      return;
+    if (
+      storageBase()
+    ) {
+      try {
+        localStorage.removeItem(
+          pricesKey()
+        );
+
+        localStorage.removeItem(
+          extrasKey()
+        );
+
+        localStorage.removeItem(
+          readsKey()
+        );
+      } catch {}
     }
-
-    try {
-      localStorage.removeItem(
-        pricesKey()
-      );
-
-      localStorage.removeItem(
-        extrasKey()
-      );
-
-      localStorage.removeItem(
-        readsKey()
-      );
-    } catch {}
 
     prices = {
       d1l: 0,
@@ -816,7 +984,9 @@
 
   function inputValue(value) {
     const n =
-      moneyNum(value);
+      moneyNum(
+        value
+      );
 
     return n
       ? String(n)
@@ -846,65 +1016,81 @@
 
     Object.entries(
       map
-    ).forEach(
-      ([id, key]) => {
-        const input =
-          $(id);
+    )
+      .forEach(
+        ([id, key]) => {
+          const input =
+            $(id);
 
-        if (!input) {
-          return;
+          if (!input) {
+            return;
+          }
+
+          input.value =
+            inputValue(
+              prices[key]
+            );
+
+          input.dataset
+            .priceKey =
+            key;
         }
-
-        input.value =
-          inputValue(
-            prices[key]
-          );
-
-        input.dataset.priceKey =
-          key;
-      }
-    );
+      );
   }
 
   // =========================================================
-  // MONEY CALCULATION
+  // MONEY
   // =========================================================
 
   function rowMealMoney(row) {
     const d1 =
-      row.day1 || {};
+      row.day1 ||
+      {};
 
     const d2 =
-      row.day2 || {};
+      row.day2 ||
+      {};
 
     return (
       num(d1.lunch) *
-        moneyNum(prices.d1l)
+        moneyNum(
+          prices.d1l
+        )
 
       +
 
       num(d1.dinner) *
-        moneyNum(prices.d1d)
+        moneyNum(
+          prices.d1d
+        )
 
       +
 
       num(d1.breakfast) *
-        moneyNum(prices.d1b)
+        moneyNum(
+          prices.d1b
+        )
 
       +
 
       num(d2.lunch) *
-        moneyNum(prices.d2l)
+        moneyNum(
+          prices.d2l
+        )
 
       +
 
       num(d2.dinner) *
-        moneyNum(prices.d2d)
+        moneyNum(
+          prices.d2d
+        )
 
       +
 
       num(d2.breakfast) *
-        moneyNum(prices.d2b)
+        moneyNum(
+          prices.d2b
+        )
     );
   }
 
@@ -924,13 +1110,15 @@
   }
 
   // =========================================================
-  // MESSAGE READ STATE
+  // READ / UNREAD
   // =========================================================
 
   function isMessageRead(event) {
     return readMessageIds
       .has(
-        String(event.id)
+        String(
+          event.id
+        )
       );
   }
 
@@ -938,7 +1126,9 @@
     return eventsForRow(row)
       .filter(
         event =>
-          !isMessageRead(event)
+          !isMessageRead(
+            event
+          )
       );
   }
 
@@ -956,7 +1146,9 @@
 
         if (
           id &&
-          !readMessageIds.has(id)
+          !readMessageIds.has(
+            id
+          )
         ) {
           readMessageIds.add(
             id
@@ -968,7 +1160,9 @@
       }
     );
 
-    if (changed) {
+    if (
+      changed
+    ) {
       saveReadMessages();
     }
   }
@@ -988,19 +1182,19 @@
             return false;
           }
 
+          /*
+           * Нормальна заявка на їжу.
+           */
           if (
-            totalOrder(row) >
-            0
+            totalOrder(row) > 0
           ) {
             return true;
           }
 
-          if (
-            norm(row.note)
-          ) {
-            return true;
-          }
-
+          /*
+           * Якщо є окреме повідомлення,
+           * рядок теж залишаємо.
+           */
           return (
             eventsForRow(row)
               .length > 0
@@ -1011,6 +1205,10 @@
         sortOrders
       );
   }
+
+  // =========================================================
+  // RECALCULATE
+  // =========================================================
 
   function recalcMoney() {
     const rows =
@@ -1025,34 +1223,38 @@
           rowKey(row);
 
         const total =
-          rowTotalMoney(row);
+          rowTotalMoney(
+            row
+          );
 
         grandTotal +=
           total;
 
-        const safeKey =
-          window.CSS &&
-          typeof CSS.escape ===
-            "function"
-            ? CSS.escape(key)
-            : key.replace(
-                /"/g,
-                '\\"'
-              );
-
-        const cell =
-          document.querySelector(
-            `[data-row-total="${safeKey}"]`
+        const cells =
+          document.querySelectorAll(
+            "[data-row-total]"
           );
 
-        if (cell) {
-          cell.textContent =
-            fmtMoney(total);
-        }
+        cells.forEach(
+          cell => {
+            if (
+              cell.dataset
+                .rowTotal ===
+              key
+            ) {
+              cell.textContent =
+                fmtMoney(
+                  total
+                );
+            }
+          }
+        );
       }
     );
 
-    if ($("moneyTotal")) {
+    if (
+      $("moneyTotal")
+    ) {
       $("moneyTotal")
         .textContent =
         fmtMoney(
@@ -1062,7 +1264,7 @@
   }
 
   // =========================================================
-  // UI STATE
+  // STATE UI
   // =========================================================
 
   function setState(
@@ -1077,19 +1279,25 @@
     }
 
     el.textContent =
-      text || "";
+      text ||
+      "";
 
     el.className =
-      `state ${type}`.trim();
+      `state ${type}`
+        .trim();
   }
 
   function showContent() {
-    if ($("content")) {
+    if (
+      $("content")
+    ) {
       $("content").hidden =
         false;
     }
 
-    if ($("priceCard")) {
+    if (
+      $("priceCard")
+    ) {
       $("priceCard").hidden =
         !mealIsOpen;
     }
@@ -1105,19 +1313,25 @@
     const tfoot =
       $("mealFoot");
 
-    if ($("orderCount")) {
+    if (
+      $("orderCount")
+    ) {
       $("orderCount")
         .textContent =
         "0";
     }
 
-    if ($("moneyTotal")) {
+    if (
+      $("moneyTotal")
+    ) {
       $("moneyTotal")
         .textContent =
         "0 ₴";
     }
 
-    if (tbody) {
+    if (
+      tbody
+    ) {
       tbody.innerHTML = `
         <tr>
 
@@ -1132,14 +1346,16 @@
       `;
     }
 
-    if (tfoot) {
+    if (
+      tfoot
+    ) {
       tfoot.innerHTML =
         "";
     }
   }
 
   // =========================================================
-  // SORT
+  // SORT ORDERS
   // =========================================================
 
   function sortOrders(
@@ -1170,17 +1386,23 @@
       zones[
         norm(
           a.zone
-        ).toUpperCase()
-      ] || 9;
+        )
+          .toUpperCase()
+      ] ||
+      9;
 
     const zb =
       zones[
         norm(
           b.zone
-        ).toUpperCase()
-      ] || 9;
+        )
+          .toUpperCase()
+      ] ||
+      9;
 
-    if (za !== zb) {
+    if (
+      za !== zb
+    ) {
       return za - zb;
     }
 
@@ -1196,7 +1418,9 @@
         999
       );
 
-    if (sa !== sb) {
+    if (
+      sa !== sb
+    ) {
       return sa - sb;
     }
 
@@ -1208,98 +1432,96 @@
   }
 
   // =========================================================
-  // MESSAGE BUTTON HTML
+  // ✉️ ENVELOPE
   // =========================================================
 
   function messageButtonHTML(row) {
-    if (isJudges(row)) {
+    if (
+      isJudges(row)
+    ) {
       return "";
     }
 
     const all =
       eventsForRow(row);
 
-    if (!all.length) {
+    if (
+      !all.length
+    ) {
       return "";
     }
 
     const unread =
       all.filter(
         event =>
-          !isMessageRead(event)
+          !isMessageRead(
+            event
+          )
       );
 
     const key =
       rowKey(row);
 
-    if (unread.length) {
+    /*
+     * Є нові.
+     *
+     * БЛИМАЮЧИЙ КОНВЕРТ.
+     */
+    if (
+      unread.length
+    ) {
       return `
         <button
           type="button"
-          class="team-messages-btn has-unread"
+          class="team-message-envelope has-unread"
           data-message-row="${esc(key)}"
+          aria-label="Нове повідомлення"
         >
-          🔔 ${unread.length}
-          ${
-            unread.length === 1
-              ? "НОВЕ"
-              : "НОВИХ"
-          }
 
-          <span class="team-messages-badge">
+          <span class="envelope-icon">
+            ✉️
+          </span>
+
+          <span>
+            НОВЕ
+          </span>
+
+          <span class="team-message-badge">
             ${unread.length}
           </span>
+
         </button>
 
-        <div class="team-message-total">
-          всього: ${all.length}
-        </div>
+        <span class="team-message-total">
+          всього повідомлень:
+          ${all.length}
+        </span>
       `;
     }
 
+    /*
+     * Все прочитано.
+     *
+     * Замість конверта показуємо
+     * спокійний ЗВІТ.
+     */
     return `
       <button
         type="button"
-        class="team-messages-btn"
+        class="team-message-envelope is-read"
         data-message-row="${esc(key)}"
+        aria-label="Відкрити звіт"
       >
-        🔔 ${all.length}
-        ${
-          all.length === 1
-            ? "повідомлення"
-            : "повідомл."
-        }
+
+        <span class="envelope-icon">
+          📋
+        </span>
+
+        <span>
+          Звіт · ${all.length}
+        </span>
+
       </button>
-    `;
-  }
-
-  function latestUnreadPreviewHTML(
-    row
-  ) {
-    const unread =
-      unreadEventsForRow(row)
-        .sort(
-          sortEventsNewFirst
-        );
-
-    if (!unread.length) {
-      return "";
-    }
-
-    const latest =
-      unread[0];
-
-    const text =
-      eventText(latest);
-
-    if (!text) {
-      return "";
-    }
-
-    return `
-      <div class="note">
-        🔔 ${esc(text)}
-      </div>
     `;
   }
 
@@ -1310,7 +1532,9 @@
   function render() {
     showContent();
 
-    if (!mealIsOpen) {
+    if (
+      !mealIsOpen
+    ) {
       clearTable(
         "Харчування зараз не відкрите."
       );
@@ -1334,7 +1558,9 @@
     const rows =
       visibleRows();
 
-    if ($("orderCount")) {
+    if (
+      $("orderCount")
+    ) {
       $("orderCount")
         .textContent =
         String(
@@ -1342,7 +1568,9 @@
         );
     }
 
-    if (!rows.length) {
+    if (
+      !rows.length
+    ) {
       clearTable(
         "Заявок на харчування ще немає."
       );
@@ -1360,7 +1588,6 @@
       d2b: 0,
 
       extra: 0,
-
       money: 0
     };
 
@@ -1368,45 +1595,73 @@
       rows.map(
         row => {
           const d1 =
-            row.day1 || {};
+            row.day1 ||
+            {};
 
           const d2 =
-            row.day2 || {};
+            row.day2 ||
+            {};
 
           const d1l =
-            num(d1.lunch);
+            num(
+              d1.lunch
+            );
 
           const d1d =
-            num(d1.dinner);
+            num(
+              d1.dinner
+            );
 
           const d1b =
-            num(d1.breakfast);
+            num(
+              d1.breakfast
+            );
 
           const d2l =
-            num(d2.lunch);
+            num(
+              d2.lunch
+            );
 
           const d2d =
-            num(d2.dinner);
+            num(
+              d2.dinner
+            );
 
           const d2b =
-            num(d2.breakfast);
+            num(
+              d2.breakfast
+            );
 
-          totals.d1l += d1l;
-          totals.d1d += d1d;
-          totals.d1b += d1b;
+          totals.d1l +=
+            d1l;
 
-          totals.d2l += d2l;
-          totals.d2d += d2d;
-          totals.d2b += d2b;
+          totals.d1d +=
+            d1d;
+
+          totals.d1b +=
+            d1b;
+
+          totals.d2l +=
+            d2l;
+
+          totals.d2d +=
+            d2d;
+
+          totals.d2b +=
+            d2b;
 
           const key =
             rowKey(row);
 
           const extra =
-            rowExtraMoney(row);
+            rowExtraMoney(
+              row
+            );
 
           const money =
-            rowTotalMoney(row);
+            rowTotalMoney(
+              row
+            );
 
           totals.extra +=
             extra;
@@ -1414,47 +1669,32 @@
           totals.money +=
             money;
 
-          const note =
-            norm(
-              row.note
-            );
-
           const name =
             rowName(row);
 
           const sector =
             rowSector(row);
 
-          const rowEvents =
-            eventsForRow(row);
-
           const unread =
-            unreadEventsForRow(row);
+            unreadEventsForRow(
+              row
+            );
 
           const hasUnread =
             unread.length > 0;
 
           /*
-           * Якщо вже є нова система
-           * повідомлень, старий note
-           * вдруге не дублюємо.
+           * ВАЖЛИВО:
            *
-           * Поки events ще немає,
-           * legacy note продовжує
-           * показуватися як раніше.
+           * Тут БІЛЬШЕ НЕМА:
+           *
+           * row.note
+           * legacyNoteHTML
+           * latestUnreadPreviewHTML
+           *
+           * Текст повідомлення
+           * у таблиці НЕ показується.
            */
-          const legacyNoteHTML =
-            (
-              note &&
-              !rowEvents.length
-            )
-              ? `
-                <div class="note">
-                  ⚠ ${esc(note)}
-                </div>
-              `
-              : "";
-
           return `
             <tr
               class="${
@@ -1488,14 +1728,6 @@
                       </div>
                     `
                     : ""
-                }
-
-                ${legacyNoteHTML}
-
-                ${
-                  latestUnreadPreviewHTML(
-                    row
-                  )
                 }
 
                 ${
@@ -1616,7 +1848,9 @@
       </tr>
     `;
 
-    if ($("moneyTotal")) {
+    if (
+      $("moneyTotal")
+    ) {
       $("moneyTotal")
         .textContent =
         fmtMoney(
@@ -1626,7 +1860,7 @@
   }
 
   // =========================================================
-  // MESSAGE MODAL
+  // MODAL
   // =========================================================
 
   function modalIsOpen() {
@@ -1664,6 +1898,17 @@
     }
   }
 
+  // =========================================================
+  // NORMAL MESSAGE HISTORY
+  //
+  // Показуємо:
+  // #1
+  // #2
+  // #3
+  //
+  // СТАРІ -> НОВІ
+  // =========================================================
+
   function renderNormalMessages(
     row,
     allEvents
@@ -1675,7 +1920,9 @@
       return;
     }
 
-    if (!allEvents.length) {
+    if (
+      !allEvents.length
+    ) {
       list.innerHTML = `
         <div class="message-empty">
           Повідомлень ще немає.
@@ -1685,89 +1932,86 @@
       return;
     }
 
-    const oldFirst =
+    const sorted =
       [...allEvents]
         .sort(
           sortEventsOldFirst
         );
 
-    const newestFirst =
-      [...allEvents]
-        .sort(
-          sortEventsNewFirst
-        );
-
     list.innerHTML =
-      newestFirst
-        .map(
-          event => {
-            const number =
-              eventNumber(
-                event,
-                oldFirst
+      sorted.map(
+        event => {
+          const number =
+            eventNumber(
+              event,
+              sorted
+            );
+
+          const fresh =
+            activeFreshMessageIds
+              .has(
+                String(
+                  event.id
+                )
               );
 
-            const fresh =
-              activeFreshMessageIds
-                .has(
-                  String(
-                    event.id
-                  )
-                );
+          return `
+            <div
+              class="message-item ${
+                fresh
+                  ? "unread"
+                  : ""
+              }"
+            >
 
-            return `
-              <div
-                class="message-item ${
-                  fresh
-                    ? "unread"
-                    : ""
-                }"
-              >
+              <div class="message-top">
 
-                <div class="message-top">
+                <div>
 
-                  <div>
+                  <span class="message-number">
+                    #${number}
+                  </span>
 
-                    <span class="message-number">
-                      #${number}
-                    </span>
-
-                    ${
-                      fresh
-                        ? `
-                          <span class="message-new">
-                            НОВЕ
-                          </span>
-                        `
-                        : ""
-                    }
-
-                  </div>
-
-                  <div class="message-time">
-                    ${esc(
-                      fmtEventTime(
-                        event
-                      )
-                    )}
-                  </div>
+                  ${
+                    fresh
+                      ? `
+                        <span class="message-new">
+                          НОВЕ
+                        </span>
+                      `
+                      : ""
+                  }
 
                 </div>
 
-                <div class="message-text">
+                <div class="message-time">
                   ${esc(
-                    eventText(
+                    fmtEventTime(
                       event
                     )
                   )}
                 </div>
 
               </div>
-            `;
-          }
-        )
-        .join("");
+
+              <div class="message-text">
+                ${esc(
+                  eventText(
+                    event
+                  )
+                )}
+              </div>
+
+            </div>
+          `;
+        }
+      )
+      .join("");
   }
+
+  // =========================================================
+  // REPORT
+  // =========================================================
 
   function renderReport(
     row,
@@ -1780,7 +2024,9 @@
       return;
     }
 
-    if (!allEvents.length) {
+    if (
+      !allEvents.length
+    ) {
       list.innerHTML = `
         <div class="message-empty">
           Немає даних для звіту.
@@ -1839,31 +2085,34 @@
       .join("");
 
     list.innerHTML = `
-      <div
-        class="message-item"
-        style="margin-bottom:10px;"
-      >
+      <div class="report-head">
 
-        <div class="message-owner">
-          📋 ЗВІТ
-        </div>
-
-        <div
-          class="message-text"
-          style="margin-top:4px;"
-        >
-          ${esc(
-            rowSector(row)
-          )}
+        <div class="report-head-title">
+          📋 Звіт
           ·
           ${esc(
             rowName(row)
           )}
         </div>
 
-        <div class="message-time">
-          Повідомлень:
+        <div class="report-head-meta">
+
+          ${
+            rowSector(row) !==
+            "—"
+              ? (
+                  "Сектор " +
+                  esc(
+                    rowSector(row)
+                  ) +
+                  " · "
+                )
+              : ""
+          }
+
+          повідомлень:
           ${sorted.length}
+
         </div>
 
       </div>
@@ -1871,6 +2120,10 @@
       ${lines}
     `;
   }
+
+  // =========================================================
+  // RENDER MODAL
+  // =========================================================
 
   function renderMessagesModal() {
     if (
@@ -1884,33 +2137,50 @@
         activeMessageRowKey
       );
 
-    if (!row) {
+    if (
+      !row
+    ) {
       closeMessagesModal();
 
       return;
     }
 
     const allEvents =
-      eventsForRow(row);
+      eventsForRow(
+        row
+      );
 
-    if ($("messagesOwner")) {
+    if (
+      $("messagesOwner")
+    ) {
       $("messagesOwner")
         .textContent =
-        rowName(row);
+        rowName(
+          row
+        );
     }
 
-    if ($("messagesSector")) {
+    if (
+      $("messagesSector")
+    ) {
       const sector =
-        rowSector(row);
+        rowSector(
+          row
+        );
 
       $("messagesSector")
         .textContent =
         sector !== "—"
-          ? `Сектор ${sector}`
+          ? (
+              "Сектор " +
+              sector
+            )
           : "";
     }
 
-    if ($("messagesSummary")) {
+    if (
+      $("messagesSummary")
+    ) {
       const newCount =
         activeFreshMessageIds
           .size;
@@ -1919,30 +2189,37 @@
         .textContent =
         newCount
           ? (
-              `Нових: ${newCount} · ` +
-              `всього: ${allEvents.length}`
+              "Нових: " +
+              newCount +
+              " · всього: " +
+              allEvents.length
             )
           : (
-              `Всього повідомлень: ` +
-              `${allEvents.length}`
+              "Всього повідомлень: " +
+              allEvents.length
             );
     }
 
     const reportBtn =
       $("messagesReportBtn");
 
-    if (reportBtn) {
+    if (
+      reportBtn
+    ) {
       reportBtn.textContent =
         reportMode
-          ? "↩ Історія"
+          ? "↩ Повідомлення"
           : "📋 Звіт";
     }
 
-    if (reportMode) {
+    if (
+      reportMode
+    ) {
       renderReport(
         row,
         allEvents
       );
+
     } else {
       renderNormalMessages(
         row,
@@ -1951,52 +2228,79 @@
     }
   }
 
+  // =========================================================
+  // OPEN ENVELOPE / REPORT
+  // =========================================================
+
   function openMessagesForRowKey(
     key
   ) {
     const row =
-      findRowByKey(key);
+      findRowByKey(
+        key
+      );
 
-    if (!row) {
+    if (
+      !row
+    ) {
       return;
     }
 
     const allEvents =
-      eventsForRow(row);
+      eventsForRow(
+        row
+      );
+
+    const unread =
+      allEvents.filter(
+        event =>
+          !isMessageRead(
+            event
+          )
+      );
+
+    const hadUnread =
+      unread.length > 0;
 
     /*
-     * Запам'ятовуємо, які саме
-     * були НОВИМИ в момент відкриття.
+     * Запам'ятовуємо,
+     * які саме були НОВИМИ.
      */
     activeFreshMessageIds =
       new Set(
-        allEvents
-          .filter(
-            event =>
-              !isMessageRead(event)
-          )
-          .map(
-            event =>
-              String(event.id)
-          )
+        unread.map(
+          event =>
+            String(
+              event.id
+            )
+        )
       );
 
     activeMessageRowKey =
       key;
 
+    /*
+     * Якщо натиснули на НОВИЙ конверт —
+     * спочатку показуємо самі повідомлення.
+     *
+     * Якщо вже все прочитано і натиснули
+     * 📋 Звіт — одразу відкриваємо звіт.
+     */
     reportMode =
-      false;
+      !hadUnread;
 
     /*
-     * Відкрила = прочитала.
+     * ВІДКРИЛА =
+     * ПРОЧИТАЛА.
      */
     markEventsRead(
       allEvents
     );
 
     /*
-     * Прибираємо зелену підсвітку
-     * з основної таблиці.
+     * Перерендерюємо таблицю:
+     * конверт перестає блимати,
+     * і після закриття буде 📋 Звіт.
      */
     render();
 
@@ -2076,24 +2380,31 @@
 
       if (
         !stageTitle &&
-        stageId === "main"
+        stageId ===
+        "main"
       ) {
         stageTitle =
           "Основне змагання";
       }
 
-      if (!stageTitle) {
+      if (
+        !stageTitle
+      ) {
         stageTitle =
           stageId;
       }
 
-      if ($("competitionTitle")) {
+      if (
+        $("competitionTitle")
+      ) {
         $("competitionTitle")
           .textContent =
           title;
       }
 
-      if ($("stageTitle")) {
+      if (
+        $("stageTitle")
+      ) {
         $("stageTitle")
           .textContent =
           stageTitle;
@@ -2178,6 +2489,7 @@
               "ok"
             );
           },
+
           error => {
             console.error(
               "[meal_ira] orders:",
@@ -2204,7 +2516,8 @@
     unsubEvents =
       null;
 
-    messageEvents = [];
+    messageEvents =
+      [];
   }
 
   function syncOpenModalReadState() {
@@ -2220,29 +2533,38 @@
         activeMessageRowKey
       );
 
-    if (!row) {
+    if (
+      !row
+    ) {
       return;
     }
 
     const allEvents =
-      eventsForRow(row);
+      eventsForRow(
+        row
+      );
 
     const newWhileOpen =
       allEvents.filter(
         event =>
-          !isMessageRead(event)
+          !isMessageRead(
+            event
+          )
       );
 
     /*
-     * Якщо повідомлення прийшло,
-     * поки Іра вже дивиться це вікно,
-     * вважаємо його побаченим.
+     * Якщо нове повідомлення
+     * прийшло, поки Іра вже
+     * дивиться цього учасника,
+     * воно вважається побаченим.
      */
     newWhileOpen.forEach(
       event => {
         activeFreshMessageIds
           .add(
-            String(event.id)
+            String(
+              event.id
+            )
           );
       }
     );
@@ -2303,19 +2625,23 @@
               renderMessagesModal();
             }
           },
+
           error => {
             /*
-             * Поки Rules / writer ще
-             * не підключені, основна
-             * сторінка харчування
-             * продовжує працювати.
+             * Якщо Rules ще не дозволяють
+             * mealPublicOrderEvents,
+             * основна сторінка не падає.
+             *
+             * legacy row.note все одно
+             * буде доступний через конверт.
              */
             console.warn(
               "[meal_ira] message events:",
               error
             );
 
-            messageEvents = [];
+            messageEvents =
+              [];
 
             render();
           }
@@ -2362,17 +2688,19 @@
             const changed =
               nextCompetitionId !==
                 competitionId ||
+
               nextStageId !==
                 stageId;
 
-            /*
-             * Якщо переходимо
-             * на інше змагання,
-             * спочатку зупиняємо
-             * старі LIVE listeners.
-             */
-            if (changed) {
+            // -------------------------------------------------
+            // NEW COMPETITION
+            // -------------------------------------------------
+
+            if (
+              changed
+            ) {
               stopOrdersRealtime();
+
               stopEventsRealtime();
 
               closeMessagesModal();
@@ -2387,21 +2715,25 @@
             mealIsOpen =
               nextOpen;
 
-            // ---------------------------------------------
-            // НЕМА АКТИВНОГО ХАРЧУВАННЯ
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // NOTHING ACTIVE
+            // -------------------------------------------------
 
             if (
               !competitionId ||
               !stageId
             ) {
               stopOrdersRealtime();
+
               stopEventsRealtime();
 
               closeMessagesModal();
 
-              if ($("priceCard")) {
-                $("priceCard").hidden =
+              if (
+                $("priceCard")
+              ) {
+                $("priceCard")
+                  .hidden =
                   true;
               }
 
@@ -2417,11 +2749,13 @@
               return;
             }
 
-            // ---------------------------------------------
-            // НОВЕ ЗМАГАННЯ / ЕТАП
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // NEW STAGE
+            // -------------------------------------------------
 
-            if (changed) {
+            if (
+              changed
+            ) {
               loadCalculator();
 
               fillPriceInputs();
@@ -2429,28 +2763,28 @@
               await loadTitle();
             }
 
-            // ---------------------------------------------
-            // ХАРЧУВАННЯ ЗАКРИТЕ
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // CLOSED
+            // -------------------------------------------------
 
-            if (!mealIsOpen) {
+            if (
+              !mealIsOpen
+            ) {
               stopOrdersRealtime();
+
               stopEventsRealtime();
 
               closeMessagesModal();
 
-              /*
-               * Ціни, доплати,
-               * прочитані повідомлення
-               * цього харчування
-               * очищаються.
-               */
               clearCalculator();
 
               fillPriceInputs();
 
-              if ($("priceCard")) {
-                $("priceCard").hidden =
+              if (
+                $("priceCard")
+              ) {
+                $("priceCard")
+                  .hidden =
                   true;
               }
 
@@ -2466,12 +2800,15 @@
               return;
             }
 
-            // ---------------------------------------------
-            // ХАРЧУВАННЯ ВІДКРИТЕ
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // OPEN
+            // -------------------------------------------------
 
-            if ($("priceCard")) {
-              $("priceCard").hidden =
+            if (
+              $("priceCard")
+            ) {
+              $("priceCard")
+                .hidden =
                 false;
             }
 
@@ -2484,6 +2821,7 @@
 
             startEventsRealtime();
           },
+
           error => {
             console.error(
               "[meal_ira] current:",
@@ -2499,7 +2837,7 @@
   }
 
   // =========================================================
-  // INPUT EVENTS
+  // INPUT
   // =========================================================
 
   document.addEventListener(
@@ -2515,9 +2853,9 @@
         return;
       }
 
-      // ---------------------------------------------
+      // -----------------------------------------------------
       // PRICE
-      // ---------------------------------------------
+      // -----------------------------------------------------
 
       if (
         target.classList
@@ -2529,7 +2867,9 @@
           target.dataset
             .priceKey;
 
-        if (!key) {
+        if (
+          !key
+        ) {
           return;
         }
 
@@ -2545,9 +2885,9 @@
         return;
       }
 
-      // ---------------------------------------------
+      // -----------------------------------------------------
       // EXTRA
-      // ---------------------------------------------
+      // -----------------------------------------------------
 
       if (
         target.classList
@@ -2559,7 +2899,9 @@
           target.dataset
             .extraKey;
 
-        if (!key) {
+        if (
+          !key
+        ) {
           return;
         }
 
@@ -2576,7 +2918,7 @@
   );
 
   // =========================================================
-  // CLICK EVENTS
+  // CLICK
   // =========================================================
 
   document.addEventListener(
@@ -2585,29 +2927,35 @@
       const target =
         event.target;
 
-      if (!target) {
+      if (
+        !target
+      ) {
         return;
       }
 
-      // ---------------------------------------------
-      // BUTTON IN TEAM ROW
-      // ---------------------------------------------
+      // -----------------------------------------------------
+      // ✉️ ENVELOPE / 📋 REPORT
+      // -----------------------------------------------------
 
       const messageButton =
         target.closest
           ? target.closest(
-              ".team-messages-btn"
+              ".team-message-envelope"
             )
           : null;
 
-      if (messageButton) {
+      if (
+        messageButton
+      ) {
         const key =
           norm(
             messageButton.dataset
               .messageRow
           );
 
-        if (key) {
+        if (
+          key
+        ) {
           openMessagesForRowKey(
             key
           );
@@ -2616,9 +2964,9 @@
         return;
       }
 
-      // ---------------------------------------------
+      // -----------------------------------------------------
       // CLOSE
-      // ---------------------------------------------
+      // -----------------------------------------------------
 
       if (
         target.id ===
@@ -2629,9 +2977,9 @@
         return;
       }
 
-      // ---------------------------------------------
-      // REPORT
-      // ---------------------------------------------
+      // -----------------------------------------------------
+      // REPORT / HISTORY
+      // -----------------------------------------------------
 
       if (
         target.id ===
@@ -2645,9 +2993,9 @@
         return;
       }
 
-      // ---------------------------------------------
-      // CLICK OUTSIDE MODAL
-      // ---------------------------------------------
+      // -----------------------------------------------------
+      // BACKDROP
+      // -----------------------------------------------------
 
       if (
         target.id ===
@@ -2657,6 +3005,10 @@
       }
     }
   );
+
+  // =========================================================
+  // ESC
+  // =========================================================
 
   document.addEventListener(
     "keydown",
@@ -2676,26 +3028,36 @@
 
   async function boot() {
     try {
-      if (window.scReady) {
+      if (
+        window.scReady
+      ) {
         await window.scReady;
       }
 
       db =
         window.scDb;
 
-      if (!db) {
+      if (
+        !db
+      ) {
         throw new Error(
           "Firebase не готовий"
         );
       }
 
-      if ($("content")) {
-        $("content").hidden =
+      if (
+        $("content")
+      ) {
+        $("content")
+          .hidden =
           false;
       }
 
-      if ($("priceCard")) {
-        $("priceCard").hidden =
+      if (
+        $("priceCard")
+      ) {
+        $("priceCard")
+          .hidden =
           true;
       }
 

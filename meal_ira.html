@@ -202,6 +202,8 @@
 
     .price-field{
       min-width:0;
+
+      text-align:center;
     }
 
     .price-field label{
@@ -247,6 +249,38 @@
 
     .ira-price-input:focus{
       border-color:#facc15;
+    }
+
+    /* =====================================================
+       DELIVERY TIME
+       ===================================================== */
+
+    .delivery-time{
+      margin-top:4px;
+
+      color:#22c55e;
+
+      font-size:.54rem;
+
+      line-height:1.15;
+
+      font-weight:900;
+
+      text-align:center;
+
+      white-space:nowrap;
+    }
+
+    .delivery-icon{
+      display:block;
+
+      margin-bottom:1px;
+
+      color:#94a3b8;
+
+      font-size:.46rem;
+
+      font-weight:700;
     }
 
     /* =====================================================
@@ -503,6 +537,10 @@
       .row-money{
         font-size:.58rem;
       }
+
+      .delivery-time{
+        font-size:.49rem;
+      }
     }
 
   </style>
@@ -544,7 +582,7 @@
 
 
   <!-- ===================================================
-       ЦІНИ
+       ЦІНИ + ЧАС ДОСТАВКИ
        =================================================== -->
 
   <section
@@ -559,6 +597,10 @@
 
     <div class="price-days">
 
+      <!-- =================================================
+           ДОБА 1
+           ================================================= -->
+
       <div class="price-day">
 
         <div class="price-day-title">
@@ -567,8 +609,13 @@
 
         <div class="price-grid">
 
+          <!-- ОБІД -->
+
           <div class="price-field">
-            <label>Обід</label>
+
+            <label>
+              Обід
+            </label>
 
             <input
               id="priceD1Lunch"
@@ -579,10 +626,27 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              12:00–13:00
+
+            </div>
+
           </div>
 
+
+          <!-- ВЕЧЕРЯ -->
+
           <div class="price-field">
-            <label>Вечеря</label>
+
+            <label>
+              Вечеря
+            </label>
 
             <input
               id="priceD1Dinner"
@@ -593,10 +657,27 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              19:00–20:00
+
+            </div>
+
           </div>
 
+
+          <!-- СНІДАНОК -->
+
           <div class="price-field">
-            <label>Сніданок</label>
+
+            <label>
+              Сніданок
+            </label>
 
             <input
               id="priceD1Breakfast"
@@ -607,12 +688,27 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              08:00–09:00
+
+            </div>
+
           </div>
 
         </div>
 
       </div>
 
+
+      <!-- =================================================
+           ДОБА 2
+           ================================================= -->
 
       <div class="price-day">
 
@@ -622,8 +718,13 @@
 
         <div class="price-grid">
 
+          <!-- ОБІД -->
+
           <div class="price-field">
-            <label>Обід</label>
+
+            <label>
+              Обід
+            </label>
 
             <input
               id="priceD2Lunch"
@@ -634,10 +735,27 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              12:00–13:00
+
+            </div>
+
           </div>
 
+
+          <!-- ВЕЧЕРЯ -->
+
           <div class="price-field">
-            <label>Вечеря</label>
+
+            <label>
+              Вечеря
+            </label>
 
             <input
               id="priceD2Dinner"
@@ -648,10 +766,27 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              19:00–20:00
+
+            </div>
+
           </div>
 
+
+          <!-- СНІДАНОК -->
+
           <div class="price-field">
-            <label>Сніданок</label>
+
+            <label>
+              Сніданок
+            </label>
 
             <input
               id="priceD2Breakfast"
@@ -662,6 +797,17 @@
               step="1"
               placeholder="0"
             >
+
+            <div class="delivery-time">
+
+              <span class="delivery-icon">
+                🚚 доставка
+              </span>
+
+              08:00–09:00
+
+            </div>
+
           </div>
 
         </div>

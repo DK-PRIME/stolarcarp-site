@@ -48,10 +48,6 @@
       color:#e5e7eb;
     }
 
-    /* =====================================================
-       PAGE
-       ===================================================== */
-
     .ira-wrap{
       width:100%;
       max-width:1100px;
@@ -135,7 +131,126 @@
     }
 
     /* =====================================================
-       CARD
+       PRICE PANEL
+       ===================================================== */
+
+    .price-card{
+      margin-top:7px;
+
+      padding:8px;
+
+      border:
+        1px solid
+        rgba(250,204,21,.28);
+
+      border-radius:15px;
+
+      background:
+        rgba(15,23,42,.94);
+    }
+
+    .price-title{
+      margin-bottom:7px;
+
+      color:#facc15;
+
+      font-size:.82rem;
+
+      font-weight:900;
+    }
+
+    .price-days{
+      display:grid;
+
+      grid-template-columns:
+        repeat(2, minmax(0,1fr));
+
+      gap:6px;
+    }
+
+    .price-day{
+      padding:6px;
+
+      border:
+        1px solid
+        rgba(148,163,184,.20);
+
+      border-radius:11px;
+
+      background:
+        rgba(2,6,23,.32);
+    }
+
+    .price-day-title{
+      margin-bottom:5px;
+
+      color:#cbd5e1;
+
+      font-size:.70rem;
+
+      font-weight:900;
+    }
+
+    .price-grid{
+      display:grid;
+
+      grid-template-columns:
+        repeat(3, minmax(0,1fr));
+
+      gap:4px;
+    }
+
+    .price-field{
+      min-width:0;
+    }
+
+    .price-field label{
+      display:block;
+
+      margin-bottom:2px;
+
+      color:#94a3b8;
+
+      font-size:.58rem;
+
+      font-weight:800;
+
+      text-align:center;
+    }
+
+    .ira-price-input{
+      width:100%;
+
+      height:30px;
+
+      padding:
+        2px 3px;
+
+      border:
+        1px solid
+        rgba(148,163,184,.35);
+
+      border-radius:7px;
+
+      outline:none;
+
+      background:#0f172a;
+
+      color:#facc15;
+
+      font-size:.72rem;
+
+      font-weight:900;
+
+      text-align:center;
+    }
+
+    .ira-price-input:focus{
+      border-color:#facc15;
+    }
+
+    /* =====================================================
+       TABLE CARD
        ===================================================== */
 
     .card{
@@ -167,20 +282,24 @@
       justify-content:
         space-between;
 
-      gap:8px;
+      gap:6px;
 
       padding:
         5px 4px 8px;
 
       color:#cbd5e1;
 
-      font-size:.76rem;
+      font-size:.72rem;
     }
 
     .summary strong{
       color:#facc15;
+    }
 
-      font-size:.95rem;
+    #moneyTotal{
+      color:#22c55e;
+
+      font-weight:900;
     }
 
     /* =====================================================
@@ -202,7 +321,7 @@
       table-layout:
         fixed;
 
-      font-size:.68rem;
+      font-size:.62rem;
     }
 
     th,
@@ -212,7 +331,7 @@
         rgba(148,163,184,.25);
 
       padding:
-        6px 1px;
+        5px 1px;
 
       text-align:center;
 
@@ -237,51 +356,17 @@
         rgba(2,6,23,.34);
     }
 
-    /*
-     * Сектор
-     */
-    th:nth-child(1),
-    td:nth-child(1){
-      width:8%;
-    }
-
-    /*
-     * Команда / учасник
-     */
-    th:nth-child(2),
-    td:nth-child(2){
-      width:38%;
-    }
-
-    /*
-     * 6 прийомів їжі
-     */
-    th:nth-child(n+3),
-    td:nth-child(n+3){
-      width:9%;
-    }
-
-    /* =====================================================
-       SECTOR
-       ===================================================== */
-
     .sector{
       color:#facc15;
 
-      font-size:.78rem;
+      font-size:.70rem;
 
       font-weight:900;
-
-      white-space:nowrap;
     }
 
-    /* =====================================================
-       TEAM / PARTICIPANT
-       ===================================================== */
-
     .team{
-      padding-left:5px;
-      padding-right:3px;
+      padding-left:4px;
+      padding-right:2px;
 
       text-align:left;
 
@@ -293,34 +378,19 @@
     .team-name{
       color:#f8fafc;
 
-      font-size:.75rem;
+      font-size:.69rem;
 
-      line-height:1.18;
+      line-height:1.15;
 
       font-weight:900;
 
       overflow-wrap:anywhere;
     }
 
-    /* =====================================================
-       FOOD NOTE
-       ===================================================== */
-
-    /*
-     * meal_ira.js уже створює:
-     *
-     * <div class="note">
-     *   ⚠ текст побажання
-     * </div>
-     *
-     * Тому Іра бачить побажання
-     * прямо під командою / учасником.
-     */
-
     .note{
       margin-top:4px;
 
-      padding-top:4px;
+      padding-top:3px;
 
       border-top:
         1px dashed
@@ -328,9 +398,9 @@
 
       color:#facc15;
 
-      font-size:.64rem;
+      font-size:.57rem;
 
-      line-height:1.25;
+      line-height:1.2;
 
       font-weight:800;
 
@@ -340,13 +410,53 @@
     }
 
     /* =====================================================
-       TOTAL
+       EXTRA
        ===================================================== */
 
-    tfoot td{
-      padding-top:7px;
-      padding-bottom:7px;
+    .ira-extra-input{
+      width:100%;
 
+      min-width:0;
+
+      height:27px;
+
+      padding:
+        1px 2px;
+
+      border:
+        1px solid
+        rgba(148,163,184,.35);
+
+      border-radius:6px;
+
+      outline:none;
+
+      background:#0f172a;
+
+      color:#f8fafc;
+
+      font-size:.62rem;
+
+      font-weight:800;
+
+      text-align:center;
+    }
+
+    .ira-extra-input:focus{
+      border-color:#facc15;
+    }
+
+    .row-money{
+      color:#22c55e;
+
+      font-size:.65rem;
+
+      font-weight:900;
+
+      white-space:nowrap;
+    }
+
+    tfoot td{
       color:#facc15;
 
       background:
@@ -366,36 +476,32 @@
       text-align:center;
     }
 
-    /* =====================================================
-       VERY SMALL PHONE
-       ===================================================== */
-
     @media(max-width:370px){
 
       table{
-        font-size:.61rem;
+        font-size:.56rem;
       }
 
       th,
       td{
         padding:
-          5px 1px;
+          4px 1px;
       }
 
       .team-name{
-        font-size:.68rem;
-      }
-
-      .sector{
-        font-size:.70rem;
+        font-size:.63rem;
       }
 
       .note{
-        font-size:.58rem;
+        font-size:.53rem;
       }
 
-      .ira-title{
-        font-size:1.17rem;
+      .ira-extra-input{
+        font-size:.56rem;
+      }
+
+      .row-money{
+        font-size:.58rem;
       }
     }
 
@@ -406,10 +512,6 @@
 <body>
 
 <main class="ira-wrap">
-
-  <!-- ===================================================
-       HEADER
-       =================================================== -->
 
   <section class="ira-head">
 
@@ -442,7 +544,137 @@
 
 
   <!-- ===================================================
-       FOOD TABLE
+       ЦІНИ
+       =================================================== -->
+
+  <section
+    id="priceCard"
+    class="price-card"
+    hidden
+  >
+
+    <div class="price-title">
+      💰 Ціна харчування, грн
+    </div>
+
+    <div class="price-days">
+
+      <div class="price-day">
+
+        <div class="price-day-title">
+          Доба 1
+        </div>
+
+        <div class="price-grid">
+
+          <div class="price-field">
+            <label>Обід</label>
+
+            <input
+              id="priceD1Lunch"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="price-field">
+            <label>Вечеря</label>
+
+            <input
+              id="priceD1Dinner"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="price-field">
+            <label>Сніданок</label>
+
+            <input
+              id="priceD1Breakfast"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div class="price-day">
+
+        <div class="price-day-title">
+          Доба 2
+        </div>
+
+        <div class="price-grid">
+
+          <div class="price-field">
+            <label>Обід</label>
+
+            <input
+              id="priceD2Lunch"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="price-field">
+            <label>Вечеря</label>
+
+            <input
+              id="priceD2Dinner"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+          <div class="price-field">
+            <label>Сніданок</label>
+
+            <input
+              id="priceD2Breakfast"
+              class="ira-price-input"
+              type="number"
+              inputmode="decimal"
+              min="0"
+              step="1"
+              placeholder="0"
+            >
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ===================================================
+       ТАБЛИЦЯ
        =================================================== -->
 
   <section
@@ -454,13 +686,17 @@
     <div class="summary">
 
       <span>
-
         Заявок:
-
         <strong id="orderCount">
           0
         </strong>
+      </span>
 
+      <span>
+        Всього:
+        <strong id="moneyTotal">
+          0 ₴
+        </strong>
       </span>
 
       <span>
@@ -475,21 +711,21 @@
 
         <colgroup>
 
-          <!-- Сектор -->
-          <col style="width:8%">
+          <col style="width:7%">
 
-          <!-- Команда / учасник -->
-          <col style="width:38%">
+          <col style="width:29%">
 
-          <!-- Доба 1 -->
-          <col style="width:9%">
-          <col style="width:9%">
-          <col style="width:9%">
+          <col style="width:6.5%">
+          <col style="width:6.5%">
+          <col style="width:6.5%">
 
-          <!-- Доба 2 -->
-          <col style="width:9%">
-          <col style="width:9%">
-          <col style="width:9%">
+          <col style="width:6.5%">
+          <col style="width:6.5%">
+          <col style="width:6.5%">
+
+          <col style="width:12%">
+
+          <col style="width:13%">
 
         </colgroup>
 
@@ -502,7 +738,7 @@
             </th>
 
             <th>
-              Команда / учасник
+              Учасник
             </th>
 
             <th>
@@ -529,6 +765,14 @@
               2С
             </th>
 
+            <th>
+              Доп.
+            </th>
+
+            <th>
+              Σ
+            </th>
+
           </tr>
 
         </thead>
@@ -538,7 +782,7 @@
           <tr>
 
             <td
-              colspan="8"
+              colspan="10"
               class="empty"
             >
               Завантаження…
@@ -560,10 +804,6 @@
 </main>
 
 
-<!-- =====================================================
-     FIREBASE
-     ===================================================== -->
-
 <script
   src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
 ></script>
@@ -576,22 +816,12 @@
   src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
 ></script>
 
-
-<!-- =====================================================
-     STOLAR CARP FIREBASE
-     ===================================================== -->
-
 <script
   src="assets/js/firebase-init.js"
 ></script>
 
-
-<!-- =====================================================
-     ПАНІ ІРА • PUBLIC READ ONLY
-     ===================================================== -->
-
 <script
-  src="assets/js/meal_ira.js?v=20260917-5"
+  src="assets/js/meal_ira.js?v=20260917-6"
 ></script>
 
 </body>

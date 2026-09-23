@@ -1,113 +1,99 @@
+
 // assets/js/participation.js
 // STOLAR CARP • Participation list
 //
 // ✅ TEAM + SOLO
 // ✅ TEAM -> назва команди
-// ✅ SOLO -> ТІЛЬКИ Прізвище + Ім'я
-// ✅ SOLO нічого не скорочує
+// ✅ SOLO -> повністю Прізвище Ім'я
 // ✅ middleName / по батькові не показуємо
-// ✅ structured fields:
-//    lastName + firstName
-// ✅ Legacy ПІБ:
-//    "Цьотар Василь Богданович" -> "Цьотар Василь"
-//    "Василь Богданович Цьотар" -> "Цьотар Василь"
-// ✅ Legacy 2 слова не переставляємо навмання
-// ✅ "Учасник" / "Participant" не вважається справжнім ім'ям
-// ✅ Legacy SOLO: старий TEAM-запис у SOLO competition показується як SOLO
+// ✅ legacy SOLO names
 // ✅ Stalker Solo -> SOLO
 // ✅ Stalker Teams -> TEAM
 // ✅ Final -> TEAM
-// ✅ SOLO не відкриває popup команди
-// ✅ public_participants
+// ✅ TEAM popup
+// ✅ meal buttons / meal context
+//
+// ✅ НОВА ЛОГІКА ОПЛАТИ:
+//    • номеруються тільки оплачені
+//    • резерв рахується тільки серед оплачених
+//    • неоплачені та скасовані — окремо, без номерів
+//    • скасування звільняє місце в основному списку
+//    • повторне підтвердження повертає в оплачені
+//    • LIVE-оновлення з public_participants
+//
 // ✅ без додаткового Firestore index по entryType
 
 (function () {
   "use strict";
 
   const $ = id =>
-    document.getElementById(
-      id
-    );
+    document.getElementById(id);
 
-  const esc = s =>
-    String(
-      s ?? ""
-    ).replace(
+  const esc = value =>
+    String(value ?? "").replace(
       /[&<>"']/g,
-      m => ({
+      char => ({
         "&": "&amp;",
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;"
-      })[m]
+      })[char]
     );
 
-  const norm = v =>
-    String(
-      v ?? ""
-    )
-      .replace(
-        /\s+/g,
-        " "
-      )
+  const norm = value =>
+    String(value ?? "")
+      .replace(/\s+/g, " ")
       .trim();
 
-  const normLower = v =>
-    norm(
-      v
-    ).toLowerCase();
+  const normLower = value =>
+    norm(value).toLowerCase();
 
-  const isPaidStatus =
-    status =>
-      [
-        "confirmed",
-        "paid",
-        "payment_confirmed"
-      ].includes(
-        normLower(
-          status
-        )
-      );
+  const PAID_STATUSES = new Set([
+    "confirmed",
+    "paid",
+    "payment_confirmed"
+  ]);
 
-  const ALLOWED_STATUSES =
-    new Set([
-      "confirmed",
-      "paid",
-      "payment_confirmed",
-      "pending_payment",
-      "cancelled"
-    ]);
+  const ALLOWED_STATUSES = new Set([
+    ...PAID_STATUSES,
+    "pending_payment",
+    "cancelled"
+  ]);
 
-  const userNameCache =
-    new Map();
+  const userNameCache = new Map();
+
+  let unsubParticipants = null;
+  let renderRequestId = 0;
+
+  // =========================================================
+  // STATUS
+  // =========================================================
+
+  function isPaidStatus(status) {
+    return PAID_STATUSES.has(
+      normLower(status)
+    );
+  }
+
+  function isCancelledStatus(status) {
+    return normLower(status) === "cancelled";
+  }
 
   // =========================================================
   // FIREBASE
   // =========================================================
 
-  async function waitFirebase(
-    maxMs = 12000
-  ) {
-    const t0 =
-      Date.now();
+  async function waitFirebase(maxMs = 12000) {
+    const startedAt = Date.now();
 
-    while (
-      Date.now() - t0 <
-      maxMs
-    ) {
-      if (
-        window.scDb
-      ) {
+    while (Date.now() - startedAt < maxMs) {
+      if (window.scDb) {
         return;
       }
 
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            100
-          )
+      await new Promise(resolve =>
+        setTimeout(resolve, 100)
       );
     }
 
@@ -124,12 +110,11 @@
     competition,
     event
   ) {
-    const explicit =
-      normLower(
-        event?.entryType ||
-        competition?.entryType ||
-        ""
-      );
+    const explicit = normLower(
+      event?.entryType ||
+      competition?.entryType ||
+      ""
+    );
 
     if (
       explicit === "solo" ||
@@ -138,100 +123,59 @@
       return explicit;
     }
 
-    const format =
-      normLower(
-        event?.format ||
-        event?.engine?.baseFormat ||
-        competition?.format ||
-        competition?.engine?.baseFormat ||
-        ""
-      )
-        .replace(
-          /\s+/g,
-          ""
-        )
-        .replace(
-          /_/g,
-          "-"
-        );
-
-    return (
-      format ===
-      "stalker-solo"
+    const format = normLower(
+      event?.format ||
+      event?.engine?.baseFormat ||
+      competition?.format ||
+      competition?.engine?.baseFormat ||
+      ""
     )
+      .replace(/\s+/g, "")
+      .replace(/_/g, "-");
+
+    return format === "stalker-solo"
       ? "solo"
       : "team";
   }
 
-  function isFinalMeta(
-    event,
-    stageId
-  ) {
-    const key =
-      normLower(
-        event?.key ||
-        event?.stageId ||
-        event?.id ||
-        stageId ||
-        ""
-      );
+  function isFinalMeta(event, stageId) {
+    const key = normLower(
+      event?.key ||
+      event?.stageId ||
+      event?.id ||
+      stageId ||
+      ""
+    );
 
-    const text =
-      normLower(
-        `${
-          event?.title || ""
-        } ${
-          event?.name || ""
-        } ${
-          event?.label || ""
-        }`
-      );
+    const title = normLower(
+      [
+        event?.title,
+        event?.name,
+        event?.label
+      ].filter(Boolean).join(" ")
+    );
 
     return (
       event?.isFinal === true ||
-      key === "final" ||
-      key.includes(
-        "final"
-      ) ||
-      key.includes(
-        "фінал"
-      ) ||
-      text.includes(
-        "final"
-      ) ||
-      text.includes(
-        "фінал"
-      )
+      key.includes("final") ||
+      key.includes("фінал") ||
+      title.includes("final") ||
+      title.includes("фінал")
     );
   }
 
-  function resolveRowEntryType(
-    row,
-    meta
-  ) {
-    const explicit =
-      normLower(
-        row?.entryType
-      );
+  function resolveRowEntryType(row, meta) {
+    const explicit = normLower(
+      row?.entryType
+    );
 
-    /*
-     * Фінал залишається TEAM.
-     */
-    if (
-      meta.isFinal
-    ) {
+    // Фінал завжди TEAM.
+    if (meta.isFinal) {
       return "team";
     }
 
-    /*
-     * Для SOLO competition
-     * competition/event є головним
-     * джерелом істини.
-     */
-    if (
-      meta.entryType ===
-      "solo"
-    ) {
+    // SOLO-формат має пріоритет над legacy TEAM.
+    if (meta.entryType === "solo") {
       return "solo";
     }
 
@@ -242,20 +186,11 @@
       return explicit;
     }
 
-    /*
-     * Legacy SOLO.
-     */
     if (
-      !norm(
-        row?.teamId
-      ) &&
+      !norm(row?.teamId) &&
       (
-        norm(
-          row?.participantName
-        ) ||
-        norm(
-          row?.displayName
-        )
+        norm(row?.participantName) ||
+        norm(row?.displayName)
       )
     ) {
       return "solo";
@@ -272,151 +207,95 @@
     compId,
     stageId
   ) {
-    const db =
-      window.scDb;
+    const db = window.scDb;
 
-    let title =
-      "Змагання";
+    let title = "Змагання";
+    let stageTitle = "";
+    let entryType = "team";
+    let format = "classic";
 
-    let stageTitle =
-      "";
-
-    let entryType =
-      "team";
-
-    let format =
-      "classic";
-
-    let competition =
-      {};
-
-    let event =
-      null;
+    let competition = {};
+    let event = null;
 
     try {
-      const cSnap =
-        await db
-          .collection(
-            "competitions"
-          )
-          .doc(
-            compId
-          )
-          .get();
+      const snap = await db
+        .collection("competitions")
+        .doc(compId)
+        .get();
 
-      if (
-        cSnap.exists
-      ) {
-        competition =
-          cSnap.data() ||
-          {};
+      if (snap.exists) {
+        competition = snap.data() || {};
 
         title =
           competition.name ||
           competition.title ||
           title;
 
-        const events =
-          Array.isArray(
-            competition.events
-          )
-            ? competition.events
-            : [];
+        const events = Array.isArray(
+          competition.events
+        )
+          ? competition.events
+          : [];
 
         const wantedStage =
-          norm(
-            stageId
-          ) ||
-          "main";
+          norm(stageId) || "main";
 
-        event =
-          events.find(
-            e => {
-              const id =
-                norm(
-                  e?.key ||
-                  e?.stageId ||
-                  e?.id
-                );
+        event = events.find(item => {
+          const key = norm(
+            item?.key ||
+            item?.stageId ||
+            item?.id
+          );
 
-              return (
-                id ===
-                wantedStage
-              );
-            }
-          ) ||
-          null;
+          return key === wantedStage;
+        }) || null;
 
-        if (
-          event
-        ) {
-          stageTitle =
-            norm(
-              event.title ||
-              event.name ||
-              event.label ||
-              ""
-            );
+        if (event) {
+          stageTitle = norm(
+            event.title ||
+            event.name ||
+            event.label ||
+            ""
+          );
         }
 
-        entryType =
-          resolveCompetitionEntryType(
-            competition,
-            event
-          );
+        entryType = resolveCompetitionEntryType(
+          competition,
+          event
+        );
 
-        format =
-          normLower(
-            event?.format ||
-            event?.engine
-              ?.baseFormat ||
-            competition.format ||
-            competition.engine
-              ?.baseFormat ||
-            "classic"
-          );
+        format = normLower(
+          event?.format ||
+          event?.engine?.baseFormat ||
+          competition.format ||
+          competition.engine?.baseFormat ||
+          "classic"
+        );
       }
 
-    } catch (e) {
+    } catch (error) {
       console.warn(
         "[participation] competition meta:",
-        e
+        error
       );
     }
 
-    const isFinal =
-      isFinalMeta(
-        event,
-        stageId
-      );
+    const isFinal = isFinalMeta(
+      event,
+      stageId
+    );
 
-    if (
-      isFinal
-    ) {
-      entryType =
-        "team";
+    if (isFinal) {
+      entryType = "team";
     }
 
     return {
-      title:
-        norm(
-          title
-        ) ||
-        "Змагання",
-
-      stageTitle:
-        norm(
-          stageTitle
-        ),
-
+      title: norm(title) || "Змагання",
+      stageTitle: norm(stageTitle),
       entryType,
-
       format,
-
       isFinal,
-
       competition,
-
       event
     };
   }
@@ -425,146 +304,63 @@
   // MAX ENTRIES
   // =========================================================
 
-  async function getMaxEntries(
-    compId,
-    stageId
-  ) {
-    const db =
-      window.scDb;
+  function getMaxEntriesFromMeta(meta) {
+    const c = meta.competition || {};
+    const ev = meta.event || {};
 
-    let max =
-      21;
+    const value =
+      ev.maxParticipants ??
+      ev.participantsLimit ??
+      ev.maxTeams ??
+      ev.teamsLimit ??
+      c.maxParticipants ??
+      c.participantsLimit ??
+      c.maxTeams ??
+      c.teamsLimit ??
+      null;
 
-    try {
-      const cSnap =
-        await db
-          .collection(
-            "competitions"
-          )
-          .doc(
-            compId
-          )
-          .get();
+    const n = Number.parseInt(
+      String(value ?? ""),
+      10
+    );
 
-      if (
-        !cSnap.exists
-      ) {
-        return max;
-      }
-
-      const c =
-        cSnap.data() ||
-        {};
-
-      const events =
-        Array.isArray(
-          c.events
-        )
-          ? c.events
-          : [];
-
-      const ev =
-        events.find(
-          e =>
-            norm(
-              e?.key ||
-              e?.stageId ||
-              e?.id
-            ) ===
-            norm(
-              stageId
-            )
-        );
-
-      const value =
-        ev?.maxParticipants ??
-        ev?.participantsLimit ??
-        ev?.maxTeams ??
-        ev?.teamsLimit ??
-        c?.maxParticipants ??
-        c?.participantsLimit ??
-        c?.maxTeams ??
-        c?.teamsLimit ??
-        null;
-
-      const n =
-        typeof value ===
-        "number"
-          ? value
-          : parseInt(
-              String(
-                value ||
-                ""
-              ),
-              10
-            );
-
-      if (
-        Number.isFinite(
-          n
-        ) &&
-        n > 0
-      ) {
-        max =
-          n;
-      }
-
-    } catch (_) {}
-
-    return max;
+    return Number.isFinite(n) && n > 0
+      ? n
+      : 21;
   }
 
   // =========================================================
   // PERSON NAME HELPERS
   // =========================================================
 
-  function isPlaceholderPersonName(
-    value
-  ) {
-    const raw =
-      normLower(
-        value
-      );
+  function isPlaceholderPersonName(value) {
+    const raw = normLower(value);
 
-    if (
-      !raw
-    ) {
+    if (!raw) {
       return true;
     }
 
-    if (
-      [
-        "—",
-        "-",
-        "учасник",
-        "учасниця",
-        "participant",
-        "user",
-        "користувач",
-        "невідомо",
-        "unknown",
-        "команда",
-        "team"
-      ].includes(
-        raw
-      )
-    ) {
+    if ([
+      "—",
+      "-",
+      "учасник",
+      "учасниця",
+      "participant",
+      "user",
+      "користувач",
+      "невідомо",
+      "unknown",
+      "команда",
+      "team"
+    ].includes(raw)) {
       return true;
     }
 
-    if (
-      /^учасник\s*\d*$/i.test(
-        raw
-      )
-    ) {
+    if (/^учасник\s*\d*$/i.test(raw)) {
       return true;
     }
 
-    if (
-      /^participant\s*\d*$/i.test(
-        raw
-      )
-    ) {
+    if (/^participant\s*\d*$/i.test(raw)) {
       return true;
     }
 
@@ -575,36 +371,17 @@
     value,
     teamName = ""
   ) {
-    const name =
-      norm(
-        value
-      );
+    const name = norm(value);
+    const team = norm(teamName);
 
-    const team =
-      norm(
-        teamName
-      );
-
-    if (
-      isPlaceholderPersonName(
-        name
-      )
-    ) {
+    if (isPlaceholderPersonName(name)) {
       return "";
     }
 
-    /*
-     * У SOLO назва команди
-     * не може бути ім'ям людини.
-     */
+    // Назва команди не є ім'ям SOLO-учасника.
     if (
       team &&
-      normLower(
-        name
-      ) ===
-        normLower(
-          team
-        )
+      normLower(name) === normLower(team)
     ) {
       return "";
     }
@@ -613,53 +390,29 @@
   }
 
   // =========================================================
-  // STRUCTURED LAST + FIRST
+  // STRUCTURED NAME
   // =========================================================
 
-  /*
-   * CANONICAL SOLO DISPLAY:
-   *
-   * Прізвище Ім'я
-   *
-   * firstName: "Василь"
-   * lastName:  "Цьотар"
-   *
-   * -> "Цьотар Василь"
-   *
-   * middleName / patronymic
-   * НЕ використовуємо.
-   */
-  function structuredPersonName(
-    data
-  ) {
-    const d =
-      data ||
-      {};
+  function structuredPersonName(data) {
+    const d = data || {};
 
-    const firstName =
-      validPersonalName(
-        d.firstName ||
-        d.givenName ||
-        d.first_name ||
-        ""
-      );
+    const firstName = validPersonalName(
+      d.firstName ||
+      d.givenName ||
+      d.first_name ||
+      ""
+    );
 
-    const lastName =
-      validPersonalName(
-        d.lastName ||
-        d.surname ||
-        d.familyName ||
-        d.last_name ||
-        ""
-      );
+    const lastName = validPersonalName(
+      d.lastName ||
+      d.surname ||
+      d.familyName ||
+      d.last_name ||
+      ""
+    );
 
-    if (
-      firstName &&
-      lastName
-    ) {
-      return (
-        `${lastName} ${firstName}`
-      );
+    if (firstName && lastName) {
+      return `${lastName} ${firstName}`;
     }
 
     return "";
@@ -669,209 +422,81 @@
   // LEGACY PATRONYMIC
   // =========================================================
 
-  /*
-   * Визначаємо по батькові.
-   *
-   * Богданович
-   * Миколайович
-   * Іванович
-   * Петрівна
-   * Іванівна
-   */
-  function isPatronymicPart(
-    value
-  ) {
-    const s =
-      normLower(
-        value
-      );
+  function isPatronymicPart(value) {
+    const s = normLower(value);
 
-    if (
-      !s
-    ) {
+    if (!s) {
       return false;
     }
 
     return (
-      /(?:ович|евич|євич|йович)$/i.test(
-        s
-      ) ||
-      /(?:івна|ївна|овна|евна|євна)$/i.test(
-        s
-      )
+      /(?:ович|евич|євич|йович)$/i.test(s) ||
+      /(?:івна|ївна|овна|евна|євна)$/i.test(s)
     );
   }
 
-  // =========================================================
-  // LEGACY SOLO NAME
-  // =========================================================
-
-  /*
-   * Приводимо старі ПІБ
-   * до canonical:
-   *
-   * Прізвище Ім'я
-   *
-   * "Цьотар Василь Богданович"
-   * -> "Цьотар Василь"
-   *
-   * "Василь Богданович Цьотар"
-   * -> "Цьотар Василь"
-   *
-   * ДВА СЛОВА:
-   *
-   * "Мілян Андрій"
-   * -> "Мілян Андрій"
-   *
-   * "Дячок Роман"
-   * -> "Дячок Роман"
-   *
-   * Їх не переставляємо,
-   * бо без structured fields
-   * неможливо надійно визначити
-   * порядок.
-   */
-  function normalizeLegacySoloName(
-    value
-  ) {
-    const raw =
-      norm(
-        value
-      );
+  function normalizeLegacySoloName(value) {
+    const raw = norm(value);
 
     if (
       !raw ||
-      isPlaceholderPersonName(
-        raw
-      )
+      isPlaceholderPersonName(raw)
     ) {
       return "";
     }
 
-    const parts =
-      raw
-        .split(
-          " "
-        )
-        .filter(
-          Boolean
-        );
+    const parts = raw
+      .split(" ")
+      .filter(Boolean);
 
-    /*
-     * Уже два слова.
-     *
-     * Не вгадуємо.
-     */
-    if (
-      parts.length ===
-      2
-    ) {
+    // Два слова не переставляємо навмання.
+    if (parts.length === 2) {
       return raw;
     }
 
-    /*
-     * Повне ПІБ.
-     */
-    if (
-      parts.length ===
-      3
-    ) {
+    if (parts.length === 3) {
       const patronymicIndex =
-        parts.findIndex(
-          isPatronymicPart
-        );
+        parts.findIndex(isPatronymicPart);
 
-      /*
-       * Прізвище Ім'я По батькові
-       *
-       * Цьотар Василь Богданович
-       * -> Цьотар Василь
-       */
-      if (
-        patronymicIndex ===
-        2
-      ) {
-        return (
-          `${parts[0]} ${parts[1]}`
-        );
+      // Прізвище Ім'я По батькові.
+      if (patronymicIndex === 2) {
+        return `${parts[0]} ${parts[1]}`;
       }
 
-      /*
-       * Ім'я По батькові Прізвище
-       *
-       * Василь Богданович Цьотар
-       * -> Цьотар Василь
-       */
-      if (
-        patronymicIndex ===
-        1
-      ) {
-        return (
-          `${parts[2]} ${parts[0]}`
-        );
+      // Ім'я По батькові Прізвище.
+      if (patronymicIndex === 1) {
+        return `${parts[2]} ${parts[0]}`;
       }
 
-      /*
-       * По батькові Ім'я Прізвище
-       *
-       * Богданович Василь Цьотар
-       * -> Цьотар Василь
-       */
-      if (
-        patronymicIndex ===
-        0
-      ) {
-        return (
-          `${parts[2]} ${parts[1]}`
-        );
+      // По батькові Ім'я Прізвище.
+      if (patronymicIndex === 0) {
+        return `${parts[2]} ${parts[1]}`;
       }
     }
 
-    /*
-     * Якщо структура невідома —
-     * нічого не вигадуємо.
-     */
     return raw;
   }
 
   // =========================================================
-  // NORMAL PERSON NAME
+  // PERSON NAME
   // =========================================================
 
-  function personNameFromObject(
-    data
-  ) {
-    const d =
-      data ||
-      {};
+  function personNameFromObject(data) {
+    const d = data || {};
 
-    /*
-     * №1.
-     *
-     * Найнадійніше:
-     * lastName + firstName.
-     */
     const structured =
-      structuredPersonName(
-        d
-      );
+      structuredPersonName(d);
 
-    if (
-      structured
-    ) {
+    if (structured) {
       return structured;
     }
 
-    const teamName =
-      norm(
-        d.teamName ||
-        d.team ||
-        ""
-      );
+    const teamName = norm(
+      d.teamName ||
+      d.team ||
+      ""
+    );
 
-    /*
-     * Legacy fallback.
-     */
     const candidates = [
       d.participantName,
       d.fullName,
@@ -881,19 +506,13 @@
       d.captain
     ];
 
-    for (
-      const candidate
-      of candidates
-    ) {
-      const name =
-        validPersonalName(
-          candidate,
-          teamName
-        );
+    for (const candidate of candidates) {
+      const name = validPersonalName(
+        candidate,
+        teamName
+      );
 
-      if (
-        name
-      ) {
+      if (name) {
         return name;
       }
     }
@@ -901,157 +520,67 @@
     return "";
   }
 
-  // =========================================================
-  // SOLO DISPLAY NAME
-  // =========================================================
-
-  /*
-   * НІЯКИХ:
-   *
-   * Чуловський Я.
-   * Мазуркевич Р.
-   *
-   * Повністю:
-   *
-   * Чуловський Ярослав
-   * Мазуркевич Роман
-   */
-  function formatSoloName(
-    value
-  ) {
-    const raw =
-      normalizeLegacySoloName(
-        value
-      );
-
-    if (
-      !raw
-    ) {
-      return "Учасник";
-    }
-
-    return raw;
+  function formatSoloName(value) {
+    return (
+      normalizeLegacySoloName(value) ||
+      "Учасник"
+    );
   }
 
   // =========================================================
   // USER NAME FALLBACK
   // =========================================================
 
-  async function getUserDisplayName(
-    uid
-  ) {
-    const id =
-      norm(
-        uid
-      );
+  async function getUserDisplayName(uid) {
+    const id = norm(uid);
 
-    if (
-      !id
-    ) {
+    if (!id) {
       return "";
     }
 
-    if (
-      userNameCache.has(
-        id
-      )
-    ) {
-      return (
-        userNameCache.get(
-          id
-        ) ||
-        ""
-      );
+    if (userNameCache.has(id)) {
+      return userNameCache.get(id) || "";
     }
 
-    let name =
-      "";
+    let name = "";
 
     try {
-      const snap =
-        await window.scDb
-          .collection(
-            "users"
-          )
-          .doc(
-            id
-          )
-          .get();
+      const snap = await window.scDb
+        .collection("users")
+        .doc(id)
+        .get();
 
-      if (
-        snap.exists
-      ) {
-        const user =
-          snap.data() ||
-          {};
+      if (snap.exists) {
+        const user = snap.data() || {};
 
-        /*
-         * №1.
-         *
-         * Якщо є firstName + lastName,
-         * це головне джерело.
-         *
-         * Вивід:
-         * lastName firstName.
-         */
         const structured =
-          structuredPersonName(
-            user
-          );
+          structuredPersonName(user);
 
-        if (
-          structured
-        ) {
-          name =
-            structured;
+        if (structured) {
+          name = structured;
 
         } else {
-          /*
-           * №2.
-           *
-           * Legacy повний ПІБ.
-           */
           const legacy =
-            personNameFromObject(
-              user
-            );
+            personNameFromObject(user);
 
-          name =
-            formatSoloName(
-              legacy
-            );
+          name = formatSoloName(legacy);
 
-          if (
-            isPlaceholderPersonName(
-              name
-            )
-          ) {
-            name =
-              "";
+          if (isPlaceholderPersonName(name)) {
+            name = "";
           }
         }
       }
 
-    } catch (e) {
-      /*
-       * На публічній сторінці
-       * users може бути закрита Rules.
-       *
-       * Тоді ім'я повинно бути
-       * у public_participants.
-       */
+    } catch (error) {
+      // Публічні користувачі можуть не мати
+      // доступу до users через Firestore Rules.
       console.warn(
-        "[participation] user name fallback skipped:",
-        id,
-        e?.message ||
-        e
+        "[participation] user fallback:",
+        error?.message || error
       );
     }
 
-    userNameCache.set(
-      id,
-      name
-    );
+    userNameCache.set(id, name);
 
     return name;
   }
@@ -1060,45 +589,26 @@
   // UID
   // =========================================================
 
-  function uidFromPublicDoc(
-    doc,
-    data
-  ) {
-    const r =
-      data ||
-      {};
+  function uidFromPublicDoc(doc, data) {
+    const row = data || {};
 
-    const direct =
-      norm(
-        r.uid ||
-        r.participantUid ||
-        r.userId ||
-        r.registeredByUid ||
-        ""
-      );
+    const direct = norm(
+      row.uid ||
+      row.participantUid ||
+      row.userId ||
+      row.registeredByUid ||
+      ""
+    );
 
-    if (
-      direct
-    ) {
+    if (direct) {
       return direct;
     }
 
-    const docId =
-      norm(
-        doc?.id
-      );
+    const docId = norm(doc?.id);
 
-    if (
-      docId.includes(
-        "__solo__"
-      )
-    ) {
+    if (docId.includes("__solo__")) {
       return norm(
-        docId
-          .split(
-            "__solo__"
-          )
-          .pop()
+        docId.split("__solo__").pop()
       );
     }
 
@@ -1113,296 +623,168 @@
     teamName,
     teamDocId
   ) {
-    if (
-      !teamDocId
-    ) {
+    if (!teamDocId) {
       return;
     }
 
-    const popup =
-      $("teamPopup");
+    const popup = $("teamPopup");
+    const title = $("teamPopupTitle");
+    const body = $("teamPopupBody");
 
-    const title =
-      $("teamPopupTitle");
-
-    const body =
-      $("teamPopupBody");
-
-    if (
-      !popup ||
-      !title ||
-      !body
-    ) {
+    if (!popup || !title || !body) {
       return;
     }
 
-    title.textContent =
-      teamName ||
-      "Команда";
+    title.textContent = teamName || "Команда";
 
     body.innerHTML =
       '<div class="team-loading">Завантаження складу…</div>';
 
-    popup.style.display =
-      "flex";
+    popup.style.display = "flex";
 
     try {
-      const db =
-        window.scDb;
+      const db = window.scDb;
 
-      const teamSnap =
-        await db
-          .collection(
-            "teams"
-          )
-          .doc(
-            teamDocId
-          )
-          .get();
+      const teamSnap = await db
+        .collection("teams")
+        .doc(teamDocId)
+        .get();
 
-      if (
-        !teamSnap.exists
-      ) {
+      if (!teamSnap.exists) {
         body.innerHTML =
           '<div class="team-loading">Команду не знайдено</div>';
 
         return;
       }
 
-      const team =
-        teamSnap.data() ||
-        {};
+      const team = teamSnap.data() || {};
+      const ownerUid = team.ownerUid || null;
 
-      const ownerUid =
-        team.ownerUid ||
-        null;
+      const members = [];
+      const used = new Set();
 
-      const members =
-        [];
+      const usersSnap = await db
+        .collection("users")
+        .where("teamId", "==", teamDocId)
+        .get();
 
-      const used =
-        new Set();
+      usersSnap.forEach(doc => {
+        const d = doc.data() || {};
 
-      const usersSnap =
-        await db
-          .collection(
-            "users"
-          )
-          .where(
-            "teamId",
-            "==",
-            teamDocId
-          )
+        members.push({
+          id: doc.id,
+          fullName:
+            personNameFromObject(d) ||
+            d.email ||
+            "Учасник",
+          role: d.role || "member",
+          avatarUrl:
+            d.avatarUrl ||
+            d.photoURL ||
+            null
+        });
+
+        used.add(doc.id);
+      });
+
+      if (ownerUid && !used.has(ownerUid)) {
+        const capSnap = await db
+          .collection("users")
+          .doc(ownerUid)
           .get();
 
-      usersSnap.forEach(
-        doc => {
-          const d =
-            doc.data() ||
-            {};
+        if (capSnap.exists) {
+          const captain = capSnap.data() || {};
 
           members.push({
-            id:
-              doc.id,
-
+            id: ownerUid,
             fullName:
-              personNameFromObject(
-                d
-              ) ||
-              d.email ||
-              "Учасник",
-
-            role:
-              d.role ||
-              "member",
-
-            avatarUrl:
-              d.avatarUrl ||
-              d.photoURL ||
-              null
-          });
-
-          used.add(
-            doc.id
-          );
-        }
-      );
-
-      if (
-        ownerUid &&
-        !used.has(
-          ownerUid
-        )
-      ) {
-        const capSnap =
-          await db
-            .collection(
-              "users"
-            )
-            .doc(
-              ownerUid
-            )
-            .get();
-
-        if (
-          capSnap.exists
-        ) {
-          const c =
-            capSnap.data() ||
-            {};
-
-          members.push({
-            id:
-              ownerUid,
-
-            fullName:
-              personNameFromObject(
-                c
-              ) ||
-              c.email ||
+              personNameFromObject(captain) ||
+              captain.email ||
               "Капітан",
-
-            role:
-              "captain",
-
+            role: "captain",
             avatarUrl:
-              c.avatarUrl ||
-              c.photoURL ||
+              captain.avatarUrl ||
+              captain.photoURL ||
               null
           });
         }
       }
 
-      if (
-        !members.length
-      ) {
+      if (!members.length) {
         body.innerHTML =
           '<div class="team-loading">Склад команди порожній</div>';
 
         return;
       }
 
-      members.sort(
-        (
-          a,
-          b
-        ) => {
-          const aCap =
-            a.role ===
-              "captain" ||
-            (
-              ownerUid &&
-              a.id ===
-                ownerUid
-            );
+      members.sort((a, b) => {
+        const aCaptain =
+          a.role === "captain" ||
+          a.id === ownerUid;
 
-          const bCap =
-            b.role ===
-              "captain" ||
-            (
-              ownerUid &&
-              b.id ===
-                ownerUid
-            );
+        const bCaptain =
+          b.role === "captain" ||
+          b.id === ownerUid;
 
-          if (
-            aCap &&
-            !bCap
-          ) {
-            return -1;
-          }
+        if (aCaptain && !bCaptain) return -1;
+        if (bCaptain && !aCaptain) return 1;
 
-          if (
-            bCap &&
-            !aCap
-          ) {
-            return 1;
-          }
+        return (a.fullName || "").localeCompare(
+          b.fullName || "",
+          "uk"
+        );
+      });
 
-          return (
-            a.fullName ||
-            ""
-          ).localeCompare(
-            b.fullName ||
-            "",
-            "uk"
-          );
-        }
-      );
+      body.innerHTML = members.map(member => {
+        const avatarHtml = member.avatarUrl
+          ? `
+            <div class="member-avatar">
+              <img
+                src="${esc(member.avatarUrl)}"
+                alt=""
+              >
+            </div>
+          `
+          : `
+            <div class="member-avatar">
+              <div class="member-avatar-placeholder">
+                👤
+              </div>
+            </div>
+          `;
 
-      body.innerHTML =
-        members
-          .map(
-            member => {
-              const avatarHtml =
-                member.avatarUrl
-                  ? `
-                    <div class="member-avatar">
-                      <img
-                        src="${esc(
-                          member.avatarUrl
-                        )}"
-                        alt=""
-                      >
-                    </div>
-                  `
-                  : `
-                    <div class="member-avatar">
-                      <div class="member-avatar-placeholder">
-                        👤
-                      </div>
-                    </div>
-                  `;
+        const isCaptain =
+          member.role === "captain" ||
+          member.id === ownerUid;
 
-              const isCaptain =
-                member.role ===
-                  "captain" ||
-                (
-                  ownerUid &&
-                  member.id ===
-                    ownerUid
-                );
+        return `
+          <div class="team-member">
+            ${avatarHtml}
 
-              return `
-                <div class="team-member">
+            <div class="member-info">
+              <div class="member-name">
+                ${esc(member.fullName)}
+              </div>
 
-                  ${avatarHtml}
+              <div class="member-role">
+                ${isCaptain ? "⭐ Капітан" : "Учасник"}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
 
-                  <div class="member-info">
-
-                    <div class="member-name">
-                      ${esc(
-                        member.fullName
-                      )}
-                    </div>
-
-                    <div class="member-role">
-                      ${
-                        isCaptain
-                          ? "⭐ Капітан"
-                          : "Учасник"
-                      }
-                    </div>
-
-                  </div>
-
-                </div>
-              `;
-            }
-          )
-          .join("");
-
-    } catch (err) {
+    } catch (error) {
       console.error(
         "[participation] team popup:",
-        err
+        error
       );
 
       body.innerHTML = `
         <div class="team-loading">
           Помилка: ${esc(
-            err?.message ||
-            err
+            error?.message || error
           )}
         </div>
       `;
@@ -1410,57 +792,34 @@
   }
 
   function closeTeamPopup() {
-    const popup =
-      $("teamPopup");
+    const popup = $("teamPopup");
 
-    if (
-      popup
-    ) {
-      popup.style.display =
-        "none";
+    if (popup) {
+      popup.style.display = "none";
     }
   }
 
-  window.openTeamPopup =
-    openTeamPopup;
+  window.openTeamPopup = openTeamPopup;
+  window.closeTeamPopup = closeTeamPopup;
 
-  window.closeTeamPopup =
-    closeTeamPopup;
-
-  document.addEventListener(
-    "click",
-    event => {
-      if (
-        event.target.id ===
-        "teamPopupClose"
-      ) {
-        closeTeamPopup();
-      }
+  document.addEventListener("click", event => {
+    if (event.target?.id === "teamPopupClose") {
+      closeTeamPopup();
     }
-  );
+  });
 
-  document.addEventListener(
-    "click",
-    event => {
-      const popup =
-        $("teamPopup");
+  document.addEventListener("click", event => {
+    const popup = $("teamPopup");
+    const content = $("teamPopupContent");
 
-      const content =
-        $("teamPopupContent");
-
-      if (
-        popup?.style.display ===
-          "flex" &&
-        event.target ===
-          popup &&
-        !content?.contains(
-          event.target
-        )
-      ) {
-        closeTeamPopup();
-      }
+    if (
+      popup?.style.display === "flex" &&
+      event.target === popup &&
+      !content?.contains(event.target)
+    ) {
+      closeTeamPopup();
     }
-  );
+  });
 
   window.addEventListener(
     "popstate",
@@ -1468,111 +827,72 @@
   );
 
   // =========================================================
-  // MEALS
+  // MEAL BUTTONS
   // =========================================================
 
   function attachMealButtons() {
-    const btnOpen =
-      $("btnMealGateOpen");
+    const btnOpen = $("btnMealGateOpen");
+    const btnOrder = $("btnOpenMealOrder");
+    const btnList = $("btnOpenMealList");
+    const btnClear = $("btnClearMealOrders");
 
-    const btnOrder =
-      $("btnOpenMealOrder");
-
-    const btnList =
-      $("btnOpenMealList");
-
-    const btnClear =
-      $("btnClearMealOrders");
-
-    if (
-      btnOpen
-    ) {
-      btnOpen.onclick =
-        () => {
-          if (
-            window.scMeals &&
-            typeof window
-              .scMeals
-              .openMeals ===
-              "function"
-          ) {
-            window.scMeals
-              .openMeals();
-          }
-        };
+    if (btnOpen) {
+      btnOpen.onclick = () => {
+        if (
+          window.scMeals &&
+          typeof window.scMeals.openMeals === "function"
+        ) {
+          window.scMeals.openMeals();
+        }
+      };
     }
 
-    if (
-      btnOrder
-    ) {
-      btnOrder.onclick =
-        () => {
-          if (
-            window.scMeals &&
-            typeof window
-              .scMeals
-              .openOrder ===
-              "function"
-          ) {
-            window.scMeals
-              .openOrder();
-          }
-        };
+    if (btnOrder) {
+      btnOrder.onclick = () => {
+        if (
+          window.scMeals &&
+          typeof window.scMeals.openOrder === "function"
+        ) {
+          window.scMeals.openOrder();
+        }
+      };
     }
 
-    if (
-      btnList
-    ) {
-      btnList.onclick =
-        () => {
-          if (
-            window.scMeals &&
-            typeof window
-              .scMeals
-              .openList ===
-              "function"
-          ) {
-            window.scMeals
-              .openList();
-          }
-        };
+    if (btnList) {
+      btnList.onclick = () => {
+        if (
+          window.scMeals &&
+          typeof window.scMeals.openList === "function"
+        ) {
+          window.scMeals.openList();
+        }
+      };
     }
 
-    if (
-      btnClear
-    ) {
-      btnClear.onclick =
-        () => {
-          if (
-            window.scMeals &&
-            typeof window
-              .scMeals
-              .clearOrders ===
-              "function"
-          ) {
-            window.scMeals
-              .clearOrders();
-          }
-        };
+    if (btnClear) {
+      btnClear.onclick = () => {
+        if (
+          window.scMeals &&
+          typeof window.scMeals.clearOrders === "function"
+        ) {
+          window.scMeals.clearOrders();
+        }
+      };
     }
 
     if (
       window.scMeals &&
-      typeof window
-        .scMeals
-        .setContext ===
-        "function" &&
+      typeof window.scMeals.setContext === "function" &&
       window.scMealContext
     ) {
-      window.scMeals
-        .setContext(
-          window.scMealContext
-        );
+      window.scMeals.setContext(
+        window.scMealContext
+      );
     }
   }
 
   // =========================================================
-  // STAGE
+  // STAGE MATCH
   // =========================================================
 
   function stageMatches(
@@ -1580,44 +900,28 @@
     stageParam
   ) {
     const rowStage =
-      norm(
-        rowStageId
-      ) ||
-      "main";
+      norm(rowStageId) || "main";
 
     const wanted =
-      norm(
-        stageParam
-      ) ||
-      "main";
+      norm(stageParam) || "main";
 
-    const wantedRaw =
-      wanted.replace(
-        /^stage-/,
-        ""
-      );
+    const wantedRaw = wanted.replace(
+      /^stage-/,
+      ""
+    );
 
-    const rowRaw =
-      rowStage.replace(
-        /^stage-/,
-        ""
-      );
+    const rowRaw = rowStage.replace(
+      /^stage-/,
+      ""
+    );
 
     return (
-      rowStage ===
-        wanted ||
-
-      rowStage ===
-        `stage-${wantedRaw}` ||
-
-      rowRaw ===
-        wantedRaw ||
-
+      rowStage === wanted ||
+      rowStage === `stage-${wantedRaw}` ||
+      rowRaw === wantedRaw ||
       (
-        wanted ===
-          "main" &&
-        rowStage ===
-          "main"
+        wanted === "main" &&
+        rowStage === "main"
       )
     );
   }
@@ -1626,392 +930,78 @@
   // DISPLAY NAMES
   // =========================================================
 
-  function participantDisplayName(
-    row
-  ) {
-    /*
-     * Після normalizeParticipantRow()
-     * participantName уже canonical:
-     *
-     * Прізвище Ім'я.
-     */
-    const direct =
-      norm(
-        row?.participantName
-      );
+  function participantDisplayName(row) {
+    const direct = norm(
+      row?.participantName
+    );
 
     if (
       direct &&
-      !isPlaceholderPersonName(
-        direct
-      )
+      !isPlaceholderPersonName(direct)
     ) {
-      return formatSoloName(
-        direct
-      );
+      return formatSoloName(direct);
     }
 
     const structured =
-      structuredPersonName(
-        row
-      );
+      structuredPersonName(row);
 
-    if (
-      structured
-    ) {
+    if (structured) {
       return structured;
     }
 
-    const raw =
-      personNameFromObject(
-        row
-      );
+    const legacy =
+      personNameFromObject(row);
 
-    return raw
-      ? formatSoloName(
-          raw
-        )
+    return legacy
+      ? formatSoloName(legacy)
       : "Учасник";
   }
 
-  function teamDisplayName(
-    row
-  ) {
+  function teamDisplayName(row) {
     return (
-      norm(
-        row.teamName
-      ) ||
-      norm(
-        row.displayName
-      ) ||
+      norm(row?.teamName) ||
+      norm(row?.displayName) ||
       "—"
     );
   }
 
   // =========================================================
-  // NORMALIZE PUBLIC ROW
+  // NORMALIZE PUBLIC PARTICIPANT
   // =========================================================
 
   async function normalizeParticipantRow(
     doc,
     meta
   ) {
-    const r =
-      doc.data() ||
-      {};
+    const r = doc.data() || {};
 
-    const status =
-      normLower(
-        r.status ||
-        "pending_payment"
-      );
+    const status = normLower(
+      r.status || "pending_payment"
+    );
 
-    if (
-      !ALLOWED_STATUSES
-        .has(
-          status
-        )
-    ) {
+    if (!ALLOWED_STATUSES.has(status)) {
       return null;
     }
 
     const entryType =
-      resolveRowEntryType(
-        r,
-        meta
-      );
+      resolveRowEntryType(r, meta);
 
-    // =====================================================
-    // SOLO
-    // =====================================================
-
-    if (
-      entryType ===
-      "solo"
-    ) {
-      const uid =
-        uidFromPublicDoc(
-          doc,
-          r
-        );
-
-      if (
-        !uid
-      ) {
-        return null;
-      }
-
-      const teamName =
-        norm(
-          r.teamName ||
-          r.team ||
-          ""
-        );
-
-      /*
-       * №1.
-       *
-       * Якщо public_participants уже має
-       * firstName + lastName:
-       *
-       * lastName + firstName
-       *
-       * Це canonical.
-       */
-      let participantName =
-        structuredPersonName(
-          r
-        );
-
-      /*
-       * №2.
-       *
-       * Якщо structured fields
-       * немає — беремо users/{uid}.
-       *
-       * Там теж canonical:
-       * lastName + firstName.
-       */
-      if (
-        !participantName
-      ) {
-        const fromUser =
-          await getUserDisplayName(
-            uid
-          );
-
-        if (
-          fromUser
-        ) {
-          participantName =
-            fromUser;
-        }
-      }
-
-      /*
-       * №3.
-       *
-       * Legacy fallback:
-       * participantName / fullName / etc.
-       */
-      if (
-        !participantName
-      ) {
-        const legacy =
-          personNameFromObject(
-            r
-          );
-
-        if (
-          legacy
-        ) {
-          participantName =
-            formatSoloName(
-              legacy
-            );
-        }
-      }
-
-      /*
-       * У SOLO teamName
-       * ніколи не є ім'ям учасника.
-       */
-      if (
-        teamName &&
-        participantName &&
-        normLower(
-          participantName
-        ) ===
-          normLower(
-            teamName
-          )
-      ) {
-        participantName =
-          "";
-      }
-
-      if (
-        !participantName ||
-        isPlaceholderPersonName(
-          participantName
-        )
-      ) {
-        participantName =
-          "Учасник";
-      }
-
-      /*
-       * Фінальна нормалізація.
-       *
-       * Ніяких скорочень.
-       */
-      participantName =
-        formatSoloName(
-          participantName
-        );
-
-      return {
-        participantDocId:
-          doc.id,
-
-        sourceEntryType:
-          normLower(
-            r.entryType
-          ),
-
-        legacyConvertedToSolo:
-          normLower(
-            r.entryType
-          ) !==
-          "solo",
-
-        entryType:
-          "solo",
-
-        uid,
-
-        participantName,
-
-        displayName:
-          participantName,
-
-        firstName:
-          norm(
-            r.firstName
-          ),
-
-        lastName:
-          norm(
-            r.lastName
-          ),
-
-        teamId:
-          null,
-
-        teamName:
-          null,
-
-        status,
-
-        createdAt:
-          r.createdAt ||
-          null,
-
-        confirmedAt:
-          r.confirmedAt ||
-          null,
-
-        updatedAt:
-          r.updatedAt ||
-          null,
-
-        orderPaid:
-          Number.isFinite(
-            r.orderPaid
-          )
-            ? r.orderPaid
-            : null,
-
-        drawZone:
-          r.drawZone ||
-          r.zone ||
-          "",
-
-        drawSector:
-          r.drawSector ||
-          r.sector ||
-          "",
-
-        drawKey:
-          r.drawKey ||
-          (
-            (
-              r.drawZone ||
-              r.zone
-            ) &&
-            (
-              r.drawSector ||
-              r.sector
-            )
-              ? `${
-                  r.drawZone ||
-                  r.zone
-                }${
-                  r.drawSector ||
-                  r.sector
-                }`
-              : ""
-          )
-      };
-    }
-
-    // =====================================================
-    // TEAM
-    // =====================================================
-
-    const teamId =
-      norm(
-        r.teamId
-      );
-
-    if (
-      !teamId
-    ) {
-      return null;
-    }
-
-    const teamName =
-      teamDisplayName(
-        r
-      );
-
-    return {
-      participantDocId:
-        doc.id,
+    const common = {
+      participantDocId: doc.id,
 
       sourceEntryType:
-        normLower(
-          r.entryType
-        ),
-
-      legacyConvertedToSolo:
-        false,
-
-      entryType:
-        "team",
-
-      uid:
-        norm(
-          r.uid
-        ),
-
-      teamId,
-
-      teamName,
-
-      displayName:
-        teamName,
+        normLower(r.entryType),
 
       status,
 
-      createdAt:
-        r.createdAt ||
-        null,
+      createdAt: r.createdAt || null,
+      confirmedAt: r.confirmedAt || null,
+      cancelledAt: r.cancelledAt || null,
+      updatedAt: r.updatedAt || null,
 
-      confirmedAt:
-        r.confirmedAt ||
-        null,
-
-      updatedAt:
-        r.updatedAt ||
-        null,
-
-      orderPaid:
-        Number.isFinite(
-          r.orderPaid
-        )
-          ? r.orderPaid
-          : null,
+      orderPaid: Number.isFinite(r.orderPaid)
+        ? r.orderPaid
+        : null,
 
       drawZone:
         r.drawZone ||
@@ -2044,58 +1034,146 @@
             : ""
         )
     };
+
+    // =====================================================
+    // SOLO
+    // =====================================================
+
+    if (entryType === "solo") {
+      const uid =
+        uidFromPublicDoc(doc, r);
+
+      if (!uid) {
+        return null;
+      }
+
+      const teamName = norm(
+        r.teamName ||
+        r.team ||
+        ""
+      );
+
+      // 1. Структуроване ім'я з public_participants.
+      let participantName =
+        structuredPersonName(r);
+
+      // 2. Структуроване ім'я з users.
+      if (!participantName) {
+        participantName =
+          await getUserDisplayName(uid);
+      }
+
+      // 3. Legacy fallback.
+      if (!participantName) {
+        const legacy =
+          personNameFromObject(r);
+
+        if (legacy) {
+          participantName =
+            formatSoloName(legacy);
+        }
+      }
+
+      // Назва команди ніколи не замінює SOLO-ім'я.
+      if (
+        teamName &&
+        participantName &&
+        normLower(participantName) ===
+          normLower(teamName)
+      ) {
+        participantName = "";
+      }
+
+      if (
+        !participantName ||
+        isPlaceholderPersonName(participantName)
+      ) {
+        participantName = "Учасник";
+      }
+
+      participantName =
+        formatSoloName(participantName);
+
+      return {
+        ...common,
+
+        legacyConvertedToSolo:
+          normLower(r.entryType) !== "solo",
+
+        entryType: "solo",
+        uid,
+
+        participantName,
+        displayName: participantName,
+
+        firstName: norm(r.firstName),
+        lastName: norm(r.lastName),
+
+        teamId: null,
+        teamName: null
+      };
+    }
+
+    // =====================================================
+    // TEAM
+    // =====================================================
+
+    const teamId = norm(r.teamId);
+
+    if (!teamId) {
+      return null;
+    }
+
+    const teamName =
+      teamDisplayName(r);
+
+    return {
+      ...common,
+
+      legacyConvertedToSolo: false,
+
+      entryType: "team",
+      uid: norm(r.uid),
+
+      teamId,
+      teamName,
+      displayName: teamName
+    };
   }
 
   // =========================================================
-  // TIMESTAMP
+  // TIMESTAMPS
   // =========================================================
 
-  function timestampMs(
-    value
-  ) {
-    if (
-      !value
-    ) {
+  function timestampMs(value) {
+    if (!value) {
       return 0;
     }
 
     try {
-      if (
-        typeof value
-          .toMillis ===
-          "function"
-      ) {
-        return value
-          .toMillis();
+      if (typeof value.toMillis === "function") {
+        return value.toMillis();
       }
 
-      if (
-        typeof value
-          .toDate ===
-          "function"
-      ) {
-        return value
-          .toDate()
-          .getTime();
+      if (typeof value.toDate === "function") {
+        return value.toDate().getTime();
       }
 
-      if (
-        value._seconds
-      ) {
-        return (
-          value._seconds *
-          1000
-        );
+      if (typeof value.seconds === "number") {
+        return value.seconds * 1000;
       }
 
-      const d =
-        new Date(
-          value
-        );
+      if (typeof value._seconds === "number") {
+        return value._seconds * 1000;
+      }
 
-      return Number.isNaN(
-        d.getTime()
-      )
+      if (typeof value === "number") {
+        return value;
+      }
+
+      const d = new Date(value);
+
+      return Number.isNaN(d.getTime())
         ? 0
         : d.getTime();
 
@@ -2104,232 +1182,236 @@
     }
   }
 
-  function rowTimestamp(
-    row
-  ) {
-    return timestampMs(
-      row.updatedAt ||
-      row.confirmedAt ||
-      row.createdAt
-    );
-  }
-
   // =========================================================
   // DEDUPE
   // =========================================================
 
-  function chooseBetterRow(
-    a,
-    b
-  ) {
-    if (
-      !a
-    ) {
-      return b;
-    }
+  function rowStatusTimestamp(row) {
+    return Math.max(
+      timestampMs(row.cancelledAt),
+      timestampMs(row.confirmedAt),
+      timestampMs(row.updatedAt),
+      timestampMs(row.createdAt)
+    );
+  }
 
-    if (
-      !b
-    ) {
-      return a;
-    }
+  function chooseBetterRow(a, b) {
+    if (!a) return b;
+    if (!b) return a;
 
-    /*
-     * Новий canonical SOLO
-     * кращий за legacy TEAM,
-     * який трактуємо як SOLO.
-     */
+    // Новий canonical SOLO має пріоритет
+    // над старим TEAM-записом того самого UID.
     if (
       a.legacyConvertedToSolo !==
       b.legacyConvertedToSolo
     ) {
-      return a
-        .legacyConvertedToSolo
+      return a.legacyConvertedToSolo
         ? b
         : a;
     }
 
-    const aPaid =
-      isPaidStatus(
-        a.status
-      );
+    // Для дублікатів використовуємо найновішу
+    // зміну статусу, а не автоматично "Оплачено".
+    const ta = rowStatusTimestamp(a);
+    const tb = rowStatusTimestamp(b);
 
-    const bPaid =
-      isPaidStatus(
-        b.status
-      );
-
-    if (
-      aPaid !==
-      bPaid
-    ) {
-      return bPaid
-        ? b
-        : a;
+    if (ta !== tb) {
+      return tb > ta ? b : a;
     }
 
-    return (
-      rowTimestamp(
-        b
-      ) >
-      rowTimestamp(
-        a
-      )
-    )
-      ? b
-      : a;
+    // Fallback для старих документів без дат.
+    const aPaid = isPaidStatus(a.status);
+    const bPaid = isPaidStatus(b.status);
+
+    if (aPaid !== bPaid) {
+      return bPaid ? b : a;
+    }
+
+    return a;
   }
 
-  function dedupeRows(
-    rows
-  ) {
-    const map =
-      new Map();
+  function dedupeRows(rows) {
+    const map = new Map();
 
-    rows.forEach(
-      row => {
-        let identity =
-          row.entryType ===
-          "solo"
-            ? norm(
-                row.uid
-              )
-            : norm(
-                row.teamId
-              );
+    rows.forEach(row => {
+      const identity =
+        row.entryType === "solo"
+          ? norm(row.uid)
+          : norm(row.teamId);
 
-        if (
-          !identity
-        ) {
-          identity =
-            row.participantDocId;
-        }
+      const key =
+        `${row.entryType}||${
+          identity || row.participantDocId
+        }`;
 
-        const key =
-          `${row.entryType}||${identity}`;
+      map.set(
+        key,
+        chooseBetterRow(
+          map.get(key),
+          row
+        )
+      );
+    });
 
-        map.set(
-          key,
-          chooseBetterRow(
-            map.get(
-              key
-            ),
-            row
-          )
-        );
+    return Array.from(map.values());
+  }
+
+  // =========================================================
+  // SORT PAID
+  // =========================================================
+
+  function sortPaidRows(rows) {
+    return [...rows].sort((a, b) => {
+      const aTime =
+        timestampMs(a.confirmedAt);
+
+      const bTime =
+        timestampMs(b.confirmedAt);
+
+      // Чинна дата підтвердження — головна.
+      // Старий orderPaid не повинен повертати
+      // перепідтверджену заявку на старе місце.
+      if (aTime && bTime && aTime !== bTime) {
+        return aTime - bTime;
       }
-    );
 
-    return Array.from(
-      map.values()
-    );
+      // Legacy: обидва без confirmedAt.
+      if (!aTime && !bTime) {
+        if (
+          Number.isFinite(a.orderPaid) &&
+          Number.isFinite(b.orderPaid) &&
+          a.orderPaid !== b.orderPaid
+        ) {
+          return a.orderPaid - b.orderPaid;
+        }
+      }
+
+      // Fallback для змішаних старих документів.
+      const aFallback =
+        aTime || timestampMs(a.createdAt);
+
+      const bFallback =
+        bTime || timestampMs(b.createdAt);
+
+      if (aFallback !== bFallback) {
+        return aFallback - bFallback;
+      }
+
+      return norm(a.participantDocId).localeCompare(
+        norm(b.participantDocId)
+      );
+    });
+  }
+
+  // =========================================================
+  // SORT UNPAID
+  // =========================================================
+
+  function sortUnpaidRows(rows) {
+    return [...rows].sort((a, b) => {
+      const aCancelled =
+        isCancelledStatus(a.status);
+
+      const bCancelled =
+        isCancelledStatus(b.status);
+
+      // Ті, хто очікує оплату, перед скасованими.
+      if (aCancelled !== bCancelled) {
+        return aCancelled ? 1 : -1;
+      }
+
+      const aTime =
+        timestampMs(a.createdAt);
+
+      const bTime =
+        timestampMs(b.createdAt);
+
+      if (aTime !== bTime) {
+        return aTime - bTime;
+      }
+
+      return norm(a.participantDocId).localeCompare(
+        norm(b.participantDocId)
+      );
+    });
   }
 
   // =========================================================
   // ROW HTML
   // =========================================================
 
-  function rowHtml(
-    idx,
-    row
-  ) {
+  function rowHtml(number, row) {
     const paid =
-      isPaidStatus(
-        row.status
-      );
+      isPaidStatus(row.status);
 
-    const isSolo =
-      row.entryType ===
-      "solo";
+    const cancelled =
+      isCancelledStatus(row.status);
 
-    const name =
-      isSolo
-        ? participantDisplayName(
-            row
-          )
-        : teamDisplayName(
-            row
-          );
+    const solo =
+      row.entryType === "solo";
 
-    const teamId =
-      isSolo
-        ? ""
-        : norm(
-            row.teamId
-          );
+    const name = solo
+      ? participantDisplayName(row)
+      : teamDisplayName(row);
 
-    const teamName =
-      isSolo
-        ? ""
-        : teamDisplayName(
-            row
-          );
+    const teamId = solo
+      ? ""
+      : norm(row.teamId);
+
+    const teamName = solo
+      ? ""
+      : teamDisplayName(row);
+
+    const statusLabel = paid
+      ? "Оплачено"
+      : cancelled
+        ? "Скасовано"
+        : "Очікується";
 
     return `
       <div
         class="row ${
-          isSolo
+          solo
             ? "row--solo"
             : "row--team"
         }"
-
-        data-entry-type="${esc(
-          row.entryType
-        )}"
-
-        data-team-id="${esc(
-          teamId
-        )}"
-
-        data-team-name="${esc(
-          teamName
-        )}"
-
-        style="
-          cursor:${
-            !isSolo &&
-            teamId
-              ? "pointer"
-              : "default"
-          };
-        "
+        data-entry-type="${esc(row.entryType)}"
+        data-team-id="${esc(teamId)}"
+        data-team-name="${esc(teamName)}"
+        style="cursor:${
+          !solo && teamId
+            ? "pointer"
+            : "default"
+        };"
       >
 
-        <span
-          class="lamp ${
-            paid
-              ? "lamp--green"
-              : "lamp--red"
-          }"
-        ></span>
+        <span class="lamp ${
+          paid
+            ? "lamp--green"
+            : "lamp--red"
+        }"></span>
 
         <span class="idx">
-          ${idx}.
+          ${
+            number !== null
+              ? `${number}.`
+              : ""
+          }
         </span>
 
         <span
           class="name"
-          title="${esc(
-            name
-          )}"
+          title="${esc(name)}"
         >
-          ${esc(
-            name
-          )}
+          ${esc(name)}
         </span>
 
-        <span
-          class="status ${
-            paid
-              ? "status--paid"
-              : "status--unpaid"
-          }"
-        >
-          ${
-            paid
-              ? "Оплачено"
-              : "Очікується"
-          }
+        <span class="status ${
+          paid
+            ? "status--paid"
+            : "status--unpaid"
+        }">
+          ${statusLabel}
         </span>
 
       </div>
@@ -2340,258 +1422,326 @@
   // RENDER
   // =========================================================
 
-  function render(
-    rows,
-    maxEntries
-  ) {
-    const list =
-      $("teamsList");
+  function render(rows, maxEntries) {
+    const list = $("teamsList");
+    const msg = $("msg");
 
-    const msg =
-      $("msg");
-
-    if (
-      !list
-    ) {
+    if (!list) {
       return;
     }
 
-    list.innerHTML =
-      "";
+    list.innerHTML = "";
 
-    if (
-      msg
-    ) {
-      msg.textContent =
-        "";
+    if (msg) {
+      msg.textContent = "";
     }
 
-    const main =
-      rows.slice(
-        0,
-        maxEntries
-      );
-
-    const reserve =
-      rows.slice(
-        maxEntries
-      );
-
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       list.innerHTML =
         '<div class="mutedCenter">Нема заявок на це змагання</div>';
 
       attachMealButtons();
-
       return;
     }
 
-    list.innerHTML +=
-      main
-        .map(
-          (
-            row,
-            index
-          ) =>
-            rowHtml(
-              index + 1,
-              row
-            )
-        )
-        .join("");
+    // -------------------------------------------------------
+    // ТІЛЬКИ ОПЛАЧЕНІ МАЮТЬ НОМЕРИ.
+    // -------------------------------------------------------
 
-    if (
-      reserve.length
-    ) {
-      list.innerHTML += `
+    const paid = sortPaidRows(
+      rows.filter(row =>
+        isPaidStatus(row.status)
+      )
+    );
+
+    const unpaid = sortUnpaidRows(
+      rows.filter(row =>
+        !isPaidStatus(row.status)
+      )
+    );
+
+    // Ліміт змагання стосується оплачених,
+    // а не всіх поданих заявок.
+    const main = paid.slice(
+      0,
+      maxEntries
+    );
+
+    const reserve = paid.slice(
+      maxEntries
+    );
+
+    const html = [];
+
+    // -------------------------------------------------------
+    // ОСНОВНИЙ СПИСОК
+    // -------------------------------------------------------
+
+    if (main.length) {
+      html.push(
+        main.map((row, index) =>
+          rowHtml(index + 1, row)
+        ).join("")
+      );
+    }
+
+    // -------------------------------------------------------
+    // РЕЗЕРВ — ТІЛЬКИ ОПЛАЧЕНІ
+    // -------------------------------------------------------
+
+    if (reserve.length) {
+      html.push(`
         <div class="dividerLabel">
           Резерв: ${reserve.length}
         </div>
-      `;
+      `);
 
-      list.innerHTML +=
-        reserve
-          .map(
-            (
-              row,
-              index
-            ) =>
-              rowHtml(
-                maxEntries +
-                index +
-                1,
-                row
-              )
+      html.push(
+        reserve.map((row, index) =>
+          rowHtml(
+            maxEntries + index + 1,
+            row
           )
-          .join("");
+        ).join("")
+      );
     }
 
-    /*
-     * Popup тільки для TEAM.
-     */
-    list
-      .querySelectorAll(
-        ".row"
-      )
-      .forEach(
-        row => {
-          row.addEventListener(
-            "click",
-            () => {
-              const entryType =
-                normLower(
-                  row.dataset
-                    .entryType
-                );
+    // -------------------------------------------------------
+    // НЕОПЛАЧЕНІ ТА СКАСОВАНІ — БЕЗ НОМЕРІВ
+    // -------------------------------------------------------
 
-              if (
-                entryType ===
-                "solo"
-              ) {
-                return;
-              }
+    if (unpaid.length) {
+      html.push(`
+        <div class="dividerLabel">
+          Очікують оплату / скасовані: ${unpaid.length}
+        </div>
+      `);
 
-              const teamId =
-                norm(
-                  row.dataset
-                    .teamId
-                );
-
-              const teamName =
-                norm(
-                  row.dataset
-                    .teamName
-                );
-
-              if (
-                teamId
-              ) {
-                openTeamPopup(
-                  teamName,
-                  teamId
-                );
-              }
-            }
-          );
-        }
+      html.push(
+        unpaid.map(row =>
+          rowHtml(null, row)
+        ).join("")
       );
+    }
+
+    if (!paid.length && !unpaid.length) {
+      html.push(`
+        <div class="mutedCenter">
+          Нема заявок на це змагання
+        </div>
+      `);
+    }
+
+    list.innerHTML = html.join("");
+
+    // -------------------------------------------------------
+    // TEAM POPUP
+    // -------------------------------------------------------
+
+    list.querySelectorAll(".row").forEach(rowEl => {
+      rowEl.addEventListener("click", () => {
+        const entryType = normLower(
+          rowEl.dataset.entryType
+        );
+
+        if (entryType === "solo") {
+          return;
+        }
+
+        const teamId = norm(
+          rowEl.dataset.teamId
+        );
+
+        const teamName = norm(
+          rowEl.dataset.teamName
+        );
+
+        if (teamId) {
+          openTeamPopup(teamName, teamId);
+        }
+      });
+    });
 
     attachMealButtons();
   }
 
   // =========================================================
-  // SORT
+  // MEAL CONTEXT
   // =========================================================
 
-  function sortRows(
+  function updateMealContext(
+    compId,
+    stageParam,
+    meta,
+    maxEntries,
     rows
   ) {
-    const rank = {
-      confirmed:
-        1,
-
-      paid:
-        1,
-
-      payment_confirmed:
-        1,
-
-      cancelled:
-        1,
-
-      pending_payment:
-        2
-    };
-
-    rows.sort(
-      (
-        a,
-        b
-      ) => {
-        const aRank =
-          rank[
-            normLower(
-              a.status
-            )
-          ] ||
-          99;
-
-        const bRank =
-          rank[
-            normLower(
-              b.status
-            )
-          ] ||
-          99;
-
-        if (
-          aRank !==
-          bRank
-        ) {
-          return (
-            aRank -
-            bRank
-          );
-        }
-
-        if (
-          aRank ===
-          1
-        ) {
-          if (
-            Number.isFinite(
-              a.orderPaid
-            ) &&
-            Number.isFinite(
-              b.orderPaid
-            )
-          ) {
-            return (
-              a.orderPaid -
-              b.orderPaid
-            );
-          }
-
-          if (
-            Number.isFinite(
-              a.orderPaid
-            )
-          ) {
-            return -1;
-          }
-
-          if (
-            Number.isFinite(
-              b.orderPaid
-            )
-          ) {
-            return 1;
-          }
-
-          return (
-            timestampMs(
-              a.confirmedAt
-            ) -
-            timestampMs(
-              b.confirmedAt
-            )
-          );
-        }
-
-        return (
-          timestampMs(
-            a.createdAt
-          ) -
-          timestampMs(
-            b.createdAt
-          )
-        );
-      }
+    const rawStage = stageParam.replace(
+      /^stage-/,
+      ""
     );
 
-    return rows;
+    const stageIdVariants = [
+      stageParam,
+      rawStage,
+      `stage-${rawStage}`
+    ].filter(Boolean);
+
+    window.scMealContext = {
+      competitionId: compId,
+      stageId: stageParam,
+
+      stageIdVariants: [
+        ...new Set(stageIdVariants)
+      ],
+
+      competitionTitle: meta.title,
+      stageTitle: meta.stageTitle,
+
+      entryType: meta.entryType,
+      format: meta.format,
+      isFinal: meta.isFinal,
+
+      maxTeams: maxEntries,
+      maxParticipants: maxEntries,
+
+      // Для харчування залишаємо всі актуальні
+      // заявки зі статусами. Харчування саме
+      // перевіряє дозвіл на подання замовлення.
+      teams: rows,
+      participants: rows
+    };
+
+    if (
+      window.scMeals &&
+      typeof window.scMeals.setContext === "function"
+    ) {
+      window.scMeals.setContext(
+        window.scMealContext
+      );
+    }
+  }
+
+  // =========================================================
+  // LIVE PUBLIC PARTICIPANTS
+  // =========================================================
+
+  function startParticipantsRealtime(
+    compId,
+    stageParam,
+    meta,
+    maxEntries
+  ) {
+    if (unsubParticipants) {
+      unsubParticipants();
+      unsubParticipants = null;
+    }
+
+    const db = window.scDb;
+
+    // Не додаємо entryType до Firestore query:
+    // legacy SOLO теж мають потрапити у список.
+    unsubParticipants = db
+      .collection("public_participants")
+      .where("competitionId", "==", compId)
+      .onSnapshot(
+        async snap => {
+          // Захист від ситуації, коли старе
+          // асинхронне завантаження завершується
+          // пізніше від нового LIVE-оновлення.
+          const requestId = ++renderRequestId;
+
+          try {
+            const docs = [];
+
+            snap.forEach(doc => {
+              const row = doc.data() || {};
+
+              if (!stageMatches(
+                row.stageId,
+                stageParam
+              )) {
+                return;
+              }
+
+              docs.push(doc);
+            });
+
+            const normalized = await Promise.all(
+              docs.map(doc =>
+                normalizeParticipantRow(
+                  doc,
+                  meta
+                )
+              )
+            );
+
+            if (requestId !== renderRequestId) {
+              return;
+            }
+
+            let rows = normalized.filter(Boolean);
+
+            rows = dedupeRows(rows);
+
+            // Спочатку оплачені за чинною
+            // датою підтвердження,
+            // потім неоплачені та скасовані.
+            const paid = sortPaidRows(
+              rows.filter(row =>
+                isPaidStatus(row.status)
+              )
+            );
+
+            const unpaid = sortUnpaidRows(
+              rows.filter(row =>
+                !isPaidStatus(row.status)
+              )
+            );
+
+            rows = [...paid, ...unpaid];
+
+            updateMealContext(
+              compId,
+              stageParam,
+              meta,
+              maxEntries,
+              rows
+            );
+
+            render(rows, maxEntries);
+
+          } catch (error) {
+            if (requestId !== renderRequestId) {
+              return;
+            }
+
+            console.error(
+              "[participation] normalize:",
+              error
+            );
+
+            if ($("msg")) {
+              $("msg").textContent =
+                "Помилка обробки списку: " +
+                (error?.message || error);
+            }
+          }
+        },
+
+        error => {
+          console.error(
+            "[participation] public participants:",
+            error
+          );
+
+          if ($("msg")) {
+            $("msg").textContent =
+              "Не вдалося завантажити список: " +
+              (error?.message || error);
+          }
+        }
+      );
   }
 
   // =========================================================
@@ -2602,263 +1752,82 @@
     try {
       await waitFirebase();
 
-      const db =
-        window.scDb;
+      const params = new URLSearchParams(
+        location.search
+      );
 
-      const params =
-        new URLSearchParams(
-          location.search
-        );
-
-      const compId =
-        norm(
-          params.get(
-            "comp"
-          )
-        );
+      const compId = norm(
+        params.get("comp")
+      );
 
       const stageParam =
-        norm(
-          params.get(
-            "stage"
-          )
-        ) ||
-        "main";
+        norm(params.get("stage")) || "main";
 
-      if (
-        !compId
-      ) {
-        if (
-          $("msg")
-        ) {
-          $("msg")
-            .textContent =
-            "❌ Не передано competitionId";
+      if (!compId) {
+        if ($("msg")) {
+          $("msg").textContent =
+            "Не передано competitionId";
         }
-
         return;
       }
 
-      // =====================================================
-      // META
-      // =====================================================
-
-      const meta =
-        await getCompetitionMeta(
-          compId,
-          stageParam
-        );
+      const meta = await getCompetitionMeta(
+        compId,
+        stageParam
+      );
 
       const maxEntries =
-        await getMaxEntries(
-          compId,
-          stageParam
-        );
+        getMaxEntriesFromMeta(meta);
 
-      if (
-        $("pageTitle")
-      ) {
-        $("pageTitle")
-          .textContent =
+      if ($("pageTitle")) {
+        $("pageTitle").textContent =
           meta.title;
       }
 
-      if (
-        $("pageSub")
-      ) {
-        $("pageSub")
-          .textContent =
-          meta.stageTitle ||
-          "";
+      if ($("pageSub")) {
+        $("pageSub").textContent =
+          meta.stageTitle || "";
       }
 
-      if (
-        $("msg")
-      ) {
-        $("msg")
-          .textContent =
+      if ($("msg")) {
+        $("msg").textContent =
           "Завантаження списку…";
       }
 
-      // =====================================================
-      // PUBLIC PARTICIPANTS
-      // =====================================================
+      attachMealButtons();
 
-      /*
-       * entryType спеціально
-       * НЕ ставимо у where,
-       * щоб legacy SOLO
-       * теж потрапив сюди.
-       */
-      const snap =
-        await db
-          .collection(
-            "public_participants"
-          )
-          .where(
-            "competitionId",
-            "==",
-            compId
-          )
-          .get();
-
-      const docs =
-        [];
-
-      snap.forEach(
-        doc => {
-          const r =
-            doc.data() ||
-            {};
-
-          if (
-            !stageMatches(
-              r.stageId,
-              stageParam
-            )
-          ) {
-            return;
-          }
-
-          docs.push(
-            doc
-          );
-        }
-      );
-
-      // =====================================================
-      // NORMALIZE
-      // =====================================================
-
-      const normalized =
-        await Promise.all(
-          docs.map(
-            doc =>
-              normalizeParticipantRow(
-                doc,
-                meta
-              )
-          )
-        );
-
-      let rows =
-        normalized.filter(
-          Boolean
-        );
-
-      rows =
-        dedupeRows(
-          rows
-        );
-
-      rows =
-        sortRows(
-          rows
-        );
-
-      // =====================================================
-      // MEAL CONTEXT
-      // =====================================================
-
-      window.scMealContext = {
-        competitionId:
-          compId,
-
-        stageId:
-          stageParam,
-
-        stageIdVariants: [
-          stageParam,
-
-          `stage-${stageParam}`,
-
-          stageParam.replace(
-            /^stage-/,
-            ""
-          )
-        ].filter(
-          Boolean
-        ),
-
-        competitionTitle:
-          meta.title,
-
-        stageTitle:
-          meta.stageTitle,
-
-        entryType:
-          meta.entryType,
-
-        format:
-          meta.format,
-
-        isFinal:
-          meta.isFinal,
-
-        maxTeams:
-          maxEntries,
-
-        maxParticipants:
-          maxEntries,
-
-        /*
-         * Legacy meal_orders.js
-         */
-        teams:
-          rows,
-
-        participants:
-          rows
-      };
-
-      if (
-        $("msg")
-      ) {
-        $("msg")
-          .textContent =
-          "";
-      }
-
-      // =====================================================
-      // RENDER
-      // =====================================================
-
-      render(
-        rows,
+      startParticipantsRealtime(
+        compId,
+        stageParam,
+        meta,
         maxEntries
       );
 
-      if (
-        window.scMeals &&
-        typeof window
-          .scMeals
-          .setContext ===
-          "function"
-      ) {
-        window.scMeals
-          .setContext(
-            window.scMealContext
-          );
-      }
-
-    } catch (e) {
+    } catch (error) {
       console.error(
         "[participation] init:",
-        e
+        error
       );
 
-      if (
-        $("msg")
-      ) {
-        $("msg")
-          .textContent =
-          "❌ " +
-          (
-            e?.message ||
-            e
-          );
+      if ($("msg")) {
+        $("msg").textContent =
+          "Помилка: " +
+          (error?.message || error);
       }
     }
   })();
+
+  // =========================================================
+  // CLEANUP
+  // =========================================================
+
+  window.addEventListener("beforeunload", () => {
+    renderRequestId++;
+
+    if (unsubParticipants) {
+      unsubParticipants();
+      unsubParticipants = null;
+    }
+  });
 
 })();

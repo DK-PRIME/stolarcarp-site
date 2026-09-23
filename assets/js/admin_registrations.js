@@ -1,10 +1,14 @@
+
 // assets/js/admin_registrations.js
 // STOLAR CARP • Admin registrations
+//
 // ✅ confirm / cancel / delete / restore
 // ✅ mirror public_participants
-// ✅ grouped by competition (active / finished accordion)
-// ✅ clean card layout (ID hidden in details)
-// ✅ no inline styles, no emoji
+// ✅ grouped by competition
+// ✅ unpaid and cancelled separated from confirmed
+// ✅ cancelling clears active payment confirmation
+// ✅ reconfirming clears cancellation markers
+// ✅ repair old cancelled records with stale confirmedAt
 // ✅ CSS injected automatically
 
 (function () {
@@ -22,29 +26,30 @@
     }
   };
 
-  const GRACE_MS = CONFIG.GRACE_HOURS_AFTER_FINISH * 60 * 60 * 1000;
+  const GRACE_MS =
+    CONFIG.GRACE_HOURS_AFTER_FINISH * 60 * 60 * 1000;
 
   const CSS_ID = "sc-admin-registrations-styles";
 
   const CSS = `
-/* ─── Registrations ────────────────────────────────────────────── */
+/* ─── Registrations ─────────────────────────────────────────── */
 
 .reg-section-header {
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: .5px;
   color: #888;
   padding: 20px 0 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
   margin-bottom: 12px;
 }
 
-/* ─── Competition group ────────────────────────────────────────── */
+/* ─── Competition group ─────────────────────────────────────── */
 
 .comp-group {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.06);
   border-radius: 10px;
   margin-bottom: 10px;
   overflow: hidden;
@@ -63,11 +68,11 @@
   font-weight: 700;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s;
+  transition: background .15s;
 }
 
 .comp-group__header:hover {
-  background: rgba(255,255,255,0.03);
+  background: rgba(255,255,255,.03);
 }
 
 .comp-group__arrow {
@@ -77,10 +82,10 @@
   width: 22px;
   height: 22px;
   border-radius: 5px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,.06);
   font-size: 11px;
   flex-shrink: 0;
-  transition: transform 0.2s;
+  transition: transform .2s;
 }
 
 .comp-group__header.is-collapsed .comp-group__arrow {
@@ -143,20 +148,51 @@
   display: none;
 }
 
-/* ─── Registration card ────────────────────────────────────────── */
+/* ─── Payment sections ──────────────────────────────────────── */
+
+.reg-payment-section {
+  margin-top: 12px;
+}
+
+.reg-payment-section__title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 5px 2px 8px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.reg-payment-section__title--unpaid {
+  color: #ffcc00;
+}
+
+.reg-payment-section__title--paid {
+  color: #7CFFB2;
+}
+
+.reg-payment-section__count {
+  font-size: 11px;
+  opacity: .8;
+}
+
+/* ─── Registration card ─────────────────────────────────────── */
 
 .reg-card {
   padding: 14px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
   border-radius: 8px;
   margin-bottom: 8px;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color .15s, background .15s;
 }
 
 .reg-card:hover {
-  border-color: rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
 }
 
 .reg-card__header {
@@ -212,13 +248,13 @@
   user-select: none;
   list-style: none;
   display: inline-block;
-  border-bottom: 1px dashed rgba(255,255,255,0.15);
+  border-bottom: 1px dashed rgba(255,255,255,.15);
 }
 
 .reg-card__details-content {
   margin-top: 8px;
   padding: 10px;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,.2);
   border-radius: 6px;
   font-size: 11px;
   color: #777;
@@ -236,7 +272,7 @@
   margin-top: 12px;
 }
 
-/* ─── Badges ───────────────────────────────────────────────────── */
+/* ─── Badges ────────────────────────────────────────────────── */
 
 .badge {
   display: inline-block;
@@ -273,14 +309,14 @@
   color: #ff6c6c;
 }
 
-/* ─── Buttons ──────────────────────────────────────────────────── */
+/* ─── Buttons ───────────────────────────────────────────────── */
 
 .btn--sm {
   font-size: 12px;
   padding: 6px 14px;
 }
 
-/* ─── Empty state ──────────────────────────────────────────────── */
+/* ─── Empty state ───────────────────────────────────────────── */
 
 .reg-empty {
   padding: 40px 0;
@@ -290,11 +326,17 @@
 
   function injectStyles() {
     if (document.getElementById(CSS_ID)) return;
+
     const style = document.createElement("style");
     style.id = CSS_ID;
     style.textContent = CSS;
+
     document.head.appendChild(style);
   }
+
+  // =========================================================
+  // STATE
+  // =========================================================
 
   const state = {
     currentUser: null,
@@ -306,7 +348,10 @@
     stageEndAtByKey: new Map(),
     stageOrderByKey: new Map(),
     unsubRegs: null,
-    unsubDeleted: null
+    unsubDeleted: null,
+
+    // Зберігаємо відкриті/закриті групи між LIVE-оновленнями.
+    groupOpenState: new Map()
   };
 
   const els = {
@@ -320,18 +365,27 @@
   const db = window.scDb;
 
   if (!auth || !db || !window.firebase) {
-    if (els.msg) els.msg.textContent = "Firebase init не завантажився.";
+    if (els.msg) {
+      els.msg.textContent = "Firebase init не завантажився.";
+    }
     return;
   }
 
   injectStyles();
 
-  if (els.statusFilter && !els.statusFilter.querySelector('option[value="deleted"]')) {
+  if (
+    els.statusFilter &&
+    !els.statusFilter.querySelector('option[value="deleted"]')
+  ) {
     const opt = document.createElement("option");
     opt.value = "deleted";
     opt.textContent = "Видалені";
     els.statusFilter.appendChild(opt);
   }
+
+  // =========================================================
+  // HELPERS
+  // =========================================================
 
   const utils = {
     escapeHtml: (s) =>
@@ -344,7 +398,10 @@
 
     fmtTs: (ts) => {
       try {
-        const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
+        const d = ts?.toDate
+          ? ts.toDate()
+          : (ts instanceof Date ? ts : null);
+
         return d ? d.toLocaleString("uk-UA") : "—";
       } catch {
         return "—";
@@ -353,35 +410,83 @@
 
     fmtDateShort: (ts) => {
       try {
-        const d = ts?.toDate ? ts.toDate() : (ts instanceof Date ? ts : null);
-        return d ? d.toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+        const d = ts?.toDate
+          ? ts.toDate()
+          : (ts instanceof Date ? ts : null);
+
+        return d
+          ? d.toLocaleDateString("uk-UA", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric"
+            })
+          : "—";
       } catch {
         return "—";
       }
     },
 
+    timestampMs: (value) => {
+      if (!value) return 0;
+
+      try {
+        if (typeof value.toMillis === "function") {
+          return value.toMillis();
+        }
+
+        if (value instanceof Date) {
+          return value.getTime();
+        }
+
+        if (typeof value === "number") {
+          return value;
+        }
+
+        const ms = Date.parse(String(value));
+        return Number.isFinite(ms) ? ms : 0;
+      } catch {
+        return 0;
+      }
+    },
+
     setMsg: (text, ok = true) => {
       if (!els.msg) return;
+
       els.msg.textContent = text || "";
-      els.msg.style.color = text ? (ok ? "#7CFFB2" : "#ff6c6c") : "";
+      els.msg.style.color = text
+        ? (ok ? "#7CFFB2" : "#ff6c6c")
+        : "";
     },
 
     showError: (prefix, e) => {
       console.error(prefix, e);
-      utils.setMsg(`${prefix}: ${e?.code ? e.code + " " : ""}${e?.message || e}`, false);
+
+      utils.setMsg(
+        `${prefix}: ${e?.code ? e.code + " " : ""}${e?.message || e}`,
+        false
+      );
     },
 
     stripUndefinedDeep: (v) => {
       if (Array.isArray(v)) {
-        return v.map(utils.stripUndefinedDeep).filter((x) => x !== undefined);
+        return v
+          .map(utils.stripUndefinedDeep)
+          .filter(x => x !== undefined);
       }
 
-      if (v && typeof v === "object" && !(v instanceof Date)) {
+      if (
+        v &&
+        typeof v === "object" &&
+        !(v instanceof Date) &&
+        typeof v.toDate !== "function"
+      ) {
         const out = {};
-        Object.keys(v).forEach((k) => {
+
+        Object.keys(v).forEach(k => {
           const cleaned = utils.stripUndefinedDeep(v[k]);
           if (cleaned !== undefined) out[k] = cleaned;
         });
+
         return out;
       }
 
@@ -390,20 +495,27 @@
 
     toDateMaybe: (x) => {
       if (!x) return null;
+
       try {
         if (x instanceof Date) return x;
+
         if (typeof x === "string") {
           const d = new Date(x);
-          return isFinite(d.getTime()) ? d : null;
+          return Number.isFinite(d.getTime()) ? d : null;
         }
-        if (x && typeof x.toDate === "function") return x.toDate();
+
+        if (typeof x.toDate === "function") {
+          return x.toDate();
+        }
       } catch {}
+
       return null;
     },
 
     now: () => new Date(),
 
-    getStageKey: (r) => `${r.competitionId || ""}||${r.stageId || ""}`,
+    getStageKey: (r) =>
+      `${r.competitionId || ""}||${r.stageId || ""}`,
 
     getStageLabel: (r) => {
       const key = utils.getStageKey(r);
@@ -413,20 +525,27 @@
     isFinished: (r) => {
       const key = utils.getStageKey(r);
       const endAt = state.stageEndAtByKey.get(key) || null;
+
       if (!endAt) return false;
+
       return utils.now().getTime() > endAt.getTime();
     },
 
     isFinishedAndExpired: (r) => {
       if (r._deleted) return false;
+
       const key = utils.getStageKey(r);
       const endAt = state.stageEndAtByKey.get(key) || null;
+
       if (!endAt) return false;
-      return utils.now().getTime() > (endAt.getTime() + GRACE_MS);
+
+      return utils.now().getTime() >
+        endAt.getTime() + GRACE_MS;
     },
 
     matchQuery: (r, q) => {
       if (!q) return true;
+
       const hay = [
         r.teamName,
         r.participantName,
@@ -447,6 +566,10 @@
       return state.stageOrderByKey.get(key) || 0;
     },
 
+    isConfirmed: (r) =>
+      !r._deleted &&
+      String(r.status || "").toLowerCase() === "confirmed",
+
     badgeForStatus: (r) => {
       if (r._deleted) {
         return {
@@ -456,6 +579,7 @@
       }
 
       const s = r.status || "unknown";
+
       const label =
         s === "pending_payment" ? "Очікує оплату" :
         s === "confirmed" ? "Підтверджено" :
@@ -471,50 +595,119 @@
     }
   };
 
+  // =========================================================
+  // FIRESTORE
+  // =========================================================
+
   const firestore = {
-    pubRef: (id) => db.collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS).doc(String(id)),
-    regRef: (id) => db.collection(CONFIG.COLLECTIONS.REGISTRATIONS).doc(String(id)),
-    delRef: (id) => db.collection(CONFIG.COLLECTIONS.REGISTRATIONS_DELETED).doc(String(id)),
+    pubRef: (id) =>
+      db.collection(CONFIG.COLLECTIONS.PUBLIC_PARTICIPANTS)
+        .doc(String(id)),
+
+    regRef: (id) =>
+      db.collection(CONFIG.COLLECTIONS.REGISTRATIONS)
+        .doc(String(id)),
+
+    delRef: (id) =>
+      db.collection(CONFIG.COLLECTIONS.REGISTRATIONS_DELETED)
+        .doc(String(id)),
 
     loadCompetitionsMap: async () => {
       state.stageNameByKey = new Map();
       state.stageEndAtByKey = new Map();
       state.stageOrderByKey = new Map();
 
-      const snap = await db.collection(CONFIG.COLLECTIONS.COMPETITIONS).get();
+      const snap = await db
+        .collection(CONFIG.COLLECTIONS.COMPETITIONS)
+        .get();
 
-      snap.forEach((docSnap) => {
+      snap.forEach(docSnap => {
         const c = docSnap.data() || {};
         const compId = docSnap.id;
 
         const brand = c.brand || "STOLAR CARP";
         const year = c.year || c.seasonYear || "";
-        const compTitle = c.name || c.title || (year ? `Season ${year}` : compId);
-        const eventsArr = Array.isArray(c.events) ? c.events : null;
+
+        const compTitle =
+          c.name ||
+          c.title ||
+          (year ? `Season ${year}` : compId);
+
+        const eventsArr = Array.isArray(c.events)
+          ? c.events
+          : null;
 
         if (eventsArr && eventsArr.length) {
           eventsArr.forEach((ev, idx) => {
-            const stageId = String(ev.key || ev.stageId || ev.id || `stage-${idx + 1}`);
-            const stageTitle = ev.title || ev.name || ev.label || `Етап ${idx + 1}`;
+            const stageId = String(
+              ev.key ||
+              ev.stageId ||
+              ev.id ||
+              `stage-${idx + 1}`
+            );
+
+            const stageTitle =
+              ev.title ||
+              ev.name ||
+              ev.label ||
+              `Етап ${idx + 1}`;
+
             const key = `${compId}||${stageId}`;
 
-            state.stageNameByKey.set(key, `${brand} · ${compTitle} — ${stageTitle}`);
-            state.stageOrderByKey.set(key, ev.order ?? ev.stageOrder ?? ev.index ?? (idx + 1));
+            state.stageNameByKey.set(
+              key,
+              `${brand} · ${compTitle} — ${stageTitle}`
+            );
 
-            const endRaw = ev.finishAt || ev.finishDate || ev.endAt || ev.endDate || null;
-            state.stageEndAtByKey.set(key, utils.toDateMaybe(endRaw));
+            state.stageOrderByKey.set(
+              key,
+              ev.order ??
+              ev.stageOrder ??
+              ev.index ??
+              (idx + 1)
+            );
+
+            const endRaw =
+              ev.finishAt ||
+              ev.finishDate ||
+              ev.endAt ||
+              ev.endDate ||
+              null;
+
+            state.stageEndAtByKey.set(
+              key,
+              utils.toDateMaybe(endRaw)
+            );
           });
         } else {
           const key = `${compId}||`;
-          state.stageNameByKey.set(key, `${brand} · ${compTitle}`);
+
+          state.stageNameByKey.set(
+            key,
+            `${brand} · ${compTitle}`
+          );
+
           state.stageOrderByKey.set(key, 1);
 
-          const endRaw = c.endAt || c.endDate || c.finishAt || c.finishDate || null;
-          state.stageEndAtByKey.set(key, utils.toDateMaybe(endRaw));
+          const endRaw =
+            c.endAt ||
+            c.endDate ||
+            c.finishAt ||
+            c.finishDate ||
+            null;
+
+          state.stageEndAtByKey.set(
+            key,
+            utils.toDateMaybe(endRaw)
+          );
         }
       });
     }
   };
+
+  // =========================================================
+  // RESTORE
+  // =========================================================
 
   function cleanRestoredData(d, id) {
     const out = { ...(d || {}) };
@@ -524,15 +717,30 @@
     delete out.originalRegId;
     delete out._methodName;
 
-    out.restoredAt = firebase.firestore.FieldValue.serverTimestamp();
+    out.restoredAt =
+      firebase.firestore.FieldValue.serverTimestamp();
+
     out.restoredBy = state.currentUser.uid;
 
-    if (!out.status || out.status === "deleted") out.status = "confirmed";
+    if (!out.status || out.status === "deleted") {
+      out.status = "confirmed";
+    }
+
+    // Не повертаємо стару оплату для скасованої заявки.
+    if (out.status !== "confirmed") {
+      delete out.confirmedAt;
+      delete out.confirmedBy;
+    } else {
+      delete out.cancelledAt;
+      delete out.cancelledBy;
+    }
 
     return utils.stripUndefinedDeep(out);
   }
 
   function publicMirrorData(data) {
+    const confirmed = data.status === "confirmed";
+
     return utils.stripUndefinedDeep({
       uid: data.uid || null,
       competitionId: data.competitionId || null,
@@ -541,32 +749,49 @@
       teamId: data.teamId || null,
       teamName: data.teamName || null,
       status: data.status || "confirmed",
-      confirmedAt: data.confirmedAt || null,
-      restoredAt: firebase.firestore.FieldValue.serverTimestamp(),
-      restoredBy: state.currentUser.uid
+
+      confirmedAt: confirmed
+        ? (data.confirmedAt || null)
+        : null,
+
+      restoredAt:
+        firebase.firestore.FieldValue.serverTimestamp(),
+
+      restoredBy:
+        state.currentUser.uid
     });
   }
 
-  // ─── Grouping logic ─────────────────────────────────────────────
+  // =========================================================
+  // GROUPING
+  // =========================================================
 
   function groupByCompetition(regs) {
     const groups = new Map();
 
-    regs.forEach((r) => {
+    regs.forEach(r => {
       const key = utils.getStageKey(r);
       const label = utils.getStageLabel(r);
       const isFinished = utils.isFinished(r);
 
       if (!groups.has(key)) {
-        groups.set(key, { key, label, isFinished, regs: [] });
+        groups.set(key, {
+          key,
+          label,
+          isFinished,
+          regs: []
+        });
       }
+
       groups.get(key).regs.push(r);
     });
 
     return groups;
   }
 
-  // ─── Render helpers ─────────────────────────────────────────────
+  // =========================================================
+  // RENDER HELPERS
+  // =========================================================
 
   function createSectionHeader(title) {
     const h = document.createElement("div");
@@ -575,60 +800,163 @@
     return h;
   }
 
+  function createPaymentSection(title, rows, isPaid) {
+    const section = document.createElement("div");
+    section.className = "reg-payment-section";
+
+    const heading = document.createElement("div");
+    heading.className = isPaid
+      ? "reg-payment-section__title reg-payment-section__title--paid"
+      : "reg-payment-section__title reg-payment-section__title--unpaid";
+
+    const text = document.createElement("span");
+    text.textContent = title;
+
+    const count = document.createElement("span");
+    count.className = "reg-payment-section__count";
+    count.textContent = String(rows.length);
+
+    heading.appendChild(text);
+    heading.appendChild(count);
+    section.appendChild(heading);
+
+    rows.forEach(r => {
+      section.appendChild(render.card(r));
+    });
+
+    return section;
+  }
+
   function createCompGroup(g, isOpenDefault = true) {
     const wrapper = document.createElement("div");
     wrapper.className = "comp-group";
 
-    const pendingCount = g.regs.filter(r => r.status === "pending_payment" && !r._deleted).length;
-    const confirmedCount = g.regs.filter(r => r.status === "confirmed" && !r._deleted).length;
-    const cancelledCount = g.regs.filter(r => r.status === "cancelled" && !r._deleted).length;
+    const pendingCount = g.regs.filter(
+      r => r.status === "pending_payment" && !r._deleted
+    ).length;
+
+    const confirmedCount = g.regs.filter(
+      r => r.status === "confirmed" && !r._deleted
+    ).length;
+
+    const cancelledCount = g.regs.filter(
+      r => r.status === "cancelled" && !r._deleted
+    ).length;
 
     const header = document.createElement("button");
     header.className = "comp-group__header";
     header.type = "button";
+
     header.innerHTML = `
       <span class="comp-group__arrow">▶</span>
-      <span class="comp-group__title">${utils.escapeHtml(g.label)}</span>
+      <span class="comp-group__title">
+        ${utils.escapeHtml(g.label)}
+      </span>
       <span class="comp-group__badges">
-        ${pendingCount ? `<span class="comp-group__badge comp-group__badge--pending">${pendingCount} очікує</span>` : ""}
-        ${confirmedCount ? `<span class="comp-group__badge comp-group__badge--confirmed">${confirmedCount} підтверджено</span>` : ""}
-        ${cancelledCount ? `<span class="comp-group__badge comp-group__badge--cancelled">${cancelledCount} скасовано</span>` : ""}
-        <span class="comp-group__count">${g.regs.length} заявок</span>
+        ${pendingCount
+          ? `<span class="comp-group__badge comp-group__badge--pending">${pendingCount} очікує</span>`
+          : ""}
+        ${confirmedCount
+          ? `<span class="comp-group__badge comp-group__badge--confirmed">${confirmedCount} підтверджено</span>`
+          : ""}
+        ${cancelledCount
+          ? `<span class="comp-group__badge comp-group__badge--cancelled">${cancelledCount} скасовано</span>`
+          : ""}
+        <span class="comp-group__count">
+          ${g.regs.length} заявок
+        </span>
       </span>
     `;
 
     const body = document.createElement("div");
     body.className = "comp-group__body";
-    if (!isOpenDefault) body.classList.add("is-collapsed");
 
-    const sortedRegs = [...g.regs].sort((a, b) => {
-      const stA = a.status || "";
-      const stB = b.status || "";
-      if (stA === "pending_payment" && stB !== "pending_payment") return -1;
-      if (stB === "pending_payment" && stA !== "pending_payment") return -1;
-      const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : (a.createdAt || 0);
-      const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : (b.createdAt || 0);
-      return dateB - dateA;
-    });
+    const remembered = state.groupOpenState.get(g.key);
+    const isOpen = remembered === undefined
+      ? isOpenDefault
+      : remembered;
 
-    sortedRegs.forEach((r) => {
-      body.appendChild(render.card(r));
-    });
+    if (!isOpen) {
+      body.classList.add("is-collapsed");
+      header.classList.add("is-collapsed");
+    }
+
+    // -------------------------------------------------------
+    // НЕОПЛАЧЕНІ:
+    // pending_payment + cancelled + інші непідтверджені
+    // -------------------------------------------------------
+
+    const unpaid = g.regs
+      .filter(r => !utils.isConfirmed(r))
+      .sort((a, b) =>
+        utils.timestampMs(b.createdAt) -
+        utils.timestampMs(a.createdAt)
+      );
+
+    // -------------------------------------------------------
+    // ОПЛАЧЕНІ:
+    // виключно status === confirmed
+    // За датою підтвердження оплати.
+    // -------------------------------------------------------
+
+    const paid = g.regs
+      .filter(r => utils.isConfirmed(r))
+      .sort((a, b) => {
+        const da = utils.timestampMs(
+          a.confirmedAt || a.createdAt
+        );
+
+        const db_ = utils.timestampMs(
+          b.confirmedAt || b.createdAt
+        );
+
+        return da - db_;
+      });
+
+    if (unpaid.length) {
+      body.appendChild(
+        createPaymentSection(
+          "Неоплачені та скасовані",
+          unpaid,
+          false
+        )
+      );
+    }
+
+    if (paid.length) {
+      body.appendChild(
+        createPaymentSection(
+          "Підтверджені оплати",
+          paid,
+          true
+        )
+      );
+    }
 
     header.addEventListener("click", () => {
-      body.classList.toggle("is-collapsed");
-      header.classList.toggle("is-collapsed");
+      const nextOpen = body.classList.contains("is-collapsed");
+
+      body.classList.toggle("is-collapsed", !nextOpen);
+      header.classList.toggle("is-collapsed", !nextOpen);
+
+      state.groupOpenState.set(g.key, nextOpen);
     });
 
     wrapper.appendChild(header);
     wrapper.appendChild(body);
+
     return wrapper;
   }
 
-  // ─── Card sub-renderers ─────────────────────────────────────────
+  // =========================================================
+  // CARD
+  // =========================================================
 
   function renderCardHeader(r, titleMain, applicantName) {
-    const { label: statusLabel, cls: badgeCls } = utils.badgeForStatus(r);
+    const {
+      label: statusLabel,
+      cls: badgeCls
+    } = utils.badgeForStatus(r);
 
     const header = document.createElement("div");
     header.className = "reg-card__header";
@@ -642,6 +970,7 @@
 
     const meta = document.createElement("div");
     meta.className = "reg-card__meta";
+
     meta.innerHTML = `
       ${r.entryType === "solo" ? "SOLO" : "Команда"}
       · Заявник: <b>${utils.escapeHtml(applicantName)}</b>
@@ -650,9 +979,14 @@
 
     const dates = document.createElement("div");
     dates.className = "reg-card__dates";
+
     dates.innerHTML = `
       Подано: ${utils.escapeHtml(utils.fmtDateShort(r.createdAt))}
-      ${r.confirmedAt ? `· Підтверджено: ${utils.escapeHtml(utils.fmtDateShort(r.confirmedAt))}` : ""}
+      ${r.status === "confirmed" && r.confirmedAt
+        ? `· Підтверджено: ${utils.escapeHtml(
+            utils.fmtDateShort(r.confirmedAt)
+          )}`
+        : ""}
     `;
 
     info.appendChild(title);
@@ -665,6 +999,7 @@
 
     header.appendChild(info);
     header.appendChild(badge);
+
     return header;
   }
 
@@ -677,22 +1012,30 @@
 
     const content = document.createElement("div");
     content.className = "reg-card__details-content";
+
     content.innerHTML = `
       ID заявки: <code>${utils.escapeHtml(r._id || "—")}</code><br>
       UID користувача: <code>${utils.escapeHtml(r.uid || "—")}</code><br>
       Змагання: <code>${utils.escapeHtml(r.competitionId || "—")}</code><br>
       Етап: <code>${utils.escapeHtml(r.stageId || "—")}</code><br>
-      ${r.originalRegId ? `Оригінал: <code>${utils.escapeHtml(r.originalRegId)}</code><br>` : ""}
-      ${r.cancelledAt ? `Скасовано: ${utils.escapeHtml(utils.fmtTs(r.cancelledAt))}<br>` : ""}
-      ${r.restoredAt ? `Відновлено: ${utils.escapeHtml(utils.fmtTs(r.restoredAt))}<br>` : ""}
+      ${r.originalRegId
+        ? `Оригінал: <code>${utils.escapeHtml(r.originalRegId)}</code><br>`
+        : ""}
+      ${r.cancelledAt
+        ? `Скасовано: ${utils.escapeHtml(utils.fmtTs(r.cancelledAt))}<br>`
+        : ""}
+      ${r.restoredAt
+        ? `Відновлено: ${utils.escapeHtml(utils.fmtTs(r.restoredAt))}<br>`
+        : ""}
     `;
 
     details.appendChild(summary);
     details.appendChild(content);
+
     return details;
   }
 
-  function renderCardButtons(r, titleMain) {
+  function renderCardButtons(r) {
     const wrap = document.createElement("div");
     wrap.className = "reg-card__actions";
 
@@ -709,13 +1052,24 @@
     btnConfirm.className = "btn btn--primary btn--sm";
     btnConfirm.dataset.act = "confirm";
     btnConfirm.textContent = "Підтвердити";
-    if (String(r.status) === "confirmed") btnConfirm.disabled = true;
+    btnConfirm.disabled = r.status === "confirmed";
 
     const btnCancel = document.createElement("button");
     btnCancel.className = "btn btn--ghost btn--sm";
     btnCancel.dataset.act = "cancel";
-    btnCancel.textContent = "Скасувати";
-    if (String(r.status) === "cancelled") btnCancel.disabled = true;
+
+    const oldCancelledPayment =
+      r.status === "cancelled" &&
+      Boolean(r.confirmedAt);
+
+    btnCancel.textContent = oldCancelledPayment
+      ? "Очистити стару оплату"
+      : "Скасувати";
+
+    // Стару скасовану заявку з confirmedAt дозволяємо виправити.
+    btnCancel.disabled =
+      r.status === "cancelled" &&
+      !oldCancelledPayment;
 
     const btnDelete = document.createElement("button");
     btnDelete.className = "btn btn--danger btn--sm";
@@ -725,22 +1079,35 @@
     wrap.appendChild(btnConfirm);
     wrap.appendChild(btnCancel);
     wrap.appendChild(btnDelete);
+
     return wrap;
   }
 
   function renderDeletedInfo(r) {
     if (!r._deleted) return null;
+
     const div = document.createElement("div");
     div.className = "reg-card__deleted-info";
-    div.innerHTML = `Видалено: <b>${utils.escapeHtml(utils.fmtTs(r.deletedAt))}</b>`;
+
+    div.innerHTML = `
+      Видалено:
+      <b>${utils.escapeHtml(utils.fmtTs(r.deletedAt))}</b>
+    `;
+
     return div;
   }
 
-  // ─── Main render ────────────────────────────────────────────────
+  // =========================================================
+  // MAIN RENDER
+  // =========================================================
 
   const render = {
     card: (r) => {
-      const titleMain = r.teamName ? r.teamName : (r.participantName ? r.participantName : "Без назви");
+      const titleMain =
+        r.teamName ||
+        r.participantName ||
+        "Без назви";
+
       const applicantName = r.entryType === "solo"
         ? (r.participantName || r.captain || "—")
         : (r.captain || "—");
@@ -748,128 +1115,259 @@
       const card = document.createElement("div");
       card.className = "card reg-card";
 
-      card.appendChild(renderCardHeader(r, titleMain, applicantName));
+      card.appendChild(
+        renderCardHeader(r, titleMain, applicantName)
+      );
 
       const deletedInfo = renderDeletedInfo(r);
-      if (deletedInfo) card.appendChild(deletedInfo);
+
+      if (deletedInfo) {
+        card.appendChild(deletedInfo);
+      }
 
       card.appendChild(renderCardDetails(r));
 
-      const buttons = renderCardButtons(r, titleMain);
+      const buttons = renderCardButtons(r);
       card.appendChild(buttons);
 
-      const btnConfirm = buttons.querySelector('[data-act="confirm"]');
-      const btnCancel = buttons.querySelector('[data-act="cancel"]');
-      const btnDelete = buttons.querySelector('[data-act="delete"]');
-      const btnRestore = buttons.querySelector('[data-act="restore"]');
+      const btnConfirm =
+        buttons.querySelector('[data-act="confirm"]');
+
+      const btnCancel =
+        buttons.querySelector('[data-act="cancel"]');
+
+      const btnDelete =
+        buttons.querySelector('[data-act="delete"]');
+
+      const btnRestore =
+        buttons.querySelector('[data-act="restore"]');
+
+      // =====================================================
+      // RESTORE
+      // =====================================================
 
       btnRestore?.addEventListener("click", async () => {
         if (!state.isAdminByRules) {
-          utils.setMsg("Нема адмін-доступу за правилами UID.", false);
+          utils.setMsg(
+            "Нема адмін-доступу за правилами UID.",
+            false
+          );
           return;
         }
 
-        if (!confirm(`Відновити заявку "${titleMain}" назад у registrations?`)) return;
+        if (!confirm(
+          `Відновити заявку "${titleMain}" назад у registrations?`
+        )) {
+          return;
+        }
 
         try {
           utils.setMsg("Відновлюю заявку...", true);
 
-          const deletedSnap = await firestore.delRef(r._id).get();
+          const deletedSnap =
+            await firestore.delRef(r._id).get();
+
           if (!deletedSnap.exists) {
-            utils.setMsg("Архівний документ уже не існує.", false);
+            utils.setMsg(
+              "Архівний документ уже не існує.",
+              false
+            );
             return;
           }
 
           const deletedData = deletedSnap.data() || {};
-          const restoredData = cleanRestoredData(deletedData, r._id);
+
+          const restoredData =
+            cleanRestoredData(deletedData, r._id);
 
           const batch = db.batch();
 
-          batch.set(firestore.regRef(r._id), restoredData, { merge: true });
-          batch.set(firestore.pubRef(r._id), publicMirrorData(restoredData), { merge: true });
-          batch.delete(firestore.delRef(r._id));
+          batch.set(
+            firestore.regRef(r._id),
+            restoredData,
+            { merge: true }
+          );
+
+          batch.set(
+            firestore.pubRef(r._id),
+            publicMirrorData(restoredData),
+            { merge: true }
+          );
+
+          batch.delete(
+            firestore.delRef(r._id)
+          );
 
           await batch.commit();
 
-          utils.setMsg(`Заявку "${titleMain}" відновлено ✅`, true);
+          utils.setMsg(
+            `Заявку "${titleMain}" відновлено`,
+            true
+          );
 
-          if (els.statusFilter) els.statusFilter.value = "all";
+          if (els.statusFilter) {
+            els.statusFilter.value = "all";
+          }
+
+          filters.apply();
+
         } catch (e) {
           utils.showError("Помилка відновлення", e);
         }
       });
 
+      // =====================================================
+      // CONFIRM PAYMENT
+      // =====================================================
+
       btnConfirm?.addEventListener("click", async () => {
         if (!state.isAdminByRules) {
-          utils.setMsg("Нема адмін-доступу за правилами UID.", false);
+          utils.setMsg(
+            "Нема адмін-доступу за правилами UID.",
+            false
+          );
           return;
         }
 
-        if (!confirm(`Підтвердити оплату для "${titleMain}"?`)) return;
+        if (!confirm(
+          `Підтвердити оплату для "${titleMain}"?`
+        )) {
+          return;
+        }
+
+        btnConfirm.disabled = true;
 
         try {
           utils.setMsg("Підтверджую...", true);
 
-          const ts = firebase.firestore.FieldValue.serverTimestamp();
+          const FV = firebase.firestore.FieldValue;
+          const ts = FV.serverTimestamp();
+
           const batch = db.batch();
 
-          batch.set(firestore.regRef(r._id), {
+          // Нова чинна оплата.
+          // Старе скасування більше не активне.
+          const paymentData = {
             status: "confirmed",
             confirmedAt: ts,
-            confirmedBy: state.currentUser.uid
-          }, { merge: true });
+            confirmedBy: state.currentUser.uid,
+            cancelledAt: FV.delete(),
+            cancelledBy: FV.delete()
+          };
 
-          batch.set(firestore.pubRef(r._id), {
-            status: "confirmed",
-            confirmedAt: ts,
-            confirmedBy: state.currentUser.uid
-          }, { merge: true });
+          batch.set(
+            firestore.regRef(r._id),
+            paymentData,
+            { merge: true }
+          );
+
+          batch.set(
+            firestore.pubRef(r._id),
+            paymentData,
+            { merge: true }
+          );
 
           await batch.commit();
 
-          utils.setMsg("Оплату підтверджено ✅", true);
+          utils.setMsg("Оплату підтверджено", true);
+
         } catch (e) {
+          btnConfirm.disabled = false;
           utils.showError("Помилка підтвердження", e);
         }
       });
 
+      // =====================================================
+      // CANCEL PAYMENT
+      // =====================================================
+
       btnCancel?.addEventListener("click", async () => {
         if (!state.isAdminByRules) {
-          utils.setMsg("Нема адмін-доступу за правилами UID.", false);
+          utils.setMsg(
+            "Нема адмін-доступу за правилами UID.",
+            false
+          );
           return;
         }
 
-        if (!confirm(`Скасувати заявку "${titleMain}"?`)) return;
+        const alreadyCancelled =
+          r.status === "cancelled";
+
+        const question = alreadyCancelled
+          ? `Очистити стару відмітку оплати для "${titleMain}"?`
+          : `Скасувати заявку "${titleMain}"?`;
+
+        if (!confirm(question)) {
+          return;
+        }
+
+        btnCancel.disabled = true;
 
         try {
-          utils.setMsg("Скасовую...", true);
+          utils.setMsg(
+            alreadyCancelled
+              ? "Очищаю стару оплату..."
+              : "Скасовую...",
+            true
+          );
 
-          const ts = firebase.firestore.FieldValue.serverTimestamp();
+          const FV = firebase.firestore.FieldValue;
+          const ts = FV.serverTimestamp();
+
           const batch = db.batch();
 
-          batch.set(firestore.regRef(r._id), {
+          // Видаляємо саме ЧИННЕ підтвердження оплати.
+          // Заявка залишається у базі зі статусом cancelled.
+          const cancelData = {
             status: "cancelled",
-            cancelledAt: ts,
-            cancelledBy: state.currentUser.uid
-          }, { merge: true });
+            confirmedAt: FV.delete(),
+            confirmedBy: FV.delete()
+          };
 
-          batch.set(firestore.pubRef(r._id), {
-            status: "cancelled",
-            cancelledAt: ts,
-            cancelledBy: state.currentUser.uid
-          }, { merge: true });
+          // Для старих скасованих заявок
+          // не переписуємо початкову дату скасування.
+          if (!alreadyCancelled) {
+            cancelData.cancelledAt = ts;
+            cancelData.cancelledBy = state.currentUser.uid;
+          }
+
+          batch.set(
+            firestore.regRef(r._id),
+            cancelData,
+            { merge: true }
+          );
+
+          batch.set(
+            firestore.pubRef(r._id),
+            cancelData,
+            { merge: true }
+          );
 
           await batch.commit();
 
-          utils.setMsg("Заявку скасовано ✅", true);
+          utils.setMsg(
+            alreadyCancelled
+              ? "Стару відмітку оплати очищено"
+              : "Заявку скасовано",
+            true
+          );
+
         } catch (e) {
+          btnCancel.disabled = false;
           utils.showError("Помилка скасування", e);
         }
       });
 
+      // =====================================================
+      // DELETE
+      // =====================================================
+
       btnDelete?.addEventListener("click", async () => {
         if (!state.isAdminByRules) {
-          utils.setMsg("Нема адмін-доступу за правилами UID.", false);
+          utils.setMsg(
+            "Нема адмін-доступу за правилами UID.",
+            false
+          );
           return;
         }
 
@@ -881,6 +1379,8 @@
 
         if (!confirm(warn)) return;
 
+        btnDelete.disabled = true;
+
         try {
           utils.setMsg("Видаляю...", true);
 
@@ -888,12 +1388,19 @@
           const pubRef = firestore.pubRef(r._id);
 
           const freshSnap = await regRef.get();
+
           if (!freshSnap.exists) {
-            utils.setMsg("Заявка вже видалена або не існує.", false);
+            utils.setMsg(
+              "Заявка вже видалена або не існує.",
+              false
+            );
             return;
           }
 
-          const freshData = utils.stripUndefinedDeep(freshSnap.data() || {});
+          const freshData = utils.stripUndefinedDeep(
+            freshSnap.data() || {}
+          );
+
           const batch = db.batch();
 
           batch.set(
@@ -901,7 +1408,8 @@
             utils.stripUndefinedDeep({
               ...freshData,
               originalRegId: r._id,
-              deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+              deletedAt:
+                firebase.firestore.FieldValue.serverTimestamp(),
               deletedBy: state.currentUser.uid
             }),
             { merge: true }
@@ -911,8 +1419,11 @@
           batch.delete(pubRef);
 
           await batch.commit();
-          utils.setMsg("Заявку видалено ✅", true);
+
+          utils.setMsg("Заявку видалено", true);
+
         } catch (e) {
+          btnDelete.disabled = false;
           utils.showError("Помилка видалення", e);
         }
       });
@@ -922,16 +1433,24 @@
 
     list: (regs) => {
       if (!els.list) return;
+
       els.list.innerHTML = "";
 
       if (!regs.length) {
-        els.list.innerHTML = `<div class="form__hint reg-empty">Нема заявок по цьому фільтру.</div>`;
+        els.list.innerHTML = `
+          <div class="form__hint reg-empty">
+            Нема заявок по цьому фільтру.
+          </div>
+        `;
         return;
       }
 
-      const sf = String(els.statusFilter?.value || "all").toLowerCase();
+      const sf = String(
+        els.statusFilter?.value || "all"
+      ).toLowerCase();
+
       if (sf === "deleted") {
-        regs.forEach((r) => {
+        regs.forEach(r => {
           els.list.appendChild(render.card(r));
         });
         return;
@@ -942,14 +1461,18 @@
       const activeGroups = [];
       const finishedGroups = [];
 
-      groups.forEach((g) => {
-        if (g.isFinished) finishedGroups.push(g);
-        else activeGroups.push(g);
+      groups.forEach(g => {
+        if (g.isFinished) {
+          finishedGroups.push(g);
+        } else {
+          activeGroups.push(g);
+        }
       });
 
-      const sortGroups = (arr) => arr.sort((a, b) => {
+      const sortGroups = arr => arr.sort((a, b) => {
         const oa = state.stageOrderByKey.get(a.key) || 0;
         const ob = state.stageOrderByKey.get(b.key) || 0;
+
         return oa - ob;
       });
 
@@ -957,140 +1480,232 @@
       sortGroups(finishedGroups);
 
       if (activeGroups.length) {
-        els.list.appendChild(createSectionHeader("Активні змагання"));
-        activeGroups.forEach((g) => {
-          els.list.appendChild(createCompGroup(g, true));
+        els.list.appendChild(
+          createSectionHeader("Активні змагання")
+        );
+
+        activeGroups.forEach(g => {
+          els.list.appendChild(
+            createCompGroup(g, true)
+          );
         });
       }
 
       if (finishedGroups.length) {
-        els.list.appendChild(createSectionHeader("Завершені змагання"));
-        finishedGroups.forEach((g) => {
-          els.list.appendChild(createCompGroup(g, false));
+        els.list.appendChild(
+          createSectionHeader("Завершені змагання")
+        );
+
+        finishedGroups.forEach(g => {
+          els.list.appendChild(
+            createCompGroup(g, false)
+          );
         });
       }
     }
   };
 
-  // ─── Filters ────────────────────────────────────────────────────
+  // =========================================================
+  // FILTERS
+  // =========================================================
 
   const filters = {
     apply: () => {
-      const sf = String(els.statusFilter?.value || "all").toLowerCase();
-      const q = String(els.qInput?.value || "").trim().toLowerCase();
+      const sf = String(
+        els.statusFilter?.value || "all"
+      ).toLowerCase();
 
-      let source = sf === "deleted" ? state.allDeleted : state.allRegs;
+      const q = String(
+        els.qInput?.value || ""
+      ).trim().toLowerCase();
 
-      let filtered = source
-        .filter((r) => sf === "deleted" || !utils.isFinishedAndExpired(r))
-        .filter((r) => {
+      const source = sf === "deleted"
+        ? state.allDeleted
+        : state.allRegs;
+
+      const filtered = source
+        .filter(r =>
+          sf === "deleted" ||
+          !utils.isFinishedAndExpired(r)
+        )
+        .filter(r => {
           if (sf === "deleted") return true;
 
-          const st = String(r.status || "").toLowerCase();
+          const st = String(
+            r.status || ""
+          ).toLowerCase();
 
           if (sf === "all") return true;
           if (sf === "confirmed") return st === "confirmed";
           if (sf === "pending") return st === "pending_payment";
           if (sf === "cancelled") return st === "cancelled";
+
           return st === sf;
         })
-        .filter((r) => utils.matchQuery(r, q));
+        .filter(r => utils.matchQuery(r, q));
 
       if (sf === "deleted") {
-        filtered.sort((a, b) => {
-          const da = a.deletedAt?.toDate ? a.deletedAt.toDate() : (a.deletedAt || 0);
-          const db_ = b.deletedAt?.toDate ? b.deletedAt.toDate() : (b.deletedAt || 0);
-          return db_ - da;
-        });
+        filtered.sort((a, b) =>
+          utils.timestampMs(b.deletedAt) -
+          utils.timestampMs(a.deletedAt)
+        );
       }
 
       render.list(filtered);
     }
   };
 
-  // ─── Watchers ───────────────────────────────────────────────────
+  // =========================================================
+  // WATCHERS
+  // =========================================================
 
   const watchers = {
     registrations: () => {
-      if (state.unsubRegs) state.unsubRegs();
+      if (state.unsubRegs) {
+        state.unsubRegs();
+      }
 
-      state.unsubRegs = db.collection(CONFIG.COLLECTIONS.REGISTRATIONS)
-        .onSnapshot((snap) => {
-          state.allRegs = [];
-          snap.forEach((d) => state.allRegs.push({ _id: d.id, ...(d.data() || {}) }));
-          filters.apply();
-        }, (err) => {
-          console.error(err);
-          utils.setMsg("Не вдалося завантажити заявки.", false);
-        });
+      state.unsubRegs = db
+        .collection(CONFIG.COLLECTIONS.REGISTRATIONS)
+        .onSnapshot(
+          snap => {
+            state.allRegs = [];
+
+            snap.forEach(d => {
+              state.allRegs.push({
+                _id: d.id,
+                ...(d.data() || {})
+              });
+            });
+
+            filters.apply();
+          },
+          err => {
+            console.error(err);
+            utils.setMsg(
+              "Не вдалося завантажити заявки.",
+              false
+            );
+          }
+        );
     },
 
     deleted: () => {
-      if (state.unsubDeleted) state.unsubDeleted();
+      if (state.unsubDeleted) {
+        state.unsubDeleted();
+      }
 
-      state.unsubDeleted = db.collection(CONFIG.COLLECTIONS.REGISTRATIONS_DELETED)
-        .onSnapshot((snap) => {
-          state.allDeleted = [];
-          snap.forEach((d) => {
-            state.allDeleted.push({
-              _id: d.id,
-              _deleted: true,
-              ...(d.data() || {})
+      state.unsubDeleted = db
+        .collection(CONFIG.COLLECTIONS.REGISTRATIONS_DELETED)
+        .onSnapshot(
+          snap => {
+            state.allDeleted = [];
+
+            snap.forEach(d => {
+              state.allDeleted.push({
+                _id: d.id,
+                _deleted: true,
+                ...(d.data() || {})
+              });
             });
-          });
-          filters.apply();
-        }, (err) => {
-          console.error(err);
-          utils.setMsg("Не вдалося завантажити видалені заявки.", false);
-        });
+
+            filters.apply();
+          },
+          err => {
+            console.error(err);
+            utils.setMsg(
+              "Не вдалося завантажити видалені заявки.",
+              false
+            );
+          }
+        );
     }
   };
 
+  // =========================================================
+  // EVENTS
+  // =========================================================
+
   function bindEvents() {
-    els.statusFilter?.addEventListener("change", filters.apply);
-    els.qInput?.addEventListener("input", filters.apply);
+    els.statusFilter?.addEventListener(
+      "change",
+      filters.apply
+    );
+
+    els.qInput?.addEventListener(
+      "input",
+      filters.apply
+    );
   }
 
+  // =========================================================
+  // AUTH
+  // =========================================================
+
   function initAuth() {
-    auth.onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged(async user => {
       state.currentUser = user || null;
       utils.setMsg("");
 
       if (!user) {
-        utils.setMsg("Увійдіть як адмін, щоб бачити заявки.", false);
+        utils.setMsg(
+          "Увійдіть як адмін, щоб бачити заявки.",
+          false
+        );
         return;
       }
 
       try {
-        const uSnap = await db.collection(CONFIG.COLLECTIONS.USERS).doc(user.uid).get();
+        const uSnap = await db
+          .collection(CONFIG.COLLECTIONS.USERS)
+          .doc(user.uid)
+          .get();
+
         const role = (uSnap.data() || {}).role || "";
 
         state.isAdminByRole = role === "admin";
-        state.isAdminByRules = user.uid === CONFIG.ADMIN_UID;
+        state.isAdminByRules =
+          user.uid === CONFIG.ADMIN_UID;
 
-        if (!state.isAdminByRole && !state.isAdminByRules) {
-          utils.setMsg("Доступ заборонено: цей акаунт не адмін.", false);
+        if (
+          !state.isAdminByRole &&
+          !state.isAdminByRules
+        ) {
+          utils.setMsg(
+            "Доступ заборонено: цей акаунт не адмін.",
+            false
+          );
           return;
         }
 
         utils.setMsg(
           state.isAdminByRules
-            ? "Адмін-доступ ✅"
+            ? "Адмін-доступ"
             : "role=admin є, але Firestore rules дозволяють запис тільки основному UID.",
-          !!state.isAdminByRules
+          Boolean(state.isAdminByRules)
         );
 
         await firestore.loadCompetitionsMap();
 
         watchers.registrations();
         watchers.deleted();
+
       } catch (e) {
         console.error(e);
-        utils.setMsg("Помилка перевірки доступу/даних.", false);
+
+        utils.setMsg(
+          "Помилка перевірки доступу/даних.",
+          false
+        );
       }
     });
   }
 
+  // =========================================================
+  // START
+  // =========================================================
+
   bindEvents();
   initAuth();
+
 })();

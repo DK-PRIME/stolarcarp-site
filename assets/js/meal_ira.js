@@ -3403,6 +3403,422 @@
     }
   );
 
+  
+  // =========================================================
+  // ІРА • РЕДАКТОР МЕНЮ НА 2 ДОБИ
+  //
+  // Поки що зберігаємо чернетку на цьому телефоні.
+  // Не змінюємо заявки, ціни, повідомлення або звіти.
+  // =========================================================
+
+  const MENU_FIELDS = {
+    menuD1Breakfast: "d1b",
+    menuD1Lunch: "d1l",
+    menuD1Dinner: "d1d",
+    menuD2Breakfast: "d2b",
+    menuD2Lunch: "d2l",
+    menuD2Dinner: "d2d"
+  };
+
+  let currentMenuKey = "";
+
+  function menuStorageKey() {
+    if (!competitionId || !stageId) {
+      return "";
+    }
+
+    return (
+      "sc_ira_menu_draft__" +
+      competitionId +
+      "__" +
+      stageId
+    );
+  }
+
+  function setMenuStatus(text, error = false) {
+    const el = $("iraMenuStatus");
+
+    if (!el) return;
+
+    el.textContent = text || "";
+    el.style.color = error
+      ? "var(--red)"
+      : "var(--green)";
+  }
+
+  function menuField(
+    id,
+    label
+  ) {
+    return `
+      <label class="ira-menu-field">
+
+        <span>${label}</span>
+
+        <textarea
+          id="${id}"
+          rows="3"
+          maxlength="2000"
+          placeholder="Впиши страви…"
+        ></textarea>
+
+      </label>
+    `;
+  }
+
+  function createMenuEditor() {
+    /*
+     * Якщо картка вже є у HTML,
+     * повторно її не створюємо.
+     */
+    if ($("iraMenuPanel")) {
+      return;
+    }
+
+    if (!$("priceCard")) {
+      console.warn(
+        "[meal_ira] Не знайдено priceCard для меню."
+      );
+      return;
+    }
+
+    const style = document.createElement("style");
+    style.id = "sc-ira-menu-styles";
+
+    style.textContent = `
+      .ira-menu-panel[hidden] {
+        display: none !important;
+      }
+
+      .ira-menu-panel {
+        margin-top: 8px;
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        background: var(--card);
+        overflow: hidden;
+      }
+
+      .ira-menu-panel summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px;
+        color: var(--yellow);
+        font-size: .94rem;
+        font-weight: 900;
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .ira-menu-panel summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .ira-menu-panel summary::after {
+        content: "▼";
+        font-size: .7rem;
+      }
+
+      .ira-menu-panel details[open] summary::after {
+        content: "▲";
+      }
+
+      .ira-menu-editor {
+        padding: 0 12px 14px;
+      }
+
+      .ira-menu-day {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid var(--border-soft);
+        border-radius: 12px;
+        background: var(--card-soft);
+      }
+
+      .ira-menu-day-title {
+        margin-bottom: 9px;
+        color: var(--yellow);
+        font-size: .9rem;
+        font-weight: 900;
+      }
+
+      .ira-menu-field {
+        display: block;
+        margin-top: 10px;
+      }
+
+      .ira-menu-field span {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--text-main);
+        font-size: .8rem;
+        font-weight: 800;
+      }
+
+      .ira-menu-field textarea {
+        display: block;
+        width: 100%;
+        min-height: 67px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        outline: none;
+        resize: vertical;
+        background: var(--card);
+        color: var(--text-main);
+        font: inherit;
+        font-size: .83rem;
+        line-height: 1.4;
+      }
+
+      .ira-menu-field textarea:focus {
+        border-color: var(--yellow);
+      }
+
+      .ira-menu-save {
+        width: 100%;
+        min-height: 44px;
+        margin-top: 14px;
+        border: none;
+        border-radius: 11px;
+        background: linear-gradient(
+          90deg,
+          #ffdc38,
+          #ff872c
+        );
+        color: #171717;
+        font-size: .88rem;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .ira-menu-status {
+        min-height: 18px;
+        margin-top: 8px;
+        color: var(--green);
+        font-size: .73rem;
+        line-height: 1.3;
+        text-align: center;
+      }
+    `;
+
+    document.head.appendChild(style);
+
+    const section = document.createElement("section");
+
+    section.id = "iraMenuPanel";
+    section.className = "ira-menu-panel";
+    section.hidden = true;
+
+    section.innerHTML = `
+      <details id="iraMenuDetails">
+
+        <summary>
+          📖 Скласти меню
+        </summary>
+
+        <div class="ira-menu-editor">
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 1
+            </div>
+
+            ${menuField("menuD1Breakfast", "Сніданок")}
+            ${menuField("menuD1Lunch", "Обід")}
+            ${menuField("menuD1Dinner", "Вечеря")}
+
+          </div>
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 2
+            </div>
+
+            ${menuField("menuD2Breakfast", "Сніданок")}
+            ${menuField("menuD2Lunch", "Обід")}
+            ${menuField("menuD2Dinner", "Вечеря")}
+
+          </div>
+
+          <button
+            id="iraMenuSave"
+            class="ira-menu-save"
+            type="button"
+          >
+            Зберегти чернетку меню
+          </button>
+
+          <div
+            id="iraMenuStatus"
+            class="ira-menu-status"
+            aria-live="polite"
+          ></div>
+
+        </div>
+
+      </details>
+    `;
+
+    $("priceCard").insertAdjacentElement(
+      "afterend",
+      section
+    );
+  }
+
+  function fillMenuEditor(data = {}) {
+    Object.entries(MENU_FIELDS).forEach(
+      ([id, key]) => {
+        const field = $(id);
+
+        if (!field) return;
+
+        field.value = String(
+          data[key] ??
+          data[id] ??
+          ""
+        );
+      }
+    );
+  }
+
+  function loadMenuDraft() {
+    fillMenuEditor();
+
+    if (!currentMenuKey) {
+      setMenuStatus("");
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(
+        currentMenuKey
+      );
+
+      if (!raw) {
+        setMenuStatus("");
+        return;
+      }
+
+      const data = JSON.parse(raw);
+
+      fillMenuEditor(data);
+
+      setMenuStatus(
+        "Збережену чернетку завантажено."
+      );
+
+    } catch (error) {
+      console.error(
+        "[meal_ira] Завантаження меню:",
+        error
+      );
+
+      setMenuStatus(
+        "Не вдалося завантажити меню.",
+        true
+      );
+    }
+  }
+
+  function saveMenuDraft() {
+    if (
+      !mealIsOpen ||
+      !currentMenuKey
+    ) {
+      setMenuStatus(
+        "Спочатку відкрий харчування.",
+        true
+      );
+      return;
+    }
+
+    const data = {};
+
+    Object.entries(MENU_FIELDS).forEach(
+      ([id, key]) => {
+        data[key] = String(
+          $(id)?.value || ""
+        ).trim();
+      }
+    );
+
+    data.savedAt = Date.now();
+
+    try {
+      localStorage.setItem(
+        currentMenuKey,
+        JSON.stringify(data)
+      );
+
+      setMenuStatus(
+        "Меню збережено на цьому телефоні."
+      );
+
+    } catch (error) {
+      console.error(
+        "[meal_ira] Збереження меню:",
+        error
+      );
+
+      setMenuStatus(
+        "Помилка збереження чернетки.",
+        true
+      );
+    }
+  }
+
+  function initMenuEditor() {
+    createMenuEditor();
+
+    $("iraMenuSave")?.addEventListener(
+      "click",
+      saveMenuDraft
+    );
+
+    Object.keys(MENU_FIELDS).forEach(id => {
+      $(id)?.addEventListener(
+        "input",
+        () => {
+          setMenuStatus(
+            "Є незбережені зміни."
+          );
+        }
+      );
+    });
+  }
+
+  function syncMenuEditor() {
+    const panel = $("iraMenuPanel");
+
+    if (!panel) return;
+
+    const isActive = Boolean(
+      mealIsOpen &&
+      competitionId &&
+      stageId
+    );
+
+    panel.hidden = !isActive;
+
+    if (!isActive) {
+      $("iraMenuDetails").open = false;
+      return;
+    }
+
+    const nextKey = menuStorageKey();
+
+    if (nextKey !== currentMenuKey) {
+      currentMenuKey = nextKey;
+      fillMenuEditor();
+      loadMenuDraft();
+      $("iraMenuDetails").open = false;
+    }
+  }
+
+
   boot();
 
 })();

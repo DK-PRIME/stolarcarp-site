@@ -1,8 +1,8 @@
+
 <!doctype html>
 <html lang="uk">
 
 <head>
-
   <meta charset="utf-8">
 
   <meta
@@ -10,9 +10,7 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>
-    Харчування · STOLAR CARP
-  </title>
+  <title>Харчування · STOLAR CARP</title>
 
   <link
     rel="stylesheet"
@@ -25,46 +23,44 @@
   ></script>
 
   <style>
-
-    *{
-      box-sizing:border-box;
+    * {
+      box-sizing: border-box;
     }
 
     html,
-    body{
-      margin:0;
-      width:100%;
-      min-height:100%;
+    body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
     }
 
-    body{
-      --page-bg-1:#111827;
-      --page-bg-2:#020617;
+    body {
+      --page-bg-1: #111827;
+      --page-bg-2: #020617;
 
-      --card:#0f172a;
-      --card-soft:#020617;
+      --card: #0f172a;
+      --card-soft: #020617;
 
-      --text:#e5e7eb;
-      --text-main:#f8fafc;
-      --muted:#94a3b8;
+      --text: #e5e7eb;
+      --text-main: #f8fafc;
+      --muted: #94a3b8;
 
-      --border:rgba(148,163,184,.28);
-      --border-soft:rgba(148,163,184,.20);
+      --border: rgba(148,163,184,.28);
+      --border-soft: rgba(148,163,184,.20);
 
-      --yellow:#facc15;
-      --green:#22c55e;
-      --red:#ef4444;
+      --yellow: #facc15;
+      --green: #22c55e;
+      --red: #ef4444;
 
-      margin:0;
+      margin: 0;
 
-      background:
-        radial-gradient(
-          circle at top,
-          var(--page-bg-1) 0,
-          var(--page-bg-2) 55%
-        );
+      background: radial-gradient(
+        circle at top,
+        var(--page-bg-1) 0,
+        var(--page-bg-2) 55%
+      );
 
-      color:var(--text);
+      color: var(--text);
 
       transition:
         background .2s ease,
@@ -75,249 +71,195 @@
        LIGHT MODE
        ===================================================== */
 
-    body.light-mode{
-      --page-bg-1:#ffffff;
-      --page-bg-2:#eef2f7;
+    body.light-mode {
+      --page-bg-1: #ffffff;
+      --page-bg-2: #eef2f7;
 
-      --card:#ffffff;
-      --card-soft:#f8fafc;
+      --card: #ffffff;
+      --card-soft: #f8fafc;
 
-      --text:#1e293b;
-      --text-main:#0f172a;
-      --muted:#64748b;
+      --text: #1e293b;
+      --text-main: #0f172a;
+      --muted: #64748b;
 
-      --border:rgba(71,85,105,.22);
-      --border-soft:rgba(71,85,105,.16);
+      --border: rgba(71,85,105,.22);
+      --border-soft: rgba(71,85,105,.16);
 
-      --yellow:#b77900;
-      --green:#15803d;
-      --red:#dc2626;
+      --yellow: #b77900;
+      --green: #15803d;
+      --red: #dc2626;
     }
 
-    .ira-wrap{
-      width:100%;
-      max-width:1100px;
-
-      margin:0 auto;
-
-      padding:
-        6px 5px 30px;
+    .ira-wrap {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 6px 5px 30px;
     }
 
     /* =====================================================
        HEADER
        ===================================================== */
 
-    .ira-head{
-      position:relative;
+    .ira-head {
+      position: relative;
+      padding: 11px 104px 11px 12px;
 
-      padding:
-        11px 104px 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:16px;
-
-      background:
-        var(--card);
+      background: var(--card);
 
       box-shadow:
-        0 12px 30px
-        rgba(0,0,0,.18);
+        0 12px 30px rgba(0,0,0,.18);
     }
 
-    .ira-title{
-      margin:0;
-
-      color:var(--yellow);
-
-      font-size:1.28rem;
-
-      line-height:1.15;
-
-      font-weight:900;
+    .ira-title {
+      margin: 0;
+      color: var(--yellow);
+      font-size: 1.28rem;
+      line-height: 1.15;
+      font-weight: 900;
     }
 
-    .ira-sub{
-      margin-top:7px;
-
-      color:var(--muted);
-
-      font-size:.88rem;
-
-      line-height:1.35;
+    .ira-sub {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.35;
     }
 
-    #competitionTitle{
-      color:var(--text-main);
-
-      font-weight:900;
+    #competitionTitle {
+      color: var(--text-main);
+      font-weight: 900;
     }
 
-    #stageTitle{
-      color:var(--muted);
+    #stageTitle {
+      color: var(--muted);
     }
 
-    .state{
-      margin-top:8px;
-
-      color:var(--muted);
-
-      font-size:.80rem;
-
-      line-height:1.25;
+    .state {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .80rem;
+      line-height: 1.25;
     }
 
-    .state.ok{
-      color:var(--green);
+    .state.ok {
+      color: var(--green);
     }
 
-    .state.err{
-      color:var(--red);
+    .state.err {
+      color: var(--red);
     }
 
     /* =====================================================
        HEADER BUTTONS
        ===================================================== */
 
-    .head-actions{
-      position:absolute;
+    .head-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
 
-      top:10px;
-      right:10px;
-
-      display:flex;
-
-      align-items:center;
-
-      gap:6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .theme-btn,
-    .global-envelope-btn{
-      width:40px;
-      height:38px;
+    .global-envelope-btn {
+      width: 40px;
+      height: 38px;
 
-      display:flex;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      align-items:center;
-      justify-content:center;
+      padding: 0;
 
-      padding:0;
+      border: 1px solid var(--border);
+      border-radius: 11px;
 
-      border:
-        1px solid
-        var(--border);
+      background: var(--card-soft);
+      color: var(--text-main);
 
-      border-radius:11px;
-
-      background:
-        var(--card-soft);
-
-      color:var(--text-main);
-
-      font-size:1.05rem;
-
-      cursor:pointer;
+      font-size: 1.05rem;
+      cursor: pointer;
     }
 
     .theme-btn:active,
-    .global-envelope-btn:active{
-      transform:scale(.96);
+    .global-envelope-btn:active {
+      transform: scale(.96);
     }
 
     /* =====================================================
        ГЛОБАЛЬНИЙ КОНВЕРТ
        ===================================================== */
 
-    .global-envelope-btn{
-      display:none;
+    .global-envelope-btn {
+      display: none;
+      position: relative;
 
-      position:relative;
-
-      color:var(--yellow);
-
-      border-color:var(--yellow);
-
-      background:
-        rgba(250,204,21,.12);
+      color: var(--yellow);
+      border-color: var(--yellow);
+      background: rgba(250,204,21,.12);
     }
 
-    .global-envelope-btn.show{
-      display:flex;
+    .global-envelope-btn.show {
+      display: flex;
     }
 
-    .global-envelope-btn.unread{
+    .global-envelope-btn.unread {
       animation:
-        globalEnvelopePulse
-        1s
-        infinite;
+        globalEnvelopePulse 1s infinite;
     }
 
     .global-envelope-btn.unread
-    .global-envelope-icon{
+    .global-envelope-icon {
       animation:
-        globalEnvelopeShake
-        1s
-        infinite;
+        globalEnvelopeShake 1s infinite;
     }
 
-    .global-envelope-icon{
-      display:block;
-
-      font-size:1.15rem;
-
-      line-height:1;
+    .global-envelope-icon {
+      display: block;
+      font-size: 1.15rem;
+      line-height: 1;
     }
 
-    @keyframes globalEnvelopePulse{
-
-      0%{
+    @keyframes globalEnvelopePulse {
+      0% {
         box-shadow:
-          0 0 0 0
-          rgba(250,204,21,.55);
+          0 0 0 0 rgba(250,204,21,.55);
       }
 
-      50%{
+      50% {
         box-shadow:
-          0 0 0 7px
-          rgba(250,204,21,.08);
+          0 0 0 7px rgba(250,204,21,.08);
       }
 
-      100%{
+      100% {
         box-shadow:
-          0 0 0 0
-          rgba(250,204,21,0);
+          0 0 0 0 rgba(250,204,21,0);
       }
     }
 
-    @keyframes globalEnvelopeShake{
-
+    @keyframes globalEnvelopeShake {
       0%,
-      100%{
-        transform:
-          rotate(0deg)
-          scale(1);
+      100% {
+        transform: rotate(0deg) scale(1);
       }
 
-      25%{
-        transform:
-          rotate(-10deg)
-          scale(1.10);
+      25% {
+        transform: rotate(-10deg) scale(1.10);
       }
 
-      50%{
-        transform:
-          rotate(10deg)
-          scale(1.18);
+      50% {
+        transform: rotate(10deg) scale(1.18);
       }
 
-      75%{
-        transform:
-          rotate(-6deg)
-          scale(1.08);
+      75% {
+        transform: rotate(-6deg) scale(1.08);
       }
     }
 
@@ -325,451 +267,495 @@
        PRICE PANEL
        ===================================================== */
 
-    .price-card{
-      margin-top:7px;
-
-      padding:8px;
+    .price-card {
+      margin-top: 7px;
+      padding: 8px;
 
       border:
-        1px solid
-        rgba(183,121,0,.35);
+        1px solid rgba(183,121,0,.35);
 
-      border-radius:15px;
-
-      background:
-        var(--card);
+      border-radius: 15px;
+      background: var(--card);
     }
 
-    .price-title{
-      margin-bottom:7px;
-
-      color:var(--yellow);
-
-      font-size:.82rem;
-
-      font-weight:900;
+    .price-title {
+      margin-bottom: 7px;
+      color: var(--yellow);
+      font-size: .82rem;
+      font-weight: 900;
     }
 
-    .price-days{
-      display:grid;
-
+    .price-days {
+      display: grid;
       grid-template-columns:
         repeat(2,minmax(0,1fr));
-
-      gap:6px;
+      gap: 6px;
     }
 
-    .price-day{
-      padding:6px;
-
-      border:
-        1px solid
-        var(--border-soft);
-
-      border-radius:11px;
-
-      background:
-        var(--card-soft);
+    .price-day {
+      padding: 6px;
+      border: 1px solid var(--border-soft);
+      border-radius: 11px;
+      background: var(--card-soft);
     }
 
-    .price-day-title{
-      margin-bottom:5px;
-
-      color:var(--text);
-
-      font-size:.70rem;
-
-      font-weight:900;
+    .price-day-title {
+      margin-bottom: 5px;
+      color: var(--text);
+      font-size: .70rem;
+      font-weight: 900;
     }
 
-    .price-grid{
-      display:grid;
-
+    .price-grid {
+      display: grid;
       grid-template-columns:
         repeat(3,minmax(0,1fr));
-
-      gap:4px;
+      gap: 4px;
     }
 
-    .price-field{
-      min-width:0;
-
-      text-align:center;
+    .price-field {
+      min-width: 0;
+      text-align: center;
     }
 
-    .price-field label{
-      display:block;
-
-      margin-bottom:2px;
-
-      color:var(--muted);
-
-      font-size:.58rem;
-
-      font-weight:800;
+    .price-field label {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: .58rem;
+      font-weight: 800;
     }
 
-    .ira-price-input{
-      width:100%;
+    .ira-price-input {
+      width: 100%;
+      height: 30px;
+      padding: 2px 3px;
 
-      height:30px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      outline: none;
 
-      padding:
-        2px 3px;
+      background: var(--card);
+      color: var(--yellow);
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:7px;
-
-      outline:none;
-
-      background:
-        var(--card);
-
-      color:var(--yellow);
-
-      font-size:.72rem;
-
-      font-weight:900;
-
-      text-align:center;
+      font-size: .72rem;
+      font-weight: 900;
+      text-align: center;
     }
 
-    .ira-price-input:focus{
-      border-color:var(--yellow);
+    .ira-price-input:focus {
+      border-color: var(--yellow);
     }
 
     /* =====================================================
        DELIVERY
        ===================================================== */
 
-    .delivery-time{
-      margin-top:4px;
-
-      color:var(--green);
-
-      font-size:.54rem;
-
-      line-height:1.15;
-
-      font-weight:900;
-
-      text-align:center;
-
-      white-space:nowrap;
+    .delivery-time {
+      margin-top: 4px;
+      color: var(--green);
+      font-size: .54rem;
+      line-height: 1.15;
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
     }
 
-    .delivery-icon{
-      display:block;
+    .delivery-icon {
+      display: block;
+      margin-bottom: 1px;
+      color: var(--muted);
+      font-size: .46rem;
+      font-weight: 700;
+    }
 
-      margin-bottom:1px;
+    /* =====================================================
+       ІРА • МЕНЮ НА 2 ДОБИ
+       ===================================================== */
 
-      color:var(--muted);
+    .ira-menu-panel[hidden] {
+      display: none !important;
+    }
 
-      font-size:.46rem;
+    .ira-menu-panel {
+      margin-top: 8px;
 
-      font-weight:700;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+
+      background: var(--card);
+
+      box-shadow:
+        0 8px 24px rgba(0,0,0,.10);
+
+      overflow: hidden;
+    }
+
+    .ira-menu-panel summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+
+      padding: 13px;
+
+      color: var(--yellow);
+      font-size: .90rem;
+      font-weight: 900;
+
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+    }
+
+    .ira-menu-panel summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .ira-menu-panel summary::after {
+      content: "▼";
+      font-size: .7rem;
+    }
+
+    .ira-menu-panel details[open] summary::after {
+      content: "▲";
+    }
+
+    .ira-menu-editor {
+      padding: 0 12px 14px;
+    }
+
+    .ira-menu-days {
+      display: grid;
+      grid-template-columns: minmax(0,1fr);
+      gap: 10px;
+    }
+
+    .ira-menu-day {
+      min-width: 0;
+      margin-top: 2px;
+      padding: 10px;
+
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
+
+      background: var(--card-soft);
+    }
+
+    .ira-menu-day-title {
+      margin-bottom: 10px;
+      color: var(--yellow);
+      font-size: .9rem;
+      font-weight: 900;
+    }
+
+    .ira-menu-field {
+      display: block;
+      margin-top: 10px;
+    }
+
+    .ira-menu-field span {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--text-main);
+      font-size: .79rem;
+      font-weight: 800;
+    }
+
+    .ira-menu-field textarea {
+      display: block;
+      width: 100%;
+      min-height: 72px;
+
+      padding: 10px;
+
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      outline: none;
+
+      background: var(--card);
+      color: var(--text-main);
+
+      font: inherit;
+      font-size: .83rem;
+      line-height: 1.45;
+
+      resize: vertical;
+    }
+
+    .ira-menu-field textarea::placeholder {
+      color: var(--muted);
+    }
+
+    .ira-menu-field textarea:focus {
+      border-color: var(--yellow);
+    }
+
+    .ira-menu-save {
+      width: 100%;
+      min-height: 45px;
+      margin-top: 14px;
+      padding: 10px;
+
+      border: none;
+      border-radius: 11px;
+
+      background: linear-gradient(
+        90deg,
+        #ffdc38,
+        #ff872c
+      );
+
+      color: #171717;
+      font-size: .88rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .ira-menu-save:active {
+      transform: scale(.99);
+    }
+
+    .ira-menu-status {
+      min-height: 18px;
+      margin-top: 8px;
+
+      color: var(--green);
+      font-size: .73rem;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .ira-menu-note {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .68rem;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    @media (min-width: 650px) {
+      .ira-menu-days {
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
+      }
     }
 
     /* =====================================================
        TABLE CARD
        ===================================================== */
 
-    .card{
-      margin-top:7px;
+    .card {
+      margin-top: 7px;
+      padding: 5px;
 
-      padding:5px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:15px;
-
-      background:
-        var(--card);
+      background: var(--card);
 
       box-shadow:
-        0 12px 30px
-        rgba(0,0,0,.14);
+        0 12px 30px rgba(0,0,0,.14);
 
-      overflow:hidden;
+      overflow: hidden;
     }
 
-    .summary{
-      display:flex;
+    .summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
 
-      align-items:center;
+      padding: 5px 4px 8px;
 
-      justify-content:
-        space-between;
-
-      gap:6px;
-
-      padding:
-        5px 4px 8px;
-
-      color:var(--text);
-
-      font-size:.72rem;
+      color: var(--text);
+      font-size: .72rem;
     }
 
-    .summary strong{
-      color:var(--yellow);
+    .summary strong {
+      color: var(--yellow);
     }
 
-    #moneyTotal{
-      color:var(--green);
-
-      font-weight:900;
+    #moneyTotal {
+      color: var(--green);
+      font-weight: 900;
     }
 
     /* =====================================================
        TABLE
        ===================================================== */
 
-    .table-wrap{
-      width:100%;
-
-      overflow:hidden;
+    .table-wrap {
+      width: 100%;
+      overflow: hidden;
     }
 
-    table{
-      width:100%;
-
-      border-collapse:collapse;
-
-      table-layout:fixed;
-
-      font-size:.62rem;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: .62rem;
     }
 
     th,
-    td{
-      border:
-        1px solid
-        var(--border-soft);
-
-      padding:
-        5px 1px;
-
-      text-align:center;
-
-      vertical-align:middle;
-
-      overflow:hidden;
+    td {
+      border: 1px solid var(--border-soft);
+      padding: 5px 1px;
+      text-align: center;
+      vertical-align: middle;
+      overflow: hidden;
     }
 
-    th{
-      color:var(--yellow);
-
-      background:
-        var(--card-soft);
-
-      font-weight:900;
-
-      white-space:nowrap;
+    th {
+      color: var(--yellow);
+      background: var(--card-soft);
+      font-weight: 900;
+      white-space: nowrap;
     }
 
-    td{
-      background:
-        var(--card);
+    td {
+      background: var(--card);
     }
 
-    .sector{
-      color:var(--yellow);
-
-      font-size:.70rem;
-
-      font-weight:900;
+    .sector {
+      color: var(--yellow);
+      font-size: .70rem;
+      font-weight: 900;
     }
 
     /* =====================================================
        TEAM CELL
        ===================================================== */
 
-    .team{
-      padding:
-        4px 4px 4px 5px;
-
-      text-align:left;
-
-      white-space:normal;
-
-      overflow:visible;
+    .team {
+      padding: 4px 4px 4px 5px;
+      text-align: left;
+      white-space: normal;
+      overflow: visible;
     }
 
-    .team-line{
-      display:flex;
-
-      align-items:center;
-
-      justify-content:
-        space-between;
-
-      gap:4px;
-
-      width:100%;
+    .team-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      width: 100%;
     }
 
-    .team-name-wrap{
-      min-width:0;
-
-      flex:1 1 auto;
+    .team-name-wrap {
+      min-width: 0;
+      flex: 1 1 auto;
     }
 
-    .team-name{
-      color:var(--text-main);
-
-      font-size:.69rem;
-
-      line-height:1.15;
-
-      font-weight:900;
-
-      overflow-wrap:anywhere;
+    .team-name {
+      color: var(--text-main);
+      font-size: .69rem;
+      line-height: 1.15;
+      font-weight: 900;
+      overflow-wrap: anywhere;
     }
 
-    .solo-label{
-      margin-top:2px;
-
-      color:var(--muted);
-
-      font-size:.52rem;
-
-      line-height:1;
-
-      font-weight:700;
+    .solo-label {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .52rem;
+      line-height: 1;
+      font-weight: 700;
     }
 
     /* =====================================================
        UNREAD ROW
        ===================================================== */
 
-    tr.meal-row-unread td{
-      background:
-        rgba(250,204,21,.08);
+    tr.meal-row-unread td {
+      background: rgba(250,204,21,.08);
     }
 
-    body.light-mode
-    tr.meal-row-unread td{
-      background:
-        rgba(250,204,21,.10);
+    body.light-mode tr.meal-row-unread td {
+      background: rgba(250,204,21,.10);
     }
 
-    tr.meal-row-unread td:first-child{
+    tr.meal-row-unread td:first-child {
       box-shadow:
-        inset 3px 0 0
-        var(--yellow);
+        inset 3px 0 0 var(--yellow);
     }
 
     /* =====================================================
        ICON БІЛЯ ІМЕНІ
        ===================================================== */
 
-    .team-message-action{
-      flex:
-        0 0 28px;
+    .team-message-action {
+      flex: 0 0 28px;
+      width: 28px;
+      height: 28px;
 
-      width:28px;
-      height:28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      display:inline-flex;
+      padding: 0;
 
-      align-items:center;
-      justify-content:center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
 
-      padding:0;
+      background: var(--card-soft);
+      color: var(--text-main);
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:8px;
-
-      background:
-        var(--card-soft);
-
-      color:
-        var(--text-main);
-
-      font-size:.92rem;
-
-      line-height:1;
-
-      cursor:pointer;
+      font-size: .92rem;
+      line-height: 1;
+      cursor: pointer;
     }
 
-    .team-message-action:active{
-      transform:
-        scale(.94);
+    .team-message-action:active {
+      transform: scale(.94);
     }
 
-    .team-message-action.has-unread{
-      border-color:
-        var(--yellow);
-
-      background:
-        rgba(250,204,21,.14);
-
-      color:
-        var(--yellow);
+    .team-message-action.has-unread {
+      border-color: var(--yellow);
+      background: rgba(250,204,21,.14);
+      color: var(--yellow);
 
       animation:
-        rowEnvelopePulse
-        1.05s
-        infinite;
+        rowEnvelopePulse 1.05s infinite;
     }
 
     .team-message-action.has-unread
-    .team-action-icon{
+    .team-action-icon {
       animation:
-        rowEnvelopeShake
-        1.05s
-        infinite;
+        rowEnvelopeShake 1.05s infinite;
     }
 
-    @keyframes rowEnvelopePulse{
-
-      0%{
+    @keyframes rowEnvelopePulse {
+      0% {
         box-shadow:
-          0 0 0 0
-          rgba(250,204,21,.45);
+          0 0 0 0 rgba(250,204,21,.45);
       }
 
-      50%{
+      50% {
         box-shadow:
-          0 0 0 4px
-          rgba(250,204,21,.08);
+          0 0 0 4px rgba(250,204,21,.08);
       }
 
-      100%{
+      100% {
         box-shadow:
-          0 0 0 0
-          rgba(250,204,21,0);
+          0 0 0 0 rgba(250,204,21,0);
       }
     }
 
-    @keyframes rowEnvelopeShake{
-
+    @keyframes rowEnvelopeShake {
       0%,
-      100%{
-        transform:
-          rotate(0deg);
+      100% {
+        transform: rotate(0deg);
       }
 
-      30%{
+      30% {
         transform:
-          rotate(-9deg)
-          scale(1.12);
+          rotate(-9deg) scale(1.12);
       }
 
-      60%{
+      60% {
         transform:
-          rotate(9deg)
-          scale(1.12);
+          rotate(9deg) scale(1.12);
       }
     }
 
@@ -777,9 +763,8 @@
        REPORT ICON
        ===================================================== */
 
-    .team-message-action.is-report{
-      color:
-        var(--green);
+    .team-message-action.is-report {
+      color: var(--green);
 
       border-color:
         rgba(34,197,94,.35);
@@ -787,579 +772,418 @@
       background:
         rgba(34,197,94,.07);
 
-      animation:none;
+      animation: none;
     }
 
-    .team-action-icon{
-      display:block;
-
-      line-height:1;
+    .team-action-icon {
+      display: block;
+      line-height: 1;
     }
 
     /* =====================================================
        EXTRA
        ===================================================== */
 
-    .ira-extra-total{
-      display:flex;
+    .ira-extra-total {
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      align-items:center;
-      justify-content:center;
+      width: 100%;
+      min-height: 27px;
+      padding: 2px 1px;
 
-      width:100%;
-
-      min-height:27px;
-
-      padding:
-        2px 1px;
-
-      color:var(--text-main);
-
-      font-size:.60rem;
-
-      line-height:1.1;
-
-      font-weight:900;
-
-      text-align:center;
-
-      white-space:nowrap;
+      color: var(--text-main);
+      font-size: .60rem;
+      line-height: 1.1;
+      font-weight: 900;
+      text-align: center;
+      white-space: nowrap;
     }
 
-    .ira-extra-total.has-value{
-      color:var(--yellow);
+    .ira-extra-total.has-value {
+      color: var(--yellow);
     }
 
-    .row-money{
-      color:var(--green);
-
-      font-size:.65rem;
-
-      font-weight:900;
-
-      white-space:nowrap;
+    .row-money {
+      color: var(--green);
+      font-size: .65rem;
+      font-weight: 900;
+      white-space: nowrap;
     }
 
-    tfoot td{
-      color:var(--yellow);
-
-      background:
-        var(--card-soft);
-
-      font-weight:900;
+    tfoot td {
+      color: var(--yellow);
+      background: var(--card-soft);
+      font-weight: 900;
     }
 
-    .empty{
-      padding:
-        18px 5px;
-
-      color:var(--muted);
-
-      font-size:.76rem;
-
-      text-align:center;
+    .empty {
+      padding: 18px 5px;
+      color: var(--muted);
+      font-size: .76rem;
+      text-align: center;
     }
 
     /* =====================================================
        MESSAGE MODAL
        ===================================================== */
 
-    .messages-modal{
-      position:fixed;
+    .messages-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
 
-      inset:0;
+      display: none;
+      align-items: center;
+      justify-content: center;
 
-      z-index:9999;
+      width: 100%;
+      height: 100dvh;
 
-      display:none;
+      padding: 10px;
+      overflow-y: auto;
 
-      align-items:center;
-      justify-content:center;
-
-      width:100%;
-      height:100dvh;
-
-      padding:10px;
-
-      overflow-y:auto;
-
-      background:
-        rgba(2,6,23,.68);
-
-      backdrop-filter:
-        blur(3px);
-
-      overscroll-behavior:contain;
+      background: rgba(2,6,23,.68);
+      backdrop-filter: blur(3px);
+      overscroll-behavior: contain;
     }
 
-    .messages-modal.open{
-      display:flex;
+    .messages-modal.open {
+      display: flex;
     }
 
-    .messages-box{
-      width:100%;
-      max-width:650px;
+    .messages-box {
+      width: 100%;
+      max-width: 650px;
+      max-height: min(88dvh,800px);
 
-      max-height:
-        min(88dvh,800px);
+      display: flex;
+      flex-direction: column;
 
-      display:flex;
-      flex-direction:column;
+      overflow: hidden;
 
-      overflow:hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:18px;
-
-      background:
-        var(--card);
-
-      color:
-        var(--text);
+      background: var(--card);
+      color: var(--text);
 
       box-shadow:
-        0 20px 60px
-        rgba(0,0,0,.38);
+        0 20px 60px rgba(0,0,0,.38);
     }
 
-    .messages-head{
-      flex:
-        0 0 auto;
+    .messages-head {
+      flex: 0 0 auto;
 
-      display:flex;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
 
-      align-items:center;
-
-      justify-content:
-        space-between;
-
-      gap:8px;
-
-      padding:12px;
+      padding: 12px;
 
       border-bottom:
-        1px solid
-        var(--border-soft);
+        1px solid var(--border-soft);
     }
 
-    .messages-owner-wrap{
-      min-width:0;
+    .messages-owner-wrap {
+      min-width: 0;
     }
 
-    .messages-title{
-      color:
-        var(--text-main);
-
-      font-size:.96rem;
-
-      line-height:1.15;
-
-      font-weight:900;
+    .messages-title {
+      color: var(--text-main);
+      font-size: .96rem;
+      line-height: 1.15;
+      font-weight: 900;
     }
 
-    .messages-sector{
-      margin-top:3px;
-
-      color:
-        var(--yellow);
-
-      font-size:.68rem;
-
-      font-weight:800;
+    .messages-sector {
+      margin-top: 3px;
+      color: var(--yellow);
+      font-size: .68rem;
+      font-weight: 800;
     }
 
-    .messages-close{
-      flex:0 0 auto;
+    .messages-close {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
 
-      width:34px;
-      height:34px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
 
-      border:
-        1px solid
-        var(--border);
+      background: var(--card-soft);
+      color: var(--text-main);
 
-      border-radius:10px;
-
-      background:
-        var(--card-soft);
-
-      color:
-        var(--text-main);
-
-      font-size:1.15rem;
-
-      font-weight:900;
-
-      cursor:pointer;
+      font-size: 1.15rem;
+      font-weight: 900;
+      cursor: pointer;
     }
 
-    .messages-summary{
-      flex:
-        0 0 auto;
+    .messages-summary {
+      flex: 0 0 auto;
+      padding: 8px 12px;
 
-      padding:
-        8px 12px;
-
-      color:
-        var(--muted);
-
-      font-size:.70rem;
+      color: var(--muted);
+      font-size: .70rem;
 
       border-bottom:
-        1px solid
-        var(--border-soft);
+        1px solid var(--border-soft);
     }
 
-    #messageList{
-      flex:
-        1 1 auto;
+    #messageList {
+      flex: 1 1 auto;
+      min-height: 0;
+      max-height: none;
 
-      min-height:0;
+      overflow-y: auto;
+      padding: 8px;
 
-      max-height:none;
-
-      overflow-y:auto;
-
-      padding:8px;
-
-      overscroll-behavior:contain;
-
-      -webkit-overflow-scrolling:touch;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
-    .message-empty{
-      padding:
-        25px 10px;
-
-      color:
-        var(--muted);
-
-      text-align:center;
-
-      font-size:.82rem;
+    .message-empty {
+      padding: 25px 10px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .82rem;
     }
 
     /* =====================================================
        MESSAGE CARD
        ===================================================== */
 
-    .message-item{
-      margin-bottom:7px;
+    .message-item {
+      margin-bottom: 7px;
+      padding: 10px;
 
-      padding:10px;
+      border: 1px solid var(--border-soft);
+      border-radius: 12px;
 
-      border:
-        1px solid
-        var(--border-soft);
-
-      border-radius:12px;
-
-      background:
-        var(--card-soft);
+      background: var(--card-soft);
     }
 
-    .message-item.unread{
-      border:
-        2px solid
-        var(--yellow);
-
-      background:
-        rgba(250,204,21,.08);
+    .message-item.unread {
+      border: 2px solid var(--yellow);
+      background: rgba(250,204,21,.08);
     }
 
-    .message-top{
-      display:flex;
-
-      align-items:flex-start;
-
-      justify-content:
-        space-between;
-
-      gap:8px;
+    .message-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
     }
 
-    .message-number{
-      color:
-        var(--yellow);
-
-      font-size:.78rem;
-
-      font-weight:900;
+    .message-number {
+      color: var(--yellow);
+      font-size: .78rem;
+      font-weight: 900;
     }
 
-    .message-new{
-      display:inline-block;
+    .message-new {
+      display: inline-block;
+      margin-left: 4px;
+      padding: 2px 5px;
 
-      margin-left:4px;
+      border-radius: 999px;
+      background: var(--red);
+      color: #ffffff;
 
-      padding:
-        2px 5px;
-
-      border-radius:999px;
-
-      background:
-        var(--red);
-
-      color:#ffffff;
-
-      font-size:.52rem;
-
-      font-weight:900;
+      font-size: .52rem;
+      font-weight: 900;
     }
 
-    .message-time{
-      color:
-        var(--muted);
-
-      font-size:.61rem;
-
-      line-height:1.25;
-
-      text-align:right;
+    .message-time {
+      color: var(--muted);
+      font-size: .61rem;
+      line-height: 1.25;
+      text-align: right;
     }
 
-    .message-text{
-      margin-top:7px;
-
-      color:
-        var(--text-main);
-
-      font-size:.82rem;
-
-      line-height:1.4;
-
-      font-weight:700;
+    .message-text {
+      margin-top: 7px;
+      color: var(--text-main);
+      font-size: .82rem;
+      line-height: 1.4;
+      font-weight: 700;
     }
 
     /* =====================================================
        REPORT
        ===================================================== */
 
-    .report-block{
-      margin-top:2px;
-
-      padding:10px;
+    .report-block {
+      margin-top: 2px;
+      padding: 10px;
 
       border:
-        1px solid
-        rgba(34,197,94,.30);
+        1px solid rgba(34,197,94,.30);
 
-      border-radius:12px;
+      border-radius: 12px;
 
       background:
         rgba(34,197,94,.06);
     }
 
-    .report-title{
-      color:
-        var(--text-main);
-
-      font-size:.82rem;
-
-      font-weight:900;
+    .report-title {
+      color: var(--text-main);
+      font-size: .82rem;
+      font-weight: 900;
     }
 
-    .report-help{
-      margin-top:4px;
-
-      color:
-        var(--muted);
-
-      font-size:.64rem;
-
-      line-height:1.35;
+    .report-help {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: .64rem;
+      line-height: 1.35;
     }
 
-    .report-cost-row{
-      display:flex;
-
-      align-items:center;
-
-      gap:7px;
-
-      margin-top:9px;
+    .report-cost-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 9px;
     }
 
-    .report-cost-input{
-      min-width:0;
+    .report-cost-input {
+      min-width: 0;
+      flex: 1 1 auto;
+      height: 38px;
 
-      flex:1 1 auto;
+      padding: 0 10px;
 
-      height:38px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      outline: none;
 
-      padding:
-        0 10px;
+      background: var(--card);
+      color: var(--yellow);
 
-      border:
-        1px solid
-        var(--border);
-
-      border-radius:9px;
-
-      outline:none;
-
-      background:
-        var(--card);
-
-      color:
-        var(--yellow);
-
-      font-size:.90rem;
-
-      font-weight:900;
-
-      text-align:center;
+      font-size: .90rem;
+      font-weight: 900;
+      text-align: center;
     }
 
-    .report-cost-input:focus{
-      border-color:
-        var(--yellow);
+    .report-cost-input:focus {
+      border-color: var(--yellow);
     }
 
-    .report-total{
-      margin-top:8px;
-
-      color:
-        var(--green);
-
-      font-size:.72rem;
-
-      font-weight:900;
+    .report-total {
+      margin-top: 8px;
+      color: var(--green);
+      font-size: .72rem;
+      font-weight: 900;
     }
 
     /* =====================================================
        STICKY SAVE REPORT
        ===================================================== */
 
-    .report-actions{
-      position:sticky;
+    .report-actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
 
-      bottom:0;
-
-      z-index:10;
-
-      margin-top:8px;
-
-      padding:
-        8px 0 2px;
-
-      background:
-        var(--card);
+      margin-top: 8px;
+      padding: 8px 0 2px;
+      background: var(--card);
     }
 
-    .report-save-btn{
-      width:100%;
-
-      min-height:42px;
-
-      padding:
-        8px 12px;
+    .report-save-btn {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 12px;
 
       border:
-        1px solid
-        rgba(34,197,94,.40);
+        1px solid rgba(34,197,94,.40);
 
-      border-radius:10px;
+      border-radius: 10px;
 
       background:
         rgba(34,197,94,.12);
 
-      color:
-        var(--green);
+      color: var(--green);
 
-      font-size:.76rem;
-
-      line-height:1.2;
-
-      font-weight:900;
-
-      cursor:pointer;
+      font-size: .76rem;
+      line-height: 1.2;
+      font-weight: 900;
+      cursor: pointer;
     }
 
-    .report-save-btn:active{
-      transform:scale(.98);
+    .report-save-btn:active {
+      transform: scale(.98);
     }
 
-    .report-status{
-      min-height:17px;
+    .report-status {
+      min-height: 17px;
+      margin-top: 5px;
 
-      margin-top:5px;
+      color: var(--green);
 
-      color:
-        var(--green);
-
-      font-size:.64rem;
-
-      line-height:1.2;
-
-      font-weight:800;
-
-      text-align:center;
+      font-size: .64rem;
+      line-height: 1.2;
+      font-weight: 800;
+      text-align: center;
     }
 
     /* =====================================================
        SMALL PHONE
        ===================================================== */
 
-    @media(max-width:370px){
-
-      .ira-head{
-        padding-right:98px;
+    @media (max-width: 370px) {
+      .ira-head {
+        padding-right: 98px;
       }
 
       .theme-btn,
-      .global-envelope-btn{
-        width:37px;
-        height:36px;
+      .global-envelope-btn {
+        width: 37px;
+        height: 36px;
       }
 
-      table{
-        font-size:.56rem;
+      table {
+        font-size: .56rem;
       }
 
       th,
-      td{
-        padding:
-          4px 1px;
+      td {
+        padding: 4px 1px;
       }
 
-      .team-name{
-        font-size:.63rem;
+      .team-name {
+        font-size: .63rem;
       }
 
-      .solo-label{
-        font-size:.49rem;
+      .solo-label {
+        font-size: .49rem;
       }
 
-      .team-message-action{
-        flex-basis:25px;
-
-        width:25px;
-        height:25px;
-
-        font-size:.80rem;
+      .team-message-action {
+        flex-basis: 25px;
+        width: 25px;
+        height: 25px;
+        font-size: .80rem;
       }
 
-      .ira-extra-total{
-        font-size:.54rem;
+      .ira-extra-total {
+        font-size: .54rem;
       }
 
-      .row-money{
-        font-size:.58rem;
+      .row-money {
+        font-size: .58rem;
       }
 
-      .delivery-time{
-        font-size:.49rem;
+      .delivery-time {
+        font-size: .49rem;
       }
 
-      .report-cost-input{
-        font-size:.82rem;
+      .report-cost-input {
+        font-size: .82rem;
       }
     }
-
   </style>
 
 </head>
@@ -1444,7 +1268,6 @@
 
     <div class="price-days">
 
-
       <!-- ДОБА 1 -->
 
       <div class="price-day">
@@ -1457,7 +1280,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD1Lunch">
               Обід
             </label>
 
@@ -1485,7 +1308,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD1Dinner">
               Вечеря
             </label>
 
@@ -1513,7 +1336,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD1Breakfast">
               Сніданок
             </label>
 
@@ -1556,7 +1379,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD2Lunch">
               Обід
             </label>
 
@@ -1584,7 +1407,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD2Dinner">
               Вечеря
             </label>
 
@@ -1612,7 +1435,7 @@
 
           <div class="price-field">
 
-            <label>
+            <label for="priceD2Breakfast">
               Сніданок
             </label>
 
@@ -1648,6 +1471,153 @@
 
 
   <!-- ===================================================
+       ІРА • СКЛАСТИ МЕНЮ
+       =================================================== -->
+
+  <section
+    id="iraMenuPanel"
+    class="ira-menu-panel"
+    hidden
+  >
+
+    <details id="iraMenuDetails">
+
+      <summary>
+        📖 Скласти меню на 2 доби
+      </summary>
+
+      <div class="ira-menu-editor">
+
+        <div class="ira-menu-days">
+
+          <!-- ДОБА 1 -->
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 1
+            </div>
+
+            <label class="ira-menu-field">
+
+              <span>Сніданок</span>
+
+              <textarea
+                id="menuD1Breakfast"
+                rows="3"
+                maxlength="2000"
+                placeholder="Наприклад: омлет, бутерброди, чай…"
+              ></textarea>
+
+            </label>
+
+            <label class="ira-menu-field">
+
+              <span>Обід</span>
+
+              <textarea
+                id="menuD1Lunch"
+                rows="3"
+                maxlength="2000"
+                placeholder="Наприклад: борщ, пюре, котлета, салат…"
+              ></textarea>
+
+            </label>
+
+            <label class="ira-menu-field">
+
+              <span>Вечеря</span>
+
+              <textarea
+                id="menuD1Dinner"
+                rows="3"
+                maxlength="2000"
+                placeholder="Наприклад: гречка, м'ясо, салат…"
+              ></textarea>
+
+            </label>
+
+          </div>
+
+
+          <!-- ДОБА 2 -->
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 2
+            </div>
+
+            <label class="ira-menu-field">
+
+              <span>Сніданок</span>
+
+              <textarea
+                id="menuD2Breakfast"
+                rows="3"
+                maxlength="2000"
+                placeholder="Впиши страви на сніданок…"
+              ></textarea>
+
+            </label>
+
+            <label class="ira-menu-field">
+
+              <span>Обід</span>
+
+              <textarea
+                id="menuD2Lunch"
+                rows="3"
+                maxlength="2000"
+                placeholder="Впиши страви на обід…"
+              ></textarea>
+
+            </label>
+
+            <label class="ira-menu-field">
+
+              <span>Вечеря</span>
+
+              <textarea
+                id="menuD2Dinner"
+                rows="3"
+                maxlength="2000"
+                placeholder="Впиши страви на вечерю…"
+              ></textarea>
+
+            </label>
+
+          </div>
+
+        </div>
+
+        <button
+          id="iraMenuSave"
+          class="ira-menu-save"
+          type="button"
+        >
+          Зберегти чернетку меню
+        </button>
+
+        <div
+          id="iraMenuStatus"
+          class="ira-menu-status"
+          aria-live="polite"
+        ></div>
+
+        <div class="ira-menu-note">
+          Чернетка зберігається на цьому телефоні.
+          Вона поки не доступна учасникам.
+        </div>
+
+      </div>
+
+    </details>
+
+  </section>
+
+
+  <!-- ===================================================
        TABLE
        =================================================== -->
 
@@ -1661,21 +1631,15 @@
 
       <span>
         Заявок:
-        <strong id="orderCount">
-          0
-        </strong>
+        <strong id="orderCount">0</strong>
       </span>
 
       <span>
         Всього:
-        <strong id="moneyTotal">
-          0 ₴
-        </strong>
+        <strong id="moneyTotal">0 ₴</strong>
       </span>
 
-      <span>
-        LIVE
-      </span>
+      <span>LIVE</span>
 
     </div>
 
@@ -1707,45 +1671,19 @@
 
           <tr>
 
-            <th>
-              С
-            </th>
+            <th>С</th>
+            <th>Учасник</th>
 
-            <th>
-              Учасник
-            </th>
+            <th>1О</th>
+            <th>1В</th>
+            <th>1С</th>
 
-            <th>
-              1О
-            </th>
+            <th>2О</th>
+            <th>2В</th>
+            <th>2С</th>
 
-            <th>
-              1В
-            </th>
-
-            <th>
-              1С
-            </th>
-
-            <th>
-              2О
-            </th>
-
-            <th>
-              2В
-            </th>
-
-            <th>
-              2С
-            </th>
-
-            <th>
-              Доп.
-            </th>
-
-            <th>
-              Σ
-            </th>
+            <th>Доп.</th>
+            <th>Σ</th>
 
           </tr>
 
@@ -1754,20 +1692,17 @@
         <tbody id="mealBody">
 
           <tr>
-
             <td
               colspan="10"
               class="empty"
             >
               Завантаження…
             </td>
-
           </tr>
 
         </tbody>
 
-        <tfoot id="mealFoot">
-        </tfoot>
+        <tfoot id="mealFoot"></tfoot>
 
       </table>
 
@@ -1803,8 +1738,7 @@
         <div
           id="messagesSector"
           class="messages-sector"
-        >
-        </div>
+        ></div>
 
       </div>
 
@@ -1874,95 +1808,364 @@
      ===================================================== -->
 
 <script>
-
-(function(){
-
+(function () {
   "use strict";
 
-  const THEME_KEY =
-    "sc_ira_theme";
+  const THEME_KEY = "sc_ira_theme";
 
-  const body =
-    document.body;
+  const body = document.body;
 
-  const btn =
-    document.getElementById(
-      "themeToggle"
-    );
+  const btn = document.getElementById(
+    "themeToggle"
+  );
 
-  function applyTheme(theme){
-
-    const light =
-      theme === "light";
+  function applyTheme(theme) {
+    const light = theme === "light";
 
     body.classList.toggle(
       "light-mode",
       light
     );
 
-    if(btn){
+    if (btn) {
+      btn.textContent = light
+        ? "🌙"
+        : "☀️";
 
-      btn.textContent =
-        light
-          ? "🌙"
-          : "☀️";
-
-      btn.title =
-        light
-          ? "Увімкнути темну тему"
-          : "Увімкнути світлу тему";
-
+      btn.title = light
+        ? "Увімкнути темну тему"
+        : "Увімкнути світлу тему";
     }
-
   }
 
-  let theme =
-    "light";
+  let theme = "light";
 
-  try{
+  try {
+    theme = localStorage.getItem(
+      THEME_KEY
+    ) || "light";
+  } catch {}
 
-    theme =
-      localStorage.getItem(
-        THEME_KEY
-      ) || "light";
+  applyTheme(theme);
 
-  }catch{}
+  btn?.addEventListener("click", () => {
+    const next = body.classList.contains(
+      "light-mode"
+    )
+      ? "dark"
+      : "light";
 
-  applyTheme(
-    theme
-  );
+    applyTheme(next);
 
-  btn?.addEventListener(
-    "click",
-    () => {
-
-      const next =
-        body.classList.contains(
-          "light-mode"
-        )
-          ? "dark"
-          : "light";
-
-      applyTheme(
+    try {
+      localStorage.setItem(
+        THEME_KEY,
         next
       );
+    } catch {}
+  });
+})();
+</script>
 
-      try{
 
-        localStorage.setItem(
-          THEME_KEY,
-          next
+<!-- =====================================================
+     ІРА • ЗБЕРЕЖЕННЯ ЧЕРНЕТКИ МЕНЮ
+     ===================================================== -->
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = id =>
+    document.getElementById(id);
+
+  const fields = {
+    menuD1Breakfast: "d1b",
+    menuD1Lunch: "d1l",
+    menuD1Dinner: "d1d",
+
+    menuD2Breakfast: "d2b",
+    menuD2Lunch: "d2l",
+    menuD2Dinner: "d2d"
+  };
+
+  let currentKey = "";
+  let unsubscribe = null;
+
+  // =====================================================
+  // STATUS
+  // =====================================================
+
+  function setStatus(
+    text,
+    isError = false
+  ) {
+    const el = $("iraMenuStatus");
+
+    if (!el) return;
+
+    el.textContent = text || "";
+
+    el.style.color = isError
+      ? "var(--red)"
+      : "var(--green)";
+  }
+
+  // =====================================================
+  // FILL
+  // =====================================================
+
+  function fillFields(data = {}) {
+    Object.entries(fields).forEach(
+      ([id, key]) => {
+        const input = $(id);
+
+        if (!input) return;
+
+        input.value = String(
+          data[key] ??
+          data[id] ??
+          ""
+        );
+      }
+    );
+  }
+
+  // =====================================================
+  // LOAD
+  // =====================================================
+
+  function loadDraft() {
+    fillFields();
+
+    if (!currentKey) {
+      setStatus("");
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem(
+        currentKey
+      );
+
+      if (raw) {
+        const data = JSON.parse(raw);
+
+        fillFields(data);
+
+        setStatus(
+          "Збережену чернетку завантажено."
+        );
+      } else {
+        setStatus("");
+      }
+
+    } catch (error) {
+      console.error(
+        "[ira menu] load:",
+        error
+      );
+
+      setStatus(
+        "Не вдалося завантажити меню.",
+        true
+      );
+    }
+  }
+
+  // =====================================================
+  // SAVE
+  // =====================================================
+
+  function saveDraft() {
+    if (!currentKey) {
+      setStatus(
+        "Немає активного харчування.",
+        true
+      );
+      return;
+    }
+
+    const data = {};
+
+    Object.entries(fields).forEach(
+      ([id, key]) => {
+        data[key] = String(
+          $(id)?.value || ""
+        ).trim();
+      }
+    );
+
+    data.savedAt = Date.now();
+
+    try {
+      localStorage.setItem(
+        currentKey,
+        JSON.stringify(data)
+      );
+
+      setStatus(
+        "Меню збережено на цьому телефоні."
+      );
+
+    } catch (error) {
+      console.error(
+        "[ira menu] save:",
+        error
+      );
+
+      setStatus(
+        "Не вдалося зберегти меню.",
+        true
+      );
+    }
+  }
+
+  // =====================================================
+  // INIT
+  // =====================================================
+
+  async function initMenu() {
+    const saveBtn = $("iraMenuSave");
+
+    if (!saveBtn) {
+      return;
+    }
+
+    saveBtn.addEventListener(
+      "click",
+      saveDraft
+    );
+
+    Object.keys(fields).forEach(id => {
+      $(id)?.addEventListener(
+        "input",
+        () => {
+          setStatus(
+            "Є незбережені зміни."
+          );
+        }
+      );
+    });
+
+    try {
+      if (window.scReady) {
+        await window.scReady;
+      }
+
+      const db = window.scDb;
+
+      if (!db) {
+        setStatus(
+          "Firestore не готовий.",
+          true
+        );
+        return;
+      }
+
+      // Слухаємо ту саму активну подію,
+      // що й головний meal_ira.js.
+      unsubscribe = db
+        .collection("mealPublic")
+        .doc("current")
+        .onSnapshot(
+          snap => {
+            const data = snap.exists
+              ? snap.data() || {}
+              : {};
+
+            const competitionId = String(
+              data.competitionId || ""
+            ).trim();
+
+            const stageId = String(
+              data.stageId || ""
+            ).trim();
+
+            const isOpen = Boolean(
+              data.isOpen === true &&
+              competitionId &&
+              stageId
+            );
+
+            const panel = $("iraMenuPanel");
+
+            if (!panel) {
+              return;
+            }
+
+            panel.hidden = !isOpen;
+
+            if (!isOpen) {
+              $("iraMenuDetails").open = false;
+
+              currentKey = "";
+
+              fillFields();
+
+              setStatus("");
+
+              return;
+            }
+
+            const nextKey =
+              "sc_ira_menu_draft__" +
+              competitionId +
+              "__" +
+              stageId;
+
+            // Не перезаписуємо введений текст
+            // при повторному LIVE-оновленні
+            // тієї самої активної події.
+            if (nextKey !== currentKey) {
+              currentKey = nextKey;
+
+              loadDraft();
+
+              $("iraMenuDetails").open = false;
+            }
+          },
+
+          error => {
+            console.error(
+              "[ira menu] current:",
+              error
+            );
+
+            setStatus(
+              "Не вдалося визначити активне харчування.",
+              true
+            );
+          }
         );
 
-      }catch{}
+    } catch (error) {
+      console.error(
+        "[ira menu] init:",
+        error
+      );
 
+      setStatus(
+        "Помилка: " +
+        (error?.message || error),
+        true
+      );
+    }
+  }
+
+  initMenu();
+
+  window.addEventListener(
+    "beforeunload",
+    () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
     }
   );
 
 })();
-
 </script>
 
 </body>
-
 </html>

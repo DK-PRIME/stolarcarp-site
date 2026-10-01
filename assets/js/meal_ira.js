@@ -7,41 +7,22 @@
 // ✅ mealPublicOrders LIVE
 // ✅ mealPublicOrderEvents LIVE
 //
-// ✅ таблиця компактна:
-//    • біля імені тільки ✉️ або 📋
-//    • повідомлення НЕ розтягують рядок
-//    • текст повідомлень тільки у модалці
+// ✅ таблиця компактна
+// ✅ повідомлення ✉️ / 📋
+// ✅ звіт з коригуваннями + / -
+// ✅ калькулятор харчування
+// ✅ prices / read / report costs -> localStorage
 //
-// ✅ глобальний конверт:
-//    • один ✉️ праворуч угорі
-//    • блимає, якщо є хоча б одне непрочитане
-//    • відкриває перший рядок з новим повідомленням
-//
-// ✅ повідомлення:
-//    • #1 / #2 / #3 / #4...
-//    • дата + година
-//    • відкрила = прочитано
-//    • після прочитання біля учасника = 📋
-//    • нове повідомлення знову повертає ✉️
-//
-// ✅ звіт:
-//    • кожне повідомлення має окреме коригування
-//    • +200 = додати 200 грн
-//    • -180 = відняти 180 грн
-//    • значення НЕ зберігається під час набору
-//    • є окрема кнопка "💾 Зберегти звіт"
-//    • після збереження сума автоматично йде в "Доп."
-//    • "Доп." руками НЕ редагується
-//
-// ✅ калькулятор:
-//    • харчування + Доп. = Σ
-//    • Всього = сума всіх рядків
-//
-// ✅ prices / read / report costs:
-//    • localStorage на телефоні Іри
-//    • після закриття харчування очищаються
-//
-// ✅ legacy fallback для старого row.note
+// ✅ МЕНЮ ІРИ:
+//    • Доба 1: Обід -> Вечеря -> Сніданок
+//    • Доба 2: Обід -> Вечеря -> Сніданок
+//    • кожен прийом:
+//         1. Страва
+//         2. Страва
+//         3. Страва
+//         4. Страва
+//         5. Напій
+//    • поки меню зберігається localStorage на телефоні Іри
 //
 // ВАЖЛИВО:
 // Кожне нове повідомлення учасника має створювати
@@ -51,7 +32,7 @@
   "use strict";
 
   console.log(
-    "✅ meal_ira.js LOADED v20260918-report-save-v11"
+    "✅ meal_ira.js LOADED v20261001-menu-v12"
   );
 
   // =========================================================
@@ -146,17 +127,12 @@
       : 0;
   }
 
-  /*
-   * Для цін самого харчування.
-   * Тільки додатне число.
-   */
   function moneyNum(value) {
     const n =
       Number(
         String(
           value ?? ""
-        )
-          .replace(",", ".")
+        ).replace(",", ".")
       );
 
     return (
@@ -167,21 +143,12 @@
       : 0;
   }
 
-  /*
-   * Для звіту.
-   *
-   * Тут дозволено:
-   * +200
-   * -180
-   * 0
-   */
   function signedMoneyNum(value) {
     const n =
       Number(
         String(
           value ?? ""
-        )
-          .replace(",", ".")
+        ).replace(",", ".")
       );
 
     return Number.isFinite(n)
@@ -191,9 +158,7 @@
 
   function fmtMoney(value) {
     const n =
-      signedMoneyNum(
-        value
-      );
+      signedMoneyNum(value);
 
     if (!n) {
       return "0 ₴";
@@ -208,8 +173,7 @@
       rounded.toLocaleString(
         "uk-UA",
         {
-          maximumFractionDigits:
-            2
+          maximumFractionDigits: 2
         }
       ) +
       " ₴"
@@ -218,9 +182,7 @@
 
   function inputValue(value) {
     const n =
-      moneyNum(
-        value
-      );
+      moneyNum(value);
 
     return n
       ? String(n)
@@ -229,9 +191,7 @@
 
   function signedInputValue(value) {
     const n =
-      signedMoneyNum(
-        value
-      );
+      signedMoneyNum(value);
 
     return n !== 0
       ? String(n)
@@ -240,29 +200,13 @@
 
   function totalOrder(order) {
     return (
-      num(
-        order?.day1?.lunch
-      ) +
+      num(order?.day1?.lunch) +
+      num(order?.day1?.dinner) +
+      num(order?.day1?.breakfast) +
 
-      num(
-        order?.day1?.dinner
-      ) +
-
-      num(
-        order?.day1?.breakfast
-      ) +
-
-      num(
-        order?.day2?.lunch
-      ) +
-
-      num(
-        order?.day2?.dinner
-      ) +
-
-      num(
-        order?.day2?.breakfast
-      )
+      num(order?.day2?.lunch) +
+      num(order?.day2?.dinner) +
+      num(order?.day2?.breakfast)
     );
   }
 
@@ -299,10 +243,7 @@
       typeof value.seconds ===
       "number"
     ) {
-      return (
-        value.seconds *
-        1000
-      );
+      return value.seconds * 1000;
     }
 
     if (
@@ -317,9 +258,7 @@
         String(value)
       );
 
-    return Number.isFinite(
-      parsed
-    )
+    return Number.isFinite(parsed)
       ? parsed
       : 0;
   }
@@ -330,29 +269,24 @@
 
   function isJudges(row) {
     return (
-      clean(
-        row?.type
-      ) === "judges" ||
+      clean(row?.type) ===
+        "judges" ||
 
-      clean(
-        row?.entryType
-      ) === "judges" ||
+      clean(row?.entryType) ===
+        "judges" ||
 
-      norm(
-        row?.entityId
-      ) === "__judges__"
+      norm(row?.entityId) ===
+        "__judges__"
     );
   }
 
   function isSolo(row) {
     return (
-      clean(
-        row?.entryType
-      ) === "solo" ||
+      clean(row?.entryType) ===
+        "solo" ||
 
-      clean(
-        row?.type
-      ) === "solo"
+      clean(row?.type) ===
+        "solo"
     );
   }
 
@@ -391,8 +325,7 @@
     const direct =
       norm(
         row?.drawKey
-      )
-        .toUpperCase();
+      ).toUpperCase();
 
     if (direct) {
       return direct;
@@ -401,8 +334,7 @@
     const zone =
       norm(
         row?.zone
-      )
-        .toUpperCase();
+      ).toUpperCase();
 
     const sector =
       norm(
@@ -477,10 +409,6 @@
       return false;
     }
 
-    // -----------------------------------------------------
-    // ORDER ID
-    // -----------------------------------------------------
-
     const eventOrderId =
       norm(
         event?.orderId
@@ -494,15 +422,10 @@
     if (
       eventOrderId &&
       rowOrderId &&
-      eventOrderId ===
-        rowOrderId
+      eventOrderId === rowOrderId
     ) {
       return true;
     }
-
-    // -----------------------------------------------------
-    // ENTITY ID
-    // -----------------------------------------------------
 
     const eventEntityId =
       norm(
@@ -517,15 +440,10 @@
     if (
       eventEntityId &&
       rowEntityId &&
-      eventEntityId ===
-        rowEntityId
+      eventEntityId === rowEntityId
     ) {
       return true;
     }
-
-    // -----------------------------------------------------
-    // UID
-    // -----------------------------------------------------
 
     const eventUid =
       norm(
@@ -544,17 +462,11 @@
     if (
       eventUid &&
       rowUid &&
-      eventUid ===
-        rowUid
+      eventUid === rowUid
     ) {
       return true;
     }
 
-    /*
-     * SOLO не match по teamId,
-     * бо два SOLO можуть бути
-     * з однієї команди.
-     */
     const eventSolo =
       clean(
         event?.entryType ||
@@ -567,10 +479,6 @@
     ) {
       return false;
     }
-
-    // -----------------------------------------------------
-    // TEAM ID
-    // -----------------------------------------------------
 
     const eventTeamId =
       norm(
@@ -585,8 +493,7 @@
     if (
       eventTeamId &&
       rowTeamId &&
-      eventTeamId ===
-        rowTeamId
+      eventTeamId === rowTeamId
     ) {
       return true;
     }
@@ -627,14 +534,12 @@
         "legacy",
         rowKey(row),
         ms || text
-      ]
-        .join("__");
+      ].join("__");
 
     return {
       id,
 
-      _legacy:
-        true,
+      _legacy: true,
 
       type:
         row?.type ||
@@ -696,14 +601,8 @@
 
   function eventsForRow(row) {
     const real =
-      realEventsForRow(
-        row
-      );
+      realEventsForRow(row);
 
-    /*
-     * Якщо вже є нормальні event-и,
-     * row.note не дублюємо.
-     */
     if (
       real.length
     ) {
@@ -711,9 +610,7 @@
     }
 
     const legacy =
-      legacyEventForRow(
-        row
-      );
+      legacyEventForRow(row);
 
     return legacy
       ? [legacy]
@@ -766,12 +663,11 @@
 
     return norm(
       a?.id
-    )
-      .localeCompare(
-        norm(
-          b?.id
-        )
-      );
+    ).localeCompare(
+      norm(
+        b?.id
+      )
+    );
   }
 
   function eventNumber(
@@ -788,9 +684,7 @@
       );
 
     if (
-      Number.isFinite(
-        explicit
-      ) &&
+      Number.isFinite(explicit) &&
       explicit > 0
     ) {
       return Math.floor(
@@ -807,26 +701,18 @@
     const index =
       sorted.findIndex(
         item =>
-          String(
-            item?.id
-          ) ===
-          String(
-            event?.id
-          )
+          String(item?.id) ===
+          String(event?.id)
       );
 
-    return (
-      index >= 0
-        ? index + 1
-        : 1
-    );
+    return index >= 0
+      ? index + 1
+      : 1;
   }
 
   function fmtEventTime(event) {
     const ms =
-      eventMillis(
-        event
-      );
+      eventMillis(event);
 
     if (!ms) {
       return "час не вказано";
@@ -837,17 +723,10 @@
         .DateTimeFormat(
           "uk-UA",
           {
-            day:
-              "2-digit",
-
-            month:
-              "2-digit",
-
-            hour:
-              "2-digit",
-
-            minute:
-              "2-digit"
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit"
           }
         )
         .format(
@@ -918,8 +797,7 @@
       d2b: 0
     };
 
-    reportCosts =
-      {};
+    reportCosts = {};
 
     readMessageIds =
       new Set();
@@ -929,10 +807,6 @@
     ) {
       return;
     }
-
-    // -----------------------------------------------------
-    // PRICES
-    // -----------------------------------------------------
 
     try {
       const raw =
@@ -950,10 +824,6 @@
         };
       }
     } catch {}
-
-    // -----------------------------------------------------
-    // READ
-    // -----------------------------------------------------
 
     try {
       const raw =
@@ -978,10 +848,6 @@
         }
       }
     } catch {}
-
-    // -----------------------------------------------------
-    // REPORT COSTS
-    // -----------------------------------------------------
 
     try {
       const raw =
@@ -1065,9 +931,6 @@
           reportCostsKey()
         );
 
-        /*
-         * Старий ключ.
-         */
         localStorage.removeItem(
           storageBase() +
           "__extras"
@@ -1086,8 +949,7 @@
       d2b: 0
     };
 
-    reportCosts =
-      {};
+    reportCosts = {};
 
     readMessageIds =
       new Set();
@@ -1129,26 +991,25 @@
 
     Object.entries(
       map
-    )
-      .forEach(
-        ([id, key]) => {
-          const input =
-            $(id);
+    ).forEach(
+      ([id, key]) => {
+        const input =
+          $(id);
 
-          if (!input) {
-            return;
-          }
-
-          input.value =
-            inputValue(
-              prices[key]
-            );
-
-          input.dataset
-            .priceKey =
-            key;
+        if (!input) {
+          return;
         }
-      );
+
+        input.value =
+          inputValue(
+            prices[key]
+          );
+
+        input.dataset
+          .priceKey =
+          key;
+      }
+    );
   }
 
   // =========================================================
@@ -1196,57 +1057,33 @@
       {};
 
     return (
-      num(
-        d1.lunch
-      ) *
-      moneyNum(
-        prices.d1l
-      )
+      num(d1.lunch) *
+      moneyNum(prices.d1l)
 
       +
 
-      num(
-        d1.dinner
-      ) *
-      moneyNum(
-        prices.d1d
-      )
+      num(d1.dinner) *
+      moneyNum(prices.d1d)
 
       +
 
-      num(
-        d1.breakfast
-      ) *
-      moneyNum(
-        prices.d1b
-      )
+      num(d1.breakfast) *
+      moneyNum(prices.d1b)
 
       +
 
-      num(
-        d2.lunch
-      ) *
-      moneyNum(
-        prices.d2l
-      )
+      num(d2.lunch) *
+      moneyNum(prices.d2l)
 
       +
 
-      num(
-        d2.dinner
-      ) *
-      moneyNum(
-        prices.d2d
-      )
+      num(d2.dinner) *
+      moneyNum(prices.d2d)
 
       +
 
-      num(
-        d2.breakfast
-      ) *
-      moneyNum(
-        prices.d2b
-      )
+      num(d2.breakfast) *
+      moneyNum(prices.d2b)
     );
   }
 
@@ -1294,9 +1131,7 @@
 
         if (
           id &&
-          !readMessageIds.has(
-            id
-          )
+          !readMessageIds.has(id)
         ) {
           readMessageIds.add(
             id
@@ -1347,8 +1182,7 @@
       zones[
         norm(
           a?.zone
-        )
-          .toUpperCase()
+        ).toUpperCase()
       ] ||
       9;
 
@@ -1356,8 +1190,7 @@
       zones[
         norm(
           b?.zone
-        )
-          .toUpperCase()
+        ).toUpperCase()
       ] ||
       9;
 
@@ -1589,14 +1422,12 @@
     ) {
       tbody.innerHTML = `
         <tr>
-
           <td
             colspan="10"
             class="empty"
           >
             ${esc(message)}
           </td>
-
         </tr>
       `;
     }
@@ -1642,9 +1473,6 @@
     const key =
       rowKey(row);
 
-    /*
-     * НОВЕ = тільки ✉️
-     */
     if (
       unread.length
     ) {
@@ -1656,18 +1484,13 @@
           aria-label="Нове повідомлення"
           title="Нове повідомлення"
         >
-
           <span class="team-action-icon">
             ✉️
           </span>
-
         </button>
       `;
     }
 
-    /*
-     * ПРОЧИТАНО = тільки 📋
-     */
     return `
       <button
         type="button"
@@ -1676,11 +1499,9 @@
         aria-label="Відкрити звіт"
         title="Відкрити звіт"
       >
-
         <span class="team-action-icon">
           📋
         </span>
-
       </button>
     `;
   }
@@ -1924,7 +1745,6 @@
                   }"
                   data-row-extra="${esc(key)}"
                 >
-
                   ${
                     extra !== 0
                       ? esc(
@@ -1934,7 +1754,6 @@
                         )
                       : "—"
                   }
-
                 </div>
 
               </td>
@@ -2305,11 +2124,7 @@
 
       </div>
 
-      <div
-        style="
-          height:8px;
-        "
-      ></div>
+      <div style="height:8px;"></div>
 
       ${lines}
 
@@ -2477,9 +2292,6 @@
             input.value
           );
 
-        /*
-         * 0 = видаляємо коригування.
-         */
         if (
           value !== 0
         ) {
@@ -2498,19 +2310,8 @@
 
     saveReportCosts();
 
-    /*
-     * Оновлюємо:
-     *
-     * Доп.
-     * Σ
-     * Всього.
-     */
     render();
 
-    /*
-     * Перемальовуємо звіт
-     * зі збереженими значеннями.
-     */
     renderMessagesModal();
 
     const status =
@@ -2578,27 +2379,13 @@
     activeMessageRowKey =
       key;
 
-    /*
-     * Якщо є нове:
-     * спочатку читаємо повідомлення.
-     *
-     * Якщо все вже прочитане:
-     * натискання 📋 одразу відкриває звіт.
-     */
     reportMode =
       !hadUnread;
 
-    /*
-     * Відкрила =
-     * прочитала.
-     */
     markEventsRead(
       allEvents
     );
 
-    /*
-     * ✉️ -> 📋
-     */
     render();
 
     $("messagesModal")
@@ -2932,6 +2719,1013 @@
   }
 
   // =========================================================
+  // ІРА • МЕНЮ
+  // =========================================================
+
+  const MENU_KEYS = [
+    "d1l",
+    "d1d",
+    "d1b",
+
+    "d2l",
+    "d2d",
+    "d2b"
+  ];
+
+  let currentMenuKey = "";
+
+  function menuStorageKey() {
+    if (
+      !competitionId ||
+      !stageId
+    ) {
+      return "";
+    }
+
+    return (
+      "sc_ira_menu_draft__" +
+      competitionId +
+      "__" +
+      stageId
+    );
+  }
+
+  function emptyMenuData() {
+    return {
+      d1l: ["", "", "", "", ""],
+      d1d: ["", "", "", "", ""],
+      d1b: ["", "", "", "", ""],
+
+      d2l: ["", "", "", "", ""],
+      d2d: ["", "", "", "", ""],
+      d2b: ["", "", "", "", ""]
+    };
+  }
+
+  function setMenuStatus(
+    text,
+    error = false
+  ) {
+    const el =
+      $("iraMenuStatusV2");
+
+    if (!el) {
+      return;
+    }
+
+    el.textContent =
+      text || "";
+
+    el.style.color =
+      error
+        ? "var(--red)"
+        : "var(--green)";
+  }
+
+  function menuMealHtml(
+    key,
+    title
+  ) {
+    return `
+      <div class="ira-menu-meal">
+
+        <div class="ira-menu-meal-title">
+          ${title}
+        </div>
+
+        <label class="ira-menu-row">
+
+          <span>
+            1. Страва
+          </span>
+
+          <input
+            type="text"
+            maxlength="120"
+            data-menu-key="${key}"
+            data-menu-index="0"
+            placeholder="Впиши страву"
+          >
+
+        </label>
+
+        <label class="ira-menu-row">
+
+          <span>
+            2. Страва
+          </span>
+
+          <input
+            type="text"
+            maxlength="120"
+            data-menu-key="${key}"
+            data-menu-index="1"
+            placeholder="Впиши страву"
+          >
+
+        </label>
+
+        <label class="ira-menu-row">
+
+          <span>
+            3. Страва
+          </span>
+
+          <input
+            type="text"
+            maxlength="120"
+            data-menu-key="${key}"
+            data-menu-index="2"
+            placeholder="Впиши страву"
+          >
+
+        </label>
+
+        <label class="ira-menu-row">
+
+          <span>
+            4. Страва
+          </span>
+
+          <input
+            type="text"
+            maxlength="120"
+            data-menu-key="${key}"
+            data-menu-index="3"
+            placeholder="Впиши страву"
+          >
+
+        </label>
+
+        <label class="ira-menu-row">
+
+          <span>
+            5. Напій
+          </span>
+
+          <input
+            type="text"
+            maxlength="120"
+            data-menu-key="${key}"
+            data-menu-index="4"
+            placeholder="Компот / чай / кава"
+          >
+
+        </label>
+
+      </div>
+    `;
+  }
+
+  function createMenuEditor() {
+    const priceCard =
+      $("priceCard");
+
+    if (!priceCard) {
+      console.warn(
+        "[meal_ira] Не знайдено priceCard."
+      );
+
+      return;
+    }
+
+    // -----------------------------------------------------
+    // STYLE
+    // -----------------------------------------------------
+
+    let style =
+      $("sc-ira-menu-v2-styles");
+
+    if (!style) {
+      style =
+        document.createElement(
+          "style"
+        );
+
+      style.id =
+        "sc-ira-menu-v2-styles";
+
+      document.head.appendChild(
+        style
+      );
+    }
+
+    style.textContent = `
+      .ira-menu-panel[hidden] {
+        display: none !important;
+      }
+
+      .ira-menu-panel {
+        margin-top: 8px;
+
+        border:
+          1px solid
+          var(--border);
+
+        border-radius:
+          15px;
+
+        background:
+          var(--card);
+
+        overflow:
+          hidden;
+      }
+
+      .ira-menu-panel summary {
+        display:
+          flex;
+
+        align-items:
+          center;
+
+        justify-content:
+          space-between;
+
+        gap:
+          8px;
+
+        padding:
+          13px;
+
+        color:
+          var(--yellow);
+
+        font-size:
+          .94rem;
+
+        font-weight:
+          900;
+
+        cursor:
+          pointer;
+
+        list-style:
+          none;
+
+        user-select:
+          none;
+      }
+
+      .ira-menu-panel summary::-webkit-details-marker {
+        display:
+          none;
+      }
+
+      .ira-menu-panel summary::after {
+        content:
+          "▼";
+
+        font-size:
+          .68rem;
+      }
+
+      .ira-menu-panel details[open] summary::after {
+        content:
+          "▲";
+      }
+
+      .ira-menu-editor {
+        padding:
+          0 10px 13px;
+      }
+
+      .ira-menu-day {
+        margin-top:
+          9px;
+
+        padding:
+          9px;
+
+        border:
+          1px solid
+          var(--border-soft);
+
+        border-radius:
+          12px;
+
+        background:
+          var(--card-soft);
+      }
+
+      .ira-menu-day-title {
+        margin-bottom:
+          8px;
+
+        color:
+          var(--yellow);
+
+        font-size:
+          .94rem;
+
+        font-weight:
+          900;
+      }
+
+      .ira-menu-meal {
+        margin-top:
+          9px;
+
+        padding:
+          8px;
+
+        border:
+          1px solid
+          var(--border-soft);
+
+        border-radius:
+          10px;
+
+        background:
+          var(--card);
+      }
+
+      .ira-menu-meal-title {
+        margin-bottom:
+          7px;
+
+        color:
+          var(--text-main);
+
+        font-size:
+          .84rem;
+
+        font-weight:
+          900;
+      }
+
+      .ira-menu-row {
+        display:
+          grid;
+
+        grid-template-columns:
+          78px minmax(0,1fr);
+
+        align-items:
+          center;
+
+        gap:
+          7px;
+
+        margin-top:
+          6px;
+      }
+
+      .ira-menu-row span {
+        color:
+          var(--muted);
+
+        font-size:
+          .68rem;
+
+        line-height:
+          1.2;
+
+        font-weight:
+          800;
+      }
+
+      .ira-menu-row input {
+        width:
+          100%;
+
+        min-width:
+          0;
+
+        height:
+          35px;
+
+        padding:
+          5px 8px;
+
+        border:
+          1px solid
+          var(--border);
+
+        border-radius:
+          8px;
+
+        outline:
+          none;
+
+        background:
+          var(--card-soft);
+
+        color:
+          var(--text-main);
+
+        font:
+          inherit;
+
+        font-size:
+          .78rem;
+      }
+
+      .ira-menu-row input:focus {
+        border-color:
+          var(--yellow);
+      }
+
+      .ira-menu-row input::placeholder {
+        color:
+          var(--muted);
+
+        opacity:
+          .70;
+      }
+
+      .ira-menu-save {
+        width:
+          100%;
+
+        min-height:
+          44px;
+
+        margin-top:
+          12px;
+
+        padding:
+          8px 10px;
+
+        border:
+          none;
+
+        border-radius:
+          11px;
+
+        background:
+          linear-gradient(
+            90deg,
+            #ffdc38,
+            #ff872c
+          );
+
+        color:
+          #171717;
+
+        font-size:
+          .86rem;
+
+        font-weight:
+          900;
+
+        cursor:
+          pointer;
+      }
+
+      .ira-menu-save:active {
+        transform:
+          scale(.99);
+      }
+
+      .ira-menu-status {
+        min-height:
+          17px;
+
+        margin-top:
+          7px;
+
+        color:
+          var(--green);
+
+        font-size:
+          .70rem;
+
+        line-height:
+          1.3;
+
+        text-align:
+          center;
+      }
+
+      @media(max-width:370px) {
+
+        .ira-menu-row {
+          grid-template-columns:
+            70px minmax(0,1fr);
+
+          gap:
+            5px;
+        }
+
+        .ira-menu-row span {
+          font-size:
+            .63rem;
+        }
+
+        .ira-menu-row input {
+          font-size:
+            .73rem;
+        }
+      }
+    `;
+
+    // -----------------------------------------------------
+    // PANEL
+    // -----------------------------------------------------
+
+    let section =
+      $("iraMenuPanel");
+
+    /*
+     * Якщо панель вже є у HTML —
+     * використовуємо її.
+     *
+     * Якщо нема —
+     * створюємо після priceCard.
+     */
+    if (!section) {
+      section =
+        document.createElement(
+          "section"
+        );
+
+      section.id =
+        "iraMenuPanel";
+
+      priceCard
+        .insertAdjacentElement(
+          "afterend",
+          section
+        );
+    }
+
+    section.className =
+      "ira-menu-panel";
+
+    section.hidden =
+      true;
+
+    /*
+     * Важливо:
+     * повністю перебудовуємо старий
+     * textarea-редактор.
+     */
+    section.innerHTML = `
+      <details id="iraMenuDetails">
+
+        <summary>
+          📖 Скласти меню на 2 доби
+        </summary>
+
+        <div class="ira-menu-editor">
+
+          <!-- ===============================================
+               ДОБА 1
+               =============================================== -->
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 1
+            </div>
+
+            ${
+              menuMealHtml(
+                "d1l",
+                "🍲 Обід"
+              )
+            }
+
+            ${
+              menuMealHtml(
+                "d1d",
+                "🍽️ Вечеря"
+              )
+            }
+
+            ${
+              menuMealHtml(
+                "d1b",
+                "☕ Сніданок"
+              )
+            }
+
+          </div>
+
+          <!-- ===============================================
+               ДОБА 2
+               =============================================== -->
+
+          <div class="ira-menu-day">
+
+            <div class="ira-menu-day-title">
+              Доба 2
+            </div>
+
+            ${
+              menuMealHtml(
+                "d2l",
+                "🍲 Обід"
+              )
+            }
+
+            ${
+              menuMealHtml(
+                "d2d",
+                "🍽️ Вечеря"
+              )
+            }
+
+            ${
+              menuMealHtml(
+                "d2b",
+                "☕ Сніданок"
+              )
+            }
+
+          </div>
+
+          <button
+            id="iraMenuSaveV2"
+            class="ira-menu-save"
+            type="button"
+          >
+            💾 Зберегти меню
+          </button>
+
+          <div
+            id="iraMenuStatusV2"
+            class="ira-menu-status"
+            aria-live="polite"
+          ></div>
+
+        </div>
+
+      </details>
+    `;
+  }
+
+  // =========================================================
+  // NORMALIZE MENU
+  // =========================================================
+
+  function normalizeMenuData(
+    rawData
+  ) {
+    const result =
+      emptyMenuData();
+
+    const data =
+      rawData &&
+      typeof rawData ===
+        "object"
+        ? rawData
+        : {};
+
+    MENU_KEYS.forEach(
+      key => {
+        const value =
+          data[key];
+
+        /*
+         * Новий формат:
+         *
+         * d1l: [
+         *   "Солянка",
+         *   "Картопляне пюре",
+         *   "Відбивна",
+         *   "Салат",
+         *   "Компот"
+         * ]
+         */
+        if (
+          Array.isArray(value)
+        ) {
+          for (
+            let i = 0;
+            i < 5;
+            i++
+          ) {
+            result[key][i] =
+              String(
+                value[i] ??
+                ""
+              ).trim();
+          }
+
+          return;
+        }
+
+        /*
+         * Старий формат:
+         *
+         * d1l: "борщ, пюре..."
+         *
+         * Не втрачаємо:
+         * ставимо старий текст
+         * у перший рядок.
+         */
+        if (
+          typeof value ===
+            "string" &&
+          value.trim()
+        ) {
+          result[key][0] =
+            value.trim();
+        }
+      }
+    );
+
+    return result;
+  }
+
+  // =========================================================
+  // FILL MENU
+  // =========================================================
+
+  function fillMenuEditor(
+    rawData = {}
+  ) {
+    const data =
+      normalizeMenuData(
+        rawData
+      );
+
+    document
+      .querySelectorAll(
+        "[data-menu-key][data-menu-index]"
+      )
+      .forEach(
+        input => {
+          const key =
+            input.dataset
+              .menuKey;
+
+          const index =
+            Number(
+              input.dataset
+                .menuIndex
+            );
+
+          input.value =
+            String(
+              data?.[key]?.[index] ??
+              ""
+            );
+        }
+      );
+  }
+
+  // =========================================================
+  // COLLECT MENU
+  // =========================================================
+
+  function collectMenuEditor() {
+    const data =
+      emptyMenuData();
+
+    document
+      .querySelectorAll(
+        "[data-menu-key][data-menu-index]"
+      )
+      .forEach(
+        input => {
+          const key =
+            input.dataset
+              .menuKey;
+
+          const index =
+            Number(
+              input.dataset
+                .menuIndex
+            );
+
+          if (
+            !MENU_KEYS.includes(
+              key
+            )
+          ) {
+            return;
+          }
+
+          if (
+            !Number.isInteger(index) ||
+            index < 0 ||
+            index > 4
+          ) {
+            return;
+          }
+
+          data[key][index] =
+            String(
+              input.value ||
+              ""
+            ).trim();
+        }
+      );
+
+    return data;
+  }
+
+  // =========================================================
+  // LOAD MENU DRAFT
+  // =========================================================
+
+  function loadMenuDraft() {
+    fillMenuEditor();
+
+    if (
+      !currentMenuKey
+    ) {
+      setMenuStatus("");
+
+      return;
+    }
+
+    try {
+      const raw =
+        localStorage.getItem(
+          currentMenuKey
+        );
+
+      if (!raw) {
+        setMenuStatus("");
+
+        return;
+      }
+
+      const data =
+        JSON.parse(
+          raw
+        );
+
+      fillMenuEditor(
+        data
+      );
+
+      setMenuStatus(
+        "Збережене меню завантажено."
+      );
+
+    } catch (error) {
+      console.error(
+        "[meal_ira] menu load:",
+        error
+      );
+
+      setMenuStatus(
+        "Не вдалося завантажити меню.",
+        true
+      );
+    }
+  }
+
+  // =========================================================
+  // SAVE MENU DRAFT
+  // =========================================================
+
+  function saveMenuDraft() {
+    if (
+      !mealIsOpen ||
+      !currentMenuKey
+    ) {
+      setMenuStatus(
+        "Спочатку відкрий харчування.",
+        true
+      );
+
+      return;
+    }
+
+    const data =
+      collectMenuEditor();
+
+    data.savedAt =
+      Date.now();
+
+    try {
+      localStorage.setItem(
+        currentMenuKey,
+        JSON.stringify(
+          data
+        )
+      );
+
+      setMenuStatus(
+        "✅ Меню збережено."
+      );
+
+    } catch (error) {
+      console.error(
+        "[meal_ira] menu save:",
+        error
+      );
+
+      setMenuStatus(
+        "Помилка збереження меню.",
+        true
+      );
+    }
+  }
+
+  // =========================================================
+  // INIT MENU EDITOR
+  // =========================================================
+
+  function initMenuEditor() {
+    createMenuEditor();
+
+    $("iraMenuSaveV2")
+      ?.addEventListener(
+        "click",
+        saveMenuDraft
+      );
+
+    document
+      .querySelectorAll(
+        "[data-menu-key][data-menu-index]"
+      )
+      .forEach(
+        input => {
+          input.addEventListener(
+            "input",
+            () => {
+              setMenuStatus(
+                "Є незбережені зміни."
+              );
+            }
+          );
+        }
+      );
+  }
+
+  // =========================================================
+  // SYNC MENU EDITOR
+  // =========================================================
+
+  function syncMenuEditor() {
+    const panel =
+      $("iraMenuPanel");
+
+    if (!panel) {
+      return;
+    }
+
+    const active =
+      Boolean(
+        mealIsOpen &&
+        competitionId &&
+        stageId
+      );
+
+    panel.hidden =
+      !active;
+
+    if (!active) {
+      const details =
+        $("iraMenuDetails");
+
+      if (details) {
+        details.open =
+          false;
+      }
+
+      /*
+       * Якщо mealPublic/current
+       * повністю очищений —
+       * скидаємо активний ключ.
+       */
+      if (
+        !competitionId ||
+        !stageId
+      ) {
+        currentMenuKey =
+          "";
+
+        fillMenuEditor();
+
+        setMenuStatus("");
+      }
+
+      return;
+    }
+
+    const nextKey =
+      menuStorageKey();
+
+    if (
+      nextKey !==
+      currentMenuKey
+    ) {
+      currentMenuKey =
+        nextKey;
+
+      fillMenuEditor();
+
+      loadMenuDraft();
+
+      const details =
+        $("iraMenuDetails");
+
+      if (details) {
+        details.open =
+          false;
+      }
+    }
+  }
+
+  // =========================================================
   // CURRENT MEAL
   // =========================================================
 
@@ -2997,6 +3791,13 @@
 
             mealIsOpen =
               nextOpen;
+
+            /*
+             * ВАЖЛИВО:
+             * після отримання competitionId / stageId /
+             * isOpen синхронізуємо меню.
+             */
+            syncMenuEditor();
 
             // -------------------------------------------------
             // NOTHING ACTIVE
@@ -3146,10 +3947,6 @@
         return;
       }
 
-      // -----------------------------------------------------
-      // PRICE OF MEALS
-      // -----------------------------------------------------
-
       if (
         target.classList
           .contains(
@@ -3177,16 +3974,6 @@
 
         return;
       }
-
-      /*
-       * REPORT COST тут
-       * НЕ зберігаємо.
-       *
-       * Іра спочатку вводить значення,
-       * потім натискає:
-       *
-       * 💾 Зберегти звіт
-       */
     }
   );
 
@@ -3206,10 +3993,6 @@
         return;
       }
 
-      // -----------------------------------------------------
-      // GLOBAL ✉️
-      // -----------------------------------------------------
-
       const globalEnvelope =
         target.closest
           ? target.closest(
@@ -3224,10 +4007,6 @@
 
         return;
       }
-
-      // -----------------------------------------------------
-      // ROW ✉️ / 📋
-      // -----------------------------------------------------
 
       const action =
         target.closest
@@ -3256,10 +4035,6 @@
         return;
       }
 
-      // -----------------------------------------------------
-      // SAVE REPORT
-      // -----------------------------------------------------
-
       if (
         target.id ===
         "saveReportCostsBtn"
@@ -3269,10 +4044,6 @@
         return;
       }
 
-      // -----------------------------------------------------
-      // CLOSE
-      // -----------------------------------------------------
-
       if (
         target.id ===
         "messagesClose"
@@ -3281,10 +4052,6 @@
 
         return;
       }
-
-      // -----------------------------------------------------
-      // BACKDROP
-      // -----------------------------------------------------
 
       if (
         target.id ===
@@ -3334,6 +4101,12 @@
         );
       }
 
+      /*
+       * Створюємо / перебудовуємо
+       * редактор меню.
+       */
+      initMenuEditor();
+
       if (
         $("content")
       ) {
@@ -3346,6 +4119,14 @@
         $("priceCard")
       ) {
         $("priceCard")
+          .hidden =
+          true;
+      }
+
+      if (
+        $("iraMenuPanel")
+      ) {
+        $("iraMenuPanel")
           .hidden =
           true;
       }
@@ -3402,422 +4183,6 @@
       } catch {}
     }
   );
-
-  
-  // =========================================================
-  // ІРА • РЕДАКТОР МЕНЮ НА 2 ДОБИ
-  //
-  // Поки що зберігаємо чернетку на цьому телефоні.
-  // Не змінюємо заявки, ціни, повідомлення або звіти.
-  // =========================================================
-
-  const MENU_FIELDS = {
-    menuD1Breakfast: "d1b",
-    menuD1Lunch: "d1l",
-    menuD1Dinner: "d1d",
-    menuD2Breakfast: "d2b",
-    menuD2Lunch: "d2l",
-    menuD2Dinner: "d2d"
-  };
-
-  let currentMenuKey = "";
-
-  function menuStorageKey() {
-    if (!competitionId || !stageId) {
-      return "";
-    }
-
-    return (
-      "sc_ira_menu_draft__" +
-      competitionId +
-      "__" +
-      stageId
-    );
-  }
-
-  function setMenuStatus(text, error = false) {
-    const el = $("iraMenuStatus");
-
-    if (!el) return;
-
-    el.textContent = text || "";
-    el.style.color = error
-      ? "var(--red)"
-      : "var(--green)";
-  }
-
-  function menuField(
-    id,
-    label
-  ) {
-    return `
-      <label class="ira-menu-field">
-
-        <span>${label}</span>
-
-        <textarea
-          id="${id}"
-          rows="3"
-          maxlength="2000"
-          placeholder="Впиши страви…"
-        ></textarea>
-
-      </label>
-    `;
-  }
-
-  function createMenuEditor() {
-    /*
-     * Якщо картка вже є у HTML,
-     * повторно її не створюємо.
-     */
-    if ($("iraMenuPanel")) {
-      return;
-    }
-
-    if (!$("priceCard")) {
-      console.warn(
-        "[meal_ira] Не знайдено priceCard для меню."
-      );
-      return;
-    }
-
-    const style = document.createElement("style");
-    style.id = "sc-ira-menu-styles";
-
-    style.textContent = `
-      .ira-menu-panel[hidden] {
-        display: none !important;
-      }
-
-      .ira-menu-panel {
-        margin-top: 8px;
-        border: 1px solid var(--border);
-        border-radius: 15px;
-        background: var(--card);
-        overflow: hidden;
-      }
-
-      .ira-menu-panel summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 13px;
-        color: var(--yellow);
-        font-size: .94rem;
-        font-weight: 900;
-        cursor: pointer;
-        list-style: none;
-      }
-
-      .ira-menu-panel summary::-webkit-details-marker {
-        display: none;
-      }
-
-      .ira-menu-panel summary::after {
-        content: "▼";
-        font-size: .7rem;
-      }
-
-      .ira-menu-panel details[open] summary::after {
-        content: "▲";
-      }
-
-      .ira-menu-editor {
-        padding: 0 12px 14px;
-      }
-
-      .ira-menu-day {
-        margin-top: 10px;
-        padding: 10px;
-        border: 1px solid var(--border-soft);
-        border-radius: 12px;
-        background: var(--card-soft);
-      }
-
-      .ira-menu-day-title {
-        margin-bottom: 9px;
-        color: var(--yellow);
-        font-size: .9rem;
-        font-weight: 900;
-      }
-
-      .ira-menu-field {
-        display: block;
-        margin-top: 10px;
-      }
-
-      .ira-menu-field span {
-        display: block;
-        margin-bottom: 5px;
-        color: var(--text-main);
-        font-size: .8rem;
-        font-weight: 800;
-      }
-
-      .ira-menu-field textarea {
-        display: block;
-        width: 100%;
-        min-height: 67px;
-        padding: 10px;
-        border: 1px solid var(--border);
-        border-radius: 9px;
-        outline: none;
-        resize: vertical;
-        background: var(--card);
-        color: var(--text-main);
-        font: inherit;
-        font-size: .83rem;
-        line-height: 1.4;
-      }
-
-      .ira-menu-field textarea:focus {
-        border-color: var(--yellow);
-      }
-
-      .ira-menu-save {
-        width: 100%;
-        min-height: 44px;
-        margin-top: 14px;
-        border: none;
-        border-radius: 11px;
-        background: linear-gradient(
-          90deg,
-          #ffdc38,
-          #ff872c
-        );
-        color: #171717;
-        font-size: .88rem;
-        font-weight: 900;
-        cursor: pointer;
-      }
-
-      .ira-menu-status {
-        min-height: 18px;
-        margin-top: 8px;
-        color: var(--green);
-        font-size: .73rem;
-        line-height: 1.3;
-        text-align: center;
-      }
-    `;
-
-    document.head.appendChild(style);
-
-    const section = document.createElement("section");
-
-    section.id = "iraMenuPanel";
-    section.className = "ira-menu-panel";
-    section.hidden = true;
-
-    section.innerHTML = `
-      <details id="iraMenuDetails">
-
-        <summary>
-          📖 Скласти меню
-        </summary>
-
-        <div class="ira-menu-editor">
-
-          <div class="ira-menu-day">
-
-            <div class="ira-menu-day-title">
-              Доба 1
-            </div>
-
-            ${menuField("menuD1Breakfast", "Сніданок")}
-            ${menuField("menuD1Lunch", "Обід")}
-            ${menuField("menuD1Dinner", "Вечеря")}
-
-          </div>
-
-          <div class="ira-menu-day">
-
-            <div class="ira-menu-day-title">
-              Доба 2
-            </div>
-
-            ${menuField("menuD2Breakfast", "Сніданок")}
-            ${menuField("menuD2Lunch", "Обід")}
-            ${menuField("menuD2Dinner", "Вечеря")}
-
-          </div>
-
-          <button
-            id="iraMenuSave"
-            class="ira-menu-save"
-            type="button"
-          >
-            Зберегти чернетку меню
-          </button>
-
-          <div
-            id="iraMenuStatus"
-            class="ira-menu-status"
-            aria-live="polite"
-          ></div>
-
-        </div>
-
-      </details>
-    `;
-
-    $("priceCard").insertAdjacentElement(
-      "afterend",
-      section
-    );
-  }
-
-  function fillMenuEditor(data = {}) {
-    Object.entries(MENU_FIELDS).forEach(
-      ([id, key]) => {
-        const field = $(id);
-
-        if (!field) return;
-
-        field.value = String(
-          data[key] ??
-          data[id] ??
-          ""
-        );
-      }
-    );
-  }
-
-  function loadMenuDraft() {
-    fillMenuEditor();
-
-    if (!currentMenuKey) {
-      setMenuStatus("");
-      return;
-    }
-
-    try {
-      const raw = localStorage.getItem(
-        currentMenuKey
-      );
-
-      if (!raw) {
-        setMenuStatus("");
-        return;
-      }
-
-      const data = JSON.parse(raw);
-
-      fillMenuEditor(data);
-
-      setMenuStatus(
-        "Збережену чернетку завантажено."
-      );
-
-    } catch (error) {
-      console.error(
-        "[meal_ira] Завантаження меню:",
-        error
-      );
-
-      setMenuStatus(
-        "Не вдалося завантажити меню.",
-        true
-      );
-    }
-  }
-
-  function saveMenuDraft() {
-    if (
-      !mealIsOpen ||
-      !currentMenuKey
-    ) {
-      setMenuStatus(
-        "Спочатку відкрий харчування.",
-        true
-      );
-      return;
-    }
-
-    const data = {};
-
-    Object.entries(MENU_FIELDS).forEach(
-      ([id, key]) => {
-        data[key] = String(
-          $(id)?.value || ""
-        ).trim();
-      }
-    );
-
-    data.savedAt = Date.now();
-
-    try {
-      localStorage.setItem(
-        currentMenuKey,
-        JSON.stringify(data)
-      );
-
-      setMenuStatus(
-        "Меню збережено на цьому телефоні."
-      );
-
-    } catch (error) {
-      console.error(
-        "[meal_ira] Збереження меню:",
-        error
-      );
-
-      setMenuStatus(
-        "Помилка збереження чернетки.",
-        true
-      );
-    }
-  }
-
-  function initMenuEditor() {
-    createMenuEditor();
-
-    $("iraMenuSave")?.addEventListener(
-      "click",
-      saveMenuDraft
-    );
-
-    Object.keys(MENU_FIELDS).forEach(id => {
-      $(id)?.addEventListener(
-        "input",
-        () => {
-          setMenuStatus(
-            "Є незбережені зміни."
-          );
-        }
-      );
-    });
-  }
-
-  function syncMenuEditor() {
-    const panel = $("iraMenuPanel");
-
-    if (!panel) return;
-
-    const isActive = Boolean(
-      mealIsOpen &&
-      competitionId &&
-      stageId
-    );
-
-    panel.hidden = !isActive;
-
-    if (!isActive) {
-      $("iraMenuDetails").open = false;
-      return;
-    }
-
-    const nextKey = menuStorageKey();
-
-    if (nextKey !== currentMenuKey) {
-      currentMenuKey = nextKey;
-      fillMenuEditor();
-      loadMenuDraft();
-      $("iraMenuDetails").open = false;
-    }
-  }
-
 
   boot();
 

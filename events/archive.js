@@ -43,6 +43,7 @@
 
   const params = new URLSearchParams(window.location.search);
   const seasonYear = params.get("year") || "2026";
+
   const FINALISTS_COUNT = 18;
 
   if (pageTitle) {
@@ -61,8 +62,8 @@
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;"
-      }[char])
-    );
+      }[char]
+    ));
   }
 
   function clean(value) {
@@ -81,12 +82,18 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function hasValue(value) {
+    return (
+      value !== null &&
+      value !== undefined &&
+      value !== ""
+    );
+  }
+
   function fmt(value) {
-    return value === null ||
-      value === undefined ||
-      value === ""
-      ? "—"
-      : String(value);
+    return hasValue(value)
+      ? String(value)
+      : "—";
   }
 
   function fmtWeight(value) {
@@ -94,6 +101,12 @@
 
     return n > 0
       ? n.toFixed(2).replace(/\.?0+$/, "")
+      : "—";
+  }
+
+  function fmtPoints(value) {
+    return hasValue(value)
+      ? String(value)
       : "—";
   }
 
@@ -113,7 +126,9 @@
       slot.totalWeight
     );
 
-    if (!count && !weight) return "—";
+    if (!count && !weight) {
+      return "—";
+    }
 
     return `${count}/${fmtWeight(weight)}`;
   }
@@ -122,10 +137,16 @@
     const raw = String(value || "");
 
     let match = raw.match(/stage[-_\s]*(\d+)/i);
-    if (match) return Number(match[1]);
+
+    if (match) {
+      return Number(match[1]);
+    }
 
     match = raw.match(/етап\s*(\d+)/i);
-    if (match) return Number(match[1]);
+
+    if (match) {
+      return Number(match[1]);
+    }
 
     const numbers = raw.match(/\d+/g);
 
@@ -134,10 +155,21 @@
       : null;
   }
 
+  function isSeasonArchived() {
+    return (
+      archiveDocument &&
+      clean(archiveDocument.status) === "archived"
+    );
+  }
+
   function isFinalMeta(data, id = "") {
     const raw = clean(
-      `${id} ${data?.stageId || ""} ${data?.stageName || ""} ` +
-      `${data?.title || ""} ${data?.type || ""} ${data?.stageType || ""}`
+      `${id} ` +
+      `${data?.stageId || ""} ` +
+      `${data?.stageName || ""} ` +
+      `${data?.title || ""} ` +
+      `${data?.type || ""} ` +
+      `${data?.stageType || ""}`
     );
 
     return (
@@ -148,6 +180,70 @@
       raw.includes("final") ||
       raw.includes("фінал")
     );
+  }
+
+  function unwrapArchivedStage(raw) {
+    if (!raw || typeof raw !== "object") {
+      return {};
+    }
+
+    const candidates = [
+      raw.stageData,
+      raw.data,
+      raw.sourceData,
+      raw.snapshot,
+      raw.stage,
+      raw.original,
+      raw.originalData
+    ];
+
+    for (const candidate of candidates) {
+      if (
+        candidate &&
+        typeof candidate === "object" &&
+        !Array.isArray(candidate) &&
+        Array.isArray(candidate.standings)
+      ) {
+        return candidate;
+      }
+    }
+
+    if (Array.isArray(raw.standings)) {
+      return raw;
+    }
+
+    for (const candidate of candidates) {
+      if (
+        candidate &&
+        typeof candidate === "object" &&
+        !Array.isArray(candidate)
+      ) {
+        return candidate;
+      }
+    }
+
+    return raw;
+  }
+
+  function archivedOriginalId(docId, raw, data) {
+    const direct = norm(
+      raw?.sourceStageDocId ||
+      raw?.stageDocId ||
+      raw?.originalStageDocId ||
+      data?.stageDocId
+    );
+
+    if (direct) {
+      return direct;
+    }
+
+    const prefix = `${seasonYear}__stage__`;
+
+    if (docId.startsWith(prefix)) {
+      return docId.slice(prefix.length);
+    }
+
+    return docId;
   }
 
   function calculateStageSummary(data) {
@@ -163,7 +259,8 @@
     );
 
     const maxBigFish = rows.reduce(
-      (max, row) => Math.max(max, num(row?.bigFish)),
+      (max, row) =>
+        Math.max(max, num(row?.bigFish)),
       0
     );
 
@@ -198,39 +295,113 @@
   }
 
   function findArchiveStage(stageDocId, stageData) {
-    const archiveStages = Array.isArray(archiveDocument?.stages)
+    const archiveStages = Array.isArray(
+      archiveDocument?.stages
+    )
       ? archiveDocument.stages
       : [];
+
+    const id = norm(stageDocId);
+    const stageId = norm(stageData?.stageId);
 
     return (
       archiveStages.find(
         stage =>
-          norm(stage.stageDocId) === norm(stageDocId)
+          norm(stage?.stageDocId) === id
       ) ||
       archiveStages.find(
         stage =>
-          norm(stage.stageId) === norm(stageData?.stageId)
+          stageId &&
+          norm(stage?.stageId) === stageId
       ) ||
       null
     );
   }
 
-  function stageSortValue(item) {
-    if (item?.isFinal) return 999999;
+  function createStageItem(id, data, rawArchive = null) {
+    const archiveMeta =
+      findArchiveStage(id, data) ||
+      (
+        rawArchive &&
+        typeof rawArchive === "object"
+          ? rawArchive
+          : null
+      );
 
-    if (
-      item?.archiveMeta?.number !== undefined &&
-      item?.archiveMeta?.number !== null &&
-      Number.isFinite(Number(item.archiveMeta.number))
-    ) {
-      return Number(item.archiveMeta.number);
+    const calculated = calculateStageSummary(data);
+
+    const summary = {
+      teamsCount: num(
+        archiveMeta?.teamsCount ??
+        archiveMeta?.summary?.teamsCount ??
+        calculated.teamsCount
+      ),
+
+      totalWeight: num(
+        archiveMeta?.totalWeight ??
+        archiveMeta?.summary?.totalWeight ??
+        calculated.totalWeight
+      ),
+
+      maxBigFish: num(
+        archiveMeta?.bigFish ??
+        archiveMeta?.maxBigFish ??
+        archiveMeta?.summary?.maxBigFish ??
+        calculated.maxBigFish
+      ),
+
+      totalCount: num(
+        archiveMeta?.totalCount ??
+        archiveMeta?.summary?.totalCount ??
+        calculated.totalCount
+      )
+    };
+
+    const final =
+      archiveMeta?.isFinal === true ||
+      clean(archiveMeta?.type) === "final" ||
+      isFinalMeta(data, id);
+
+    const item = {
+      id,
+      data,
+      archiveMeta,
+      summary,
+      isFinal: final,
+      type: final ? "final" : "qualification",
+      sortValue: 9999
+    };
+
+    item.sortValue = stageSortValue(item);
+
+    return item;
+  }
+
+  function stageSortValue(item) {
+    if (item?.isFinal) {
+      return 999999;
     }
 
-    for (const value of [
+    const metaNumber = Number(
+      item?.archiveMeta?.number
+    );
+
+    if (
+      Number.isFinite(metaNumber) &&
+      metaNumber > 0
+    ) {
+      return metaNumber;
+    }
+
+    const values = [
       item?.data?.stageId,
       item?.data?.stageName,
+      item?.archiveMeta?.stageId,
+      item?.archiveMeta?.stageDocId,
       item?.id
-    ]) {
+    ];
+
+    for (const value of values) {
       const n = stageNumber(value);
 
       if (Number.isFinite(n)) {
@@ -242,13 +413,19 @@
   }
 
   function inferFinal(items) {
-    if (items.some(item => item.isFinal) || items.length < 2) {
+    if (
+      items.length < 2 ||
+      items.some(item => item.isFinal)
+    ) {
       return;
     }
 
     const ordered = items
       .slice()
-      .sort((a, b) => a.sortValue - b.sortValue);
+      .sort(
+        (a, b) =>
+          a.sortValue - b.sortValue
+      );
 
     const last = ordered[ordered.length - 1];
     const previous = ordered.slice(0, -1);
@@ -258,7 +435,8 @@
       num(last?.summary?.teamsCount) <= FINALISTS_COUNT &&
       previous.some(
         item =>
-          num(item?.summary?.teamsCount) > FINALISTS_COUNT
+          num(item?.summary?.teamsCount) >
+          FINALISTS_COUNT
       )
     ) {
       last.isFinal = true;
@@ -267,7 +445,9 @@
   }
 
   function resolveStageTitle(item, index) {
-    if (item?.isFinal) return "Фінал";
+    if (item?.isFinal) {
+      return "Фінал";
+    }
 
     const title = norm(
       item?.archiveMeta?.title ||
@@ -276,12 +456,17 @@
       item?.data?.title
     );
 
-    if (title && !title.includes("season-")) {
+    if (
+      title &&
+      !clean(title).includes("season-")
+    ) {
       return title;
     }
 
     const number = stageNumber(
-      item?.data?.stageId || item?.id
+      item?.data?.stageId ||
+      item?.archiveMeta?.stageId ||
+      item?.id
     );
 
     return Number.isFinite(number)
@@ -289,13 +474,166 @@
       : `Етап ${index + 1}`;
   }
 
+  function prepareStages() {
+    inferFinal(stages);
+
+    stages.forEach((item, index) => {
+      item.title = resolveStageTitle(
+        item,
+        index
+      );
+
+      item.sortValue = item.isFinal
+        ? 999999
+        : stageSortValue(item);
+    });
+
+    stages.sort(
+      (a, b) =>
+        a.sortValue - b.sortValue
+    );
+  }
+
+  function regularArchiveStages() {
+    const archiveStages = Array.isArray(
+      archiveDocument?.stages
+    )
+      ? archiveDocument.stages.slice()
+      : [];
+
+    return archiveStages
+      .filter(
+        stage =>
+          !(
+            stage?.isFinal === true ||
+            clean(stage?.type) === "final" ||
+            clean(stage?.stageType) === "final"
+          )
+      )
+      .sort((a, b) => {
+        const an =
+          num(a?.number) ||
+          stageNumber(a?.stageId) ||
+          stageNumber(a?.stageDocId) ||
+          9999;
+
+        const bn =
+          num(b?.number) ||
+          stageNumber(b?.stageId) ||
+          stageNumber(b?.stageDocId) ||
+          9999;
+
+        return an - bn;
+      });
+  }
+
+  function archiveHasFinal() {
+    const archiveStages = Array.isArray(
+      archiveDocument?.stages
+    )
+      ? archiveDocument.stages
+      : [];
+
+    return (
+      archiveDocument?.hasFinal === true ||
+      archiveStages.some(
+        stage =>
+          stage?.isFinal === true ||
+          clean(stage?.type) === "final" ||
+          clean(stage?.stageType) === "final"
+      )
+    );
+  }
+
+  async function loadArchive() {
+    const snap = await db
+      .collection("seasonArchives")
+      .doc(seasonYear)
+      .get();
+
+    archiveDocument = snap.exists
+      ? snap.data() || {}
+      : null;
+  }
+
+  async function loadArchivedStages() {
+    const prefix = `${seasonYear}__stage__`;
+
+    const fieldPath =
+      window.firebase
+        ?.firestore
+        ?.FieldPath
+        ?.documentId?.();
+
+    if (!fieldPath) {
+      return [];
+    }
+
+    const snap = await db
+      .collection("seasonArchives")
+      .orderBy(fieldPath)
+      .startAt(prefix)
+      .endAt(prefix + "\uf8ff")
+      .get();
+
+    const result = [];
+
+    snap.forEach(doc => {
+      const raw = doc.data() || {};
+      const data = unwrapArchivedStage(raw);
+
+      const originalId = archivedOriginalId(
+        doc.id,
+        raw,
+        data
+      );
+
+      result.push(
+        createStageItem(
+          originalId,
+          data,
+          raw
+        )
+      );
+    });
+
+    return result;
+  }
+
+  async function loadLiveStages() {
+    const snap = await db
+      .collection("seasonResults")
+      .doc(seasonYear)
+      .collection("stages")
+      .get();
+
+    const result = [];
+
+    snap.forEach(doc => {
+      result.push(
+        createStageItem(
+          doc.id,
+          doc.data() || {}
+        )
+      );
+    });
+
+    return result;
+  }
+
   function ensureSummaryDom() {
-    if ($("seasonArchiveSummary")) return;
+    if ($("seasonArchiveSummary")) {
+      return;
+    }
 
     const main = pageTitle?.parentElement;
-    const stagesCard = stagesList.closest(".archive-card");
+    const stagesCard = stagesList.closest(
+      ".archive-card"
+    );
 
-    if (!main || !stagesCard) return;
+    if (!main || !stagesCard) {
+      return;
+    }
 
     const wrap = document.createElement("div");
 
@@ -358,16 +696,23 @@
       </section>
     `;
 
-    main.insertBefore(wrap, stagesCard);
+    main.insertBefore(
+      wrap,
+      stagesCard
+    );
   }
 
   function renderSeasonPodium() {
     const section = $("seasonArchivePodium");
     const grid = $("seasonPodiumGrid");
 
-    if (!section || !grid) return;
+    if (!section || !grid) {
+      return;
+    }
 
-    const podium = Array.isArray(archiveDocument?.podium)
+    const podium = Array.isArray(
+      archiveDocument?.podium
+    )
       ? archiveDocument.podium
       : [];
 
@@ -383,6 +728,11 @@
     };
 
     grid.innerHTML = podium
+      .slice()
+      .sort(
+        (a, b) =>
+          num(a?.place) - num(b?.place)
+      )
       .slice(0, 3)
       .map(row => `
         <div class="season-podium-card podium-${num(row.place)}">
@@ -400,9 +750,14 @@
           </div>
 
           <div class="season-podium-meta">
-            ${esc(num(row.points))} бал.
+            ${esc(fmtPoints(
+              row.points ??
+              row.seasonPoints
+            ))} бал.
             ·
-            ${esc(fmtWeight(row.totalWeight))} кг
+            ${esc(fmtWeight(
+              row.totalWeight
+            ))} кг
           </div>
 
         </div>
@@ -416,12 +771,18 @@
     const section = $("seasonArchiveBigFish");
     const box = $("seasonBigFishArchiveCard");
 
-    if (!section || !box) return;
+    if (!section || !box) {
+      return;
+    }
 
-    const bigFish = archiveDocument?.bigFish || {};
+    const bigFish =
+      archiveDocument?.bigFish || {};
+
     const weight = num(bigFish.weight);
 
-    const winners = Array.isArray(bigFish.winners)
+    const winners = Array.isArray(
+      bigFish.winners
+    )
       ? bigFish.winners
       : [];
 
@@ -430,33 +791,50 @@
       return;
     }
 
-    const teams = winners
-      .map(row => esc(row.team || "—"))
-      .join(" / ");
+    const teams = [
+      ...new Set(
+        winners
+          .map(row =>
+            norm(
+              row?.team ||
+              row?.teamName
+            )
+          )
+          .filter(Boolean)
+      )
+    ];
 
     const stageNames = [
       ...new Set(
         winners
-          .map(row => row.stage)
+          .map(row =>
+            norm(row?.stage)
+          )
           .filter(Boolean)
       )
     ];
 
     box.innerHTML = `
-      <div class="season-bigfish-icon">🎣</div>
+      <div class="season-bigfish-icon">
+        🎣
+      </div>
 
       <div class="season-bigfish-info">
+
         <div class="season-bigfish-team">
-          ${teams}
+          ${teams.map(esc).join(" / ")}
         </div>
 
         <div class="season-bigfish-stage">
           ${
             stageNames.length
-              ? stageNames.map(esc).join(" / ")
+              ? stageNames
+                  .map(esc)
+                  .join(" / ")
               : `Сезон ${esc(seasonYear)}`
           }
         </div>
+
       </div>
 
       <div class="season-bigfish-weight">
@@ -467,51 +845,74 @@
     section.hidden = false;
   }
 
-  function getRanking() {
-    const ranking = Array.isArray(archiveDocument?.ranking)
+  function getArchivedRanking() {
+    const ranking = Array.isArray(
+      archiveDocument?.ranking
+    )
       ? archiveDocument.ranking.slice()
       : [];
 
     return ranking.sort((a, b) => {
-      const aPlace = num(a.place) || 9999;
-      const bPlace = num(b.place) || 9999;
+      const aPlace =
+        num(a?.place) || 999999;
 
-      return aPlace - bPlace;
+      const bPlace =
+        num(b?.place) || 999999;
+
+      if (aPlace !== bPlace) {
+        return aPlace - bPlace;
+      }
+
+      return String(
+        a?.team || ""
+      ).localeCompare(
+        String(b?.team || ""),
+        "uk"
+      );
     });
   }
 
   function getStageCell(row, stage, index) {
-    const results = Array.isArray(row?.stages)
+    const results = Array.isArray(
+      row?.stages
+    )
       ? row.stages
       : [];
 
-    const stageDocId = norm(stage?.stageDocId);
-    const stageId = norm(stage?.stageId);
+    const stageDocId =
+      norm(stage?.stageDocId);
+
+    const stageId =
+      norm(stage?.stageId);
 
     const exact = results.find(result =>
-      (stageDocId &&
-        norm(result?.stageDocId) === stageDocId) ||
-      (stageId &&
-        norm(result?.stageId) === stageId)
+      (
+        stageDocId &&
+        norm(result?.stageDocId) ===
+        stageDocId
+      ) ||
+      (
+        stageId &&
+        norm(result?.stageId) ===
+        stageId
+      )
     );
 
-    return exact || results[index] || {};
+    return (
+      exact ||
+      results[index] ||
+      {}
+    );
   }
 
   function formatRankingCell(cell) {
-    const place =
-      cell?.place === null ||
-      cell?.place === undefined ||
-      cell?.place === ""
-        ? "—"
-        : cell.place;
+    const place = hasValue(cell?.place)
+      ? cell.place
+      : "—";
 
-    const points =
-      cell?.points === null ||
-      cell?.points === undefined ||
-      cell?.points === ""
-        ? "—"
-        : cell.points;
+    const points = hasValue(cell?.points)
+      ? cell.points
+      : "—";
 
     return `${esc(place)}/${esc(points)}`;
   }
@@ -521,60 +922,49 @@
     const table = $("seasonArchiveRankingTable");
     const legend = $("seasonRankingLegend");
 
-    if (!section || !table) return;
+    if (!section || !table) {
+      return;
+    }
 
-    const ranking = getRanking();
+    const ranking = getArchivedRanking();
 
     if (!ranking.length) {
       section.hidden = true;
       return;
     }
 
-    const archiveStages = Array.isArray(archiveDocument?.stages)
-      ? archiveDocument.stages
-      : [];
-
-    const regularStages = archiveStages
-      .filter(stage =>
-        !(
-          stage.isFinal === true ||
-          clean(stage.type) === "final"
-        )
-      )
-      .sort((a, b) => {
-        const an =
-          num(a.number) ||
-          stageNumber(a.stageId) ||
-          stageNumber(a.stageDocId) ||
-          9999;
-
-        const bn =
-          num(b.number) ||
-          stageNumber(b.stageId) ||
-          stageNumber(b.stageDocId) ||
-          9999;
-
-        return an - bn;
-      });
+    const regularStages =
+      regularArchiveStages();
 
     const hasFinal =
-      archiveDocument?.hasFinal === true ||
-      archiveStages.some(
-        stage =>
-          stage.isFinal === true ||
-          clean(stage.type) === "final"
-      );
+      archiveHasFinal();
 
     const finalists = ranking.filter(
-      row => num(row.place) > 0 && num(row.place) <= FINALISTS_COUNT
+      row => {
+        const place = num(row?.place);
+
+        return (
+          place > 0 &&
+          place <= FINALISTS_COUNT
+        );
+      }
     );
 
     const contenders = ranking.filter(
-      row => !(
-        num(row.place) > 0 &&
-        num(row.place) <= FINALISTS_COUNT
-      )
+      row => {
+        const place = num(row?.place);
+
+        return (
+          place <= 0 ||
+          place > FINALISTS_COUNT
+        );
+      }
     );
+
+    const orderedRanking = [
+      ...finalists,
+      ...contenders
+    ];
 
     if (legend) {
       legend.innerHTML = `
@@ -596,42 +986,50 @@
       `;
     }
 
-    table.querySelector("thead").innerHTML = `
-      <tr>
-        <th class="col-place">М</th>
-        <th class="col-team">Команда</th>
+    table
+      .querySelector("thead")
+      .innerHTML = `
+        <tr>
+          <th class="col-place">М</th>
+          <th class="col-team">Команда</th>
 
-        ${regularStages
-          .map((stage, index) => `
-            <th class="col-stage">
-              Е${num(stage.number) || index + 1}
-            </th>
-          `)
-          .join("")}
+          ${regularStages
+            .map((stage, index) => `
+              <th class="col-stage">
+                Е${
+                  num(stage?.number) ||
+                  stageNumber(stage?.stageId) ||
+                  stageNumber(stage?.stageDocId) ||
+                  index + 1
+                }
+              </th>
+            `)
+            .join("")}
 
-        ${
-          hasFinal
-            ? `<th class="col-final">Ф</th>`
-            : ""
-        }
+          ${
+            hasFinal
+              ? `<th class="col-final">Ф</th>`
+              : ""
+          }
 
-        <th class="col-points">Б</th>
-        <th class="col-weight">кг</th>
-        <th class="col-big">BIG</th>
-      </tr>
-    `;
+          <th class="col-points">Б</th>
+          <th class="col-weight">кг</th>
+          <th class="col-big">BIG</th>
+        </tr>
+      `;
 
     let body = "";
 
-    ranking.forEach((row, rowIndex) => {
-      const place = num(row.place);
+    orderedRanking.forEach((row, index) => {
+      const place = num(row?.place);
+
       const isFinalist =
         place > 0 &&
         place <= FINALISTS_COUNT;
 
       if (
         contenders.length &&
-        rowIndex === finalists.length
+        index === finalists.length
       ) {
         body += `
           <tr class="ranking-divider">
@@ -650,7 +1048,8 @@
       body += `
         <tr class="
           ${
-            place >= 1 && place <= 3
+            place >= 1 &&
+            place <= 3
               ? `ranking-top-${place}`
               : ""
           }
@@ -662,31 +1061,37 @@
         ">
 
           <td class="r-place">
-            ${esc(row.place ?? "—")}
+            ${esc(
+              hasValue(row?.place)
+                ? row.place
+                : "—"
+            )}
           </td>
 
           <td
             class="r-team"
-            title="${esc(row.team || "")}"
+            title="${esc(row?.team || "")}"
           >
-            ${esc(row.team || "—")}
+            ${esc(row?.team || "—")}
           </td>
 
           ${regularStages
-            .map((stage, index) => {
+            .map((stage, stageIndex) => {
               const cell = getStageCell(
                 row,
                 stage,
-                index
+                stageIndex
               );
 
               return `
-                <td
-                  class="
-                    r-stage
-                    ${cell?.absent ? "r-absent" : ""}
-                  "
-                >
+                <td class="
+                  r-stage
+                  ${
+                    cell?.absent
+                      ? "r-absent"
+                      : ""
+                  }
+                ">
                   ${formatRankingCell(cell)}
                 </td>
               `;
@@ -696,15 +1101,17 @@
           ${
             hasFinal
               ? `
-                <td
-                  class="
-                    r-final
-                    ${row.final?.absent ? "r-absent" : ""}
-                  "
-                >
+                <td class="
+                  r-final
+                  ${
+                    row?.final?.absent
+                      ? "r-absent"
+                      : ""
+                  }
+                ">
                   ${esc(
-                    row.final?.place ??
-                    row.finalPlace ??
+                    row?.final?.place ??
+                    row?.finalPlace ??
                     "—"
                   )}
                 </td>
@@ -713,218 +1120,130 @@
           }
 
           <td class="r-points">
-            ${esc(num(row.seasonPoints))}
+            ${esc(
+              fmtPoints(
+                row?.seasonPoints ??
+                row?.points
+              )
+            )}
           </td>
 
           <td class="r-weight">
-            ${esc(fmtWeight(row.totalWeight))}
+            ${esc(
+              fmtWeight(
+                row?.totalWeight
+              )
+            )}
           </td>
 
           <td class="r-big">
-            ${esc(fmtWeight(row.bigFish))}
+            ${esc(
+              fmtWeight(
+                row?.bigFish
+              )
+            )}
           </td>
 
         </tr>
       `;
     });
 
-    table.querySelector("tbody").innerHTML = body;
+    table
+      .querySelector("tbody")
+      .innerHTML = body;
 
     section.hidden = false;
   }
 
   function renderArchiveSnapshot() {
-    if (
-      !archiveDocument ||
-      clean(archiveDocument.status) !== "archived"
-    ) {
+    if (!isSeasonArchived()) {
       return;
     }
 
     ensureSummaryDom();
+
     renderSeasonPodium();
     renderSeasonBigFish();
     renderSeasonRanking();
   }
 
-  async function loadArchive() {
-    try {
-      const snap = await db
-        .collection("seasonArchives")
-        .doc(seasonYear)
-        .get();
+  function renderStageButtons() {
+    stagesList.innerHTML = stages
+      .map(item => {
+        const summary = item.summary || {};
 
-      archiveDocument = snap.exists
-        ? snap.data() || {}
-        : null;
-    } catch (error) {
-      console.warn(
-        "[Archive] seasonArchives:",
-        error
-      );
+        return `
+          <button
+            class="stage-btn ${
+              item.isFinal
+                ? "stage-btn--final"
+                : ""
+            }"
+            type="button"
+            data-stage="${esc(item.id)}"
+          >
 
-      archiveDocument = null;
-    }
-  }
+            <div class="stage-btn__top">
 
-  async function loadStages() {
-    try {
-      if (msg) {
-        msg.textContent = "Завантажую архів…";
-        msg.className = "muted";
-      }
-
-      await loadArchive();
-
-      const snap = await db
-        .collection("seasonResults")
-        .doc(seasonYear)
-        .collection("stages")
-        .get();
-
-      stages = [];
-
-      snap.forEach(doc => {
-        const data = doc.data() || {};
-        const archiveMeta = findArchiveStage(doc.id, data);
-        const calculated = calculateStageSummary(data);
-
-        const summary = {
-          teamsCount: num(
-            archiveMeta?.teamsCount ??
-            archiveMeta?.summary?.teamsCount ??
-            calculated.teamsCount
-          ),
-
-          totalWeight: num(
-            archiveMeta?.totalWeight ??
-            archiveMeta?.summary?.totalWeight ??
-            calculated.totalWeight
-          ),
-
-          maxBigFish: num(
-            archiveMeta?.bigFish ??
-            archiveMeta?.summary?.maxBigFish ??
-            calculated.maxBigFish
-          ),
-
-          totalCount: num(
-            archiveMeta?.totalCount ??
-            archiveMeta?.summary?.totalCount ??
-            calculated.totalCount
-          )
-        };
-
-        const final =
-          archiveMeta?.isFinal === true ||
-          clean(archiveMeta?.type) === "final" ||
-          isFinalMeta(data, doc.id);
-
-        const item = {
-          id: doc.id,
-          data,
-          archiveMeta,
-          summary,
-          isFinal: final,
-          type: final ? "final" : "qualification"
-        };
-
-        item.sortValue = stageSortValue(item);
-
-        stages.push(item);
-      });
-
-      inferFinal(stages);
-
-      stages.forEach((item, index) => {
-        item.title = resolveStageTitle(item, index);
-        item.sortValue = item.isFinal
-          ? 999999
-          : stageSortValue(item);
-      });
-
-      stages.sort(
-        (a, b) =>
-          a.sortValue - b.sortValue
-      );
-
-      renderArchiveSnapshot();
-
-      if (!stages.length) {
-        if (msg) {
-          msg.textContent = archiveDocument
-            ? `Сезон ${seasonYear} завершено.`
-            : `Немає етапів сезону ${seasonYear}.`;
-
-          msg.className = archiveDocument
-            ? "ok"
-            : "muted";
-        }
-
-        stagesList.innerHTML = "";
-        return;
-      }
-
-      if (msg) {
-        msg.textContent = archiveDocument
-          ? `Сезон ${seasonYear} завершено · етапів: ${stages.length}`
-          : `Знайдено етапів: ${stages.length}`;
-
-        msg.className = "ok";
-      }
-
-      stagesList.innerHTML = stages
-        .map(item => {
-          const summary = item.summary || {};
-
-          return `
-            <button
-              class="stage-btn ${
-                item.isFinal
-                  ? "stage-btn--final"
-                  : ""
-              }"
-              type="button"
-              data-stage="${esc(item.id)}"
-            >
-              <div class="stage-btn__top">
-
-                <div class="stage-btn__title">
-                  ${item.isFinal ? "🏆 " : ""}
-                  ${esc(item.title)}
-                </div>
-
+              <div class="stage-btn__title">
                 ${
                   item.isFinal
-                    ? `
-                      <span class="stage-final-badge">
-                        ФІНАЛ
-                      </span>
-                    `
+                    ? "🏆 "
                     : ""
                 }
-
+                ${esc(item.title)}
               </div>
 
-              <div class="stage-btn__meta">
-                Команд:
-                <b>${esc(num(summary.teamsCount))}</b>
+              ${
+                item.isFinal
+                  ? `
+                    <span class="stage-final-badge">
+                      ФІНАЛ
+                    </span>
+                  `
+                  : ""
+              }
 
-                · Вага:
-                <b>${esc(fmtWeight(summary.totalWeight))}</b>
+            </div>
 
-                · BIG:
-                <b>${esc(fmtWeight(summary.maxBigFish))}</b>
-              </div>
-            </button>
-          `;
-        })
-        .join("");
+            <div class="stage-btn__meta">
+              Команд:
+              <b>
+                ${esc(
+                  num(summary.teamsCount)
+                )}
+              </b>
 
-      stagesList
-        .querySelectorAll("[data-stage]")
-        .forEach(button => {
-          button.addEventListener("click", () => {
+              · Вага:
+              <b>
+                ${esc(
+                  fmtWeight(
+                    summary.totalWeight
+                  )
+                )}
+              </b>
+
+              · BIG:
+              <b>
+                ${esc(
+                  fmtWeight(
+                    summary.maxBigFish
+                  )
+                )}
+              </b>
+            </div>
+
+          </button>
+        `;
+      })
+      .join("");
+
+    stagesList
+      .querySelectorAll("[data-stage]")
+      .forEach(button => {
+        button.addEventListener(
+          "click",
+          () => {
             const item = stages.find(
               stage =>
                 stage.id ===
@@ -934,23 +1253,121 @@
             if (item) {
               renderStage(item);
             }
-          });
-        });
+          }
+        );
+      });
+  }
 
-    } catch (error) {
-      console.error("[Archive] load:", error);
+  async function loadStages() {
+    try {
+      if (msg) {
+        msg.textContent =
+          "Завантажую архів…";
+
+        msg.className = "muted";
+      }
+
+      await loadArchive();
+
+      if (isSeasonArchived()) {
+        stages = await loadArchivedStages();
+      } else {
+        stages = await loadLiveStages();
+      }
+
+      prepareStages();
+
+      if (isSeasonArchived()) {
+        renderArchiveSnapshot();
+      }
+
+      if (!stages.length) {
+        stagesList.innerHTML = "";
+
+        if (msg) {
+          msg.textContent =
+            isSeasonArchived()
+              ? `Сезон ${seasonYear} завершено.`
+              : `Немає етапів сезону ${seasonYear}.`;
+
+          msg.className =
+            isSeasonArchived()
+              ? "ok"
+              : "muted";
+        }
+
+        return;
+      }
 
       if (msg) {
-        msg.innerHTML =
-          `<span class="err">Помилка читання архіву: ${esc(
-            error.message || error
-          )}</span>`;
+        msg.textContent =
+          isSeasonArchived()
+            ? `Сезон ${seasonYear} завершено · етапів: ${stages.length}`
+            : `Знайдено етапів: ${stages.length}`;
+
+        msg.className = "ok";
+      }
+
+      renderStageButtons();
+
+    } catch (error) {
+      console.error(
+        "[Archive] load:",
+        error
+      );
+
+      if (msg) {
+        msg.textContent =
+          "Не вдалося завантажити архів.";
+
+        msg.className = "err";
       }
     }
   }
 
+  function compareStandingRows(a, b) {
+    const weight =
+      num(b?.totalWeight) -
+      num(a?.totalWeight);
+
+    if (weight) {
+      return weight;
+    }
+
+    const big =
+      num(b?.bigFish) -
+      num(a?.bigFish);
+
+    if (big) {
+      return big;
+    }
+
+    const count =
+      num(b?.totalCount) -
+      num(a?.totalCount);
+
+    if (count) {
+      return count;
+    }
+
+    return String(
+      a?.team ||
+      a?.teamName ||
+      ""
+    ).localeCompare(
+      String(
+        b?.team ||
+        b?.teamName ||
+        ""
+      ),
+      "uk"
+    );
+  }
+
   function renderStage(item) {
-    const rows = Array.isArray(item?.data?.standings)
+    const rows = Array.isArray(
+      item?.data?.standings
+    )
       ? item.data.standings.slice()
       : [];
 
@@ -959,9 +1376,10 @@
     }
 
     if (stageTitle) {
-      stageTitle.textContent = item?.isFinal
-        ? "Фінал · Зони A / B / C"
-        : "Зони A / B / C";
+      stageTitle.textContent =
+        item?.isFinal
+          ? "Фінал · Зони A / B / C"
+          : "Зони A / B / C";
     }
 
     if (stageMeta) {
@@ -974,6 +1392,7 @@
         zonesWrap.innerHTML =
           `<div class="archive-card err">Детальні результати етапу відсутні.</div>`;
       }
+
       return;
     }
 
@@ -984,7 +1403,9 @@
     };
 
     rows.forEach(row => {
-      const zone = norm(row.zone).toUpperCase();
+      const zone = norm(
+        row?.zone
+      ).toUpperCase();
 
       if (zones[zone]) {
         zones[zone].push(row);
@@ -1005,9 +1426,13 @@
   }
 
   function formatSector(zone, sectorValue) {
-    const raw = norm(sectorValue).toUpperCase();
+    const raw = norm(
+      sectorValue
+    ).toUpperCase();
 
-    if (!raw) return zone;
+    if (!raw) {
+      return zone;
+    }
 
     return /^[ABC]\d+$/i.test(raw)
       ? raw
@@ -1017,46 +1442,25 @@
   function renderZone(zone, rows) {
     const sorted = rows
       .slice()
-      .sort((a, b) => {
-        const weight =
-          num(b.totalWeight) -
-          num(a.totalWeight);
-
-        if (weight) return weight;
-
-        const big =
-          num(b.bigFish) -
-          num(a.bigFish);
-
-        if (big) return big;
-
-        const count =
-          num(b.totalCount) -
-          num(a.totalCount);
-
-        if (count) return count;
-
-        return String(
-          a.team || a.teamName || ""
-        ).localeCompare(
-          String(
-            b.team || b.teamName || ""
-          ),
-          "uk"
-        );
-      });
+      .sort(compareStandingRows);
 
     const body = sorted
       .map((row, index) => {
         const team =
-          row.team ||
-          row.teamName ||
+          row?.team ||
+          row?.teamName ||
           "—";
 
         return `
           <tr>
+
             <td class="a-sector">
-              ${esc(formatSector(zone, row.sector))}
+              ${esc(
+                formatSector(
+                  zone,
+                  row?.sector
+                )
+              )}
             </td>
 
             <td
@@ -1066,26 +1470,37 @@
               ${esc(team)}
             </td>
 
-            <td>${fmtW(row.w1)}</td>
-            <td>${fmtW(row.w2)}</td>
-            <td>${fmtW(row.w3)}</td>
-            <td>${fmtW(row.w4)}</td>
+            <td>${fmtW(row?.w1)}</td>
+            <td>${fmtW(row?.w2)}</td>
+            <td>${fmtW(row?.w3)}</td>
+            <td>${fmtW(row?.w4)}</td>
 
             <td>
-              ${fmt(num(row.totalCount) || "—")}
+              ${fmt(
+                num(row?.totalCount) ||
+                "—"
+              )}
             </td>
 
             <td>
-              ${fmtWeight(row.bigFish)}
+              ${fmtWeight(
+                row?.bigFish
+              )}
             </td>
 
             <td class="a-weight">
-              ${fmtWeight(row.totalWeight)}
+              ${fmtWeight(
+                row?.totalWeight
+              )}
             </td>
 
             <td class="a-place">
-              ${esc(num(row.zonePlace) || index + 1)}
+              ${esc(
+                num(row?.zonePlace) ||
+                index + 1
+              )}
             </td>
+
           </tr>
         `;
       })
@@ -1095,11 +1510,17 @@
       <div class="archive-zone-card">
 
         <div class="archive-zone-head">
-          <h3>Зона ${esc(zone)}</h3>
-          <span>команд: ${sorted.length}</span>
+          <h3>
+            Зона ${esc(zone)}
+          </h3>
+
+          <span>
+            команд: ${sorted.length}
+          </span>
         </div>
 
         <div class="archive-table-wrap">
+
           <table class="archive-compact-table">
 
             <thead>
@@ -1131,6 +1552,7 @@
             </tbody>
 
           </table>
+
         </div>
 
       </div>
@@ -1138,9 +1560,13 @@
   }
 
   function injectCss() {
-    if ($("archiveCompactCss")) return;
+    if ($("archiveCompactCss")) {
+      return;
+    }
 
-    const style = document.createElement("style");
+    const style =
+      document.createElement("style");
+
     style.id = "archiveCompactCss";
 
     style.textContent = `
@@ -1309,7 +1735,7 @@
       }
 
       .season-ranking-table .col-place{
-        width:24px;
+        width:6%;
       }
 
       .season-ranking-table .col-team{
@@ -1626,34 +2052,6 @@
         .season-ranking-table .r-team{
           padding-left:3px;
           font-size:7px;
-        }
-
-        .season-ranking-table .col-place{
-          width:6%;
-        }
-
-        .season-ranking-table .col-team{
-          width:30%;
-        }
-
-        .season-ranking-table .col-stage{
-          width:8%;
-        }
-
-        .season-ranking-table .col-final{
-          width:6%;
-        }
-
-        .season-ranking-table .col-points{
-          width:7%;
-        }
-
-        .season-ranking-table .col-weight{
-          width:10%;
-        }
-
-        .season-ranking-table .col-big{
-          width:9%;
         }
       }
 

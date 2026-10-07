@@ -239,6 +239,192 @@
     );
   }
 
+  function getSlotCount(slot) {
+    if (!slot) return 0;
+
+    return num(
+      slot.c ??
+      slot.count ??
+      slot.fishCount
+    );
+  }
+
+  function getSlotAmurCount(slot) {
+    if (!slot) return 0;
+
+    if (slot.amurCount != null) {
+      return num(slot.amurCount);
+    }
+
+    const fish =
+      Array.isArray(slot.fish)
+        ? slot.fish
+        : [];
+
+    if (fish.length) {
+      return fish.filter(item => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+
+        return (
+          item.isAmur === true ||
+          clean(item.fishType) === "amur"
+        );
+      }).length;
+    }
+
+    return 0;
+  }
+
+  function getSlotCarpCount(slot) {
+    if (!slot) return 0;
+
+    if (slot.carpCount != null) {
+      return num(slot.carpCount);
+    }
+
+    const fish =
+      Array.isArray(slot.fish)
+        ? slot.fish
+        : [];
+
+    if (fish.length) {
+      return fish.filter(item => {
+        if (!item || typeof item !== "object") {
+          return false;
+        }
+
+        return !(
+          item.isAmur === true ||
+          clean(item.fishType) === "amur"
+        );
+      }).length;
+    }
+
+    const total =
+      getSlotCount(slot);
+
+    const amur =
+      getSlotAmurCount(slot);
+
+    return Math.max(
+      0,
+      total - amur
+    );
+  }
+
+  function getRowFishStats(row) {
+    const slots = [
+      row?.w1,
+      row?.w2,
+      row?.w3,
+      row?.w4
+    ];
+
+    const totalCount =
+      num(row?.totalCount);
+
+    let amurCount = 0;
+    let carpCount = 0;
+
+    if (row?.amurCount != null) {
+      amurCount =
+        num(row.amurCount);
+    } else {
+      amurCount =
+        slots.reduce(
+          (sum, slot) =>
+            sum +
+            getSlotAmurCount(slot),
+          0
+        );
+    }
+
+    if (row?.carpCount != null) {
+      carpCount =
+        num(row.carpCount);
+    } else {
+      const slotCarpCount =
+        slots.reduce(
+          (sum, slot) =>
+            sum +
+            getSlotCarpCount(slot),
+          0
+        );
+
+      if (slotCarpCount > 0) {
+        carpCount =
+          slotCarpCount;
+      } else {
+        carpCount =
+          Math.max(
+            0,
+            totalCount -
+            amurCount
+          );
+      }
+    }
+
+    return {
+      totalCount,
+      carpCount,
+      amurCount
+    };
+  }
+
+  function calculateSeasonStats() {
+    let totalWeight = 0;
+    let totalCount = 0;
+    let carpCount = 0;
+    let amurCount = 0;
+
+    stages.forEach(item => {
+      const rows =
+        Array.isArray(
+          item?.data?.standings
+        )
+          ? item.data.standings
+          : [];
+
+      rows.forEach(row => {
+        totalWeight +=
+          num(row?.totalWeight);
+
+        const fishStats =
+          getRowFishStats(row);
+
+        totalCount +=
+          fishStats.totalCount;
+
+        carpCount +=
+          fishStats.carpCount;
+
+        amurCount +=
+          fishStats.amurCount;
+      });
+    });
+
+    if (
+      totalCount > 0 &&
+      carpCount + amurCount !== totalCount
+    ) {
+      carpCount =
+        Math.max(
+          0,
+          totalCount -
+          amurCount
+        );
+    }
+
+    return {
+      totalWeight,
+      totalCount,
+      carpCount,
+      amurCount
+    };
+  }
+
   function calculateStageSummary(data) {
     const rows =
       Array.isArray(
@@ -528,6 +714,16 @@
       totalCount:
         num(
           row?.totalCount
+        ),
+
+      carpCount:
+        num(
+          row?.carpCount
+        ),
+
+      amurCount:
+        num(
+          row?.amurCount
         ),
 
       w1:
@@ -2334,22 +2530,59 @@
       }
 
       if (msg) {
-        const contenderCount =
-          fullRanking.filter(
-            row =>
-              row.rankingType ===
-              "contender"
-          ).length;
+        if (archiveDocument) {
+          const seasonStats =
+            calculateSeasonStats();
 
-        msg.textContent =
-          archiveDocument
-            ? `Сезон ${seasonYear} завершено · етапів: ${stages.length}` +
-              (
-                contenderCount
-                  ? ` · претендентів: ${contenderCount}`
-                  : ""
-              )
-            : `Знайдено етапів: ${stages.length}`;
+          msg.innerHTML = `
+            <div class="archive-season-status">
+              Сезон ${esc(seasonYear)} завершено
+            </div>
+
+            <div class="archive-season-stats">
+              <span>
+                Загальний улов:
+                <b>
+                  ${esc(
+                    fmtWeight(
+                      seasonStats.totalWeight
+                    )
+                  )} кг
+                </b>
+              </span>
+
+              <span>
+                Риб:
+                <b>
+                  ${esc(
+                    seasonStats.totalCount
+                  )} шт
+                </b>
+              </span>
+
+              <span>
+                Короп-осетер:
+                <b>
+                  ${esc(
+                    seasonStats.carpCount
+                  )} шт
+                </b>
+              </span>
+
+              <span>
+                Амур:
+                <b>
+                  ${esc(
+                    seasonStats.amurCount
+                  )} шт
+                </b>
+              </span>
+            </div>
+          `;
+        } else {
+          msg.textContent =
+            `Знайдено етапів: ${stages.length}`;
+        }
 
         msg.className =
           "ok";
@@ -3062,6 +3295,30 @@
         text-align:left;
       }
 
+      .archive-season-status{
+        color:#22c55e;
+        font-weight:950;
+      }
+
+      .archive-season-stats{
+        display:flex;
+        flex-wrap:wrap;
+        gap:5px 14px;
+        margin-top:7px;
+        color:#94a3b8;
+        font-size:.88rem;
+        line-height:1.45;
+      }
+
+      .archive-season-stats span{
+        white-space:nowrap;
+      }
+
+      .archive-season-stats b{
+        color:#f8fafc;
+        font-weight:900;
+      }
+
       .stage-btn{
         transition:transform .18s ease;
       }
@@ -3279,6 +3536,17 @@
         .season-podium-team,
         .season-podium-meta{
           margin-top:2px;
+        }
+
+        .archive-season-stats{
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:5px 10px;
+          font-size:.8rem;
+        }
+
+        .archive-season-stats span{
+          white-space:normal;
         }
 
         .season-ranking-table{

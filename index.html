@@ -20,7 +20,11 @@
        STOLAR CARP • HOME
        ========================================================= */
 
-    body.home-page{
+    * {
+      box-sizing: border-box;
+    }
+
+    body.home-page {
       background:
         radial-gradient(
           circle at 50% -10%,
@@ -34,11 +38,11 @@
        HERO
        ========================================================= */
 
-    .hero-main{
-      max-width:1040px;
-      margin:0 auto;
-      padding:48px 0 46px;
-      text-align:center;
+    .hero-main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 48px 0 46px;
+      text-align: center;
     }
 
     /* =========================================================
@@ -47,40 +51,40 @@
        Вона НЕ входить у плашку слогана.
        ========================================================= */
 
-    .hero-kicker-wrap{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:12px;
-      max-width:100%;
-      margin-bottom:10px;
+    .hero-kicker-wrap {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      max-width: 100%;
+      margin-bottom: 10px;
     }
 
-    .hero-fish-overlay{
-      position:static;
-      display:block;
-      flex:0 0 auto;
+    .hero-fish-overlay {
+      position: static;
+      display: block;
+      flex: 0 0 auto;
 
-      width:82px;
-      height:82px;
+      width: 82px;
+      height: 82px;
 
-      object-fit:contain;
-      pointer-events:none;
+      object-fit: contain;
+      pointer-events: none;
 
       filter:
         drop-shadow(0 5px 12px rgba(0,0,0,.55))
         drop-shadow(0 0 8px rgba(250,204,21,.12));
     }
 
-    .hero-kicker{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      min-height:34px;
-      padding:6px 16px;
+      min-height: 34px;
+      padding: 6px 16px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
       background:
         linear-gradient(
@@ -89,39 +93,39 @@
           rgba(2,6,23,.92)
         );
 
-      border:1px solid rgba(148,163,184,.34);
+      border: 1px solid rgba(148,163,184,.34);
 
-      color:#e5e7eb;
+      color: #e5e7eb;
 
       box-shadow:
         0 10px 30px rgba(0,0,0,.28),
         inset 0 1px 0 rgba(255,255,255,.04);
     }
 
-    .hero-kicker-text{
-      display:block;
+    .hero-kicker-text {
+      display: block;
 
-      font-size:.72rem;
-      font-weight:700;
-      line-height:1.35;
+      font-size: .72rem;
+      font-weight: 700;
+      line-height: 1.35;
 
-      letter-spacing:.16em;
-      text-transform:uppercase;
-      white-space:nowrap;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      white-space: nowrap;
     }
 
-    .hero-title{
-      position:relative;
-      z-index:1;
+    .hero-title {
+      position: relative;
+      z-index: 1;
 
-      font-size:clamp(42px,7vw,68px);
-      font-weight:900;
-      line-height:1;
-      letter-spacing:.055em;
+      font-size: clamp(42px,7vw,68px);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: .055em;
 
-      margin:8px 0 27px;
+      margin: 8px 0 27px;
 
-      text-transform:uppercase;
+      text-transform: uppercase;
 
       background:
         linear-gradient(
@@ -132,33 +136,33 @@
           #e11d48 100%
         );
 
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
 
       text-shadow:
         0 1px 0 rgba(255,255,255,.18),
         0 3px 8px rgba(0,0,0,.72);
 
-      opacity:0;
-      transform:translateY(14px);
+      opacity: 0;
+      transform: translateY(14px);
 
-      animation:heroTitleFade .85s ease-out forwards;
+      animation: heroTitleFade .85s ease-out forwards;
     }
 
-    .hero-title::before{
-      content:"";
+    .hero-title::before {
+      content: "";
 
-      position:absolute;
-      z-index:-1;
+      position: absolute;
+      z-index: -1;
 
-      left:50%;
-      top:50%;
+      left: 50%;
+      top: 50%;
 
-      transform:translate(-50%,-50%);
+      transform: translate(-50%,-50%);
 
-      width:390px;
-      height:120px;
+      width: 390px;
+      height: 120px;
 
       background:
         radial-gradient(
@@ -169,28 +173,28 @@
           transparent 78%
         );
 
-      filter:blur(18px);
+      filter: blur(18px);
 
-      opacity:0;
-      pointer-events:none;
+      opacity: 0;
+      pointer-events: none;
 
-      animation:heroGlow 1.1s ease-out forwards .1s;
+      animation: heroGlow 1.1s ease-out forwards .1s;
     }
 
-    .hero-title::after{
-      content:"";
+    .hero-title::after {
+      content: "";
 
-      position:absolute;
+      position: absolute;
 
-      left:50%;
-      bottom:-13px;
+      left: 50%;
+      bottom: -13px;
 
-      transform:translateX(-50%);
+      transform: translateX(-50%);
 
-      width:220px;
-      height:2px;
+      width: 220px;
+      height: 2px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
       background:
         linear-gradient(
@@ -205,53 +209,53 @@
       box-shadow:
         0 0 8px rgba(255,180,0,.34);
 
-      opacity:0;
+      opacity: 0;
 
-      animation:heroLineFade 1.1s ease-out forwards;
+      animation: heroLineFade 1.1s ease-out forwards;
     }
 
-    .hero-subtitle{
-      margin:0 auto;
-      max-width:700px;
+    .hero-subtitle {
+      margin: 0 auto;
+      max-width: 700px;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
-      font-size:1rem;
-      line-height:1.65;
+      font-size: 1rem;
+      line-height: 1.65;
     }
 
     /* =========================================================
        HERO META
        ========================================================= */
 
-    .hero-tags{
-      margin-top:18px;
+    .hero-tags {
+      margin-top: 18px;
 
-      display:flex;
-      flex-wrap:wrap;
-      justify-content:center;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
 
-      gap:8px;
+      gap: 8px;
     }
 
-    .hero-tag{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      min-height:30px;
+      min-height: 30px;
 
-      padding:5px 12px;
+      padding: 5px 12px;
 
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.28);
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,.28);
 
-      font-size:.77rem;
-      font-weight:600;
+      font-size: .77rem;
+      font-weight: 600;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
-      background:rgba(15,23,42,.66);
+      background: rgba(15,23,42,.66);
 
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.025);
@@ -261,30 +265,30 @@
        MAIN QUICK NAVIGATION
        ========================================================= */
 
-    .home-actions{
-      display:grid;
-      grid-template-columns:repeat(4,minmax(0,1fr));
+    .home-actions {
+      display: grid;
+      grid-template-columns: repeat(4,minmax(0,1fr));
 
-      gap:12px;
-      margin-top:28px;
+      gap: 12px;
+      margin-top: 28px;
     }
 
-    .home-action{
-      position:relative;
+    .home-action {
+      position: relative;
 
-      min-height:112px;
+      min-height: 112px;
 
-      padding:17px 14px 15px;
+      padding: 17px 14px 15px;
 
-      display:flex;
-      flex-direction:column;
-      align-items:flex-start;
-      justify-content:center;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
 
-      overflow:hidden;
+      overflow: hidden;
 
-      border-radius:18px;
-      border:1px solid rgba(148,163,184,.25);
+      border-radius: 18px;
+      border: 1px solid rgba(148,163,184,.25);
 
       background:
         linear-gradient(
@@ -297,10 +301,10 @@
         0 12px 28px rgba(0,0,0,.24),
         inset 0 1px 0 rgba(255,255,255,.035);
 
-      color:#f8fafc;
+      color: #f8fafc;
 
-      text-decoration:none;
-      text-align:left;
+      text-decoration: none;
+      text-align: left;
 
       transition:
         transform .18s ease,
@@ -309,108 +313,108 @@
         background .18s ease;
     }
 
-    .home-action::before{
-      content:"";
+    .home-action::before {
+      content: "";
 
-      position:absolute;
+      position: absolute;
 
-      width:90px;
-      height:90px;
+      width: 90px;
+      height: 90px;
 
-      right:-35px;
-      top:-35px;
+      right: -35px;
+      top: -35px;
 
-      border-radius:50%;
+      border-radius: 50%;
 
-      background:rgba(255,255,255,.035);
+      background: rgba(255,255,255,.035);
 
-      pointer-events:none;
+      pointer-events: none;
     }
 
-    .home-action:hover{
-      transform:translateY(-3px);
+    .home-action:hover {
+      transform: translateY(-3px);
 
-      border-color:rgba(250,204,21,.48);
+      border-color: rgba(250,204,21,.48);
 
       box-shadow:
         0 18px 36px rgba(0,0,0,.34),
         inset 0 1px 0 rgba(255,255,255,.05);
     }
 
-    .home-action__top{
-      width:100%;
+    .home-action__top {
+      width: 100%;
 
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
 
-      gap:10px;
+      gap: 10px;
 
-      margin-bottom:9px;
+      margin-bottom: 9px;
     }
 
-    .home-action__icon{
-      width:34px;
-      height:34px;
+    .home-action__icon {
+      width: 34px;
+      height: 34px;
 
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      flex:0 0 auto;
+      flex: 0 0 auto;
 
-      border-radius:11px;
+      border-radius: 11px;
 
-      background:rgba(255,255,255,.07);
-      border:1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.07);
 
-      font-size:1.05rem;
-      line-height:1;
+      font-size: 1.05rem;
+      line-height: 1;
     }
 
-    .home-action__arrow{
-      color:#64748b;
+    .home-action__arrow {
+      color: #64748b;
 
-      font-size:1rem;
+      font-size: 1rem;
 
       transition:
         color .18s ease,
         transform .18s ease;
     }
 
-    .home-action:hover .home-action__arrow{
-      color:#facc15;
-      transform:translateX(3px);
+    .home-action:hover .home-action__arrow {
+      color: #facc15;
+      transform: translateX(3px);
     }
 
-    .home-action__title{
-      display:block;
+    .home-action__title {
+      display: block;
 
-      font-size:.92rem;
-      line-height:1.15;
-      font-weight:800;
+      font-size: .92rem;
+      line-height: 1.15;
+      font-weight: 800;
 
-      letter-spacing:.045em;
-      text-transform:uppercase;
+      letter-spacing: .045em;
+      text-transform: uppercase;
 
-      color:#f8fafc;
+      color: #f8fafc;
     }
 
-    .home-action__text{
-      display:block;
+    .home-action__text {
+      display: block;
 
-      margin-top:5px;
+      margin-top: 5px;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.77rem;
-      line-height:1.3;
+      font-size: .77rem;
+      line-height: 1.3;
     }
 
     /* LIVE */
 
-    .home-action--live{
-      border-color:rgba(248,113,113,.34);
+    .home-action--live {
+      border-color: rgba(248,113,113,.34);
 
       background:
         radial-gradient(
@@ -425,31 +429,31 @@
         );
     }
 
-    .home-action--live .home-action__icon{
-      background:rgba(220,38,38,.16);
-      border-color:rgba(248,113,113,.24);
+    .home-action--live .home-action__icon {
+      background: rgba(220,38,38,.16);
+      border-color: rgba(248,113,113,.24);
     }
 
-    .live-dot{
-      width:9px;
-      height:9px;
+    .live-dot {
+      width: 9px;
+      height: 9px;
 
-      display:block;
+      display: block;
 
-      border-radius:50%;
+      border-radius: 50%;
 
-      background:#ef4444;
+      background: #ef4444;
 
       box-shadow:
         0 0 0 rgba(239,68,68,.55);
 
-      animation:livePulse 1.8s infinite;
+      animation: livePulse 1.8s infinite;
     }
 
     /* COMPETITIONS */
 
-    .home-action--events{
-      border-color:rgba(250,204,21,.30);
+    .home-action--events {
+      border-color: rgba(250,204,21,.30);
 
       background:
         radial-gradient(
@@ -464,39 +468,39 @@
         );
     }
 
-    .home-action--events .home-action__icon{
-      color:#facc15;
+    .home-action--events .home-action__icon {
+      color: #facc15;
 
-      background:rgba(250,204,21,.10);
-      border-color:rgba(250,204,21,.18);
+      background: rgba(250,204,21,.10);
+      border-color: rgba(250,204,21,.18);
     }
 
     /* RULES */
 
-    .home-action--rules .home-action__icon{
-      color:#e2e8f0;
+    .home-action--rules .home-action__icon {
+      color: #e2e8f0;
     }
 
     /* ARCHIVE */
 
-    .home-action--archive .home-action__icon{
-      color:#cbd5e1;
+    .home-action--archive .home-action__icon {
+      color: #cbd5e1;
     }
 
     /* =========================================================
        SEASON CARD
        ========================================================= */
 
-    .hero-season-card{
-      position:relative;
+    .hero-season-card {
+      position: relative;
 
-      overflow:hidden;
+      overflow: hidden;
 
-      margin-top:18px;
+      margin-top: 18px;
 
-      padding:20px 22px;
+      padding: 20px 22px;
 
-      border-radius:20px;
+      border-radius: 20px;
 
       background:
         radial-gradient(
@@ -515,25 +519,25 @@
           rgba(2,6,23,.96)
         );
 
-      border:1px solid rgba(148,163,184,.25);
+      border: 1px solid rgba(148,163,184,.25);
 
       box-shadow:
         0 18px 42px rgba(0,0,0,.32),
         inset 0 1px 0 rgba(255,255,255,.035);
 
-      text-align:left;
+      text-align: left;
     }
 
-    .hero-season-card::after{
-      content:"";
+    .hero-season-card::after {
+      content: "";
 
-      position:absolute;
+      position: absolute;
 
-      left:22px;
-      right:22px;
-      top:0;
+      left: 22px;
+      right: 22px;
+      top: 0;
 
-      height:1px;
+      height: 1px;
 
       background:
         linear-gradient(
@@ -545,83 +549,83 @@
         );
     }
 
-    .season-card__row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
+    .season-card__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
 
-      gap:22px;
+      gap: 22px;
     }
 
-    .season-card__content{
-      min-width:0;
+    .season-card__content {
+      min-width: 0;
     }
 
-    .season-card__eyebrow{
-      margin:0 0 5px;
+    .season-card__eyebrow {
+      margin: 0 0 5px;
 
-      color:#facc15;
+      color: #facc15;
 
-      font-size:.68rem;
-      font-weight:800;
+      font-size: .68rem;
+      font-weight: 800;
 
-      letter-spacing:.14em;
-      text-transform:uppercase;
+      letter-spacing: .14em;
+      text-transform: uppercase;
     }
 
-    .hero-season-card h2{
-      margin:0;
+    .hero-season-card h2 {
+      margin: 0;
 
-      color:#f8fafc;
+      color: #f8fafc;
 
-      font-size:1.18rem;
-      line-height:1.25;
-      font-weight:800;
+      font-size: 1.18rem;
+      line-height: 1.25;
+      font-weight: 800;
     }
 
-    .hero-season-card p{
-      margin:7px 0 0;
+    .hero-season-card p {
+      margin: 7px 0 0;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.84rem;
-      line-height:1.45;
+      font-size: .84rem;
+      line-height: 1.45;
     }
 
-    .season-card__links{
-      display:flex;
-      align-items:center;
-      justify-content:flex-end;
-      flex-wrap:wrap;
+    .season-card__links {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
 
-      gap:8px;
+      gap: 8px;
 
-      flex:0 0 auto;
+      flex: 0 0 auto;
     }
 
-    .season-link{
-      min-height:40px;
+    .season-link {
+      min-height: 40px;
 
-      padding:9px 15px;
+      padding: 9px 15px;
 
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      border-radius:999px;
+      border-radius: 999px;
 
-      text-decoration:none;
+      text-decoration: none;
 
-      font-size:.78rem;
-      font-weight:700;
+      font-size: .78rem;
+      font-weight: 700;
 
-      white-space:nowrap;
+      white-space: nowrap;
 
-      border:1px solid rgba(148,163,184,.28);
+      border: 1px solid rgba(148,163,184,.28);
 
-      background:rgba(15,23,42,.72);
+      background: rgba(15,23,42,.72);
 
-      color:#e2e8f0;
+      color: #e2e8f0;
 
       transition:
         border-color .18s ease,
@@ -630,16 +634,16 @@
         transform .18s ease;
     }
 
-    .season-link:hover{
-      transform:translateY(-1px);
+    .season-link:hover {
+      transform: translateY(-1px);
 
-      border-color:rgba(250,204,21,.55);
+      border-color: rgba(250,204,21,.55);
 
-      color:#facc15;
+      color: #facc15;
     }
 
-    .season-link--primary{
-      border-color:rgba(250,204,21,.34);
+    .season-link--primary {
+      border-color: rgba(250,204,21,.34);
 
       background:
         linear-gradient(
@@ -648,90 +652,90 @@
           rgba(249,115,22,.10)
         );
 
-      color:#fde68a;
+      color: #fde68a;
     }
 
     /* =========================================================
        CONTENT SECTIONS
        ========================================================= */
 
-    .info-block{
-      max-width:760px;
+    .info-block {
+      max-width: 760px;
 
-      margin:0 auto;
+      margin: 0 auto;
 
-      padding:38px 0;
+      padding: 38px 0;
 
-      color:#e5e7eb;
+      color: #e5e7eb;
 
-      text-align:left;
+      text-align: left;
     }
 
-    .info-block + .info-block{
-      border-top:1px solid rgba(148,163,184,.10);
+    .info-block + .info-block {
+      border-top: 1px solid rgba(148,163,184,.10);
     }
 
-    .info-text{
-      max-width:none;
+    .info-text {
+      max-width: none;
 
-      margin:12px 0 0;
+      margin: 12px 0 0;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
-      font-size:.96rem;
-      line-height:1.7;
+      font-size: .96rem;
+      line-height: 1.7;
     }
 
     .info-list,
-    .advantages-list{
-      list-style:none;
+    .advantages-list {
+      list-style: none;
 
-      padding:0;
+      padding: 0;
 
-      margin:20px 0 0;
+      margin: 20px 0 0;
 
-      max-width:none;
+      max-width: none;
 
-      text-align:left;
+      text-align: left;
 
-      color:#e5e7eb;
+      color: #e5e7eb;
 
-      font-size:.94rem;
+      font-size: .94rem;
     }
 
     .info-list li,
-    .advantages-list li{
-      position:relative;
+    .advantages-list li {
+      position: relative;
 
-      padding:10px 4px 10px 0;
+      padding: 10px 4px 10px 0;
 
-      border-bottom:1px solid rgba(148,163,184,.12);
+      border-bottom: 1px solid rgba(148,163,184,.12);
 
-      line-height:1.5;
+      line-height: 1.5;
     }
 
     .info-list li:last-child,
-    .advantages-list li:last-child{
-      border-bottom:none;
+    .advantages-list li:last-child {
+      border-bottom: none;
     }
 
-    .section-title{
-      position:relative;
+    .section-title {
+      position: relative;
 
-      display:inline-block;
+      display: inline-block;
 
-      margin:0 0 18px;
+      margin: 0 0 18px;
 
-      padding-bottom:7px;
+      padding-bottom: 7px;
 
-      font-size:1.35rem;
-      line-height:1.25;
-      font-weight:750;
+      font-size: 1.35rem;
+      line-height: 1.25;
+      font-weight: 750;
 
-      color:#f1f5f9;
+      color: #f1f5f9;
     }
 
-    .section-title__brand{
+    .section-title__brand {
       background:
         linear-gradient(
           90deg,
@@ -740,28 +744,28 @@
           #d90429 100%
         );
 
-      -webkit-background-clip:text;
-      background-clip:text;
+      -webkit-background-clip: text;
+      background-clip: text;
 
-      color:transparent;
+      color: transparent;
 
-      font-weight:850;
+      font-weight: 850;
 
-      letter-spacing:.035em;
+      letter-spacing: .035em;
     }
 
-    .section-title::after{
-      content:"";
+    .section-title::after {
+      content: "";
 
-      position:absolute;
+      position: absolute;
 
-      left:0;
-      bottom:0;
+      left: 0;
+      bottom: 0;
 
-      width:100%;
-      height:2px;
+      width: 100%;
+      height: 2px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
       background:
         linear-gradient(
@@ -779,29 +783,29 @@
        MISSION
        ========================================================= */
 
-    .mission-cards{
-      margin-top:22px;
+    .mission-cards {
+      margin-top: 22px;
 
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
 
-      gap:10px;
+      gap: 10px;
     }
 
-    .mission-card{
-      width:100%;
+    .mission-card {
+      width: 100%;
 
-      margin:0;
+      margin: 0;
 
-      padding:13px 15px;
+      padding: 13px 15px;
 
-      display:flex;
-      align-items:center;
+      display: flex;
+      align-items: center;
 
-      min-height:54px;
+      min-height: 54px;
 
-      border-radius:14px;
-      border:1px solid rgba(148,163,184,.22);
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,.22);
 
       background:
         linear-gradient(
@@ -813,25 +817,25 @@
       box-shadow:
         inset 0 1px 0 rgba(255,255,255,.025);
 
-      color:#dbe3ef;
+      color: #dbe3ef;
 
-      font-size:.86rem;
-      line-height:1.4;
+      font-size: .86rem;
+      line-height: 1.4;
     }
 
     /* =========================================================
        CTA
        ========================================================= */
 
-    .btn-lg{
-      padding:12px 22px;
+    .btn-lg {
+      padding: 12px 22px;
 
-      font-size:.95rem;
+      font-size: .95rem;
 
-      border-radius:999px;
+      border-radius: 999px;
     }
 
-    .btn--accent{
+    .btn--accent {
       background:
         linear-gradient(
           135deg,
@@ -839,40 +843,40 @@
           #f28b2b
         );
 
-      color:#111;
+      color: #111;
 
-      border:none;
+      border: none;
     }
 
-    .btn--accent:hover{
-      filter:brightness(1.05);
+    .btn--accent:hover {
+      filter: brightness(1.05);
     }
 
-    .call-to-action{
-      text-align:left;
+    .call-to-action {
+      text-align: left;
     }
 
-    .call-to-action .btn{
-      margin-top:18px;
+    .call-to-action .btn {
+      margin-top: 18px;
     }
 
     /* =========================================================
        TIKTOK
        ========================================================= */
 
-    .section.highlight{
-      position:relative;
+    .section.highlight {
+      position: relative;
 
-      max-width:760px;
+      max-width: 760px;
 
-      margin:20px auto 50px;
+      margin: 20px auto 50px;
 
-      padding:32px 24px;
+      padding: 32px 24px;
 
-      text-align:center;
+      text-align: center;
 
-      border-radius:20px;
-      border:1px solid rgba(148,163,184,.18);
+      border-radius: 20px;
+      border: 1px solid rgba(148,163,184,.18);
 
       background:
         linear-gradient(
@@ -886,46 +890,46 @@
         inset 0 1px 0 rgba(255,255,255,.025);
     }
 
-    .section.highlight h2{
-      margin-top:0;
+    .section.highlight h2 {
+      margin-top: 0;
     }
 
-    .section.highlight p{
-      color:#94a3b8;
-      line-height:1.55;
+    .section.highlight p {
+      color: #94a3b8;
+      line-height: 1.55;
     }
 
     /* =========================================================
        HEADER LOGIN
        ========================================================= */
 
-    .header-login{
-      margin-left:auto;
-      margin-right:8px;
+    .header-login {
+      margin-left: auto;
+      margin-right: 8px;
 
-      padding:6px 14px;
+      padding: 6px 14px;
 
-      min-height:42px;
+      min-height: 42px;
 
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-      flex-shrink:0;
+      flex-shrink: 0;
 
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.45);
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,.45);
 
-      background:rgba(15,23,42,.88);
+      background: rgba(15,23,42,.88);
 
-      color:#e5e7eb;
+      color: #e5e7eb;
 
-      font-size:.85rem;
-      line-height:1;
+      font-size: .85rem;
+      line-height: 1;
 
-      text-decoration:none;
+      text-decoration: none;
 
-      white-space:nowrap;
+      white-space: nowrap;
 
       transition:
         border-color .18s ease,
@@ -933,41 +937,41 @@
         background .18s ease;
     }
 
-    .header-login:hover{
-      border-color:#facc15;
-      color:#facc15;
-      background:rgba(30,41,59,.92);
+    .header-login:hover {
+      border-color: #facc15;
+      color: #facc15;
+      background: rgba(30,41,59,.92);
     }
 
     /* =========================================================
        HEADER LOGOUT
        ========================================================= */
 
-    .header-logout{
-      width:46px;
-      height:42px;
+    .header-logout {
+      width: 46px;
+      height: 42px;
 
-      margin:0 10px 0 0;
-      padding:0;
+      margin: 0 10px 0 0;
+      padding: 0;
 
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      flex:0 0 auto;
+      flex: 0 0 auto;
 
-      border-radius:999px;
-      border:1px solid rgba(248,113,113,.42);
+      border-radius: 999px;
+      border: 1px solid rgba(248,113,113,.42);
 
-      background:rgba(127,29,29,.18);
+      background: rgba(127,29,29,.18);
 
-      color:#fff;
+      color: #fff;
 
-      font-family:inherit;
-      font-size:1.15rem;
-      line-height:1;
+      font-family: inherit;
+      font-size: 1.15rem;
+      line-height: 1;
 
-      cursor:pointer;
+      cursor: pointer;
 
       transition:
         border-color .18s ease,
@@ -976,50 +980,485 @@
         opacity .18s ease;
     }
 
-    .header-logout:hover{
-      border-color:#f87171;
+    .header-logout:hover {
+      border-color: #f87171;
 
-      background:rgba(220,38,38,.28);
+      background: rgba(220,38,38,.28);
 
-      transform:translateY(-1px);
+      transform: translateY(-1px);
     }
 
-    .header-logout:active{
-      transform:translateY(0);
+    .header-logout:active {
+      transform: translateY(0);
     }
 
-    .header-logout:disabled{
-      opacity:.55;
-      cursor:wait;
-      transform:none;
+    .header-logout:disabled {
+      opacity: .55;
+      cursor: wait;
+      transform: none;
     }
 
-    .header-logout[hidden]{
-      display:none !important;
+    .header-logout[hidden] {
+      display: none !important;
+    }
+
+    /* =========================================================
+       HOME • SPONSORS
+       ========================================================= */
+
+    .home-sponsors {
+      width: min(calc(100% - 32px), 1040px);
+
+      margin: 0 auto 55px;
+      padding: 32px 25px 30px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(20,29,43,.94),
+          rgba(8,13,24,.97)
+        );
+
+      border: 1px solid rgba(228,188,114,.20);
+      border-radius: 20px;
+
+      box-shadow:
+        0 18px 40px rgba(0,0,0,.25);
+    }
+
+    .home-sponsors__title {
+      margin: 0 0 27px;
+
+      color: #e4bc72;
+
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .home-sponsors__grid {
+      display: grid;
+
+      grid-template-columns:
+        repeat(4,minmax(0,1fr));
+
+      gap: 12px;
+    }
+
+    .home-sponsor-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      min-width: 0;
+      aspect-ratio: 1.8 / 1;
+
+      padding: 16px;
+
+      background: #05070b;
+
+      border:
+        1px solid rgba(255,255,255,.10);
+
+      border-radius: 9px;
+
+      color: #f3d69b;
+      text-decoration: none;
+
+      overflow: hidden;
+
+      transition:
+        transform .2s ease,
+        border-color .2s ease;
+    }
+
+    .home-sponsor-card:hover {
+      transform: translateY(-3px);
+      border-color: #e4bc72;
+    }
+
+    .home-sponsor-card img {
+      display: block;
+
+      max-width: 100%;
+      max-height: 100%;
+
+      width: auto;
+      height: auto;
+
+      object-fit: contain;
+    }
+
+    .home-sponsor-card__name {
+      font-size: clamp(12px,1.5vw,18px);
+      font-weight: 800;
+      line-height: 1.3;
+
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .home-sponsors__actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .home-sponsors__button,
+    .home-sponsors__link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 48px;
+      padding: 12px 23px;
+
+      border-radius: 11px;
+
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.3;
+
+      text-align: center;
+      text-decoration: none;
+
+      cursor: pointer;
+    }
+
+    .home-sponsors__button {
+      border: 0;
+
+      background:
+        linear-gradient(
+          135deg,
+          #f0d293,
+          #d5a85e
+        );
+
+      color: #17130d;
+    }
+
+    .home-sponsors__button:hover {
+      filter: brightness(1.06);
+    }
+
+    .home-sponsors__link {
+      border:
+        1px solid rgba(228,188,114,.35);
+
+      background: rgba(255,255,255,.025);
+
+      color: #f3d69b;
+    }
+
+    .home-sponsors__link:hover {
+      border-color: #e4bc72;
+    }
+
+    /* =========================================================
+       SUPPORT MODAL
+       ========================================================= */
+
+    body.home-support-open {
+      overflow: hidden;
+    }
+
+    .home-support-modal {
+      position: fixed;
+      inset: 0;
+
+      z-index: 10000;
+
+      display: none;
+      align-items: center;
+      justify-content: center;
+
+      padding: 16px;
+
+      background: rgba(2,5,10,.86);
+
+      backdrop-filter: blur(9px);
+      -webkit-backdrop-filter: blur(9px);
+    }
+
+    .home-support-modal.is-open {
+      display: flex;
+    }
+
+    .home-support-dialog {
+      position: relative;
+
+      width: min(100%,460px);
+      max-height: 90dvh;
+
+      overflow-y: auto;
+      overscroll-behavior: contain;
+
+      padding: 35px 24px 25px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #1b2532,
+          #101722 65%,
+          #0b111a
+        );
+
+      border:
+        1px solid rgba(228,188,114,.38);
+
+      border-radius: 20px;
+
+      box-shadow:
+        0 25px 80px rgba(0,0,0,.65);
+    }
+
+    .home-support-close {
+      position: absolute;
+
+      top: 12px;
+      right: 13px;
+
+      width: 35px;
+      height: 35px;
+
+      border:
+        1px solid rgba(255,255,255,.15);
+
+      border-radius: 10px;
+
+      background:
+        rgba(255,255,255,.04);
+
+      color: #cbd5e1;
+
+      font-size: 23px;
+      line-height: 1;
+
+      cursor: pointer;
+    }
+
+    .home-support-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 54px;
+      height: 54px;
+
+      margin: 0 auto 18px;
+
+      border-radius: 15px;
+
+      border:
+        1px solid rgba(228,188,114,.25);
+
+      background:
+        rgba(228,188,114,.09);
+
+      color: #e4bc72;
+
+      font-size: 28px;
+    }
+
+    .home-support-title {
+      margin: 0 0 15px;
+
+      color: #f8fafc;
+
+      font-size: clamp(23px,5vw,29px);
+      font-weight: 800;
+      line-height: 1.3;
+
+      text-align: center;
+    }
+
+    .home-support-text {
+      margin: 0 0 23px;
+
+      color: #a3acba;
+
+      font-size: 13px;
+      line-height: 1.7;
+
+      text-align: center;
+    }
+
+    .home-support-bank {
+      margin-bottom: 22px;
+      padding: 21px 17px;
+
+      background:
+        rgba(4,8,15,.6);
+
+      border:
+        1px solid rgba(228,188,114,.25);
+
+      border-radius: 15px;
+    }
+
+    .home-support-bank__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+      margin-bottom: 18px;
+
+      color: #e4bc72;
+
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+    }
+
+    .home-support-bank__label {
+      margin-bottom: 10px;
+
+      color: #a3acba;
+      font-size: 12px;
+    }
+
+    /* =========================================================
+       CARD NUMBER • BLUR WITHOUT TEXT
+       ========================================================= */
+
+    .home-support-number {
+      display: block;
+
+      width: 100%;
+      min-height: 42px;
+
+      padding: 5px 0;
+
+      border: 0;
+      background: transparent;
+
+      color: #fff;
+
+      font-family: inherit;
+      font-size: clamp(18px,4.5vw,23px);
+      font-weight: 800;
+      letter-spacing: .055em;
+      line-height: 1.4;
+
+      text-align: left;
+
+      cursor: pointer;
+    }
+
+    .home-support-number span {
+      display: block;
+
+      filter: blur(8px);
+      opacity: .75;
+
+      transition:
+        filter .25s ease,
+        opacity .25s ease;
+
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .home-support-number.is-revealed span {
+      filter: blur(0);
+      opacity: 1;
+
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .home-support-number:focus-visible {
+      outline: 2px solid #e4bc72;
+      outline-offset: 4px;
+    }
+
+    .home-support-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .home-support-action {
+      min-height: 49px;
+      padding: 12px;
+
+      border: 0;
+      border-radius: 11px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #f0d293,
+          #d5a85e
+        );
+
+      color: #17130d;
+
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+
+      cursor: pointer;
+    }
+
+    .home-support-action--close {
+      background:
+        rgba(255,255,255,.035);
+
+      border:
+        1px solid rgba(255,255,255,.17);
+
+      color: #f8fafc;
+    }
+
+    .home-support-status {
+      min-height: 19px;
+      margin: 12px 0 0;
+
+      color: #86efac;
+
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
     }
 
     /* =========================================================
        TABLET
        ========================================================= */
 
-    @media (max-width:820px){
+    @media (max-width:820px) {
 
-      .hero-main{
-        padding-top:42px;
+      .hero-main {
+        padding-top: 42px;
       }
 
-      .home-actions{
-        grid-template-columns:repeat(2,minmax(0,1fr));
+      .home-actions {
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
       }
 
-      .season-card__row{
-        align-items:flex-start;
-        flex-direction:column;
+      .season-card__row {
+        align-items: flex-start;
+        flex-direction: column;
       }
 
-      .season-card__links{
-        width:100%;
-        justify-content:flex-start;
+      .season-card__links {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .home-sponsors__grid {
+        grid-template-columns:
+          repeat(3,minmax(0,1fr));
       }
     }
 
@@ -1027,231 +1466,280 @@
        MOBILE
        ========================================================= */
 
-    @media (max-width:640px){
+    @media (max-width:640px) {
 
-      .hero-main{
-        padding:32px 0 34px;
+      .hero-main {
+        padding: 32px 0 34px;
       }
 
-      .hero-kicker-wrap{
-        display:flex;
-        align-items:center;
-        justify-content:center;
+      .hero-kicker-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
-        width:100%;
-        max-width:100%;
+        width: 100%;
+        max-width: 100%;
 
-        gap:6px;
+        gap: 6px;
 
-        margin-bottom:7px;
+        margin-bottom: 7px;
 
-        padding:0 2px;
-
-        box-sizing:border-box;
+        padding: 0 2px;
       }
 
-      .hero-fish-overlay{
-        position:static;
+      .hero-fish-overlay {
+        position: static;
 
-        width:56px;
-        height:56px;
+        width: 56px;
+        height: 56px;
 
-        flex:0 0 56px;
+        flex: 0 0 56px;
       }
 
-      .hero-kicker{
-        min-width:0;
-        min-height:32px;
+      .hero-kicker {
+        min-width: 0;
+        min-height: 32px;
 
-        padding:6px 9px;
+        padding: 6px 9px;
 
-        flex:0 1 auto;
+        flex: 0 1 auto;
       }
 
-      .hero-kicker-text{
-        font-size:.54rem;
-        line-height:1.3;
+      .hero-kicker-text {
+        font-size: .54rem;
+        line-height: 1.3;
 
-        letter-spacing:.065em;
+        letter-spacing: .065em;
 
-        white-space:nowrap;
+        white-space: nowrap;
 
-        text-align:center;
+        text-align: center;
       }
 
-      .hero-title{
-        font-size:clamp(38px,12vw,52px);
+      .hero-title {
+        font-size: clamp(38px,12vw,52px);
 
-        margin-top:8px;
-        margin-bottom:25px;
+        margin-top: 8px;
+        margin-bottom: 25px;
 
-        letter-spacing:.035em;
+        letter-spacing: .035em;
       }
 
-      .hero-title::before{
-        width:290px;
-        height:100px;
+      .hero-title::before {
+        width: 290px;
+        height: 100px;
       }
 
-      .hero-title::after{
-        width:180px;
+      .hero-title::after {
+        width: 180px;
       }
 
-      .hero-subtitle{
-        max-width:94%;
+      .hero-subtitle {
+        max-width: 94%;
 
-        font-size:.88rem;
-        line-height:1.55;
+        font-size: .88rem;
+        line-height: 1.55;
       }
 
-      .hero-tags{
-        margin-top:15px;
+      .hero-tags {
+        margin-top: 15px;
 
-        gap:6px;
+        gap: 6px;
       }
 
-      .hero-tag{
-        min-height:27px;
+      .hero-tag {
+        min-height: 27px;
 
-        padding:4px 9px;
+        padding: 4px 9px;
 
-        font-size:.66rem;
+        font-size: .66rem;
       }
 
-      .home-actions{
-        grid-template-columns:repeat(2,minmax(0,1fr));
+      .home-actions {
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
 
-        gap:9px;
+        gap: 9px;
 
-        margin-top:21px;
+        margin-top: 21px;
       }
 
-      .home-action{
-        min-height:104px;
+      .home-action {
+        min-height: 104px;
 
-        padding:14px 12px;
+        padding: 14px 12px;
 
-        border-radius:16px;
+        border-radius: 16px;
       }
 
-      .home-action__top{
-        margin-bottom:7px;
+      .home-action__top {
+        margin-bottom: 7px;
       }
 
-      .home-action__icon{
-        width:31px;
-        height:31px;
+      .home-action__icon {
+        width: 31px;
+        height: 31px;
 
-        border-radius:10px;
+        border-radius: 10px;
 
-        font-size:.96rem;
+        font-size: .96rem;
       }
 
-      .home-action__title{
-        font-size:.78rem;
+      .home-action__title {
+        font-size: .78rem;
 
-        letter-spacing:.025em;
+        letter-spacing: .025em;
       }
 
-      .home-action__text{
-        margin-top:4px;
+      .home-action__text {
+        margin-top: 4px;
 
-        font-size:.67rem;
+        font-size: .67rem;
       }
 
-      .hero-season-card{
-        margin-top:11px;
+      .hero-season-card {
+        margin-top: 11px;
 
-        padding:17px 15px;
+        padding: 17px 15px;
 
-        border-radius:17px;
+        border-radius: 17px;
       }
 
-      .season-card__row{
-        gap:15px;
+      .season-card__row {
+        gap: 15px;
       }
 
-      .season-card__eyebrow{
-        font-size:.61rem;
+      .season-card__eyebrow {
+        font-size: .61rem;
       }
 
-      .hero-season-card h2{
-        font-size:1rem;
+      .hero-season-card h2 {
+        font-size: 1rem;
       }
 
-      .hero-season-card p{
-        margin-top:6px;
+      .hero-season-card p {
+        margin-top: 6px;
 
-        font-size:.75rem;
+        font-size: .75rem;
       }
 
-      .season-card__links{
-        display:grid;
-        grid-template-columns:1fr 1fr;
+      .season-card__links {
+        display: grid;
 
-        gap:7px;
+        grid-template-columns: 1fr 1fr;
+
+        gap: 7px;
       }
 
-      .season-link{
-        min-height:38px;
+      .season-link {
+        min-height: 38px;
 
-        padding:8px 10px;
+        padding: 8px 10px;
 
-        font-size:.69rem;
+        font-size: .69rem;
       }
 
-      .info-block{
-        padding:29px 0;
+      .info-block {
+        padding: 29px 0;
       }
 
-      .info-text{
-        font-size:.91rem;
-        line-height:1.65;
+      .info-text {
+        font-size: .91rem;
+        line-height: 1.65;
       }
 
       .info-list,
-      .advantages-list{
-        font-size:.89rem;
+      .advantages-list {
+        font-size: .89rem;
       }
 
-      .section-title{
-        font-size:1.2rem;
+      .section-title {
+        font-size: 1.2rem;
       }
 
-      .mission-cards{
-        grid-template-columns:1fr;
+      .mission-cards {
+        grid-template-columns: 1fr;
 
-        gap:8px;
+        gap: 8px;
       }
 
-      .mission-card{
-        min-height:50px;
+      .mission-card {
+        min-height: 50px;
 
-        padding:11px 13px;
+        padding: 11px 13px;
 
-        font-size:.83rem;
+        font-size: .83rem;
       }
 
-      .section.highlight{
-        margin-top:12px;
-        margin-bottom:34px;
+      .section.highlight {
+        margin-top: 12px;
+        margin-bottom: 34px;
 
-        padding:26px 18px;
+        padding: 26px 18px;
 
-        border-radius:18px;
+        border-radius: 18px;
       }
 
-      .header-login{
-        margin-right:7px;
+      .header-login {
+        margin-right: 7px;
 
-        padding:6px 12px;
+        padding: 6px 12px;
       }
 
-      .header-logout{
-        width:44px;
-        height:42px;
+      .header-logout {
+        width: 44px;
+        height: 42px;
 
-        margin-right:8px;
+        margin-right: 8px;
+      }
+
+      /* SPONSORS MOBILE */
+
+      .home-sponsors {
+        width: calc(100% - 28px);
+
+        margin: 0 auto 35px;
+        padding: 25px 13px;
+      }
+
+      .home-sponsors__title {
+        margin-bottom: 20px;
+
+        font-size: 1.1rem;
+      }
+
+      .home-sponsors__grid {
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
+
+        gap: 9px;
+      }
+
+      .home-sponsor-card {
+        padding: 11px;
+        aspect-ratio: 1.55 / 1;
+      }
+
+      .home-sponsor-card__name {
+        font-size: 12px;
+      }
+
+      .home-sponsors__actions {
+        flex-direction: column;
+        margin-top: 22px;
+      }
+
+      .home-sponsors__button,
+      .home-sponsors__link {
+        width: 100%;
+      }
+
+      .home-support-dialog {
+        padding: 32px 19px 22px;
+      }
+
+      .home-support-number {
+        letter-spacing: .025em;
       }
     }
 
@@ -1259,47 +1747,47 @@
        SMALL MOBILE
        ========================================================= */
 
-    @media (max-width:390px){
+    @media (max-width:390px) {
 
-      .hero-kicker-wrap{
-        gap:4px;
+      .hero-kicker-wrap {
+        gap: 4px;
       }
 
-      .hero-fish-overlay{
-        width:48px;
-        height:48px;
+      .hero-fish-overlay {
+        width: 48px;
+        height: 48px;
 
-        flex-basis:48px;
+        flex-basis: 48px;
       }
 
-      .hero-kicker{
-        min-height:30px;
+      .hero-kicker {
+        min-height: 30px;
 
-        padding:5px 7px;
+        padding: 5px 7px;
       }
 
-      .hero-kicker-text{
-        font-size:.47rem;
+      .hero-kicker-text {
+        font-size: .47rem;
 
-        letter-spacing:.025em;
+        letter-spacing: .025em;
       }
 
-      .home-action{
-        min-height:100px;
+      .home-action {
+        min-height: 100px;
 
-        padding:13px 10px;
+        padding: 13px 10px;
       }
 
-      .home-action__title{
-        font-size:.73rem;
+      .home-action__title {
+        font-size: .73rem;
       }
 
-      .home-action__text{
-        font-size:.63rem;
+      .home-action__text {
+        font-size: .63rem;
       }
 
-      .season-card__links{
-        grid-template-columns:1fr;
+      .season-card__links {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -1307,26 +1795,26 @@
        VERY SMALL MOBILE
        ========================================================= */
 
-    @media (max-width:350px){
+    @media (max-width:350px) {
 
-      .hero-kicker-wrap{
-        gap:3px;
+      .hero-kicker-wrap {
+        gap: 3px;
       }
 
-      .hero-fish-overlay{
-        width:42px;
-        height:42px;
+      .hero-fish-overlay {
+        width: 42px;
+        height: 42px;
 
-        flex-basis:42px;
+        flex-basis: 42px;
       }
 
-      .hero-kicker{
-        padding:5px 6px;
+      .hero-kicker {
+        padding: 5px 6px;
       }
 
-      .hero-kicker-text{
-        font-size:.43rem;
-        letter-spacing:0;
+      .hero-kicker-text {
+        font-size: .43rem;
+        letter-spacing: 0;
       }
     }
 
@@ -1334,81 +1822,90 @@
        ANIMATIONS
        ========================================================= */
 
-    @keyframes heroTitleFade{
-      0%{
-        opacity:0;
-        transform:translateY(18px);
+    @keyframes heroTitleFade {
+      0% {
+        opacity: 0;
+        transform: translateY(18px);
       }
 
-      100%{
-        opacity:1;
-        transform:translateY(0);
-      }
-    }
-
-    @keyframes heroLineFade{
-      0%{
-        opacity:0;
-        width:0;
-      }
-
-      100%{
-        opacity:1;
+      100% {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
 
-    @keyframes heroGlow{
-      0%{
-        opacity:0;
-        transform:translate(-50%,-55%) scale(.92);
+    @keyframes heroLineFade {
+      0% {
+        opacity: 0;
+        width: 0;
       }
 
-      100%{
-        opacity:1;
-        transform:translate(-50%,-50%) scale(1);
+      100% {
+        opacity: 1;
       }
     }
 
-    @keyframes livePulse{
-      0%{
+    @keyframes heroGlow {
+      0% {
+        opacity: 0;
+        transform: translate(-50%,-55%) scale(.92);
+      }
+
+      100% {
+        opacity: 1;
+        transform: translate(-50%,-50%) scale(1);
+      }
+    }
+
+    @keyframes livePulse {
+      0% {
         box-shadow:
           0 0 0 0 rgba(239,68,68,.52);
       }
 
-      70%{
+      70% {
         box-shadow:
           0 0 0 7px rgba(239,68,68,0);
       }
 
-      100%{
+      100% {
         box-shadow:
           0 0 0 0 rgba(239,68,68,0);
       }
     }
 
-    @media (prefers-reduced-motion:reduce){
+    @media (prefers-reduced-motion:reduce) {
 
       .hero-title,
       .hero-title::before,
       .hero-title::after,
-      .live-dot{
-        animation:none !important;
+      .live-dot {
+        animation: none !important;
       }
 
-      .hero-title{
-        opacity:1;
-        transform:none;
+      .hero-title {
+        opacity: 1;
+        transform: none;
       }
 
       .hero-title::before,
-      .hero-title::after{
-        opacity:1;
+      .hero-title::after {
+        opacity: 1;
+      }
+
+      .home-sponsor-card,
+      .home-support-number span {
+        transition: none;
       }
     }
   </style>
 </head>
 
 <body class="home-page">
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
 
 <header class="header">
   <div class="container header__row">
@@ -1419,16 +1916,47 @@
     </a>
 
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+
+      <a href="/index.html" class="nav__link">
+        Головна
+      </a>
+
+      <a href="/rules.html" class="nav__link">
+        Регламент
+      </a>
+
+      <a href="/formats.html" class="nav__link">
+        Формат змагань
+      </a>
+
+      <a href="/register.html" class="nav__link">
+        Реєстрація
+      </a>
+
+      <a href="/live.html" class="nav__link">
+        Live
+      </a>
+
+      <a href="/rating.html" class="nav__link">
+        Рейтинг
+      </a>
+
+      <a href="/lakes.html" class="nav__link">
+        Водойми
+      </a>
+
+      <a href="/sponsors.html" class="nav__link">
+        Спонсори
+      </a>
+
+      <a href="/events/index.html" class="nav__link">
+        Архів
+      </a>
+
+      <a href="/cabinet.html" class="nav__link">
+        Мій кабінет
+      </a>
+
     </nav>
 
     <a
@@ -1457,6 +1985,8 @@
       class="burger"
       id="burger"
       aria-label="Відкрити меню"
+      aria-controls="nav"
+      aria-expanded="false"
     >
       <span></span>
       <span></span>
@@ -1484,9 +2014,11 @@
       >
 
       <div class="hero-kicker">
+
         <span class="hero-kicker-text">
           Твій рівень. Твій трофей. Твоя перемога.
         </span>
+
       </div>
 
     </div>
@@ -1648,7 +2180,8 @@
           </div>
 
           <h2>
-            🏆 STOLAR CARP · Сезон <span class="js-current-year"></span>
+            🏆 STOLAR CARP · Сезон
+            <span class="js-current-year"></span>
           </h2>
 
           <p>
@@ -1701,11 +2234,27 @@
     </p>
 
     <ul class="info-list">
-      <li>• Команди з 1–3 учасників</li>
-      <li>• Початківці та аматори, які хочуть пройти свій перший турнір</li>
-      <li>• Досвідчені рибалки та спортивні команди</li>
-      <li>• Риболовні клуби та спільноти</li>
-      <li>• Ті, хто готовий позмагатися</li>
+
+      <li>
+        • Команди з 1–3 учасників
+      </li>
+
+      <li>
+        • Початківці та аматори, які хочуть пройти свій перший турнір
+      </li>
+
+      <li>
+        • Досвідчені рибалки та спортивні команди
+      </li>
+
+      <li>
+        • Риболовні клуби та спільноти
+      </li>
+
+      <li>
+        • Ті, хто готовий позмагатися
+      </li>
+
     </ul>
 
   </section>
@@ -1872,6 +2421,181 @@
 </section>
 
 <!-- =========================================================
+     НАШІ ПАРТНЕРИ
+     ========================================================= -->
+
+<section
+  class="home-sponsors"
+  aria-labelledby="homeSponsorsTitle"
+>
+
+  <h2
+    class="home-sponsors__title"
+    id="homeSponsorsTitle"
+  >
+    НАШІ ПАРТНЕРИ
+  </h2>
+
+  <!--
+    Картки додаються автоматично.
+
+    1 спонсор = 1 картка.
+    Порожніх карток немає.
+
+    Джерело:
+    Firestore / sponsors
+  -->
+
+  <div
+    class="home-sponsors__grid"
+    id="homeSponsorsGrid"
+  ></div>
+
+  <div class="home-sponsors__actions">
+
+    <button
+      class="home-sponsors__button"
+      id="homeOpenSupport"
+      type="button"
+      aria-haspopup="dialog"
+      aria-controls="homeSupportModal"
+    >
+      ❤️ Підтримати STOLAR CARP
+    </button>
+
+    <a
+      class="home-sponsors__link"
+      href="/sponsors.html"
+    >
+      Усі партнери →
+    </a>
+
+  </div>
+
+</section>
+
+<!-- =========================================================
+     ВІКНО ПІДТРИМКИ
+     ========================================================= -->
+
+<div
+  class="home-support-modal"
+  id="homeSupportModal"
+  aria-hidden="true"
+>
+
+  <div
+    class="home-support-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="homeSupportTitle"
+    tabindex="-1"
+  >
+
+    <button
+      class="home-support-close"
+      type="button"
+      data-home-support-close
+      aria-label="Закрити"
+    >
+      ×
+    </button>
+
+    <div
+      class="home-support-icon"
+      aria-hidden="true"
+    >
+      ♡
+    </div>
+
+    <h2
+      class="home-support-title"
+      id="homeSupportTitle"
+    >
+      Підтримка STOLAR CARP
+    </h2>
+
+    <p class="home-support-text">
+      Ваша добровільна підтримка допомагає нам
+      утримувати та розвивати сайт STOLAR CARP,
+      вдосконалювати його можливості й робити
+      участь у змаганнях ще зручнішою.
+      Дякуємо кожному, хто долучається до розвитку
+      нашої платформи! ❤️
+    </p>
+
+    <div class="home-support-bank">
+
+      <div class="home-support-bank__top">
+
+        <span>
+          monobank
+        </span>
+
+        <span>
+          STOLAR CARP
+        </span>
+
+      </div>
+
+      <div class="home-support-bank__label">
+        Номер картки для переказу
+      </div>
+
+      <!--
+        Номер спочатку розмитий.
+
+        ЖОДНОГО напису поверх цифр.
+
+        Натискання відкриває номер.
+      -->
+
+      <button
+        class="home-support-number"
+        id="homeSupportNumber"
+        type="button"
+        aria-label="Показати номер картки"
+        aria-pressed="false"
+      >
+        <span>
+          4874 0700 5068 8793
+        </span>
+      </button>
+
+    </div>
+
+    <div class="home-support-actions">
+
+      <button
+        class="home-support-action"
+        id="homeCopySupport"
+        type="button"
+      >
+        📋 Скопіювати номер картки
+      </button>
+
+      <button
+        class="home-support-action home-support-action--close"
+        type="button"
+        data-home-support-close
+      >
+        Закрити
+      </button>
+
+    </div>
+
+    <p
+      class="home-support-status"
+      id="homeSupportStatus"
+      role="status"
+      aria-live="polite"
+    ></p>
+
+  </div>
+
+</div>
+
+<!-- =========================================================
      FOOTER
      ========================================================= -->
 
@@ -1886,14 +2610,17 @@
         role="button"
         tabindex="0"
       >
-        © 2025 STOLAR CARP · Львів
+        © <span id="footerYear">2026</span>
+        STOLAR CARP · Львів
       </span>
 
     </div>
 
     <div class="footer__links">
 
-      <a href="https://invite.viber.com/?g=...">
+      <a
+        href="https://invite.viber.com/?g=..."
+      >
         Viber
       </a>
 
@@ -1912,21 +2639,37 @@
 </footer>
 
 <!-- =========================================================
+     FIREBASE SDK
+     ========================================================= -->
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="assets/js/firebase-init.js?v=20260813"></script>
+
+<!-- =========================================================
      AUTOMATIC CURRENT SEASON YEAR
      ========================================================= -->
 
 <script>
-  (function(){
-    "use strict";
+(function () {
+  "use strict";
 
-    const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
 
-    document
-      .querySelectorAll(".js-current-year")
-      .forEach(function(element){
-        element.textContent = currentYear;
-      });
-  })();
+  document
+    .querySelectorAll(".js-current-year")
+    .forEach(function (element) {
+      element.textContent = currentYear;
+    });
+
+  const footerYear = document.getElementById("footerYear");
+
+  if (footerYear) {
+    footerYear.textContent = currentYear;
+  }
+})();
 </script>
 
 <!-- =========================================================
@@ -1934,26 +2677,32 @@
      ========================================================= -->
 
 <script>
-  (function(){
-    "use strict";
+(function () {
+  "use strict";
 
-    const adminEntry = document.getElementById("scAdminEntry");
+  const adminEntry = document.getElementById("scAdminEntry");
 
-    if (!adminEntry) return;
+  if (!adminEntry) return;
 
-    function openAdmin(){
-      window.location.href = "/admin.html";
-    }
+  function openAdmin() {
+    window.location.href = "/admin.html";
+  }
 
-    adminEntry.addEventListener("click", openAdmin);
+  adminEntry.addEventListener("click", openAdmin);
 
-    adminEntry.addEventListener("keydown", function(event){
-      if (event.key === "Enter" || event.key === " ") {
+  adminEntry.addEventListener(
+    "keydown",
+    function (event) {
+      if (
+        event.key === "Enter" ||
+        event.key === " "
+      ) {
         event.preventDefault();
         openAdmin();
       }
-    });
-  })();
+    }
+  );
+})();
 </script>
 
 <!-- =========================================================
@@ -1961,163 +2710,771 @@
      ========================================================= -->
 
 <script>
-  (function(){
-    "use strict";
+(function () {
+  "use strict";
 
-    const loginBtn = document.getElementById("headerLoginBtn");
-    const logoutBtn = document.getElementById("headerLogoutBtn");
+  const loginBtn = document.getElementById("headerLoginBtn");
+  const logoutBtn = document.getElementById("headerLogoutBtn");
 
-    if (!loginBtn || !logoutBtn) return;
+  if (!loginBtn || !logoutBtn) return;
 
-    function getTeamCacheKeys(){
-      return Object.keys(localStorage).filter(function(key){
+  function getTeamCacheKeys() {
+    try {
+      return Object.keys(localStorage).filter(function (key) {
         return key.startsWith("sc_team_cache_");
       });
+    } catch (_) {
+      return [];
     }
+  }
 
-    function hasTeamCache(){
-      return getTeamCacheKeys().length > 0;
-    }
+  function hasTeamCache() {
+    return getTeamCacheKeys().length > 0;
+  }
 
-    function clearTeamCache(){
-      getTeamCacheKeys().forEach(function(key){
+  function clearTeamCache() {
+    getTeamCacheKeys().forEach(function (key) {
+      try {
         localStorage.removeItem(key);
-      });
+      } catch (_) {}
+    });
+  }
+
+  function showLoggedIn() {
+    loginBtn.textContent = "🏠";
+    loginBtn.href = "/cabinet.html";
+    loginBtn.title = "Мій кабінет";
+
+    loginBtn.setAttribute(
+      "aria-label",
+      "Мій кабінет"
+    );
+
+    logoutBtn.hidden = false;
+    logoutBtn.disabled = false;
+  }
+
+  function showLoggedOut() {
+    loginBtn.textContent = "Увійти";
+    loginBtn.href = "/auth.html";
+    loginBtn.title = "Увійти";
+
+    loginBtn.setAttribute(
+      "aria-label",
+      "Увійти"
+    );
+
+    logoutBtn.hidden = true;
+    logoutBtn.disabled = false;
+  }
+
+  function getFirebaseAuth() {
+    if (window.scAuth) {
+      return window.scAuth;
     }
 
-    function showLoggedIn(){
-      loginBtn.textContent = "🏠";
-      loginBtn.href = "/cabinet.html";
-      loginBtn.title = "Мій кабінет";
-      loginBtn.setAttribute(
-        "aria-label",
-        "Мій кабінет"
-      );
-
-      logoutBtn.hidden = false;
-      logoutBtn.disabled = false;
-    }
-
-    function showLoggedOut(){
-      loginBtn.textContent = "Увійти";
-      loginBtn.href = "/auth.html";
-      loginBtn.title = "Увійти";
-      loginBtn.setAttribute(
-        "aria-label",
-        "Увійти"
-      );
-
-      logoutBtn.hidden = true;
-      logoutBtn.disabled = false;
-    }
-
-    function getFirebaseAuth(){
-
-      if (window.scAuth) {
-        return window.scAuth;
+    if (
+      window.firebase &&
+      typeof window.firebase.auth === "function"
+    ) {
+      try {
+        return window.firebase.auth();
+      } catch (error) {
+        console.warn(
+          "Firebase Auth ще не готовий:",
+          error
+        );
       }
-
-      if (
-        window.firebase &&
-        typeof window.firebase.auth === "function"
-      ) {
-        try {
-          return window.firebase.auth();
-        } catch (error) {
-          console.warn(
-            "Firebase Auth ще не готовий:",
-            error
-          );
-        }
-      }
-
-      return null;
     }
 
-    function updateHeaderFromCache(){
+    return null;
+  }
 
-      if (hasTeamCache()) {
+  function updateHeaderFromCache() {
+    if (hasTeamCache()) {
+      showLoggedIn();
+    } else {
+      showLoggedOut();
+    }
+  }
+
+  function connectFirebaseAuth() {
+    const auth = getFirebaseAuth();
+
+    if (
+      !auth ||
+      typeof auth.onAuthStateChanged !== "function"
+    ) {
+      return false;
+    }
+
+    auth.onAuthStateChanged(function (user) {
+      if (user || hasTeamCache()) {
         showLoggedIn();
       } else {
         showLoggedOut();
       }
+    });
 
-    }
+    return true;
+  }
 
-    function connectFirebaseAuth(){
+  updateHeaderFromCache();
 
-      const auth = getFirebaseAuth();
+  window.addEventListener("load", function () {
+    connectFirebaseAuth();
+  });
 
-      if (
-        !auth ||
-        typeof auth.onAuthStateChanged !== "function"
-      ) {
-        return;
-      }
+  logoutBtn.addEventListener(
+    "click",
+    async function () {
+      const confirmed = window.confirm(
+        "Вийти з акаунта?"
+      );
 
-      auth.onAuthStateChanged(function(user){
+      if (!confirmed) return;
 
-        if (user || hasTeamCache()) {
-          showLoggedIn();
-        } else {
-          showLoggedOut();
+      logoutBtn.disabled = true;
+
+      try {
+        const auth = getFirebaseAuth();
+
+        if (
+          auth &&
+          typeof auth.signOut === "function"
+        ) {
+          await auth.signOut();
         }
 
+        clearTeamCache();
+        showLoggedOut();
+
+        window.location.replace("/index.html");
+
+      } catch (error) {
+        console.error(
+          "Помилка виходу з акаунта:",
+          error
+        );
+
+        logoutBtn.disabled = false;
+
+        window.alert(
+          "Не вдалося вийти з акаунта. Спробуйте ще раз."
+        );
+      }
+    }
+  );
+})();
+</script>
+
+<!-- =========================================================
+     HOME • SPONSORS + SUPPORT
+     ========================================================= -->
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  const CARD_NUMBER = "4874070050688793";
+
+  /* =====================================================
+     DEFAULT SPONSORS
+     ===================================================== */
+
+  const DEFAULT_SPONSORS = [
+    {
+      id: "pugach",
+      name: "Pugach Baits",
+      logoUrl: "assets/sponsors/pugach.png",
+      websiteUrl: "https://puhach.com",
+      active: true,
+      sortOrder: 1
+    },
+    {
+      id: "vkk",
+      name: "Винниківський Короповий Клуб",
+      logoUrl: "assets/sponsors/vkk.png",
+      websiteUrl: "https://vkk.in.ua",
+      active: true,
+      sortOrder: 2
+    }
+  ];
+
+  const grid = $("homeSponsorsGrid");
+
+  const modal = $("homeSupportModal");
+
+  const cardNumber = $("homeSupportNumber");
+
+  const status = $("homeSupportStatus");
+
+  let previousFocus = null;
+
+  /* =====================================================
+     HELPERS
+     ===================================================== */
+
+  function safeText(value) {
+    return String(
+      value == null ? "" : value
+    ).trim();
+  }
+
+  function safeUrl(value) {
+    const raw = safeText(value);
+
+    if (!raw) return "";
+
+    try {
+      const parsed = new URL(
+        raw,
+        window.location.href
+      );
+
+      if (
+        parsed.protocol !== "https:" &&
+        parsed.protocol !== "http:"
+      ) {
+        return "";
+      }
+
+      return parsed.href;
+
+    } catch (_) {
+      return "";
+    }
+  }
+
+  /* =====================================================
+     CREATE SPONSOR CARD
+     ===================================================== */
+
+  function createSponsorCard(sponsor) {
+    const name = safeText(sponsor.name);
+
+    if (!name) return null;
+
+    const website = safeUrl(
+      sponsor.websiteUrl
+    );
+
+    const logo = safeUrl(
+      sponsor.logoUrl
+    );
+
+    const card = document.createElement(
+      website ? "a" : "div"
+    );
+
+    card.className = "home-sponsor-card";
+
+    if (website) {
+      card.href = website;
+      card.target = "_blank";
+
+      card.rel = "noopener noreferrer";
+
+      card.setAttribute(
+        "aria-label",
+        name
+      );
+    }
+
+    function showFallback() {
+      const fallback =
+        document.createElement("span");
+
+      fallback.className =
+        "home-sponsor-card__name";
+
+      fallback.textContent = name;
+
+      card.prepend(fallback);
+    }
+
+    if (logo) {
+      const image =
+        document.createElement("img");
+
+      image.src = logo;
+      image.alt = name;
+      image.loading = "lazy";
+
+      image.addEventListener(
+        "error",
+        function () {
+          image.remove();
+          showFallback();
+        },
+        { once: true }
+      );
+
+      card.appendChild(image);
+
+    } else {
+      showFallback();
+    }
+
+    return card;
+  }
+
+  /* =====================================================
+     RENDER SPONSORS
+     ===================================================== */
+
+  function renderSponsors(items) {
+    if (!grid) return;
+
+    const active = items
+      .filter(item => {
+        return (
+          item &&
+          item.active === true
+        );
+      })
+      .sort((a, b) => {
+        const aOrder = Number(a.sortOrder);
+        const bOrder = Number(b.sortOrder);
+
+        const orderA = Number.isFinite(aOrder)
+          ? aOrder
+          : 999;
+
+        const orderB = Number.isFinite(bOrder)
+          ? bOrder
+          : 999;
+
+        return orderA - orderB;
+      });
+
+    grid.replaceChildren();
+
+    active.forEach(sponsor => {
+      const card = createSponsorCard(sponsor);
+
+      if (card) {
+        grid.appendChild(card);
+      }
+    });
+
+    /*
+      Порожніх карток немає.
+
+      Кількість карток дорівнює
+      кількості активних спонсорів.
+    */
+  }
+
+  /* =====================================================
+     SPONSOR IDENTITY
+     ===================================================== */
+
+  function sponsorIdentity(sponsor) {
+    const website = safeUrl(
+      sponsor.websiteUrl
+    );
+
+    if (website) {
+      try {
+        return new URL(website)
+          .hostname
+          .replace(/^www\./, "")
+          .toLowerCase();
+      } catch (_) {}
+    }
+
+    return safeText(
+      sponsor.name
+    ).toLowerCase();
+  }
+
+  /* =====================================================
+     MERGE DEFAULT + FIRESTORE
+     ===================================================== */
+
+  function mergeSponsors(remoteSponsors) {
+    const merged = DEFAULT_SPONSORS.map(
+      item => ({ ...item })
+    );
+
+    remoteSponsors.forEach(remote => {
+      if (!remote) return;
+
+      const identity = sponsorIdentity(remote);
+
+      const index = merged.findIndex(local => {
+        return (
+          local.id === remote.id ||
+          (
+            identity &&
+            sponsorIdentity(local) === identity
+          ) ||
+          (
+            safeText(local.name).toLowerCase() ===
+            safeText(remote.name).toLowerCase()
+          )
+        );
+      });
+
+      if (index >= 0) {
+        merged[index] = {
+          ...merged[index],
+          ...remote
+        };
+      } else {
+        merged.push(remote);
+      }
+    });
+
+    return merged;
+  }
+
+  /* =====================================================
+     WAIT FOR FIREBASE
+     ===================================================== */
+
+  async function waitForFirebase() {
+    for (let i = 0; i < 120; i++) {
+      if (window.scDb) {
+        return window.scDb;
+      }
+
+      await new Promise(resolve => {
+        setTimeout(resolve, 100);
       });
     }
 
-    updateHeaderFromCache();
+    return null;
+  }
 
-    window.addEventListener("load", function(){
-      connectFirebaseAuth();
-    });
+  /* =====================================================
+     LOAD SPONSORS
+     ===================================================== */
 
-    logoutBtn.addEventListener(
-      "click",
-      async function(){
+  async function loadSponsors() {
+    renderSponsors(DEFAULT_SPONSORS);
 
-        const confirmed = window.confirm(
-          "Вийти з акаунта?"
+    const db = await waitForFirebase();
+
+    if (!db) {
+      console.warn(
+        "[Home Sponsors] Firebase недоступний."
+      );
+
+      return;
+    }
+
+    try {
+      const snapshot = await db
+        .collection("sponsors")
+        .where("active", "==", true)
+        .get();
+
+      const remoteSponsors = snapshot.docs.map(
+        doc => ({
+          id: doc.id,
+          ...doc.data()
+        })
+      );
+
+      renderSponsors(
+        mergeSponsors(remoteSponsors)
+      );
+
+    } catch (error) {
+      console.warn(
+        "[Home Sponsors] Firestore:",
+        error
+      );
+    }
+  }
+
+  /* =====================================================
+     CARD NUMBER • BLUR / REVEAL
+     ===================================================== */
+
+  function hideCardNumber() {
+    if (!cardNumber) return;
+
+    cardNumber.classList.remove(
+      "is-revealed"
+    );
+
+    cardNumber.setAttribute(
+      "aria-label",
+      "Показати номер картки"
+    );
+
+    cardNumber.setAttribute(
+      "aria-pressed",
+      "false"
+    );
+  }
+
+  function revealCardNumber() {
+    if (!cardNumber) return;
+
+    cardNumber.classList.add(
+      "is-revealed"
+    );
+
+    cardNumber.setAttribute(
+      "aria-label",
+      "Номер картки: 4874 0700 5068 8793"
+    );
+
+    cardNumber.setAttribute(
+      "aria-pressed",
+      "true"
+    );
+  }
+
+  /* =====================================================
+     OPEN MODAL
+     ===================================================== */
+
+  function openModal() {
+    if (!modal) return;
+
+    previousFocus = document.activeElement;
+
+    hideCardNumber();
+
+    if (status) {
+      status.textContent = "";
+    }
+
+    modal.classList.add(
+      "is-open"
+    );
+
+    modal.setAttribute(
+      "aria-hidden",
+      "false"
+    );
+
+    document.body.classList.add(
+      "home-support-open"
+    );
+
+    const dialog = modal.querySelector(
+      ".home-support-dialog"
+    );
+
+    dialog?.focus();
+  }
+
+  /* =====================================================
+     CLOSE MODAL
+     ===================================================== */
+
+  function closeModal() {
+    if (!modal) return;
+
+    modal.classList.remove(
+      "is-open"
+    );
+
+    modal.setAttribute(
+      "aria-hidden",
+      "true"
+    );
+
+    document.body.classList.remove(
+      "home-support-open"
+    );
+
+    if (
+      previousFocus &&
+      typeof previousFocus.focus === "function"
+    ) {
+      previousFocus.focus();
+    }
+  }
+
+  /* =====================================================
+     COPY CARD NUMBER
+     ===================================================== */
+
+  async function copyCardNumber() {
+    revealCardNumber();
+
+    if (status) {
+      status.textContent = "";
+    }
+
+    try {
+      if (
+        navigator.clipboard &&
+        window.isSecureContext
+      ) {
+        await navigator.clipboard.writeText(
+          CARD_NUMBER
         );
 
-        if (!confirmed) return;
+      } else {
+        const input = document.createElement(
+          "textarea"
+        );
 
-        logoutBtn.disabled = true;
+        input.value = CARD_NUMBER;
 
-        try {
+        input.readOnly = true;
 
-          const auth = getFirebaseAuth();
+        input.style.position = "fixed";
+        input.style.left = "-9999px";
 
-          if (
-            auth &&
-            typeof auth.signOut === "function"
-          ) {
-            await auth.signOut();
-          }
+        document.body.appendChild(input);
 
-          clearTeamCache();
-          showLoggedOut();
+        input.select();
 
-          window.location.replace("/index.html");
+        const copied =
+          document.execCommand("copy");
 
-        } catch (error) {
+        input.remove();
 
-          console.error(
-            "Помилка виходу з акаунта:",
-            error
-          );
+        if (!copied) {
+          throw new Error("Copy failed");
+        }
+      }
 
-          logoutBtn.disabled = false;
+      if (status) {
+        status.textContent =
+          "✓ Номер картки скопійовано";
+      }
 
-          window.alert(
-            "Не вдалося вийти з акаунта. Спробуйте ще раз."
-          );
+    } catch (error) {
+      console.warn(
+        "[Home Support] Copy:",
+        error
+      );
 
+      if (status) {
+        status.textContent =
+          "Не вдалося скопіювати. Номер відкрито для ручного копіювання.";
+      }
+    }
+  }
+
+  /* =====================================================
+     MODAL KEYBOARD
+     ===================================================== */
+
+  function handleModalKeyboard(event) {
+    if (
+      !modal ||
+      !modal.classList.contains("is-open")
+    ) {
+      return;
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeModal();
+      return;
+    }
+
+    if (event.key !== "Tab") return;
+
+    const focusable = Array.from(
+      modal.querySelectorAll(
+        'button:not([disabled]),' +
+        'a[href],' +
+        'input:not([disabled])'
+      )
+    ).filter(element => {
+      return (
+        element.getClientRects().length > 0 &&
+        element.tabIndex !== -1
+      );
+    });
+
+    if (!focusable.length) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusable[0];
+
+    const last = focusable[
+      focusable.length - 1
+    ];
+
+    if (
+      event.shiftKey &&
+      document.activeElement === first
+    ) {
+      event.preventDefault();
+      last.focus();
+
+    } else if (
+      !event.shiftKey &&
+      document.activeElement === last
+    ) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  /* =====================================================
+     INIT
+     ===================================================== */
+
+  function init() {
+    $("homeOpenSupport")?.addEventListener(
+      "click",
+      openModal
+    );
+
+    cardNumber?.addEventListener(
+      "click",
+      revealCardNumber
+    );
+
+    $("homeCopySupport")?.addEventListener(
+      "click",
+      copyCardNumber
+    );
+
+    document.querySelectorAll(
+      "[data-home-support-close]"
+    ).forEach(button => {
+      button.addEventListener(
+        "click",
+        closeModal
+      );
+    });
+
+    modal?.addEventListener(
+      "click",
+      function (event) {
+        if (event.target === modal) {
+          closeModal();
         }
       }
     );
 
-  })();
+    document.addEventListener(
+      "keydown",
+      handleModalKeyboard
+    );
+
+    loadSponsors();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      init
+    );
+  } else {
+    init();
+  }
+
+})();
 </script>
 
 </body>

@@ -2177,6 +2177,11 @@
               : ""
           }
           ranking-finalist
+          ${
+            row.replacementOut
+              ? "ranking-replacement-out"
+              : ""
+          }
         ">
 
           <td class="r-place">
@@ -2317,6 +2322,11 @@
             ${
               actualFinal
                 ? "ranking-contender--final"
+                : ""
+            }
+            ${
+              row.replacementIn
+                ? "ranking-replacement-in"
                 : ""
             }
           ">
@@ -3386,6 +3396,16 @@
         font-weight:950;
         letter-spacing:.08em;
         text-align:left;
+      }
+
+      .season-ranking-table tr.ranking-replacement-out td:first-child{
+        border-left:3px solid #ef4444 !important;
+        box-shadow:inset 2px 0 0 rgba(239,68,68,.18);
+      }
+
+      .season-ranking-table tr.ranking-replacement-in td:first-child{
+        border-left:3px solid #22c55e !important;
+        box-shadow:inset 2px 0 0 rgba(34,197,94,.18);
       }
 
       .archive-season-status{

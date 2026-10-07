@@ -1,5 +1,4 @@
 <!doctype html>
-
 <html lang="uk">
 <head>
   <meta charset="utf-8">
@@ -140,6 +139,37 @@
       justify-content: center;
       padding: 12px 14px;
       border-radius: 14px;
+    }
+
+    /* ============================================
+       НОВА КНОПКА СПОНСОРІВ
+       ============================================ */
+    .btn-sponsors {
+      background: linear-gradient(
+        135deg,
+        #f6c34c 0%,
+        #d6a23a 55%,
+        #b7791f 100%
+      );
+
+      color: #111827;
+      border: 1px solid rgba(246, 195, 76, .7);
+
+      font-weight: 900;
+      letter-spacing: .02em;
+
+      box-shadow: 0 6px 22px rgba(246, 195, 76, .16);
+
+      transition:
+        transform .2s ease,
+        box-shadow .2s ease,
+        filter .2s ease;
+    }
+
+    .btn-sponsors:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.08);
+      box-shadow: 0 10px 28px rgba(246, 195, 76, .28);
     }
 
     /* ============================================
@@ -321,6 +351,32 @@
     .note b {
       color: #e5e7eb;
     }
+
+    /* ============================================
+       МОБІЛЬНА ВЕРСІЯ
+       ============================================ */
+    @media (max-width: 640px) {
+      .admin-wrap {
+        padding-top: 16px;
+      }
+
+      .header-logout {
+        padding: 6px 10px;
+        margin-right: 0;
+      }
+
+      .stack .btn {
+        min-height: 48px;
+        text-align: center;
+        white-space: normal;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .btn-sponsors {
+        transition: none;
+      }
+    }
   </style>
 </head>
 
@@ -383,7 +439,9 @@
 
       </div>
 
-      <!-- Форма входу -->
+      <!-- ============================================
+           ФОРМА ВХОДУ
+           ============================================ -->
       <div id="adminLogin" class="admin-card hidden">
         <div class="login-card">
 
@@ -446,11 +504,15 @@
         </div>
       </div>
 
-      <!-- Головне меню після входу -->
+      <!-- ============================================
+           ГОЛОВНЕ МЕНЮ АДМІНІСТРАТОРА
+           ============================================ -->
       <div id="adminApp" class="hidden">
         <div class="admin-card">
+
           <div class="stack">
 
+            <!-- 1 -->
             <a
               class="btn btn--primary"
               href="admin-create.html?type=season"
@@ -458,6 +520,7 @@
               1) Створити сезон STOLAR CARP
             </a>
 
+            <!-- 2 -->
             <a
               class="btn btn--accent"
               href="admin-create.html?type=oneoff"
@@ -465,6 +528,7 @@
               2) Створити одиночне змагання
             </a>
 
+            <!-- 3 -->
             <a
               class="btn btn--primary"
               href="admin-registrations.html"
@@ -472,6 +536,7 @@
               3) Реєстрація команд
             </a>
 
+            <!-- 4 -->
             <a
               class="btn btn--accent"
               href="admin-draw.html"
@@ -479,6 +544,7 @@
               4) Жеребкування
             </a>
 
+            <!-- 5 -->
             <a
               class="btn btn--danger"
               href="admin-weigh.html"
@@ -486,6 +552,7 @@
               5) Зважування (адмін)
             </a>
 
+            <!-- 6 -->
             <a
               class="btn btn--primary"
               href="admin-accounts.html"
@@ -493,14 +560,26 @@
               6) Акаунт STOLAR CARP
             </a>
 
+            <!-- 7 -->
             <a
               class="btn btn--accent"
               href="judge_qr_admin.html"
             >
-              📱 QR-доступ для суддів
+              📱 7) QR-доступ для суддів
+            </a>
+
+            <!-- ====================================
+                 8) СПОНСОРИ ТА ЗАЯВКИ
+                 ==================================== -->
+            <a
+              class="btn btn-sponsors"
+              href="admin-sponsors.html"
+            >
+              🤝 8) Спонсори та заявки
             </a>
 
           </div>
+
         </div>
       </div>
 

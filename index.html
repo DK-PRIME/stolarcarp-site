@@ -44,7 +44,7 @@
     /* =========================================================
        HERO SLOGAN + FISH
        Рибка є окремим елементом.
-       Вона НЕ входить у плашку слогана і НЕ накладається на неї.
+       Вона НЕ входить у плашку слогана.
        ========================================================= */
 
     .hero-kicker-wrap{
@@ -1033,10 +1033,6 @@
         padding:32px 0 34px;
       }
 
-      /*
-       * Рибка залишається ОКРЕМО від слогана.
-       * flex-basis резервує їй власне місце.
-       */
       .hero-kicker-wrap{
         display:flex;
         align-items:center;
@@ -1478,10 +1474,6 @@
 
   <section class="section container hero-main">
 
-    <!--
-      Рибка та слоган — два ОКРЕМІ flex-елементи.
-      Рибка не входить у межі .hero-kicker.
-    -->
     <div class="hero-kicker-wrap">
 
       <img
@@ -1512,7 +1504,7 @@
     <div class="hero-tags">
 
       <span class="hero-tag">
-        Сезон 2026 · 3 етапи та Фінал
+        Сезон <span class="js-current-year"></span> · 3 етапи та Фінал
       </span>
 
       <span class="hero-tag">
@@ -1656,7 +1648,7 @@
           </div>
 
           <h2>
-            🏆 STOLAR CARP · Сезон 2026
+            🏆 STOLAR CARP · Сезон <span class="js-current-year"></span>
           </h2>
 
           <p>
@@ -1918,6 +1910,24 @@
   </div>
 
 </footer>
+
+<!-- =========================================================
+     AUTOMATIC CURRENT SEASON YEAR
+     ========================================================= -->
+
+<script>
+  (function(){
+    "use strict";
+
+    const currentYear = new Date().getFullYear();
+
+    document
+      .querySelectorAll(".js-current-year")
+      .forEach(function(element){
+        element.textContent = currentYear;
+      });
+  })();
+</script>
 
 <!-- =========================================================
      ADMIN ENTRY

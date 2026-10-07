@@ -594,7 +594,8 @@
     }
 
     /* =========================================================
-       MONOBANK • VISIBLE CARD NUMBER
+       MONOBANK • BLURRED CARD NUMBER
+       Без написів поверх номера
        ========================================================= */
 
     .sp-bank {
@@ -638,6 +639,10 @@
       width: 100%;
       padding: 9px 0;
 
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+
       color: #fff;
 
       font-size: clamp(18px, 4.5vw, 24px);
@@ -649,8 +654,34 @@
 
       overflow-wrap: anywhere;
 
-      user-select: all;
-      -webkit-user-select: all;
+      cursor: pointer;
+    }
+
+    .sp-bank__digits {
+      display: block;
+
+      filter: blur(7px);
+      opacity: .8;
+
+      user-select: none;
+      -webkit-user-select: none;
+
+      transition:
+        filter .3s ease,
+        opacity .3s ease;
+    }
+
+    .sp-bank__number.is-revealed .sp-bank__digits {
+      filter: blur(0);
+      opacity: 1;
+
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .sp-bank__number:focus-visible {
+      outline: 2px solid var(--sp-gold);
+      outline-offset: 4px;
     }
 
     .sp-modal__actions {
@@ -1178,7 +1209,7 @@
       </p>
 
       <!-- ===================================================
-           MONOBANK CARD • ALWAYS VISIBLE
+           MONOBANK CARD
            =================================================== -->
 
       <div class="sp-bank">
@@ -1195,12 +1226,27 @@
           Номер картки для переказу
         </div>
 
-        <span
+        <!--
+          Номер розмитий при відкритті.
+          Жодних написів поверх цифр.
+          Натискання відкриває номер.
+        -->
+
+        <button
           class="sp-bank__number"
           id="spCardNumber"
+          type="button"
+          aria-label="Показати номер картки"
+          aria-pressed="false"
         >
-          4874 0700 5068 8793
-        </span>
+          <span
+            class="sp-bank__digits"
+            id="spCardDigits"
+            aria-hidden="true"
+          >
+            4874 0700 5068 8793
+          </span>
+        </button>
 
       </div>
 
@@ -1750,6 +1796,58 @@
     }
 
     /* =====================================================
+       MONOBANK • BLUR / REVEAL
+       ===================================================== */
+
+    function revealCardNumber() {
+      const card = $("spCardNumber");
+      const digits = $("spCardDigits");
+
+      if (!card || !digits) return;
+
+      card.classList.add("is-revealed");
+
+      card.setAttribute(
+        "aria-label",
+        "Номер картки: 4874 0700 5068 8793"
+      );
+
+      card.setAttribute(
+        "aria-pressed",
+        "true"
+      );
+
+      digits.setAttribute(
+        "aria-hidden",
+        "false"
+      );
+    }
+
+    function hideCardNumber() {
+      const card = $("spCardNumber");
+      const digits = $("spCardDigits");
+
+      if (!card || !digits) return;
+
+      card.classList.remove("is-revealed");
+
+      card.setAttribute(
+        "aria-label",
+        "Показати номер картки"
+      );
+
+      card.setAttribute(
+        "aria-pressed",
+        "false"
+      );
+
+      digits.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+    }
+
+    /* =====================================================
        MONOBANK • COPY CARD
        ===================================================== */
 
@@ -1759,6 +1857,9 @@
       if (status) {
         status.textContent = "";
       }
+
+      // Показуємо номер після натискання копіювання.
+      revealCardNumber();
 
       try {
         if (
@@ -1812,7 +1913,7 @@
 
         if (status) {
           status.textContent =
-            "Не вдалося скопіювати. Виділіть номер картки вручну.";
+            "Не вдалося скопіювати. Номер відкрито для ручного копіювання.";
         }
       }
     }
@@ -2312,8 +2413,20 @@
             status.textContent = "";
           }
 
+          // При кожному відкритті номер знову розмитий.
+          hideCardNumber();
+
           openModal(supportModal);
         }
+      );
+
+      /* ===================================================
+         REVEAL CARD
+         =================================================== */
+
+      $("spCardNumber")?.addEventListener(
+        "click",
+        revealCardNumber
       );
 
       /* ===================================================

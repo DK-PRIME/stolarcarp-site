@@ -17,16 +17,15 @@
 
   <style>
     /* =========================================================
-       STOLAR CARP • CABINET 2026
+       STOLAR CARP • COMPACT CABINET
        ========================================================= */
 
     body.cabinet-page {
       background:
         radial-gradient(
           circle at 50% -10%,
-          rgba(30,41,59,.95) 0,
-          rgba(15,23,42,.72) 28%,
-          #020617 62%
+          rgba(30,41,59,.75),
+          #020617 60%
         );
 
       color:#e5e7eb;
@@ -41,100 +40,20 @@
     .cabinet-shell {
       max-width:1080px;
       margin:0 auto;
-      padding-bottom:65px;
+      padding-top:15px;
+      padding-bottom:45px;
     }
 
     /* =========================================================
-       HERO
+       STATUS
        ========================================================= */
 
-    .cabinet-hero {
-      position:relative;
-      padding:39px 0 28px;
-      text-align:center;
-    }
-
-    .cabinet-kicker {
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:9px;
-
-      padding:7px 15px;
-      margin-bottom:15px;
-
-      border-radius:999px;
-
-      background:rgba(15,23,42,.85);
-      border:1px solid rgba(148,163,184,.28);
-
-      color:#cbd5e1;
-
-      font-size:.7rem;
-      font-weight:800;
-      letter-spacing:.15em;
-      text-transform:uppercase;
-    }
-
-    .cabinet-kicker-dot {
-      width:8px;
-      height:8px;
-
-      flex:0 0 auto;
-
-      border-radius:50%;
-
-      background:#facc15;
-
-      box-shadow:
-        0 0 12px rgba(250,204,21,.5);
-    }
-
-    .cabinet-title {
-      margin:0;
-
-      font-size:clamp(31px,5vw,46px);
-      font-weight:900;
-      line-height:1.15;
-
-      letter-spacing:.045em;
-      text-transform:uppercase;
-    }
-
-    .cabinet-title span {
-      background:
-        linear-gradient(
-          90deg,
-          #ffe16b 0%,
-          #ffd000 25%,
-          #ff9d21 60%,
-          #e11d48 100%
-        );
-
-      -webkit-background-clip:text;
-      background-clip:text;
-      color:transparent;
-    }
-
-    .cabinet-hero-description {
-      max-width:620px;
-
-      margin:12px auto 0;
-
-      color:#94a3b8;
-
-      font-size:.92rem;
-      line-height:1.6;
-    }
-
     #cabinetStatus {
-      min-height:20px;
-
-      margin:10px auto 0;
+      margin:0 0 10px;
 
       color:#facc15;
 
-      font-size:.8rem;
+      font-size:.78rem;
       line-height:1.5;
     }
 
@@ -147,7 +66,7 @@
        ========================================================= */
 
     .cabinet-layout {
-      margin-top:8px;
+      margin:0;
     }
 
     .cabinet-grid {
@@ -157,17 +76,35 @@
         minmax(0,1.05fr)
         minmax(0,.95fr);
 
-      gap:16px;
+      grid-template-areas:
+        "profile participation"
+        "team participation"
+        "team achievements"
+        "team navigation";
+
+      gap:13px;
 
       align-items:start;
     }
 
-    .cabinet-column {
-      display:flex;
-      flex-direction:column;
-      gap:16px;
+    .cabinet-card--profile {
+      grid-area:profile;
+    }
 
-      min-width:0;
+    .cabinet-card--participation {
+      grid-area:participation;
+    }
+
+    .cabinet-card--team {
+      grid-area:team;
+    }
+
+    .cabinet-card--achievements {
+      grid-area:achievements;
+    }
+
+    .cabinet-card--navigation {
+      grid-area:navigation;
     }
 
     /* =========================================================
@@ -179,109 +116,72 @@
 
       min-width:0;
 
-      overflow:hidden;
+      padding:17px;
 
-      padding:23px;
+      border-radius:17px;
 
-      border-radius:21px;
-
-      border:1px solid rgba(148,163,184,.22);
+      border:1px solid rgba(148,163,184,.19);
 
       background:
         linear-gradient(
           145deg,
           rgba(15,23,42,.95),
-          rgba(2,6,23,.96)
+          rgba(2,6,23,.97)
         );
 
       box-shadow:
-        0 15px 38px rgba(0,0,0,.28),
-        inset 0 1px 0 rgba(255,255,255,.035);
-    }
-
-    .cabinet-card::before {
-      content:"";
-
-      position:absolute;
-
-      top:0;
-      left:22px;
-      right:22px;
-
-      height:1px;
-
-      background:
-        linear-gradient(
-          90deg,
-          transparent,
-          rgba(250,204,21,.55),
-          rgba(249,115,22,.32),
-          transparent
-        );
-
-      pointer-events:none;
+        0 10px 25px rgba(0,0,0,.2);
     }
 
     .cabinet-card--profile {
+      border-color:rgba(250,204,21,.3);
+
       background:
         radial-gradient(
-          circle at 0 0,
-          rgba(250,204,21,.09),
-          transparent 43%
+          circle at top left,
+          rgba(250,204,21,.07),
+          transparent 55%
         ),
         linear-gradient(
           145deg,
-          rgba(15,23,42,.96),
-          rgba(2,6,23,.96)
+          #101827,
+          #020617
         );
     }
 
     .cabinet-card--participation {
-      border-color:rgba(250,204,21,.27);
-    }
-
-    .cabinet-card--achievements {
-      background:
-        radial-gradient(
-          circle at 100% 0,
-          rgba(250,204,21,.08),
-          transparent 48%
-        ),
-        linear-gradient(
-          145deg,
-          rgba(15,23,42,.95),
-          rgba(2,6,23,.96)
-        );
+      border-color:rgba(250,204,21,.22);
     }
 
     /* =========================================================
-       SECTION HEADERS
+       HEADINGS
        ========================================================= */
 
     .cabinet-card-head {
       display:flex;
-      align-items:flex-start;
-      gap:12px;
+      align-items:center;
 
-      margin-bottom:19px;
+      gap:9px;
+
+      margin-bottom:13px;
     }
 
     .cabinet-card-icon {
-      width:43px;
-      height:43px;
+      width:32px;
+      height:32px;
 
-      flex:0 0 43px;
+      flex:0 0 32px;
 
       display:flex;
       align-items:center;
       justify-content:center;
 
-      border-radius:13px;
+      border-radius:10px;
 
       background:rgba(250,204,21,.09);
       border:1px solid rgba(250,204,21,.17);
 
-      font-size:1.15rem;
+      font-size:.98rem;
     }
 
     .cabinet-card-heading {
@@ -290,33 +190,30 @@
     }
 
     .card-title {
-      margin:1px 0 5px;
+      margin:0;
 
       color:#f8fafc;
 
-      font-size:1.04rem;
+      font-size:.9rem;
       font-weight:850;
-      line-height:1.3;
 
       letter-spacing:.025em;
       text-transform:uppercase;
     }
 
     .card-subtitle {
-      margin:0;
+      margin:3px 0 0;
 
       color:#94a3b8;
 
-      font-size:.79rem;
-      line-height:1.5;
+      font-size:.72rem;
+      line-height:1.4;
     }
 
     .cabinet-small-muted {
-      margin-top:5px;
-
       color:#94a3b8;
 
-      font-size:.82rem;
+      font-size:.8rem;
       line-height:1.5;
     }
 
@@ -327,20 +224,17 @@
     .profile-identity {
       display:flex;
       align-items:center;
-      gap:17px;
+
+      gap:13px;
 
       min-width:0;
-
-      padding:3px 0 17px;
     }
 
     .team-avatar-wrap {
-      position:relative;
+      width:72px;
+      height:72px;
 
-      width:94px;
-      height:94px;
-
-      flex:0 0 94px;
+      flex:0 0 72px;
 
       display:flex;
       align-items:center;
@@ -352,32 +246,19 @@
 
       background:#0f172a;
 
-      border:3px solid #facc15;
+      border:2px solid #facc15;
 
       box-shadow:
-        0 0 0 5px rgba(250,204,21,.06),
-        0 9px 25px rgba(0,0,0,.3);
+        0 0 0 3px rgba(250,204,21,.06);
 
       cursor:pointer;
-
-      transition:
-        transform .2s ease,
-        box-shadow .2s ease;
-    }
-
-    .team-avatar-wrap:hover {
-      transform:scale(1.04);
-
-      box-shadow:
-        0 0 0 5px rgba(250,204,21,.1),
-        0 0 20px rgba(250,204,21,.2);
     }
 
     .team-avatar {
+      display:none;
+
       width:100%;
       height:100%;
-
-      display:none;
 
       object-fit:cover;
     }
@@ -385,151 +266,95 @@
     .team-avatar-placeholder {
       color:#facc15;
 
-      font-size:1.5rem;
+      font-size:1.3rem;
       font-weight:900;
-
-      letter-spacing:.04em;
     }
 
     .profile-identity-info {
-      min-width:0;
       flex:1;
-    }
-
-    .profile-eyebrow {
-      margin-bottom:5px;
-
-      color:#facc15;
-
-      font-size:.65rem;
-      font-weight:800;
-      letter-spacing:.13em;
-      text-transform:uppercase;
+      min-width:0;
     }
 
     .user-fullname {
       color:#f8fafc;
 
-      font-size:1.16rem;
+      font-size:1.12rem;
       font-weight:850;
-      line-height:1.35;
+
+      line-height:1.3;
 
       overflow-wrap:anywhere;
     }
 
     .user-city {
-      margin-top:6px;
+      margin-top:4px;
 
       color:#94a3b8;
 
-      font-size:.83rem;
-      line-height:1.4;
+      font-size:.79rem;
     }
 
-    /* =========================================================
-       PROFILE DETAILS
-       ========================================================= */
+    .profile-phone {
+      margin-top:7px;
 
-    .profile-details {
-      display:grid;
-      grid-template-columns:1fr;
-
-      gap:9px;
-
-      padding:15px 0;
-
-      border-top:1px solid rgba(148,163,184,.13);
-      border-bottom:1px solid rgba(148,163,184,.13);
-    }
-
-    .profile-detail {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-
-      gap:12px;
-
-      padding:10px 13px;
-
-      border-radius:12px;
-
-      background:rgba(15,23,42,.6);
-      border:1px solid rgba(148,163,184,.13);
-    }
-
-    .profile-detail-label {
-      color:#94a3b8;
+      color:#cbd5e1;
 
       font-size:.78rem;
-    }
-
-    .profile-detail-value {
-      min-width:0;
-
-      color:#e2e8f0;
-
-      font-size:.83rem;
-      font-weight:700;
-
-      text-align:right;
 
       overflow-wrap:anywhere;
     }
 
+    .profile-phone span {
+      color:#f8fafc;
+      font-weight:700;
+    }
+
     /* =========================================================
-       BUTTONS
+       PROFILE BUTTONS
        ========================================================= */
 
     .profile-actions {
       display:flex;
-      flex-wrap:wrap;
-      gap:9px;
+      gap:8px;
 
-      margin-top:16px;
+      margin-top:13px;
     }
 
-    .profile-btn {
-      min-height:41px;
+    .profile-btn,
+    .avatar-small-btn {
+      min-height:38px;
 
       display:inline-flex;
       align-items:center;
       justify-content:center;
 
-      padding:10px 17px;
+      gap:5px;
 
-      border-radius:999px;
+      padding:9px 11px;
 
-      border:1px solid rgba(148,163,184,.3);
+      border-radius:11px;
+
+      border:1px solid rgba(148,163,184,.28);
 
       background:rgba(30,41,59,.65);
 
       color:#e2e8f0;
 
       font-family:inherit;
-      font-size:.81rem;
+      font-size:.75rem;
       font-weight:750;
 
-      text-decoration:none;
+      text-align:center;
 
       cursor:pointer;
-
-      transition:
-        transform .18s ease,
-        border-color .18s ease,
-        background .18s ease;
     }
 
-    .profile-btn:hover {
-      transform:translateY(-1px);
-
-      border-color:rgba(250,204,21,.55);
-
-      background:rgba(51,65,85,.65);
+    .profile-btn:hover,
+    .avatar-small-btn:hover {
+      border-color:#facc15;
     }
 
     .profile-btn--primary {
-      color:#111827;
-
       border-color:transparent;
 
       background:
@@ -538,21 +363,19 @@
           #facc15,
           #f97316
         );
-    }
 
-    .profile-btn--primary:hover {
-      background:
-        linear-gradient(
-          135deg,
-          #fde047,
-          #fb923c
-        );
+      color:#111827;
     }
 
     .profile-btn:disabled {
       opacity:.55;
       cursor:not-allowed;
-      transform:none;
+    }
+
+    #editProfileBtn,
+    #openCloudinaryWidget {
+      flex:1;
+      min-width:0;
     }
 
     /* =========================================================
@@ -562,30 +385,32 @@
     .profile-editbox {
       display:none;
 
-      margin-top:17px;
-      padding:17px;
+      margin-top:13px;
+      padding:13px;
 
-      border-radius:16px;
+      border-radius:13px;
 
-      border:1px solid rgba(148,163,184,.22);
+      border:1px solid rgba(148,163,184,.2);
 
-      background:rgba(2,6,23,.65);
+      background:rgba(2,6,23,.7);
     }
 
     .profile-edit-title {
-      margin:0 0 14px;
+      margin:0 0 12px;
 
       color:#facc15;
 
-      font-size:.84rem;
+      font-size:.83rem;
       font-weight:800;
     }
 
     .profile-grid {
       display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
 
-      gap:13px;
+      grid-template-columns:
+        repeat(2,minmax(0,1fr));
+
+      gap:10px;
     }
 
     .profile-field {
@@ -595,30 +420,29 @@
     .profile-label {
       display:block;
 
-      margin-bottom:7px;
+      margin-bottom:5px;
 
       color:#cbd5e1;
 
-      font-size:.77rem;
-      font-weight:650;
+      font-size:.76rem;
     }
 
     .profile-input {
       width:100%;
-      min-height:43px;
+      min-height:41px;
 
-      padding:11px 12px;
+      padding:10px;
 
-      border-radius:12px;
+      border-radius:10px;
 
-      border:1px solid rgba(148,163,184,.28);
+      border:1px solid #374151;
 
       background:#0b1220;
 
       color:#f8fafc;
 
       font-family:inherit;
-      font-size:.87rem;
+      font-size:.85rem;
 
       outline:none;
     }
@@ -627,17 +451,13 @@
       border-color:#facc15;
 
       box-shadow:
-        0 0 0 3px rgba(250,204,21,.12);
+        0 0 0 3px rgba(250,204,21,.1);
     }
 
     #profileEditMsg {
-      min-height:18px;
+      margin-top:10px;
 
-      margin-top:12px;
-
-      color:#94a3b8;
-
-      font-size:.8rem;
+      font-size:.78rem;
       line-height:1.5;
     }
 
@@ -652,68 +472,23 @@
     }
 
     /* =========================================================
-       AVATAR EDIT
+       AVATAR
        ========================================================= */
 
     .avatar-section {
-      margin-top:17px;
-      padding-top:16px;
-
-      border-top:1px solid rgba(148,163,184,.13);
-    }
-
-    .avatar-section-head {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .avatar-label {
-      color:#cbd5e1;
-
-      font-size:.79rem;
-      font-weight:750;
-    }
-
-    .avatar-small-btn {
-      min-height:38px;
-
-      padding:8px 14px;
-
-      border-radius:999px;
-
-      border:1px solid rgba(148,163,184,.3);
-
-      background:rgba(30,41,59,.65);
-
-      color:#e2e8f0;
-
-      font-family:inherit;
-      font-size:.78rem;
-      font-weight:700;
-
-      cursor:pointer;
-    }
-
-    .avatar-small-btn:hover {
-      border-color:#facc15;
-      color:#facc15;
+      margin:0;
+      padding:0;
     }
 
     #avatarMsg {
-      min-height:16px;
+      margin-top:7px;
 
-      margin-top:8px;
-
-      font-size:.78rem;
+      font-size:.76rem;
     }
 
-    #cabinetMsg {
-      margin-top:8px;
-      font-size:.8rem;
+    #avatarMsg:empty,
+    #cabinetMsg:empty {
+      display:none;
     }
 
     /* =========================================================
@@ -721,38 +496,22 @@
        ========================================================= */
 
     .team-summary {
-      padding:15px;
+      padding:12px;
 
-      border-radius:15px;
+      border-radius:12px;
 
-      border:1px solid rgba(250,204,21,.2);
+      border:1px solid rgba(250,204,21,.16);
 
-      background:
-        linear-gradient(
-          135deg,
-          rgba(250,204,21,.075),
-          rgba(15,23,42,.4)
-        );
-    }
-
-    .team-summary-label {
-      margin-bottom:7px;
-
-      color:#94a3b8;
-
-      font-size:.69rem;
-      font-weight:750;
-      letter-spacing:.11em;
-      text-transform:uppercase;
+      background:rgba(250,204,21,.04);
     }
 
     .team-name {
       color:#f8fafc;
 
-      font-size:1.16rem;
+      font-size:1.02rem;
       font-weight:850;
 
-      line-height:1.4;
+      line-height:1.35;
 
       text-transform:uppercase;
 
@@ -763,9 +522,9 @@
       display:flex;
       flex-wrap:wrap;
 
-      gap:8px;
+      gap:7px;
 
-      margin-top:14px;
+      margin-top:10px;
     }
 
     .meta-pill {
@@ -777,24 +536,23 @@
 
       max-width:100%;
 
-      padding:7px 11px;
+      padding:6px 9px;
 
-      border-radius:999px;
+      border-radius:9px;
 
-      border:1px solid rgba(148,163,184,.22);
+      border:1px solid rgba(148,163,184,.2);
 
-      background:rgba(2,6,23,.55);
+      background:rgba(2,6,23,.5);
 
       color:#cbd5e1;
 
-      font-size:.75rem;
+      font-size:.73rem;
 
       overflow-wrap:anywhere;
     }
 
     .meta-pill strong {
       color:#facc15;
-      font-weight:750;
     }
 
     #joinCodePill {
@@ -802,109 +560,84 @@
     }
 
     /* =========================================================
-       MEMBERS
+       TEAM MEMBERS
        ========================================================= */
 
-    .members-list {
-      margin-top:20px;
-      padding-top:18px;
+    .members-details {
+      margin-top:11px;
 
       border-top:1px solid rgba(148,163,184,.13);
     }
 
-    .members-title {
-      margin-bottom:11px;
+    .members-details summary {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+
+      gap:10px;
+
+      padding:12px 0 2px;
 
       color:#cbd5e1;
 
       font-size:.78rem;
       font-weight:800;
 
-      letter-spacing:.09em;
-      text-transform:uppercase;
+      cursor:pointer;
+
+      list-style:none;
+    }
+
+    .members-details summary::-webkit-details-marker {
+      display:none;
+    }
+
+    .members-details summary::after {
+      content:"⌄";
+
+      color:#facc15;
+
+      font-size:1.1rem;
+
+      transition:transform .2s;
+    }
+
+    .members-details[open] summary::after {
+      transform:rotate(180deg);
     }
 
     #membersContainer {
+      padding-top:6px;
       min-width:0;
     }
 
-    /*
-      cabinet.js сам створює картки учасників
-      з класом .card.
-      Оформлюємо їх, не змінюючи JS.
-    */
-
     #membersContainer > .card {
-      margin-top:9px !important;
+      margin-top:7px !important;
 
-      border-radius:14px !important;
+      padding:9px !important;
 
-      border:1px solid rgba(148,163,184,.18) !important;
+      border-radius:11px !important;
 
-      background:rgba(15,23,42,.62) !important;
+      border:1px solid rgba(148,163,184,.15) !important;
+
+      background:rgba(15,23,42,.6) !important;
 
       box-shadow:none !important;
     }
 
     #membersContainer .form__hint {
       color:#94a3b8;
-
-      font-size:.76rem;
-      line-height:1.5;
+      font-size:.75rem;
     }
 
     /* =========================================================
-       MY PARTICIPATION
+       PARTICIPATION
        ========================================================= */
-
-    .participation-intro {
-      display:flex;
-      flex-wrap:wrap;
-
-      gap:7px;
-
-      margin-bottom:16px;
-    }
-
-    .participation-tag {
-      display:inline-flex;
-      align-items:center;
-
-      padding:6px 10px;
-
-      border-radius:999px;
-
-      background:rgba(15,23,42,.7);
-
-      border:1px solid rgba(148,163,184,.2);
-
-      color:#cbd5e1;
-
-      font-size:.72rem;
-      font-weight:700;
-    }
-
-    .participation-tag--team {
-      border-color:rgba(250,204,21,.25);
-      color:#fde68a;
-    }
-
-    .participation-tag--solo {
-      border-color:rgba(56,189,248,.25);
-      color:#bae6fd;
-    }
 
     #myCompetitions {
       min-width:0;
-
       overflow-wrap:anywhere;
     }
-
-    /*
-      Усі результати, заявки та кнопки
-      всередині #myCompetitions
-      створює тільки my_participation.js.
-    */
 
     #myCompetitions .card {
       max-width:100%;
@@ -920,57 +653,42 @@
       grid-template-columns:
         repeat(2,minmax(0,1fr));
 
-      gap:11px;
-
-      margin-top:13px;
+      gap:9px;
     }
 
     .stat-card {
-      position:relative;
-
       min-width:0;
 
-      padding:18px 14px;
+      padding:12px;
 
-      border-radius:16px;
+      border-radius:12px;
 
-      border:1px solid rgba(148,163,184,.19);
+      border:1px solid rgba(148,163,184,.17);
 
-      background:
-        radial-gradient(
-          circle at 100% 0,
-          rgba(250,204,21,.08),
-          transparent 65%
-        ),
-        rgba(15,23,42,.72);
+      background:rgba(15,23,42,.7);
     }
 
     .stat-label {
-      margin-bottom:10px;
+      margin-bottom:7px;
 
       color:#94a3b8;
 
-      font-size:.77rem;
-      line-height:1.4;
+      font-size:.74rem;
     }
 
     .stat-value {
       color:#f8fafc;
 
-      font-size:1.36rem;
+      font-size:1.2rem;
       font-weight:850;
-      line-height:1.2;
 
       overflow-wrap:anywhere;
     }
 
     .stat-unit {
-      margin-left:3px;
-
       color:#facc15;
 
-      font-size:.75rem;
-      font-weight:700;
+      font-size:.72rem;
     }
 
     /* =========================================================
@@ -983,46 +701,40 @@
       grid-template-columns:
         repeat(2,minmax(0,1fr));
 
-      gap:10px;
+      gap:8px;
     }
 
     .cabinet-quick-link {
-      min-height:76px;
+      min-height:48px;
 
       display:flex;
       align-items:center;
       justify-content:space-between;
 
-      gap:10px;
+      gap:8px;
 
-      padding:15px;
+      padding:10px;
 
-      border-radius:15px;
+      border-radius:11px;
 
-      border:1px solid rgba(148,163,184,.21);
+      border:1px solid rgba(148,163,184,.18);
 
-      background:rgba(15,23,42,.7);
+      background:rgba(15,23,42,.65);
 
       color:#e2e8f0;
 
       text-decoration:none;
 
-      font-size:.81rem;
+      font-size:.75rem;
       font-weight:750;
-
-      transition:
-        transform .18s ease,
-        border-color .18s ease;
     }
 
     .cabinet-quick-link:hover {
-      transform:translateY(-2px);
-      border-color:rgba(250,204,21,.55);
+      border-color:#facc15;
     }
 
     .cabinet-quick-link-arrow {
       color:#facc15;
-      font-size:1.05rem;
     }
 
     /* =========================================================
@@ -1044,7 +756,7 @@
 
       background:rgba(0,0,0,.88);
 
-      backdrop-filter:blur(6px);
+      backdrop-filter:blur(5px);
 
       cursor:zoom-out;
     }
@@ -1053,172 +765,111 @@
       max-width:95%;
       max-height:90vh;
 
-      border-radius:18px;
+      border-radius:15px;
 
       object-fit:contain;
-
-      box-shadow:
-        0 0 40px rgba(0,0,0,.8);
     }
 
     /* =========================================================
-       TABLET
+       MOBILE / TABLET
        ========================================================= */
 
     @media (max-width:850px) {
       .cabinet-grid {
         grid-template-columns:1fr;
-      }
 
-      .cabinet-column {
-        display:contents;
-      }
-
-      .cabinet-card--profile {
-        order:1;
-      }
-
-      .cabinet-card--team {
-        order:2;
-      }
-
-      .cabinet-card--participation {
-        order:3;
-      }
-
-      .cabinet-card--achievements {
-        order:4;
-      }
-
-      .cabinet-card--navigation {
-        order:5;
+        grid-template-areas:
+          "profile"
+          "participation"
+          "team"
+          "achievements"
+          "navigation";
       }
     }
 
-    /* =========================================================
-       MOBILE
-       ========================================================= */
-
     @media (max-width:640px) {
       .cabinet-shell {
-        padding-bottom:40px;
-      }
-
-      .cabinet-hero {
-        padding:29px 0 23px;
-      }
-
-      .cabinet-title {
-        font-size:clamp(29px,9vw,39px);
-      }
-
-      .cabinet-hero-description {
-        font-size:.84rem;
+        padding-top:10px;
+        padding-bottom:30px;
       }
 
       .cabinet-grid {
-        gap:12px;
+        gap:10px;
       }
 
       .cabinet-card {
-        padding:18px 15px;
-        border-radius:18px;
+        padding:13px;
+        border-radius:15px;
       }
 
       .cabinet-card-head {
-        gap:10px;
-        margin-bottom:16px;
+        margin-bottom:11px;
       }
 
       .cabinet-card-icon {
-        width:39px;
-        height:39px;
+        width:29px;
+        height:29px;
 
-        flex-basis:39px;
+        flex-basis:29px;
 
-        border-radius:12px;
+        font-size:.87rem;
       }
 
       .card-title {
-        font-size:.93rem;
+        font-size:.84rem;
       }
 
       .card-subtitle {
-        font-size:.74rem;
-      }
-
-      .profile-identity {
-        gap:13px;
+        font-size:.69rem;
       }
 
       .team-avatar-wrap {
-        width:78px;
-        height:78px;
+        width:64px;
+        height:64px;
 
-        flex-basis:78px;
+        flex-basis:64px;
+      }
+
+      .profile-identity {
+        gap:11px;
       }
 
       .user-fullname {
-        font-size:1.02rem;
+        font-size:1rem;
+      }
+
+      .profile-actions {
+        gap:7px;
+        margin-top:12px;
+      }
+
+      .profile-btn,
+      .avatar-small-btn {
+        padding:9px 7px;
+        font-size:.72rem;
       }
 
       .profile-grid {
         grid-template-columns:1fr;
       }
 
-      .profile-actions {
-        gap:8px;
-      }
-
-      .profile-btn {
-        flex:1 1 auto;
-
-        padding:10px 13px;
-
-        font-size:.76rem;
-      }
-
-      .stats-grid {
-        gap:9px;
-      }
-
       .stat-card {
-        padding:15px 11px;
+        padding:11px 9px;
       }
 
       .stat-value {
-        font-size:1.13rem;
-      }
-
-      .cabinet-quick-link {
-        min-height:69px;
-
-        padding:12px;
-
-        font-size:.74rem;
+        font-size:1.08rem;
       }
     }
 
-    @media (max-width:370px) {
-      .cabinet-quick-links {
-        grid-template-columns:1fr;
+    @media (max-width:350px) {
+      .profile-actions {
+        flex-wrap:wrap;
       }
 
-      .team-avatar-wrap {
-        width:68px;
-        height:68px;
-
-        flex-basis:68px;
-      }
-
-      .profile-detail {
-        align-items:flex-start;
-        flex-direction:column;
-        gap:5px;
-      }
-
-      .profile-detail-value {
-        text-align:left;
+      .profile-btn,
+      .avatar-small-btn {
+        font-size:.69rem;
       }
     }
 
@@ -1314,42 +965,19 @@
   <section class="container cabinet-shell">
 
     <!-- =====================================================
-         HERO
+         STATUS
          ===================================================== -->
 
-    <div class="cabinet-hero">
-
-      <div class="cabinet-kicker">
-        <span class="cabinet-kicker-dot"></span>
-        Особистий простір учасника
-      </div>
-
-      <h1 class="cabinet-title">
-        <span>МІЙ КАБІНЕТ</span>
-      </h1>
-
-      <p class="cabinet-hero-description">
-        Профіль, команда, участь у змаганнях
-        та спортивні досягнення — усе в одному місці.
-      </p>
-
-      <p
-        id="cabinetStatus"
-        role="status"
-        aria-live="polite"
-      >
-        Перевірка доступу до кабінету…
-      </p>
-
+    <div
+      id="cabinetStatus"
+      role="status"
+      aria-live="polite"
+    >
+      Перевірка доступу…
     </div>
 
     <!-- =====================================================
-         CABINET CONTENT
-
-         ВАЖЛИВО:
-         cabinet.js керує display у #cabinetContent.
-
-         Тому сітка знаходиться всередині.
+         CONTENT
          ===================================================== -->
 
     <div
@@ -1361,99 +989,69 @@
       <div class="cabinet-grid">
 
         <!-- =================================================
-             LEFT COLUMN
+             1. PROFILE
              ================================================= -->
 
-        <div class="cabinet-column">
+        <section class="cabinet-card cabinet-card--profile">
 
-          <!-- ===============================================
-               1. MY PROFILE
-               =============================================== -->
+          <div class="cabinet-card-head">
 
-          <section class="cabinet-card cabinet-card--profile">
-
-            <div class="cabinet-card-head">
-
-              <div class="cabinet-card-icon">
-                👤
-              </div>
-
-              <div class="cabinet-card-heading">
-
-                <h2 class="card-title">
-                  Мій профіль
-                </h2>
-
-                <p class="card-subtitle">
-                  Особисті дані учасника STOLAR CARP
-                </p>
-
-              </div>
-
+            <div class="cabinet-card-icon">
+              👤
             </div>
 
-            <!-- AVATAR + NAME -->
+            <div class="cabinet-card-heading">
+              <h1 class="card-title">
+                Мій профіль
+              </h1>
+            </div>
 
-            <div class="profile-identity">
+          </div>
 
-              <div
-                class="team-avatar-wrap"
-                id="avatarWrapper"
-                title="Натисніть для збільшення"
+          <!-- AVATAR + NAME -->
+
+          <div class="profile-identity">
+
+            <div
+              class="team-avatar-wrap"
+              id="avatarWrapper"
+              title="Натисніть для збільшення"
+            >
+
+              <img
+                id="cabinetAvatarImg"
+                class="team-avatar"
+                alt="Аватар учасника"
               >
 
-                <img
-                  id="cabinetAvatarImg"
-                  class="team-avatar"
-                  alt="Аватар учасника"
-                >
-
-                <div
-                  id="cabinetAvatarPlaceholder"
-                  class="team-avatar-placeholder"
-                >
-                  SC
-                </div>
-
-              </div>
-
-              <div class="profile-identity-info">
-
-                <div class="profile-eyebrow">
-                  Учасник STOLAR CARP
-                </div>
-
-                <div
-                  class="user-fullname"
-                  id="userFullName"
-                >
-                  Завантаження…
-                </div>
-
-                <div
-                  class="user-city"
-                  id="userCity"
-                  style="display:none;"
-                ></div>
-
+              <div
+                id="cabinetAvatarPlaceholder"
+                class="team-avatar-placeholder"
+              >
+                SC
               </div>
 
             </div>
 
-            <!-- PROFILE DETAILS -->
+            <div class="profile-identity-info">
 
-            <div class="profile-details">
+              <div
+                class="user-fullname"
+                id="userFullName"
+              >
+                Завантаження…
+              </div>
 
-              <div class="profile-detail">
+              <div
+                class="user-city"
+                id="userCity"
+                style="display:none;"
+              ></div>
 
-                <span class="profile-detail-label">
-                  📞 Телефон
-                </span>
+              <div class="profile-phone">
 
-                <span
-                  class="profile-detail-value"
-                  id="userPhoneText"
-                >
+                📞
+                <span id="userPhoneText">
                   —
                 </span>
 
@@ -1461,494 +1059,418 @@
 
             </div>
 
-            <!-- EDIT BUTTONS -->
+          </div>
 
-            <div class="profile-actions">
+          <!-- ACTIONS -->
 
-              <button
-                type="button"
-                class="profile-btn"
-                id="editProfileBtn"
-              >
-                ✏️ Редагувати дані
-              </button>
+          <div class="profile-actions">
 
-              <button
-                type="button"
-                class="profile-btn profile-btn--primary"
-                id="saveProfileBtn"
-                style="display:none;"
-              >
-                ✓ Зберегти
-              </button>
-
-              <button
-                type="button"
-                class="profile-btn"
-                id="cancelProfileBtn"
-                style="display:none;"
-              >
-                Скасувати
-              </button>
-
-            </div>
-
-            <!-- PROFILE EDIT FORM -->
-
-            <div
-              class="profile-editbox"
-              id="profileEditBox"
+            <button
+              type="button"
+              class="profile-btn"
+              id="editProfileBtn"
             >
+              ✏️ Редагувати
+            </button>
 
-              <h3 class="profile-edit-title">
-                Редагування особистих даних
-              </h3>
+            <button
+              type="button"
+              class="profile-btn profile-btn--primary"
+              id="saveProfileBtn"
+              style="display:none;"
+            >
+              ✓ Зберегти
+            </button>
 
-              <div class="profile-grid">
-
-                <div class="profile-field">
-
-                  <label
-                    class="profile-label"
-                    for="lastNameInput"
-                  >
-                    Прізвище
-                  </label>
-
-                  <input
-                    id="lastNameInput"
-                    class="profile-input"
-                    type="text"
-                    placeholder="Напр. Петренко"
-                    maxlength="40"
-                    autocomplete="family-name"
-                  >
-
-                </div>
-
-                <div class="profile-field">
-
-                  <label
-                    class="profile-label"
-                    for="firstNameInput"
-                  >
-                    Ім'я
-                  </label>
-
-                  <input
-                    id="firstNameInput"
-                    class="profile-input"
-                    type="text"
-                    placeholder="Напр. Іван"
-                    maxlength="40"
-                    autocomplete="given-name"
-                  >
-
-                </div>
-
-                <div class="profile-field">
-
-                  <label
-                    class="profile-label"
-                    for="phoneInput"
-                  >
-                    Телефон
-                  </label>
-
-                  <input
-                    id="phoneInput"
-                    class="profile-input"
-                    type="tel"
-                    placeholder="+380..."
-                    maxlength="25"
-                    autocomplete="tel"
-                  >
-
-                </div>
-
-                <div class="profile-field">
-
-                  <label
-                    class="profile-label"
-                    for="cityInput"
-                  >
-                    Місто проживання
-                  </label>
-
-                  <input
-                    id="cityInput"
-                    class="profile-input"
-                    type="text"
-                    placeholder="Напр. Львів"
-                    maxlength="40"
-                    autocomplete="address-level2"
-                  >
-
-                </div>
-
-              </div>
-
-              <div
-                id="profileEditMsg"
-                aria-live="polite"
-              ></div>
-
-            </div>
-
-            <!-- AVATAR UPLOAD -->
+            <button
+              type="button"
+              class="profile-btn"
+              id="cancelProfileBtn"
+              style="display:none;"
+            >
+              Скасувати
+            </button>
 
             <div class="avatar-section">
 
-              <div class="avatar-section-head">
-
-                <span class="avatar-label">
-                  🖼️ Фото профілю
-                </span>
-
-                <button
-                  type="button"
-                  class="avatar-small-btn"
-                  id="openCloudinaryWidget"
-                >
-                  Змінити аватар
-                </button>
-
-              </div>
-
-              <div
-                id="avatarMsg"
-                aria-live="polite"
-              ></div>
-
-            </div>
-
-            <div id="cabinetMsg"></div>
-
-          </section>
-
-          <!-- ===============================================
-               2. TEAM
-               =============================================== -->
-
-          <section class="cabinet-card cabinet-card--team">
-
-            <div class="cabinet-card-head">
-
-              <div class="cabinet-card-icon">
-                🎣
-              </div>
-
-              <div class="cabinet-card-heading">
-
-                <h2 class="card-title">
-                  Моя команда
-                </h2>
-
-                <p class="card-subtitle">
-                  Назва, роль та склад команди
-                </p>
-
-              </div>
-
-            </div>
-
-            <div class="team-summary">
-
-              <div class="team-summary-label">
-                Назва команди
-              </div>
-
-              <div
-                class="team-name"
-                id="teamNameText"
+              <button
+                type="button"
+                class="avatar-small-btn"
+                id="openCloudinaryWidget"
               >
-                Завантаження…
-              </div>
+                🖼️ Змінити фото
+              </button>
 
-              <div class="team-meta">
+            </div>
 
-                <div class="meta-pill">
+          </div>
 
-                  <strong>
-                    Роль:
-                  </strong>
+          <!-- EDIT FORM -->
 
-                  <span id="userRoleText">
-                    —
-                  </span>
+          <div
+            class="profile-editbox"
+            id="profileEditBox"
+          >
 
-                </div>
+            <h2 class="profile-edit-title">
+              Редагування даних
+            </h2>
 
-                <div
-                  class="meta-pill"
-                  id="joinCodePill"
-                  style="display:none;"
+            <div class="profile-grid">
+
+              <div class="profile-field">
+
+                <label
+                  class="profile-label"
+                  for="lastNameInput"
+                >
+                  Прізвище
+                </label>
+
+                <input
+                  id="lastNameInput"
+                  class="profile-input"
+                  type="text"
+                  placeholder="Прізвище"
+                  maxlength="40"
+                  autocomplete="family-name"
                 >
 
-                  <strong>
-                    Код команди:
-                  </strong>
+              </div>
 
-                  <span id="joinCodeText"></span>
+              <div class="profile-field">
 
-                </div>
+                <label
+                  class="profile-label"
+                  for="firstNameInput"
+                >
+                  Ім'я
+                </label>
+
+                <input
+                  id="firstNameInput"
+                  class="profile-input"
+                  type="text"
+                  placeholder="Ім'я"
+                  maxlength="40"
+                  autocomplete="given-name"
+                >
+
+              </div>
+
+              <div class="profile-field">
+
+                <label
+                  class="profile-label"
+                  for="phoneInput"
+                >
+                  Телефон
+                </label>
+
+                <input
+                  id="phoneInput"
+                  class="profile-input"
+                  type="tel"
+                  placeholder="+380..."
+                  maxlength="25"
+                  autocomplete="tel"
+                >
+
+              </div>
+
+              <div class="profile-field">
+
+                <label
+                  class="profile-label"
+                  for="cityInput"
+                >
+                  Місто
+                </label>
+
+                <input
+                  id="cityInput"
+                  class="profile-input"
+                  type="text"
+                  placeholder="Місто"
+                  maxlength="40"
+                  autocomplete="address-level2"
+                >
 
               </div>
 
             </div>
 
-            <!-- MEMBERS -->
+            <div
+              id="profileEditMsg"
+              aria-live="polite"
+            ></div>
 
-            <div class="members-list">
+          </div>
 
-              <div class="members-title">
-                👥 Склад команди
-              </div>
+          <div
+            id="avatarMsg"
+            aria-live="polite"
+          ></div>
 
-              <div id="membersContainer">
+          <div id="cabinetMsg"></div>
 
-                <div class="cabinet-small-muted">
-                  Завантаження учасників…
-                </div>
-
-              </div>
-
-            </div>
-
-          </section>
-
-        </div>
+        </section>
 
         <!-- =================================================
-             RIGHT COLUMN
+             2. MY PARTICIPATION
              ================================================= -->
 
-        <div class="cabinet-column">
+        <section
+          class="cabinet-card cabinet-card--participation"
+        >
 
-          <!-- ===============================================
-               3. MY PARTICIPATION
-               =============================================== -->
+          <div class="cabinet-card-head">
 
-          <section
-            class="cabinet-card cabinet-card--participation"
-          >
+            <div class="cabinet-card-icon">
+              🏆
+            </div>
 
-            <div class="cabinet-card-head">
+            <div class="cabinet-card-heading">
 
-              <div class="cabinet-card-icon">
-                🏆
+              <h2 class="card-title">
+                Моя участь
+              </h2>
+
+              <p class="card-subtitle">
+                Поточні та майбутні змагання
+              </p>
+
+            </div>
+
+          </div>
+
+          <!--
+            ТІЛЬКИ my_participation.js
+            працює з цим контейнером.
+          -->
+
+          <div id="myCompetitions">
+
+            <div class="cabinet-small-muted">
+              Завантаження участі…
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- =================================================
+             3. MY TEAM
+             ================================================= -->
+
+        <section class="cabinet-card cabinet-card--team">
+
+          <div class="cabinet-card-head">
+
+            <div class="cabinet-card-icon">
+              🎣
+            </div>
+
+            <div class="cabinet-card-heading">
+
+              <h2 class="card-title">
+                Моя команда
+              </h2>
+
+            </div>
+
+          </div>
+
+          <div class="team-summary">
+
+            <div
+              class="team-name"
+              id="teamNameText"
+            >
+              Завантаження…
+            </div>
+
+            <div class="team-meta">
+
+              <div class="meta-pill">
+
+                <strong>Роль:</strong>
+
+                <span id="userRoleText">
+                  —
+                </span>
+
               </div>
 
-              <div class="cabinet-card-heading">
+              <div
+                class="meta-pill"
+                id="joinCodePill"
+                style="display:none;"
+              >
 
-                <h2 class="card-title">
-                  Моя участь
-                </h2>
+                <strong>
+                  Код:
+                </strong>
 
-                <p class="card-subtitle">
-                  Поточні та майбутні турніри
-                </p>
+                <span id="joinCodeText"></span>
 
               </div>
 
             </div>
 
-            <div class="participation-intro">
+          </div>
 
-              <span
-                class="participation-tag participation-tag--team"
-              >
-                👥 TEAM
-              </span>
+          <!-- MEMBERS -->
 
-              <span
-                class="participation-tag participation-tag--solo"
-              >
-                🎣 SOLO
-              </span>
+          <details class="members-details">
 
-            </div>
+            <summary>
+              👥 Склад команди
+            </summary>
 
-            <!--
-              ВАЖЛИВО:
-
-              Тільки my_participation.js
-              керує цим контейнером.
-
-              cabinet.js його не змінює.
-            -->
-
-            <div id="myCompetitions">
+            <div id="membersContainer">
 
               <div class="cabinet-small-muted">
-                Завантаження участі…
+                Завантаження учасників…
               </div>
 
             </div>
 
-          </section>
+          </details>
 
-          <!-- ===============================================
-               4. ACHIEVEMENTS
-               =============================================== -->
+        </section>
 
-          <section
-            class="cabinet-card cabinet-card--achievements"
-          >
+        <!-- =================================================
+             4. ACHIEVEMENTS
+             ================================================= -->
 
-            <div class="cabinet-card-head">
+        <section
+          class="cabinet-card cabinet-card--achievements"
+        >
 
-              <div class="cabinet-card-icon">
-                📊
-              </div>
+          <div class="cabinet-card-head">
 
-              <div class="cabinet-card-heading">
+            <div class="cabinet-card-icon">
+              📊
+            </div>
 
-                <h2 class="card-title">
-                  Досягнення команди
-                </h2>
+            <div class="cabinet-card-heading">
 
-                <p class="card-subtitle">
-                  Спортивна статистика STOLAR CARP
-                </p>
-
-              </div>
+              <h2 class="card-title">
+                Досягнення команди
+              </h2>
 
             </div>
 
-            <div class="stats-grid">
+          </div>
 
-              <div class="stat-card">
+          <div class="stats-grid">
 
-                <div class="stat-label">
-                  ⚖️ Загальний улов
-                </div>
+            <div class="stat-card">
 
-                <div class="stat-value">
-
-                  <span id="statTotalWeight">
-                    —
-                  </span>
-
-                  <span class="stat-unit">
-                    кг
-                  </span>
-
-                </div>
-
+              <div class="stat-label">
+                ⚖️ Загальний улов
               </div>
 
-              <div class="stat-card">
+              <div class="stat-value">
 
-                <div class="stat-label">
-                  🐟 Big Fish
-                </div>
+                <span id="statTotalWeight">
+                  —
+                </span>
 
-                <div class="stat-value">
-
-                  <span id="statBigFish">
-                    —
-                  </span>
-
-                  <span class="stat-unit">
-                    кг
-                  </span>
-
-                </div>
+                <span class="stat-unit">
+                  кг
+                </span>
 
               </div>
 
             </div>
 
-          </section>
+            <div class="stat-card">
 
-          <!-- ===============================================
-               5. QUICK NAVIGATION
-               =============================================== -->
-
-          <section
-            class="cabinet-card cabinet-card--navigation"
-          >
-
-            <div class="cabinet-card-head">
-
-              <div class="cabinet-card-icon">
-                🧭
+              <div class="stat-label">
+                🐟 Big Fish
               </div>
 
-              <div class="cabinet-card-heading">
+              <div class="stat-value">
 
-                <h2 class="card-title">
-                  Швидкі переходи
-                </h2>
+                <span id="statBigFish">
+                  —
+                </span>
 
-                <p class="card-subtitle">
-                  Основні розділи для учасника
-                </p>
+                <span class="stat-unit">
+                  кг
+                </span>
 
               </div>
 
             </div>
 
-            <div class="cabinet-quick-links">
+          </div>
 
-              <a
-                href="register.html"
-                class="cabinet-quick-link"
-              >
-                <span>
-                  🏆 Реєстрація
-                </span>
+        </section>
 
-                <span class="cabinet-quick-link-arrow">
-                  →
-                </span>
-              </a>
+        <!-- =================================================
+             5. QUICK LINKS
+             ================================================= -->
 
-              <a
-                href="live.html"
-                class="cabinet-quick-link"
-              >
-                <span>
-                  🔴 Live
-                </span>
+        <section
+          class="cabinet-card cabinet-card--navigation"
+        >
 
-                <span class="cabinet-quick-link-arrow">
-                  →
-                </span>
-              </a>
+          <div class="cabinet-card-head">
 
-              <a
-                href="rating.html"
-                class="cabinet-quick-link"
-              >
-                <span>
-                  📊 Рейтинг
-                </span>
+            <div class="cabinet-card-icon">
+              🧭
+            </div>
 
-                <span class="cabinet-quick-link-arrow">
-                  →
-                </span>
-              </a>
+            <div class="cabinet-card-heading">
 
-              <a
-                href="events/index.html"
-                class="cabinet-quick-link"
-              >
-                <span>
-                  🗂️ Архів
-                </span>
-
-                <span class="cabinet-quick-link-arrow">
-                  →
-                </span>
-              </a>
+              <h2 class="card-title">
+                Швидкі переходи
+              </h2>
 
             </div>
 
-          </section>
+          </div>
 
-        </div>
+          <div class="cabinet-quick-links">
+
+            <a
+              href="register.html"
+              class="cabinet-quick-link"
+            >
+              <span>🏆 Реєстрація</span>
+              <span class="cabinet-quick-link-arrow">→</span>
+            </a>
+
+            <a
+              href="live.html"
+              class="cabinet-quick-link"
+            >
+              <span>🔴 Live</span>
+              <span class="cabinet-quick-link-arrow">→</span>
+            </a>
+
+            <a
+              href="rating.html"
+              class="cabinet-quick-link"
+            >
+              <span>📊 Рейтинг</span>
+              <span class="cabinet-quick-link-arrow">→</span>
+            </a>
+
+            <a
+              href="events/index.html"
+              class="cabinet-quick-link"
+            >
+              <span>🗂️ Архів</span>
+              <span class="cabinet-quick-link-arrow">→</span>
+            </a>
+
+          </div>
+
+        </section>
 
       </div>
 
@@ -2013,27 +1535,19 @@
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
 <!-- =========================================================
-     STOLAR CARP
+     STOLAR CARP JS
      ========================================================= -->
 
 <script src="assets/js/firebase-init.js?v=20260215-1"></script>
 
 <!-- =========================================================
      CABINET CORE
-
-     ПРОФІЛЬ
-     КОМАНДА
-     СКЛАД
-     АВАТАР
-     SOLO NAME SYNC
      ========================================================= -->
 
 <script src="assets/js/cabinet.js?v=20260916-9"></script>
 
 <!-- =========================================================
      MY PARTICIPATION
-
-     TEAM + SOLO
      ========================================================= -->
 
 <script src="assets/js/my_participation.js?v=20260916-9"></script>
@@ -2051,46 +1565,46 @@
 <script src="assets/js/cabinet_achievements.js?v=20260215-1"></script>
 
 <!-- =========================================================
-     SMALL UI HELPERS
+     UI HELPERS
      ========================================================= -->
 
 <script>
-  (function () {
-    "use strict";
+(function () {
+  "use strict";
 
-    const yearEl = document.getElementById("footerYear");
+  const yearEl = document.getElementById("footerYear");
 
-    if (yearEl) {
-      yearEl.textContent = new Date().getFullYear();
-    }
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
 
-    /*
-      Burger відкривається через cabinet.js.
+  /*
+    Меню відкриває cabinet.js.
+    Тут лише синхронізуємо aria-expanded.
+  */
 
-      Тут лише синхронізуємо aria-expanded,
-      не додаючи другого обробника відкриття.
-    */
+  const burger = document.getElementById("burger");
+  const nav = document.getElementById("nav");
 
-    const burger = document.getElementById("burger");
-    const nav = document.getElementById("nav");
+  if (burger && nav) {
 
-    if (burger && nav) {
-      burger.addEventListener("click", function () {
-        burger.setAttribute(
-          "aria-expanded",
-          nav.classList.contains("open")
-            ? "true"
-            : "false"
-        );
-      });
+    burger.addEventListener("click", function () {
+      burger.setAttribute(
+        "aria-expanded",
+        nav.classList.contains("open")
+          ? "true"
+          : "false"
+      );
+    });
 
-      nav.addEventListener("click", function (event) {
-        if (event.target.closest(".nav__link")) {
-          burger.setAttribute("aria-expanded", "false");
-        }
-      });
-    }
-  })();
+    nav.addEventListener("click", function (event) {
+      if (event.target.closest(".nav__link")) {
+        burger.setAttribute("aria-expanded", "false");
+      }
+    });
+
+  }
+})();
 </script>
 
 </body>

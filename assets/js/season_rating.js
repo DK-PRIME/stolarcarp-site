@@ -5734,9 +5734,9 @@
                     `✅ Сезон ${esc(
                       SEASON_YEAR
                     )} завершений. ` +
-                    `Збережено ${esc(
+                    `Збережено в Архів сезону ${esc(
                       rating.archivedTo ||
-                      `у Архів ${SEASON_YEAR}`
+                      ` ${SEASON_YEAR}`
                     )}`
                   );
 

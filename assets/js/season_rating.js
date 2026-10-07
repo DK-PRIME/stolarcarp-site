@@ -64,8 +64,7 @@
 (function () {
   "use strict";
 
-  const $ = id =>
-    document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   // =========================================================
   // SETTINGS
@@ -78,19 +77,14 @@
 
   const DELETE_BATCH_SIZE = 400;
 
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
+  const params = new URLSearchParams(window.location.search);
 
   const SEASON_YEAR =
     params.get("year") ||
     "2026";
 
   const NEXT_SEASON_YEAR =
-    String(
-      Number(SEASON_YEAR) + 1
-    );
+    String(Number(SEASON_YEAR) + 1);
 
   // =========================================================
   // RUNTIME
@@ -107,10 +101,7 @@
   // HELPERS
   // =========================================================
 
-  function safeText(
-    value,
-    dash = "—"
-  ) {
+  function safeText(value, dash = "—") {
     return (
       value === null ||
       value === undefined ||
@@ -121,8 +112,7 @@
   }
 
   function num(value) {
-    const n =
-      Number(value);
+    const n = Number(value);
 
     return Number.isFinite(n)
       ? n
@@ -130,8 +120,7 @@
   }
 
   function fmtKg(value) {
-    const n =
-      num(value);
+    const n = num(value);
 
     if (n <= 0) {
       return "—";
@@ -143,18 +132,14 @@
   }
 
   function clean(value) {
-    return String(
-      value || ""
-    )
+    return String(value || "")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, " ");
   }
 
   function esc(value) {
-    return String(
-      value ?? ""
-    ).replace(
+    return String(value ?? "").replace(
       /[&<>"']/g,
       char => ({
         "&": "&amp;",
@@ -168,9 +153,7 @@
 
   function teamKey(team) {
     const id =
-      String(
-        team?.teamId || ""
-      ).trim();
+      String(team?.teamId || "").trim();
 
     if (id) {
       return `id:${id}`;
@@ -258,24 +241,18 @@
   // AUTH / ADMIN
   // =========================================================
 
-  async function checkAdmin(
-    user,
-    db
-  ) {
+  async function checkAdmin(user, db) {
     if (!user) {
       return false;
     }
 
-    if (
-      window.scIsAdmin === true
-    ) {
+    if (window.scIsAdmin === true) {
       return true;
     }
 
     try {
       const token =
-        await user
-          .getIdTokenResult();
+        await user.getIdTokenResult();
 
       if (
         token?.claims?.admin === true ||
@@ -304,8 +281,7 @@
         if (
           data.isAdmin === true ||
           data.admin === true ||
-          clean(data.role) ===
-            "admin"
+          clean(data.role) === "admin"
         ) {
           return true;
         }
@@ -326,31 +302,33 @@
         );
 
       const userEmail =
-        clean(
-          user.email || ""
-        );
+        clean(user.email || "");
 
       if (
         configuredEmail &&
         userEmail &&
-        configuredEmail ===
-          userEmail
+        configuredEmail === userEmail
       ) {
         return true;
       }
-    } catch {}
+    } catch (error) {
+      console.warn(
+        "[Season Rating] admin email:",
+        error
+      );
+    }
 
     return false;
   }
 
-  async function initAdminAccess(
-    db
-  ) {
+  async function initAdminAccess(db) {
     if (
-      typeof firebase ===
-        "undefined" ||
+      typeof firebase === "undefined" ||
       !firebase.auth
     ) {
+      console.warn(
+        "[Season Rating] firebase.auth недоступний."
+      );
       return;
     }
 
@@ -366,6 +344,20 @@
               currentUser,
               db
             );
+
+          console.log(
+            "[Season Rating] admin state:",
+            {
+              uid:
+                currentUser?.uid || null,
+
+              email:
+                currentUser?.email || null,
+
+              isAdmin:
+                currentUserIsAdmin
+            }
+          );
 
           renderAdminArchivePanel();
         }
@@ -401,22 +393,16 @@
     return (
       stage.isFinal === true ||
       stage.final === true ||
-      clean(stage.type) ===
-        "final" ||
-      clean(stage.stageType) ===
-        "final" ||
+      clean(stage.type) === "final" ||
+      clean(stage.stageType) === "final" ||
       raw.includes("final") ||
       raw.includes("фінал")
     );
   }
 
-  function extractStageNumber(
-    value
-  ) {
+  function extractStageNumber(value) {
     const raw =
-      String(
-        value || ""
-      );
+      String(value || "");
 
     let match =
       raw.match(
@@ -424,9 +410,7 @@
       );
 
     if (match) {
-      return Number(
-        match[1]
-      );
+      return Number(match[1]);
     }
 
     match =
@@ -435,9 +419,7 @@
       );
 
     if (match) {
-      return Number(
-        match[1]
-      );
+      return Number(match[1]);
     }
 
     match =
@@ -446,9 +428,7 @@
       );
 
     if (match) {
-      return Number(
-        match[1]
-      );
+      return Number(match[1]);
     }
 
     const numbers =
@@ -465,12 +445,8 @@
     );
   }
 
-  function stageSortValue(
-    stage
-  ) {
-    if (
-      isFinalStage(stage)
-    ) {
+  function stageSortValue(stage) {
+    if (isFinalStage(stage)) {
       return 999999;
     }
 
@@ -480,17 +456,11 @@
       stage?.stageName
     ];
 
-    for (
-      const value of values
-    ) {
+    for (const value of values) {
       const n =
-        extractStageNumber(
-          value
-        );
+        extractStageNumber(value);
 
-      if (
-        Number.isFinite(n)
-      ) {
+      if (Number.isFinite(n)) {
         return n;
       }
     }
@@ -508,17 +478,11 @@
       stage?.stageName
     ];
 
-    for (
-      const value of values
-    ) {
+    for (const value of values) {
       const n =
-        extractStageNumber(
-          value
-        );
+        extractStageNumber(value);
 
-      if (
-        Number.isFinite(n)
-      ) {
+      if (Number.isFinite(n)) {
         return n;
       }
     }
@@ -530,9 +494,7 @@
     stage,
     index
   ) {
-    if (
-      isFinalStage(stage)
-    ) {
+    if (isFinalStage(stage)) {
       return "Фінал";
     }
 
@@ -544,40 +506,20 @@
     }`;
   }
 
-  function normalizeStage(
-    stage
-  ) {
-    if (
-      typeof stage ===
-      "string"
-    ) {
+  function normalizeStage(stage) {
+    if (typeof stage === "string") {
       const fixed = {
-        stageDocId:
-          stage,
-
-        stageId:
-          stage,
-
-        stageName:
-          stage,
-
-        type:
-          "",
-
-        stageType:
-          "",
-
-        title:
-          "",
-
-        isFinal:
-          false
+        stageDocId: stage,
+        stageId: stage,
+        stageName: stage,
+        type: "",
+        stageType: "",
+        title: "",
+        isFinal: false
       };
 
       fixed.isFinal =
-        isFinalStage(
-          fixed
-        );
+        isFinalStage(fixed);
 
       return fixed;
     }
@@ -635,16 +577,12 @@
     };
 
     fixed.isFinal =
-      isFinalStage(
-        fixed
-      );
+      isFinalStage(fixed);
 
     return fixed;
   }
 
-  function getCandidateStages(
-    rating
-  ) {
+  function getCandidateStages(rating) {
     const source =
       Array.isArray(
         rating.archivedStages
@@ -653,9 +591,7 @@
         : [];
 
     return source
-      .map(
-        normalizeStage
-      )
+      .map(normalizeStage)
       .filter(
         stage =>
           stage.stageDocId
@@ -671,9 +607,7 @@
   // STANDING
   // =========================================================
 
-  function normalizeStandingRow(
-    row
-  ) {
+  function normalizeStandingRow(row) {
     return {
       teamId:
         String(
@@ -753,10 +687,7 @@
     };
   }
 
-  function compareStandingRows(
-    a,
-    b
-  ) {
+  function compareStandingRows(a, b) {
     if (
       b.totalWeight !==
       a.totalWeight
@@ -787,24 +718,17 @@
       );
     }
 
-    return String(
-      a.team
-    ).localeCompare(
-      String(
-        b.team
-      ),
-      "uk"
-    );
+    return String(a.team)
+      .localeCompare(
+        String(b.team),
+        "uk"
+      );
   }
 
-  function computeStageMap(
-    standings
-  ) {
+  function computeStageMap(standings) {
     const rows =
       (
-        Array.isArray(
-          standings
-        )
+        Array.isArray(standings)
           ? standings
           : []
       ).map(
@@ -828,15 +752,10 @@
       new Map();
 
     overallRows.forEach(
-      (
-        row,
-        index
-      ) => {
+      (row, index) => {
         const key =
           row.teamId ||
-          clean(
-            row.team
-          );
+          clean(row.team);
 
         if (!key) {
           return;
@@ -850,33 +769,23 @@
       }
     );
 
-    [
-      "A",
-      "B",
-      "C"
-    ].forEach(
+    ["A", "B", "C"].forEach(
       zone => {
         const zoneRows =
           rows
             .filter(
               row =>
-                row.zone ===
-                zone
+                row.zone === zone
             )
             .sort(
               compareStandingRows
             );
 
         zoneRows.forEach(
-          (
-            row,
-            index
-          ) => {
+          (row, index) => {
             const key =
               row.teamId ||
-              clean(
-                row.team
-              );
+              clean(row.team);
 
             const zonePlace =
               row.zonePlace ||
@@ -898,22 +807,16 @@
                 0
             };
 
-            if (
-              fixed.teamId
-            ) {
+            if (fixed.teamId) {
               byTeamId.set(
                 fixed.teamId,
                 fixed
               );
             }
 
-            if (
-              fixed.team
-            ) {
+            if (fixed.team) {
               byTeamName.set(
-                clean(
-                  fixed.team
-                ),
+                clean(fixed.team),
                 fixed
               );
             }
@@ -925,21 +828,14 @@
     rows
       .filter(
         row =>
-          ![
-            "A",
-            "B",
-            "C"
-          ].includes(
-            row.zone
-          )
+          !["A", "B", "C"]
+            .includes(row.zone)
       )
       .forEach(
         row => {
           const key =
             row.teamId ||
-            clean(
-              row.team
-            );
+            clean(row.team);
 
           const fixed = {
             ...row,
@@ -958,22 +854,16 @@
               0
           };
 
-          if (
-            fixed.teamId
-          ) {
+          if (fixed.teamId) {
             byTeamId.set(
               fixed.teamId,
               fixed
             );
           }
 
-          if (
-            fixed.team
-          ) {
+          if (fixed.team) {
             byTeamName.set(
-              clean(
-                fixed.team
-              ),
+              clean(fixed.team),
               fixed
             );
           }
@@ -996,9 +886,7 @@
     standings
   ) {
     const rows =
-      Array.isArray(
-        standings
-      )
+      Array.isArray(standings)
         ? standings
         : [];
 
@@ -1008,42 +896,27 @@
 
     const calculatedWeight =
       rows.reduce(
-        (
-          sum,
-          row
-        ) =>
+        (sum, row) =>
           sum +
-          num(
-            row?.totalWeight
-          ),
+          num(row?.totalWeight),
         0
       );
 
     const calculatedBig =
       rows.reduce(
-        (
-          max,
-          row
-        ) =>
+        (max, row) =>
           Math.max(
             max,
-            num(
-              row?.bigFish
-            )
+            num(row?.bigFish)
           ),
         0
       );
 
     const calculatedFishCount =
       rows.reduce(
-        (
-          sum,
-          row
-        ) =>
+        (sum, row) =>
           sum +
-          num(
-            row?.totalCount
-          ),
+          num(row?.totalCount),
         0
       );
 
@@ -1071,33 +944,23 @@
 
     return {
       teamsCount:
-        teamsCountRaw !==
-          null
-          ? num(
-              teamsCountRaw
-            )
+        teamsCountRaw !== null
+          ? num(teamsCountRaw)
           : rows.length,
 
       totalWeight:
         weightRaw !== null
-          ? num(
-              weightRaw
-            )
+          ? num(weightRaw)
           : calculatedWeight,
 
       maxBigFish:
         bigRaw !== null
-          ? num(
-              bigRaw
-            )
+          ? num(bigRaw)
           : calculatedBig,
 
       totalCount:
-        fishCountRaw !==
-          null
-          ? num(
-              fishCountRaw
-            )
+        fishCountRaw !== null
+          ? num(fishCountRaw)
           : calculatedFishCount
     };
   }
@@ -1221,9 +1084,8 @@
               stage.stageDocId,
               map
             );
-          } catch (
-            error
-          ) {
+
+          } catch (error) {
             console.warn(
               "[Season Rating] Не вдалося прочитати етап:",
               stage.stageDocId,
@@ -1317,9 +1179,7 @@
   // FINAL HINTS
   // =========================================================
 
-  function getRatingFinalHints(
-    rating
-  ) {
+  function getRatingFinalHints(rating) {
     const raw = [
       rating?.finalStageDocId,
       rating?.finalStageId,
@@ -1353,9 +1213,7 @@
     return raw
       .map(
         value =>
-          clean(
-            value
-          )
+          clean(value)
       )
       .filter(Boolean);
   }
@@ -1370,16 +1228,12 @@
       stage.stageName,
       stage.title
     ]
-      .map(
-        clean
-      )
+      .map(clean)
       .filter(Boolean);
 
     return hints.some(
       hint =>
-        values.includes(
-          hint
-        )
+        values.includes(hint)
     );
   }
 
@@ -1401,9 +1255,7 @@
     let finalStage =
       stages.find(
         stage =>
-          isFinalStage(
-            stage
-          )
+          isFinalStage(stage)
       ) ||
       null;
 
@@ -1413,9 +1265,7 @@
           rating
         );
 
-      if (
-        hints.length
-      ) {
+      if (hints.length) {
         finalStage =
           stages.find(
             stage =>
@@ -1436,10 +1286,7 @@
         stages
           .slice()
           .sort(
-            (
-              a,
-              b
-            ) =>
+            (a, b) =>
               stageSortValue(a) -
               stageSortValue(b)
           );
@@ -1479,36 +1326,23 @@
       const hadLargerStage =
         previousCounts.some(
           count =>
-            count >
-            TOP_COUNT
+            count > TOP_COUNT
         );
 
       if (
         lastCount > 0 &&
-        lastCount <=
-          TOP_COUNT &&
+        lastCount <= TOP_COUNT &&
         hadLargerStage
       ) {
         finalStage = {
           ...last,
 
-          isFinal:
-            true,
-
-          type:
-            "final",
-
-          stageType:
-            "final",
-
-          stageName:
-            "Фінал",
-
-          title:
-            "Фінал",
-
-          inferredFinal:
-            true
+          isFinal: true,
+          type: "final",
+          stageType: "final",
+          stageName: "Фінал",
+          title: "Фінал",
+          inferredFinal: true
         };
 
         stages =
@@ -1526,20 +1360,11 @@
       finalStage = {
         ...finalStage,
 
-        isFinal:
-          true,
-
-        type:
-          "final",
-
-        stageType:
-          "final",
-
-        stageName:
-          "Фінал",
-
-        title:
-          "Фінал"
+        isFinal: true,
+        type: "final",
+        stageType: "final",
+        stageName: "Фінал",
+        title: "Фінал"
       };
 
       stages =
@@ -1561,10 +1386,7 @@
               finalStage.stageDocId
         )
         .sort(
-          (
-            a,
-            b
-          ) =>
+          (a, b) =>
             stageSortValue(a) -
             stageSortValue(b)
         );
@@ -1618,30 +1440,22 @@
       teamId &&
       stageMap
         .byTeamId
-        .has(
-          teamId
-        )
+        .has(teamId)
     ) {
       return stageMap
         .byTeamId
-        .get(
-          teamId
-        );
+        .get(teamId);
     }
 
     if (
       teamName &&
       stageMap
         .byTeamName
-        .has(
-          teamName
-        )
+        .has(teamName)
     ) {
       return stageMap
         .byTeamName
-        .get(
-          teamName
-        );
+        .get(teamName);
     }
 
     return null;
@@ -1661,9 +1475,7 @@
     }
 
     const final =
-      isFinalStage(
-        stage
-      );
+      isFinalStage(stage);
 
     const stageMap =
       stageMaps.get(
@@ -1676,9 +1488,7 @@
         team
       );
 
-    if (
-      archiveRow
-    ) {
+    if (archiveRow) {
       const place =
         final
           ? num(
@@ -1696,9 +1506,7 @@
 
       return {
         place,
-
-        points:
-          place,
+        points: place,
 
         totalWeight:
           num(
@@ -1754,9 +1562,7 @@
 
     return {
       place,
-
-      points:
-        place,
+      points: place,
 
       totalWeight:
         num(
@@ -1796,9 +1602,7 @@
               stageMaps
             );
 
-          if (
-            result
-          ) {
+          if (result) {
             return {
               stageDocId:
                 stage.stageDocId,
@@ -1831,10 +1635,7 @@
       );
 
     results.sort(
-      (
-        a,
-        b
-      ) => {
+      (a, b) => {
         if (
           a.points !==
           b.points
@@ -1868,14 +1669,9 @@
         BEST_COUNT_FOR_FINAL
       )
       .reduce(
-        (
-          sum,
-          result
-        ) =>
+        (sum, result) =>
           sum +
-          num(
-            result.points
-          ),
+          num(result.points),
         0
       );
   }
@@ -1897,9 +1693,7 @@
             stageMaps
           );
 
-        if (
-          result
-        ) {
+        if (result) {
           weight +=
             num(
               result.totalWeight
@@ -1928,9 +1722,7 @@
             stageMaps
           );
 
-        if (
-          result
-        ) {
+        if (result) {
           bigFish =
             Math.max(
               bigFish,
@@ -1983,10 +1775,7 @@
       );
 
     ranked.sort(
-      (
-        a,
-        b
-      ) => {
+      (a, b) => {
         if (
           a.qualificationPoints !==
           b.qualificationPoints
@@ -2135,14 +1924,10 @@
 
         if (!result) {
           return {
-            place:
-              "—",
-
+            place: "—",
             points:
               ABSENT_REGULAR_POINTS,
-
-            absent:
-              true
+            absent: true
           };
         }
 
@@ -2180,10 +1965,7 @@
       "";
 
     regularStages.forEach(
-      (
-        stage,
-        index
-      ) => {
+      (stage, index) => {
         const result =
           readStageResult(
             team,
@@ -2191,9 +1973,7 @@
             stageMaps
           );
 
-        if (
-          !result
-        ) {
+        if (!result) {
           return;
         }
 
@@ -2203,9 +1983,7 @@
           );
 
         if (
-          num(
-            result.bigFish
-          ) >
+          num(result.bigFish) >
           biggestFish
         ) {
           biggestFish =
@@ -2222,9 +2000,7 @@
       }
     );
 
-    if (
-      finalStage
-    ) {
+    if (finalStage) {
       const result =
         readStageResult(
           team,
@@ -2232,18 +2008,14 @@
           stageMaps
         );
 
-      if (
-        result
-      ) {
+      if (result) {
         totalWeight +=
           num(
             result.totalWeight
           );
 
         if (
-          num(
-            result.bigFish
-          ) >
+          num(result.bigFish) >
           biggestFish
         ) {
           biggestFish =
@@ -2275,9 +2047,7 @@
     stageMaps
   ) {
     const finalArchived =
-      Boolean(
-        finalStage
-      );
+      Boolean(finalStage);
 
     const rows =
       finalists.map(
@@ -2291,14 +2061,9 @@
 
           const regularPoints =
             regularCells.reduce(
-              (
-                sum,
-                item
-              ) =>
+              (sum, item) =>
                 sum +
-                num(
-                  item.points
-                ),
+                num(item.points),
               0
             );
 
@@ -2308,9 +2073,7 @@
           let finalPoints =
             0;
 
-          if (
-            finalStage
-          ) {
+          if (finalStage) {
             const finalResult =
               readStageResult(
                 team,
@@ -2318,9 +2081,7 @@
                 stageMaps
               );
 
-            if (
-              finalResult
-            ) {
+            if (finalResult) {
               finalPlace =
                 finalResult.place;
 
@@ -2365,16 +2126,13 @@
               finalPoints,
 
             totalWeight:
-              seasonStats
-                .totalWeight,
+              seasonStats.totalWeight,
 
             bigFish:
-              seasonStats
-                .biggestFish,
+              seasonStats.biggestFish,
 
             bigFishStage:
-              seasonStats
-                .biggestFishStage,
+              seasonStats.biggestFishStage,
 
             finalArchived
           };
@@ -2382,10 +2140,7 @@
       );
 
     rows.sort(
-      (
-        a,
-        b
-      ) => {
+      (a, b) => {
         if (
           a.seasonPoints !==
           b.seasonPoints
@@ -2416,24 +2171,17 @@
           );
         }
 
-        return String(
-          a.team
-        ).localeCompare(
-          String(
-            b.team
-          ),
-          "uk"
-        );
+        return String(a.team)
+          .localeCompare(
+            String(b.team),
+            "uk"
+          );
       }
     );
 
     return rows.map(
-      (
-        row,
-        index
-      ) => ({
+      (row, index) => ({
         ...row,
-
         place:
           index + 1
       })
@@ -2491,10 +2239,7 @@
     stageMaps
   ) {
     return allStages.map(
-      (
-        stage,
-        index
-      ) => {
+      (stage, index) => {
         const map =
           stageMaps.get(
             stage.stageDocId
@@ -2502,23 +2247,14 @@
 
         const summary =
           map?.summary || {
-            teamsCount:
-              0,
-
-            totalWeight:
-              0,
-
-            maxBigFish:
-              0,
-
-            totalCount:
-              0
+            teamsCount: 0,
+            totalWeight: 0,
+            maxBigFish: 0,
+            totalCount: 0
           };
 
         const final =
-          isFinalStage(
-            stage
-          );
+          isFinalStage(stage);
 
         const number =
           final
@@ -2543,7 +2279,6 @@
             final,
 
           number,
-
           title,
 
           stageDocId:
@@ -2563,8 +2298,7 @@
 
           sourceStageName:
             String(
-              map?.meta
-                ?.stageName ||
+              map?.meta?.stageName ||
               stage.stageName ||
               ""
             ),
@@ -2643,17 +2377,12 @@
         "th.col-final"
       );
 
-    if (
-      !finalHeader
-    ) {
+    if (!finalHeader) {
       return;
     }
 
     regularStages.forEach(
-      (
-        stage,
-        index
-      ) => {
+      (stage, index) => {
         const number =
           stageDisplayNumber(
             stage,
@@ -2697,9 +2426,7 @@
       return;
     }
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       tbody.innerHTML = `
         <tr>
           <td colspan="${
@@ -2779,13 +2506,9 @@
 
                 <td
                   class="col-team"
-                  title="${esc(
-                    row.team
-                  )}"
+                  title="${esc(row.team)}"
                 >
-                  ${esc(
-                    row.team
-                  )}
+                  ${esc(row.team)}
                 </td>
 
                 ${stageHtml}
@@ -2840,9 +2563,7 @@
   // PODIUM
   // =========================================================
 
-  function renderPodium(
-    rows
-  ) {
+  function renderPodium(rows) {
     for (
       let place = 1;
       place <= 3;
@@ -2863,18 +2584,14 @@
           `seasonWinner${place}Points`
         );
 
-      if (
-        teamEl
-      ) {
+      if (teamEl) {
         teamEl.textContent =
           row
             ? row.team
             : "—";
       }
 
-      if (
-        pointsEl
-      ) {
+      if (pointsEl) {
         pointsEl.textContent =
           row
             ? `${
@@ -2905,28 +2622,18 @@
 
     const maxBigFish =
       teams.reduce(
-        (
-          max,
-          row
-        ) =>
+        (max, row) =>
           Math.max(
             max,
-            num(
-              row.bigFish
-            )
+            num(row.bigFish)
           ),
         0
       );
 
-    if (
-      maxBigFish <= 0
-    ) {
+    if (maxBigFish <= 0) {
       return {
-        weight:
-          0,
-
-        winners:
-          []
+        weight: 0,
+        winners: []
       };
     }
 
@@ -2937,9 +2644,7 @@
       winners:
         teams.filter(
           row =>
-            num(
-              row.bigFish
-            ) ===
+            num(row.bigFish) ===
             maxBigFish
         )
     };
@@ -2968,9 +2673,7 @@
     const winners =
       result.winners;
 
-    if (
-      maxBigFish <= 0
-    ) {
+    if (maxBigFish <= 0) {
       if (teamEl) {
         teamEl.textContent =
           "—";
@@ -2989,23 +2692,17 @@
       return;
     }
 
-    if (
-      teamEl
-    ) {
+    if (teamEl) {
       teamEl.textContent =
         winners
           .map(
             row =>
               row.team
           )
-          .join(
-            " / "
-          );
+          .join(" / ");
     }
 
-    if (
-      metaEl
-    ) {
+    if (metaEl) {
       const stages =
         [
           ...new Set(
@@ -3020,15 +2717,11 @@
 
       metaEl.textContent =
         stages.length
-          ? stages.join(
-              " / "
-            )
+          ? stages.join(" / ")
           : `Сезон ${SEASON_YEAR}`;
     }
 
-    if (
-      weightEl
-    ) {
+    if (weightEl) {
       weightEl.textContent =
         `${fmtKg(
           maxBigFish
@@ -3049,8 +2742,7 @@
 
           cell.classList.toggle(
             "season-bigfish-winner",
-            value ===
-              maxBigFish
+            value === maxBigFish
           );
         }
       );
@@ -3067,16 +2759,12 @@
     const title =
       $("seasonRatingTitle");
 
-    if (
-      kicker
-    ) {
+    if (kicker) {
       kicker.textContent =
         `СЕЗОН ${SEASON_YEAR}`;
     }
 
-    if (
-      title
-    ) {
+    if (title) {
       title.textContent =
         "Рейтинг команд сезону";
     }
@@ -3146,13 +2834,9 @@
     allParticipants.forEach(
       team => {
         const key =
-          teamKey(
-            team
-          );
+          teamKey(team);
 
-        if (
-          key
-        ) {
+        if (key) {
           participantsMap.set(
             key,
             team
@@ -3164,9 +2848,7 @@
     rawTeams.forEach(
       team => {
         const key =
-          teamKey(
-            team
-          );
+          teamKey(team);
 
         if (
           key &&
@@ -3216,9 +2898,7 @@
   // RENDER PAYLOAD
   // =========================================================
 
-  function renderPayload(
-    payload
-  ) {
+  function renderPayload(payload) {
     currentPayload =
       payload;
 
@@ -3264,9 +2944,7 @@
 
     renderAdminArchivePanel();
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       showError(
         "⚠️ Немає команд для підсумкового рейтингу."
       );
@@ -3300,6 +2978,8 @@
 
     style.textContent = `
       .season-archive-admin{
+        position:relative;
+        z-index:10;
         margin-top:28px;
         padding:18px;
         border-radius:18px;
@@ -3336,6 +3016,12 @@
       }
 
       .season-archive-admin__button{
+        position:relative;
+        z-index:50;
+        pointer-events:auto;
+        touch-action:manipulation;
+        -webkit-tap-highlight-color:rgba(0,0,0,0);
+
         width:100%;
         margin-top:14px;
         padding:14px 16px;
@@ -3409,12 +3095,8 @@
     let panel =
       $("seasonArchiveAdmin");
 
-    if (
-      !currentUserIsAdmin
-    ) {
-      if (
-        panel
-      ) {
+    if (!currentUserIsAdmin) {
+      if (panel) {
         panel.remove();
       }
 
@@ -3426,15 +3108,15 @@
         ".season-rating-content"
       );
 
-    if (
-      !content
-    ) {
+    if (!content) {
+      console.warn(
+        "[Season Archive] .season-rating-content не знайдено."
+      );
       return;
     }
 
-    if (
-      !panel
-    ) {
+    // Створюємо панель тільки якщо її ще немає.
+    if (!panel) {
       panel =
         document.createElement(
           "section"
@@ -3508,32 +3190,131 @@
       content.appendChild(
         panel
       );
+    }
 
-      const button =
-        $("archiveSeasonButton");
+    // =======================================================
+    // ВАЖЛИВО:
+    // Обробник ставимо НЕ всередині if (!panel).
+    // Тому навіть якщо панель вже існувала, кнопка
+    // гарантовано отримує робочий onclick.
+    // =======================================================
 
-      if (
-        button
-      ) {
-        button.addEventListener(
-          "click",
-          event => {
-            event.preventDefault();
-            event.stopPropagation();
+    const button =
+      $("archiveSeasonButton");
 
-            archiveCurrentSeason()
-              .catch(
-                error => {
-                  console.error(
-                    "[Season Archive] unhandled:",
-                    error
-                  );
-                }
-              );
+    if (!button) {
+      console.error(
+        "[Season Archive] archiveSeasonButton не знайдено."
+      );
+      return;
+    }
+
+    button.style.position =
+      "relative";
+
+    button.style.zIndex =
+      "50";
+
+    button.style.pointerEvents =
+      "auto";
+
+    button.style.touchAction =
+      "manipulation";
+
+    button.onclick =
+      async function (event) {
+        event.preventDefault();
+
+        console.log(
+          "[Season Archive] CLICK",
+          {
+            year:
+              SEASON_YEAR,
+
+            uid:
+              currentUser?.uid ||
+              null,
+
+            isAdmin:
+              currentUserIsAdmin,
+
+            hasDb:
+              Boolean(
+                currentDb
+              ),
+
+            hasPayload:
+              Boolean(
+                currentPayload
+              ),
+
+            hasFinal:
+              Boolean(
+                currentPayload
+                  ?.finalStage
+              ),
+
+            rows:
+              Array.isArray(
+                currentPayload
+                  ?.rows
+              )
+                ? currentPayload
+                    .rows
+                    .length
+                : 0
           }
         );
+
+        setArchiveStatus(
+          "Натискання отримано. Перевіряємо дані сезону…",
+          "working"
+        );
+
+        try {
+          await archiveCurrentSeason();
+        } catch (error) {
+          console.error(
+            "[Season Archive] unhandled:",
+            error
+          );
+
+          archiveInProgress =
+            false;
+
+          const errorText =
+            getArchiveErrorText(
+              error
+            );
+
+          setArchiveStatus(
+            `❌ ${errorText}`,
+            "error"
+          );
+
+          button.disabled =
+            false;
+
+          button.textContent =
+            `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
+
+          window.alert(
+            `Помилка завершення сезону.\n\n${errorText}`
+          );
+        }
+      };
+
+    console.log(
+      "[Season Archive] button bound:",
+      {
+        year:
+          SEASON_YEAR,
+
+        uid:
+          currentUser?.uid ||
+          null
       }
-    }
+    );
   }
 
   function setArchiveStatus(
@@ -3543,18 +3324,14 @@
     const box =
       $("seasonArchiveStatus");
 
-    if (
-      !box
-    ) {
+    if (!box) {
       return;
     }
 
     box.className =
       "season-archive-admin__status";
 
-    if (
-      type
-    ) {
+    if (type) {
       box.classList.add(
         `is-${type}`
       );
@@ -3568,9 +3345,7 @@
   // ARCHIVE STAGES
   // =========================================================
 
-  function makeArchiveStages(
-    payload
-  ) {
+  function makeArchiveStages(payload) {
     const summaries =
       Array.isArray(
         payload?.stageSummaries
@@ -3584,12 +3359,10 @@
           stage.type,
 
         isFinal:
-          stage.isFinal ===
-          true,
+          stage.isFinal === true,
 
         number:
-          stage.number ===
-            undefined
+          stage.number === undefined
             ? null
             : stage.number,
 
@@ -3666,9 +3439,7 @@
   // FULL STAGE DOCUMENTS FOR ARCHIVE
   // =========================================================
 
-  function makeFullStageDocuments(
-    payload
-  ) {
+  function makeFullStageDocuments(payload) {
     const stages =
       Array.isArray(
         payload?.allStages
@@ -3735,9 +3506,7 @@
   // =========================================================
 
   function buildArchiveDocument() {
-    if (
-      !currentPayload
-    ) {
+    if (!currentPayload) {
       throw new Error(
         "Рейтинг сезону ще не сформований."
       );
@@ -3750,17 +3519,13 @@
         ? currentPayload.rows
         : [];
 
-    if (
-      !rows.length
-    ) {
+    if (!rows.length) {
       throw new Error(
         "Немає команд для архівації."
       );
     }
 
-    if (
-      !currentPayload.finalStage
-    ) {
+    if (!currentPayload.finalStage) {
       throw new Error(
         "Фінал сезону не знайдено. Архівацію заблоковано."
       );
@@ -3774,16 +3539,11 @@
 
     const podium =
       rows
-        .slice(
-          0,
-          3
-        )
+        .slice(0, 3)
         .map(
           row => ({
             place:
-              num(
-                row.place
-              ),
+              num(row.place),
 
             teamId:
               String(
@@ -3818,9 +3578,7 @@
       rows.map(
         row => ({
           place:
-            num(
-              row.place
-            ),
+            num(row.place),
 
           teamId:
             String(
@@ -3836,10 +3594,7 @@
 
           stages:
             row.regularCells.map(
-              (
-                cell,
-                index
-              ) => {
+              (cell, index) => {
                 const stage =
                   currentPayload
                     .regularStages[
@@ -3864,15 +3619,13 @@
 
                   stageDocId:
                     String(
-                      stage
-                        ?.stageDocId ||
+                      stage?.stageDocId ||
                       ""
                     ),
 
                   stageId:
                     String(
-                      stage
-                        ?.stageId ||
+                      stage?.stageId ||
                       ""
                     ),
 
@@ -3888,8 +3641,7 @@
                     ),
 
                   absent:
-                    cell.absent ===
-                    true
+                    cell.absent === true
                 };
               }
             ),
@@ -3940,8 +3692,7 @@
               ),
 
             absent:
-              row.finalPlace ===
-              "—"
+              row.finalPlace === "—"
           },
 
           seasonPoints:
@@ -4003,6 +3754,8 @@
         })
       );
 
+    // ВАЖЛИВО:
+    // тут ОБОВ'ЯЗКОВО створюємо змінну stages.
     const stages =
       makeArchiveStages(
         currentPayload
@@ -4016,14 +3769,11 @@
     const finalStageArchive =
       stages.find(
         stage =>
-          stage.isFinal ===
-          true
+          stage.isFinal === true
       ) ||
       null;
 
-    if (
-      !finalStageArchive
-    ) {
+    if (!finalStageArchive) {
       throw new Error(
         "Не вдалося сформувати дані Фіналу для архіву."
       );
@@ -4213,9 +3963,7 @@
           )
           .get();
 
-      if (
-        snap.empty
-      ) {
+      if (snap.empty) {
         break;
       }
 
@@ -4267,19 +4015,15 @@
 
   function clearRatingCaches() {
     try {
-      const keys =
-        [];
+      const keys = [];
 
       for (
         let i = 0;
-        i <
-        localStorage.length;
+        i < localStorage.length;
         i++
       ) {
         const key =
-          localStorage.key(
-            i
-          );
+          localStorage.key(i);
 
         if (
           key &&
@@ -4292,22 +4036,17 @@
             )
           )
         ) {
-          keys.push(
-            key
-          );
+          keys.push(key);
         }
       }
 
       keys.forEach(
         key =>
           localStorage
-            .removeItem(
-              key
-            )
+            .removeItem(key)
       );
-    } catch (
-      error
-    ) {
+
+    } catch (error) {
       console.warn(
         "[Season Archive] cache:",
         error
@@ -4319,9 +4058,7 @@
   // FIRESTORE ERROR TEXT
   // =========================================================
 
-  function getArchiveErrorText(
-    error
-  ) {
+  function getArchiveErrorText(error) {
     const code =
       String(
         error?.code ||
@@ -4355,8 +4092,7 @@
     ) {
       return (
         "Архів вийшов завеликим для одного документа Firestore. " +
-        "У такому випадку повні етапи треба буде зберігати окремою " +
-        "підколекцією архіву. " +
+        "Повні етапи треба буде зберігати окремою підколекцією архіву. " +
         `[${code}]`
       );
     }
@@ -4405,39 +4141,35 @@
   // =========================================================
 
   async function archiveCurrentSeason() {
-    if (
-      archiveInProgress
-    ) {
+    console.log(
+      "[Season Archive] archiveCurrentSeason START"
+    );
+
+    if (archiveInProgress) {
+      console.warn(
+        "[Season Archive] already in progress"
+      );
       return;
     }
 
-    if (
-      !currentUserIsAdmin
-    ) {
-      alert(
+    if (!currentUserIsAdmin) {
+      window.alert(
         "Ця дія доступна тільки адміністратору."
       );
-
       return;
     }
 
-    if (
-      !currentUser
-    ) {
-      alert(
+    if (!currentUser) {
+      window.alert(
         "Адміністратор не авторизований."
       );
-
       return;
     }
 
-    if (
-      !currentDb
-    ) {
-      alert(
+    if (!currentDb) {
+      window.alert(
         "Firestore ще не готовий."
       );
-
       return;
     }
 
@@ -4450,10 +4182,9 @@
         .rows
         .length
     ) {
-      alert(
+      window.alert(
         "Немає готового рейтингу для архівації."
       );
-
       return;
     }
 
@@ -4461,7 +4192,7 @@
       !currentPayload
         .finalStage
     ) {
-      alert(
+      window.alert(
         `Фінал сезону ${SEASON_YEAR} не знайдено.\n\n` +
         `Сезон НЕ буде закритий.`
       );
@@ -4481,8 +4212,7 @@
     const finalSummary =
       stageSummaries.find(
         stage =>
-          stage.isFinal ===
-          true
+          stage.isFinal === true
       );
 
     const stagesText =
@@ -4537,9 +4267,11 @@
         `Продовжити?`
       );
 
-    if (
-      !confirmed
-    ) {
+    if (!confirmed) {
+      setArchiveStatus(
+        "Архівацію скасовано.",
+        ""
+      );
       return;
     }
 
@@ -4562,9 +4294,11 @@
         `Виконати завершення сезону?`
       );
 
-    if (
-      !finalConfirm
-    ) {
+    if (!finalConfirm) {
+      setArchiveStatus(
+        "Завершення сезону скасовано.",
+        ""
+      );
       return;
     }
 
@@ -4574,9 +4308,7 @@
     archiveInProgress =
       true;
 
-    if (
-      button
-    ) {
+    if (button) {
       button.disabled =
         true;
 
@@ -4630,27 +4362,20 @@
       );
 
       const existing =
-        await archiveRef
-          .get();
+        await archiveRef.get();
 
-      if (
-        existing.exists
-      ) {
+      if (existing.exists) {
         const overwrite =
           window.confirm(
             `Архів сезону ${SEASON_YEAR} уже існує.\n\n` +
             `Перезаписати його новим повним snapshot?`
           );
 
-        if (
-          !overwrite
-        ) {
+        if (!overwrite) {
           archiveInProgress =
             false;
 
-          if (
-            button
-          ) {
+          if (button) {
             button.disabled =
               false;
 
@@ -4676,9 +4401,7 @@
         "working"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.textContent =
           "⏳ Записуємо архів…";
       }
@@ -4686,8 +4409,7 @@
       await archiveRef.set(
         archiveDocument,
         {
-          merge:
-            false
+          merge: false
         }
       );
 
@@ -4704,20 +4426,15 @@
         "working"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.textContent =
           "⏳ Перевіряємо архів…";
       }
 
       const verifySnap =
-        await archiveRef
-          .get();
+        await archiveRef.get();
 
-      if (
-        !verifySnap.exists
-      ) {
+      if (!verifySnap.exists) {
         throw new Error(
           `Архів seasonArchives/${SEASON_YEAR} не знайдено після запису. ` +
           `НІЧОГО НЕ ВИДАЛЕНО.`
@@ -4733,9 +4450,7 @@
           savedArchive.seasonYear ||
           ""
         ) !==
-        String(
-          SEASON_YEAR
-        )
+        String(SEASON_YEAR)
       ) {
         throw new Error(
           "Перевірка архіву не пройдена: неправильний seasonYear. " +
@@ -4754,8 +4469,7 @@
       }
 
       if (
-        savedArchive.hasFinal !==
-        true
+        savedArchive.hasFinal !== true
       ) {
         throw new Error(
           "Перевірка архіву не пройдена: Фінал відсутній. " +
@@ -4839,13 +4553,10 @@
           .stages
           .find(
             stage =>
-              stage?.isFinal ===
-              true
+              stage?.isFinal === true
           );
 
-      if (
-        !verifiedFinal
-      ) {
+      if (!verifiedFinal) {
         throw new Error(
           "Перевірка архіву не пройдена: у stages немає Фіналу. " +
           "НІЧОГО НЕ ВИДАЛЕНО."
@@ -4857,13 +4568,10 @@
           .fullStageDocuments
           .find(
             stage =>
-              stage?.isFinal ===
-              true
+              stage?.isFinal === true
           );
 
-      if (
-        !verifiedFullFinal
-      ) {
+      if (!verifiedFullFinal) {
         throw new Error(
           "Перевірка архіву не пройдена: повний документ Фіналу відсутній. " +
           "НІЧОГО НЕ ВИДАЛЕНО."
@@ -4908,9 +4616,7 @@
         "working"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.textContent =
           "⏳ Видаляємо дані турнірів…";
       }
@@ -4929,9 +4635,7 @@
       const seasonResultsDeleted =
         await verifySeasonResultsDeleted();
 
-      if (
-        !seasonResultsDeleted
-      ) {
+      if (!seasonResultsDeleted) {
         throw new Error(
           `Архів збережено, але не всі документи ` +
           `seasonResults/${SEASON_YEAR}/stages були видалені. ` +
@@ -4952,9 +4656,7 @@
         "working"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.textContent =
           "⏳ Очищаємо рейтинг…";
       }
@@ -5005,8 +4707,7 @@
       await ratingRef.set(
         closedRating,
         {
-          merge:
-            false
+          merge: false
         }
       );
 
@@ -5019,12 +4720,9 @@
       // =====================================================
 
       const verifyRatingSnap =
-        await ratingRef
-          .get();
+        await ratingRef.get();
 
-      if (
-        !verifyRatingSnap.exists
-      ) {
+      if (!verifyRatingSnap.exists) {
         throw new Error(
           `Архів створено та seasonResults очищено, ` +
           `але seasonRating/${SEASON_YEAR} не знайдено після очищення.`
@@ -5036,8 +4734,7 @@
         {};
 
       if (
-        ratingAfter.archived !==
-        true
+        ratingAfter.archived !== true
       ) {
         throw new Error(
           "Архів створено, але seasonRating не отримав archived:true."
@@ -5090,9 +4787,7 @@
         "success"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.disabled =
           true;
 
@@ -5124,9 +4819,7 @@
         `Видалено документів етапів: ${deletedStages}.`
       );
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "[Season Archive] error:",
         error
@@ -5145,9 +4838,7 @@
         "error"
       );
 
-      if (
-        button
-      ) {
+      if (button) {
         button.disabled =
           false;
 
@@ -5192,9 +4883,7 @@
         )
         .onSnapshot(
           async snap => {
-            if (
-              !snap.exists
-            ) {
+            if (!snap.exists) {
               currentRatingSource =
                 null;
 
@@ -5219,8 +4908,7 @@
                 rating;
 
               if (
-                rating.archived ===
-                  true &&
+                rating.archived === true &&
                 (
                   !Array.isArray(
                     rating.teams
@@ -5231,44 +4919,25 @@
                 )
               ) {
                 currentPayload = {
-                  regularStages:
-                    [],
-
-                  finalStage:
-                    null,
-
-                  allStages:
-                    [],
-
-                  rows:
-                    [],
-
-                  allParticipantsStats:
-                    [],
-
-                  stageSummaries:
-                    [],
-
-                  stageMaps:
-                    new Map()
+                  regularStages: [],
+                  finalStage: null,
+                  allStages: [],
+                  rows: [],
+                  allParticipantsStats: [],
+                  stageSummaries: [],
+                  stageMaps: new Map()
                 };
 
-                buildHeader(
-                  []
-                );
+                buildHeader([]);
 
                 renderTable(
                   [],
                   []
                 );
 
-                renderPodium(
-                  []
-                );
+                renderPodium([]);
 
-                renderSeasonBigFish(
-                  []
-                );
+                renderSeasonBigFish([]);
 
                 updateTitles();
 
@@ -5299,9 +4968,7 @@
                 payload
               );
 
-            } catch (
-              error
-            ) {
+            } catch (error) {
               console.error(
                 "[Season Rating] build:",
                 error
@@ -5335,9 +5002,7 @@
           }
         );
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
       console.error(
         "[Season Rating] load:",
         error
@@ -5360,8 +5025,7 @@
 
   window.refreshSeasonRating =
     function () {
-      window.location
-        .reload();
+      window.location.reload();
     };
 
   // =========================================================
@@ -5374,7 +5038,10 @@
   ) {
     document.addEventListener(
       "DOMContentLoaded",
-      loadSeasonRating
+      loadSeasonRating,
+      {
+        once: true
+      }
     );
   } else {
     loadSeasonRating();

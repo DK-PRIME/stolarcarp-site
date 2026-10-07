@@ -594,7 +594,7 @@
     }
 
     /* =========================================================
-       MONOBANK
+       MONOBANK • VISIBLE CARD NUMBER
        ========================================================= */
 
     .sp-bank {
@@ -632,26 +632,11 @@
       color: var(--sp-muted);
     }
 
-    /* =========================================================
-       MONOBANK • BLURRED CARD NUMBER
-       ========================================================= */
-
     .sp-bank__number {
-      position: relative;
-
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
+      display: block;
 
       width: 100%;
-      min-height: 48px;
-
-      padding: 8px 0;
-
-      border: 0;
-      border-radius: 8px;
-
-      background: transparent;
+      padding: 9px 0;
 
       color: #fff;
 
@@ -659,70 +644,13 @@
       font-weight: 750;
       letter-spacing: .075em;
 
+      line-height: 1.4;
       text-align: left;
-      cursor: pointer;
 
-      overflow: hidden;
-    }
+      overflow-wrap: anywhere;
 
-    .sp-bank__digits {
-      display: block;
-
-      filter: blur(8px);
-      opacity: .65;
-
-      user-select: none;
-      -webkit-user-select: none;
-
-      transition:
-        filter .35s ease,
-        opacity .35s ease;
-    }
-
-    .sp-bank__reveal {
-      position: absolute;
-      inset: 0;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      gap: 8px;
-
-      padding: 6px;
-
-      border-radius: 9px;
-
-      background:
-        rgba(7, 12, 20, .45);
-
-      color: var(--sp-gold-light);
-
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: .025em;
-
-      text-align: center;
-
-      transition: opacity .25s ease;
-    }
-
-    .sp-bank__number.is-revealed .sp-bank__digits {
-      filter: blur(0);
-      opacity: 1;
-
-      user-select: text;
-      -webkit-user-select: text;
-    }
-
-    .sp-bank__number.is-revealed .sp-bank__reveal {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .sp-bank__number:focus-visible {
-      outline: 2px solid var(--sp-gold);
-      outline-offset: 4px;
+      user-select: all;
+      -webkit-user-select: all;
     }
 
     .sp-modal__actions {
@@ -771,10 +699,10 @@
 
       padding: 11px 13px;
 
-      border-radius: 10px;
-
       border:
         1px solid rgba(255, 255, 255, .14);
+
+      border-radius: 10px;
 
       background:
         rgba(5, 10, 18, .67);
@@ -1250,7 +1178,7 @@
       </p>
 
       <!-- ===================================================
-           MONOBANK CARD
+           MONOBANK CARD • ALWAYS VISIBLE
            =================================================== -->
 
       <div class="sp-bank">
@@ -1267,41 +1195,12 @@
           Номер картки для переказу
         </div>
 
-        <!--
-          Спочатку номер розмитий.
-
-          Натискання на номер:
-          показує цифри.
-
-          Натискання на копіювання:
-          показує цифри та копіює номер.
-        -->
-
-        <button
+        <span
           class="sp-bank__number"
           id="spCardNumber"
-          type="button"
-          aria-label="Показати номер картки"
-          aria-pressed="false"
         >
-
-          <span
-            class="sp-bank__digits"
-            id="spCardDigits"
-            aria-hidden="true"
-          >
-            4874 0700 5068 8793
-          </span>
-
-          <span
-            class="sp-bank__reveal"
-            id="spCardReveal"
-            aria-hidden="true"
-          >
-            ◉ Натисніть, щоб переглянути
-          </span>
-
-        </button>
+          4874 0700 5068 8793
+        </span>
 
       </div>
 
@@ -1851,64 +1750,6 @@
     }
 
     /* =====================================================
-       MONOBANK • CARD PRIVACY
-       ===================================================== */
-
-    function revealCardNumber() {
-      const card = $("spCardNumber");
-
-      const digits = $("spCardDigits");
-
-      if (!card || !digits) return;
-
-      card.classList.add(
-        "is-revealed"
-      );
-
-      card.setAttribute(
-        "aria-label",
-        "Номер картки: 4874 0700 5068 8793"
-      );
-
-      card.setAttribute(
-        "aria-pressed",
-        "true"
-      );
-
-      digits.setAttribute(
-        "aria-hidden",
-        "false"
-      );
-    }
-
-    function hideCardNumber() {
-      const card = $("spCardNumber");
-
-      const digits = $("spCardDigits");
-
-      if (!card || !digits) return;
-
-      card.classList.remove(
-        "is-revealed"
-      );
-
-      card.setAttribute(
-        "aria-label",
-        "Показати номер картки"
-      );
-
-      card.setAttribute(
-        "aria-pressed",
-        "false"
-      );
-
-      digits.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-    }
-
-    /* =====================================================
        MONOBANK • COPY CARD
        ===================================================== */
 
@@ -1918,9 +1759,6 @@
       if (status) {
         status.textContent = "";
       }
-
-      // При копіюванні номер стає видимим
-      revealCardNumber();
 
       try {
         if (
@@ -1963,7 +1801,7 @@
 
         if (status) {
           status.textContent =
-            "✓ Номер картки відкрито та скопійовано";
+            "✓ Номер картки скопійовано";
         }
 
       } catch (error) {
@@ -1974,7 +1812,7 @@
 
         if (status) {
           status.textContent =
-            "Номер відкрито. Скопіюйте його вручну.";
+            "Не вдалося скопіювати. Виділіть номер картки вручну.";
         }
       }
     }
@@ -2474,20 +2312,8 @@
             status.textContent = "";
           }
 
-          // При кожному відкритті номер розмитий
-          hideCardNumber();
-
           openModal(supportModal);
         }
-      );
-
-      /* ===================================================
-         SHOW CARD NUMBER
-         =================================================== */
-
-      $("spCardNumber")?.addEventListener(
-        "click",
-        revealCardNumber
       );
 
       /* ===================================================

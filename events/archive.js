@@ -42,9 +42,7 @@
   }
 
   const params = new URLSearchParams(window.location.search);
-
-  const seasonYear =
-    params.get("year") || "2026";
+  const seasonYear = params.get("year") || "2026";
 
   const FINALISTS_COUNT = 18;
   const BEST_COUNT_FOR_FINAL = 2;
@@ -55,8 +53,7 @@
   let fullRanking = [];
 
   if (pageTitle) {
-    pageTitle.textContent =
-      `Архів сезону ${seasonYear}`;
+    pageTitle.textContent = `Архів сезону ${seasonYear}`;
   }
 
   function esc(value) {
@@ -102,9 +99,7 @@
     const n = num(value);
 
     return n > 0
-      ? n
-          .toFixed(2)
-          .replace(/\.?0+$/, "")
+      ? n.toFixed(2).replace(/\.?0+$/, "")
       : "—";
   }
 
@@ -132,9 +127,7 @@
   }
 
   function teamKey(team) {
-    const id = norm(
-      team?.teamId
-    );
+    const id = norm(team?.teamId);
 
     if (id) {
       return `id:${id}`;
@@ -176,9 +169,7 @@
   }
 
   function stageNumber(value) {
-    const raw = String(
-      value || ""
-    );
+    const raw = String(value || "");
 
     let match = raw.match(
       /stage[-_\s]*(\d+)/i
@@ -204,22 +195,14 @@
       return Number(match[1]);
     }
 
-    const numbers =
-      raw.match(/\d+/g);
+    const numbers = raw.match(/\d+/g);
 
     return numbers?.length
-      ? Number(
-          numbers[
-            numbers.length - 1
-          ]
-        )
+      ? Number(numbers[numbers.length - 1])
       : null;
   }
 
-  function isFinalMeta(
-    data,
-    id = ""
-  ) {
+  function isFinalMeta(data, id = "") {
     const raw = clean(
       `${id} ` +
       `${data?.stageId || ""} ` +
@@ -263,7 +246,10 @@
 
     if (fish.length) {
       return fish.filter(item => {
-        if (!item || typeof item !== "object") {
+        if (
+          !item ||
+          typeof item !== "object"
+        ) {
           return false;
         }
 
@@ -291,7 +277,10 @@
 
     if (fish.length) {
       return fish.filter(item => {
-        if (!item || typeof item !== "object") {
+        if (
+          !item ||
+          typeof item !== "object"
+        ) {
           return false;
         }
 
@@ -302,11 +291,8 @@
       }).length;
     }
 
-    const total =
-      getSlotCount(slot);
-
-    const amur =
-      getSlotAmurCount(slot);
+    const total = getSlotCount(slot);
+    const amur = getSlotAmurCount(slot);
 
     return Math.max(
       0,
@@ -412,8 +398,7 @@
       carpCount =
         Math.max(
           0,
-          totalCount -
-          amurCount
+          totalCount - amurCount
         );
     }
 
@@ -427,9 +412,7 @@
 
   function calculateStageSummary(data) {
     const rows =
-      Array.isArray(
-        data?.standings
-      )
+      Array.isArray(data?.standings)
         ? data.standings
         : [];
 
@@ -440,9 +423,7 @@
       rows.reduce(
         (sum, row) =>
           sum +
-          num(
-            row?.totalWeight
-          ),
+          num(row?.totalWeight),
         0
       );
 
@@ -451,9 +432,7 @@
         (max, row) =>
           Math.max(
             max,
-            num(
-              row?.bigFish
-            )
+            num(row?.bigFish)
           ),
         0
       );
@@ -462,9 +441,7 @@
       rows.reduce(
         (sum, row) =>
           sum +
-          num(
-            row?.totalCount
-          ),
+          num(row?.totalCount),
         0
       );
 
@@ -479,23 +456,17 @@
 
       totalWeight:
         summary.totalWeight != null
-          ? num(
-              summary.totalWeight
-            )
+          ? num(summary.totalWeight)
           : totalWeight,
 
       maxBigFish:
         summary.maxBigFish != null
-          ? num(
-              summary.maxBigFish
-            )
+          ? num(summary.maxBigFish)
           : maxBigFish,
 
       totalCount:
         summary.totalCount != null
-          ? num(
-              summary.totalCount
-            )
+          ? num(summary.totalCount)
           : totalCount
     };
   }
@@ -514,19 +485,13 @@
     return (
       archiveStages.find(
         stage =>
-          norm(
-            stage.stageDocId
-          ) ===
+          norm(stage.stageDocId) ===
           norm(stageDocId)
       ) ||
       archiveStages.find(
         stage =>
-          norm(
-            stage.stageId
-          ) ===
-          norm(
-            stageData?.stageId
-          )
+          norm(stage.stageId) ===
+          norm(stageData?.stageId)
       ) ||
       null
     );
@@ -538,14 +503,10 @@
     }
 
     if (
-      item?.archiveMeta?.number !==
-        undefined &&
-      item?.archiveMeta?.number !==
-        null &&
+      item?.archiveMeta?.number !== undefined &&
+      item?.archiveMeta?.number !== null &&
       Number.isFinite(
-        Number(
-          item.archiveMeta.number
-        )
+        Number(item.archiveMeta.number)
       )
     ) {
       return Number(
@@ -558,12 +519,9 @@
       item?.data?.stageName,
       item?.id
     ]) {
-      const n =
-        stageNumber(value);
+      const n = stageNumber(value);
 
-      if (
-        Number.isFinite(n)
-      ) {
+      if (Number.isFinite(n)) {
         return n;
       }
     }
@@ -573,10 +531,7 @@
 
   function inferFinal(items) {
     if (
-      items.some(
-        item =>
-          item.isFinal
-      ) ||
+      items.some(item => item.isFinal) ||
       items.length < 2
     ) {
       return;
@@ -592,33 +547,20 @@
         );
 
     const last =
-      ordered[
-        ordered.length - 1
-      ];
+      ordered[ordered.length - 1];
 
     const previous =
-      ordered.slice(
-        0,
-        -1
-      );
+      ordered.slice(0, -1);
 
     if (
-      num(
-        last?.summary
-          ?.teamsCount
-      ) > 0 &&
-      num(
-        last?.summary
-          ?.teamsCount
-      ) <=
+      num(last?.summary?.teamsCount) > 0 &&
+      num(last?.summary?.teamsCount) <=
         FINALISTS_COUNT &&
       previous.some(
         item =>
           num(
-            item?.summary
-              ?.teamsCount
-          ) >
-          FINALISTS_COUNT
+            item?.summary?.teamsCount
+          ) > FINALISTS_COUNT
       )
     ) {
       last.isFinal = true;
@@ -662,9 +604,7 @@
   function normalizeStandingRow(row) {
     return {
       teamId:
-        norm(
-          row?.teamId
-        ),
+        norm(row?.teamId),
 
       team:
         norm(
@@ -679,14 +619,10 @@
         ).toUpperCase(),
 
       sector:
-        norm(
-          row?.sector
-        ),
+        norm(row?.sector),
 
       zonePlace:
-        num(
-          row?.zonePlace
-        ),
+        num(row?.zonePlace),
 
       points:
         num(
@@ -702,29 +638,19 @@
         ),
 
       totalWeight:
-        num(
-          row?.totalWeight
-        ),
+        num(row?.totalWeight),
 
       bigFish:
-        num(
-          row?.bigFish
-        ),
+        num(row?.bigFish),
 
       totalCount:
-        num(
-          row?.totalCount
-        ),
+        num(row?.totalCount),
 
       carpCount:
-        num(
-          row?.carpCount
-        ),
+        num(row?.carpCount),
 
       amurCount:
-        num(
-          row?.amurCount
-        ),
+        num(row?.amurCount),
 
       w1:
         row?.w1 || null,
@@ -740,10 +666,7 @@
     };
   }
 
-  function compareStandingRows(
-    a,
-    b
-  ) {
+  function compareStandingRows(a, b) {
     if (
       b.totalWeight !==
       a.totalWeight
@@ -774,12 +697,11 @@
       );
     }
 
-    return String(
-      a.team
-    ).localeCompare(
-      String(b.team),
-      "uk"
-    );
+    return String(a.team)
+      .localeCompare(
+        String(b.team),
+        "uk"
+      );
   }
 
   function buildStageResultMap(item) {
@@ -859,28 +781,20 @@
 
               overallPlace:
                 row.overallPlace ||
-                overallPlaces.get(
-                  key
-                ) ||
+                overallPlaces.get(key) ||
                 0
             };
 
-            if (
-              fixed.teamId
-            ) {
+            if (fixed.teamId) {
               byTeamId.set(
                 fixed.teamId,
                 fixed
               );
             }
 
-            if (
-              fixed.team
-            ) {
+            if (fixed.team) {
               byTeamName.set(
-                clean(
-                  fixed.team
-                ),
+                clean(fixed.team),
                 fixed
               );
             }
@@ -892,9 +806,7 @@
       .filter(
         row =>
           !["A", "B", "C"]
-            .includes(
-              row.zone
-            )
+            .includes(row.zone)
       )
       .forEach(row => {
         const key =
@@ -906,9 +818,7 @@
 
           overallPlace:
             row.overallPlace ||
-            overallPlaces.get(
-              key
-            ) ||
+            overallPlaces.get(key) ||
             0,
 
           points:
@@ -918,22 +828,16 @@
             0
         };
 
-        if (
-          fixed.teamId
-        ) {
+        if (fixed.teamId) {
           byTeamId.set(
             fixed.teamId,
             fixed
           );
         }
 
-        if (
-          fixed.team
-        ) {
+        if (fixed.team) {
           byTeamName.set(
-            clean(
-              fixed.team
-            ),
+            clean(fixed.team),
             fixed
           );
         }
@@ -948,10 +852,7 @@
 
   function getRegularStageItems() {
     return stages
-      .filter(
-        item =>
-          !item.isFinal
-      )
+      .filter(item => !item.isFinal)
       .slice()
       .sort(
         (a, b) =>
@@ -963,8 +864,7 @@
   function getFinalStageItem() {
     return (
       stages.find(
-        item =>
-          item.isFinal
+        item => item.isFinal
       ) ||
       null
     );
@@ -982,17 +882,13 @@
     }
 
     const id =
-      norm(
-        team?.teamId
-      );
+      norm(team?.teamId);
 
     if (
       id &&
       map.byTeamId.has(id)
     ) {
-      return map.byTeamId.get(
-        id
-      );
+      return map.byTeamId.get(id);
     }
 
     const name =
@@ -1005,14 +901,19 @@
       name &&
       map.byTeamName.has(name)
     ) {
-      return map.byTeamName.get(
-        name
-      );
+      return map.byTeamName.get(name);
     }
 
     return null;
   }
 
+  /*
+   * Фінал у рейтингу STOLAR CARP:
+   * показуємо місце в зоні фіналу.
+   *
+   * Саме тому для KORSAR тут буде 5,
+   * а не загальне overallPlace = 16.
+   */
   function getActualFinalResult(team) {
     const finalStage =
       getFinalStageItem();
@@ -1033,7 +934,8 @@
 
     const place =
       num(
-        row.overallPlace
+        row.zonePlace ||
+        row.points
       );
 
     if (!place) {
@@ -1046,14 +948,16 @@
       absent: false,
       participated: true,
       totalWeight:
-        num(
-          row.totalWeight
-        ),
+        num(row.totalWeight),
       bigFish:
-        num(
-          row.bigFish
-        )
+        num(row.bigFish)
     };
+  }
+
+  function didTeamPlayFinal(team) {
+    return Boolean(
+      getActualFinalResult(team)
+    );
   }
 
   function collectSeasonTeams(
@@ -1062,65 +966,59 @@
     const result =
       new Map();
 
-    regularStages.forEach(
-      item => {
-        const rows =
-          item?.resultMap?.rows ||
-          [];
+    regularStages.forEach(item => {
+      const rows =
+        item?.resultMap?.rows ||
+        [];
 
-        rows.forEach(row => {
-          const team = {
-            teamId:
-              norm(
-                row.teamId
-              ),
+      rows.forEach(row => {
+        const team = {
+          teamId:
+            norm(row.teamId),
 
-            team:
-              norm(
-                row.team
-              )
-          };
+          team:
+            norm(row.team)
+        };
 
-          const key =
-            teamKey(team);
+        const key =
+          teamKey(team);
 
-          if (!key) {
-            return;
-          }
+        if (!key) {
+          return;
+        }
 
-          const existing =
-            result.get(key);
+        const existing =
+          result.get(key);
 
-          if (!existing) {
-            result.set(
-              key,
-              team
-            );
-            return;
-          }
+        if (!existing) {
+          result.set(
+            key,
+            team
+          );
+          return;
+        }
 
-          if (
-            !existing.teamId &&
-            team.teamId
-          ) {
-            existing.teamId =
-              team.teamId;
-          }
+        if (
+          !existing.teamId &&
+          team.teamId
+        ) {
+          existing.teamId =
+            team.teamId;
+        }
 
-          if (
-            (
-              !existing.team ||
-              existing.team === "—"
-            ) &&
-            team.team &&
-            team.team !== "—"
-          ) {
-            existing.team =
-              team.team;
-          }
-        });
-      }
-    );
+        if (
+          (
+            !existing.team ||
+            existing.team === "—"
+          ) &&
+          team.team &&
+          team.team !== "—"
+        ) {
+          existing.team =
+            team.team;
+        }
+      });
+    });
 
     return [
       ...result.values()
@@ -1132,86 +1030,76 @@
     regularStages
   ) {
     const stageResults =
-      regularStages.map(
-        item => {
-          const row =
-            findStageTeamRow(
-              item,
-              team
-            );
+      regularStages.map(item => {
+        const row =
+          findStageTeamRow(
+            item,
+            team
+          );
 
-          if (!row) {
-            return {
-              stageDocId:
-                item.id,
-
-              stageId:
-                norm(
-                  item?.data
-                    ?.stageId ||
-                  item?.archiveMeta
-                    ?.stageId ||
-                  item.id
-                ),
-
-              place:
-                "—",
-
-              points:
-                ABSENT_REGULAR_POINTS,
-
-              absent:
-                true,
-
-              totalWeight:
-                0,
-
-              bigFish:
-                0
-            };
-          }
-
-          const place =
-            num(
-              row.zonePlace ||
-              row.points
-            );
-
+        if (!row) {
           return {
             stageDocId:
               item.id,
 
             stageId:
               norm(
-                item?.data
-                  ?.stageId ||
-                item?.archiveMeta
-                  ?.stageId ||
+                item?.data?.stageId ||
+                item?.archiveMeta?.stageId ||
                 item.id
               ),
 
             place:
-              place || "—",
+              "—",
 
             points:
-              place ||
               ABSENT_REGULAR_POINTS,
 
             absent:
-              !place,
+              true,
 
             totalWeight:
-              num(
-                row.totalWeight
-              ),
+              0,
 
             bigFish:
-              num(
-                row.bigFish
-              )
+              0
           };
         }
-      );
+
+        const place =
+          num(
+            row.zonePlace ||
+            row.points
+          );
+
+        return {
+          stageDocId:
+            item.id,
+
+          stageId:
+            norm(
+              item?.data?.stageId ||
+              item?.archiveMeta?.stageId ||
+              item.id
+            ),
+
+          place:
+            place || "—",
+
+          points:
+            place ||
+            ABSENT_REGULAR_POINTS,
+
+          absent:
+            !place,
+
+          totalWeight:
+            num(row.totalWeight),
+
+          bigFish:
+            num(row.bigFish)
+        };
+      });
 
     const bestResults =
       stageResults
@@ -1253,9 +1141,7 @@
       bestResults.reduce(
         (sum, result) =>
           sum +
-          num(
-            result.points
-          ),
+          num(result.points),
         0
       );
 
@@ -1263,9 +1149,7 @@
       stageResults.reduce(
         (sum, result) =>
           sum +
-          num(
-            result.totalWeight
-          ),
+          num(result.totalWeight),
         0
       );
 
@@ -1274,18 +1158,14 @@
         (max, result) =>
           Math.max(
             max,
-            num(
-              result.bigFish
-            )
+            num(result.bigFish)
           ),
         0
       );
 
     return {
       teamId:
-        norm(
-          team.teamId
-        ),
+        norm(team.teamId),
 
       team:
         norm(
@@ -1308,9 +1188,7 @@
     const regularStages =
       getRegularStageItems();
 
-    if (
-      !regularStages.length
-    ) {
+    if (!regularStages.length) {
       return [];
     }
 
@@ -1360,12 +1238,11 @@
           );
         }
 
-        return String(
-          a.team
-        ).localeCompare(
-          String(b.team),
-          "uk"
-        );
+        return String(a.team)
+          .localeCompare(
+            String(b.team),
+            "uk"
+          );
       }
     );
 
@@ -1388,6 +1265,125 @@
           sameTeam(
             row,
             archiveRow
+          )
+      ) ||
+      null
+    );
+  }
+
+  /*
+   * Визначаємо фактичні заміни у фіналі.
+   *
+   * OUT:
+   * команда з кваліфікаційного TOP-18,
+   * яка не стартувала у фіналі.
+   *
+   * IN:
+   * команда нижче TOP-18,
+   * яка фактично є у standings фіналу.
+   *
+   * Якщо замін декілька — резерви заходять
+   * у порядку кваліфікаційного рейтингу.
+   */
+  function buildFinalReplacements(
+    qualification
+  ) {
+    const finalStage =
+      getFinalStageItem();
+
+    if (!finalStage) {
+      return [];
+    }
+
+    const qualified =
+      qualification
+        .filter(
+          row =>
+            row.qualificationPlace <=
+            FINALISTS_COUNT
+        )
+        .sort(
+          (a, b) =>
+            a.qualificationPlace -
+            b.qualificationPlace
+        );
+
+    const reserves =
+      qualification
+        .filter(
+          row =>
+            row.qualificationPlace >
+            FINALISTS_COUNT
+        )
+        .sort(
+          (a, b) =>
+            a.qualificationPlace -
+            b.qualificationPlace
+        );
+
+    const declined =
+      qualified.filter(
+        row =>
+          !didTeamPlayFinal(row)
+      );
+
+    const replacements =
+      reserves.filter(
+        row =>
+          didTeamPlayFinal(row)
+      );
+
+    const count =
+      Math.min(
+        declined.length,
+        replacements.length
+      );
+
+    const pairs = [];
+
+    for (
+      let index = 0;
+      index < count;
+      index += 1
+    ) {
+      pairs.push({
+        out:
+          declined[index],
+
+        in:
+          replacements[index]
+      });
+    }
+
+    return pairs;
+  }
+
+  function findReplacementOut(
+    replacements,
+    team
+  ) {
+    return (
+      replacements.find(
+        pair =>
+          sameTeam(
+            pair.out,
+            team
+          )
+      ) ||
+      null
+    );
+  }
+
+  function findReplacementIn(
+    replacements,
+    team
+  ) {
+    return (
+      replacements.find(
+        pair =>
+          sameTeam(
+            pair.in,
+            team
           )
       ) ||
       null
@@ -1418,39 +1414,108 @@
     const qualification =
       buildQualificationRanking();
 
-    if (
-      !qualification.length
-    ) {
+    if (!qualification.length) {
       return archivedRanking;
     }
 
-    const finalists =
-      archivedRanking.map(
-        row => {
-          const qualificationRow =
-            findQualificationRow(
-              qualification,
-              row
-            );
-
-          return {
-            ...row,
-
-            rankingType:
-              "finalist",
-
-            qualificationPlace:
-              qualificationRow
-                ?.qualificationPlace ||
-              0,
-
-            qualificationPoints:
-              qualificationRow
-                ?.qualificationPoints ||
-              0
-          };
-        }
+    const replacements =
+      buildFinalReplacements(
+        qualification
       );
+
+    const finalists =
+      archivedRanking.map(row => {
+        const qualificationRow =
+          findQualificationRow(
+            qualification,
+            row
+          );
+
+        const sourceTeam =
+          qualificationRow || row;
+
+        const actualFinal =
+          getActualFinalResult(
+            sourceTeam
+          );
+
+        const replacementOut =
+          findReplacementOut(
+            replacements,
+            sourceTeam
+          );
+
+        /*
+         * Для фіналіста теж беремо фактичне
+         * місце у зоні фіналу.
+         *
+         * Якщо команда відмовилась —
+         * фінал = "—".
+         */
+        const finalData =
+          actualFinal
+            ? {
+                place:
+                  actualFinal.place,
+
+                points:
+                  actualFinal.points,
+
+                absent:
+                  false,
+
+                participated:
+                  true
+              }
+            : {
+                place:
+                  "—",
+
+                points:
+                  0,
+
+                absent:
+                  true,
+
+                participated:
+                  false
+              };
+
+        return {
+          ...row,
+
+          final:
+            finalData,
+
+          finalPlace:
+            actualFinal
+              ? actualFinal.place
+              : "—",
+
+          rankingType:
+            "finalist",
+
+          qualificationPlace:
+            qualificationRow
+              ?.qualificationPlace ||
+            0,
+
+          qualificationPoints:
+            qualificationRow
+              ?.qualificationPoints ||
+            0,
+
+          replacementOut:
+            Boolean(
+              replacementOut
+            ),
+
+          replacementTeam:
+            replacementOut
+              ?.in?.team ||
+            ""
+        };
+      });
 
     const finalistKeys =
       new Set();
@@ -1506,7 +1571,11 @@
         })
         .map(row => {
           const actualFinal =
-            getActualFinalResult(
+            getActualFinalResult(row);
+
+          const replacementIn =
+            findReplacementIn(
+              replacements,
               row
             );
 
@@ -1596,7 +1665,17 @@
               "contender",
 
             actualFinalParticipation:
-              Boolean(actualFinal)
+              Boolean(actualFinal),
+
+            replacementIn:
+              Boolean(
+                replacementIn
+              ),
+
+            replacedTeam:
+              replacementIn
+                ?.out?.team ||
+              ""
           };
         });
 
@@ -1607,9 +1686,7 @@
   }
 
   function ensureSummaryDom() {
-    if (
-      $("seasonArchiveSummary")
-    ) {
+    if ($("seasonArchiveSummary")) {
       return;
     }
 
@@ -1629,9 +1706,7 @@
     }
 
     const wrap =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
     wrap.id =
       "seasonArchiveSummary";
@@ -1720,9 +1795,7 @@
         ? archiveDocument.podium
         : [];
 
-    if (
-      !podium.length
-    ) {
+    if (!podium.length) {
       section.hidden = true;
       return;
     }
@@ -1832,10 +1905,7 @@
     const stageNames = [
       ...new Set(
         winners
-          .map(
-            row =>
-              row.stage
-          )
+          .map(row => row.stage)
           .filter(Boolean)
       )
     ];
@@ -1885,21 +1955,15 @@
     index
   ) {
     const results =
-      Array.isArray(
-        row?.stages
-      )
+      Array.isArray(row?.stages)
         ? row.stages
         : [];
 
     const stageDocId =
-      norm(
-        stage?.stageDocId
-      );
+      norm(stage?.stageDocId);
 
     const stageId =
-      norm(
-        stage?.stageId
-      );
+      norm(stage?.stageId);
 
     const exact =
       results.find(
@@ -1908,15 +1972,13 @@
             stageDocId &&
             norm(
               result?.stageDocId
-            ) ===
-            stageDocId
+            ) === stageDocId
           ) ||
           (
             stageId &&
             norm(
               result?.stageId
-            ) ===
-            stageId
+            ) === stageId
           )
       );
 
@@ -1947,6 +2009,68 @@
     );
   }
 
+  function renderTeamCell(row) {
+    const team =
+      esc(
+        row.team ||
+        "—"
+      );
+
+    if (row.replacementOut) {
+      return `
+        <div class="ranking-team-name">
+          ${team}
+        </div>
+
+        <div class="replacement replacement--out">
+          → ВІДМОВА
+        </div>
+
+        ${
+          row.replacementTeam
+            ? `
+              <div class="replacement-link">
+                → ${esc(
+                  row.replacementTeam
+                )}
+              </div>
+            `
+            : ""
+        }
+      `;
+    }
+
+    if (row.replacementIn) {
+      return `
+        <div class="ranking-team-name">
+          ${team}
+        </div>
+
+        <div class="replacement replacement--in">
+          ← ЗАМІНА
+        </div>
+
+        ${
+          row.replacedTeam
+            ? `
+              <div class="replacement-link replacement-link--in">
+                замість ${esc(
+                  row.replacedTeam
+                )}
+              </div>
+            `
+            : ""
+        }
+      `;
+    }
+
+    return `
+      <div class="ranking-team-name">
+        ${team}
+      </div>
+    `;
+  }
+
   function renderSeasonRanking() {
     const section =
       $("seasonArchiveRanking");
@@ -1967,9 +2091,7 @@
     const ranking =
       getRanking();
 
-    if (
-      !ranking.length
-    ) {
+    if (!ranking.length) {
       section.hidden = true;
       return;
     }
@@ -1986,11 +2108,8 @@
         .filter(
           stage =>
             !(
-              stage.isFinal ===
-                true ||
-              clean(
-                stage.type
-              ) ===
+              stage.isFinal === true ||
+              clean(stage.type) ===
                 "final"
             )
         )
@@ -1998,9 +2117,7 @@
           (a, b) => {
             const an =
               num(a.number) ||
-              stageNumber(
-                a.stageId
-              ) ||
+              stageNumber(a.stageId) ||
               stageNumber(
                 a.stageDocId
               ) ||
@@ -2008,9 +2125,7 @@
 
             const bn =
               num(b.number) ||
-              stageNumber(
-                b.stageId
-              ) ||
+              stageNumber(b.stageId) ||
               stageNumber(
                 b.stageDocId
               ) ||
@@ -2025,11 +2140,8 @@
         ?.hasFinal === true ||
       archiveStages.some(
         stage =>
-          stage.isFinal ===
-            true ||
-          clean(
-            stage.type
-          ) ===
+          stage.isFinal === true ||
+          clean(stage.type) ===
             "final"
       ) ||
       stages.some(
@@ -2051,6 +2163,12 @@
           "contender"
       );
 
+    const replacements =
+      contenders.filter(
+        row =>
+          row.replacementIn
+      );
+
     if (legend) {
       legend.innerHTML = `
         <span>
@@ -2068,13 +2186,22 @@
             `
             : ""
         }
+
+        ${
+          replacements.length
+            ? `
+              <span class="legend-replacement">
+                Заміни:
+                <b>${replacements.length}</b>
+              </span>
+            `
+            : ""
+        }
       `;
     }
 
     table
-      .querySelector(
-        "thead"
-      )
+      .querySelector("thead")
       .innerHTML = `
         <tr>
 
@@ -2091,9 +2218,7 @@
               (stage, index) => `
                 <th class="col-stage">
                   Е${
-                    num(
-                      stage.number
-                    ) ||
+                    num(stage.number) ||
                     index + 1
                   }
                 </th>
@@ -2128,25 +2253,177 @@
 
     let body = "";
 
-    finalists.forEach(
-      row => {
-        const place =
-          num(row.place);
+    finalists.forEach(row => {
+      const place =
+        num(row.place);
+
+      body += `
+        <tr class="
+          ${
+            place >= 1 &&
+            place <= 3
+              ? `ranking-top-${place}`
+              : ""
+          }
+          ranking-finalist
+          ${
+            row.replacementOut
+              ? "ranking-replaced-out"
+              : ""
+          }
+        ">
+
+          <td class="r-place">
+            ${esc(
+              row.place ??
+              "—"
+            )}
+          </td>
+
+          <td
+            class="r-team"
+            title="${esc(
+              row.team ||
+              ""
+            )}"
+          >
+            ${renderTeamCell(row)}
+          </td>
+
+          ${regularStages
+            .map(
+              (
+                stage,
+                index
+              ) => {
+                const cell =
+                  getStageCell(
+                    row,
+                    stage,
+                    index
+                  );
+
+                return `
+                  <td
+                    class="
+                      r-stage
+                      ${
+                        cell?.absent
+                          ? "r-absent"
+                          : ""
+                      }
+                    "
+                  >
+                    ${formatRankingCell(
+                      cell
+                    )}
+                  </td>
+                `;
+              }
+            )
+            .join("")}
+
+          ${
+            hasFinal
+              ? `
+                <td
+                  class="
+                    r-final
+                    ${
+                      row.final
+                        ?.absent
+                        ? "r-absent"
+                        : "r-final-played"
+                    }
+                  "
+                >
+                  ${
+                    row.final
+                      ?.absent
+                      ? "—"
+                      : esc(
+                          row.final
+                            ?.place ??
+                          row.finalPlace ??
+                          "—"
+                        )
+                  }
+                </td>
+              `
+              : ""
+          }
+
+          <td class="r-points">
+            ${esc(
+              num(
+                row.seasonPoints
+              )
+            )}
+          </td>
+
+          <td class="r-weight">
+            ${esc(
+              fmtWeight(
+                row.totalWeight
+              )
+            )}
+          </td>
+
+          <td class="r-big">
+            ${esc(
+              fmtWeight(
+                row.bigFish
+              )
+            )}
+          </td>
+
+        </tr>
+      `;
+    });
+
+    if (contenders.length) {
+      body += `
+        <tr class="ranking-divider">
+          <td colspan="${
+            2 +
+            regularStages.length +
+            (
+              hasFinal
+                ? 1
+                : 0
+            ) +
+            3
+          }">
+            ПРЕТЕНДЕНТИ НА ФІНАЛ
+          </td>
+        </tr>
+      `;
+
+      contenders.forEach(row => {
+        const actualFinal =
+          row.final &&
+          row.final.absent !== true &&
+          num(row.final.place) > 0;
 
         body += `
           <tr class="
+            ranking-contender
             ${
-              place >= 1 &&
-              place <= 3
-                ? `ranking-top-${place}`
+              actualFinal
+                ? "ranking-contender--final"
                 : ""
             }
-            ranking-finalist
+            ${
+              row.replacementIn
+                ? "ranking-replacement-in"
+                : ""
+            }
           ">
 
             <td class="r-place">
               ${esc(
-                row.place ??
+                row.qualificationPlace ||
+                row.place ||
                 "—"
               )}
             </td>
@@ -2158,10 +2435,7 @@
                 ""
               )}"
             >
-              ${esc(
-                row.team ||
-                "—"
-              )}
+              ${renderTeamCell(row)}
             </td>
 
             ${regularStages
@@ -2204,19 +2478,19 @@
                     class="
                       r-final
                       ${
-                        row.final
-                          ?.absent
-                          ? "r-absent"
-                          : ""
+                        actualFinal
+                          ? "r-final-played"
+                          : "r-absent"
                       }
                     "
                   >
-                    ${esc(
-                      row.final
-                        ?.place ??
-                      row.finalPlace ??
-                      "—"
-                    )}
+                    ${
+                      actualFinal
+                        ? esc(
+                            row.final.place
+                          )
+                        : "—"
+                    }
                   </td>
                 `
                 : ""
@@ -2225,7 +2499,7 @@
             <td class="r-points">
               ${esc(
                 num(
-                  row.seasonPoints
+                  row.qualificationPoints
                 )
               )}
             </td>
@@ -2248,159 +2522,11 @@
 
           </tr>
         `;
-      }
-    );
-
-    if (
-      contenders.length
-    ) {
-      body += `
-        <tr class="ranking-divider">
-          <td colspan="${
-            2 +
-            regularStages.length +
-            (
-              hasFinal
-                ? 1
-                : 0
-            ) +
-            3
-          }">
-            ПРЕТЕНДЕНТИ НА ФІНАЛ
-          </td>
-        </tr>
-      `;
-
-      contenders.forEach(
-        row => {
-          const actualFinal =
-            row.final &&
-            row.final.absent !== true &&
-            num(row.final.place) > 0;
-
-          body += `
-            <tr class="
-              ranking-contender
-              ${
-                actualFinal
-                  ? "ranking-contender--final"
-                  : ""
-              }
-            ">
-
-              <td class="r-place">
-                ${esc(
-                  row.qualificationPlace ||
-                  row.place ||
-                  "—"
-                )}
-              </td>
-
-              <td
-                class="r-team"
-                title="${esc(
-                  row.team ||
-                  ""
-                )}"
-              >
-                ${esc(
-                  row.team ||
-                  "—"
-                )}
-              </td>
-
-              ${regularStages
-                .map(
-                  (
-                    stage,
-                    index
-                  ) => {
-                    const cell =
-                      getStageCell(
-                        row,
-                        stage,
-                        index
-                      );
-
-                    return `
-                      <td
-                        class="
-                          r-stage
-                          ${
-                            cell?.absent
-                              ? "r-absent"
-                              : ""
-                          }
-                        "
-                      >
-                        ${formatRankingCell(
-                          cell
-                        )}
-                      </td>
-                    `;
-                  }
-                )
-                .join("")}
-
-              ${
-                hasFinal
-                  ? `
-                    <td
-                      class="
-                        r-final
-                        ${
-                          actualFinal
-                            ? "r-final-played"
-                            : "r-absent"
-                        }
-                      "
-                    >
-                      ${
-                        actualFinal
-                          ? esc(
-                              row.final.place
-                            )
-                          : "—"
-                      }
-                    </td>
-                  `
-                  : ""
-              }
-
-              <td class="r-points">
-                ${esc(
-                  num(
-                    row.qualificationPoints
-                  )
-                )}
-              </td>
-
-              <td class="r-weight">
-                ${esc(
-                  fmtWeight(
-                    row.totalWeight
-                  )
-                )}
-              </td>
-
-              <td class="r-big">
-                ${esc(
-                  fmtWeight(
-                    row.bigFish
-                  )
-                )}
-              </td>
-
-            </tr>
-          `;
-        }
-      );
+      });
     }
 
     table
-      .querySelector(
-        "tbody"
-      )
+      .querySelector("tbody")
       .innerHTML =
         body;
 
@@ -2412,8 +2538,7 @@
       !archiveDocument ||
       clean(
         archiveDocument.status
-      ) !==
-        "archived"
+      ) !== "archived"
     ) {
       return;
     }
@@ -2434,15 +2559,12 @@
           .collection(
             "seasonArchives"
           )
-          .doc(
-            seasonYear
-          )
+          .doc(seasonYear)
           .get();
 
       archiveDocument =
         snap.exists
-          ? snap.data() ||
-            {}
+          ? snap.data() || {}
           : null;
 
     } catch (error) {
@@ -2472,121 +2594,108 @@
           .collection(
             "seasonResults"
           )
-          .doc(
-            seasonYear
-          )
-          .collection(
-            "stages"
-          )
+          .doc(seasonYear)
+          .collection("stages")
           .get();
 
       stages = [];
 
-      snap.forEach(
-        doc => {
-          const data =
-            doc.data() ||
-            {};
+      snap.forEach(doc => {
+        const data =
+          doc.data() || {};
 
-          const archiveMeta =
-            findArchiveStage(
-              doc.id,
-              data
-            );
-
-          const calculated =
-            calculateStageSummary(
-              data
-            );
-
-          const summary = {
-            teamsCount:
-              num(
-                archiveMeta
-                  ?.teamsCount ??
-                archiveMeta
-                  ?.summary
-                  ?.teamsCount ??
-                calculated
-                  .teamsCount
-              ),
-
-            totalWeight:
-              num(
-                archiveMeta
-                  ?.totalWeight ??
-                archiveMeta
-                  ?.summary
-                  ?.totalWeight ??
-                calculated
-                  .totalWeight
-              ),
-
-            maxBigFish:
-              num(
-                archiveMeta
-                  ?.bigFish ??
-                archiveMeta
-                  ?.summary
-                  ?.maxBigFish ??
-                calculated
-                  .maxBigFish
-              ),
-
-            totalCount:
-              num(
-                archiveMeta
-                  ?.totalCount ??
-                archiveMeta
-                  ?.summary
-                  ?.totalCount ??
-                calculated
-                  .totalCount
-              )
-          };
-
-          const final =
-            archiveMeta
-              ?.isFinal ===
-              true ||
-            clean(
-              archiveMeta?.type
-            ) ===
-              "final" ||
-            isFinalMeta(
-              data,
-              doc.id
-            );
-
-          const item = {
-            id:
-              doc.id,
-
-            data,
-
-            archiveMeta,
-
-            summary,
-
-            isFinal:
-              final,
-
-            type:
-              final
-                ? "final"
-                : "qualification"
-          };
-
-          item.sortValue =
-            stageSortValue(
-              item
-            );
-
-          stages.push(
-            item
+        const archiveMeta =
+          findArchiveStage(
+            doc.id,
+            data
           );
-        }
-      );
+
+        const calculated =
+          calculateStageSummary(
+            data
+          );
+
+        const summary = {
+          teamsCount:
+            num(
+              archiveMeta
+                ?.teamsCount ??
+              archiveMeta
+                ?.summary
+                ?.teamsCount ??
+              calculated
+                .teamsCount
+            ),
+
+          totalWeight:
+            num(
+              archiveMeta
+                ?.totalWeight ??
+              archiveMeta
+                ?.summary
+                ?.totalWeight ??
+              calculated
+                .totalWeight
+            ),
+
+          maxBigFish:
+            num(
+              archiveMeta
+                ?.bigFish ??
+              archiveMeta
+                ?.summary
+                ?.maxBigFish ??
+              calculated
+                .maxBigFish
+            ),
+
+          totalCount:
+            num(
+              archiveMeta
+                ?.totalCount ??
+              archiveMeta
+                ?.summary
+                ?.totalCount ??
+              calculated
+                .totalCount
+            )
+        };
+
+        const final =
+          archiveMeta?.isFinal ===
+            true ||
+          clean(
+            archiveMeta?.type
+          ) === "final" ||
+          isFinalMeta(
+            data,
+            doc.id
+          );
+
+        const item = {
+          id:
+            doc.id,
+
+          data,
+
+          archiveMeta,
+
+          summary,
+
+          isFinal:
+            final,
+
+          type:
+            final
+              ? "final"
+              : "qualification"
+        };
+
+        item.sortValue =
+          stageSortValue(item);
+
+        stages.push(item);
+      });
 
       inferFinal(stages);
 
@@ -2620,9 +2729,7 @@
 
       renderArchiveSnapshot();
 
-      if (
-        !stages.length
-      ) {
+      if (!stages.length) {
         if (msg) {
           msg.textContent =
             archiveDocument
@@ -2635,9 +2742,7 @@
               : "muted";
         }
 
-        stagesList.innerHTML =
-          "";
-
+        stagesList.innerHTML = "";
         return;
       }
 
@@ -2652,6 +2757,7 @@
             </div>
 
             <div class="archive-season-stats">
+
               <span>
                 Загальний улов:
                 <b>
@@ -2689,6 +2795,7 @@
                   )} шт
                 </b>
               </span>
+
             </div>
           `;
         } else {
@@ -2696,120 +2803,108 @@
             `Знайдено етапів: ${stages.length}`;
         }
 
-        msg.className =
-          "ok";
+        msg.className = "ok";
       }
 
       stagesList.innerHTML =
         stages
-          .map(
-            item => {
-              const summary =
-                item.summary ||
-                {};
+          .map(item => {
+            const summary =
+              item.summary || {};
 
-              return `
-                <button
-                  class="stage-btn ${
-                    item.isFinal
-                      ? "stage-btn--final"
-                      : ""
-                  }"
-                  type="button"
-                  data-stage="${esc(
-                    item.id
-                  )}"
-                >
+            return `
+              <button
+                class="stage-btn ${
+                  item.isFinal
+                    ? "stage-btn--final"
+                    : ""
+                }"
+                type="button"
+                data-stage="${esc(
+                  item.id
+                )}"
+              >
 
-                  <div class="stage-btn__top">
+                <div class="stage-btn__top">
 
-                    <div class="stage-btn__title">
-                      ${
-                        item.isFinal
-                          ? "🏆 "
-                          : ""
-                      }
-                      ${esc(
-                        item.title
-                      )}
-                    </div>
-
+                  <div class="stage-btn__title">
                     ${
                       item.isFinal
-                        ? `
-                          <span class="stage-final-badge">
-                            ФІНАЛ
-                          </span>
-                        `
+                        ? "🏆 "
                         : ""
                     }
-
+                    ${esc(
+                      item.title
+                    )}
                   </div>
 
-                  <div class="stage-btn__meta">
-                    Команд:
-                    <b>
-                      ${esc(
-                        num(
-                          summary
-                            .teamsCount
-                        )
-                      )}
-                    </b>
+                  ${
+                    item.isFinal
+                      ? `
+                        <span class="stage-final-badge">
+                          ФІНАЛ
+                        </span>
+                      `
+                      : ""
+                  }
 
-                    · Вага:
-                    <b>
-                      ${esc(
-                        fmtWeight(
-                          summary
-                            .totalWeight
-                        )
-                      )}
-                    </b>
+                </div>
 
-                    · BIG:
-                    <b>
-                      ${esc(
-                        fmtWeight(
-                          summary
-                            .maxBigFish
-                        )
-                      )}
-                    </b>
-                  </div>
+                <div class="stage-btn__meta">
+                  Команд:
+                  <b>
+                    ${esc(
+                      num(
+                        summary.teamsCount
+                      )
+                    )}
+                  </b>
 
-                </button>
-              `;
-            }
-          )
+                  · Вага:
+                  <b>
+                    ${esc(
+                      fmtWeight(
+                        summary.totalWeight
+                      )
+                    )}
+                  </b>
+
+                  · BIG:
+                  <b>
+                    ${esc(
+                      fmtWeight(
+                        summary.maxBigFish
+                      )
+                    )}
+                  </b>
+                </div>
+
+              </button>
+            `;
+          })
           .join("");
 
       stagesList
         .querySelectorAll(
           "[data-stage]"
         )
-        .forEach(
-          button => {
-            button.addEventListener(
-              "click",
-              () => {
-                const item =
-                  stages.find(
-                    stage =>
-                      stage.id ===
-                      button.dataset
-                        .stage
-                  );
+        .forEach(button => {
+          button.addEventListener(
+            "click",
+            () => {
+              const item =
+                stages.find(
+                  stage =>
+                    stage.id ===
+                    button.dataset.stage
+                );
 
-                if (item) {
-                  renderStage(
-                    item
-                  );
-                }
+              if (item) {
+                renderStage(item);
               }
-            );
-          }
-        );
+            }
+          );
+        });
 
     } catch (error) {
       console.error(
@@ -2872,22 +2967,16 @@
       C: []
     };
 
-    rows.forEach(
-      row => {
-        const zone =
-          norm(
-            row.zone
-          ).toUpperCase();
+    rows.forEach(row => {
+      const zone =
+        norm(
+          row.zone
+        ).toUpperCase();
 
-        if (
-          zones[zone]
-        ) {
-          zones[zone].push(
-            row
-          );
-        }
+      if (zones[zone]) {
+        zones[zone].push(row);
       }
-    );
+    });
 
     if (zonesWrap) {
       zonesWrap.innerHTML =
@@ -2907,11 +2996,8 @@
 
     resultSection
       ?.scrollIntoView({
-        behavior:
-          "smooth",
-
-        block:
-          "start"
+        behavior: "smooth",
+        block: "start"
       });
   }
 
@@ -2944,36 +3030,24 @@
         .sort(
           (a, b) => {
             const weight =
-              num(
-                b.totalWeight
-              ) -
-              num(
-                a.totalWeight
-              );
+              num(b.totalWeight) -
+              num(a.totalWeight);
 
             if (weight) {
               return weight;
             }
 
             const big =
-              num(
-                b.bigFish
-              ) -
-              num(
-                a.bigFish
-              );
+              num(b.bigFish) -
+              num(a.bigFish);
 
             if (big) {
               return big;
             }
 
             const count =
-              num(
-                b.totalCount
-              ) -
-              num(
-                a.totalCount
-              );
+              num(b.totalCount) -
+              num(a.totalCount);
 
             if (count) {
               return count;
@@ -3017,35 +3091,25 @@
 
                 <td
                   class="a-team"
-                  title="${esc(
-                    team
-                  )}"
+                  title="${esc(team)}"
                 >
                   ${esc(team)}
                 </td>
 
                 <td>
-                  ${fmtW(
-                    row.w1
-                  )}
+                  ${fmtW(row.w1)}
                 </td>
 
                 <td>
-                  ${fmtW(
-                    row.w2
-                  )}
+                  ${fmtW(row.w2)}
                 </td>
 
                 <td>
-                  ${fmtW(
-                    row.w3
-                  )}
+                  ${fmtW(row.w3)}
                 </td>
 
                 <td>
-                  ${fmtW(
-                    row.w4
-                  )}
+                  ${fmtW(row.w4)}
                 </td>
 
                 <td>
@@ -3140,9 +3204,7 @@
   }
 
   function injectCss() {
-    if (
-      $("archiveCompactCss")
-    ) {
+    if ($("archiveCompactCss")) {
       return;
     }
 
@@ -3282,6 +3344,10 @@
         color:#f8fafc;
       }
 
+      .season-ranking-legend .legend-replacement{
+        color:#22c55e;
+      }
+
       .season-ranking-wrap{
         width:100%;
         overflow:hidden;
@@ -3352,6 +3418,42 @@
         padding-left:4px;
         font-size:8px;
         font-weight:900;
+        white-space:normal;
+        overflow:visible;
+      }
+
+      .ranking-team-name{
+        color:inherit;
+        font-weight:950;
+        line-height:1.05;
+      }
+
+      .replacement{
+        margin-top:2px;
+        font-size:6.5px;
+        line-height:1;
+        font-weight:950;
+        letter-spacing:.02em;
+      }
+
+      .replacement--out{
+        color:#f87171;
+      }
+
+      .replacement--in{
+        color:#22c55e;
+      }
+
+      .replacement-link{
+        margin-top:2px;
+        color:#fca5a5;
+        font-size:6px;
+        line-height:1.05;
+        font-weight:800;
+      }
+
+      .replacement-link--in{
+        color:#86efac;
       }
 
       .season-ranking-table .r-place,
@@ -3374,6 +3476,22 @@
         color:#22c55e!important;
         background:rgba(34,197,94,.10)!important;
         font-weight:950;
+      }
+
+      .season-ranking-table .ranking-replaced-out td{
+        background:rgba(127,29,29,.09);
+      }
+
+      .season-ranking-table .ranking-replaced-out .r-team{
+        border-left:2px solid #ef4444;
+      }
+
+      .season-ranking-table .ranking-replacement-in td{
+        background:rgba(20,83,45,.11);
+      }
+
+      .season-ranking-table .ranking-replacement-in .r-team{
+        border-left:2px solid #22c55e;
       }
 
       .season-ranking-table .ranking-top-1 td{
@@ -3403,6 +3521,10 @@
 
       .season-ranking-table .ranking-contender--final .r-team{
         color:#f8fafc;
+      }
+
+      .season-ranking-table .ranking-replacement-in td{
+        background:rgba(20,83,45,.11);
       }
 
       .season-ranking-table .ranking-divider td{
@@ -3477,7 +3599,11 @@
         padding:4px 8px;
         border-radius:999px;
         color:#111827;
-        background:linear-gradient(90deg,#facc15,#f97316);
+        background:linear-gradient(
+          90deg,
+          #facc15,
+          #f97316
+        );
         font-size:.65rem;
         font-weight:950;
       }
@@ -3681,13 +3807,21 @@
 
         .season-ranking-table th,
         .season-ranking-table td{
-          height:25px;
+          min-height:25px;
           padding:1px;
         }
 
         .season-ranking-table .r-team{
-          padding-left:3px;
+          padding:3px;
           font-size:7px;
+        }
+
+        .replacement{
+          font-size:5.8px;
+        }
+
+        .replacement-link{
+          font-size:5.5px;
         }
       }
 
@@ -3704,6 +3838,14 @@
           font-size:6.5px;
         }
 
+        .replacement{
+          font-size:5.5px;
+        }
+
+        .replacement-link{
+          font-size:5.2px;
+        }
+
         .archive-compact-table{
           font-size:6.8px;
         }
@@ -3718,9 +3860,7 @@
       }
     `;
 
-    document.head.appendChild(
-      style
-    );
+    document.head.appendChild(style);
   }
 
   await loadStages();

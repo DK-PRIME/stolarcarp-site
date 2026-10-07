@@ -34,15 +34,10 @@
 //
 // 5. АРХІВАЦІЯ СЕЗОНУ
 //    • snapshot -> seasonArchives/{year}
-//    • зберігає:
-//        - Етап 1 / 2 / 3...
-//        - Фінал
-//        - summary кожного етапу
-//        - повний рейтинг
-//        - TOP-3
-//        - Big Fish сезону
-//    • seasonResults/{year}/stages НЕ видаляється;
-//    • seasonRating/{year} після архівації очищається.
+//    • спочатку записує архів;
+//    • потім перевіряє, що архів реально записаний;
+//    • тільки після цього очищає seasonRating/{year};
+//    • seasonResults/{year}/stages НЕ видаляється.
 //
 // 6. FINAL DETECTION
 //    • isFinal / type / stageType / назва "Фінал";
@@ -1396,9 +1391,6 @@
         stageMaps
       );
 
-    /*
-     * 1. Явно позначений Фінал.
-     */
     let finalStage =
       stages.find(
         stage =>
@@ -1408,9 +1400,6 @@
       ) ||
       null;
 
-    /*
-     * 2. Hint у seasonRating.
-     */
     if (!finalStage) {
       const hints =
         getRatingFinalHints(
@@ -1432,23 +1421,6 @@
       }
     }
 
-    /*
-     * 3. Legacy fallback.
-     *
-     * Старий сезон міг записати:
-     * stage-4
-     *
-     * замість:
-     * isFinal:true / "Фінал".
-     *
-     * Для STOLAR CARP фінал:
-     * TOP-18.
-     *
-     * Якщо останній етап має
-     * <=18 команд, а хоча б один
-     * попередній мав >18 —
-     * останній вважаємо Фіналом.
-     */
     if (
       !finalStage &&
       stages.length >= 2
@@ -1548,10 +1520,6 @@
       }
     }
 
-    /*
-     * Якщо finalStage знайдений
-     * через hint — канонізуємо.
-     */
     if (finalStage) {
       finalStage = {
         ...finalStage,
@@ -2588,13 +2556,6 @@
               ""
             ),
 
-          /*
-           * Канонічна назва.
-           *
-           * Навіть якщо старий
-           * stage-4 був без "Фінал",
-           * в архіві буде "Фінал".
-           */
           stageName:
             title,
 
@@ -2626,12 +2587,6 @@
               summary.totalCount
             ),
 
-          /*
-           * Дублюємо summary,
-           * щоб archive.js міг
-           * читати і старий,
-           * і новий формат.
-           */
           summary: {
             teamsCount:
               num(
@@ -3143,31 +3098,17 @@
     db,
     rating
   ) {
-    /*
-     * 1. Беремо всі archivedStages.
-     */
     const candidateStages =
       getCandidateStages(
         rating
       );
 
-    /*
-     * 2. Читаємо реальні
-     * seasonResults/{year}/stages.
-     *
-     * Тут отримуємо:
-     * standings + summary + meta.
-     */
     const stageMaps =
       await loadStageMaps(
         db,
         candidateStages
       );
 
-    /*
-     * 3. Тепер визначаємо,
-     * що регулярне, а що Фінал.
-     */
     const {
       regularStages,
       finalStage,
@@ -3186,10 +3127,6 @@
         ? rating.teams.slice()
         : [];
 
-    /*
-     * TOP-18 тільки
-     * за відбірковими етапами.
-     */
     const finalists =
       getFinalists(
         rawTeams,
@@ -3197,9 +3134,6 @@
         stageMaps
       );
 
-    /*
-     * Підсумковий рейтинг.
-     */
     const rows =
       buildSeasonRanking(
         finalists,
@@ -3208,10 +3142,6 @@
         stageMaps
       );
 
-    /*
-     * Усі учасники сезону
-     * для Big Fish.
-     */
     const allParticipants =
       collectAllSeasonParticipants(
         allStages,
@@ -3273,20 +3203,6 @@
         stageMaps
       );
 
-    /*
-     * Готовий summary:
-     *
-     * Етап 1
-     * Команд: 21
-     * Вага: ...
-     * BIG: ...
-     *
-     * ...
-     *
-     * Фінал
-     * Команд: 18
-     * ...
-     */
     const stageSummaries =
       buildStageArchiveSummaries(
         allStages,
@@ -3556,7 +3472,11 @@
         </div>
 
         <div class="season-archive-admin__warning">
-          Після успішного запису
+          Спочатку буде створено та перевірено архів.
+
+          <br><br>
+
+          Тільки після успішної перевірки
           <b>seasonRating/${esc(SEASON_YEAR)}</b>
           буде очищено.
 
@@ -3593,7 +3513,20 @@
       ) {
         button.addEventListener(
           "click",
-          archiveCurrentSeason
+          event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            archiveCurrentSeason()
+              .catch(
+                error => {
+                  console.error(
+                    "[Season Archive] unhandled:",
+                    error
+                  );
+                }
+              );
+          }
         );
       }
     }
@@ -3651,22 +3584,30 @@
           true,
 
         number:
-          stage.number,
+          stage.number ===
+            undefined
+            ? null
+            : stage.number,
 
         title:
-          stage.title,
+          stage.title ||
+          "",
 
         stageDocId:
-          stage.stageDocId,
+          stage.stageDocId ||
+          "",
 
         stageId:
-          stage.stageId,
+          stage.stageId ||
+          "",
 
         stageName:
-          stage.stageName,
+          stage.stageName ||
+          "",
 
         sourceStageName:
-          stage.sourceStageName,
+          stage.sourceStageName ||
+          "",
 
         teamsCount:
           num(
@@ -3745,13 +3686,6 @@
       );
     }
 
-    /*
-     * Сезон НЕ закриваємо,
-     * якщо Фінал не знайдений.
-     *
-     * Це захист від випадкового
-     * неповного snapshot.
-     */
     if (
       !currentPayload.finalStage
     ) {
@@ -3775,7 +3709,9 @@
         .map(
           row => ({
             place:
-              row.place,
+              num(
+                row.place
+              ),
 
             teamId:
               String(
@@ -3784,7 +3720,10 @@
               ),
 
             team:
-              row.team,
+              String(
+                row.team ||
+                "—"
+              ),
 
             points:
               num(
@@ -3807,7 +3746,9 @@
       rows.map(
         row => ({
           place:
-            row.place,
+            num(
+              row.place
+            ),
 
           teamId:
             String(
@@ -3816,11 +3757,11 @@
             ),
 
           team:
-            row.team,
+            String(
+              row.team ||
+              "—"
+            ),
 
-          /*
-           * Відбіркові етапи.
-           */
           stages:
             row.regularCells.map(
               (
@@ -3864,7 +3805,10 @@
                     ),
 
                   place:
-                    cell.place,
+                    cell.place ===
+                      undefined
+                      ? "—"
+                      : cell.place,
 
                   points:
                     num(
@@ -3878,20 +3822,17 @@
               }
             ),
 
-          /*
-           * Compatibility fields.
-           */
           finalPlace:
-            row.finalPlace,
+            row.finalPlace ===
+              undefined
+              ? "—"
+              : row.finalPlace,
 
           finalPoints:
             num(
               row.finalPoints
             ),
 
-          /*
-           * Новий структурований final.
-           */
           final: {
             type:
               "final",
@@ -3916,7 +3857,10 @@
               ),
 
             place:
-              row.finalPlace,
+              row.finalPlace ===
+                undefined
+                ? "—"
+                : row.finalPlace,
 
             points:
               num(
@@ -3944,8 +3888,10 @@
             ),
 
           bigFishStage:
-            row.bigFishStage ||
-            ""
+            String(
+              row.bigFishStage ||
+              ""
+            )
         })
       );
 
@@ -3967,7 +3913,10 @@
             ),
 
           team:
-            row.team,
+            String(
+              row.team ||
+              "—"
+            ),
 
           bigFish:
             num(
@@ -3975,8 +3924,10 @@
             ),
 
           bigFishStage:
-            row.bigFishStage ||
-            ""
+            String(
+              row.bigFishStage ||
+              ""
+            )
         })
       );
 
@@ -3993,20 +3944,25 @@
       ) ||
       null;
 
+    if (
+      !finalStageArchive
+    ) {
+      throw new Error(
+        "Не вдалося сформувати дані Фіналу для архіву."
+      );
+    }
+
     return {
       seasonYear:
-        SEASON_YEAR,
+        String(
+          SEASON_YEAR
+        ),
 
       status:
         "archived",
 
-      /*
-       * v2 =
-       * stages мають summary +
-       * структурований final.
-       */
       archiveVersion:
-        2,
+        3,
 
       stagesCount:
         stages.length,
@@ -4018,9 +3974,7 @@
         ).length,
 
       hasFinal:
-        Boolean(
-          finalStageArchive
-        ),
+        true,
 
       finalistsCount:
         ranking.length,
@@ -4059,32 +4013,15 @@
         ]
       },
 
-      /*
-       * Етап 1 / 2 / 3 / Фінал
-       * разом із summary.
-       */
       stages,
 
-      /*
-       * Швидке посилання
-       * на Фінал всередині snapshot.
-       */
       finalStage:
         finalStageArchive,
 
-      /*
-       * Повний TOP-18.
-       */
       ranking,
 
-      /*
-       * TOP-3.
-       */
       podium,
 
-      /*
-       * Big Fish сезону.
-       */
       bigFish: {
         weight:
           num(
@@ -4103,20 +4040,20 @@
                   ),
 
                 team:
-                  row.team,
+                  String(
+                    row.team ||
+                    "—"
+                  ),
 
                 stage:
-                  row.bigFishStage ||
-                  ""
+                  String(
+                    row.bigFishStage ||
+                    ""
+                  )
               })
             )
       },
 
-      /*
-       * Усі учасники,
-       * щоб Big Fish можна було
-       * перевірити в архіві.
-       */
       allParticipantsBigFish:
         allBigFishParticipants,
 
@@ -4130,12 +4067,16 @@
 
       archivedBy: {
         uid:
-          currentUser?.uid ||
-          "",
+          String(
+            currentUser?.uid ||
+            ""
+          ),
 
         email:
-          currentUser?.email ||
-          ""
+          String(
+            currentUser?.email ||
+            ""
+          )
       },
 
       archivedAt:
@@ -4200,6 +4141,91 @@
   }
 
   // =========================================================
+  // FIRESTORE ERROR TEXT
+  // =========================================================
+
+  function getArchiveErrorText(
+    error
+  ) {
+    const code =
+      String(
+        error?.code ||
+        ""
+      );
+
+    const message =
+      String(
+        error?.message ||
+        error ||
+        "Невідома помилка"
+      );
+
+    if (
+      code.includes(
+        "permission-denied"
+      )
+    ) {
+      return (
+        "Firestore заборонив операцію. " +
+        "Потрібно дозволити адміністратору запис у " +
+        `seasonArchives/${SEASON_YEAR} та ` +
+        `seasonRating/${SEASON_YEAR}. ` +
+        `[${code}]`
+      );
+    }
+
+    if (
+      code.includes(
+        "resource-exhausted"
+      )
+    ) {
+      return (
+        "Firestore відхилив запис через розмір або ліміт ресурсу. " +
+        "Ймовірно фінальний snapshot завеликий для одного документа. " +
+        `[${code}]`
+      );
+    }
+
+    if (
+      code.includes(
+        "unavailable"
+      )
+    ) {
+      return (
+        "Firestore тимчасово недоступний або немає стабільного з'єднання. " +
+        `[${code}]`
+      );
+    }
+
+    if (
+      code.includes(
+        "unauthenticated"
+      )
+    ) {
+      return (
+        "Firebase не бачить авторизованого адміністратора. " +
+        `[${code}]`
+      );
+    }
+
+    if (
+      code.includes(
+        "invalid-argument"
+      )
+    ) {
+      return (
+        "Firestore відхилив структуру документа. " +
+        `${message} ` +
+        `[${code}]`
+      );
+    }
+
+    return code
+      ? `${message} [${code}]`
+      : message;
+  }
+
+  // =========================================================
   // ARCHIVE CURRENT SEASON
   // =========================================================
 
@@ -4221,6 +4247,16 @@
     }
 
     if (
+      !currentUser
+    ) {
+      alert(
+        "Адміністратор не авторизований."
+      );
+
+      return;
+    }
+
+    if (
       !currentDb
     ) {
       alert(
@@ -4232,9 +4268,12 @@
 
     if (
       !currentPayload ||
+      !Array.isArray(
+        currentPayload.rows
+      ) ||
       !currentPayload
         .rows
-        ?.length
+        .length
     ) {
       alert(
         "Немає готового рейтингу для архівації."
@@ -4243,10 +4282,6 @@
       return;
     }
 
-    /*
-     * Тепер без Фіналу
-     * сезон не закриваємо.
-     */
     if (
       !currentPayload
         .finalStage
@@ -4272,33 +4307,37 @@
     const finalSummary =
       stageSummaries.find(
         stage =>
-          stage.isFinal
+          stage.isFinal ===
+          true
       );
 
+    const stagesText =
+      stageSummaries
+        .map(
+          stage =>
+            `• ${
+              stage.title
+            }: ${
+              stage.teamsCount
+            } команд · ${
+              fmtKg(
+                stage.totalWeight
+              )
+            } кг · BIG ${
+              fmtKg(
+                stage.bigFish
+              )
+            }`
+        )
+        .join("\n");
+
     const confirmed =
-      confirm(
+      window.confirm(
         `ЗАВЕРШИТИ СЕЗОН ${SEASON_YEAR}?\n\n` +
 
         `Буде збережено:\n\n` +
 
-        `${stageSummaries
-          .map(
-            stage =>
-              `• ${
-                stage.title
-              }: ${
-                stage.teamsCount
-              } команд · ${
-                fmtKg(
-                  stage.totalWeight
-                )
-              } кг · BIG ${
-                fmtKg(
-                  stage.bigFish
-                )
-              }`
-          )
-          .join("\n")}\n\n` +
+        `${stagesText}\n\n` +
 
         `• Повний рейтинг TOP-${TOP_COUNT}\n` +
         `• 1 / 2 / 3 місце\n` +
@@ -4310,8 +4349,11 @@
             : "знайдено"
         }\n\n` +
 
-        `seasonResults/${SEASON_YEAR}/stages залишиться без змін.\n` +
-        `seasonRating/${SEASON_YEAR} буде очищено.\n\n` +
+        `ВАЖЛИВО:\n` +
+        `спочатку буде записано і перевірено архів.\n` +
+        `Лише після цього seasonRating/${SEASON_YEAR} буде очищено.\n\n` +
+
+        `seasonResults/${SEASON_YEAR}/stages залишиться без змін.\n\n` +
 
         `Продовжити?`
       );
@@ -4323,13 +4365,16 @@
     }
 
     const finalConfirm =
-      confirm(
+      window.confirm(
         `ОСТАННЄ ПІДТВЕРДЖЕННЯ.\n\n` +
-        `Після завершення сезону ${SEASON_YEAR} ` +
-        `робочий рейтинг буде очищено.\n\n` +
-        `Фінальний snapshot залишиться у:\n` +
+
+        `Фінальний snapshot буде записано у:\n` +
         `seasonArchives/${SEASON_YEAR}\n\n` +
-        `Архівувати сезон?`
+
+        `Після успішної перевірки архіву буде очищено:\n` +
+        `seasonRating/${SEASON_YEAR}\n\n` +
+
+        `Архівувати та завершити сезон?`
       );
 
     if (
@@ -4351,15 +4396,19 @@
         true;
 
       button.textContent =
-        "⏳ Архівуємо сезон…";
+        "⏳ Готуємо архів…";
     }
 
     setArchiveStatus(
-      "Формуємо повний snapshot сезону…",
+      "Формуємо фінальний snapshot сезону…",
       "working"
     );
 
     try {
+      // =====================================================
+      // 1. BUILD ARCHIVE
+      // =====================================================
+
       const archiveDocument =
         buildArchiveDocument();
 
@@ -4381,6 +4430,20 @@
             SEASON_YEAR
           );
 
+      console.log(
+        "[Season Archive] archive document:",
+        archiveDocument
+      );
+
+      // =====================================================
+      // 2. EXISTING ARCHIVE
+      // =====================================================
+
+      setArchiveStatus(
+        `Перевіряємо seasonArchives/${SEASON_YEAR}…`,
+        "working"
+      );
+
       const existing =
         await archiveRef
           .get();
@@ -4389,30 +4452,53 @@
         existing.exists
       ) {
         const overwrite =
-          confirm(
+          window.confirm(
             `Архів сезону ${SEASON_YEAR} уже існує.\n\n` +
-            `Перезаписати його новим повним snapshot?`
+            `Перезаписати його новим фінальним snapshot?`
           );
 
         if (
           !overwrite
         ) {
-          throw new Error(
-            "Архівацію скасовано: архів уже існує."
+          archiveInProgress =
+            false;
+
+          if (
+            button
+          ) {
+            button.disabled =
+              false;
+
+            button.textContent =
+              `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
+          }
+
+          setArchiveStatus(
+            "Архівацію скасовано. Існуючий архів не змінено.",
+            "error"
           );
+
+          return;
         }
       }
 
+      // =====================================================
+      // 3. WRITE ARCHIVE FIRST
+      // =====================================================
+
       setArchiveStatus(
-        "Записуємо етапи, Фінал, рейтинг, TOP-3 та Big Fish…",
+        "Записуємо фінальний архів сезону…",
         "working"
       );
 
-      const batch =
-        currentDb.batch();
+      if (
+        button
+      ) {
+        button.textContent =
+          "⏳ Записуємо архів…";
+      }
 
-      batch.set(
-        archiveRef,
+      await archiveRef.set(
         archiveDocument,
         {
           merge:
@@ -4420,63 +4506,323 @@
         }
       );
 
-      batch.set(
-        ratingRef,
-        {
-          seasonYear:
-            SEASON_YEAR,
-
-          archived:
-            true,
-
-          archivedTo:
-            `seasonArchives/${SEASON_YEAR}`,
-
-          archivedAt:
-            firebase.firestore
-              .FieldValue
-              .serverTimestamp(),
-
-          nextSeasonYear:
-            NEXT_SEASON_YEAR,
-
-          archivedStages:
-            [],
-
-          teams:
-            [],
-
-          source:
-            "season-closed"
-        },
-        {
-          merge:
-            false
-        }
+      console.log(
+        `[Season Archive] seasonArchives/${SEASON_YEAR} записано`
       );
 
-      await batch
-        .commit();
-
-      clearRatingCaches();
+      // =====================================================
+      // 4. VERIFY ARCHIVE
+      // =====================================================
 
       setArchiveStatus(
-        `✅ Сезон ${SEASON_YEAR} заархівовано повністю. ` +
-        `Етапи + Фінал + рейтинг + TOP-3 + Big Fish збережені.`,
-        "success"
+        "Архів записано. Перевіряємо дані…",
+        "working"
       );
 
       if (
         button
       ) {
         button.textContent =
-          `✅ Сезон ${SEASON_YEAR} заархівовано`;
+          "⏳ Перевіряємо архів…";
       }
 
-      alert(
-        `Готово.\n\n` +
-        `Сезон ${SEASON_YEAR} збережено в:\n` +
+      const verifySnap =
+        await archiveRef
+          .get();
+
+      if (
+        !verifySnap.exists
+      ) {
+        throw new Error(
+          `Архів seasonArchives/${SEASON_YEAR} не знайдено після запису. ` +
+          `Рейтинг НЕ очищено.`
+        );
+      }
+
+      const savedArchive =
+        verifySnap.data() ||
+        {};
+
+      if (
+        String(
+          savedArchive.seasonYear ||
+          ""
+        ) !==
+        String(
+          SEASON_YEAR
+        )
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: неправильний seasonYear. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      if (
+        savedArchive.status !==
+        "archived"
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: status != archived. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      if (
+        savedArchive.hasFinal !==
+        true
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: Фінал відсутній. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      if (
+        !Array.isArray(
+          savedArchive.stages
+        ) ||
+        !savedArchive
+          .stages
+          .length
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: список етапів порожній. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      if (
+        !Array.isArray(
+          savedArchive.ranking
+        ) ||
+        !savedArchive
+          .ranking
+          .length
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: рейтинг порожній. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      if (
+        !Array.isArray(
+          savedArchive.podium
+        ) ||
+        !savedArchive
+          .podium
+          .length
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: TOP-3 відсутній. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      const verifiedFinal =
+        savedArchive
+          .stages
+          .find(
+            stage =>
+              stage?.isFinal ===
+              true
+          );
+
+      if (
+        !verifiedFinal
+      ) {
+        throw new Error(
+          "Перевірка архіву не пройдена: у stages немає Фіналу. " +
+          "Рейтинг НЕ очищено."
+        );
+      }
+
+      console.log(
+        "[Season Archive] archive verified:",
+        {
+          stages:
+            savedArchive
+              .stages
+              .length,
+
+          ranking:
+            savedArchive
+              .ranking
+              .length,
+
+          podium:
+            savedArchive
+              .podium
+              .length,
+
+          hasFinal:
+            savedArchive
+              .hasFinal
+        }
+      );
+
+      // =====================================================
+      // 5. CLEAR WORKING RATING
+      // =====================================================
+
+      setArchiveStatus(
+        "✅ Архів перевірено. Очищаємо робочий рейтинг…",
+        "working"
+      );
+
+      if (
+        button
+      ) {
+        button.textContent =
+          "⏳ Очищаємо рейтинг…";
+      }
+
+      const closedRating = {
+        seasonYear:
+          SEASON_YEAR,
+
+        archived:
+          true,
+
+        status:
+          "archived",
+
+        archivedTo:
+          `seasonArchives/${SEASON_YEAR}`,
+
+        archivedAt:
+          firebase.firestore
+            .FieldValue
+            .serverTimestamp(),
+
+        nextSeasonYear:
+          NEXT_SEASON_YEAR,
+
+        archivedStages:
+          [],
+
+        teams:
+          [],
+
+        finalStageId:
+          "",
+
+        finalStageDocId:
+          "",
+
+        finalStageKey:
+          "",
+
+        source:
+          "season-closed"
+      };
+
+      await ratingRef.set(
+        closedRating,
+        {
+          merge:
+            false
+        }
+      );
+
+      console.log(
+        `[Season Archive] seasonRating/${SEASON_YEAR} очищено`
+      );
+
+      // =====================================================
+      // 6. VERIFY RATING CLEANUP
+      // =====================================================
+
+      const verifyRatingSnap =
+        await ratingRef
+          .get();
+
+      if (
+        !verifyRatingSnap.exists
+      ) {
+        throw new Error(
+          `Архів створено, але seasonRating/${SEASON_YEAR} не знайдено після очищення.`
+        );
+      }
+
+      const ratingAfter =
+        verifyRatingSnap.data() ||
+        {};
+
+      if (
+        ratingAfter.archived !==
+        true
+      ) {
+        throw new Error(
+          "Архів створено, але seasonRating не отримав archived:true."
+        );
+      }
+
+      if (
+        Array.isArray(
+          ratingAfter.teams
+        ) &&
+        ratingAfter
+          .teams
+          .length
+      ) {
+        throw new Error(
+          "Архів створено, але teams у seasonRating не очистився."
+        );
+      }
+
+      if (
+        Array.isArray(
+          ratingAfter
+            .archivedStages
+        ) &&
+        ratingAfter
+          .archivedStages
+          .length
+      ) {
+        throw new Error(
+          "Архів створено, але archivedStages у seasonRating не очистився."
+        );
+      }
+
+      // =====================================================
+      // 7. CACHE
+      // =====================================================
+
+      clearRatingCaches();
+
+      // =====================================================
+      // 8. SUCCESS
+      // =====================================================
+
+      archiveInProgress =
+        false;
+
+      setArchiveStatus(
+        `✅ Сезон ${SEASON_YEAR} завершено. ` +
+        `Архів перевірено, робочий рейтинг очищено.`,
+        "success"
+      );
+
+      if (
+        button
+      ) {
+        button.disabled =
+          true;
+
+        button.textContent =
+          `✅ Сезон ${SEASON_YEAR} завершено`;
+      }
+
+      window.alert(
+        `ГОТОВО.\n\n` +
+
+        `Сезон ${SEASON_YEAR} завершено.\n\n` +
+
+        `Архів:\n` +
         `seasonArchives/${SEASON_YEAR}\n\n` +
+
         `Збережено:\n` +
         `• відбіркові етапи\n` +
         `• Фінал\n` +
@@ -4484,7 +4830,13 @@
         `• повний рейтинг\n` +
         `• TOP-3\n` +
         `• Big Fish сезону\n\n` +
-        `Детальні таблиці етапів залишились у seasonResults.`
+
+        `Робочий рейтинг:\n` +
+        `seasonRating/${SEASON_YEAR}\n` +
+        `очищено.\n\n` +
+
+        `seasonResults/${SEASON_YEAR}/stages ` +
+        `залишено без змін.`
       );
 
     } catch (
@@ -4495,11 +4847,16 @@
         error
       );
 
-      setArchiveStatus(
-        `❌ ${safeText(
-          error.message ||
+      archiveInProgress =
+        false;
+
+      const errorText =
+        getArchiveErrorText(
           error
-        )}`,
+        );
+
+      setArchiveStatus(
+        `❌ ${errorText}`,
         "error"
       );
 
@@ -4513,8 +4870,13 @@
           `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
       }
 
-      archiveInProgress =
-        false;
+      window.alert(
+        `НЕ ВДАЛОСЯ ЗАВЕРШИТИ СЕЗОН.\n\n` +
+        `${errorText}\n\n` +
+        `Якщо архів уже був записаний, він залишається у ` +
+        `seasonArchives/${SEASON_YEAR}.\n\n` +
+        `Робочий рейтинг очищається тільки після успішної перевірки архіву.`
+      );
     }
   }
 
@@ -4568,9 +4930,6 @@
               currentRatingSource =
                 rating;
 
-              /*
-               * Уже завершений сезон.
-               */
               if (
                 rating.archived ===
                   true &&

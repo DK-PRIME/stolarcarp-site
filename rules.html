@@ -3,15 +3,819 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Регламент — STOLAR CARP</title>
-  <meta name="description" content="Офіційний регламент змагань STOLAR CARP: правила участі, суддівство, дисципліна, безпека та контакти організаторів.">
+
+  <title>Офіційний регламент — STOLAR CARP</title>
+  <meta name="description" content="Офіційний регламент спортивних змагань STOLAR CARP. Правила участі, ловлі, зважування, визначення переможців, дисципліни та безпеки.">
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <meta name="theme-color" content="#020617">
+
   <link rel="stylesheet" href="assets/css/main.css">
   <script defer src="assets/js/config.js"></script>
+
+  <style>
+    /* =========================================================
+       STOLAR CARP • OFFICIAL RULES
+       Premium Dark / Gold
+       ========================================================= */
+
+    :root {
+      --rules-bg: #020617;
+      --rules-card: #0f172a;
+      --rules-card-soft: #111c30;
+      --rules-border: rgba(148,163,184,.15);
+      --rules-text: #e2e8f0;
+      --rules-muted: #94a3b8;
+      --rules-gold: #e8bf68;
+      --rules-gold-light: #f8dda0;
+      --rules-green: #4ade80;
+      --rules-red: #fb7185;
+      --rules-radius: 18px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 90px;
+    }
+
+    body.rules-page {
+      margin: 0;
+      color: var(--rules-text);
+      background:
+        radial-gradient(
+          ellipse at 50% -5%,
+          rgba(120,89,34,.18),
+          transparent 35%
+        ),
+        radial-gradient(
+          ellipse at 100% 35%,
+          rgba(30,41,59,.35),
+          transparent 40%
+        ),
+        var(--rules-bg);
+    }
+
+    .rules-page *,
+    .rules-page *::before,
+    .rules-page *::after {
+      box-sizing: border-box;
+    }
+
+    .rules-page a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* HEADER */
+
+    .rules-page .header .header__row {
+      align-items: center;
+    }
+
+    .rules-page .header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 56px;
+      padding: 8px 0;
+      text-decoration: none;
+    }
+
+    .rules-page .header .logo__mark {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+    }
+
+    .rules-page .header .logo__text {
+      white-space: nowrap;
+    }
+
+    /* LAYOUT */
+
+    .rules-shell {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 30px 20px 90px;
+    }
+
+    /* HERO */
+
+    .rules-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 52px 38px;
+      border: 1px solid rgba(232,191,104,.24);
+      border-radius: 26px;
+      background:
+        radial-gradient(
+          circle at 85% 0%,
+          rgba(232,191,104,.12),
+          transparent 42%
+        ),
+        linear-gradient(
+          145deg,
+          #152033,
+          #080e1b 75%
+        );
+      box-shadow: 0 24px 65px rgba(0,0,0,.22);
+    }
+
+    .rules-hero::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 38px;
+      right: 38px;
+      height: 2px;
+      background: linear-gradient(
+        90deg,
+        transparent,
+        var(--rules-gold),
+        transparent
+      );
+    }
+
+    .rules-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 20px;
+      color: var(--rules-gold);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+    }
+
+    .rules-eyebrow::before {
+      content: "";
+      width: 20px;
+      height: 1px;
+      background: var(--rules-gold);
+    }
+
+    .rules-hero h1 {
+      margin: 0;
+      max-width: 850px;
+      color: #fff;
+      font-size: clamp(30px, 5vw, 54px);
+      font-weight: 900;
+      line-height: 1.12;
+      letter-spacing: -1.5px;
+    }
+
+    .rules-hero h1 span {
+      display: block;
+      margin-top: 8px;
+      color: var(--rules-gold);
+    }
+
+    .rules-hero__description {
+      max-width: 720px;
+      margin: 22px 0 0;
+      color: #b7c3d5;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .rules-hero__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .rules-meta {
+      padding: 9px 14px;
+      border: 1px solid rgba(232,191,104,.2);
+      border-radius: 100px;
+      background: rgba(232,191,104,.07);
+      color: #e8d3a7;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* QUICK FACTS */
+
+    .rules-facts {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .rules-fact {
+      min-width: 0;
+      padding: 22px 16px;
+      text-align: center;
+      border: 1px solid var(--rules-border);
+      border-radius: 16px;
+      background: rgba(15,23,42,.85);
+    }
+
+    .rules-fact__value {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--rules-gold);
+      font-size: 25px;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .rules-fact__label {
+      display: block;
+      color: var(--rules-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* NOTICE */
+
+    .rules-notice {
+      display: flex;
+      gap: 16px;
+      margin: 24px 0;
+      padding: 21px 23px;
+      border: 1px solid rgba(251,191,36,.25);
+      border-left: 3px solid #fbbf24;
+      border-radius: 14px;
+      background: rgba(120,53,15,.11);
+    }
+
+    .rules-notice__icon {
+      flex: 0 0 auto;
+      font-size: 23px;
+      line-height: 1;
+    }
+
+    .rules-notice strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #fde68a;
+      font-size: 14px;
+    }
+
+    .rules-notice p {
+      margin: 0;
+      color: #d8c8a8;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    /* CONTENT LAYOUT */
+
+    .rules-layout {
+      display: grid;
+      grid-template-columns: 265px minmax(0,1fr);
+      align-items: start;
+      gap: 25px;
+      margin-top: 30px;
+    }
+
+    /* TABLE OF CONTENTS */
+
+    .rules-sidebar {
+      position: sticky;
+      top: 24px;
+      padding: 22px 15px;
+      border: 1px solid var(--rules-border);
+      border-radius: var(--rules-radius);
+      background: rgba(15,23,42,.95);
+    }
+
+    .rules-sidebar__title {
+      padding: 0 10px 15px;
+      color: var(--rules-gold);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .rules-toc {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .rules-toc a {
+      display: flex;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 11px 10px;
+      border-radius: 9px;
+      color: #aebbd0;
+      text-decoration: none;
+      font-size: 12px;
+      line-height: 1.5;
+      transition: background .2s, color .2s;
+    }
+
+    .rules-toc a:hover,
+    .rules-toc a.is-active {
+      color: var(--rules-gold-light);
+      background: rgba(232,191,104,.09);
+    }
+
+    .rules-toc__number {
+      flex: 0 0 22px;
+      color: var(--rules-gold);
+      font-weight: 800;
+    }
+
+    /* SECTIONS */
+
+    .rules-content {
+      min-width: 0;
+    }
+
+    .rules-section {
+      margin-bottom: 22px;
+      padding: 30px;
+      border: 1px solid var(--rules-border);
+      border-radius: var(--rules-radius);
+      background: rgba(15,23,42,.78);
+      scroll-margin-top: 90px;
+    }
+
+    .rules-section__heading {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 26px;
+      padding-bottom: 21px;
+      border-bottom: 1px solid rgba(148,163,184,.13);
+    }
+
+    .rules-section__number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 47px;
+      height: 47px;
+      flex: 0 0 47px;
+      border: 1px solid rgba(232,191,104,.28);
+      border-radius: 12px;
+      background: rgba(232,191,104,.08);
+      color: var(--rules-gold);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .rules-section__heading h2 {
+      margin: 0;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .rules-group {
+      margin-bottom: 27px;
+    }
+
+    .rules-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .rules-group h3 {
+      margin: 0 0 13px;
+      color: var(--rules-gold-light);
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.5;
+    }
+
+    .rules-group p {
+      margin: 0 0 13px;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .rules-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .rules-list > li {
+      position: relative;
+      padding-left: 20px;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .rules-list > li::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 0;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--rules-gold);
+    }
+
+    .rules-list strong,
+    .rules-group strong {
+      color: #f1f5f9;
+      font-weight: 800;
+    }
+
+    .rules-list ul {
+      margin: 9px 0 2px;
+      padding-left: 19px;
+    }
+
+    .rules-list ul li {
+      margin: 5px 0;
+    }
+
+    /* ALLOWED / FORBIDDEN */
+
+    .rules-dual {
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .rules-status {
+      padding: 20px;
+      border: 1px solid var(--rules-border);
+      border-radius: 13px;
+      background: rgba(2,6,23,.35);
+    }
+
+    .rules-status--allowed {
+      border-top: 2px solid var(--rules-green);
+    }
+
+    .rules-status--forbidden {
+      border-top: 2px solid var(--rules-red);
+    }
+
+    .rules-status h4 {
+      margin: 0 0 13px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .rules-status--allowed h4 {
+      color: var(--rules-green);
+    }
+
+    .rules-status--forbidden h4 {
+      color: var(--rules-red);
+    }
+
+    .rules-status ul {
+      margin: 0;
+      padding-left: 17px;
+      color: #cbd5e1;
+      font-size: 12px;
+      line-height: 1.85;
+    }
+
+    .rules-status li {
+      margin-bottom: 7px;
+    }
+
+    /* IMPORTANT BLOCK */
+
+    .rules-highlight {
+      margin: 18px 0;
+      padding: 17px 20px;
+      border: 1px solid rgba(232,191,104,.2);
+      border-left: 3px solid var(--rules-gold);
+      border-radius: 11px;
+      background: rgba(232,191,104,.055);
+      color: #e7d7b7;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    .rules-highlight strong {
+      color: var(--rules-gold-light);
+    }
+
+    .rules-danger {
+      margin: 18px 0;
+      padding: 17px 20px;
+      border: 1px solid rgba(251,113,133,.2);
+      border-left: 3px solid var(--rules-red);
+      border-radius: 11px;
+      background: rgba(127,29,29,.11);
+      color: #fecdd3;
+      font-size: 13px;
+      line-height: 1.85;
+    }
+
+    /* TABLE */
+
+    .rules-table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--rules-border);
+      border-radius: 13px;
+    }
+
+    .rules-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .rules-table th {
+      padding: 15px 17px;
+      background: rgba(232,191,104,.09);
+      color: var(--rules-gold-light);
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .rules-table td {
+      padding: 15px 17px;
+      border-top: 1px solid rgba(148,163,184,.1);
+      color: #cbd5e1;
+      vertical-align: top;
+    }
+
+    .rules-table tbody tr:hover {
+      background: rgba(255,255,255,.025);
+    }
+
+    .rules-badge {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .rules-badge--yellow {
+      color: #fde68a;
+      background: rgba(245,158,11,.13);
+    }
+
+    .rules-badge--red {
+      color: #fda4af;
+      background: rgba(244,63,94,.13);
+    }
+
+    /* CONTACTS */
+
+    .rules-contacts {
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+      gap: 13px;
+    }
+
+    .rules-contact {
+      display: block;
+      padding: 21px;
+      border: 1px solid rgba(232,191,104,.2);
+      border-radius: 13px;
+      background: rgba(232,191,104,.045);
+      text-decoration: none;
+      transition: border-color .2s, transform .2s;
+    }
+
+    .rules-contact:hover {
+      transform: translateY(-2px);
+      border-color: var(--rules-gold);
+    }
+
+    .rules-contact small {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--rules-muted);
+      font-size: 11px;
+    }
+
+    .rules-contact strong {
+      color: var(--rules-gold-light);
+      font-size: 16px;
+      white-space: nowrap;
+    }
+
+    /* BOTTOM */
+
+    .rules-bottom {
+      margin-top: 30px;
+      padding: 26px;
+      border: 1px solid rgba(232,191,104,.22);
+      border-radius: 16px;
+      background: linear-gradient(
+        135deg,
+        rgba(232,191,104,.09),
+        rgba(15,23,42,.8)
+      );
+      text-align: center;
+    }
+
+    .rules-bottom__title {
+      margin: 0 0 10px;
+      color: var(--rules-gold);
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .rules-bottom p {
+      max-width: 650px;
+      margin: 0 auto;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .rules-back-top {
+      display: inline-flex;
+      margin-top: 20px;
+      padding: 11px 20px;
+      border: 1px solid rgba(232,191,104,.35);
+      border-radius: 9px;
+      color: var(--rules-gold-light);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    /* MOBILE TOC */
+
+    .rules-mobile-toc {
+      display: none;
+      margin-bottom: 20px;
+      border: 1px solid var(--rules-border);
+      border-radius: 13px;
+      background: var(--rules-card);
+      overflow: hidden;
+    }
+
+    .rules-mobile-toc summary {
+      padding: 18px 20px;
+      color: var(--rules-gold);
+      font-size: 13px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .rules-mobile-toc .rules-toc {
+      padding: 0 10px 12px;
+    }
+
+    /* RESPONSIVE */
+
+    @media (max-width: 900px) {
+      .rules-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .rules-sidebar {
+        display: none;
+      }
+
+      .rules-mobile-toc {
+        display: block;
+      }
+    }
+
+    @media (max-width: 650px) {
+      .rules-shell {
+        padding: 16px 12px 65px;
+      }
+
+      .rules-hero {
+        padding: 36px 22px;
+        border-radius: 19px;
+      }
+
+      .rules-hero::before {
+        left: 22px;
+        right: 22px;
+      }
+
+      .rules-hero h1 {
+        font-size: 31px;
+        letter-spacing: -.8px;
+      }
+
+      .rules-hero__description {
+        font-size: 13px;
+      }
+
+      .rules-facts {
+        grid-template-columns: repeat(2,minmax(0,1fr));
+        gap: 9px;
+      }
+
+      .rules-fact {
+        padding: 19px 10px;
+      }
+
+      .rules-fact__value {
+        font-size: 22px;
+      }
+
+      .rules-section {
+        padding: 22px 18px;
+        border-radius: 14px;
+      }
+
+      .rules-section__heading {
+        gap: 12px;
+      }
+
+      .rules-section__number {
+        width: 39px;
+        height: 39px;
+        flex-basis: 39px;
+        font-size: 15px;
+      }
+
+      .rules-section__heading h2 {
+        font-size: 17px;
+      }
+
+      .rules-dual,
+      .rules-contacts {
+        grid-template-columns: 1fr;
+      }
+
+      .rules-notice {
+        padding: 17px;
+      }
+
+      .rules-table {
+        font-size: 11px;
+      }
+
+      .rules-table th,
+      .rules-table td {
+        padding: 12px;
+      }
+    }
+
+    @media print {
+      body.rules-page {
+        color: #111;
+        background: #fff;
+      }
+
+      .header,
+      .footer,
+      .rules-sidebar,
+      .rules-mobile-toc,
+      .rules-back-top {
+        display: none !important;
+      }
+
+      .rules-layout {
+        display: block;
+      }
+
+      .rules-hero,
+      .rules-section,
+      .rules-fact,
+      .rules-bottom {
+        color: #111;
+        background: #fff;
+        border: 1px solid #ccc;
+        box-shadow: none;
+      }
+
+      .rules-section {
+        break-inside: avoid;
+      }
+
+      .rules-section h2,
+      .rules-section h3,
+      .rules-group p,
+      .rules-list li,
+      .rules-table td {
+        color: #111;
+      }
+    }
+  </style>
 </head>
 
 <body class="rules-page">
+
 <header class="header">
   <div class="container header__row">
+
     <a class="logo" href="index.html">
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
@@ -30,364 +834,1518 @@
       <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
     </nav>
 
-    <button class="burger" id="burger"><span></span><span></span><span></span></button>
+    <button class="burger" id="burger"
+            type="button"
+            aria-label="Відкрити меню"
+            aria-controls="nav"
+            aria-expanded="false">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
   </div>
 </header>
 
-<main class="main">
-  <section class="container section">
-    <h1 class="title-gradient">РЕГЛАМЕНТ ЗМАГАНЬ STOLAR CARP</h1>
-    
-    <p class="form__hint">
-      <strong>Формат:</strong> Класика та флет-фідер · Catch & Release<br>
-      <span class="muted">Редакція від 25 січня 2026 року</span>
-    </p>
+<main class="main" id="top">
 
-    <div class="alert alert--warning">
-      <strong>⚠️ ВАЖЛИВО:</strong> Регламент водойми є обов'язковим до виконання та має пріоритет над цим регламентом у разі розбіжностей. Незнання правил водойми не звільняє від відповідальності.
+<div class="rules-shell">
+
+  <!-- HERO -->
+
+  <section class="rules-hero">
+
+    <div class="rules-eyebrow">
+      STOLAR CARP • OFFICIAL DOCUMENT
     </div>
 
-    <h2>РОЗДІЛ 1. ЗАГАЛЬНІ ПОЛОЖЕННЯ</h2>
-    
-    <h3>1.1. Принципи турніру</h3>
-    <ul>
-      <li>Формат: «зловив — відпустив» (Catch & Release).</li>
-      <li>Мета: розвиток спортивного карпфішингу, безпека та гуманне ставлення до риби.</li>
-      <li>Зробити риболовні змагання простими, чесними й доступними для кожного.</li>
-    </ul>
+    <h1>
+      ОФІЦІЙНИЙ
+      <span>РЕГЛАМЕНТ ЗМАГАНЬ</span>
+    </h1>
 
-    <h3>1.2. Мінімальна кількість учасників</h3>
-    <ul>
-      <li>Змагання проводяться за умови участі <strong>не менше 12 команд</strong>.</li>
-      <li>У разі недобору мінімальної кількості команд організатор має право: перенести дату, змінити формат або скасувати змагання.</li>
-    </ul>
-
-    <h3>1.3. Організація Джек-потів «Big Fish Total»</h3>
-    <ul>
-      <li>Проводиться за бажанням учасників та оплати повного пакету.</li>
-      <li>Участь є добровільною.</li>
-      <li>Призовий фонд формується з внесків учасників.</li>
-      <li>Організатор залишає за собою право утримувати частину коштів на організаційні та адміністративні витрати.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 2. ФОРМАТ УЧАСТІ ТА РЕЄСТРАЦІЯ</h2>
-
-<h3>2.0. Тривалість та розклад</h3>
-<ul>
-  <li><strong>Тривалість змагань:</strong> 48 годин.</li>
-  <li><strong>Старт:</strong> п'ятниця о 12:00.</li>
-  <li><strong>Фініш:</strong> неділя о 12:00.</li>
-</ul>
-    
-
-    <h3>2.1. Формат участі</h3>
-    <ul>
-      <li><strong>Командний формат:</strong> 1–3 повноцінних учасники.</li>
-      <li><strong>STALKER (соло):</strong> 1 учасник — лише якщо оголошено окремо.</li>
-      <li><strong>Відповідальність:</strong> порушення одним учасником тягне відповідальність для всієї команди.</li>
-      <li>Регламент діє однаково для командного та соло-формату.</li>
-    </ul>
-
-    <h3>2.2. Реєстрація та оплата</h3>
-    <ul>
-      <li><strong>Реєстрація вважається дійсною лише після оплати внеску.</strong></li>
-      <li><strong>Список учасників формується виключно за датою оплати.</strong></li>
-      <li><strong>Місце в основному списку отримує команда, яка здійснила оплату першою.</strong></li>
-      <li>Організатор не зобов'язаний утримувати місце за неоплаченими заявками.</li>
-      <li>Факт оплати підтверджується надісланою квитанцією або банківським повідомленням.</li>
-      <li>У разі переплати або подвійної оплати кошти повертаються за вирахуванням банківської комісії.</li>
-      <li>Відмова від участі — внесок <strong>не повертається</strong>.</li>
-    </ul>
-
-    <h3>2.3. Технічні уточнення</h3>
-    <ul>
-      <h3>2.4. Формування організаційного фонду</h3>
-<p>Командні внески формують єдиний організаційний фонд, з якого покриваються всі витрати на проведення турніру. До цього фонду входять:</p>
-
-<ul>
-  <li>оплата оренди водойми;</li>
-  <li>робота суддів та організаторської групи;</li>
-  <li>оплата доставки призів від партнерів та спонсорів;</li>
-  <li>фінансування додаткових призів та заохочень;</li>
-  <li>виготовлення кубків, медалей та нагород для зон.</li>
-</ul>
-
-<p><strong>Організатор має право розподіляти фонд відповідно до потреб турніру.</strong></p>
-      <li>Організатор має право вносити технічні уточнення до регламенту, які не змінюють суті змагань, з обов'язковим повідомленням учасників до старту.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 3. ОРГАНІЗАЦІЯ, СЕКТОРИ ТА ЗОНИ</h2>
-
-    <h3>3.1. Жеребкування</h3>
-    <ul>
-      <li>Сектори/зони визначаються жеребкуванням.</li>
-      <li><strong>Дистанція лову</strong> оголошується та фіксується <strong>до жеребкування</strong> і є обов'язковою.</li>
-      <li>Розклад (заїзд, старт, фініш, нагородження) публікується на сайті та у Viber-групі.</li>
-    </ul>
-
-    <h3>3.2. Межі сектора та зони</h3>
-    <ul>
-      <li>Учасники зобов'язані дотримуватися меж своєї зони ловлі.</li>
-      <li>Робоча зона дозволена виключно в напрямку, <strong>який відповідає крайнім секторам зони</strong>, або у напрямку, визначеному суддею.</li>
-    </ul>
-
-    <h3>3.3. Пересування</h3>
-    <ul>
-      <li><strong>Заборонено:</strong> їздити автомобілем по береговій лінії від старту до фінішу.</li>
-      <li>Винятки допускаються лише у форс-мажорних обставинах і виключно за згодою судді.</li>
-    </ul>
-
-    <h3>3.4. Вхід у воду</h3>
-    <ul>
-      <li><strong>Перед стартом змагань:</strong> дозволено зайти у воду для перевірки/очистки сектора від коряг і зачепів (без обмежень).</li>
-      <li><strong>Під час змагань:</strong> дозволено зайти у воду <strong>не далі 20 метрів</strong> від берега <strong>та не вище рівня грудей</strong> виключно для <strong>підсачування риби</strong>.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 4. ПРАВИЛА ЛОВУ ТА ОСНАЩЕННЯ</h2>
-
-<h3>4.0. Вудилища</h3>
-<ul>
-  <li><strong>Довжина:</strong> не більше <strong>4.57 м</strong>.</li>
-  <li><strong>Типи:</strong> дозволені <strong>коропові та фідерні вудилища</strong>.</li>
-  <li><strong>Запасні вудилища:</strong> дозволена необмежена кількість.</li>
-  <li><strong>Одночасно в воді та на род-поді:</strong> не більше <strong>2 робочих вудилищ</strong>.</li>
-  <li><strong>Оснащеними:</strong> не більше <strong>1 гачка на вудилище</strong>.</li>
-  <li><strong>Заборонено</strong> закидати третє робоче вудилище, доки одне з двох робочих не вимотане.</li>
-</ul>
-
-<h3>4.1. Закидання та виважування</h3>
-<ul>
-  <li><strong>Закидання, чи виважування проводить :</strong> виключно <strong>склад команди, зареєстрований на турнірі</strong>.</li>
-  <li><strong>Заборонено:</strong> будь-яка допомога з боку гостей, сусідів чи третіх осіб під час закиду чи виважування.</li>
-  <li><strong>Єдиний виняток:</strong> участь судді у випадках форс-мажору:
-    <ul>
-      <li>переплутані снасті між секторами;</li>
-      <li>небезпека для риби;</li>
-      <li>небезпека для рибалки.</li>
-    </ul>
-  </li>
-</ul>
-
-
-    <h3>4.2. Маркеріння</h3>
-    <ul>
-      <li>Дозволено використання маркера <strong>не виймаючи 2 робочих вудилищ</strong>.</li>
-      <li>Маркеріння дозволено після заїзду у сектор та до фінішу.</li>
-    </ul>
-
-    <h3>4.3. Ліска та шок-лідер</h3>
-    <ul>
-      <li>Основна волосінь — <strong>не менше 0.25 мм</strong>.</li>
-      <li>Шок-лідер дозволено — <strong>не більше 10 м</strong>.</li>
-      <li><strong>Заборонено:</strong> використання шнура як основної волосіні для робочих вудилищ.</li>
-      <li>Використання шнура дозволяється виключно на <strong>сподових</strong> та <strong>маркерних</strong> вудилищах.</li>
-    </ul>
-
-    <h3>4.4. Монтажі</h3>
-    <ul>
-      <li><strong>Заборонено:</strong> будь-які застібки та вертлюги у складі робочих монтажів.</li>
-      <li><strong>Дозволено:</strong> класика та флет.</li>
-      <li>Монтажі мають відповідати принципу <strong>безпечного звільнення риби</strong> від грузу/годівниці у разі обриву.</li>
-      <li>Флет-годівниця або вантаж при використанні лідкору повинні мати вільний хід по лідкору та скидатися у разі обриву оснастки.</li>
-      <li><strong>Заборонено:</strong> оснастка «вертоліт», «гарбуз»</li>
-    </ul>
-
-    <h3>4.5. Плавзасоби</h3>
-    <ul>
-      <li><strong>Заборонено:</strong> кораблики, човни та будь-які плавзасоби для завозу оснасток і прикорму.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 5. ГОДУВАННЯ</h2>
-
-    <h3>5.1. Спомб</h3>
-    <ul>
-      <li>Дозволено лише у світлий час, який визначає організатор.</li>
-      <li>Дозволено годування одночасно у <strong>2 спомби</strong>.</li>
-      <li>Дозволені розміри: <strong>Mini</strong> та <strong>MidiX</strong>.</li>
-      <li><strong>Тільки: </strong> малого та середнього розміру</li>
-      <li><strong>Заборонено:</strong> спомб Large.</li>
-    </ul>
-
-    <h3>5.2. Кобра</h3>
-    <ul>
-      <li>Дозволена цілодобово.</li>
-    </ul>
-
-    <h3>5.3. Насадки та прикорм</h3>
-<ul>
-  <li><strong>Заборонено:</strong>
-    <ul>
-      <li><strong>Годування цілим тигровим горіхом.</strong></li>
-      <li>приманки та підгодовування тваринного походження ;</li>
-      <li>ікра у будь-якому вигляді;</li>
-      <li>жива насадка.</li>
-    </ul>
-  </li>
-  <li><strong>Дозволено:</strong>
-    <ul>
-      <li>бойли, пелетс, зернові;</li>
-      <li>варені/пропарені зерна</li>
-      <li>тигровий горіх тільки мелений,пропущений через м'ясорубку</li>
-      <li>рідкі та сухі атрактанти (діпи, ароматизатори).</li>
-    </ul>
-  </li>
-</ul>
-
-
-    <h2>РОЗДІЛ 6. ПОРЯДОК ЗВАЖУВАННЯ ТА ГУМАННЕ ПОВОДЖЕННЯ</h2>
-
-    <h3>6.1. Обладнання для зважування (обов'язкове)</h3>
-    <ul>
-      <li>Антисептик.</li>
-      <li><strong>Мінімум 10 коропових мішків.</strong></li>
-      <li>Коропові мішки із затяжкою (шнурком) — <strong>не дозволяються</strong>.</li>
-      <li>До використання допускаються лише коропові мішки з <strong>zip-замком</strong>.</li>
-      <li>Наявність <strong>поплавця на короповому мішку є бажаною</strong>. Поплавець дозволяє швидко виявити місце знаходження мішка у разі його втрати у воді.</li>
-      <li>Короповий мат: якщо на водоймі матів немає — мат обов'язковий.</li>
-    </ul>
-
-    <h3>6.2. Порядок зважування</h3>
-    <ul>
-      <li>Кількість та час проведення зважувань визначаються організатором і можуть змінюватися залежно від умов змагань.</li>
-      <li>Зважування проводиться <strong>лише в присутності судді</strong>.</li>
-      <li>Команда зобов'язана: витягнути мішок, допомогти судді у зважуванні, після чого <strong>негайно відпустити рибу</strong>.</li>
-      <li><strong>Заборонено:</strong> тримати більше <strong>1 риби</strong> в одному короповому мішку.</li>
-      <li>Фото/зважування без судді — <strong>заборонено</strong>.</li>
-      <li>Під час фотозйомки риба повинна знаходитися на мінімальній висоті тільки над короповим матом.</li>
-    </ul>
-
-    <h3>6.3. Виклик судді (обов'язково)</h3>
-    <ul>
-      <li><strong>Риба 10+ кг</strong> — обов'язковий виклик судді.</li>
-      <li><strong>2 амури</strong> — обов'язковий виклик судді.</li>
-      <li><strong>10 мішків з рибою</strong> — обов'язковий виклик судді.</li>
-      <li>Тільки при підозрі, що вага риби становить 10+ кг, команда може попередньо зважити улов самостійно.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 7. ВИЗНАЧЕННЯ ПЕРЕМОЖЦІВ ТА ПРИЗИ</h2>
-
-    <h3>7.1. Критерії перемоги</h3>
-    <ul>
-      <li>Призові місця визначаються окремо по кожній зоні:
-        <ul>
-          <li><strong>Зона А:</strong> 1, 2, 3 місце</li>
-          <li><strong>Зона В:</strong> 1, 2, 3 місце</li>
-          <li><strong>Зона С:</strong> 1, 2, 3 місце</li>
-        </ul>
-      </li>
-      <li>Окремо визначаються переможці в номінації <strong>Big Fish</strong> — найбільший <strong>короп</strong> та найбільший <strong>амур</strong>.</li>
-      <li>Основний залік здійснюється за <strong>загальною вагою улову</strong> за весь період змагань.</li>
-      <li>При однаковій загальній вазі перевага надається команді, що має <strong>більшу рибу (Big Fish)</strong>.</li>
-    </ul>
-
-    <h3>7.2. Призи</h3>
-    <ul>
-      <li>Призовий фонд формується організаторами та спонсорами.</li>
-      <li>Для кожної зони передбачені <strong>кубки</strong> за призові місця.</li>
-      <li>Додатково команди отримують <strong>призи від спонсорів</strong> у своїх зонах.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 8. ПРАВИЛА ПОВЕДІНКИ ТА FAIR PLAY</h2>
-
-    <h3>8.1. Fair play</h3>
-    <ul>
-      <li>Після сигналу фінішу команда має <strong>15 хвилин</strong> для завершення виважування риби, що клюнула <strong>до сигналу</strong>.</li>
-      <li>У разі клювання до фінішу команда зобов'язана попередити суддю або сусідню команду; інакше риба в залік <strong>не зараховується</strong>.</li>
-      <li>Якщо риба зайшла в сектор сусідньої команди, <strong>дозволяється за їхньою згодою</strong> зайти для вивільнення оснастки або риби.</li>
-      <li><strong>Підсачування здійснюється виключно у своєму секторі.</strong></li>
-    </ul>
-
-    <h3>8.2. Гості та глядачі</h3>
-    <ul>
-      <li>Гості дозволені <strong>тільки у світлий час доби</strong>.</li>
-      <li>Заїзд гостей у сектор автомобілем <strong>заборонено</strong>.</li>
-      <li>Усі гості та відвідувачі зобов'язані залишати транспортні засоби виключно на парковці.</li>
-      <li>Прохід до секторів дозволяється лише у пішому порядку.</li>
-      <li>Переміщення автотранспортом територією секторів та між ними категорично заборонено.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 9. ДИСЦИПЛІНА ТА ШТРАФИ</h2>
-
-    <h3>9.1. Загальні вимоги</h3>
-    <ul>
-      <li>Тиша, порядок та чистота у секторі — обов'язкові.</li>
-      <li>Заборонені конфлікти, агресія, маніпуляції, приховування риби.</li>
-      <li>Три усні попередження = жовта картка. Дві жовті/червона = дискваліфікація.</li>
-    </ul>
-
-    <h3>9.2. Штрафні санкції</h3>
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Порушення</th>
-          <th>Покарання</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Порушення часу годування,годування цілим тигровим горіхом</td><td>Жовта картка</td></tr>
-        <tr><td>Ловля/годування за межами свого сектору/зони</td><td>Жовта картка</td></tr>
-        <tr><td>Недбале поводження з рибою</td><td>Жовта/Червона (за рішенням судді)</td></tr>
-        <tr><td>Заборонена оснастка / порушення правил годування</td><td>Жовта/Червона</td></tr>
-        <tr><td>Фото без присутності судді</td><td>Жовта картка</td></tr>
-        <tr><td>Алкоголь у великих дозах, агресія</td><td>Миттєва дискваліфікація</td></tr>
-      </tbody>
-    </table>
-
-    <h2>РОЗДІЛ 10. ПРАВИЛА БЕЗПЕКИ</h2>
-
-    <h3>10.1. Під час грози</h3>
-    <ul>
-      <li>Змагання призупиняються на час, визначений організатором.</li>
-      <li>Усі команди зобов'язані миттєво витягнути всі вудилища з води.</li>
-      <li>Під час призупинення <strong>забороняється</strong> тримати вудилища в руках, робити закидання, маркеріння, підгодовування та будь-які інші дії, пов'язані з ловлею.</li>
-      <li><strong>Невиконання вимоги витягнути снасті = червона картка = дискваліфікація команди.</strong></li>
-    </ul>
-
-    <h3>10.2. Алкоголь та заборонені речовини</h3>
-    <ul>
-      <li>Перебування в стані алкогольного чи наркотичного сп'яніння заборонено.</li>
-      <li>Фіксація такого стану суддями карається згідно з рішенням суддівської колегії.</li>
-    </ul>
-
-    <h3>10.3. Снасті та обладнання</h3>
-    <ul>
-      <li>Забороняється залишати снасті без нагляду під час змагань.</li>
-      <li>Організатор та адміністрація водойми не несуть відповідальності за втрачені чи пошкоджені речі учасників.</li>
-    </ul>
-
-    <h3>10.4. Робота в темний час</h3>
-    <ul>
-      <li>Переміщення між секторами дозволено лише з увімкненими ліхтарями.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 11. ПРОТЕСТИ</h2>
-    <ul>
-      <li>Протест подається головному судді або організатору протягом <strong>30 хвилин</strong> після інциденту.</li>
-      <li>Без доказів протест може бути не розглянутий.</li>
-      <li>Рішення суддів є остаточними та оскарженню не підлягають.</li>
-    </ul>
-
-    <h2>РОЗДІЛ 12. КОНТАКТИ</h2>
-    <p>
-      Для участі або уточнення інформації:<br>
-      📞 <a href="tel:+380631731116">+38 (063) 173-11-16</a><br>
-      📞 <a href="tel:+380978824845">+38 (097) 882-48-45</a>
+    <p class="rules-hero__description">
+      Єдині правила проведення спортивних змагань
+      із ловлі коропа та амура. Регламент визначає
+      порядок участі, правила ловлі, вимоги до оснащення,
+      процедуру зважування, визначення переможців,
+      дисциплінарні санкції та вимоги безпеки.
     </p>
 
-    <div class="alert alert--info"
+    <div class="rules-hero__meta">
+      <span class="rules-meta">Класика + Flat Feeder</span>
+      <span class="rules-meta">Catch & Release</span>
+      <span class="rules-meta">Редакція 25.01.2026</span>
     </div>
 
   </section>
+
+  <!-- QUICK FACTS -->
+
+  <div class="rules-facts">
+
+    <div class="rules-fact">
+      <span class="rules-fact__value">48 ГОД</span>
+      <span class="rules-fact__label">
+        Тривалість турніру
+      </span>
+    </div>
+
+    <div class="rules-fact">
+      <span class="rules-fact__value">2</span>
+      <span class="rules-fact__label">
+        Робочі вудилища
+      </span>
+    </div>
+
+    <div class="rules-fact">
+      <span class="rules-fact__value">12+</span>
+      <span class="rules-fact__label">
+        Мінімум команд
+      </span>
+    </div>
+
+    <div class="rules-fact">
+      <span class="rules-fact__value">C&R</span>
+      <span class="rules-fact__label">
+        Зловив — відпустив
+      </span>
+    </div>
+
+  </div>
+
+  <!-- WARNING -->
+
+  <div class="rules-notice">
+    <div class="rules-notice__icon">⚠</div>
+
+    <div>
+      <strong>ОБОВ'ЯЗКОВО ДО ВИКОНАННЯ</strong>
+
+      <p>
+        Регламент водойми є обов'язковим до виконання
+        та має пріоритет над цим регламентом у разі
+        розбіжностей. Незнання правил водойми
+        не звільняє учасників від відповідальності.
+      </p>
+    </div>
+  </div>
+
+  <!-- MOBILE CONTENTS -->
+
+  <details class="rules-mobile-toc" id="mobileRulesToc">
+    <summary>ЗМІСТ РЕГЛАМЕНТУ — ВІДКРИТИ РОЗДІЛИ</summary>
+
+    <nav class="rules-toc" aria-label="Зміст регламенту">
+      <a href="#section-1"><span class="rules-toc__number">01</span>Загальні положення</a>
+      <a href="#section-2"><span class="rules-toc__number">02</span>Участь та реєстрація</a>
+      <a href="#section-3"><span class="rules-toc__number">03</span>Організація та сектори</a>
+      <a href="#section-4"><span class="rules-toc__number">04</span>Правила ловлі</a>
+      <a href="#section-5"><span class="rules-toc__number">05</span>Годування</a>
+      <a href="#section-6"><span class="rules-toc__number">06</span>Зважування та риба</a>
+      <a href="#section-7"><span class="rules-toc__number">07</span>Переможці та призи</a>
+      <a href="#section-8"><span class="rules-toc__number">08</span>Fair Play</a>
+      <a href="#section-9"><span class="rules-toc__number">09</span>Дисципліна та штрафи</a>
+      <a href="#section-10"><span class="rules-toc__number">10</span>Безпека</a>
+      <a href="#section-11"><span class="rules-toc__number">11</span>Протести</a>
+      <a href="#section-12"><span class="rules-toc__number">12</span>Контакти</a>
+    </nav>
+  </details>
+
+  <div class="rules-layout">
+
+    <!-- DESKTOP SIDEBAR -->
+
+    <aside class="rules-sidebar">
+
+      <div class="rules-sidebar__title">
+        Зміст документа
+      </div>
+
+      <nav class="rules-toc" aria-label="Навігація регламентом">
+        <a href="#section-1"><span class="rules-toc__number">01</span>Загальні положення</a>
+        <a href="#section-2"><span class="rules-toc__number">02</span>Участь та реєстрація</a>
+        <a href="#section-3"><span class="rules-toc__number">03</span>Організація та сектори</a>
+        <a href="#section-4"><span class="rules-toc__number">04</span>Правила ловлі</a>
+        <a href="#section-5"><span class="rules-toc__number">05</span>Годування</a>
+        <a href="#section-6"><span class="rules-toc__number">06</span>Зважування та риба</a>
+        <a href="#section-7"><span class="rules-toc__number">07</span>Переможці та призи</a>
+        <a href="#section-8"><span class="rules-toc__number">08</span>Fair Play</a>
+        <a href="#section-9"><span class="rules-toc__number">09</span>Дисципліна та штрафи</a>
+        <a href="#section-10"><span class="rules-toc__number">10</span>Безпека</a>
+        <a href="#section-11"><span class="rules-toc__number">11</span>Протести</a>
+        <a href="#section-12"><span class="rules-toc__number">12</span>Контакти</a>
+      </nav>
+
+    </aside>
+
+    <!-- CONTENT -->
+
+    <div class="rules-content">
+
+      <!-- SECTION 1 -->
+
+      <section class="rules-section" id="section-1">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">01</span>
+          <h2>ЗАГАЛЬНІ ПОЛОЖЕННЯ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>1.1. Принципи проведення турніру</h3>
+
+          <ul class="rules-list">
+            <li>
+              Усі змагання проводяться за принципом
+              <strong>Catch & Release — «зловив — відпустив».</strong>
+            </li>
+
+            <li>
+              Основна мета — розвиток спортивного
+              карпфішингу, забезпечення чесної конкуренції,
+              безпеки учасників та гуманного ставлення до риби.
+            </li>
+
+            <li>
+              Змагання організовуються на принципах
+              рівних умов, прозорого суддівства,
+              взаємної поваги та спортивної етики.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>1.2. Мінімальна кількість учасників</h3>
+
+          <ul class="rules-list">
+            <li>
+              Змагання проводяться за умови участі
+              <strong>не менше 12 команд.</strong>
+            </li>
+
+            <li>
+              У разі недобору мінімальної кількості команд
+              організатор має право перенести дату,
+              змінити формат або скасувати змагання.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>1.3. Джек-поти «Big Fish Total»</h3>
+
+          <ul class="rules-list">
+            <li>
+              Участь у джек-потах є добровільною.
+            </li>
+
+            <li>
+              Джек-пот проводиться за бажанням учасників
+              та за умови оплати повного пакета участі.
+            </li>
+
+            <li>
+              Призовий фонд формується з внесків учасників.
+            </li>
+
+            <li>
+              Організатор залишає за собою право
+              утримувати частину коштів на організаційні
+              та адміністративні витрати.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- SECTION 2 -->
+
+      <section class="rules-section" id="section-2">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">02</span>
+          <h2>УЧАСТЬ ТА РЕЄСТРАЦІЯ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>2.1. Тривалість та розклад</h3>
+
+          <div class="rules-highlight">
+            <strong>Тривалість турніру — 48 годин.</strong><br>
+            Старт: п'ятниця, 12:00.<br>
+            Фініш: неділя, 12:00.
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>2.2. Формат участі</h3>
+
+          <ul class="rules-list">
+            <li>
+              <strong>Командний формат:</strong>
+              від 1 до 3 повноцінних учасників.
+            </li>
+
+            <li>
+              <strong>STALKER SOLO:</strong>
+              один учасник, якщо проведення такого
+              формату оголошено окремо.
+            </li>
+
+            <li>
+              Порушення правил одним учасником
+              тягне відповідальність для всієї команди.
+            </li>
+
+            <li>
+              Цей регламент поширюється як на
+              командний, так і на сольний формат.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>2.3. Реєстрація та оплата</h3>
+
+          <ul class="rules-list">
+            <li>
+              <strong>
+                Реєстрація вважається дійсною
+                лише після оплати внеску.
+              </strong>
+            </li>
+
+            <li>
+              Список учасників формується
+              виключно за датою оплати.
+            </li>
+
+            <li>
+              Місце в основному списку отримує команда,
+              яка здійснила оплату першою.
+            </li>
+
+            <li>
+              Організатор не зобов'язаний утримувати
+              місце за неоплаченими заявками.
+            </li>
+
+            <li>
+              Факт оплати підтверджується
+              квитанцією або банківським повідомленням.
+            </li>
+
+            <li>
+              У разі переплати або подвійної оплати
+              кошти повертаються за вирахуванням
+              банківської комісії.
+            </li>
+          </ul>
+
+          <div class="rules-danger">
+            <strong>ВІДМОВА ВІД УЧАСТІ:</strong>
+            відповідно до чинних умов турніру
+            сплачений внесок не повертається.
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>2.4. Організаційний фонд</h3>
+
+          <p>
+            Командні внески формують єдиний
+            організаційний фонд, з якого
+            покриваються витрати на проведення турніру.
+          </p>
+
+          <ul class="rules-list">
+            <li>Оренда водойми.</li>
+            <li>Робота суддів та організаторської групи.</li>
+            <li>Доставка призів від партнерів і спонсорів.</li>
+            <li>Додаткові призи та заохочення.</li>
+            <li>Виготовлення кубків, медалей і нагород.</li>
+          </ul>
+
+          <div class="rules-highlight">
+            Організатор має право розподіляти
+            організаційний фонд відповідно
+            до потреб проведення турніру.
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>2.5. Технічні уточнення</h3>
+
+          <p>
+            Організатор має право вносити технічні
+            уточнення до регламенту, які не змінюють
+            суті змагань, з обов'язковим повідомленням
+            учасників до старту.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- SECTION 3 -->
+
+      <section class="rules-section" id="section-3">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">03</span>
+          <h2>ОРГАНІЗАЦІЯ ТА СЕКТОРИ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>3.1. Жеребкування</h3>
+
+          <ul class="rules-list">
+            <li>
+              Розподіл секторів та зон
+              здійснюється шляхом жеребкування.
+            </li>
+
+            <li>
+              <strong>
+                Дистанція ловлі оголошується
+                та фіксується до жеребкування.
+              </strong>
+            </li>
+
+            <li>
+              Встановлена дистанція ловлі
+              є обов'язковою для учасників.
+            </li>
+
+            <li>
+              Розклад заїзду, старту, фінішу
+              та нагородження публікується
+              на сайті та у Viber-групі.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>3.2. Межі сектора</h3>
+
+          <ul class="rules-list">
+            <li>
+              Учасники зобов'язані дотримуватися
+              встановлених меж своєї зони ловлі.
+            </li>
+
+            <li>
+              Робоча зона дозволена виключно
+              в напрямку, який відповідає крайнім
+              секторам зони, або в напрямку,
+              визначеному суддею.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>3.3. Пересування транспортом</h3>
+
+          <div class="rules-danger">
+            <strong>ЗАБОРОНЕНО:</strong>
+            пересування автомобілем береговою
+            лінією від старту до фінішу змагань.
+          </div>
+
+          <p>
+            Винятки допускаються лише
+            у форс-мажорних обставинах
+            та виключно за згодою судді.
+          </p>
+        </div>
+
+        <div class="rules-group">
+          <h3>3.4. Вхід у воду</h3>
+
+          <ul class="rules-list">
+            <li>
+              <strong>До старту:</strong>
+              дозволено заходити у воду
+              для перевірки та очищення сектора
+              від коряг і зачепів без обмежень,
+              передбачених цим пунктом.
+            </li>
+
+            <li>
+              <strong>Під час змагань:</strong>
+              дозволено заходити у воду
+              не далі 20 метрів від берега
+              та не вище рівня грудей.
+            </li>
+
+            <li>
+              Під час змагань вхід у воду
+              дозволяється виключно
+              для підсачування риби.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- SECTION 4 -->
+
+      <section class="rules-section" id="section-4">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">04</span>
+          <h2>ПРАВИЛА ЛОВЛІ ТА ОСНАЩЕННЯ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.1. Вудилища</h3>
+
+          <ul class="rules-list">
+            <li>
+              Максимальна довжина вудилища —
+              <strong>4,57 м.</strong>
+            </li>
+
+            <li>
+              Дозволено використовувати
+              коропові та фідерні вудилища.
+            </li>
+
+            <li>
+              Кількість запасних вудилищ
+              не обмежується.
+            </li>
+
+            <li>
+              Одночасно у воді та на род-поді
+              дозволено не більше
+              <strong>двох робочих вудилищ.</strong>
+            </li>
+
+            <li>
+              На одному робочому вудилищі
+              дозволено не більше
+              <strong>одного гачка.</strong>
+            </li>
+
+            <li>
+              Заборонено закидати третє
+              робоче вудилище, доки одне
+              з двох робочих не вимотане.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.2. Закидання та виважування</h3>
+
+          <ul class="rules-list">
+            <li>
+              Закидання та виважування
+              здійснюють виключно учасники,
+              зареєстровані у складі команди.
+            </li>
+
+            <li>
+              Допомога гостей, сусідніх команд
+              або третіх осіб під час закидання
+              та виважування заборонена.
+            </li>
+
+            <li>
+              Єдиний виняток — допомога судді
+              у форс-мажорних обставинах:
+              <ul>
+                <li>переплутування снастей між секторами;</li>
+                <li>небезпека для риби;</li>
+                <li>небезпека для рибалки.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.3. Маркеріння</h3>
+
+          <ul class="rules-list">
+            <li>
+              Маркеріння дозволено
+              без вимотування двох робочих вудилищ.
+            </li>
+
+            <li>
+              Маркеріння дозволяється
+              після заїзду в сектор
+              та до фінішу змагань.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.4. Волосінь та шок-лідер</h3>
+
+          <ul class="rules-list">
+            <li>
+              Діаметр основної волосіні —
+              <strong>не менше 0,25 мм.</strong>
+            </li>
+
+            <li>
+              Довжина шок-лідера —
+              <strong>не більше 10 м.</strong>
+            </li>
+
+            <li>
+              Використання плетеного шнура
+              як основної волосіні
+              на робочих вудилищах заборонено.
+            </li>
+
+            <li>
+              Плетений шнур дозволяється
+              виключно на сподових
+              та маркерних вудилищах.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.5. Монтажі</h3>
+
+          <div class="rules-dual">
+
+            <div class="rules-status rules-status--allowed">
+              <h4>✓ ДОЗВОЛЕНО</h4>
+
+              <ul>
+                <li>Класичні коропові монтажі.</li>
+                <li>Flat Feeder.</li>
+                <li>Безпечні монтажі зі звільненням риби від вантажу або годівниці при обриві.</li>
+              </ul>
+            </div>
+
+            <div class="rules-status rules-status--forbidden">
+              <h4>✕ ЗАБОРОНЕНО</h4>
+
+              <ul>
+                <li>Будь-які застібки та вертлюги у складі робочих монтажів.</li>
+                <li>Оснастка «вертоліт».</li>
+                <li>Оснастка «гарбуз».</li>
+                <li>Монтажі, що не забезпечують безпечного звільнення риби.</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="rules-highlight">
+            <strong>ВИМОГА БЕЗПЕКИ:</strong>
+            флет-годівниця або вантаж
+            при використанні лідкору
+            повинні мати вільний хід
+            по лідкору та скидатися
+            у разі обриву оснастки.
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>4.6. Плавзасоби</h3>
+
+          <div class="rules-danger">
+            Заборонено використання корабликів,
+            човнів та будь-яких плавзасобів
+            для завезення оснасток і прикорму.
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 5 -->
+
+      <section class="rules-section" id="section-5">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">05</span>
+          <h2>ПРАВИЛА ГОДУВАННЯ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>5.1. Використання спомба</h3>
+
+          <ul class="rules-list">
+            <li>
+              Годування спомбом дозволено
+              лише у світлий час доби,
+              визначений організатором.
+            </li>
+
+            <li>
+              Дозволено одночасне годування
+              <strong>двома спомбами.</strong>
+            </li>
+
+            <li>
+              Дозволені розміри:
+              <strong>Mini та MidiX.</strong>
+            </li>
+
+            <li>
+              Дозволено лише спомби
+              малого та середнього розміру.
+            </li>
+
+            <li>
+              Використання спомба
+              <strong>Large заборонено.</strong>
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>5.2. Використання кобри</h3>
+
+          <div class="rules-highlight">
+            Годування за допомогою кобри
+            <strong>дозволено цілодобово.</strong>
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>5.3. Насадки та прикорм</h3>
+
+          <div class="rules-dual">
+
+            <div class="rules-status rules-status--allowed">
+              <h4>✓ ДОЗВОЛЕНО</h4>
+
+              <ul>
+                <li>Бойли.</li>
+                <li>Пелетс.</li>
+                <li>Зернові суміші.</li>
+                <li>Варені та пропарені зерна.</li>
+                <li>Тигровий горіх лише в меленому вигляді, пропущений через м'ясорубку.</li>
+                <li>Рідкі та сухі атрактанти.</li>
+                <li>Діпи та ароматизатори.</li>
+              </ul>
+            </div>
+
+            <div class="rules-status rules-status--forbidden">
+              <h4>✕ ЗАБОРОНЕНО</h4>
+
+              <ul>
+                <li>Годування цілим тигровим горіхом.</li>
+                <li>Приманки тваринного походження.</li>
+                <li>Підгодовування тваринного походження.</li>
+                <li>Ікра у будь-якому вигляді.</li>
+                <li>Жива насадка.</li>
+              </ul>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 6 -->
+
+      <section class="rules-section" id="section-6">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">06</span>
+          <h2>ЗВАЖУВАННЯ ТА ЗБЕРЕЖЕННЯ РИБИ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>6.1. Обов'язкове обладнання</h3>
+
+          <ul class="rules-list">
+            <li>
+              Антисептик для обробки риби.
+            </li>
+
+            <li>
+              <strong>
+                Мінімум 10 коропових мішків.
+              </strong>
+            </li>
+
+            <li>
+              Дозволяються виключно
+              коропові мішки із zip-замком.
+            </li>
+
+            <li>
+              Мішки із затяжкою
+              або шнурком заборонені.
+            </li>
+
+            <li>
+              Наявність поплавця
+              на короповому мішку
+              є бажаною для швидкого
+              виявлення мішка у воді.
+            </li>
+
+            <li>
+              Якщо водойма не забезпечує
+              учасників короповими матами,
+              команда зобов'язана мати власний мат.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>6.2. Порядок зважування</h3>
+
+          <ul class="rules-list">
+            <li>
+              Кількість і час зважувань
+              визначаються організатором.
+            </li>
+
+            <li>
+              Графік може змінюватися
+              залежно від умов проведення турніру.
+            </li>
+
+            <li>
+              <strong>
+                Офіційне зважування проводиться
+                виключно у присутності судді.
+              </strong>
+            </li>
+
+            <li>
+              Команда зобов'язана дістати
+              мішок із рибою та допомогти
+              судді під час зважування.
+            </li>
+
+            <li>
+              Після завершення зважування
+              рибу необхідно негайно відпустити.
+            </li>
+
+            <li>
+              В одному короповому мішку
+              дозволено утримувати
+              <strong>лише одну рибу.</strong>
+            </li>
+
+            <li>
+              Фотографування та офіційне
+              зважування без судді заборонені.
+            </li>
+
+            <li>
+              Під час фотографування
+              риба повинна перебувати
+              на мінімальній висоті
+              виключно над короповим матом.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>6.3. Обов'язковий виклик судді</h3>
+
+          <div class="rules-highlight">
+            <strong>СУДДЮ НЕОБХІДНО ВИКЛИКАТИ:</strong>
+            <br><br>
+            • якщо вага риби становить 10 кг або більше;<br>
+            • за наявності двох амурів;<br>
+            • за наявності 10 мішків із рибою.
+          </div>
+
+          <p>
+            Якщо команда підозрює,
+            що вага риби становить
+            10 кг або більше,
+            дозволяється попереднє
+            самостійне зважування.
+          </p>
+
+          <p>
+            Офіційне зважування
+            здійснюється суддею.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- SECTION 7 -->
+
+      <section class="rules-section" id="section-7">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">07</span>
+          <h2>ВИЗНАЧЕННЯ ПЕРЕМОЖЦІВ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>7.1. Основний залік</h3>
+
+          <ul class="rules-list">
+            <li>
+              Основний залік визначається
+              за загальною вагою улову
+              за весь період змагань.
+            </li>
+
+            <li>
+              Призові місця визначаються
+              окремо в кожній зоні.
+            </li>
+
+            <li>
+              При однаковій загальній вазі
+              перевага надається команді,
+              яка має більшу рибу (Big Fish).
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>7.2. Призові місця</h3>
+
+          <div class="rules-table-wrap">
+            <table class="rules-table">
+              <thead>
+                <tr>
+                  <th>Зона</th>
+                  <th>Призові місця</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td><strong>Зона A</strong></td>
+                  <td>1, 2, 3 місце</td>
+                </tr>
+
+                <tr>
+                  <td><strong>Зона B</strong></td>
+                  <td>1, 2, 3 місце</td>
+                </tr>
+
+                <tr>
+                  <td><strong>Зона C</strong></td>
+                  <td>1, 2, 3 місце</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>7.3. Номінації Big Fish</h3>
+
+          <ul class="rules-list">
+            <li>
+              Окремо визначається
+              найбільший короп турніру.
+            </li>
+
+            <li>
+              Окремо визначається
+              найбільший амур турніру.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>7.4. Призовий фонд</h3>
+
+          <ul class="rules-list">
+            <li>
+              Призовий фонд формується
+              організаторами та спонсорами.
+            </li>
+
+            <li>
+              Для кожної зони передбачені
+              кубки за призові місця.
+            </li>
+
+            <li>
+              Додатково команди отримують
+              призи від спонсорів
+              у відповідних зонах.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- SECTION 8 -->
+
+      <section class="rules-section" id="section-8">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">08</span>
+          <h2>FAIR PLAY ТА ПОВЕДІНКА</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>8.1. Завершення змагань</h3>
+
+          <ul class="rules-list">
+            <li>
+              Після сигналу фінішу
+              команда має
+              <strong>15 хвилин</strong>
+              для завершення виважування
+              риби, яка клюнула до сигналу.
+            </li>
+
+            <li>
+              У разі клювання до фінішу
+              команда зобов'язана
+              попередити суддю
+              або сусідню команду.
+            </li>
+
+            <li>
+              Якщо такого повідомлення
+              не було, риба
+              до заліку не зараховується.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>8.2. Взаємодія між секторами</h3>
+
+          <ul class="rules-list">
+            <li>
+              Якщо риба зайшла
+              в сектор сусідньої команди,
+              дозволяється за її згодою
+              зайти для вивільнення
+              оснастки або риби.
+            </li>
+
+            <li>
+              <strong>
+                Підсачування здійснюється
+                виключно у своєму секторі.
+              </strong>
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>8.3. Гості та глядачі</h3>
+
+          <ul class="rules-list">
+            <li>
+              Відвідування секторів гостями
+              дозволено лише у світлий час доби.
+            </li>
+
+            <li>
+              Заїзд гостей автомобілем
+              у сектор заборонений.
+            </li>
+
+            <li>
+              Транспортні засоби гостей
+              повинні залишатися
+              виключно на парковці.
+            </li>
+
+            <li>
+              Прохід до секторів
+              дозволяється лише пішки.
+            </li>
+
+            <li>
+              Переміщення автотранспортом
+              між секторами заборонене.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- SECTION 9 -->
+
+      <section class="rules-section" id="section-9">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">09</span>
+          <h2>ДИСЦИПЛІНА ТА ШТРАФИ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>9.1. Загальні вимоги</h3>
+
+          <ul class="rules-list">
+            <li>
+              Учасники зобов'язані
+              підтримувати тишу,
+              порядок і чистоту в секторі.
+            </li>
+
+            <li>
+              Заборонені конфлікти,
+              агресивна поведінка,
+              маніпуляції результатами
+              та приховування риби.
+            </li>
+
+            <li>
+              Три усні попередження
+              прирівнюються до жовтої картки.
+            </li>
+
+            <li>
+              Дві жовті картки
+              або одна червона картка
+              означають дискваліфікацію команди.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>9.2. Таблиця дисциплінарних санкцій</h3>
+
+          <div class="rules-table-wrap">
+            <table class="rules-table">
+
+              <thead>
+                <tr>
+                  <th>Порушення</th>
+                  <th>Санкція</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                <tr>
+                  <td>
+                    Порушення встановленого
+                    часу годування
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА КАРТКА
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Годування цілим тигровим горіхом
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА КАРТКА
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Ловля або годування
+                    за межами сектора чи зони
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА КАРТКА
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Недбале поводження з рибою
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА
+                    </span>
+                    /
+                    <span class="rules-badge rules-badge--red">
+                      ЧЕРВОНА
+                    </span>
+                    <br>
+                    За рішенням судді
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Використання забороненої оснастки
+                    або порушення правил годування
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА
+                    </span>
+                    /
+                    <span class="rules-badge rules-badge--red">
+                      ЧЕРВОНА
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Фотографування риби
+                    без присутності судді
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--yellow">
+                      ЖОВТА КАРТКА
+                    </span>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>
+                    Надмірне вживання алкоголю,
+                    агресивна поведінка
+                  </td>
+                  <td>
+                    <span class="rules-badge rules-badge--red">
+                      ДИСКВАЛІФІКАЦІЯ
+                    </span>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 10 -->
+
+      <section class="rules-section" id="section-10">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">10</span>
+          <h2>ПРАВИЛА БЕЗПЕКИ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>10.1. Дії під час грози</h3>
+
+          <ul class="rules-list">
+            <li>
+              Змагання призупиняються
+              на час, визначений організатором.
+            </li>
+
+            <li>
+              Усі команди зобов'язані
+              негайно витягнути
+              робочі вудилища з води.
+            </li>
+
+            <li>
+              Під час призупинення заборонено:
+              <ul>
+                <li>тримати вудилища в руках;</li>
+                <li>здійснювати закидання;</li>
+                <li>проводити маркеріння;</li>
+                <li>здійснювати підгодовування;</li>
+                <li>виконувати будь-які дії, пов'язані з ловлею.</li>
+              </ul>
+            </li>
+          </ul>
+
+          <div class="rules-danger">
+            <strong>КРИТИЧНЕ ПОРУШЕННЯ:</strong>
+            невиконання вимоги витягнути снасті
+            під час призупинення змагань через грозу
+            карається червоною карткою
+            та дискваліфікацією команди.
+          </div>
+        </div>
+
+        <div class="rules-group">
+          <h3>10.2. Алкоголь та заборонені речовини</h3>
+
+          <ul class="rules-list">
+            <li>
+              Перебування в стані алкогольного
+              або наркотичного сп'яніння заборонено.
+            </li>
+
+            <li>
+              Зафіксовані суддями порушення
+              розглядаються суддівською колегією.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>10.3. Снасті та особисті речі</h3>
+
+          <ul class="rules-list">
+            <li>
+              Заборонено залишати
+              робочі снасті без нагляду.
+            </li>
+
+            <li>
+              Організатор та адміністрація водойми
+              не несуть відповідальності
+              за втрачені або пошкоджені
+              особисті речі учасників.
+            </li>
+          </ul>
+        </div>
+
+        <div class="rules-group">
+          <h3>10.4. Переміщення в темний час доби</h3>
+
+          <p>
+            Переміщення між секторами
+            в темний час доби дозволяється
+            лише з увімкненими ліхтарями.
+          </p>
+        </div>
+
+      </section>
+
+      <!-- SECTION 11 -->
+
+      <section class="rules-section" id="section-11">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">11</span>
+          <h2>ПРОТЕСТИ ТА РІШЕННЯ СУДДІВ</h2>
+        </div>
+
+        <div class="rules-group">
+          <h3>11.1. Подання протесту</h3>
+
+          <ul class="rules-list">
+            <li>
+              Протест подається
+              головному судді або організатору.
+            </li>
+
+            <li>
+              Термін подання —
+              <strong>30 хвилин</strong>
+              після виникнення інциденту.
+            </li>
+
+            <li>
+              За відсутності доказів
+              протест може бути не розглянутий.
+            </li>
+
+            <li>
+              Рішення суддів є остаточними
+              та оскарженню не підлягають.
+            </li>
+          </ul>
+        </div>
+
+      </section>
+
+      <!-- SECTION 12 -->
+
+      <section class="rules-section" id="section-12">
+
+        <div class="rules-section__heading">
+          <span class="rules-section__number">12</span>
+          <h2>КОНТАКТИ ОРГАНІЗАТОРІВ</h2>
+        </div>
+
+        <div class="rules-group">
+          <p>
+            Для отримання інформації
+            щодо участі, реєстрації,
+            регламенту та організації
+            змагань звертайтеся
+            за контактними телефонами.
+          </p>
+
+          <div class="rules-contacts">
+
+            <a class="rules-contact"
+               href="tel:+380631731116">
+
+              <small>Контактний телефон</small>
+
+              <strong>
+                +38 (063) 173-11-16
+              </strong>
+            </a>
+
+            <a class="rules-contact"
+               href="tel:+380978824845">
+
+              <small>Контактний телефон</small>
+
+              <strong>
+                +38 (097) 882-48-45
+              </strong>
+            </a>
+
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+
+  <!-- FINAL BLOCK -->
+
+  <div class="rules-bottom">
+
+    <h2 class="rules-bottom__title">
+      STOLAR CARP • FAIR PLAY
+    </h2>
+
+    <p>
+      Участь у змаганнях передбачає
+      ознайомлення з чинним регламентом
+      та його дотримання.
+      Повага до суперників, суддів,
+      водойми та риби є основою
+      спортивної культури STOLAR CARP.
+    </p>
+
+    <a href="#top" class="rules-back-top">
+      ↑ ПОВЕРНУТИСЯ НА ПОЧАТОК
+    </a>
+
+  </div>
+
+</div>
 </main>
 
 <footer class="footer">
   <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
+
+    <div>
+      © <span id="rulesYear">2026</span>
+      STOLAR CARP · Львів
+    </div>
+
     <div class="footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
+
+      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+         target="_blank"
+         rel="noopener noreferrer">
+        Viber
+      </a>
+
+      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+         target="_blank"
+         rel="noopener noreferrer">
+        YouTube
+      </a>
+
     </div>
   </div>
 </footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+     STOLAR CARP • RULES PAGE INTERACTIONS
+     ========================================================= */
+
+  const yearEl = document.getElementById("rulesYear");
+
+  if (yearEl) {
+    yearEl.textContent = new Date().getFullYear();
+  }
+
+  /* MOBILE TABLE OF CONTENTS */
+
+  const mobileToc = document.getElementById("mobileRulesToc");
+
+  if (mobileToc) {
+    mobileToc.querySelectorAll('a[href^="#"]').forEach(function (link) {
+      link.addEventListener("click", function () {
+        mobileToc.open = false;
+      });
+    });
+  }
+
+  /* ACTIVE SECTION TRACKING */
+
+  const sections = document.querySelectorAll(".rules-section");
+  const tocLinks = document.querySelectorAll(
+    '.rules-sidebar .rules-toc a[href^="#"]'
+  );
+
+  if ("IntersectionObserver" in window && sections.length) {
+    const observer = new IntersectionObserver(
+      function (entries) {
+        const visible = entries
+          .filter(function (entry) {
+            return entry.isIntersecting;
+          })
+          .sort(function (a, b) {
+            return a.boundingClientRect.top -
+                   b.boundingClientRect.top;
+          });
+
+        if (!visible.length) return;
+
+        const activeId = visible[0].target.id;
+
+        tocLinks.forEach(function (link) {
+          const isActive =
+            link.getAttribute("href") === "#" + activeId;
+
+          link.classList.toggle("is-active", isActive);
+
+          if (isActive) {
+            link.setAttribute("aria-current", "location");
+          } else {
+            link.removeAttribute("aria-current");
+          }
+        });
+      },
+      {
+        rootMargin: "-10% 0px -70% 0px",
+        threshold: 0
+      }
+    );
+
+    sections.forEach(function (section) {
+      observer.observe(section);
+    });
+  }
+
+  /* MOBILE HEADER */
+
+  const burger = document.getElementById("burger");
+  const nav = document.getElementById("nav");
+
+  if (burger && nav) {
+    burger.addEventListener("click", function () {
+      const isOpen = nav.classList.toggle("nav--open");
+
+      burger.classList.toggle("burger--open", isOpen);
+      burger.setAttribute("aria-expanded", String(isOpen));
+    });
+
+    nav.querySelectorAll("a").forEach(function (link) {
+      link.addEventListener("click", function () {
+        nav.classList.remove("nav--open");
+        burger.classList.remove("burger--open");
+        burger.setAttribute("aria-expanded", "false");
+      });
+    });
+  }
+
+})();
+</script>
+
 </body>
 </html>

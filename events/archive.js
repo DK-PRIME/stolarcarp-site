@@ -960,6 +960,16 @@
       );
   }
 
+  function getFinalStageItem() {
+    return (
+      stages.find(
+        item =>
+          item.isFinal
+      ) ||
+      null
+    );
+  }
+
   function findStageTeamRow(
     item,
     team
@@ -1001,6 +1011,49 @@
     }
 
     return null;
+  }
+
+  function getActualFinalResult(team) {
+    const finalStage =
+      getFinalStageItem();
+
+    if (!finalStage) {
+      return null;
+    }
+
+    const row =
+      findStageTeamRow(
+        finalStage,
+        team
+      );
+
+    if (!row) {
+      return null;
+    }
+
+    const place =
+      num(
+        row.overallPlace
+      );
+
+    if (!place) {
+      return null;
+    }
+
+    return {
+      place,
+      points: place,
+      absent: false,
+      participated: true,
+      totalWeight:
+        num(
+          row.totalWeight
+        ),
+      bigFish:
+        num(
+          row.bigFish
+        )
+    };
   }
 
   function collectSeasonTeams(
@@ -1451,8 +1504,13 @@
 
           return true;
         })
-        .map(
-          row => ({
+        .map(row => {
+          const actualFinal =
+            getActualFinalResult(
+              row
+            );
+
+          return {
             place:
               row.qualificationPlace,
 
@@ -1482,19 +1540,39 @@
                 })
               ),
 
-            final: {
-              place:
-                "—",
+            final:
+              actualFinal
+                ? {
+                    place:
+                      actualFinal.place,
 
-              points:
-                0,
+                    points:
+                      actualFinal.points,
 
-              absent:
-                true
-            },
+                    absent:
+                      false,
+
+                    participated:
+                      true
+                  }
+                : {
+                    place:
+                      "—",
+
+                    points:
+                      0,
+
+                    absent:
+                      true,
+
+                    participated:
+                      false
+                  },
 
             finalPlace:
-              "—",
+              actualFinal
+                ? actualFinal.place
+                : "—",
 
             seasonPoints:
               row.qualificationPoints,
@@ -1515,9 +1593,12 @@
               row.qualificationPoints,
 
             rankingType:
-              "contender"
-          })
-        );
+              "contender",
+
+            actualFinalParticipation:
+              Boolean(actualFinal)
+          };
+        });
 
     return [
       ...finalists,
@@ -1950,6 +2031,10 @@
             stage.type
           ) ===
             "final"
+      ) ||
+      stages.some(
+        stage =>
+          stage.isFinal
       );
 
     const finalists =
@@ -2188,8 +2273,20 @@
 
       contenders.forEach(
         row => {
+          const actualFinal =
+            row.final &&
+            row.final.absent !== true &&
+            num(row.final.place) > 0;
+
           body += `
-            <tr class="ranking-contender">
+            <tr class="
+              ranking-contender
+              ${
+                actualFinal
+                  ? "ranking-contender--final"
+                  : ""
+              }
+            ">
 
               <td class="r-place">
                 ${esc(
@@ -2248,8 +2345,23 @@
               ${
                 hasFinal
                   ? `
-                    <td class="r-final r-absent">
-                      —
+                    <td
+                      class="
+                        r-final
+                        ${
+                          actualFinal
+                            ? "r-final-played"
+                            : "r-absent"
+                        }
+                      "
+                    >
+                      ${
+                        actualFinal
+                          ? esc(
+                              row.final.place
+                            )
+                          : "—"
+                      }
                     </td>
                   `
                   : ""
@@ -3258,6 +3370,12 @@
         background:rgba(127,29,29,.12);
       }
 
+      .season-ranking-table .r-final-played{
+        color:#22c55e!important;
+        background:rgba(34,197,94,.10)!important;
+        font-weight:950;
+      }
+
       .season-ranking-table .ranking-top-1 td{
         background:rgba(250,204,21,.09);
       }
@@ -3281,6 +3399,10 @@
 
       .season-ranking-table .ranking-contender .r-place{
         color:#fbbf24;
+      }
+
+      .season-ranking-table .ranking-contender--final .r-team{
+        color:#f8fafc;
       }
 
       .season-ranking-table .ranking-divider td{

@@ -51,8 +51,7 @@
 (function () {
   "use strict";
 
-  const $ = id =>
-    document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   // =========================================================
   // SETTINGS
@@ -79,7 +78,7 @@
       Number(SEASON_YEAR) + 1
     );
 
-  // UID, який дозволений твоїми Firestore Rules.
+  // UID, який дозволений Firestore Rules.
   const FIRESTORE_ADMIN_UID =
     "5Dt6fN64c3aWACYV1WacxV2BHDl2";
 
@@ -99,6 +98,8 @@
   let ratingUnsubscribe = null;
   let authUnsubscribe = null;
 
+  let archiveDelegatedHandlerInstalled = false;
+
   // =========================================================
   // HELPERS
   // =========================================================
@@ -117,8 +118,7 @@
   }
 
   function num(value) {
-    const n =
-      Number(value);
+    const n = Number(value);
 
     return Number.isFinite(n)
       ? n
@@ -126,8 +126,7 @@
   }
 
   function fmtKg(value) {
-    const n =
-      num(value);
+    const n = num(value);
 
     if (n <= 0) {
       return "—";
@@ -203,6 +202,16 @@
   }
 
   function serverTimestamp() {
+    if (
+      typeof firebase === "undefined" ||
+      !firebase.firestore ||
+      !firebase.firestore.FieldValue
+    ) {
+      throw new Error(
+        "Firebase FieldValue недоступний."
+      );
+    }
+
     return firebase
       .firestore
       .FieldValue
@@ -269,8 +278,7 @@
       );
     }
 
-    currentDb =
-      db;
+    currentDb = db;
 
     return db;
   }
@@ -287,29 +295,12 @@
       return false;
     }
 
-    /*
-     * ВАЖЛИВО.
-     *
-     * Firestore Rules у тебе дозволяють
-     * архівацію тільки цьому UID.
-     *
-     * Тому для небезпечної кнопки
-     * використовуємо ТУ САМУ перевірку.
-     *
-     * Це прибирає ситуацію:
-     * UI думає, що користувач admin,
-     * а Firestore відповідає
-     * permission-denied.
-     */
-
-    if (
+    // Firestore Rules дозволяють
+    // завершення сезону тільки цьому UID.
+    return (
       user.uid ===
       FIRESTORE_ADMIN_UID
-    ) {
-      return true;
-    }
-
-    return false;
+    );
   }
 
   async function initAdminAccess(
@@ -324,11 +315,8 @@
         "[Season Rating] firebase.auth недоступний."
       );
 
-      currentUser =
-        null;
-
-      currentUserIsAdmin =
-        false;
+      currentUser = null;
+      currentUserIsAdmin = false;
 
       renderAdminArchivePanel();
 
@@ -1103,8 +1091,7 @@
               standings
             );
 
-          map.raw =
-            data;
+          map.raw = data;
 
           map.summary =
             buildStageSummary(
@@ -2992,13 +2979,14 @@
       .season-archive-admin{
         position:relative;
         z-index:100;
+        isolation:isolate;
         margin-top:28px;
         padding:18px;
         border-radius:18px;
         border:1px solid rgba(245,158,11,.42);
         background:#0b0d14;
         box-shadow:0 16px 36px rgba(0,0,0,.42);
-        pointer-events:auto;
+        pointer-events:auto !important;
       }
 
       .season-archive-admin__title{
@@ -3024,7 +3012,7 @@
       .season-archive-admin__button{
         display:block;
         position:relative;
-        z-index:101;
+        z-index:999;
         width:100%;
         margin-top:14px;
         padding:14px 16px;
@@ -3115,11 +3103,149 @@
   }
 
   // =========================================================
+  // PERMANENT ARCHIVE BUTTON HANDLER
+  // =========================================================
+
+  function installArchiveButtonHandler() {
+    if (
+      archiveDelegatedHandlerInstalled
+    ) {
+      return;
+    }
+
+    archiveDelegatedHandlerInstalled =
+      true;
+
+    document.addEventListener(
+      "click",
+      async event => {
+        const target =
+          event.target;
+
+        if (
+          !target ||
+          typeof target.closest !==
+            "function"
+        ) {
+          return;
+        }
+
+        const button =
+          target.closest(
+            "#archiveSeasonButton"
+          );
+
+        if (!button) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (
+          archiveInProgress ||
+          button.disabled
+        ) {
+          return;
+        }
+
+        console.log(
+          "[Season Archive] CLICK CAPTURED",
+          {
+            uid:
+              currentUser?.uid ||
+              null,
+
+            year:
+              SEASON_YEAR,
+
+            isAdmin:
+              currentUserIsAdmin,
+
+            hasDb:
+              Boolean(currentDb),
+
+            hasRating:
+              Boolean(
+                currentRatingSource
+              ),
+
+            hasPayload:
+              Boolean(
+                currentPayload
+              ),
+
+            rows:
+              currentPayload
+                ?.rows
+                ?.length ||
+              0,
+
+            finalStage:
+              currentPayload
+                ?.finalStage
+                ?.stageDocId ||
+              null
+          }
+        );
+
+        setArchiveStatus(
+          "Кнопка працює. Перевіряємо сезон…",
+          "working"
+        );
+
+        try {
+          await archiveCurrentSeason();
+        } catch (error) {
+          console.error(
+            "[Season Archive] CLICK ERROR",
+            error
+          );
+
+          archiveInProgress =
+            false;
+
+          const liveButton =
+            $("archiveSeasonButton");
+
+          if (liveButton) {
+            liveButton.disabled =
+              false;
+
+            liveButton.textContent =
+              `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
+          }
+
+          const text =
+            getArchiveErrorText(
+              error
+            );
+
+          setArchiveStatus(
+            `❌ ${text}`,
+            "error"
+          );
+
+          window.alert(
+            `ПОМИЛКА.\n\n${text}`
+          );
+        }
+      },
+      true
+    );
+
+    console.log(
+      "[Season Archive] delegated click handler installed"
+    );
+  }
+
+  // =========================================================
   // ADMIN PANEL
   // =========================================================
 
   function renderAdminArchivePanel() {
     injectAdminArchiveStyles();
+    installArchiveButtonHandler();
 
     let panel =
       $("seasonArchiveAdmin");
@@ -3226,9 +3352,6 @@
       );
 
     if (alreadyArchived) {
-      button.onclick =
-        null;
-
       button.disabled =
         true;
 
@@ -3246,14 +3369,10 @@
     button.disabled =
       archiveInProgress;
 
-    /*
-     * КЛЮЧОВЕ:
-     * onclick встановлюється КОЖНОГО разу,
-     * незалежно від того, чи panel вже існував.
-     */
-
-    button.onclick =
-      handleArchiveButtonClick;
+    if (!archiveInProgress) {
+      button.textContent =
+        `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
+    }
 
     console.log(
       "[Season Archive] BUTTON READY",
@@ -3271,59 +3390,6 @@
           )
       }
     );
-  }
-
-  async function handleArchiveButtonClick(
-    event
-  ) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    console.log(
-      "[Season Archive] CLICK"
-    );
-
-    setArchiveStatus(
-      "Кнопка працює. Перевіряємо сезон…",
-      "working"
-    );
-
-    try {
-      await archiveCurrentSeason();
-    } catch (error) {
-      console.error(
-        "[Season Archive] CLICK ERROR",
-        error
-      );
-
-      archiveInProgress =
-        false;
-
-      const button =
-        $("archiveSeasonButton");
-
-      if (button) {
-        button.disabled =
-          false;
-
-        button.textContent =
-          `🏆 Архівувати та завершити сезон ${SEASON_YEAR}`;
-      }
-
-      const text =
-        getArchiveErrorText(
-          error
-        );
-
-      setArchiveStatus(
-        `❌ ${text}`,
-        "error"
-      );
-
-      window.alert(
-        `ПОМИЛКА.\n\n${text}`
-      );
-    }
   }
 
   // =========================================================
@@ -3892,10 +3958,6 @@
         "seasonArchives"
       );
 
-    /*
-     * 1. Повний оригінальний rating.
-     */
-
     setArchiveStatus(
       "Архівуємо оригінальний seasonRating…",
       "working"
@@ -3927,9 +3989,10 @@
         }
       );
 
-    /*
-     * 2. Parent seasonResults.
-     */
+    setArchiveStatus(
+      "Архівуємо seasonResults parent…",
+      "working"
+    );
 
     await archiveCollection
       .doc(
@@ -3963,10 +4026,6 @@
           merge: false
         }
       );
-
-    /*
-     * 3. Кожен stage — окремий документ.
-     */
 
     for (
       let start = 0;
@@ -4045,13 +4104,7 @@
       );
     }
 
-    /*
-     * 4. MAIN archive пишемо ОСТАННІМ.
-     *
-     * Тобто status=archived з'явиться
-     * тільки після запису source snapshots.
-     */
-
+    // MAIN archive пишемо останнім.
     await archiveCollection
       .doc(
         SEASON_YEAR
@@ -4174,6 +4227,22 @@
       );
     }
 
+    const ratingSourceData =
+      ratingSourceSnap.data() ||
+      {};
+
+    if (
+      ratingSourceData.archiveType !==
+      "seasonRating-source" ||
+      !ratingSourceData.sourceData ||
+      typeof ratingSourceData.sourceData !==
+        "object"
+    ) {
+      throw new Error(
+        "Повна копія seasonRating пошкоджена. НІЧОГО НЕ ВИДАЛЕНО."
+      );
+    }
+
     const parentSourceSnap =
       await collection
         .doc(
@@ -4189,9 +4258,18 @@
       );
     }
 
-    /*
-     * Перевіряємо КОЖЕН stage.
-     */
+    const parentSourceData =
+      parentSourceSnap.data() ||
+      {};
+
+    if (
+      parentSourceData.archiveType !==
+      "seasonResults-parent-source"
+    ) {
+      throw new Error(
+        "Копія seasonResults parent некоректна. НІЧОГО НЕ ВИДАЛЕНО."
+      );
+    }
 
     for (
       let i = 0;
@@ -4292,11 +4370,8 @@
           "stages"
         );
 
-    /*
-     * Перечитуємо безпосередньо
-     * перед видаленням.
-     */
-
+    // Ще раз перечитуємо source
+    // безпосередньо перед DELETE.
     const freshSnap =
       await stagesRef.get();
 
@@ -4349,12 +4424,8 @@
       );
     }
 
-    /*
-     * Firestore НЕ видаляє parent
-     * автоматично разом із subcollection.
-     * Тому видаляємо його окремо.
-     */
-
+    // Firestore НЕ видаляє parent
+    // автоматично після видалення subcollection.
     await seasonRef.delete();
 
     return deleted;
@@ -4634,6 +4705,21 @@
       return;
     }
 
+    console.log(
+      "[Season Archive] START",
+      {
+        year:
+          SEASON_YEAR,
+
+        uid:
+          currentUser?.uid ||
+          null,
+
+        isAdmin:
+          currentUserIsAdmin
+      }
+    );
+
     if (!currentUser) {
       throw new Error(
         "Адміністратор не авторизований."
@@ -4687,10 +4773,8 @@
       );
     }
 
-    /*
-     * Спочатку читаємо ФАКТИЧНИЙ source.
-     */
-
+    // Спочатку читаємо ФАКТИЧНІ
+    // робочі дані Firestore.
     const source =
       await readCompleteSeasonSource();
 
@@ -4775,10 +4859,6 @@
     }
 
     try {
-      /*
-       * Перевіряємо існуючий main archive.
-       */
-
       const archiveRef =
         currentDb
           .collection(
@@ -4819,18 +4899,10 @@
         }
       }
 
-      /*
-       * MAIN ARCHIVE.
-       */
-
       const mainArchive =
         buildMainArchiveDocument(
           source
         );
-
-      /*
-       * WRITE ALL ARCHIVE DOCUMENTS.
-       */
 
       setArchiveStatus(
         "Створюємо повну резервну копію сезону…",
@@ -4841,10 +4913,6 @@
         source,
         mainArchive
       );
-
-      /*
-       * VERIFY.
-       */
 
       if (button) {
         button.textContent =
@@ -4858,10 +4926,6 @@
       console.log(
         "[Season Archive] FULL ARCHIVE VERIFIED"
       );
-
-      /*
-       * ТІЛЬКИ ТЕПЕР DELETE.
-       */
 
       setArchiveStatus(
         "✅ Архів повністю перевірено. Видаляємо робочі seasonResults…",
@@ -4880,10 +4944,6 @@
             .length
         );
 
-      /*
-       * VERIFY DELETE.
-       */
-
       const resultsDeleted =
         await verifyWorkingResultsDeleted();
 
@@ -4893,10 +4953,6 @@
           "seasonRating НЕ буде очищено."
         );
       }
-
-      /*
-       * CLOSE RATING.
-       */
 
       setArchiveStatus(
         "seasonResults очищено. Закриваємо seasonRating…",
@@ -4909,10 +4965,6 @@
       }
 
       await closeWorkingRating();
-
-      /*
-       * CACHE.
-       */
 
       clearRatingCaches();
 
@@ -5006,6 +5058,11 @@
   async function loadSeasonRating() {
     hideError();
 
+    // Встановлюємо обробник одразу.
+    // Він не залежить від того,
+    // коли буде створена кнопка.
+    installArchiveButtonHandler();
+
     try {
       const db =
         await waitReady();
@@ -5057,9 +5114,9 @@
                 currentRatingSource =
                   rating;
 
-                /*
-                 * SEASON CLOSED.
-                 */
+                // =================================================
+                // SEASON CLOSED
+                // =================================================
 
                 if (
                   rating.archived ===

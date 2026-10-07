@@ -3,329 +3,1562 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Спонсори — STOLAR CARP</title>
 
-  <link rel="stylesheet" href="assets/css/main.css?v=20251110">
+  <title>Спонсори та партнери — STOLAR CARP</title>
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta name="theme-color" content="#020617">
+
+  <link rel="stylesheet" href="assets/css/main.css?v=20261008">
+
   <script defer src="assets/js/config.js"></script>
 
   <style>
-    /* Фон сторінки (легкий градієнт зверху) */
-    body{
+    /* ============================================
+       STOLAR CARP • SPONSORS
+       ============================================ */
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
       background:
-        radial-gradient(circle at top,#1f2937 0,#05060a 55%);
+        radial-gradient(
+          circle at 50% -10%,
+          #1f2937 0,
+          #0f172a 35%,
+          #020617 75%
+        );
+      color: #e5e7eb;
     }
 
-    /* HERO блок */
-    .sponsors-hero{
-      text-align:center;
-      margin-top:18px;
-      margin-bottom:22px;
+    .sponsors-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 70px;
     }
 
-    /* Чистий бейдж без кружечка SC */
-    .sponsors-kicker{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding:5px 16px;
-      border-radius:999px;
-      font-size:.8rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      background:rgba(0,0,0,.45);
-      border:1px solid rgba(248,250,252,.18);
-      color:#e5e7eb;
-      margin-bottom:10px;
+    /* ============================================
+       HERO
+       ============================================ */
+
+    .sponsors-hero {
+      text-align: center;
+      padding: 24px 0 30px;
     }
 
-    .page-title{
-      margin:0;
-    }
-    .page-title span{display:block;}
-    .page-title span:nth-child(1){
-      font-size:clamp(26px,4vw,32px);
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-    .page-title span:nth-child(2){
-      font-size:clamp(30px,4.6vw,40px);
-      font-weight:900;
-    }
-    .page-title.title-gradient{
-      animation: scGlowPulse 3.6s ease-in-out infinite;
-      text-shadow:
-        0 0 10px rgba(246,195,76,0.55),
-        0 0 22px rgba(122,15,43,0.55),
-        0 0 40px rgba(0,0,0,0.8);
-      margin-bottom:4px;
-    }
-    @keyframes scGlowPulse{
-      0%{
-        text-shadow:
-          0 0 6px rgba(246,195,76,0.35),
-          0 0 16px rgba(122,15,43,0.35),
-          0 0 30px rgba(0,0,0,0.6);
-        transform:translateY(0);
-      }
-      50%{
-        text-shadow:
-          0 0 14px rgba(246,195,76,0.85),
-          0 0 30px rgba(122,15,43,0.85),
-          0 0 46px rgba(0,0,0,0.9);
-        transform:translateY(-1px);
-      }
-      100%{
-        text-shadow:
-          0 0 6px rgba(246,195,76,0.35),
-          0 0 16px rgba(122,15,43,0.35),
-          0 0 30px rgba(0,0,0,0.6);
-        transform:translateY(0);
-      }
+    .sponsors-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      padding: 7px 18px;
+      border-radius: 999px;
+
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+
+      background: rgba(0, 0, 0, .35);
+      border: 1px solid rgba(246, 195, 76, .35);
+
+      color: #f6c34c;
+      margin-bottom: 16px;
     }
 
-    .sponsors-lead{
-      max-width:720px;
-      margin:10px auto 0;
-      color:#d1d5db;
-      font-size:.95rem;
+    .sponsors-title {
+      margin: 0;
+      font-size: clamp(30px, 5vw, 46px);
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: .04em;
+      text-transform: uppercase;
     }
 
-    .sponsors-hero::after{
-      content:"";
-      display:block;
-      margin:16px auto 0;
-      width:140px;
-      height:2px;
-      border-radius:999px;
-      background:linear-gradient(90deg,#f6c34c 0%,#cc6a2b 50%,#7a0f2b 100%);
-      box-shadow:0 0 12px rgba(246,195,76,0.6);
-      opacity:.9;
-    }
-    @media (max-width:520px){
-      .sponsors-hero::after{width:90px;}
+    .sponsors-title span {
+      display: block;
+      color: #f6c34c;
     }
 
-    /* Сітка карток */
-    .sponsors-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-      gap:20px;
-      margin-top:24px;
+    .sponsors-lead {
+      max-width: 720px;
+      margin: 16px auto 0;
+
+      font-size: .97rem;
+      line-height: 1.7;
+
+      color: #cbd5e1;
     }
 
-    .sponsor-card{
-      position:relative;
-      overflow:hidden;
-      border-radius:18px;
-      padding:0;
-      background:radial-gradient(circle at top,#1e293b 0,#020617 60%);
-      border:1px solid rgba(148,163,184,.45);
-      box-shadow:0 16px 40px rgba(0,0,0,.7);
-      min-height:190px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      cursor:pointer;
-      transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-      text-decoration:none;
-    }
-    @media (min-width:900px){
-      .sponsor-card{min-height:220px;}
+    .sponsors-hero::after {
+      content: "";
+      display: block;
+
+      width: 140px;
+      height: 3px;
+
+      margin: 24px auto 0;
+      border-radius: 999px;
+
+      background: linear-gradient(
+        90deg,
+        #f6c34c,
+        #cc6a2b,
+        #7a0f2b
+      );
+
+      box-shadow: 0 0 16px rgba(246, 195, 76, .45);
     }
 
-    .sponsor-card::before{
-      content:"";
-      position:absolute;
-      inset:-40%;
+    /* ============================================
+       SECTION TITLE
+       ============================================ */
+
+    .sponsors-section-title {
+      text-align: center;
+      margin: 16px 0 8px;
+
+      font-size: clamp(21px, 4vw, 28px);
+      font-weight: 900;
+
+      color: #f8fafc;
+    }
+
+    .sponsors-section-subtitle {
+      text-align: center;
+      margin: 0 auto 20px;
+      max-width: 700px;
+
+      color: #94a3b8;
+      font-size: .9rem;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       SPONSORS GRID
+       ============================================ */
+
+    .sponsors-grid {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(240px, 1fr)
+      );
+
+      gap: 20px;
+      margin: 24px 0 45px;
+    }
+
+    .sponsor-card {
+      position: relative;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 205px;
+      padding: 20px;
+
+      border-radius: 20px;
+      overflow: hidden;
+
       background:
-        radial-gradient(circle at top left,rgba(250,204,21,.10) 0,transparent 60%),
-        radial-gradient(circle at bottom right,rgba(56,189,248,.12) 0,transparent 60%);
-      opacity:.9;
-      pointer-events:none;
-      transition:opacity .25s ease, transform .25s ease;
+        radial-gradient(
+          circle at top,
+          #1e293b,
+          #020617 70%
+        );
+
+      border: 1px solid rgba(148, 163, 184, .35);
+
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .55);
+
+      text-decoration: none;
+      color: #e5e7eb;
+
+      transition:
+        transform .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease;
     }
 
-    .sponsor-card:hover{
-      transform:translateY(-3px);
-      border-color:rgba(250,204,21,.7);
-      box-shadow:0 20px 50px rgba(0,0,0,.85);
-    }
-    .sponsor-card:hover::before{
-      opacity:1;
-      transform:translate3d(0,-4px,0);
+    .sponsor-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(246, 195, 76, .75);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, .75);
     }
 
-    .sponsor-logo-wrap{
-      position:relative;
-      z-index:1;
-      padding:18px;
-      width:100%;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .sponsor-logo{
-      max-width:100%;
-      max-height:120px;
-      width:auto;
-      height:auto;
-      object-fit:contain;
-      display:block;
-      filter:drop-shadow(0 4px 10px rgba(0,0,0,.8));
+    .sponsor-logo {
+      max-width: 100%;
+      max-height: 120px;
+      width: auto;
+      height: auto;
+
+      object-fit: contain;
+
+      filter: drop-shadow(
+        0 5px 12px rgba(0, 0, 0, .6)
+      );
     }
 
-    .sponsor-meta{
-      position:absolute;
-      left:12px;
-      bottom:12px;
-      z-index:2;
-      display:flex;
-      align-items:center;
-      gap:6px;
-      padding:4px 9px;
-      border-radius:999px;
-      background:rgba(0,0,0,.6);
-      border:1px solid rgba(248,250,252,.18);
-      font-size:.75rem;
-      color:#e5e7eb;
-      backdrop-filter:saturate(140%) blur(3px);
-    }
-    .sponsor-meta span.bullet{
-      display:inline-flex;
-      width:16px;
-      height:16px;
-      border-radius:50%;
-      background:linear-gradient(135deg,#f6c34c,#b45309);
+    .sponsor-name-fallback {
+      text-align: center;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #f6c34c;
+      overflow-wrap: anywhere;
     }
 
-    .sponsor-hover-tip{
-      position:absolute;
-      right:12px;
-      top:12px;
-      z-index:2;
-      padding:3px 8px;
-      border-radius:999px;
-      font-size:.7rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      background:rgba(15,23,42,.9);
-      border:1px solid rgba(148,163,184,.5);
-      color:#e5e7eb;
-      opacity:0;
-      transform:translateY(-4px);
-      transition:opacity .18s ease, transform .18s ease;
-    }
-    .sponsor-card:hover .sponsor-hover-tip{
-      opacity:1;
-      transform:translateY(0);
+    .sponsor-meta {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+
+      display: flex;
+      align-items: center;
+      gap: 7px;
+
+      width: fit-content;
+      max-width: calc(100% - 24px);
+
+      padding: 6px 11px;
+      border-radius: 999px;
+
+      background: rgba(0, 0, 0, .7);
+      border: 1px solid rgba(248, 250, 252, .15);
+
+      color: #e5e7eb;
+      font-size: .75rem;
     }
 
-    /* Для шапки — прибираємо outline (як на інших сторінках) */
-    .header *:focus,
-    .header *:focus-visible,
-    .header a:focus,
-    .header a:focus-visible,
-    .header button:focus,
-    .header button:focus-visible{
-      outline:none !important;
+    .sponsor-meta-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
+
+    .sponsor-dot {
+      width: 10px;
+      height: 10px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: #f6c34c;
+    }
+
+    .sponsors-empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 30px 15px;
+      color: #94a3b8;
+    }
+
+    /* ============================================
+       PARTNER SECTION
+       ============================================ */
+
+    .partner-section {
+      position: relative;
+
+      margin-top: 35px;
+      padding: 32px 24px;
+
+      border-radius: 24px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(30, 41, 59, .95),
+          rgba(2, 6, 23, .95)
+        );
+
+      border: 1px solid rgba(246, 195, 76, .35);
+
+      box-shadow: 0 18px 45px rgba(0, 0, 0, .55);
+
+      text-align: center;
+    }
+
+    .partner-icon {
+      font-size: 35px;
+      margin-bottom: 12px;
+    }
+
+    .partner-title {
+      margin: 0 0 14px;
+
+      font-size: clamp(23px, 4vw, 31px);
+      font-weight: 900;
+
+      color: #f6c34c;
+    }
+
+    .partner-description {
+      max-width: 720px;
+      margin: 0 auto 24px;
+
+      font-size: .96rem;
+      line-height: 1.8;
+
+      color: #cbd5e1;
+    }
+
+    .partner-benefits {
+      display: grid;
+      grid-template-columns: repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+      gap: 12px;
+      margin: 25px 0;
+    }
+
+    .partner-benefit {
+      padding: 17px 12px;
+
+      border-radius: 15px;
+
+      background: rgba(2, 6, 23, .55);
+      border: 1px solid rgba(148, 163, 184, .2);
+
+      font-size: .88rem;
+      line-height: 1.5;
+
+      color: #e5e7eb;
+    }
+
+    .partner-benefit strong {
+      display: block;
+      color: #f6c34c;
+      margin-bottom: 6px;
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+
+    .sc-gold-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+
+      min-height: 48px;
+      padding: 13px 24px;
+
+      border: none;
+      border-radius: 14px;
+
+      background:
+        linear-gradient(
+          135deg,
+          #f6c34c,
+          #d6a23a
+        );
+
+      color: #111827;
+
+      font-size: .95rem;
+      font-weight: 900;
+
+      cursor: pointer;
+      text-decoration: none;
+
+      transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+    }
+
+    .sc-gold-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(246, 195, 76, .25);
+    }
+
+    .sc-gold-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .sc-outline-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      min-height: 45px;
+      padding: 11px 20px;
+
+      border-radius: 13px;
+
+      background: rgba(15, 23, 42, .8);
+      border: 1px solid rgba(148, 163, 184, .4);
+
+      color: #e5e7eb;
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+    /* ============================================
+       APPLICATION FORM
+       ============================================ */
+
+    .application-wrap {
+      display: none;
+      margin-top: 25px;
+      text-align: left;
+    }
+
+    .application-wrap.open {
+      display: block;
+    }
+
+    .application-card {
+      max-width: 680px;
+      margin: 0 auto;
+
+      padding: 24px;
+
+      border-radius: 20px;
+
+      background: rgba(2, 6, 23, .65);
+      border: 1px solid rgba(148, 163, 184, .3);
+    }
+
+    .application-title {
+      margin: 0 0 20px;
+      text-align: center;
+
+      color: #f8fafc;
+      font-size: 1.25rem;
+      font-weight: 900;
+    }
+
+    .application-field {
+      margin-bottom: 15px;
+    }
+
+    .application-field label {
+      display: block;
+      margin-bottom: 7px;
+
+      color: #cbd5e1;
+      font-size: .86rem;
+      font-weight: 700;
+    }
+
+    .application-field input,
+    .application-field select,
+    .application-field textarea {
+      display: block;
+      width: 100%;
+
+      padding: 12px 14px;
+
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, .35);
+
+      background: #0f172a;
+      color: #f8fafc;
+
+      font: inherit;
+      font-size: .92rem;
+
+      outline: none;
+    }
+
+    .application-field textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .application-field input:focus,
+    .application-field select:focus,
+    .application-field textarea:focus {
+      border-color: #f6c34c;
+    }
+
+    .application-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+
+      margin-top: 22px;
+    }
+
+    .application-message {
+      margin-top: 16px;
+      text-align: center;
+      font-size: .9rem;
+      line-height: 1.5;
+    }
+
+    .application-message.success {
+      color: #4ade80;
+    }
+
+    .application-message.error {
+      color: #f87171;
+    }
+
+    .application-note {
+      margin-top: 12px;
+      color: #94a3b8;
+      font-size: .78rem;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       SUPPORT SECTION
+       ============================================ */
+
+    .support-section {
+      margin-top: 28px;
+      padding: 28px 22px;
+
+      border-radius: 22px;
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(15, 23, 42, .95),
+          rgba(2, 6, 23, .95)
+        );
+
+      border: 1px solid rgba(148, 163, 184, .25);
+
+      text-align: center;
+    }
+
+    .support-icon {
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .support-title {
+      margin: 0 0 12px;
+      color: #f8fafc;
+      font-size: 1.45rem;
+      font-weight: 900;
+    }
+
+    .support-text {
+      max-width: 650px;
+      margin: 0 auto 20px;
+
+      color: #cbd5e1;
+      line-height: 1.75;
+      font-size: .92rem;
+    }
+
+    .support-coming {
+      display: inline-block;
+
+      padding: 11px 17px;
+      border-radius: 12px;
+
+      border: 1px solid rgba(246, 195, 76, .3);
+      background: rgba(246, 195, 76, .07);
+
+      color: #f6c34c;
+      font-size: .86rem;
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+
+    @media (max-width: 700px) {
+      .partner-benefits {
+        grid-template-columns: 1fr;
+      }
+
+      .partner-section {
+        padding: 25px 16px;
+      }
+
+      .application-card {
+        padding: 18px 14px;
+      }
+
+      .sponsors-container {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .sponsors-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .sponsor-card {
+        min-height: 190px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sponsor-card,
+      .sc-gold-btn {
+        transition: none;
+      }
+    }
+
   </style>
-<header class="header">
-  <div class="container header__row">
+</head>
 
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
-    </a>
+<body>
 
-    <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link">Регламент</a>
-      <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
-    </nav>
+  <!-- ============================================
+       HEADER
+       ============================================ -->
 
-    <button class="burger" id="burger">
-      <span></span><span></span><span></span>
-    </button>
+  <header class="header">
+    <div class="container header__row">
 
-  </div>
-</header>
+      <a class="logo" href="/index.html">
+        <span class="logo__mark">SC</span>
+        <span class="logo__text">STOLAR CARP</span>
+      </a>
 
-<main class="main">
-  <section class="container section">
+      <nav class="nav" id="nav">
+        <a href="/index.html" class="nav__link">Головна</a>
+        <a href="/rules.html" class="nav__link">Регламент</a>
+        <a href="/formats.html" class="nav__link">Формат змагань</a>
+        <a href="/register.html" class="nav__link">Реєстрація</a>
+        <a href="/live.html" class="nav__link">Live</a>
+        <a href="/rating.html" class="nav__link">Рейтинг</a>
+        <a href="/lakes.html" class="nav__link">Водойми</a>
+        <a href="/sponsors.html" class="nav__link nav__link--active">Спонсори</a>
+        <a href="/events/index.html" class="nav__link">Архів</a>
+        <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      </nav>
 
-    <!-- HERO -->
-    <div class="sponsors-hero">
-      <di<div data-include-html="partials/header.html"></div>
-        ПАРТНЕРИ ТА СПОНСОРИ ТУРНІРУ
+      <button
+        class="burger"
+        id="burger"
+        type="button"
+        aria-label="Відкрити меню"
+        aria-controls="nav"
+        aria-expanded="false"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+    </div>
+  </header>
+
+  <!-- ============================================
+       MAIN
+       ============================================ -->
+
+  <main class="main">
+
+    <div class="sponsors-container">
+
+      <!-- HERO -->
+
+      <section class="sponsors-hero">
+
+        <div class="sponsors-kicker">
+          ПАРТНЕРИ ТА СПОНСОРИ
+        </div>
+
+        <h1 class="sponsors-title">
+          НАШІ ПАРТНЕРИ
+          <span>STOLAR CARP</span>
+        </h1>
+
+        <p class="sponsors-lead">
+          Дякуємо партнерам і спонсорам, які підтримують
+          розвиток спортивної ловлі коропа та допомагають
+          проводити турніри STOLAR CARP.
+        </p>
+
+      </section>
+
+      <!-- ============================================
+           SPONSORS
+           ============================================ -->
+
+      <section aria-labelledby="sponsorsHeading">
+
+        <h2
+          class="sponsors-section-title"
+          id="sponsorsHeading"
+        >
+          🏆 Наші спонсори
+        </h2>
+
+        <p class="sponsors-section-subtitle">
+          Бренди та організації, які підтримують
+          наші змагання.
+        </p>
+
+        <div
+          class="sponsors-grid"
+          id="sponsorsGrid"
+        >
+
+          <!--
+            Початкові картки.
+
+            Після підключення Firestore:
+            - якщо є активні спонсори, показуємо їх;
+            - якщо колекція порожня або недоступна,
+              ці картки залишаються.
+          -->
+
+          <a
+            class="sponsor-card"
+            href="https://puhach.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              class="sponsor-logo"
+              src="assets/sponsors/pugach.png"
+              alt="Pugach Baits"
+              loading="lazy"
+            >
+
+            <div class="sponsor-meta">
+              <span class="sponsor-dot"></span>
+              <span class="sponsor-meta-name">
+                Pugach Baits
+              </span>
+            </div>
+          </a>
+
+          <a
+            class="sponsor-card"
+            href="https://vkk.in.ua"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              class="sponsor-logo"
+              src="assets/sponsors/vkk.png"
+              alt="Винниківський Короповий Клуб"
+              loading="lazy"
+            >
+
+            <div class="sponsor-meta">
+              <span class="sponsor-dot"></span>
+              <span class="sponsor-meta-name">
+                Винниківський Короповий Клуб
+              </span>
+            </div>
+          </a>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================
+           BECOME A SPONSOR
+           ============================================ -->
+
+      <section class="partner-section">
+
+        <div class="partner-icon">
+          🤝
+        </div>
+
+        <h2 class="partner-title">
+          СТАТИ ПАРТНЕРОМ STOLAR CARP
+        </h2>
+
+        <p class="partner-description">
+          Запрошуємо магазини, виробників рибальського
+          спорядження, прикормок та інші бренди
+          до співпраці зі STOLAR CARP.
+
+          <br><br>
+
+          Ви можете підтримати наші турніри
+          призами, продукцією або фінансово.
+
+          <br><br>
+
+          Ми відкриті до різних форматів партнерства
+          та готові обговорити індивідуальні
+          умови співпраці.
+        </p>
+
+        <div class="partner-benefits">
+
+          <div class="partner-benefit">
+            <strong>🏆 Партнер турніру</strong>
+            Представлення бренду
+            на сторінці спонсорів.
+          </div>
+
+          <div class="partner-benefit">
+            <strong>🥈 Офіційний спонсор</strong>
+            Розміщення бренду та
+            згадки під час змагань.
+          </div>
+
+          <div class="partner-benefit">
+            <strong>🥇 Генеральний партнер</strong>
+            Розширений формат
+            співпраці за домовленістю.
+          </div>
+
+        </div>
+
+        <button
+          class="sc-gold-btn"
+          id="openSponsorForm"
+          type="button"
+          aria-expanded="false"
+          aria-controls="applicationWrap"
+        >
+          🤝 Подати заявку на співпрацю
+        </button>
+
+        <!-- ============================================
+             APPLICATION FORM
+             ============================================ -->
+
+        <div
+          class="application-wrap"
+          id="applicationWrap"
+        >
+
+          <div class="application-card">
+
+            <h3 class="application-title">
+              Заявка на партнерство
+            </h3>
+
+            <form id="sponsorApplicationForm">
+
+              <div class="application-field">
+                <label for="sponsorName">
+                  Назва бренду або компанії *
+                </label>
+
+                <input
+                  id="sponsorName"
+                  type="text"
+                  maxlength="120"
+                  required
+                  placeholder="Наприклад: Carp Fishing Shop"
+                >
+              </div>
+
+              <div class="application-field">
+                <label for="contactName">
+                  Контактна особа *
+                </label>
+
+                <input
+                  id="contactName"
+                  type="text"
+                  maxlength="100"
+                  required
+                  placeholder="Ваше ім'я"
+                >
+              </div>
+
+              <div class="application-field">
+                <label for="contactPhone">
+                  Телефон / Viber / Telegram *
+                </label>
+
+                <input
+                  id="contactPhone"
+                  type="text"
+                  maxlength="100"
+                  required
+                  placeholder="+380..."
+                >
+              </div>
+
+              <div class="application-field">
+                <label for="contactEmail">
+                  Email
+                </label>
+
+                <input
+                  id="contactEmail"
+                  type="email"
+                  maxlength="160"
+                  placeholder="email@example.com"
+                >
+              </div>
+
+              <div class="application-field">
+                <label for="sponsorWebsite">
+                  Сайт або сторінка бренду
+                </label>
+
+                <input
+                  id="sponsorWebsite"
+                  type="url"
+                  maxlength="300"
+                  placeholder="https://..."
+                >
+              </div>
+
+              <div class="application-field">
+                <label for="supportType">
+                  Формат співпраці *
+                </label>
+
+                <select
+                  id="supportType"
+                  required
+                >
+                  <option value="">
+                    Оберіть формат
+                  </option>
+
+                  <option value="prizes">
+                    Призи для учасників
+                  </option>
+
+                  <option value="products">
+                    Продукція бренду
+                  </option>
+
+                  <option value="financial">
+                    Фінансова підтримка
+                  </option>
+
+                  <option value="other">
+                    Інша пропозиція
+                  </option>
+                </select>
+              </div>
+
+              <div class="application-field">
+                <label for="sponsorMessage">
+                  Ваша пропозиція
+                </label>
+
+                <textarea
+                  id="sponsorMessage"
+                  maxlength="1500"
+                  placeholder="Коротко розкажіть про вашу пропозицію..."
+                ></textarea>
+              </div>
+
+              <!-- Антиспам: приховане поле -->
+              <div
+                style="position:absolute;left:-9999px;"
+                aria-hidden="true"
+              >
+                <label for="sponsorCompanyFax">
+                  Не заповнювати
+                </label>
+                <input
+                  id="sponsorCompanyFax"
+                  type="text"
+                  tabindex="-1"
+                  autocomplete="off"
+                >
+              </div>
+
+              <div class="application-actions">
+
+                <button
+                  class="sc-gold-btn"
+                  id="submitSponsorApplication"
+                  type="submit"
+                >
+                  📩 Надіслати заявку
+                </button>
+
+                <button
+                  class="sc-outline-btn"
+                  id="closeSponsorForm"
+                  type="button"
+                >
+                  Скасувати
+                </button>
+
+              </div>
+
+              <div
+                class="application-message"
+                id="applicationMessage"
+                role="status"
+                aria-live="polite"
+              ></div>
+
+              <p class="application-note">
+                Надсилаючи заявку, ви погоджуєтеся
+                на використання вказаних контактних
+                даних для розгляду вашої пропозиції
+                та зв'язку щодо співпраці.
+                Заявка не означає автоматичного
+                отримання статусу спонсора.
+              </p>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================
+           SUPPORT STOLAR CARP
+           ============================================ -->
+
+      <section class="support-section">
+
+        <div class="support-icon">
+          ☕
+        </div>
+
+        <h2 class="support-title">
+          Підтримати розвиток STOLAR CARP
+        </h2>
+
+        <p class="support-text">
+          Ми розвиваємо платформу, щоб учасникам
+          було зручно реєструватися на змагання,
+          стежити за результатами LIVE,
+          переглядати рейтинги та історію турнірів.
+
+          <br><br>
+
+          Якщо вам подобається наш проєкт
+          і ви хочете підтримати його розвиток —
+          можете пригостити нашу команду
+          віртуальною кавою! ❤️
+
+          <br><br>
+
+          Дякуємо кожному, хто підтримує STOLAR CARP!
+        </p>
+
+        <!--
+          Тут пізніше додамо кнопку
+          з посиланням на банку або платіжну сторінку.
+        -->
+
+        <div class="support-coming">
+          ❤️ Можливість підтримки скоро з'явиться
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ============================================
+       FOOTER
+       ============================================ -->
+
+  <footer class="footer">
+    <div class="container footer__row">
+
+      <div>
+        © <span id="footerYear">2026</span>
+        STOLAR CARP · Львів
       </div>
-      <h1 class="page-title title-gradient">
-        <span>STOLAR CARP</span>
-      </h1>
-      <p class="sponsors-lead">
-        МАГАЗИНИ СПОНСОРІВ
-      </p>
-    </div>
 
-    <!-- СІТКА СПОНСОРІВ -->
-    <div class="sponsors-grid">
+      <div class="footer__links">
 
-      <!-- Pugach -->
-      <a class="sponsor-card" href="https://puhach.com" target="_blank" rel="noopener">
-        <div class="sponsor-logo-wrap">
-          <img class="sponsor-logo" src="assets/sponsors/pugach.png" alt="Pugach Baits">
-        </div>
-        <div class="sponsor-meta">
-          <span class="bullet"></span>
-          <span>Pugach Baits</span>
-        </div>
-        <div class="sponsor-hover-tip">Перейти на сайт</div>
-      </a>
+        <a
+          href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Viber
+        </a>
 
-      <!-- Винниківський Короповий Клуб -->
-      <a class="sponsor-card" href="https://vkk.in.ua" target="_blank" rel="noopener">
-        <div class="sponsor-logo-wrap">
-          <img class="sponsor-logo" src="assets/sponsors/vkk.png" alt="Винниківський Короповий Клуб">
-        </div>
-        <div class="sponsor-meta">
-          <span class="bullet"></span>
-          <span>Винниківський Короповий Клуб</span>
-        </div>
-        <div class="sponsor-hover-tip">Перейти на сайт</div>
-      </a>
+        <a
+          href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          YouTube
+        </a>
 
-      <!-- ШАБЛОН ДЛЯ НОВИХ СПОНСОРІВ
-      <a class="sponsor-card" href="https://example.com" target="_blank" rel="noopener">
-        <div class="sponsor-logo-wrap">
-          <img class="sponsor-logo" src="assets/sponsors/example.png" alt="Назва спонсора">
-        </div>
-        <div class="sponsor-meta">
-          <span class="bullet"></span>
-          <span>Назва спонсора</span>
-        </div>
-        <div class="sponsor-hover-tip">Перейти на сайт</div>
-      </a>
-      -->
+      </div>
 
     </div>
-  </section>
-</main>
+  </footer>
 
-<footer class="footer">
-  <div class="container footer__row">
-    <div>© 2025 STOLAR CARP · Львів</div>
-    <div class=".footer__links">
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh">Viber</a>
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9">YouTube</a>
-    </div>
-  </div>
-</footer>
+  <!-- ============================================
+       FIREBASE SDK
+       ============================================ -->
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script src="assets/js/firebase-init.js?v=20260813"></script>
+
+  <!-- ============================================
+       SPONSORS LOGIC
+       ============================================ -->
+
+  <script>
+  (function () {
+    "use strict";
+
+    const $ = id => document.getElementById(id);
+
+    const grid = $("sponsorsGrid");
+    const form = $("sponsorApplicationForm");
+    const wrap = $("applicationWrap");
+
+    const openBtn = $("openSponsorForm");
+    const closeBtn = $("closeSponsorForm");
+
+    const submitBtn = $("submitSponsorApplication");
+    const messageEl = $("applicationMessage");
+
+    const DEFAULT_SPONSORS = [
+      {
+        id: "pugach",
+        name: "Pugach Baits",
+        logoUrl: "assets/sponsors/pugach.png",
+        websiteUrl: "https://puhach.com",
+        active: true,
+        sortOrder: 1
+      },
+      {
+        id: "vkk",
+        name: "Винниківський Короповий Клуб",
+        logoUrl: "assets/sponsors/vkk.png",
+        websiteUrl: "https://vkk.in.ua",
+        active: true,
+        sortOrder: 2
+      }
+    ];
+
+    let db = null;
+    let sending = false;
+
+    function safeText(value) {
+      return String(value == null ? "" : value).trim();
+    }
+
+    function safeUrl(value) {
+      const url = safeText(value);
+
+      if (!url) return "";
+
+      try {
+        const parsed = new URL(url, window.location.href);
+
+        if (
+          parsed.protocol !== "https:" &&
+          parsed.protocol !== "http:"
+        ) {
+          return "";
+        }
+
+        return parsed.href;
+      } catch (_) {
+        return "";
+      }
+    }
+
+    function setMessage(text, type) {
+      if (!messageEl) return;
+
+      messageEl.textContent = text || "";
+
+      messageEl.className = "application-message";
+
+      if (type) {
+        messageEl.classList.add(type);
+      }
+    }
+
+    function makeSponsorCard(sponsor) {
+      const name = safeText(sponsor.name);
+
+      if (!name) return null;
+
+      const website = safeUrl(sponsor.websiteUrl);
+      const logo = safeUrl(sponsor.logoUrl);
+
+      const card = document.createElement(
+        website ? "a" : "div"
+      );
+
+      card.className = "sponsor-card";
+
+      if (website) {
+        card.href = website;
+        card.target = "_blank";
+        card.rel = "noopener noreferrer";
+      }
+
+      if (logo) {
+        const img = document.createElement("img");
+
+        img.className = "sponsor-logo";
+        img.src = logo;
+        img.alt = name;
+        img.loading = "lazy";
+
+        img.onerror = function () {
+          this.remove();
+
+          const fallback = document.createElement("div");
+          fallback.className = "sponsor-name-fallback";
+          fallback.textContent = name;
+
+          card.prepend(fallback);
+        };
+
+        card.appendChild(img);
+      } else {
+        const fallback = document.createElement("div");
+
+        fallback.className = "sponsor-name-fallback";
+        fallback.textContent = name;
+
+        card.appendChild(fallback);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "sponsor-meta";
+
+      const dot = document.createElement("span");
+      dot.className = "sponsor-dot";
+
+      const label = document.createElement("span");
+      label.className = "sponsor-meta-name";
+      label.textContent = name;
+
+      meta.appendChild(dot);
+      meta.appendChild(label);
+
+      card.appendChild(meta);
+
+      return card;
+    }
+
+    function renderSponsors(items) {
+      if (!grid) return;
+
+      grid.innerHTML = "";
+
+      const active = items
+        .filter(s => s && s.active === true)
+        .sort((a, b) => {
+          const orderA = Number(a.sortOrder) || 999;
+          const orderB = Number(b.sortOrder) || 999;
+
+          return orderA - orderB;
+        });
+
+      if (!active.length) {
+        const empty = document.createElement("div");
+
+        empty.className = "sponsors-empty";
+        empty.textContent =
+          "Наразі список спонсорів оновлюється.";
+
+        grid.appendChild(empty);
+        return;
+      }
+
+      active.forEach(sponsor => {
+        const card = makeSponsorCard(sponsor);
+
+        if (card) {
+          grid.appendChild(card);
+        }
+      });
+    }
+
+    async function waitForFirebase() {
+      for (let i = 0; i < 120; i++) {
+        if (window.scDb) {
+          db = window.scDb;
+          return true;
+        }
+
+        await new Promise(resolve =>
+          setTimeout(resolve, 100)
+        );
+      }
+
+      return false;
+    }
+
+    async function loadSponsors() {
+      renderSponsors(DEFAULT_SPONSORS);
+
+      const ready = await waitForFirebase();
+
+      if (!ready) {
+        console.warn(
+          "[Sponsors] Firebase недоступний."
+        );
+        return;
+      }
+
+      try {
+        const snapshot = await db
+          .collection("sponsors")
+          .get();
+
+        const sponsors = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+
+        if (sponsors.length) {
+          renderSponsors(sponsors);
+        }
+
+      } catch (error) {
+        console.warn(
+          "[Sponsors] Не вдалося завантажити спонсорів:",
+          error
+        );
+      }
+    }
+
+    function openForm() {
+      if (!wrap) return;
+
+      wrap.classList.add("open");
+
+      if (openBtn) {
+        openBtn.setAttribute(
+          "aria-expanded",
+          "true"
+        );
+      }
+
+      wrap.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    }
+
+    function closeForm() {
+      if (!wrap) return;
+
+      wrap.classList.remove("open");
+
+      if (openBtn) {
+        openBtn.setAttribute(
+          "aria-expanded",
+          "false"
+        );
+      }
+
+      setMessage("");
+    }
+
+    async function submitApplication(event) {
+      event.preventDefault();
+
+      if (sending || !form) return;
+
+      const honeypot = safeText(
+        $("sponsorCompanyFax")?.value
+      );
+
+      if (honeypot) {
+        setMessage(
+          "Не вдалося надіслати заявку.",
+          "error"
+        );
+        return;
+      }
+
+      const name = safeText(
+        $("sponsorName")?.value
+      );
+
+      const contactName = safeText(
+        $("contactName")?.value
+      );
+
+      const contactPhone = safeText(
+        $("contactPhone")?.value
+      );
+
+      const contactEmail = safeText(
+        $("contactEmail")?.value
+      );
+
+      const websiteRaw = safeText(
+        $("sponsorWebsite")?.value
+      );
+
+      const supportType = safeText(
+        $("supportType")?.value
+      );
+
+      const message = safeText(
+        $("sponsorMessage")?.value
+      );
+
+      if (
+        !name ||
+        !contactName ||
+        !contactPhone ||
+        !supportType
+      ) {
+        setMessage(
+          "Заповніть усі обов'язкові поля.",
+          "error"
+        );
+        return;
+      }
+
+      const allowedTypes = [
+        "prizes",
+        "products",
+        "financial",
+        "other"
+      ];
+
+      if (!allowedTypes.includes(supportType)) {
+        setMessage(
+          "Оберіть формат співпраці.",
+          "error"
+        );
+        return;
+      }
+
+      if (
+        websiteRaw &&
+        !safeUrl(websiteRaw)
+      ) {
+        setMessage(
+          "Вкажіть правильне посилання на сайт.",
+          "error"
+        );
+        return;
+      }
+
+      sending = true;
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Надсилання…";
+      }
+
+      setMessage("");
+
+      try {
+        if (!db) {
+          const ready = await waitForFirebase();
+
+          if (!ready) {
+            throw new Error(
+              "Firebase недоступний."
+            );
+          }
+        }
+
+        const application = {
+          name,
+          contactName,
+          contactPhone,
+          contactEmail,
+          websiteUrl: websiteRaw,
+          supportType,
+          message,
+
+          status: "pending",
+
+          createdAt:
+            firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db
+          .collection("sponsorApplications")
+          .add(application);
+
+        form.reset();
+
+        setMessage(
+          "✅ Дякуємо! Вашу заявку успішно надіслано. Адміністратор STOLAR CARP розгляне її та зв'яжеться з вами.",
+          "success"
+        );
+
+      } catch (error) {
+        console.error(
+          "[Sponsors] Помилка заявки:",
+          error
+        );
+
+        setMessage(
+          "❌ Не вдалося надіслати заявку. Спробуйте пізніше.",
+          "error"
+        );
+
+      } finally {
+        sending = false;
+
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent =
+            "📩 Надіслати заявку";
+        }
+      }
+    }
+
+    function init() {
+      const year = $("footerYear");
+
+      if (year) {
+        year.textContent =
+          String(new Date().getFullYear());
+      }
+
+      if (openBtn) {
+        openBtn.addEventListener(
+          "click",
+          openForm
+        );
+      }
+
+      if (closeBtn) {
+        closeBtn.addEventListener(
+          "click",
+          closeForm
+        );
+      }
+
+      if (form) {
+        form.addEventListener(
+          "submit",
+          submitApplication
+        );
+      }
+
+      loadSponsors();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener(
+        "DOMContentLoaded",
+        init
+      );
+    } else {
+      init();
+    }
+
+  })();
+  </script>
+
 </body>
 </html>

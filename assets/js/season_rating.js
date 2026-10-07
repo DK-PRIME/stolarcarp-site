@@ -5731,14 +5731,9 @@
                   updateTitles();
 
                   showError(
-                    `✅ Сезон ${esc(
-                      SEASON_YEAR
-                    )} завершений. ` +
-                    `Збережено в Архів сезону ${esc(
-                      rating.archivedTo ||
-                      ` ${SEASON_YEAR}`
-                    )}`
-                  );
+  `✅ <b>Сезон ${esc(SEASON_YEAR)} завершено.</b><br>` +
+  `Результати сезону збережені в архіві STOLAR CARP.`
+);
 
                   renderAdminArchivePanel();
 

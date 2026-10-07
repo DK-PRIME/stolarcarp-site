@@ -42,16 +42,22 @@
   }
 
   const params = new URLSearchParams(window.location.search);
-  const seasonYear = params.get("year") || "2026";
+
+  const seasonYear =
+    params.get("year") || "2026";
 
   const FINALISTS_COUNT = 18;
-
-  if (pageTitle) {
-    pageTitle.textContent = `Архів сезону ${seasonYear}`;
-  }
+  const BEST_COUNT_FOR_FINAL = 2;
+  const ABSENT_REGULAR_POINTS = 8;
 
   let archiveDocument = null;
   let stages = [];
+  let fullRanking = [];
+
+  if (pageTitle) {
+    pageTitle.textContent =
+      `Архів сезону ${seasonYear}`;
+  }
 
   function esc(value) {
     return String(value ?? "").replace(
@@ -62,8 +68,8 @@
         ">": "&gt;",
         '"': "&quot;",
         "'": "&#39;"
-      }[char]
-    ));
+      }[char])
+    );
   }
 
   function clean(value) {
@@ -82,31 +88,23 @@
     return Number.isFinite(n) ? n : 0;
   }
 
-  function hasValue(value) {
-    return (
-      value !== null &&
-      value !== undefined &&
-      value !== ""
-    );
-  }
-
   function fmt(value) {
-    return hasValue(value)
-      ? String(value)
-      : "—";
+    return (
+      value === null ||
+      value === undefined ||
+      value === ""
+    )
+      ? "—"
+      : String(value);
   }
 
   function fmtWeight(value) {
     const n = num(value);
 
     return n > 0
-      ? n.toFixed(2).replace(/\.?0+$/, "")
-      : "—";
-  }
-
-  function fmtPoints(value) {
-    return hasValue(value)
-      ? String(value)
+      ? n
+          .toFixed(2)
+          .replace(/\.?0+$/, "")
       : "—";
   }
 
@@ -133,36 +131,95 @@
     return `${count}/${fmtWeight(weight)}`;
   }
 
-  function stageNumber(value) {
-    const raw = String(value || "");
+  function teamKey(team) {
+    const id = norm(
+      team?.teamId
+    );
 
-    let match = raw.match(/stage[-_\s]*(\d+)/i);
-
-    if (match) {
-      return Number(match[1]);
+    if (id) {
+      return `id:${id}`;
     }
 
-    match = raw.match(/етап\s*(\d+)/i);
+    const name = clean(
+      team?.team ||
+      team?.teamName
+    );
 
-    if (match) {
-      return Number(match[1]);
-    }
-
-    const numbers = raw.match(/\d+/g);
-
-    return numbers?.length
-      ? Number(numbers[numbers.length - 1])
-      : null;
+    return name
+      ? `name:${name}`
+      : "";
   }
 
-  function isSeasonArchived() {
+  function sameTeam(a, b) {
+    const aId = norm(a?.teamId);
+    const bId = norm(b?.teamId);
+
+    if (aId && bId) {
+      return aId === bId;
+    }
+
+    const aName = clean(
+      a?.team ||
+      a?.teamName
+    );
+
+    const bName = clean(
+      b?.team ||
+      b?.teamName
+    );
+
     return (
-      archiveDocument &&
-      clean(archiveDocument.status) === "archived"
+      Boolean(aName) &&
+      Boolean(bName) &&
+      aName === bName
     );
   }
 
-  function isFinalMeta(data, id = "") {
+  function stageNumber(value) {
+    const raw = String(
+      value || ""
+    );
+
+    let match = raw.match(
+      /stage[-_\s]*(\d+)/i
+    );
+
+    if (match) {
+      return Number(match[1]);
+    }
+
+    match = raw.match(
+      /етап\s*(\d+)/i
+    );
+
+    if (match) {
+      return Number(match[1]);
+    }
+
+    match = raw.match(
+      /(?:^|[^a-zа-яіїєґ0-9])[eе]\s*(\d+)/i
+    );
+
+    if (match) {
+      return Number(match[1]);
+    }
+
+    const numbers =
+      raw.match(/\d+/g);
+
+    return numbers?.length
+      ? Number(
+          numbers[
+            numbers.length - 1
+          ]
+        )
+      : null;
+  }
+
+  function isFinalMeta(
+    data,
+    id = ""
+  ) {
     const raw = clean(
       `${id} ` +
       `${data?.stageId || ""} ` +
@@ -182,199 +239,111 @@
     );
   }
 
-  function unwrapArchivedStage(raw) {
-    if (!raw || typeof raw !== "object") {
-      return {};
-    }
-
-    const candidates = [
-      raw.stageData,
-      raw.data,
-      raw.sourceData,
-      raw.snapshot,
-      raw.stage,
-      raw.original,
-      raw.originalData
-    ];
-
-    for (const candidate of candidates) {
-      if (
-        candidate &&
-        typeof candidate === "object" &&
-        !Array.isArray(candidate) &&
-        Array.isArray(candidate.standings)
-      ) {
-        return candidate;
-      }
-    }
-
-    if (Array.isArray(raw.standings)) {
-      return raw;
-    }
-
-    for (const candidate of candidates) {
-      if (
-        candidate &&
-        typeof candidate === "object" &&
-        !Array.isArray(candidate)
-      ) {
-        return candidate;
-      }
-    }
-
-    return raw;
-  }
-
-  function archivedOriginalId(docId, raw, data) {
-    const direct = norm(
-      raw?.sourceStageDocId ||
-      raw?.stageDocId ||
-      raw?.originalStageDocId ||
-      data?.stageDocId
-    );
-
-    if (direct) {
-      return direct;
-    }
-
-    const prefix = `${seasonYear}__stage__`;
-
-    if (docId.startsWith(prefix)) {
-      return docId.slice(prefix.length);
-    }
-
-    return docId;
-  }
-
   function calculateStageSummary(data) {
-    const rows = Array.isArray(data?.standings)
-      ? data.standings
-      : [];
+    const rows =
+      Array.isArray(
+        data?.standings
+      )
+        ? data.standings
+        : [];
 
-    const summary = data?.summary || {};
+    const summary =
+      data?.summary || {};
 
-    const totalWeight = rows.reduce(
-      (sum, row) => sum + num(row?.totalWeight),
-      0
-    );
+    const totalWeight =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          num(
+            row?.totalWeight
+          ),
+        0
+      );
 
-    const maxBigFish = rows.reduce(
-      (max, row) =>
-        Math.max(max, num(row?.bigFish)),
-      0
-    );
+    const maxBigFish =
+      rows.reduce(
+        (max, row) =>
+          Math.max(
+            max,
+            num(
+              row?.bigFish
+            )
+          ),
+        0
+      );
 
-    const totalCount = rows.reduce(
-      (sum, row) => sum + num(row?.totalCount),
-      0
-    );
+    const totalCount =
+      rows.reduce(
+        (sum, row) =>
+          sum +
+          num(
+            row?.totalCount
+          ),
+        0
+      );
 
     return {
-      teamsCount: num(
-        summary.teamsCount ??
-        summary.teamCount ??
-        summary.participantsCount ??
-        rows.length
-      ),
+      teamsCount:
+        num(
+          summary.teamsCount ??
+          summary.teamCount ??
+          summary.participantsCount ??
+          rows.length
+        ),
 
       totalWeight:
         summary.totalWeight != null
-          ? num(summary.totalWeight)
+          ? num(
+              summary.totalWeight
+            )
           : totalWeight,
 
       maxBigFish:
         summary.maxBigFish != null
-          ? num(summary.maxBigFish)
+          ? num(
+              summary.maxBigFish
+            )
           : maxBigFish,
 
       totalCount:
         summary.totalCount != null
-          ? num(summary.totalCount)
+          ? num(
+              summary.totalCount
+            )
           : totalCount
     };
   }
 
-  function findArchiveStage(stageDocId, stageData) {
-    const archiveStages = Array.isArray(
-      archiveDocument?.stages
-    )
-      ? archiveDocument.stages
-      : [];
-
-    const id = norm(stageDocId);
-    const stageId = norm(stageData?.stageId);
+  function findArchiveStage(
+    stageDocId,
+    stageData
+  ) {
+    const archiveStages =
+      Array.isArray(
+        archiveDocument?.stages
+      )
+        ? archiveDocument.stages
+        : [];
 
     return (
       archiveStages.find(
         stage =>
-          norm(stage?.stageDocId) === id
+          norm(
+            stage.stageDocId
+          ) ===
+          norm(stageDocId)
       ) ||
       archiveStages.find(
         stage =>
-          stageId &&
-          norm(stage?.stageId) === stageId
+          norm(
+            stage.stageId
+          ) ===
+          norm(
+            stageData?.stageId
+          )
       ) ||
       null
     );
-  }
-
-  function createStageItem(id, data, rawArchive = null) {
-    const archiveMeta =
-      findArchiveStage(id, data) ||
-      (
-        rawArchive &&
-        typeof rawArchive === "object"
-          ? rawArchive
-          : null
-      );
-
-    const calculated = calculateStageSummary(data);
-
-    const summary = {
-      teamsCount: num(
-        archiveMeta?.teamsCount ??
-        archiveMeta?.summary?.teamsCount ??
-        calculated.teamsCount
-      ),
-
-      totalWeight: num(
-        archiveMeta?.totalWeight ??
-        archiveMeta?.summary?.totalWeight ??
-        calculated.totalWeight
-      ),
-
-      maxBigFish: num(
-        archiveMeta?.bigFish ??
-        archiveMeta?.maxBigFish ??
-        archiveMeta?.summary?.maxBigFish ??
-        calculated.maxBigFish
-      ),
-
-      totalCount: num(
-        archiveMeta?.totalCount ??
-        archiveMeta?.summary?.totalCount ??
-        calculated.totalCount
-      )
-    };
-
-    const final =
-      archiveMeta?.isFinal === true ||
-      clean(archiveMeta?.type) === "final" ||
-      isFinalMeta(data, id);
-
-    const item = {
-      id,
-      data,
-      archiveMeta,
-      summary,
-      isFinal: final,
-      type: final ? "final" : "qualification",
-      sortValue: 9999
-    };
-
-    item.sortValue = stageSortValue(item);
-
-    return item;
   }
 
   function stageSortValue(item) {
@@ -382,29 +351,33 @@
       return 999999;
     }
 
-    const metaNumber = Number(
-      item?.archiveMeta?.number
-    );
-
     if (
-      Number.isFinite(metaNumber) &&
-      metaNumber > 0
+      item?.archiveMeta?.number !==
+        undefined &&
+      item?.archiveMeta?.number !==
+        null &&
+      Number.isFinite(
+        Number(
+          item.archiveMeta.number
+        )
+      )
     ) {
-      return metaNumber;
+      return Number(
+        item.archiveMeta.number
+      );
     }
 
-    const values = [
+    for (const value of [
       item?.data?.stageId,
       item?.data?.stageName,
-      item?.archiveMeta?.stageId,
-      item?.archiveMeta?.stageDocId,
       item?.id
-    ];
+    ]) {
+      const n =
+        stageNumber(value);
 
-    for (const value of values) {
-      const n = stageNumber(value);
-
-      if (Number.isFinite(n)) {
+      if (
+        Number.isFinite(n)
+      ) {
         return n;
       }
     }
@@ -414,28 +387,51 @@
 
   function inferFinal(items) {
     if (
-      items.length < 2 ||
-      items.some(item => item.isFinal)
+      items.some(
+        item =>
+          item.isFinal
+      ) ||
+      items.length < 2
     ) {
       return;
     }
 
-    const ordered = items
-      .slice()
-      .sort(
-        (a, b) =>
-          a.sortValue - b.sortValue
+    const ordered =
+      items
+        .slice()
+        .sort(
+          (a, b) =>
+            a.sortValue -
+            b.sortValue
+        );
+
+    const last =
+      ordered[
+        ordered.length - 1
+      ];
+
+    const previous =
+      ordered.slice(
+        0,
+        -1
       );
 
-    const last = ordered[ordered.length - 1];
-    const previous = ordered.slice(0, -1);
-
     if (
-      num(last?.summary?.teamsCount) > 0 &&
-      num(last?.summary?.teamsCount) <= FINALISTS_COUNT &&
+      num(
+        last?.summary
+          ?.teamsCount
+      ) > 0 &&
+      num(
+        last?.summary
+          ?.teamsCount
+      ) <=
+        FINALISTS_COUNT &&
       previous.some(
         item =>
-          num(item?.summary?.teamsCount) >
+          num(
+            item?.summary
+              ?.teamsCount
+          ) >
           FINALISTS_COUNT
       )
     ) {
@@ -444,7 +440,10 @@
     }
   }
 
-  function resolveStageTitle(item, index) {
+  function resolveStageTitle(
+    item,
+    index
+  ) {
     if (item?.isFinal) {
       return "Фінал";
     }
@@ -458,186 +457,907 @@
 
     if (
       title &&
-      !clean(title).includes("season-")
+      !title.includes("season-")
     ) {
       return title;
     }
 
-    const number = stageNumber(
-      item?.data?.stageId ||
-      item?.archiveMeta?.stageId ||
-      item?.id
-    );
+    const number =
+      stageNumber(
+        item?.data?.stageId ||
+        item?.id
+      );
 
     return Number.isFinite(number)
       ? `Етап ${number}`
       : `Етап ${index + 1}`;
   }
 
-  function prepareStages() {
-    inferFinal(stages);
+  function normalizeStandingRow(row) {
+    return {
+      teamId:
+        norm(
+          row?.teamId
+        ),
 
-    stages.forEach((item, index) => {
-      item.title = resolveStageTitle(
-        item,
-        index
+      team:
+        norm(
+          row?.team ||
+          row?.teamName ||
+          "—"
+        ),
+
+      zone:
+        norm(
+          row?.zone
+        ).toUpperCase(),
+
+      sector:
+        norm(
+          row?.sector
+        ),
+
+      zonePlace:
+        num(
+          row?.zonePlace
+        ),
+
+      points:
+        num(
+          row?.points ||
+          row?.zonePlace
+        ),
+
+      overallPlace:
+        num(
+          row?.overallPlace ||
+          row?.finalPlace ||
+          row?.place
+        ),
+
+      totalWeight:
+        num(
+          row?.totalWeight
+        ),
+
+      bigFish:
+        num(
+          row?.bigFish
+        ),
+
+      totalCount:
+        num(
+          row?.totalCount
+        ),
+
+      w1:
+        row?.w1 || null,
+
+      w2:
+        row?.w2 || null,
+
+      w3:
+        row?.w3 || null,
+
+      w4:
+        row?.w4 || null
+    };
+  }
+
+  function compareStandingRows(
+    a,
+    b
+  ) {
+    if (
+      b.totalWeight !==
+      a.totalWeight
+    ) {
+      return (
+        b.totalWeight -
+        a.totalWeight
+      );
+    }
+
+    if (
+      b.bigFish !==
+      a.bigFish
+    ) {
+      return (
+        b.bigFish -
+        a.bigFish
+      );
+    }
+
+    if (
+      b.totalCount !==
+      a.totalCount
+    ) {
+      return (
+        b.totalCount -
+        a.totalCount
+      );
+    }
+
+    return String(
+      a.team
+    ).localeCompare(
+      String(b.team),
+      "uk"
+    );
+  }
+
+  function buildStageResultMap(item) {
+    const sourceRows =
+      Array.isArray(
+        item?.data?.standings
+      )
+        ? item.data.standings
+        : [];
+
+    const rows =
+      sourceRows.map(
+        normalizeStandingRow
       );
 
-      item.sortValue = item.isFinal
-        ? 999999
-        : stageSortValue(item);
-    });
+    const byTeamId =
+      new Map();
 
-    stages.sort(
-      (a, b) =>
-        a.sortValue - b.sortValue
+    const byTeamName =
+      new Map();
+
+    const overallRows =
+      rows
+        .slice()
+        .sort(
+          compareStandingRows
+        );
+
+    const overallPlaces =
+      new Map();
+
+    overallRows.forEach(
+      (row, index) => {
+        const key =
+          row.teamId ||
+          clean(row.team);
+
+        if (!key) return;
+
+        overallPlaces.set(
+          key,
+          row.overallPlace ||
+          index + 1
+        );
+      }
     );
-  }
 
-  function regularArchiveStages() {
-    const archiveStages = Array.isArray(
-      archiveDocument?.stages
-    )
-      ? archiveDocument.stages.slice()
-      : [];
+    ["A", "B", "C"]
+      .forEach(zone => {
+        const zoneRows =
+          rows
+            .filter(
+              row =>
+                row.zone === zone
+            )
+            .sort(
+              compareStandingRows
+            );
 
-    return archiveStages
-      .filter(
-        stage =>
-          !(
-            stage?.isFinal === true ||
-            clean(stage?.type) === "final" ||
-            clean(stage?.stageType) === "final"
-          )
-      )
-      .sort((a, b) => {
-        const an =
-          num(a?.number) ||
-          stageNumber(a?.stageId) ||
-          stageNumber(a?.stageDocId) ||
-          9999;
+        zoneRows.forEach(
+          (row, index) => {
+            const key =
+              row.teamId ||
+              clean(row.team);
 
-        const bn =
-          num(b?.number) ||
-          stageNumber(b?.stageId) ||
-          stageNumber(b?.stageDocId) ||
-          9999;
+            const zonePlace =
+              row.zonePlace ||
+              index + 1;
 
-        return an - bn;
+            const fixed = {
+              ...row,
+
+              zonePlace,
+
+              points:
+                zonePlace,
+
+              overallPlace:
+                row.overallPlace ||
+                overallPlaces.get(
+                  key
+                ) ||
+                0
+            };
+
+            if (
+              fixed.teamId
+            ) {
+              byTeamId.set(
+                fixed.teamId,
+                fixed
+              );
+            }
+
+            if (
+              fixed.team
+            ) {
+              byTeamName.set(
+                clean(
+                  fixed.team
+                ),
+                fixed
+              );
+            }
+          }
+        );
       });
-  }
 
-  function archiveHasFinal() {
-    const archiveStages = Array.isArray(
-      archiveDocument?.stages
-    )
-      ? archiveDocument.stages
-      : [];
-
-    return (
-      archiveDocument?.hasFinal === true ||
-      archiveStages.some(
-        stage =>
-          stage?.isFinal === true ||
-          clean(stage?.type) === "final" ||
-          clean(stage?.stageType) === "final"
+    rows
+      .filter(
+        row =>
+          !["A", "B", "C"]
+            .includes(
+              row.zone
+            )
       )
+      .forEach(row => {
+        const key =
+          row.teamId ||
+          clean(row.team);
+
+        const fixed = {
+          ...row,
+
+          overallPlace:
+            row.overallPlace ||
+            overallPlaces.get(
+              key
+            ) ||
+            0,
+
+          points:
+            row.points ||
+            row.zonePlace ||
+            row.overallPlace ||
+            0
+        };
+
+        if (
+          fixed.teamId
+        ) {
+          byTeamId.set(
+            fixed.teamId,
+            fixed
+          );
+        }
+
+        if (
+          fixed.team
+        ) {
+          byTeamName.set(
+            clean(
+              fixed.team
+            ),
+            fixed
+          );
+        }
+      });
+
+    return {
+      rows,
+      byTeamId,
+      byTeamName
+    };
+  }
+
+  function getRegularStageItems() {
+    return stages
+      .filter(
+        item =>
+          !item.isFinal
+      )
+      .slice()
+      .sort(
+        (a, b) =>
+          a.sortValue -
+          b.sortValue
+      );
+  }
+
+  function findStageTeamRow(
+    item,
+    team
+  ) {
+    const map =
+      item?.resultMap;
+
+    if (!map) {
+      return null;
+    }
+
+    const id =
+      norm(
+        team?.teamId
+      );
+
+    if (
+      id &&
+      map.byTeamId.has(id)
+    ) {
+      return map.byTeamId.get(
+        id
+      );
+    }
+
+    const name =
+      clean(
+        team?.team ||
+        team?.teamName
+      );
+
+    if (
+      name &&
+      map.byTeamName.has(name)
+    ) {
+      return map.byTeamName.get(
+        name
+      );
+    }
+
+    return null;
+  }
+
+  function collectSeasonTeams(
+    regularStages
+  ) {
+    const result =
+      new Map();
+
+    regularStages.forEach(
+      item => {
+        const rows =
+          item?.resultMap?.rows ||
+          [];
+
+        rows.forEach(row => {
+          const team = {
+            teamId:
+              norm(
+                row.teamId
+              ),
+
+            team:
+              norm(
+                row.team
+              )
+          };
+
+          const key =
+            teamKey(team);
+
+          if (!key) {
+            return;
+          }
+
+          const existing =
+            result.get(key);
+
+          if (!existing) {
+            result.set(
+              key,
+              team
+            );
+            return;
+          }
+
+          if (
+            !existing.teamId &&
+            team.teamId
+          ) {
+            existing.teamId =
+              team.teamId;
+          }
+
+          if (
+            (
+              !existing.team ||
+              existing.team === "—"
+            ) &&
+            team.team &&
+            team.team !== "—"
+          ) {
+            existing.team =
+              team.team;
+          }
+        });
+      }
     );
+
+    return [
+      ...result.values()
+    ];
   }
 
-  async function loadArchive() {
-    const snap = await db
-      .collection("seasonArchives")
-      .doc(seasonYear)
-      .get();
+  function buildQualificationEntry(
+    team,
+    regularStages
+  ) {
+    const stageResults =
+      regularStages.map(
+        item => {
+          const row =
+            findStageTeamRow(
+              item,
+              team
+            );
 
-    archiveDocument = snap.exists
-      ? snap.data() || {}
-      : null;
+          if (!row) {
+            return {
+              stageDocId:
+                item.id,
+
+              stageId:
+                norm(
+                  item?.data
+                    ?.stageId ||
+                  item?.archiveMeta
+                    ?.stageId ||
+                  item.id
+                ),
+
+              place:
+                "—",
+
+              points:
+                ABSENT_REGULAR_POINTS,
+
+              absent:
+                true,
+
+              totalWeight:
+                0,
+
+              bigFish:
+                0
+            };
+          }
+
+          const place =
+            num(
+              row.zonePlace ||
+              row.points
+            );
+
+          return {
+            stageDocId:
+              item.id,
+
+            stageId:
+              norm(
+                item?.data
+                  ?.stageId ||
+                item?.archiveMeta
+                  ?.stageId ||
+                item.id
+              ),
+
+            place:
+              place || "—",
+
+            points:
+              place ||
+              ABSENT_REGULAR_POINTS,
+
+            absent:
+              !place,
+
+            totalWeight:
+              num(
+                row.totalWeight
+              ),
+
+            bigFish:
+              num(
+                row.bigFish
+              )
+          };
+        }
+      );
+
+    const bestResults =
+      stageResults
+        .slice()
+        .sort(
+          (a, b) => {
+            if (
+              a.points !==
+              b.points
+            ) {
+              return (
+                a.points -
+                b.points
+              );
+            }
+
+            if (
+              b.totalWeight !==
+              a.totalWeight
+            ) {
+              return (
+                b.totalWeight -
+                a.totalWeight
+              );
+            }
+
+            return (
+              b.bigFish -
+              a.bigFish
+            );
+          }
+        )
+        .slice(
+          0,
+          BEST_COUNT_FOR_FINAL
+        );
+
+    const qualificationPoints =
+      bestResults.reduce(
+        (sum, result) =>
+          sum +
+          num(
+            result.points
+          ),
+        0
+      );
+
+    const qualificationWeight =
+      stageResults.reduce(
+        (sum, result) =>
+          sum +
+          num(
+            result.totalWeight
+          ),
+        0
+      );
+
+    const qualificationBigFish =
+      stageResults.reduce(
+        (max, result) =>
+          Math.max(
+            max,
+            num(
+              result.bigFish
+            )
+          ),
+        0
+      );
+
+    return {
+      teamId:
+        norm(
+          team.teamId
+        ),
+
+      team:
+        norm(
+          team.team ||
+          team.teamName ||
+          "—"
+        ),
+
+      stageResults,
+
+      qualificationPoints,
+
+      qualificationWeight,
+
+      qualificationBigFish
+    };
   }
 
-  async function loadArchivedStages() {
-    const prefix = `${seasonYear}__stage__`;
+  function buildQualificationRanking() {
+    const regularStages =
+      getRegularStageItems();
 
-    const fieldPath =
-      window.firebase
-        ?.firestore
-        ?.FieldPath
-        ?.documentId?.();
-
-    if (!fieldPath) {
+    if (
+      !regularStages.length
+    ) {
       return [];
     }
 
-    const snap = await db
-      .collection("seasonArchives")
-      .orderBy(fieldPath)
-      .startAt(prefix)
-      .endAt(prefix + "\uf8ff")
-      .get();
-
-    const result = [];
-
-    snap.forEach(doc => {
-      const raw = doc.data() || {};
-      const data = unwrapArchivedStage(raw);
-
-      const originalId = archivedOriginalId(
-        doc.id,
-        raw,
-        data
+    const teams =
+      collectSeasonTeams(
+        regularStages
       );
 
-      result.push(
-        createStageItem(
-          originalId,
-          data,
-          raw
-        )
+    const ranking =
+      teams.map(
+        team =>
+          buildQualificationEntry(
+            team,
+            regularStages
+          )
       );
-    });
 
-    return result;
+    ranking.sort(
+      (a, b) => {
+        if (
+          a.qualificationPoints !==
+          b.qualificationPoints
+        ) {
+          return (
+            a.qualificationPoints -
+            b.qualificationPoints
+          );
+        }
+
+        if (
+          b.qualificationWeight !==
+          a.qualificationWeight
+        ) {
+          return (
+            b.qualificationWeight -
+            a.qualificationWeight
+          );
+        }
+
+        if (
+          b.qualificationBigFish !==
+          a.qualificationBigFish
+        ) {
+          return (
+            b.qualificationBigFish -
+            a.qualificationBigFish
+          );
+        }
+
+        return String(
+          a.team
+        ).localeCompare(
+          String(b.team),
+          "uk"
+        );
+      }
+    );
+
+    return ranking.map(
+      (row, index) => ({
+        ...row,
+        qualificationPlace:
+          index + 1
+      })
+    );
   }
 
-  async function loadLiveStages() {
-    const snap = await db
-      .collection("seasonResults")
-      .doc(seasonYear)
-      .collection("stages")
-      .get();
+  function findQualificationRow(
+    qualification,
+    archiveRow
+  ) {
+    return (
+      qualification.find(
+        row =>
+          sameTeam(
+            row,
+            archiveRow
+          )
+      ) ||
+      null
+    );
+  }
 
-    const result = [];
+  function buildFullRanking() {
+    const archivedRanking =
+      Array.isArray(
+        archiveDocument?.ranking
+      )
+        ? archiveDocument
+            .ranking
+            .slice()
+            .sort(
+              (a, b) =>
+                (
+                  num(a.place) ||
+                  9999
+                ) -
+                (
+                  num(b.place) ||
+                  9999
+                )
+            )
+        : [];
 
-    snap.forEach(doc => {
-      result.push(
-        createStageItem(
-          doc.id,
-          doc.data() || {}
-        )
+    const qualification =
+      buildQualificationRanking();
+
+    if (
+      !qualification.length
+    ) {
+      return archivedRanking;
+    }
+
+    const finalists =
+      archivedRanking.map(
+        row => {
+          const qualificationRow =
+            findQualificationRow(
+              qualification,
+              row
+            );
+
+          return {
+            ...row,
+
+            rankingType:
+              "finalist",
+
+            qualificationPlace:
+              qualificationRow
+                ?.qualificationPlace ||
+              0,
+
+            qualificationPoints:
+              qualificationRow
+                ?.qualificationPoints ||
+              0
+          };
+        }
       );
+
+    const finalistKeys =
+      new Set();
+
+    finalists.forEach(row => {
+      const id =
+        norm(row.teamId);
+
+      const name =
+        clean(row.team);
+
+      if (id) {
+        finalistKeys.add(
+          `id:${id}`
+        );
+      }
+
+      if (name) {
+        finalistKeys.add(
+          `name:${name}`
+        );
+      }
     });
 
-    return result;
+    const contenders =
+      qualification
+        .filter(row => {
+          const id =
+            norm(row.teamId);
+
+          const name =
+            clean(row.team);
+
+          if (
+            id &&
+            finalistKeys.has(
+              `id:${id}`
+            )
+          ) {
+            return false;
+          }
+
+          if (
+            name &&
+            finalistKeys.has(
+              `name:${name}`
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        })
+        .map(
+          row => ({
+            place:
+              row.qualificationPlace,
+
+            teamId:
+              row.teamId,
+
+            team:
+              row.team,
+
+            stages:
+              row.stageResults.map(
+                result => ({
+                  stageDocId:
+                    result.stageDocId,
+
+                  stageId:
+                    result.stageId,
+
+                  place:
+                    result.place,
+
+                  points:
+                    result.points,
+
+                  absent:
+                    result.absent
+                })
+              ),
+
+            final: {
+              place:
+                "—",
+
+              points:
+                0,
+
+              absent:
+                true
+            },
+
+            finalPlace:
+              "—",
+
+            seasonPoints:
+              row.qualificationPoints,
+
+            totalWeight:
+              row.qualificationWeight,
+
+            bigFish:
+              row.qualificationBigFish,
+
+            bigFishStage:
+              "",
+
+            qualificationPlace:
+              row.qualificationPlace,
+
+            qualificationPoints:
+              row.qualificationPoints,
+
+            rankingType:
+              "contender"
+          })
+        );
+
+    return [
+      ...finalists,
+      ...contenders
+    ];
   }
 
   function ensureSummaryDom() {
-    if ($("seasonArchiveSummary")) {
+    if (
+      $("seasonArchiveSummary")
+    ) {
       return;
     }
 
-    const main = pageTitle?.parentElement;
-    const stagesCard = stagesList.closest(
-      ".archive-card"
-    );
+    const main =
+      pageTitle?.parentElement;
 
-    if (!main || !stagesCard) {
+    const stagesCard =
+      stagesList.closest(
+        ".archive-card"
+      );
+
+    if (
+      !main ||
+      !stagesCard
+    ) {
       return;
     }
 
-    const wrap = document.createElement("div");
+    const wrap =
+      document.createElement(
+        "div"
+      );
 
-    wrap.id = "seasonArchiveSummary";
+    wrap.id =
+      "seasonArchiveSummary";
 
     wrap.innerHTML = `
       <section
@@ -703,20 +1423,29 @@
   }
 
   function renderSeasonPodium() {
-    const section = $("seasonArchivePodium");
-    const grid = $("seasonPodiumGrid");
+    const section =
+      $("seasonArchivePodium");
 
-    if (!section || !grid) {
+    const grid =
+      $("seasonPodiumGrid");
+
+    if (
+      !section ||
+      !grid
+    ) {
       return;
     }
 
-    const podium = Array.isArray(
-      archiveDocument?.podium
-    )
-      ? archiveDocument.podium
-      : [];
+    const podium =
+      Array.isArray(
+        archiveDocument?.podium
+      )
+        ? archiveDocument.podium
+        : [];
 
-    if (!podium.length) {
+    if (
+      !podium.length
+    ) {
       section.hidden = true;
       return;
     }
@@ -727,88 +1456,108 @@
       3: "🥉"
     };
 
-    grid.innerHTML = podium
-      .slice()
-      .sort(
-        (a, b) =>
-          num(a?.place) - num(b?.place)
-      )
-      .slice(0, 3)
-      .map(row => `
-        <div class="season-podium-card podium-${num(row.place)}">
+    grid.innerHTML =
+      podium
+        .slice(0, 3)
+        .map(
+          row => `
+            <div class="season-podium-card podium-${num(
+              row.place
+            )}">
 
-          <div class="season-podium-medal">
-            ${medals[num(row.place)] || "🏆"}
-          </div>
+              <div class="season-podium-medal">
+                ${
+                  medals[
+                    num(row.place)
+                  ] ||
+                  "🏆"
+                }
+              </div>
 
-          <div class="season-podium-place">
-            ${esc(row.place)} місце
-          </div>
+              <div class="season-podium-place">
+                ${esc(row.place)} місце
+              </div>
 
-          <div class="season-podium-team">
-            ${esc(row.team || "—")}
-          </div>
+              <div class="season-podium-team">
+                ${esc(
+                  row.team ||
+                  "—"
+                )}
+              </div>
 
-          <div class="season-podium-meta">
-            ${esc(fmtPoints(
-              row.points ??
-              row.seasonPoints
-            ))} бал.
-            ·
-            ${esc(fmtWeight(
-              row.totalWeight
-            ))} кг
-          </div>
+              <div class="season-podium-meta">
+                ${esc(
+                  num(row.points)
+                )} бал.
+                ·
+                ${esc(
+                  fmtWeight(
+                    row.totalWeight
+                  )
+                )} кг
+              </div>
 
-        </div>
-      `)
-      .join("");
+            </div>
+          `
+        )
+        .join("");
 
     section.hidden = false;
   }
 
   function renderSeasonBigFish() {
-    const section = $("seasonArchiveBigFish");
-    const box = $("seasonBigFishArchiveCard");
+    const section =
+      $("seasonArchiveBigFish");
 
-    if (!section || !box) {
+    const box =
+      $("seasonBigFishArchiveCard");
+
+    if (
+      !section ||
+      !box
+    ) {
       return;
     }
 
     const bigFish =
-      archiveDocument?.bigFish || {};
+      archiveDocument?.bigFish ||
+      {};
 
-    const weight = num(bigFish.weight);
+    const weight =
+      num(bigFish.weight);
 
-    const winners = Array.isArray(
-      bigFish.winners
-    )
-      ? bigFish.winners
-      : [];
+    const winners =
+      Array.isArray(
+        bigFish.winners
+      )
+        ? bigFish.winners
+        : [];
 
-    if (!weight || !winners.length) {
+    if (
+      !weight ||
+      !winners.length
+    ) {
       section.hidden = true;
       return;
     }
 
-    const teams = [
-      ...new Set(
-        winners
-          .map(row =>
-            norm(
-              row?.team ||
-              row?.teamName
+    const teams =
+      winners
+        .map(
+          row =>
+            esc(
+              row.team ||
+              "—"
             )
-          )
-          .filter(Boolean)
-      )
-    ];
+        )
+        .join(" / ");
 
     const stageNames = [
       ...new Set(
         winners
-          .map(row =>
-            norm(row?.stage)
+          .map(
+            row =>
+              row.stage
           )
           .filter(Boolean)
       )
@@ -822,7 +1571,7 @@
       <div class="season-bigfish-info">
 
         <div class="season-bigfish-team">
-          ${teams.map(esc).join(" / ")}
+          ${teams}
         </div>
 
         <div class="season-bigfish-stage">
@@ -831,72 +1580,68 @@
               ? stageNames
                   .map(esc)
                   .join(" / ")
-              : `Сезон ${esc(seasonYear)}`
+              : `Сезон ${esc(
+                  seasonYear
+                )}`
           }
         </div>
 
       </div>
 
       <div class="season-bigfish-weight">
-        ${esc(fmtWeight(weight))} кг
+        ${esc(
+          fmtWeight(weight)
+        )} кг
       </div>
     `;
 
     section.hidden = false;
   }
 
-  function getArchivedRanking() {
-    const ranking = Array.isArray(
-      archiveDocument?.ranking
-    )
-      ? archiveDocument.ranking.slice()
-      : [];
-
-    return ranking.sort((a, b) => {
-      const aPlace =
-        num(a?.place) || 999999;
-
-      const bPlace =
-        num(b?.place) || 999999;
-
-      if (aPlace !== bPlace) {
-        return aPlace - bPlace;
-      }
-
-      return String(
-        a?.team || ""
-      ).localeCompare(
-        String(b?.team || ""),
-        "uk"
-      );
-    });
+  function getRanking() {
+    return fullRanking.slice();
   }
 
-  function getStageCell(row, stage, index) {
-    const results = Array.isArray(
-      row?.stages
-    )
-      ? row.stages
-      : [];
+  function getStageCell(
+    row,
+    stage,
+    index
+  ) {
+    const results =
+      Array.isArray(
+        row?.stages
+      )
+        ? row.stages
+        : [];
 
     const stageDocId =
-      norm(stage?.stageDocId);
+      norm(
+        stage?.stageDocId
+      );
 
     const stageId =
-      norm(stage?.stageId);
+      norm(
+        stage?.stageId
+      );
 
-    const exact = results.find(result =>
-      (
-        stageDocId &&
-        norm(result?.stageDocId) ===
-        stageDocId
-      ) ||
-      (
-        stageId &&
-        norm(result?.stageId) ===
-        stageId
-      )
-    );
+    const exact =
+      results.find(
+        result =>
+          (
+            stageDocId &&
+            norm(
+              result?.stageDocId
+            ) ===
+            stageDocId
+          ) ||
+          (
+            stageId &&
+            norm(
+              result?.stageId
+            ) ===
+            stageId
+          )
+      );
 
     return (
       exact ||
@@ -906,65 +1651,124 @@
   }
 
   function formatRankingCell(cell) {
-    const place = hasValue(cell?.place)
-      ? cell.place
-      : "—";
+    const place =
+      cell?.place === null ||
+      cell?.place === undefined ||
+      cell?.place === ""
+        ? "—"
+        : cell.place;
 
-    const points = hasValue(cell?.points)
-      ? cell.points
-      : "—";
+    const points =
+      cell?.points === null ||
+      cell?.points === undefined ||
+      cell?.points === ""
+        ? "—"
+        : cell.points;
 
-    return `${esc(place)}/${esc(points)}`;
+    return (
+      `${esc(place)}/${esc(points)}`
+    );
   }
 
   function renderSeasonRanking() {
-    const section = $("seasonArchiveRanking");
-    const table = $("seasonArchiveRankingTable");
-    const legend = $("seasonRankingLegend");
+    const section =
+      $("seasonArchiveRanking");
 
-    if (!section || !table) {
+    const table =
+      $("seasonArchiveRankingTable");
+
+    const legend =
+      $("seasonRankingLegend");
+
+    if (
+      !section ||
+      !table
+    ) {
       return;
     }
 
-    const ranking = getArchivedRanking();
+    const ranking =
+      getRanking();
 
-    if (!ranking.length) {
+    if (
+      !ranking.length
+    ) {
       section.hidden = true;
       return;
     }
 
+    const archiveStages =
+      Array.isArray(
+        archiveDocument?.stages
+      )
+        ? archiveDocument.stages
+        : [];
+
     const regularStages =
-      regularArchiveStages();
+      archiveStages
+        .filter(
+          stage =>
+            !(
+              stage.isFinal ===
+                true ||
+              clean(
+                stage.type
+              ) ===
+                "final"
+            )
+        )
+        .sort(
+          (a, b) => {
+            const an =
+              num(a.number) ||
+              stageNumber(
+                a.stageId
+              ) ||
+              stageNumber(
+                a.stageDocId
+              ) ||
+              9999;
+
+            const bn =
+              num(b.number) ||
+              stageNumber(
+                b.stageId
+              ) ||
+              stageNumber(
+                b.stageDocId
+              ) ||
+              9999;
+
+            return an - bn;
+          }
+        );
 
     const hasFinal =
-      archiveHasFinal();
+      archiveDocument
+        ?.hasFinal === true ||
+      archiveStages.some(
+        stage =>
+          stage.isFinal ===
+            true ||
+          clean(
+            stage.type
+          ) ===
+            "final"
+      );
 
-    const finalists = ranking.filter(
-      row => {
-        const place = num(row?.place);
+    const finalists =
+      ranking.filter(
+        row =>
+          row.rankingType !==
+          "contender"
+      );
 
-        return (
-          place > 0 &&
-          place <= FINALISTS_COUNT
-        );
-      }
-    );
-
-    const contenders = ranking.filter(
-      row => {
-        const place = num(row?.place);
-
-        return (
-          place <= 0 ||
-          place > FINALISTS_COUNT
-        );
-      }
-    );
-
-    const orderedRanking = [
-      ...finalists,
-      ...contenders
-    ];
+    const contenders =
+      ranking.filter(
+        row =>
+          row.rankingType ===
+          "contender"
+      );
 
     if (legend) {
       legend.innerHTML = `
@@ -987,275 +1791,360 @@
     }
 
     table
-      .querySelector("thead")
+      .querySelector(
+        "thead"
+      )
       .innerHTML = `
         <tr>
-          <th class="col-place">М</th>
-          <th class="col-team">Команда</th>
+
+          <th class="col-place">
+            М
+          </th>
+
+          <th class="col-team">
+            Команда
+          </th>
 
           ${regularStages
-            .map((stage, index) => `
-              <th class="col-stage">
-                Е${
-                  num(stage?.number) ||
-                  stageNumber(stage?.stageId) ||
-                  stageNumber(stage?.stageDocId) ||
-                  index + 1
-                }
-              </th>
-            `)
-            .join("")}
-
-          ${
-            hasFinal
-              ? `<th class="col-final">Ф</th>`
-              : ""
-          }
-
-          <th class="col-points">Б</th>
-          <th class="col-weight">кг</th>
-          <th class="col-big">BIG</th>
-        </tr>
-      `;
-
-    let body = "";
-
-    orderedRanking.forEach((row, index) => {
-      const place = num(row?.place);
-
-      const isFinalist =
-        place > 0 &&
-        place <= FINALISTS_COUNT;
-
-      if (
-        contenders.length &&
-        index === finalists.length
-      ) {
-        body += `
-          <tr class="ranking-divider">
-            <td colspan="${
-              2 +
-              regularStages.length +
-              (hasFinal ? 1 : 0) +
-              3
-            }">
-              ПРЕТЕНДЕНТИ
-            </td>
-          </tr>
-        `;
-      }
-
-      body += `
-        <tr class="
-          ${
-            place >= 1 &&
-            place <= 3
-              ? `ranking-top-${place}`
-              : ""
-          }
-          ${
-            isFinalist
-              ? "ranking-finalist"
-              : "ranking-contender"
-          }
-        ">
-
-          <td class="r-place">
-            ${esc(
-              hasValue(row?.place)
-                ? row.place
-                : "—"
-            )}
-          </td>
-
-          <td
-            class="r-team"
-            title="${esc(row?.team || "")}"
-          >
-            ${esc(row?.team || "—")}
-          </td>
-
-          ${regularStages
-            .map((stage, stageIndex) => {
-              const cell = getStageCell(
-                row,
-                stage,
-                stageIndex
-              );
-
-              return `
-                <td class="
-                  r-stage
-                  ${
-                    cell?.absent
-                      ? "r-absent"
-                      : ""
+            .map(
+              (stage, index) => `
+                <th class="col-stage">
+                  Е${
+                    num(
+                      stage.number
+                    ) ||
+                    index + 1
                   }
-                ">
-                  ${formatRankingCell(cell)}
-                </td>
-              `;
-            })
+                </th>
+              `
+            )
             .join("")}
 
           ${
             hasFinal
               ? `
-                <td class="
-                  r-final
-                  ${
-                    row?.final?.absent
-                      ? "r-absent"
-                      : ""
-                  }
-                ">
-                  ${esc(
-                    row?.final?.place ??
-                    row?.finalPlace ??
-                    "—"
-                  )}
-                </td>
+                <th class="col-final">
+                  Ф
+                </th>
               `
               : ""
           }
 
-          <td class="r-points">
-            ${esc(
-              fmtPoints(
-                row?.seasonPoints ??
-                row?.points
-              )
-            )}
-          </td>
+          <th class="col-points">
+            Б
+          </th>
 
-          <td class="r-weight">
-            ${esc(
-              fmtWeight(
-                row?.totalWeight
-              )
-            )}
-          </td>
+          <th class="col-weight">
+            кг
+          </th>
 
-          <td class="r-big">
-            ${esc(
-              fmtWeight(
-                row?.bigFish
-              )
-            )}
-          </td>
+          <th class="col-big">
+            BIG
+          </th>
 
         </tr>
       `;
-    });
+
+    let body = "";
+
+    finalists.forEach(
+      row => {
+        const place =
+          num(row.place);
+
+        body += `
+          <tr class="
+            ${
+              place >= 1 &&
+              place <= 3
+                ? `ranking-top-${place}`
+                : ""
+            }
+            ranking-finalist
+          ">
+
+            <td class="r-place">
+              ${esc(
+                row.place ??
+                "—"
+              )}
+            </td>
+
+            <td
+              class="r-team"
+              title="${esc(
+                row.team ||
+                ""
+              )}"
+            >
+              ${esc(
+                row.team ||
+                "—"
+              )}
+            </td>
+
+            ${regularStages
+              .map(
+                (
+                  stage,
+                  index
+                ) => {
+                  const cell =
+                    getStageCell(
+                      row,
+                      stage,
+                      index
+                    );
+
+                  return `
+                    <td
+                      class="
+                        r-stage
+                        ${
+                          cell?.absent
+                            ? "r-absent"
+                            : ""
+                        }
+                      "
+                    >
+                      ${formatRankingCell(
+                        cell
+                      )}
+                    </td>
+                  `;
+                }
+              )
+              .join("")}
+
+            ${
+              hasFinal
+                ? `
+                  <td
+                    class="
+                      r-final
+                      ${
+                        row.final
+                          ?.absent
+                          ? "r-absent"
+                          : ""
+                      }
+                    "
+                  >
+                    ${esc(
+                      row.final
+                        ?.place ??
+                      row.finalPlace ??
+                      "—"
+                    )}
+                  </td>
+                `
+                : ""
+            }
+
+            <td class="r-points">
+              ${esc(
+                num(
+                  row.seasonPoints
+                )
+              )}
+            </td>
+
+            <td class="r-weight">
+              ${esc(
+                fmtWeight(
+                  row.totalWeight
+                )
+              )}
+            </td>
+
+            <td class="r-big">
+              ${esc(
+                fmtWeight(
+                  row.bigFish
+                )
+              )}
+            </td>
+
+          </tr>
+        `;
+      }
+    );
+
+    if (
+      contenders.length
+    ) {
+      body += `
+        <tr class="ranking-divider">
+          <td colspan="${
+            2 +
+            regularStages.length +
+            (
+              hasFinal
+                ? 1
+                : 0
+            ) +
+            3
+          }">
+            ПРЕТЕНДЕНТИ НА ФІНАЛ
+          </td>
+        </tr>
+      `;
+
+      contenders.forEach(
+        row => {
+          body += `
+            <tr class="ranking-contender">
+
+              <td class="r-place">
+                ${esc(
+                  row.qualificationPlace ||
+                  row.place ||
+                  "—"
+                )}
+              </td>
+
+              <td
+                class="r-team"
+                title="${esc(
+                  row.team ||
+                  ""
+                )}"
+              >
+                ${esc(
+                  row.team ||
+                  "—"
+                )}
+              </td>
+
+              ${regularStages
+                .map(
+                  (
+                    stage,
+                    index
+                  ) => {
+                    const cell =
+                      getStageCell(
+                        row,
+                        stage,
+                        index
+                      );
+
+                    return `
+                      <td
+                        class="
+                          r-stage
+                          ${
+                            cell?.absent
+                              ? "r-absent"
+                              : ""
+                          }
+                        "
+                      >
+                        ${formatRankingCell(
+                          cell
+                        )}
+                      </td>
+                    `;
+                  }
+                )
+                .join("")}
+
+              ${
+                hasFinal
+                  ? `
+                    <td class="r-final r-absent">
+                      —
+                    </td>
+                  `
+                  : ""
+              }
+
+              <td class="r-points">
+                ${esc(
+                  num(
+                    row.qualificationPoints
+                  )
+                )}
+              </td>
+
+              <td class="r-weight">
+                ${esc(
+                  fmtWeight(
+                    row.totalWeight
+                  )
+                )}
+              </td>
+
+              <td class="r-big">
+                ${esc(
+                  fmtWeight(
+                    row.bigFish
+                  )
+                )}
+              </td>
+
+            </tr>
+          `;
+        }
+      );
+    }
 
     table
-      .querySelector("tbody")
-      .innerHTML = body;
+      .querySelector(
+        "tbody"
+      )
+      .innerHTML =
+        body;
 
     section.hidden = false;
   }
 
   function renderArchiveSnapshot() {
-    if (!isSeasonArchived()) {
+    if (
+      !archiveDocument ||
+      clean(
+        archiveDocument.status
+      ) !==
+        "archived"
+    ) {
       return;
     }
 
-    ensureSummaryDom();
+    fullRanking =
+      buildFullRanking();
 
+    ensureSummaryDom();
     renderSeasonPodium();
     renderSeasonBigFish();
     renderSeasonRanking();
   }
 
-  function renderStageButtons() {
-    stagesList.innerHTML = stages
-      .map(item => {
-        const summary = item.summary || {};
+  async function loadArchive() {
+    try {
+      const snap =
+        await db
+          .collection(
+            "seasonArchives"
+          )
+          .doc(
+            seasonYear
+          )
+          .get();
 
-        return `
-          <button
-            class="stage-btn ${
-              item.isFinal
-                ? "stage-btn--final"
-                : ""
-            }"
-            type="button"
-            data-stage="${esc(item.id)}"
-          >
+      archiveDocument =
+        snap.exists
+          ? snap.data() ||
+            {}
+          : null;
 
-            <div class="stage-btn__top">
+    } catch (error) {
+      console.warn(
+        "[Archive] seasonArchives:",
+        error
+      );
 
-              <div class="stage-btn__title">
-                ${
-                  item.isFinal
-                    ? "🏆 "
-                    : ""
-                }
-                ${esc(item.title)}
-              </div>
-
-              ${
-                item.isFinal
-                  ? `
-                    <span class="stage-final-badge">
-                      ФІНАЛ
-                    </span>
-                  `
-                  : ""
-              }
-
-            </div>
-
-            <div class="stage-btn__meta">
-              Команд:
-              <b>
-                ${esc(
-                  num(summary.teamsCount)
-                )}
-              </b>
-
-              · Вага:
-              <b>
-                ${esc(
-                  fmtWeight(
-                    summary.totalWeight
-                  )
-                )}
-              </b>
-
-              · BIG:
-              <b>
-                ${esc(
-                  fmtWeight(
-                    summary.maxBigFish
-                  )
-                )}
-              </b>
-            </div>
-
-          </button>
-        `;
-      })
-      .join("");
-
-    stagesList
-      .querySelectorAll("[data-stage]")
-      .forEach(button => {
-        button.addEventListener(
-          "click",
-          () => {
-            const item = stages.find(
-              stage =>
-                stage.id ===
-                button.dataset.stage
-            );
-
-            if (item) {
-              renderStage(item);
-            }
-          }
-        );
-      });
+      archiveDocument = null;
+    }
   }
 
   async function loadStages() {
@@ -1264,51 +2153,318 @@
         msg.textContent =
           "Завантажую архів…";
 
-        msg.className = "muted";
+        msg.className =
+          "muted";
       }
 
       await loadArchive();
 
-      if (isSeasonArchived()) {
-        stages = await loadArchivedStages();
-      } else {
-        stages = await loadLiveStages();
-      }
+      const snap =
+        await db
+          .collection(
+            "seasonResults"
+          )
+          .doc(
+            seasonYear
+          )
+          .collection(
+            "stages"
+          )
+          .get();
 
-      prepareStages();
+      stages = [];
 
-      if (isSeasonArchived()) {
-        renderArchiveSnapshot();
-      }
+      snap.forEach(
+        doc => {
+          const data =
+            doc.data() ||
+            {};
 
-      if (!stages.length) {
-        stagesList.innerHTML = "";
+          const archiveMeta =
+            findArchiveStage(
+              doc.id,
+              data
+            );
 
+          const calculated =
+            calculateStageSummary(
+              data
+            );
+
+          const summary = {
+            teamsCount:
+              num(
+                archiveMeta
+                  ?.teamsCount ??
+                archiveMeta
+                  ?.summary
+                  ?.teamsCount ??
+                calculated
+                  .teamsCount
+              ),
+
+            totalWeight:
+              num(
+                archiveMeta
+                  ?.totalWeight ??
+                archiveMeta
+                  ?.summary
+                  ?.totalWeight ??
+                calculated
+                  .totalWeight
+              ),
+
+            maxBigFish:
+              num(
+                archiveMeta
+                  ?.bigFish ??
+                archiveMeta
+                  ?.summary
+                  ?.maxBigFish ??
+                calculated
+                  .maxBigFish
+              ),
+
+            totalCount:
+              num(
+                archiveMeta
+                  ?.totalCount ??
+                archiveMeta
+                  ?.summary
+                  ?.totalCount ??
+                calculated
+                  .totalCount
+              )
+          };
+
+          const final =
+            archiveMeta
+              ?.isFinal ===
+              true ||
+            clean(
+              archiveMeta?.type
+            ) ===
+              "final" ||
+            isFinalMeta(
+              data,
+              doc.id
+            );
+
+          const item = {
+            id:
+              doc.id,
+
+            data,
+
+            archiveMeta,
+
+            summary,
+
+            isFinal:
+              final,
+
+            type:
+              final
+                ? "final"
+                : "qualification"
+          };
+
+          item.sortValue =
+            stageSortValue(
+              item
+            );
+
+          stages.push(
+            item
+          );
+        }
+      );
+
+      inferFinal(stages);
+
+      stages.forEach(
+        (item, index) => {
+          item.title =
+            resolveStageTitle(
+              item,
+              index
+            );
+
+          item.sortValue =
+            item.isFinal
+              ? 999999
+              : stageSortValue(
+                  item
+                );
+
+          item.resultMap =
+            buildStageResultMap(
+              item
+            );
+        }
+      );
+
+      stages.sort(
+        (a, b) =>
+          a.sortValue -
+          b.sortValue
+      );
+
+      renderArchiveSnapshot();
+
+      if (
+        !stages.length
+      ) {
         if (msg) {
           msg.textContent =
-            isSeasonArchived()
+            archiveDocument
               ? `Сезон ${seasonYear} завершено.`
               : `Немає етапів сезону ${seasonYear}.`;
 
           msg.className =
-            isSeasonArchived()
+            archiveDocument
               ? "ok"
               : "muted";
         }
+
+        stagesList.innerHTML =
+          "";
 
         return;
       }
 
       if (msg) {
+        const contenderCount =
+          fullRanking.filter(
+            row =>
+              row.rankingType ===
+              "contender"
+          ).length;
+
         msg.textContent =
-          isSeasonArchived()
-            ? `Сезон ${seasonYear} завершено · етапів: ${stages.length}`
+          archiveDocument
+            ? `Сезон ${seasonYear} завершено · етапів: ${stages.length}` +
+              (
+                contenderCount
+                  ? ` · претендентів: ${contenderCount}`
+                  : ""
+              )
             : `Знайдено етапів: ${stages.length}`;
 
-        msg.className = "ok";
+        msg.className =
+          "ok";
       }
 
-      renderStageButtons();
+      stagesList.innerHTML =
+        stages
+          .map(
+            item => {
+              const summary =
+                item.summary ||
+                {};
+
+              return `
+                <button
+                  class="stage-btn ${
+                    item.isFinal
+                      ? "stage-btn--final"
+                      : ""
+                  }"
+                  type="button"
+                  data-stage="${esc(
+                    item.id
+                  )}"
+                >
+
+                  <div class="stage-btn__top">
+
+                    <div class="stage-btn__title">
+                      ${
+                        item.isFinal
+                          ? "🏆 "
+                          : ""
+                      }
+                      ${esc(
+                        item.title
+                      )}
+                    </div>
+
+                    ${
+                      item.isFinal
+                        ? `
+                          <span class="stage-final-badge">
+                            ФІНАЛ
+                          </span>
+                        `
+                        : ""
+                    }
+
+                  </div>
+
+                  <div class="stage-btn__meta">
+                    Команд:
+                    <b>
+                      ${esc(
+                        num(
+                          summary
+                            .teamsCount
+                        )
+                      )}
+                    </b>
+
+                    · Вага:
+                    <b>
+                      ${esc(
+                        fmtWeight(
+                          summary
+                            .totalWeight
+                        )
+                      )}
+                    </b>
+
+                    · BIG:
+                    <b>
+                      ${esc(
+                        fmtWeight(
+                          summary
+                            .maxBigFish
+                        )
+                      )}
+                    </b>
+                  </div>
+
+                </button>
+              `;
+            }
+          )
+          .join("");
+
+      stagesList
+        .querySelectorAll(
+          "[data-stage]"
+        )
+        .forEach(
+          button => {
+            button.addEventListener(
+              "click",
+              () => {
+                const item =
+                  stages.find(
+                    stage =>
+                      stage.id ===
+                      button.dataset
+                        .stage
+                  );
+
+                if (item) {
+                  renderStage(
+                    item
+                  );
+                }
+              }
+            );
+          }
+        );
 
     } catch (error) {
       console.error(
@@ -1317,62 +2473,28 @@
       );
 
       if (msg) {
-        msg.textContent =
-          "Не вдалося завантажити архів.";
-
-        msg.className = "err";
+        msg.innerHTML =
+          `<span class="err">Помилка читання архіву: ${esc(
+            error.message ||
+            error
+          )}</span>`;
       }
     }
   }
 
-  function compareStandingRows(a, b) {
-    const weight =
-      num(b?.totalWeight) -
-      num(a?.totalWeight);
-
-    if (weight) {
-      return weight;
-    }
-
-    const big =
-      num(b?.bigFish) -
-      num(a?.bigFish);
-
-    if (big) {
-      return big;
-    }
-
-    const count =
-      num(b?.totalCount) -
-      num(a?.totalCount);
-
-    if (count) {
-      return count;
-    }
-
-    return String(
-      a?.team ||
-      a?.teamName ||
-      ""
-    ).localeCompare(
-      String(
-        b?.team ||
-        b?.teamName ||
-        ""
-      ),
-      "uk"
-    );
-  }
-
   function renderStage(item) {
-    const rows = Array.isArray(
-      item?.data?.standings
-    )
-      ? item.data.standings.slice()
-      : [];
+    const rows =
+      Array.isArray(
+        item?.data?.standings
+      )
+        ? item.data
+            .standings
+            .slice()
+        : [];
 
     if (resultSection) {
-      resultSection.style.display = "block";
+      resultSection.style.display =
+        "block";
     }
 
     if (stageTitle) {
@@ -1384,7 +2506,10 @@
 
     if (stageMeta) {
       stageMeta.textContent =
-        `${item?.title || "Етап"} · Команд: ${rows.length}`;
+        `${
+          item?.title ||
+          "Етап"
+        } · Команд: ${rows.length}`;
     }
 
     if (!rows.length) {
@@ -1402,114 +2527,223 @@
       C: []
     };
 
-    rows.forEach(row => {
-      const zone = norm(
-        row?.zone
-      ).toUpperCase();
+    rows.forEach(
+      row => {
+        const zone =
+          norm(
+            row.zone
+          ).toUpperCase();
 
-      if (zones[zone]) {
-        zones[zone].push(row);
+        if (
+          zones[zone]
+        ) {
+          zones[zone].push(
+            row
+          );
+        }
       }
-    });
+    );
 
     if (zonesWrap) {
       zonesWrap.innerHTML =
-        renderZone("A", zones.A) +
-        renderZone("B", zones.B) +
-        renderZone("C", zones.C);
+        renderZone(
+          "A",
+          zones.A
+        ) +
+        renderZone(
+          "B",
+          zones.B
+        ) +
+        renderZone(
+          "C",
+          zones.C
+        );
     }
 
-    resultSection?.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
+    resultSection
+      ?.scrollIntoView({
+        behavior:
+          "smooth",
+
+        block:
+          "start"
+      });
   }
 
-  function formatSector(zone, sectorValue) {
-    const raw = norm(
-      sectorValue
-    ).toUpperCase();
+  function formatSector(
+    zone,
+    sectorValue
+  ) {
+    const raw =
+      norm(
+        sectorValue
+      ).toUpperCase();
 
     if (!raw) {
       return zone;
     }
 
-    return /^[ABC]\d+$/i.test(raw)
+    return /^[ABC]\d+$/i
+      .test(raw)
       ? raw
       : `${zone}${raw}`;
   }
 
-  function renderZone(zone, rows) {
-    const sorted = rows
-      .slice()
-      .sort(compareStandingRows);
+  function renderZone(
+    zone,
+    rows
+  ) {
+    const sorted =
+      rows
+        .slice()
+        .sort(
+          (a, b) => {
+            const weight =
+              num(
+                b.totalWeight
+              ) -
+              num(
+                a.totalWeight
+              );
 
-    const body = sorted
-      .map((row, index) => {
-        const team =
-          row?.team ||
-          row?.teamName ||
-          "—";
+            if (weight) {
+              return weight;
+            }
 
-        return `
-          <tr>
+            const big =
+              num(
+                b.bigFish
+              ) -
+              num(
+                a.bigFish
+              );
 
-            <td class="a-sector">
-              ${esc(
-                formatSector(
-                  zone,
-                  row?.sector
-                )
-              )}
-            </td>
+            if (big) {
+              return big;
+            }
 
-            <td
-              class="a-team"
-              title="${esc(team)}"
-            >
-              ${esc(team)}
-            </td>
+            const count =
+              num(
+                b.totalCount
+              ) -
+              num(
+                a.totalCount
+              );
 
-            <td>${fmtW(row?.w1)}</td>
-            <td>${fmtW(row?.w2)}</td>
-            <td>${fmtW(row?.w3)}</td>
-            <td>${fmtW(row?.w4)}</td>
+            if (count) {
+              return count;
+            }
 
-            <td>
-              ${fmt(
-                num(row?.totalCount) ||
-                "—"
-              )}
-            </td>
+            return String(
+              a.team ||
+              a.teamName ||
+              ""
+            ).localeCompare(
+              String(
+                b.team ||
+                b.teamName ||
+                ""
+              ),
+              "uk"
+            );
+          }
+        );
 
-            <td>
-              ${fmtWeight(
-                row?.bigFish
-              )}
-            </td>
+    const body =
+      sorted
+        .map(
+          (row, index) => {
+            const team =
+              row.team ||
+              row.teamName ||
+              "—";
 
-            <td class="a-weight">
-              ${fmtWeight(
-                row?.totalWeight
-              )}
-            </td>
+            return `
+              <tr>
 
-            <td class="a-place">
-              ${esc(
-                num(row?.zonePlace) ||
-                index + 1
-              )}
-            </td>
+                <td class="a-sector">
+                  ${esc(
+                    formatSector(
+                      zone,
+                      row.sector
+                    )
+                  )}
+                </td>
 
-          </tr>
-        `;
-      })
-      .join("");
+                <td
+                  class="a-team"
+                  title="${esc(
+                    team
+                  )}"
+                >
+                  ${esc(team)}
+                </td>
+
+                <td>
+                  ${fmtW(
+                    row.w1
+                  )}
+                </td>
+
+                <td>
+                  ${fmtW(
+                    row.w2
+                  )}
+                </td>
+
+                <td>
+                  ${fmtW(
+                    row.w3
+                  )}
+                </td>
+
+                <td>
+                  ${fmtW(
+                    row.w4
+                  )}
+                </td>
+
+                <td>
+                  ${fmt(
+                    num(
+                      row.totalCount
+                    ) ||
+                    "—"
+                  )}
+                </td>
+
+                <td>
+                  ${fmtWeight(
+                    row.bigFish
+                  )}
+                </td>
+
+                <td class="a-weight">
+                  ${fmtWeight(
+                    row.totalWeight
+                  )}
+                </td>
+
+                <td class="a-place">
+                  ${esc(
+                    num(
+                      row.zonePlace
+                    ) ||
+                    index + 1
+                  )}
+                </td>
+
+              </tr>
+            `;
+          }
+        )
+        .join("");
 
     return `
       <div class="archive-zone-card">
 
         <div class="archive-zone-head">
+
           <h3>
             Зона ${esc(zone)}
           </h3>
@@ -1517,6 +2751,7 @@
           <span>
             команд: ${sorted.length}
           </span>
+
         </div>
 
         <div class="archive-table-wrap">
@@ -1560,14 +2795,19 @@
   }
 
   function injectCss() {
-    if ($("archiveCompactCss")) {
+    if (
+      $("archiveCompactCss")
+    ) {
       return;
     }
 
     const style =
-      document.createElement("style");
+      document.createElement(
+        "style"
+      );
 
-    style.id = "archiveCompactCss";
+    style.id =
+      "archiveCompactCss";
 
     style.textContent = `
       .season-summary-section{
@@ -1799,17 +3039,23 @@
 
       .season-ranking-table .ranking-contender td{
         color:#94a3b8;
+        background:#0d0e15;
       }
 
       .season-ranking-table .ranking-contender .r-team{
         color:#cbd5e1;
       }
 
+      .season-ranking-table .ranking-contender .r-place{
+        color:#fbbf24;
+      }
+
       .season-ranking-table .ranking-divider td{
-        height:24px;
+        height:25px;
         padding:4px;
         color:#fbbf24;
         background:#17130b;
+        border-color:rgba(251,191,36,.28);
         font-size:8px;
         font-weight:950;
         letter-spacing:.08em;
@@ -2082,7 +3328,9 @@
       }
     `;
 
-    document.head.appendChild(style);
+    document.head.appendChild(
+      style
+    );
   }
 
   await loadStages();

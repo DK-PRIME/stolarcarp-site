@@ -16,46 +16,48 @@
   <link rel="preload" href="/assets/css/main.css" as="style">
   <link rel="stylesheet" href="/assets/css/main.css">
 
+  <!-- CONFIG -->
   <script defer src="/assets/js/config.js?v=20260802-1"></script>
 
-  <!-- Firebase -->
+  <!-- FIREBASE -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
+  <!-- FIREBASE INIT -->
   <script defer src="/assets/js/firebase-init.js?v=20260802-1"></script>
+
+  <!-- REGISTRATION -->
   <script defer src="/assets/js/register_firebase.js?v=20260802-2"></script>
+
+  <!-- FINAL DECLINE -->
   <script defer src="/assets/js/final_decline.js?v=20260813-1"></script>
 
   <style>
     /* =========================================================
-       STOLAR CARP • PREMIUM REGISTRATION
+       STOLAR CARP • COMPACT PREMIUM REGISTRATION
        ========================================================= */
 
     body.register-page {
-      --reg-bg: #020617;
-      --reg-surface: #0b1220;
-      --reg-surface-2: #101b2d;
-      --reg-border: rgba(148, 163, 184, .17);
       --reg-gold: #e8bf68;
       --reg-gold-light: #ffe3a0;
-      --reg-text: #f1f5f9;
       --reg-muted: #94a3b8;
-      --reg-green: #4ade80;
+      --reg-border: rgba(148, 163, 184, .16);
 
       margin: 0;
       min-height: 100vh;
       overflow-x: hidden;
-      color: var(--reg-text);
 
       background:
         radial-gradient(
-          ellipse at 50% -180px,
-          rgba(51, 65, 85, .52),
-          transparent 60%
+          ellipse at 50% -160px,
+          rgba(51, 65, 85, .46),
+          transparent 58%
         ),
         #020617;
+
+      color: #f1f5f9;
     }
 
     .register-page *,
@@ -64,15 +66,11 @@
       box-sizing: border-box;
     }
 
-    .register-page .main {
-      min-height: 65vh;
-    }
-
     .register-page .section--narrow {
       width: 100%;
-      max-width: 1160px;
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 30px 18px 76px;
+      padding: 20px 16px 60px;
     }
 
     /* =========================================================
@@ -101,15 +99,17 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+
       width: 42px;
       height: 42px;
       flex: 0 0 42px;
+
       border-radius: 12px;
       background: linear-gradient(145deg, #f5d48a, #b9832d);
       color: #10131b;
-      font-weight: 900;
+
       font-size: 15px;
-      letter-spacing: -.04em;
+      font-weight: 900;
     }
 
     .register-page .header .logo__text {
@@ -118,62 +118,41 @@
     }
 
     /* =========================================================
-       HERO
+       COMPACT HERO
        ========================================================= */
 
     .register-hero {
       position: relative;
       overflow: hidden;
-      margin-bottom: 25px;
-      padding: 40px 36px;
-      border: 1px solid rgba(232, 191, 104, .23);
-      border-radius: 24px;
+
+      margin-bottom: 16px;
+      padding: 22px 24px;
+
+      border: 1px solid rgba(232, 191, 104, .22);
+      border-radius: 18px;
 
       background:
         radial-gradient(
-          circle at 90% 0%,
-          rgba(232, 191, 104, .13),
-          transparent 36%
+          circle at 95% 0%,
+          rgba(232, 191, 104, .11),
+          transparent 40%
         ),
-        linear-gradient(
-          135deg,
-          #111c2d 0%,
-          #080e1a 65%,
-          #050a13 100%
-        );
+        linear-gradient(135deg, #111c2d, #080e1a);
 
-      box-shadow: 0 24px 65px rgba(0, 0, 0, .24);
-    }
-
-    .register-hero::after {
-      content: "SC";
-      position: absolute;
-      right: -5px;
-      bottom: -62px;
-      font-size: clamp(130px, 24vw, 290px);
-      font-weight: 900;
-      letter-spacing: -.12em;
-      line-height: 1;
-      color: rgba(232, 191, 104, .035);
-      pointer-events: none;
-      user-select: none;
-    }
-
-    .register-hero__content {
-      position: relative;
-      z-index: 1;
-      max-width: 770px;
+      box-shadow: 0 16px 42px rgba(0, 0, 0, .2);
     }
 
     .register-hero__kicker {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 17px;
+      gap: 8px;
+
+      margin-bottom: 9px;
+
       color: var(--reg-gold);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .18em;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .17em;
       text-transform: uppercase;
     }
 
@@ -181,22 +160,26 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
-      border-radius: 9px;
+
+      width: 24px;
+      height: 24px;
+
+      border-radius: 7px;
       background: linear-gradient(135deg, #ffe3a0, #c58e35);
       color: #10131b;
-      font-size: 11px;
+
+      font-size: 10px;
       font-weight: 900;
       letter-spacing: 0;
     }
 
     .register-hero h1 {
-      margin: 0 0 15px;
-      font-size: clamp(28px, 4.8vw, 48px);
-      line-height: 1.12;
-      letter-spacing: -.035em;
+      margin: 0 0 5px;
+
+      font-size: clamp(23px, 4vw, 34px);
       font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -.035em;
       text-transform: uppercase;
     }
 
@@ -207,105 +190,17 @@
         #e8bf68 55%,
         #bc8738
       );
+
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
     }
 
     .register-hero p {
-      max-width: 620px;
       margin: 0;
-      color: #bac5d4;
-      font-size: 15px;
-      line-height: 1.75;
-    }
-
-    .register-hero__divider {
-      width: 90px;
-      height: 3px;
-      margin-top: 23px;
-      border-radius: 10px;
-      background: linear-gradient(90deg, #ffe3a0, #b9832d);
-    }
-
-    /* =========================================================
-       STEPS
-       ========================================================= */
-
-    .registration-guide {
-      margin-bottom: 28px;
-    }
-
-    .registration-guide__heading {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 15px;
-    }
-
-    .registration-guide__heading h2 {
-      margin: 0;
-      color: #f8fafc;
-      font-size: 17px;
-      font-weight: 800;
-      letter-spacing: -.01em;
-    }
-
-    .registration-guide__heading::before {
-      content: "";
-      width: 4px;
-      height: 22px;
-      border-radius: 10px;
-      background: var(--reg-gold);
-    }
-
-    .registration-steps {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .registration-step {
-      position: relative;
-      min-width: 0;
-      padding: 19px 17px 20px;
-      border: 1px solid var(--reg-border);
-      border-radius: 17px;
-      background: linear-gradient(
-        160deg,
-        rgba(22, 34, 53, .94),
-        rgba(9, 16, 29, .98)
-      );
-    }
-
-    .registration-step__number {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 35px;
-      height: 35px;
-      margin-bottom: 14px;
-      border: 1px solid rgba(232, 191, 104, .35);
-      border-radius: 11px;
-      background: rgba(232, 191, 104, .10);
-      color: var(--reg-gold-light);
-      font-size: 14px;
-      font-weight: 900;
-    }
-
-    .registration-step h3 {
-      margin: 0 0 7px;
-      color: #f8fafc;
-      font-size: 14px;
-      line-height: 1.4;
-      font-weight: 800;
-    }
-
-    .registration-step p {
-      margin: 0;
-      color: var(--reg-muted);
+      color: #aebdd0;
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.5;
     }
 
     /* =========================================================
@@ -314,154 +209,109 @@
 
     .register-layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
-      gap: 20px;
+      grid-template-columns: minmax(0, 1.7fr) minmax(290px, 1fr);
+      gap: 16px;
       align-items: start;
     }
 
     .register-page .register-form-card,
     .register-page .card--payment {
       min-width: 0;
-      padding: 26px;
+      padding: 20px;
+
       border: 1px solid var(--reg-border);
-      border-radius: 20px;
+      border-radius: 17px;
+
       background: linear-gradient(
         155deg,
         #111c2d,
         #080e1a 80%
       );
-      box-shadow: 0 18px 50px rgba(0, 0, 0, .20);
-    }
 
-    .register-card-heading {
-      display: flex;
-      align-items: flex-start;
-      gap: 13px;
-      margin-bottom: 22px;
-    }
-
-    .register-card-heading__icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 42px;
-      height: 42px;
-      flex: 0 0 42px;
-      border: 1px solid rgba(232, 191, 104, .28);
-      border-radius: 13px;
-      background: rgba(232, 191, 104, .10);
-      color: var(--reg-gold);
-      font-size: 21px;
-      font-weight: 900;
-    }
-
-    .register-card-heading h2 {
-      margin: 0 0 5px;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: -.025em;
-    }
-
-    .register-card-heading p {
-      margin: 0;
-      color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.6;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, .18);
     }
 
     /* =========================================================
-       PROFILE
+       FORM HEADER
+       ========================================================= */
+
+    .register-card-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+
+      margin-bottom: 13px;
+    }
+
+    .register-card-heading h2 {
+      margin: 0;
+      color: #f8fafc;
+
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: -.01em;
+    }
+
+    .register-card-heading__tag {
+      padding: 5px 9px;
+
+      border: 1px solid rgba(232, 191, 104, .25);
+      border-radius: 100px;
+
+      background: rgba(232, 191, 104, .08);
+      color: var(--reg-gold-light);
+
+      font-size: 10px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    /* =========================================================
+       PROFILE — COMPACT
        ========================================================= */
 
     .profile-panel {
-      margin-bottom: 25px;
-      padding: 17px;
-      border: 1px solid rgba(148, 163, 184, .17);
-      border-radius: 14px;
-      background: rgba(2, 6, 23, .42);
-    }
+      margin-bottom: 14px;
+      padding: 10px 12px;
 
-    .profile-panel__heading {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      margin-bottom: 10px;
-      color: var(--reg-gold);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .09em;
-    }
+      border: 1px solid rgba(148, 163, 184, .15);
+      border-radius: 11px;
 
-    .profile-panel__dot {
-      width: 8px;
-      height: 8px;
-      flex: 0 0 8px;
-      border-radius: 50%;
-      background: #4ade80;
-      box-shadow: 0 0 12px rgba(74, 222, 128, .3);
+      background: rgba(2, 6, 23, .35);
     }
 
     .profile-summary {
       color: #cbd5e1;
-      font-size: 13px;
-      line-height: 1.7;
+      font-size: 12px;
+      line-height: 1.5;
       overflow-wrap: anywhere;
     }
 
     .profile-summary b,
     .profile-summary strong {
-      color: #f8fafc;
-    }
-
-    .profile-panel__help {
-      margin: 12px 0 0;
-      color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.6;
-    }
-
-    .profile-panel__help a {
-      color: var(--reg-gold);
-      font-weight: 700;
-      text-decoration: none;
+      color: #fff;
     }
 
     /* =========================================================
-       FORM STEPS
+       EVENT OPTIONS
        ========================================================= */
 
-    .form-step-heading {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 11px;
+    .register-page .field {
+      min-width: 0;
+      margin: 0 0 12px;
     }
 
-    .form-step-heading__number {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      flex: 0 0 30px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #ffe3a0, #c58e35);
-      color: #111827;
+    .field-label {
+      display: block;
+      margin-bottom: 10px;
+
+      color: #e2e8f0;
       font-size: 12px;
-      font-weight: 900;
-    }
-
-    .form-step-heading h3 {
-      margin: 0;
-      color: #f8fafc;
-      font-size: 15px;
       font-weight: 800;
-      line-height: 1.4;
     }
 
-    .required-mark {
+    .field-label .required-mark {
       color: var(--reg-gold);
     }
 
@@ -469,40 +319,27 @@
       margin: 0;
       color: var(--reg-muted);
       font-size: 12px;
-      line-height: 1.6;
+      line-height: 1.5;
     }
-
-    .register-page .field {
-      display: block;
-      margin: 0 0 23px;
-      min-width: 0;
-    }
-
-    .field-help {
-      margin: 0 0 12px;
-      color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.65;
-    }
-
-    /* =========================================================
-       FIREBASE EVENT OPTIONS
-       ========================================================= */
 
     .event-options {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
+
       width: 100%;
       min-width: 0;
-      padding: 10px;
-      border: 1px solid rgba(148, 163, 184, .17);
-      border-radius: 15px;
+
+      padding: 8px;
+
+      border: 1px solid rgba(148, 163, 184, .14);
+      border-radius: 13px;
+
       background: rgba(2, 6, 23, .35);
     }
 
     .event-options > .form__hint {
-      padding: 13px 8px;
+      padding: 12px 6px;
       text-align: center;
     }
 
@@ -510,45 +347,50 @@
       position: relative;
       display: flex;
       align-items: flex-start;
-      gap: 12px;
+      gap: 10px;
+
       width: 100%;
       min-width: 0;
-      padding: 16px;
-      border: 1px solid rgba(148, 163, 184, .22);
-      border-radius: 13px;
+
+      padding: 12px;
+
+      border: 1px solid rgba(148, 163, 184, .2);
+      border-radius: 11px;
+
       background: linear-gradient(
         150deg,
         rgba(30, 41, 59, .65),
         rgba(15, 23, 42, .55)
       );
+
       cursor: pointer;
+
       transition:
         border-color .2s ease,
         background .2s ease,
-        box-shadow .2s ease,
         transform .2s ease;
     }
 
     .event-item:hover {
-      border-color: rgba(232, 191, 104, .6);
-      background: rgba(232, 191, 104, .055);
+      border-color: rgba(232, 191, 104, .55);
       transform: translateY(-1px);
     }
 
     .event-item:has(input[type="radio"]:checked) {
       border-color: var(--reg-gold);
+
       background: linear-gradient(
         140deg,
-        rgba(232, 191, 104, .14),
+        rgba(232, 191, 104, .13),
         rgba(232, 191, 104, .035)
       );
-      box-shadow: 0 0 0 1px rgba(232, 191, 104, .15);
     }
 
     .event-item input[type="radio"] {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+
       margin: 1px 0 0;
       accent-color: #e8bf68;
       cursor: pointer;
@@ -568,27 +410,32 @@
       flex-wrap: wrap;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 8px;
+      gap: 6px;
+
       min-width: 0;
+
       color: #f8fafc;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 850;
-      line-height: 1.45;
+      line-height: 1.4;
     }
 
     .event-title .text {
       min-width: 0;
       max-width: 100%;
+
       white-space: normal;
       overflow-wrap: anywhere;
       text-overflow: clip;
     }
 
     .event-meta {
-      margin-top: 8px;
+      margin-top: 5px;
+
       color: #aab8ca;
-      font-size: 12px;
-      line-height: 1.6;
+      font-size: 11px;
+      line-height: 1.5;
+
       white-space: normal;
       overflow-wrap: anywhere;
     }
@@ -597,17 +444,24 @@
       display: flex;
       flex-wrap: wrap;
       gap: 5px;
-      flex: 0 1 auto;
     }
+
+    /* =========================================================
+       BADGES
+       ========================================================= */
 
     .pill-b {
       display: inline-flex;
       align-items: center;
-      padding: 5px 9px;
+
+      padding: 4px 8px;
+
       border: 1px solid rgba(148, 163, 184, .25);
       border-radius: 100px;
+
       background: rgba(2, 6, 23, .55);
       color: #e2e8f0;
+
       font-size: 10px;
       font-weight: 850;
       line-height: 1.2;
@@ -657,56 +511,59 @@
     }
 
     .event-item.is-closed {
-      opacity: .63;
+      opacity: .62;
       cursor: default;
     }
 
     .event-item.is-closed:hover {
       transform: none;
-      border-color: rgba(148, 163, 184, .22);
-      background: rgba(15, 23, 42, .55);
+      border-color: rgba(148, 163, 184, .2);
     }
 
     /* =========================================================
-       RULES CHECKBOX
+       RULES
        ========================================================= */
 
     .rules-confirmation {
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 17px;
-      border: 1px solid rgba(148, 163, 184, .22);
-      border-radius: 13px;
-      background: rgba(2, 6, 23, .42);
+      align-items: center;
+      gap: 10px;
+
+      padding: 11px 12px;
+
+      border: 1px solid rgba(148, 163, 184, .17);
+      border-radius: 11px;
+
+      background: rgba(2, 6, 23, .35);
       cursor: pointer;
     }
 
     .rules-confirmation:has(input:checked) {
-      border-color: rgba(74, 222, 128, .42);
-      background: rgba(74, 222, 128, .045);
+      border-color: rgba(74, 222, 128, .4);
+      background: rgba(74, 222, 128, .04);
     }
 
     .rules-confirmation input {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
-      margin: 2px 0 0;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+
+      margin: 0;
       accent-color: #e8bf68;
       cursor: pointer;
     }
 
     .rules-confirmation span {
       color: #dbe3ef;
-      font-size: 13px;
-      line-height: 1.7;
+      font-size: 12px;
+      line-height: 1.5;
     }
 
     .rules-confirmation a {
       color: var(--reg-gold-light);
       font-weight: 800;
       text-decoration: underline;
-      text-underline-offset: 3px;
+      text-underline-offset: 2px;
     }
 
     /* =========================================================
@@ -716,24 +573,28 @@
     .form-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-top: 18px;
+      gap: 10px;
+      margin-top: 12px;
     }
 
     .register-page #submitBtn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
-      min-height: 52px;
-      padding: 14px 25px;
+
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 20px;
+
       border: 0;
-      border-radius: 12px;
+      border-radius: 11px;
+
       background: linear-gradient(135deg, #ffe3a0, #d7a44e);
       color: #10131b;
+
       font-size: 14px;
       font-weight: 900;
-      box-shadow: 0 12px 25px rgba(0, 0, 0, .2);
+
       transition: transform .2s ease, filter .2s ease;
     }
 
@@ -742,21 +603,21 @@
     }
 
     .register-page #submitBtn:not(:disabled):hover {
-      transform: translateY(-2px);
-      filter: brightness(1.07);
+      transform: translateY(-1px);
+      filter: brightness(1.06);
     }
 
     .register-page #submitBtn:disabled {
       opacity: .48;
       cursor: not-allowed;
-      box-shadow: none;
     }
 
     .spinner {
       display: none;
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+
       border: 3px solid rgba(255, 255, 255, .2);
       border-top-color: #e8bf68;
       border-radius: 50%;
@@ -772,11 +633,13 @@
     }
 
     .form-msg {
-      min-height: 22px;
-      margin-top: 14px;
-      font-size: 13px;
+      min-height: 18px;
+      margin-top: 10px;
+
+      color: #cbd5e1;
+      font-size: 12px;
       font-weight: 750;
-      line-height: 1.65;
+      line-height: 1.5;
       overflow-wrap: anywhere;
     }
 
@@ -788,117 +651,110 @@
       color: #fca5a5;
     }
 
-    .submit-help {
-      margin: 13px 0 0;
-      color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.7;
-    }
-
     /* =========================================================
        PAYMENT
        ========================================================= */
 
     .register-page .card--payment {
       position: sticky;
-      top: 20px;
+      top: 16px;
     }
 
     .payment-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 18px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .payment-header__icon {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 43px;
-      height: 43px;
-      flex: 0 0 43px;
-      border-radius: 13px;
+
+      width: 36px;
+      height: 36px;
+      flex: 0 0 36px;
+
+      border-radius: 10px;
       background: linear-gradient(135deg, #ffe3a0, #c58e35);
       color: #10131b;
-      font-size: 22px;
+
+      font-size: 19px;
       font-weight: 900;
     }
 
     .card-payment-title {
       margin: 0;
       color: #f8fafc;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 900;
-      line-height: 1.3;
     }
 
     .payment-header__subtitle {
-      margin: 4px 0 0;
+      margin: 3px 0 0;
       color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.5;
+      font-size: 11px;
     }
 
     .payment-amount-box {
-      margin-bottom: 20px;
-      padding: 18px;
-      border: 1px solid rgba(232, 191, 104, .25);
-      border-radius: 14px;
-      background: linear-gradient(
-        135deg,
-        rgba(232, 191, 104, .10),
-        rgba(232, 191, 104, .025)
-      );
+      margin-bottom: 13px;
+      padding: 13px;
+
+      border: 1px solid rgba(232, 191, 104, .24);
+      border-radius: 12px;
+
+      background: rgba(232, 191, 104, .07);
     }
 
     .payment-amount-box__label {
       display: block;
-      margin-bottom: 7px;
+      margin-bottom: 4px;
+
       color: #b9c5d5;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
     }
 
     #payLine {
       margin: 0;
       color: #f8fafc;
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: 12px;
     }
 
     #payLine b {
       color: var(--reg-gold-light);
-      font-size: clamp(20px, 2.5vw, 28px);
+      font-size: 24px;
       font-weight: 900;
-      white-space: nowrap;
     }
 
     #payCurrency {
       font-size: 12px;
-      font-weight: 800;
     }
 
     #payLabel {
-      margin: 0 0 10px;
+      margin: 0 0 8px;
       color: #e2e8f0;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 800;
     }
 
     .payment-details {
       width: 100%;
-      min-height: 65px;
+      min-height: 54px;
       margin: 0;
-      padding: 15px;
-      border: 1px solid rgba(148, 163, 184, .23);
-      border-radius: 12px;
-      background: rgba(2, 6, 23, .65);
+      padding: 12px;
+
+      border: 1px solid rgba(148, 163, 184, .2);
+      border-radius: 10px;
+
+      background: rgba(2, 6, 23, .6);
       color: #f8fafc;
-      font-size: 13px;
+
+      font-size: 12px;
       font-weight: 700;
-      line-height: 1.7;
-      letter-spacing: .01em;
+      line-height: 1.6;
+
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
@@ -912,68 +768,36 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
       width: 100%;
-      min-height: 45px;
-      margin-top: 12px;
-      padding: 11px 14px;
-      border: 1px solid rgba(232, 191, 104, .4);
-      border-radius: 11px;
+      min-height: 42px;
+      margin-top: 10px;
+      padding: 10px;
+
+      border: 1px solid rgba(232, 191, 104, .35);
+      border-radius: 10px;
+
       background: rgba(232, 191, 104, .08);
       color: var(--reg-gold-light);
-      font-size: 13px;
+
+      font-size: 12px;
       font-weight: 850;
       cursor: pointer;
-      transition: background .2s ease;
     }
 
     .register-page #copyCard:hover {
-      background: rgba(232, 191, 104, .16);
-    }
-
-    .payment-warning {
-      margin-top: 20px;
-      padding: 14px;
-      border: 1px solid rgba(74, 222, 128, .22);
-      border-radius: 12px;
-      background: rgba(74, 222, 128, .055);
-    }
-
-    .payment-warning__title {
-      margin: 0 0 7px;
-      color: #86efac;
-      font-size: 12px;
-      font-weight: 850;
+      background: rgba(232, 191, 104, .15);
     }
 
     .card-note {
-      margin: 0;
-      color: #cbd5e1;
-      font-size: 12px;
-      line-height: 1.7;
+      margin: 12px 0 0;
+      color: var(--reg-muted);
+      font-size: 11px;
+      line-height: 1.6;
     }
 
     .card-note b {
       color: #f8fafc;
-    }
-
-    .payment-status {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid rgba(148, 163, 184, .14);
-    }
-
-    .payment-status h3 {
-      margin: 0 0 9px;
-      color: #e2e8f0;
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .payment-status p {
-      margin: 0;
-      color: var(--reg-muted);
-      font-size: 12px;
-      line-height: 1.7;
     }
 
     /* =========================================================
@@ -985,14 +809,10 @@
     }
 
     /* =========================================================
-       RESPONSIVE
+       MOBILE
        ========================================================= */
 
-    @media (max-width: 950px) {
-      .registration-steps {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-
+    @media (max-width: 900px) {
       .register-layout {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -1004,103 +824,80 @@
 
     @media (max-width: 600px) {
       .register-page .section--narrow {
-        padding: 18px 12px 55px;
+        padding: 12px 10px 45px;
       }
 
       .register-hero {
-        padding: 27px 20px;
-        border-radius: 18px;
+        margin-bottom: 12px;
+        padding: 17px 16px;
+        border-radius: 14px;
+      }
+
+      .register-hero__kicker {
+        margin-bottom: 7px;
+        font-size: 9px;
       }
 
       .register-hero h1 {
-        font-size: clamp(26px, 8vw, 35px);
+        margin-bottom: 5px;
+        font-size: clamp(21px, 6.5vw, 27px);
       }
 
       .register-hero p {
-        font-size: 13px;
-      }
-
-      .registration-guide__heading h2 {
-        font-size: 15px;
-      }
-
-      .registration-steps {
-        gap: 9px;
-      }
-
-      .registration-step {
-        padding: 14px 12px;
-        border-radius: 13px;
-      }
-
-      .registration-step__number {
-        width: 31px;
-        height: 31px;
-        margin-bottom: 10px;
-      }
-
-      .registration-step h3 {
-        font-size: 12px;
-      }
-
-      .registration-step p {
         font-size: 11px;
       }
 
       .register-page .register-form-card,
       .register-page .card--payment {
-        padding: 19px 15px;
-        border-radius: 16px;
+        padding: 14px 12px;
+        border-radius: 14px;
+      }
+
+      .register-card-heading {
+        margin-bottom: 11px;
       }
 
       .register-card-heading h2 {
-        font-size: 18px;
+        font-size: 14px;
+      }
+
+      .profile-panel {
+        margin-bottom: 11px;
+        padding: 9px 10px;
       }
 
       .event-options {
-        padding: 7px;
+        padding: 6px;
+        gap: 7px;
       }
 
       .event-item {
-        padding: 13px 10px;
-        gap: 9px;
+        padding: 11px 9px;
       }
 
       .event-title {
-        font-size: 13px;
-      }
-
-      .event-badges {
-        justify-content: flex-start;
+        font-size: 12px;
       }
 
       .event-meta {
         font-size: 11px;
       }
 
+      .pill-b {
+        font-size: 9px;
+        padding: 4px 7px;
+      }
+
+      .rules-confirmation {
+        padding: 10px;
+      }
+
+      .rules-confirmation span {
+        font-size: 11px;
+      }
+
       .register-page #submitBtn {
-        width: 100%;
-      }
-
-      .form-actions {
-        flex-wrap: wrap;
-      }
-    }
-
-    @media (max-width: 360px) {
-      .registration-steps {
-        grid-template-columns: 1fr;
-      }
-
-      .registration-step {
-        display: grid;
-        grid-template-columns: 35px 1fr;
-        column-gap: 12px;
-      }
-
-      .registration-step__number {
-        grid-row: span 2;
-        margin-bottom: 0;
+        min-height: 46px;
       }
     }
 
@@ -1165,133 +962,57 @@
   <main class="main">
     <section class="container section section--narrow">
 
-      <!-- HERO -->
+      <!-- COMPACT HERO -->
 
       <div class="register-hero">
-        <div class="register-hero__content">
 
-          <div class="register-hero__kicker">
-            <span class="register-hero__kicker-tag">SC</span>
-            STOLAR CARP · REGISTRATION
-          </div>
-
-          <h1>
-            Реєстрація
-            <span class="title-gradient">на змагання</span>
-          </h1>
-
-          <p>
-            Оберіть турнір, подайте заявку та отримайте
-            підтвердження участі. Усе необхідне для
-            реєстрації зібрано на цій сторінці.
-          </p>
-
-          <div class="register-hero__divider"></div>
-
+        <div class="register-hero__kicker">
+          <span class="register-hero__kicker-tag">SC</span>
+          STOLAR CARP · REGISTRATION
         </div>
+
+        <h1>
+          Реєстрація
+          <span class="title-gradient">на змагання</span>
+        </h1>
+
+        <p>Оберіть турнір або етап для участі.</p>
+
       </div>
 
-      <!-- ІНСТРУКЦІЯ -->
-
-      <section class="registration-guide" aria-label="Як зареєструватися">
-
-        <div class="registration-guide__heading">
-          <h2>Як зареєструватися — 4 прості кроки</h2>
-        </div>
-
-        <div class="registration-steps">
-
-          <div class="registration-step">
-            <div class="registration-step__number">01</div>
-            <h3>Перевірте профіль</h3>
-            <p>
-              Увійдіть у свій акаунт.
-              Переконайтеся, що дані учасника
-              або команди правильні.
-            </p>
-          </div>
-
-          <div class="registration-step">
-            <div class="registration-step__number">02</div>
-            <h3>Оберіть змагання</h3>
-            <p>
-              Знайдіть потрібний турнір
-              або етап зі статусом
-              «Реєстрація відкрита».
-            </p>
-          </div>
-
-          <div class="registration-step">
-            <div class="registration-step__number">03</div>
-            <h3>Подайте заявку</h3>
-            <p>
-              Прочитайте регламент,
-              поставте позначку згоди
-              та натисніть «Подати заявку».
-            </p>
-          </div>
-
-          <div class="registration-step">
-            <div class="registration-step__number">04</div>
-            <h3>Підтвердьте участь</h3>
-            <p>
-              Якщо передбачено внесок —
-              оплатіть його. Адміністратор
-              перевірить оплату та підтвердить участь.
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ФОРМА + ОПЛАТА -->
+      <!-- FORM + PAYMENT -->
 
       <div class="register-layout">
 
         <!-- =================================================
-             ФОРМА
+             FORM
              ================================================= -->
 
         <div class="card register-form-card">
 
           <div class="register-card-heading">
 
-            <div class="register-card-heading__icon">✓</div>
+            <h2>Доступні змагання</h2>
 
-            <div>
-              <h2>Оформлення заявки</h2>
-              <p>
-                Виконайте дії нижче, щоб подати заявку
-                на участь у змаганнях.
-              </p>
-            </div>
+            <span class="register-card-heading__tag">
+              STOLAR CARP
+            </span>
 
           </div>
 
-          <!-- ПРОФІЛЬ -->
+          <!-- PROFILE -->
 
           <div class="profile-panel">
-
-            <div class="profile-panel__heading">
-              <span class="profile-panel__dot"></span>
-              Ваш профіль
-            </div>
-
             <div id="profileSummary" class="profile-summary">
               Профіль: завантаження...
             </div>
-
-            <p class="profile-panel__help">
-              Дані підтягуються автоматично з вашого акаунта.
-              Перевірити або змінити їх можна в
-              <a href="#" id="profileCabinetLink">особистому кабінеті</a>.
-            </p>
-
           </div>
+
+          <!-- FORM -->
 
           <form id="regForm" class="form" novalidate>
 
-            <!-- Honeypot -->
+            <!-- HONEYPOT -->
 
             <input
               type="text"
@@ -1310,22 +1031,14 @@
               "
             >
 
-            <!-- КРОК 1 -->
+            <!-- EVENTS -->
 
             <div class="field">
 
-              <div class="form-step-heading">
-                <span class="form-step-heading__number">1</span>
-                <h3>
-                  Оберіть змагання або етап
-                  <span class="required-mark">*</span>
-                </h3>
-              </div>
-
-              <p class="field-help">
-                Натисніть на потрібне змагання у списку.
-                Для подання заявки реєстрація має бути відкритою.
-              </p>
+              <label class="field-label">
+                Оберіть змагання / етап
+                <span class="required-mark">*</span>
+              </label>
 
               <div id="eventOptions" class="event-options">
                 <p class="form__hint">
@@ -1335,22 +1048,9 @@
 
             </div>
 
-            <!-- КРОК 2 -->
+            <!-- RULES -->
 
             <div class="field">
-
-              <div class="form-step-heading">
-                <span class="form-step-heading__number">2</span>
-                <h3>
-                  Підтвердьте ознайомлення з правилами
-                  <span class="required-mark">*</span>
-                </h3>
-              </div>
-
-              <p class="field-help">
-                Перед поданням заявки ознайомтеся
-                з офіційним регламентом STOLAR CARP.
-              </p>
 
               <label for="rules" class="rules-confirmation">
 
@@ -1361,31 +1061,21 @@
                 >
 
                 <span>
-                  Я ознайомився(-лася) з
+                  Погоджуюся з
                   <a
                     href="/rules.html"
                     target="_blank"
                     rel="noopener noreferrer"
-                  >регламентом змагань</a>
-                  та погоджуюся дотримуватися
-                  встановлених правил.
+                  >
+                    регламентом змагань
+                  </a>
                 </span>
 
               </label>
 
             </div>
 
-            <!-- КРОК 3 -->
-
-            <div class="form-step-heading">
-              <span class="form-step-heading__number">3</span>
-              <h3>Надішліть заявку</h3>
-            </div>
-
-            <p class="field-help">
-              Перевірте вибраний турнір і натисніть кнопку.
-              Після відправлення дочекайтеся повідомлення системи.
-            </p>
+            <!-- SUBMIT -->
 
             <div class="form-actions">
 
@@ -1395,7 +1085,7 @@
                 class="btn btn--primary"
                 disabled
               >
-                Подати заявку →
+                Подати заявку
               </button>
 
               <div
@@ -1406,6 +1096,8 @@
 
             </div>
 
+            <!-- MESSAGE -->
+
             <div
               id="msg"
               class="form-msg"
@@ -1413,20 +1105,12 @@
               aria-live="polite"
             ></div>
 
-            <p class="submit-help">
-              <strong>Зверніть увагу:</strong>
-              подана заявка ще не означає підтверджену участь.
-              Якщо для змагання передбачена оплата,
-              підтвердження надається після перевірки внеску
-              адміністратором.
-            </p>
-
           </form>
 
         </div>
 
         <!-- =================================================
-             ОПЛАТА
+             PAYMENT
              ================================================= -->
 
         <aside
@@ -1444,18 +1128,18 @@
               </h2>
 
               <p class="payment-header__subtitle">
-                Інформація про внесок і реквізити
+                Внесок та реквізити
               </p>
             </div>
 
           </div>
 
-          <!-- СУМА -->
+          <!-- AMOUNT -->
 
           <div class="payment-amount-box">
 
             <span class="payment-amount-box__label">
-              Внесок за обране змагання
+              Сума внеску
             </span>
 
             <p id="payLine">
@@ -1467,7 +1151,7 @@
 
           </div>
 
-          <!-- РЕКВІЗИТИ -->
+          <!-- PAYMENT DETAILS -->
 
           <p id="payLabel">
             Реквізити для оплати
@@ -1478,7 +1162,7 @@
             class="payment-details"
           >—</div>
 
-          <!-- ID для сумісності -->
+          <!-- COMPATIBILITY -->
 
           <span
             id="cardNum"
@@ -1493,37 +1177,13 @@
             Скопіювати реквізити
           </button>
 
-          <!-- ПРИМІТКА -->
-
-          <div class="payment-warning">
-
-            <h3 class="payment-warning__title">
-              Важливо при оплаті
-            </h3>
-
-            <p
-              class="card-note"
-              id="payNote"
-            >
-              У коментарі до платежу обов'язково
-              вкажіть <b>назву команди</b>.
-            </p>
-
-          </div>
-
-          <!-- ПОЯСНЕННЯ -->
-
-          <div class="payment-status">
-
-            <h3>Коли участь підтверджена?</h3>
-
-            <p>
-              Після перевірки оплати адміністратор
-              підтверджує заявку. Перевірити свою
-              участь можна в особистому кабінеті.
-            </p>
-
-          </div>
+          <p
+            class="card-note"
+            id="payNote"
+          >
+            У коментарі до платежу вкажіть
+            <b>назву команди</b>.
+          </p>
 
         </aside>
 
@@ -1569,36 +1229,11 @@
 
   </footer>
 
-  <!-- =====================================================
-       ТІЛЬКИ UI-ДОПОВНЕННЯ
-       Firebase-логіку не змінюємо
-       ===================================================== -->
-
+  <!-- UI ONLY -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
-
-      // Поточний рік у футері
-      const footerYear = document.getElementById("footerYear");
-
-      if (footerYear) {
-        footerYear.textContent = new Date().getFullYear();
-      }
-
-      // Посилання на кабінет використовує той самий
-      // обробник, що й наявний пункт меню.
-      const profileCabinetLink =
-        document.getElementById("profileCabinetLink");
-
-      const goCabinet =
-        document.getElementById("goCabinet");
-
-      if (profileCabinetLink && goCabinet) {
-        profileCabinetLink.addEventListener("click", function (event) {
-          event.preventDefault();
-          goCabinet.click();
-        });
-      }
-
+      const year = document.getElementById("footerYear");
+      if (year) year.textContent = new Date().getFullYear();
     });
   </script>
 

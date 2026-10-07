@@ -18,9 +18,14 @@
   <script defer src="assets/js/config.js"></script>
 
   <!-- Рейтинг команд сезону -->
+  <!--
+    ВАЖЛИВО:
+    version query змінено, щоб браузер/хостинг
+    гарантовано завантажив актуальний season_rating.js
+  -->
   <script
     defer
-    src="assets/js/season_rating.js?v=20260810-3"
+    src="assets/js/season_rating.js?v=20261007-1"
     onerror="
       document.documentElement.setAttribute('data-season-rating-ready','1');
       const box=document.getElementById('seasonRatingError');
@@ -657,12 +662,13 @@
 
     /* =====================================================
        ADMIN — ARCHIVE SEASON
-       За замовчуванням ПОВНІСТЮ приховано.
-       season_rating.js відкриє блок тільки адміну.
        ===================================================== */
 
     .season-admin-archive{
       display:none;
+
+      position:relative;
+      z-index:5;
 
       margin-top:28px;
       padding:18px;
@@ -741,11 +747,18 @@
       flex-wrap:wrap;
       gap:10px;
 
+      position:relative;
+      z-index:10;
+
       margin-top:16px;
     }
 
     .season-admin-btn{
       appearance:none;
+      -webkit-appearance:none;
+
+      position:relative;
+      z-index:11;
 
       min-height:46px;
 
@@ -757,6 +770,8 @@
       font-weight:900;
 
       cursor:pointer;
+      pointer-events:auto;
+      touch-action:manipulation;
 
       transition:
         transform .15s ease,
@@ -1293,8 +1308,6 @@
 
       <!-- =================================================
            ADMIN ONLY
-           ЗА ЗАМОВЧУВАННЯМ НЕ ВИДИМИЙ
-           season_rating.js покаже його тільки адміну.
            ================================================= -->
 
       <section
@@ -1320,8 +1333,8 @@
         <div class="season-admin-warning">
           ⚠️ Після успішного створення архіву активний
           «Вихід у фінал» і «Рейтинг команд сезону»
-          будуть очищені. Архівовані Етапи та Фінал
-          залишаться збереженими.
+          будуть очищені. Дані Етапів та Фіналу спочатку
+          повинні бути збережені в архіві сезону.
         </div>
 
         <div class="season-admin-actions">
@@ -1389,66 +1402,95 @@
 </footer>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
-    const burger =
-      document.getElementById("burger");
+      const burger =
+        document.getElementById("burger");
 
-    const nav =
-      document.getElementById("nav");
+      const nav =
+        document.getElementById("nav");
 
-    if (!burger || !nav) {
-      return;
-    }
+      if (burger && nav) {
 
-    burger.addEventListener(
-      "click",
-      () => {
+        burger.addEventListener(
+          "click",
+          () => {
 
-        nav.classList.toggle(
-          "active"
+            nav.classList.toggle("active");
+            nav.classList.toggle("nav--open");
+            burger.classList.toggle("active");
+
+            document.body.classList.toggle(
+              "menu-open"
+            );
+          }
         );
 
-        nav.classList.toggle(
-          "nav--open"
-        );
+        nav.addEventListener(
+          "click",
+          e => {
 
-        burger.classList.toggle(
-          "active"
-        );
+            if (
+              e.target.classList.contains(
+                "nav__link"
+              )
+            ) {
 
-        document.body.classList.toggle(
-          "menu-open"
+              nav.classList.remove(
+                "active",
+                "nav--open"
+              );
+
+              burger.classList.remove(
+                "active"
+              );
+
+              document.body.classList.remove(
+                "menu-open"
+              );
+            }
+          }
         );
       }
-    );
 
-    nav.addEventListener(
-      "click",
-      e => {
+      /*
+       * ДІАГНОСТИКА КНОПКИ АРХІВАЦІЇ
+       *
+       * Цей код НЕ виконує архівацію.
+       * Архівацію виконує season_rating.js.
+       *
+       * Тут лише перевіряємо, що сама кнопка
+       * фізично присутня в DOM і доступна для натискання.
+       */
+      const archiveButton =
+        document.getElementById(
+          "archiveSeasonButton"
+        );
 
-        if (
-          e.target.classList.contains(
-            "nav__link"
-          )
-        ) {
+      if (archiveButton) {
 
-          nav.classList.remove(
-            "active",
-            "nav--open"
-          );
+        archiveButton.style.pointerEvents =
+          "auto";
 
-          burger.classList.remove(
-            "active"
-          );
+        archiveButton.style.touchAction =
+          "manipulation";
 
-          document.body.classList.remove(
-            "menu-open"
-          );
-        }
+        console.log(
+          "[Season Archive HTML] button found:",
+          archiveButton
+        );
+
+      } else {
+
+        console.error(
+          "[Season Archive HTML] #archiveSeasonButton not found"
+        );
       }
-    );
-  });
+    },
+    { once:true }
+  );
 </script>
 
 </body>

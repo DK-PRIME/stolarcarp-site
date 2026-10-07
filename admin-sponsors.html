@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Спонсори та заявки • STOLAR CARP</title>
+
+  <link rel="stylesheet" href="assets/css/main.css">
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background:
+        radial-gradient(circle at top, #111827 0, #020617 60%);
+      color: #e5e7eb;
+    }
+
+    .sponsors-admin-wrap {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 25px 14px 70px;
+    }
+
+    .sa-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .sa-header h1 {
+      margin: 0 0 10px;
+      color: #f6c34c;
+      font-size: clamp(24px, 4vw, 34px);
+    }
+
+    .sa-header p {
+      color: #94a3b8;
+      margin: 0;
+    }
+
+    .sa-card {
+      margin-top: 20px;
+      padding: 20px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, .9);
+      border: 1px solid rgba(148, 163, 184, .3);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, .4);
+    }
+
+    .sa-card h2 {
+      margin: 0 0 15px;
+      font-size: 1.3rem;
+      color: #f8fafc;
+    }
+
+    .sa-muted {
+      color: #94a3b8;
+      font-size: .9rem;
+    }
+
+    .sa-hidden {
+      display: none !important;
+    }
+
+    .sa-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .sa-item {
+      padding: 16px;
+      border-radius: 15px;
+      background: rgba(2, 6, 23, .55);
+      border: 1px solid rgba(148, 163, 184, .25);
+    }
+
+    .sa-item-title {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #f6c34c;
+      margin-bottom: 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .sa-item-line {
+      margin: 5px 0;
+      font-size: .9rem;
+      color: #cbd5e1;
+      overflow-wrap: anywhere;
+    }
+
+    .sa-item-line strong {
+      color: #f8fafc;
+    }
+
+    .sa-status {
+      display: inline-block;
+      margin: 5px 0 12px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 900;
+      background: rgba(246, 195, 76, .1);
+      border: 1px solid rgba(246, 195, 76, .35);
+      color: #f6c34c;
+    }
+
+    .sa-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .sa-btn {
+      padding: 10px 14px;
+      border-radius: 11px;
+      border: 1px solid rgba(148, 163, 184, .35);
+      background: #1e293b;
+      color: #f8fafc;
+      font-weight: 800;
+      cursor: pointer;
+      font-size: .86rem;
+    }
+
+    .sa-btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .sa-btn--gold {
+      background: linear-gradient(135deg, #f6c34c, #d6a23a);
+      border-color: transparent;
+      color: #111827;
+    }
+
+    .sa-btn--green {
+      background: #166534;
+      border-color: #15803d;
+      color: #fff;
+    }
+
+    .sa-btn--red {
+      background: #7f1d1d;
+      border-color: #991b1b;
+      color: #fff;
+    }
+
+    .sa-form {
+      display: grid;
+      gap: 13px;
+    }
+
+    .sa-field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: .86rem;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+
+    .sa-field input,
+    .sa-field select,
+    .sa-field textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, .35);
+      background: #020617;
+      color: #f8fafc;
+      font: inherit;
+    }
+
+    .sa-field textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .sa-sponsor-logo {
+      display: block;
+      max-width: 180px;
+      max-height: 90px;
+      object-fit: contain;
+      margin: 10px 0;
+    }
+
+    .sa-message {
+      margin-top: 12px;
+      font-size: .9rem;
+      line-height: 1.5;
+      color: #f6c34c;
+    }
+
+    .sa-back {
+      display: inline-flex;
+      margin-bottom: 18px;
+      color: #f6c34c;
+      text-decoration: none;
+      font-weight: 800;
+    }
+
+    @media (max-width: 600px) {
+      .sa-card {
+        padding: 15px;
+      }
+
+      .sa-actions {
+        flex-direction: column;
+      }
+
+      .sa-actions .sa-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header class="header">
+  <div class="container header__row">
+
+    <a class="logo" href="index.html">
+      <span class="logo__mark">SC</span>
+      <span class="logo__text">STOLAR CARP</span>
+    </a>
+
+    <nav class="nav">
+      <a href="admin.html" class="nav__link">
+        Адмінка
+      </a>
+      <a href="sponsors.html" class="nav__link">
+        Сторінка спонсорів
+      </a>
+    </nav>
+
+  </div>
+</header>
+
+<main class="main">
+  <section class="sponsors-admin-wrap">
+
+    <a class="sa-back" href="admin.html">
+      ← Повернутися в адмінку
+    </a>
+
+    <div class="sa-header">
+      <h1>🤝 Спонсори STOLAR CARP</h1>
+      <p>
+        Заявки на співпрацю та керування партнерами
+      </p>
+    </div>
+
+    <div class="sa-card" id="saAccessCard">
+      <p class="sa-muted" id="saAccessStatus">
+        Перевірка доступу адміністратора…
+      </p>
+    </div>
+
+    <div id="saAdminContent" class="sa-hidden">
+
+      <!-- ЗАЯВКИ -->
+
+      <section class="sa-card">
+        <h2>📩 Заявки на спонсорство</h2>
+
+        <p class="sa-muted">
+          Тут відображаються заявки, надіслані
+          через сторінку спонсорів.
+        </p>
+
+        <div class="sa-list" id="saApplicationsList">
+          <p class="sa-muted">Завантаження заявок…</p>
+        </div>
+      </section>
+
+      <!-- ДОДАВАННЯ / РЕДАГУВАННЯ -->
+
+      <section class="sa-card">
+        <h2 id="saFormTitle">
+          ➕ Додати спонсора
+        </h2>
+
+        <form class="sa-form" id="saSponsorForm">
+
+          <input type="hidden" id="saEditId">
+
+          <div class="sa-field">
+            <label for="saName">
+              Назва спонсора *
+            </label>
+            <input
+              id="saName"
+              type="text"
+              maxlength="120"
+              required
+            >
+          </div>
+
+          <div class="sa-field">
+            <label for="saWebsite">
+              Посилання на сайт
+            </label>
+            <input
+              id="saWebsite"
+              type="url"
+              maxlength="300"
+              placeholder="https://..."
+            >
+          </div>
+
+          <div class="sa-field">
+            <label for="saLogo">
+              Посилання на логотип
+            </label>
+            <input
+              id="saLogo"
+              type="text"
+              maxlength="500"
+              placeholder="assets/sponsors/logo.png"
+            >
+          </div>
+
+          <div class="sa-field">
+            <label for="saLevel">
+              Рівень партнерства
+            </label>
+
+            <select id="saLevel">
+              <option value="partner">Партнер</option>
+              <option value="official">Офіційний спонсор</option>
+              <option value="general">Генеральний партнер</option>
+            </select>
+          </div>
+
+          <div class="sa-field">
+            <label for="saSortOrder">
+              Порядок відображення
+            </label>
+            <input
+              id="saSortOrder"
+              type="number"
+              value="100"
+              min="0"
+            >
+          </div>
+
+          <div class="sa-field">
+            <label for="saActive">
+              Відображення на сайті
+            </label>
+
+            <select id="saActive">
+              <option value="true">Активний</option>
+              <option value="false">Прихований</option>
+            </select>
+          </div>
+
+          <div class="sa-actions">
+            <button
+              type="submit"
+              class="sa-btn sa-btn--gold"
+              id="saSaveSponsor"
+            >
+              💾 Зберегти спонсора
+            </button>
+
+            <button
+              type="button"
+              class="sa-btn"
+              id="saCancelEdit"
+            >
+              Скасувати редагування
+            </button>
+          </div>
+
+          <div class="sa-message" id="saFormMessage"></div>
+
+        </form>
+      </section>
+
+      <!-- СПОНСОРИ -->
+
+      <section class="sa-card">
+        <h2>🏆 Опубліковані спонсори</h2>
+
+        <div class="sa-list" id="saSponsorsList">
+          <p class="sa-muted">Завантаження спонсорів…</p>
+        </div>
+      </section>
+
+    </div>
+
+  </section>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="assets/js/firebase-init.js?v=20260813"></script>
+<script src="assets/js/admin-sponsors.js?v=20261008"></script>
+
+</body>
+</html>

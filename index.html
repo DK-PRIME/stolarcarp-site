@@ -9,79 +9,116 @@
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
 
-  <meta name="theme-color" content="#1a1a1a">
+  <meta name="theme-color" content="#020617">
 
   <link rel="stylesheet" href="assets/css/main.css">
 
   <script defer src="assets/js/config.js"></script>
 
   <style>
+    /* =========================================================
+       STOLAR CARP • HOME
+       ========================================================= */
+
     body.home-page{
       background:
-        radial-gradient(circle at top,#111827 0,#020617 55%);
+        radial-gradient(circle at 50% -10%, rgba(30,41,59,.95) 0, rgba(15,23,42,.72) 28%, #020617 62%);
     }
 
+    /* =========================================================
+       HERO
+       ========================================================= */
+
     .hero-main{
-      max-width:980px;
+      max-width:1040px;
       margin:0 auto;
-      padding:70px 0 60px;
+      padding:48px 0 46px;
       text-align:center;
+    }
+
+    .hero-kicker-wrap{
+      position:relative;
+      display:inline-block;
+      margin-bottom:10px;
     }
 
     .hero-kicker{
       display:inline-flex;
       align-items:center;
-      gap:8px;
-      padding:4px 12px;
+      justify-content:center;
+      min-height:34px;
+      padding:6px 16px 6px 72px;
       border-radius:999px;
-      font-size:.75rem;
-      letter-spacing:.18em;
+      font-size:.72rem;
+      letter-spacing:.16em;
       text-transform:uppercase;
-      background:rgba(0,0,0,.6);
-      border:1px solid rgba(148,163,184,.5);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(15,23,42,.94),
+          rgba(2,6,23,.92)
+        );
+      border:1px solid rgba(148,163,184,.34);
       color:#e5e7eb;
-      margin-bottom:14px;
-      margin-left:89px;
-    }
-
-    .hero-kicker-icon{
-      width:20px;
-      height:20px;
-      border-radius:50%;
-      flex-shrink:0;
-      background:url("assets/fish-gold.png") center/cover no-repeat;
+      box-shadow:
+        0 10px 30px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,.04);
     }
 
     .hero-kicker-text{
-      font-size:.75rem;
-      letter-spacing:.18em;
+      position:relative;
+      z-index:2;
+      font-size:.72rem;
+      font-weight:700;
+      letter-spacing:.16em;
       text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .hero-fish-overlay{
+      position:absolute;
+      left:-18px;
+      top:50%;
+      transform:translateY(-50%);
+      width:96px;
+      height:96px;
+      z-index:10;
+      object-fit:contain;
+      pointer-events:none;
+      filter:
+        drop-shadow(0 5px 12px rgba(0,0,0,.55))
+        drop-shadow(0 0 8px rgba(250,204,21,.12));
     }
 
     .hero-title{
       position:relative;
       z-index:1;
-      font-size:clamp(40px,7vw,64px);
+      font-size:clamp(42px,7vw,68px);
       font-weight:900;
-      letter-spacing:.06em;
-      margin:0 0 36px;
+      line-height:1;
+      letter-spacing:.055em;
+      margin:8px 0 27px;
       text-transform:uppercase;
+
       background:linear-gradient(
         90deg,
-        #ffd700 0%,
-        #ff8c00 40%,
-        #d90429 100%
+        #ffe16b 0%,
+        #ffd000 24%,
+        #ff9d21 58%,
+        #e11d48 100%
       );
+
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
+
       text-shadow:
-        0 1px 0 rgba(255,255,255,.3),
-        0 2px 0 rgba(140,90,0,.9),
-        0 5px 10px rgba(0,0,0,.85);
+        0 1px 0 rgba(255,255,255,.18),
+        0 3px 8px rgba(0,0,0,.72);
+
       opacity:0;
       transform:translateY(14px);
-      animation:heroTitleFade .9s ease-out forwards;
+      animation:heroTitleFade .85s ease-out forwards;
     }
 
     .hero-title::before{
@@ -91,17 +128,17 @@
       left:50%;
       top:50%;
       transform:translate(-50%,-50%);
-      width:340px;
-      height:110px;
+      width:390px;
+      height:120px;
       background:
         radial-gradient(
-          circle at 50% 40%,
-          rgba(255,215,0,.28) 0%,
-          rgba(255,140,0,.18) 35%,
-          rgba(217,4,41,.14) 60%,
-          transparent 80%
+          circle at 50% 45%,
+          rgba(255,215,0,.20) 0%,
+          rgba(255,140,0,.11) 38%,
+          rgba(217,4,41,.08) 60%,
+          transparent 78%
         );
-      filter:blur(16px);
+      filter:blur(18px);
       opacity:0;
       pointer-events:none;
       animation:heroGlow 1.1s ease-out forwards .1s;
@@ -112,27 +149,34 @@
       position:absolute;
       left:50%;
       transform:translateX(-50%);
-      bottom:-14px;
-      width:240px;
-      height:3px;
+      bottom:-13px;
+      width:220px;
+      height:2px;
       border-radius:999px;
       background:linear-gradient(
         90deg,
-        #ffd700 0%,
-        #ff8c00 50%,
-        #d90429 100%
+        transparent 0%,
+        #ffd700 20%,
+        #ff8c00 52%,
+        #d90429 82%,
+        transparent 100%
       );
-      box-shadow:0 0 6px rgba(255,180,0,.6);
+      box-shadow:0 0 8px rgba(255,180,0,.34);
       opacity:0;
       animation:heroLineFade 1.1s ease-out forwards;
     }
 
     .hero-subtitle{
-      margin:14px auto 0;
-      max-width:640px;
-      color:#d1d5db;
-      font-size:1.02rem;
+      margin:0 auto;
+      max-width:700px;
+      color:#cbd5e1;
+      font-size:1rem;
+      line-height:1.65;
     }
+
+    /* =========================================================
+       HERO META
+       ========================================================= */
 
     .hero-tags{
       margin-top:18px;
@@ -143,88 +187,367 @@
     }
 
     .hero-tag{
-      padding:4px 12px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,.55);
-      font-size:.8rem;
-      color:#e5e7eb;
-      background:rgba(15,23,42,.9);
-    }
-
-    .hero-cta{
-      margin-top:30px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
+      display:inline-flex;
+      align-items:center;
       justify-content:center;
-    }
-
-    .btn-lg{
-      padding:12px 22px;
-      font-size:.98rem;
+      min-height:30px;
+      padding:5px 12px;
       border-radius:999px;
+      border:1px solid rgba(148,163,184,.28);
+      font-size:.77rem;
+      font-weight:600;
+      color:#cbd5e1;
+      background:rgba(15,23,42,.66);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
     }
 
-    .btn--accent{
-      background:linear-gradient(135deg,#f6c34c,#f28b2b);
-      color:#111;
-      border:none;
+    /* =========================================================
+       MAIN QUICK NAVIGATION
+       ========================================================= */
+
+    .home-actions{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:12px;
+      margin-top:28px;
     }
 
-    .btn--accent:hover{
-      filter:brightness(1.05);
-    }
-
-    .hero-season-card{
-      margin-top:40px;
-      padding:22px 18px;
-      border-radius:22px;
-      background:
-        radial-gradient(circle at top,#1e293b 0,#020617 65%);
-      border:1px solid rgba(148,163,184,.35);
-      box-shadow:0 18px 40px rgba(0,0,0,.8);
-      text-align:center;
-    }
-
-    .hero-season-card h2{
-      margin:0 0 10px;
-    }
-
-    .hero-season-card p{
-      margin:0 0 16px;
-      color:#e5e7eb;
-      font-size:.95rem;
-    }
-
-    .hero-kicker-wrap{
+    .home-action{
       position:relative;
-      display:inline-block;
+      min-height:112px;
+      padding:17px 14px 15px;
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      justify-content:center;
+      overflow:hidden;
+
+      border-radius:18px;
+      border:1px solid rgba(148,163,184,.25);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(30,41,59,.80),
+          rgba(15,23,42,.76)
+        );
+
+      box-shadow:
+        0 12px 28px rgba(0,0,0,.24),
+        inset 0 1px 0 rgba(255,255,255,.035);
+
+      color:#f8fafc;
+      text-decoration:none;
+      text-align:left;
+
+      transition:
+        transform .18s ease,
+        border-color .18s ease,
+        box-shadow .18s ease,
+        background .18s ease;
     }
 
-    .hero-fish-overlay{
+    .home-action::before{
+      content:"";
       position:absolute;
-      left:-15px;
-      top:0;
-      transform:translateY(-50%);
-      width:105px;
-      height:105px;
-      z-index:10;
+      width:90px;
+      height:90px;
+      right:-35px;
+      top:-35px;
+      border-radius:50%;
+      background:rgba(255,255,255,.035);
       pointer-events:none;
     }
 
+    .home-action:hover{
+      transform:translateY(-3px);
+      border-color:rgba(250,204,21,.48);
+      box-shadow:
+        0 18px 36px rgba(0,0,0,.34),
+        inset 0 1px 0 rgba(255,255,255,.05);
+    }
+
+    .home-action__top{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:9px;
+    }
+
+    .home-action__icon{
+      width:34px;
+      height:34px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      flex:0 0 auto;
+
+      border-radius:11px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.07);
+
+      font-size:1.05rem;
+      line-height:1;
+    }
+
+    .home-action__arrow{
+      color:#64748b;
+      font-size:1rem;
+      transition:
+        color .18s ease,
+        transform .18s ease;
+    }
+
+    .home-action:hover .home-action__arrow{
+      color:#facc15;
+      transform:translateX(3px);
+    }
+
+    .home-action__title{
+      display:block;
+      font-size:.92rem;
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.045em;
+      text-transform:uppercase;
+      color:#f8fafc;
+    }
+
+    .home-action__text{
+      display:block;
+      margin-top:5px;
+      color:#94a3b8;
+      font-size:.77rem;
+      line-height:1.3;
+    }
+
+    /* LIVE */
+
+    .home-action--live{
+      border-color:rgba(248,113,113,.34);
+      background:
+        radial-gradient(
+          circle at 100% 0,
+          rgba(220,38,38,.18),
+          transparent 46%
+        ),
+        linear-gradient(
+          145deg,
+          rgba(30,41,59,.82),
+          rgba(15,23,42,.78)
+        );
+    }
+
+    .home-action--live .home-action__icon{
+      background:rgba(220,38,38,.16);
+      border-color:rgba(248,113,113,.24);
+    }
+
+    .live-dot{
+      width:9px;
+      height:9px;
+      display:block;
+      border-radius:50%;
+      background:#ef4444;
+      box-shadow:0 0 0 rgba(239,68,68,.55);
+      animation:livePulse 1.8s infinite;
+    }
+
+    /* COMPETITIONS */
+
+    .home-action--events{
+      border-color:rgba(250,204,21,.30);
+      background:
+        radial-gradient(
+          circle at 100% 0,
+          rgba(250,204,21,.13),
+          transparent 48%
+        ),
+        linear-gradient(
+          145deg,
+          rgba(30,41,59,.82),
+          rgba(15,23,42,.78)
+        );
+    }
+
+    .home-action--events .home-action__icon{
+      color:#facc15;
+      background:rgba(250,204,21,.10);
+      border-color:rgba(250,204,21,.18);
+    }
+
+    /* RULES */
+
+    .home-action--rules .home-action__icon{
+      color:#e2e8f0;
+    }
+
+    /* ARCHIVE */
+
+    .home-action--archive .home-action__icon{
+      color:#cbd5e1;
+    }
+
+    /* =========================================================
+       SEASON CARD
+       ========================================================= */
+
+    .hero-season-card{
+      position:relative;
+      overflow:hidden;
+      margin-top:18px;
+      padding:20px 22px;
+      border-radius:20px;
+
+      background:
+        radial-gradient(
+          circle at 0 0,
+          rgba(250,204,21,.10),
+          transparent 34%
+        ),
+        radial-gradient(
+          circle at 100% 100%,
+          rgba(225,29,72,.08),
+          transparent 35%
+        ),
+        linear-gradient(
+          135deg,
+          rgba(15,23,42,.96),
+          rgba(2,6,23,.96)
+        );
+
+      border:1px solid rgba(148,163,184,.25);
+
+      box-shadow:
+        0 18px 42px rgba(0,0,0,.32),
+        inset 0 1px 0 rgba(255,255,255,.035);
+
+      text-align:left;
+    }
+
+    .hero-season-card::after{
+      content:"";
+      position:absolute;
+      left:22px;
+      right:22px;
+      top:0;
+      height:1px;
+      background:linear-gradient(
+        90deg,
+        transparent,
+        rgba(250,204,21,.75),
+        rgba(249,115,22,.55),
+        transparent
+      );
+    }
+
+    .season-card__row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:22px;
+    }
+
+    .season-card__content{
+      min-width:0;
+    }
+
+    .season-card__eyebrow{
+      margin:0 0 5px;
+      color:#facc15;
+      font-size:.68rem;
+      font-weight:800;
+      letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+
+    .hero-season-card h2{
+      margin:0;
+      color:#f8fafc;
+      font-size:1.18rem;
+      line-height:1.25;
+      font-weight:800;
+    }
+
+    .hero-season-card p{
+      margin:7px 0 0;
+      color:#94a3b8;
+      font-size:.84rem;
+      line-height:1.45;
+    }
+
+    .season-card__links{
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      flex-wrap:wrap;
+      gap:8px;
+      flex:0 0 auto;
+    }
+
+    .season-link{
+      min-height:40px;
+      padding:9px 15px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      text-decoration:none;
+      font-size:.78rem;
+      font-weight:700;
+      white-space:nowrap;
+
+      border:1px solid rgba(148,163,184,.28);
+      background:rgba(15,23,42,.72);
+      color:#e2e8f0;
+
+      transition:
+        border-color .18s ease,
+        color .18s ease,
+        background .18s ease,
+        transform .18s ease;
+    }
+
+    .season-link:hover{
+      transform:translateY(-1px);
+      border-color:rgba(250,204,21,.55);
+      color:#facc15;
+    }
+
+    .season-link--primary{
+      border-color:rgba(250,204,21,.34);
+      background:linear-gradient(
+        135deg,
+        rgba(250,204,21,.15),
+        rgba(249,115,22,.10)
+      );
+      color:#fde68a;
+    }
+
+    /* =========================================================
+       CONTENT SECTIONS
+       ========================================================= */
+
     .info-block{
-      max-width:720px;
+      max-width:760px;
       margin:0 auto;
-      padding:40px 0;
+      padding:38px 0;
       color:#e5e7eb;
       text-align:left;
+    }
+
+    .info-block + .info-block{
+      border-top:1px solid rgba(148,163,184,.10);
     }
 
     .info-text{
       max-width:none;
       margin:12px 0 0;
-      color:#d1d5db;
-      font-size:.98rem;
+      color:#cbd5e1;
+      font-size:.96rem;
+      line-height:1.7;
     }
 
     .info-list,
@@ -235,37 +558,45 @@
       max-width:none;
       text-align:left;
       color:#e5e7eb;
-      font-size:.95rem;
+      font-size:.94rem;
     }
 
     .info-list li,
     .advantages-list li{
-      padding:6px 0;
-      border-bottom:1px solid rgba(148,163,184,.18);
+      position:relative;
+      padding:10px 4px 10px 0;
+      border-bottom:1px solid rgba(148,163,184,.12);
+      line-height:1.5;
+    }
+
+    .info-list li:last-child,
+    .advantages-list li:last-child{
+      border-bottom:none;
     }
 
     .section-title{
       position:relative;
       display:inline-block;
       margin:0 0 18px;
+      padding-bottom:7px;
       font-size:1.35rem;
-      font-weight:700;
-      color:#e5e7eb;
-      padding-bottom:6px;
+      line-height:1.25;
+      font-weight:750;
+      color:#f1f5f9;
     }
 
     .section-title__brand{
       background:linear-gradient(
         90deg,
         #ffd700 0%,
-        #ff8c00 40%,
+        #ff8c00 45%,
         #d90429 100%
       );
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
-      font-weight:800;
-      letter-spacing:.04em;
+      font-weight:850;
+      letter-spacing:.035em;
     }
 
     .section-title::after{
@@ -279,27 +610,66 @@
       background:linear-gradient(
         90deg,
         #ffd700 0%,
-        #ff8c00 50%,
+        #ff8c00 55%,
         #d90429 100%
       );
-      box-shadow:0 0 6px rgba(255,180,0,.35);
+      box-shadow:0 0 6px rgba(255,180,0,.26);
     }
+
+    /* =========================================================
+       MISSION
+       ========================================================= */
 
     .mission-cards{
       margin-top:22px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
     }
 
     .mission-card{
       width:100%;
       margin:0;
-      padding:10px 16px;
+      padding:13px 15px;
+      display:flex;
+      align-items:center;
+      min-height:54px;
+
       border-radius:14px;
-      border:1px solid rgba(148,163,184,.35);
-      background:rgba(15,23,42,.9);
-      font-size:.9rem;
+      border:1px solid rgba(148,163,184,.22);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(15,23,42,.90),
+          rgba(2,6,23,.82)
+        );
+
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+
+      color:#dbe3ef;
+      font-size:.86rem;
+      line-height:1.4;
+    }
+
+    /* =========================================================
+       CTA
+       ========================================================= */
+
+    .btn-lg{
+      padding:12px 22px;
+      font-size:.95rem;
+      border-radius:999px;
+    }
+
+    .btn--accent{
+      background:linear-gradient(135deg,#f6c34c,#f28b2b);
+      color:#111;
+      border:none;
+    }
+
+    .btn--accent:hover{
+      filter:brightness(1.05);
     }
 
     .call-to-action{
@@ -307,15 +677,47 @@
     }
 
     .call-to-action .btn{
-      margin-top:16px;
+      margin-top:18px;
     }
+
+    /* =========================================================
+       TIKTOK
+       ========================================================= */
 
     .section.highlight{
+      position:relative;
+      max-width:760px;
+      margin:20px auto 50px;
+      padding:32px 24px;
       text-align:center;
-      padding:60px 0;
+
+      border-radius:20px;
+      border:1px solid rgba(148,163,184,.18);
+
+      background:
+        linear-gradient(
+          145deg,
+          rgba(15,23,42,.76),
+          rgba(2,6,23,.76)
+        );
+
+      box-shadow:
+        0 16px 38px rgba(0,0,0,.24),
+        inset 0 1px 0 rgba(255,255,255,.025);
     }
 
-    /* Кнопка входу / кабінету */
+    .section.highlight h2{
+      margin-top:0;
+    }
+
+    .section.highlight p{
+      color:#94a3b8;
+      line-height:1.55;
+    }
+
+    /* =========================================================
+       HEADER LOGIN
+       ========================================================= */
 
     .header-login{
       margin-left:auto;
@@ -326,40 +728,56 @@
       align-items:center;
       justify-content:center;
       flex-shrink:0;
+
       border-radius:999px;
-      border:1px solid rgba(148,163,184,.6);
-      background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.45);
+
+      background:rgba(15,23,42,.88);
       color:#e5e7eb;
+
       font-size:.85rem;
       line-height:1;
       text-decoration:none;
       white-space:nowrap;
+
+      transition:
+        border-color .18s ease,
+        color .18s ease,
+        background .18s ease;
     }
 
     .header-login:hover{
       border-color:#facc15;
       color:#facc15;
+      background:rgba(30,41,59,.92);
     }
 
-    /* Окрема кнопка виходу */
+    /* =========================================================
+       HEADER LOGOUT
+       ========================================================= */
 
     .header-logout{
       width:46px;
       height:42px;
       margin:0 10px 0 0;
       padding:0;
+
       display:flex;
       align-items:center;
       justify-content:center;
       flex:0 0 auto;
+
       border-radius:999px;
-      border:1px solid rgba(248,113,113,.55);
-      background:rgba(127,29,29,.22);
+      border:1px solid rgba(248,113,113,.42);
+      background:rgba(127,29,29,.18);
       color:#fff;
+
       font-family:inherit;
       font-size:1.15rem;
       line-height:1;
+
       cursor:pointer;
+
       transition:
         border-color .18s ease,
         background .18s ease,
@@ -369,7 +787,7 @@
 
     .header-logout:hover{
       border-color:#f87171;
-      background:rgba(220,38,38,.3);
+      background:rgba(220,38,38,.28);
       transform:translateY(-1px);
     }
 
@@ -387,13 +805,200 @@
       display:none !important;
     }
 
-    @media (max-width:640px){
+    /* =========================================================
+       TABLET
+       ========================================================= */
+
+    @media (max-width:820px){
+
       .hero-main{
-        padding:60px 0 40px;
+        padding-top:42px;
+      }
+
+      .home-actions{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+
+      .season-card__row{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+
+      .season-card__links{
+        width:100%;
+        justify-content:flex-start;
+      }
+    }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media (max-width:640px){
+
+      .hero-main{
+        padding:32px 0 34px;
+      }
+
+      .hero-kicker-wrap{
+        max-width:100%;
+        margin-bottom:7px;
+      }
+
+      .hero-kicker{
+        min-height:32px;
+        max-width:100%;
+        padding:6px 11px 6px 54px;
+      }
+
+      .hero-kicker-text{
+        font-size:.58rem;
+        letter-spacing:.10em;
+        white-space:normal;
+        text-align:left;
+      }
+
+      .hero-fish-overlay{
+        left:-12px;
+        width:72px;
+        height:72px;
+      }
+
+      .hero-title{
+        font-size:clamp(38px,12vw,52px);
+        margin-top:8px;
+        margin-bottom:25px;
+        letter-spacing:.035em;
+      }
+
+      .hero-title::before{
+        width:290px;
+        height:100px;
+      }
+
+      .hero-title::after{
+        width:180px;
+      }
+
+      .hero-subtitle{
+        max-width:94%;
+        font-size:.88rem;
+        line-height:1.55;
+      }
+
+      .hero-tags{
+        margin-top:15px;
+        gap:6px;
+      }
+
+      .hero-tag{
+        min-height:27px;
+        padding:4px 9px;
+        font-size:.66rem;
+      }
+
+      .home-actions{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:9px;
+        margin-top:21px;
+      }
+
+      .home-action{
+        min-height:104px;
+        padding:14px 12px;
+        border-radius:16px;
+      }
+
+      .home-action__top{
+        margin-bottom:7px;
+      }
+
+      .home-action__icon{
+        width:31px;
+        height:31px;
+        border-radius:10px;
+        font-size:.96rem;
+      }
+
+      .home-action__title{
+        font-size:.78rem;
+        letter-spacing:.025em;
+      }
+
+      .home-action__text{
+        margin-top:4px;
+        font-size:.67rem;
+      }
+
+      .hero-season-card{
+        margin-top:11px;
+        padding:17px 15px;
+        border-radius:17px;
+      }
+
+      .season-card__row{
+        gap:15px;
+      }
+
+      .season-card__eyebrow{
+        font-size:.61rem;
+      }
+
+      .hero-season-card h2{
+        font-size:1rem;
+      }
+
+      .hero-season-card p{
+        margin-top:6px;
+        font-size:.75rem;
+      }
+
+      .season-card__links{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:7px;
+      }
+
+      .season-link{
+        min-height:38px;
+        padding:8px 10px;
+        font-size:.69rem;
       }
 
       .info-block{
-        padding:28px 0;
+        padding:29px 0;
+      }
+
+      .info-text{
+        font-size:.91rem;
+        line-height:1.65;
+      }
+
+      .info-list,
+      .advantages-list{
+        font-size:.89rem;
+      }
+
+      .section-title{
+        font-size:1.2rem;
+      }
+
+      .mission-cards{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+
+      .mission-card{
+        min-height:50px;
+        padding:11px 13px;
+        font-size:.83rem;
+      }
+
+      .section.highlight{
+        margin-top:12px;
+        margin-bottom:34px;
+        padding:26px 18px;
+        border-radius:18px;
       }
 
       .header-login{
@@ -408,10 +1013,42 @@
       }
     }
 
+    /* =========================================================
+       SMALL MOBILE
+       ========================================================= */
+
+    @media (max-width:390px){
+
+      .hero-kicker-text{
+        font-size:.54rem;
+      }
+
+      .home-action{
+        min-height:100px;
+        padding:13px 10px;
+      }
+
+      .home-action__title{
+        font-size:.73rem;
+      }
+
+      .home-action__text{
+        font-size:.63rem;
+      }
+
+      .season-card__links{
+        grid-template-columns:1fr;
+      }
+    }
+
+    /* =========================================================
+       ANIMATIONS
+       ========================================================= */
+
     @keyframes heroTitleFade{
       0%{
         opacity:0;
-        transform:translateY(22px);
+        transform:translateY(18px);
       }
 
       100%{
@@ -428,19 +1065,52 @@
 
       100%{
         opacity:1;
-        width:240px;
       }
     }
 
     @keyframes heroGlow{
       0%{
         opacity:0;
-        transform:translate(-50%,-55%) scale(.9);
+        transform:translate(-50%,-55%) scale(.92);
       }
 
       100%{
         opacity:1;
         transform:translate(-50%,-50%) scale(1);
+      }
+    }
+
+    @keyframes livePulse{
+      0%{
+        box-shadow:0 0 0 0 rgba(239,68,68,.52);
+      }
+
+      70%{
+        box-shadow:0 0 0 7px rgba(239,68,68,0);
+      }
+
+      100%{
+        box-shadow:0 0 0 0 rgba(239,68,68,0);
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce){
+
+      .hero-title,
+      .hero-title::before,
+      .hero-title::after,
+      .live-dot{
+        animation:none !important;
+      }
+
+      .hero-title{
+        opacity:1;
+        transform:none;
+      }
+
+      .hero-title::before,
+      .hero-title::after{
+        opacity:1;
       }
     }
   </style>
@@ -506,9 +1176,14 @@
 
 <main class="main">
 
+  <!-- =======================================================
+       HERO
+       ======================================================= -->
+
   <section class="section container hero-main">
 
     <div class="hero-kicker-wrap">
+
       <img
         src="assets/fish-gold.png"
         class="hero-fish-overlay"
@@ -520,9 +1195,12 @@
           Твій рівень. Твій трофей. Твоя перемога.
         </span>
       </div>
+
     </div>
 
-    <h1 class="hero-title">STOLAR CARP</h1>
+    <h1 class="hero-title">
+      STOLAR CARP
+    </h1>
 
     <p class="hero-subtitle">
       STOLAR CARP — це поєднання спортивної боротьби,
@@ -531,6 +1209,7 @@
     </p>
 
     <div class="hero-tags">
+
       <span class="hero-tag">
         Сезон 2026 · 3 етапи та Фінал
       </span>
@@ -542,50 +1221,177 @@
       <span class="hero-tag">
         Live-таблиці та рейтинг онлайн
       </span>
+
     </div>
 
-    <div class="hero-cta">
-      <a
-        class="btn btn--primary btn-lg"
-        href="/rules.html"
-      >
-        Переглянути регламент
-      </a>
+    <!-- =====================================================
+         ГОЛОВНІ НАПРЯМКИ
+         ===================================================== -->
+
+    <div class="home-actions">
 
       <a
-        class="btn btn--accent btn-lg"
-        href="/register.html"
-      >
-        Змагання
-      </a>
-
-      <a
-        class="btn btn--danger btn-lg"
+        class="home-action home-action--live"
         href="/live.html"
       >
-        Live протоколи
+
+        <span class="home-action__top">
+
+          <span class="home-action__icon">
+            <span class="live-dot"></span>
+          </span>
+
+          <span class="home-action__arrow">
+            →
+          </span>
+
+        </span>
+
+        <span class="home-action__title">
+          Live
+        </span>
+
+        <span class="home-action__text">
+          Результати та протоколи онлайн
+        </span>
+
       </a>
-    </div>
-
-    <div class="hero-season-card">
-      <h2 class="title-gradient">
-        🏆 Сезон STOLAR CARP
-      </h2>
-
-      <p>
-        Слідкуй за всіма змаганнями в одному місці.
-        Архів, Live результати та підсумковий рейтинг команд.
-      </p>
 
       <a
-        href="/events/index.html"
-        class="btn btn--primary btn-lg"
+        class="home-action home-action--events"
+        href="/register.html"
       >
-        Переглянути сезон
+
+        <span class="home-action__top">
+
+          <span class="home-action__icon">
+            🏆
+          </span>
+
+          <span class="home-action__arrow">
+            →
+          </span>
+
+        </span>
+
+        <span class="home-action__title">
+          Змагання
+        </span>
+
+        <span class="home-action__text">
+          Турніри сезону та участь
+        </span>
+
       </a>
+
+      <a
+        class="home-action home-action--rules"
+        href="/rules.html"
+      >
+
+        <span class="home-action__top">
+
+          <span class="home-action__icon">
+            📋
+          </span>
+
+          <span class="home-action__arrow">
+            →
+          </span>
+
+        </span>
+
+        <span class="home-action__title">
+          Регламент
+        </span>
+
+        <span class="home-action__text">
+          Правила проведення турнірів
+        </span>
+
+      </a>
+
+      <a
+        class="home-action home-action--archive"
+        href="/events/index.html"
+      >
+
+        <span class="home-action__top">
+
+          <span class="home-action__icon">
+            🗂️
+          </span>
+
+          <span class="home-action__arrow">
+            →
+          </span>
+
+        </span>
+
+        <span class="home-action__title">
+          Архів
+        </span>
+
+        <span class="home-action__text">
+          Завершені турніри та результати
+        </span>
+
+      </a>
+
+    </div>
+
+    <!-- =====================================================
+         СЕЗОН
+         ===================================================== -->
+
+    <div class="hero-season-card">
+
+      <div class="season-card__row">
+
+        <div class="season-card__content">
+
+          <div class="season-card__eyebrow">
+            Офіційний сезон
+          </div>
+
+          <h2>
+            🏆 STOLAR CARP · Сезон 2026
+          </h2>
+
+          <p>
+            3 етапи · Фінал · Зони A / B / C ·
+            результати та рейтинг команд в одному місці.
+          </p>
+
+        </div>
+
+        <div class="season-card__links">
+
+          <a
+            href="/rating.html"
+            class="season-link season-link--primary"
+          >
+            Рейтинг сезону →
+          </a>
+
+          <a
+            href="/events/index.html"
+            class="season-link"
+          >
+            Переглянути сезон
+          </a>
+
+        </div>
+
+      </div>
+
     </div>
 
   </section>
+
+  <!-- =======================================================
+       ХТО МОЖЕ ВЗЯТИ УЧАСТЬ
+       ======================================================= -->
 
   <section class="section container info-block">
 
@@ -611,6 +1417,10 @@
 
   </section>
 
+  <!-- =======================================================
+       МІСІЯ
+       ======================================================= -->
+
   <section class="section container info-block">
 
     <h2 class="section-title">
@@ -627,6 +1437,7 @@
     </p>
 
     <div class="mission-cards">
+
       <div class="mission-card">
         ✅ Інноваційна система відкритого зважування
       </div>
@@ -642,9 +1453,14 @@
       <div class="mission-card">
         🎣 Популяризація спортивного карпфішингу
       </div>
+
     </div>
 
   </section>
+
+  <!-- =======================================================
+       ВОДОЙМИ
+       ======================================================= -->
 
   <section class="section container info-block">
 
@@ -652,15 +1468,25 @@
       Локації спортивних водойм
     </h2>
 
+    <p class="info-text">
+      Турніри STOLAR CARP проходять на спортивних водоймах,
+      підібраних для чесної боротьби, комфортної участі
+      та повноцінного спортивного формату.
+    </p>
+
     <a
       href="/lakes.html"
       class="btn btn--primary"
       style="margin-top:20px;"
     >
-      Переглянути водойми детальніше
+      Переглянути водойми
     </a>
 
   </section>
+
+  <!-- =======================================================
+       ПЕРЕВАГИ
+       ======================================================= -->
 
   <section class="section container info-block">
 
@@ -672,6 +1498,7 @@
     </h2>
 
     <ul class="advantages-list">
+
       <li>
         Незалежне суддівство та інноваційний цифровий контроль.
       </li>
@@ -691,9 +1518,14 @@
       <li>
         Дружня атмосфера та сильна спільнота учасників.
       </li>
+
     </ul>
 
   </section>
+
+  <!-- =======================================================
+       CTA
+       ======================================================= -->
 
   <section class="section container info-block call-to-action">
 
@@ -720,6 +1552,10 @@
 
 </main>
 
+<!-- =========================================================
+     TIKTOK
+     ========================================================= -->
+
 <section class="section container highlight">
 
   <h2 class="title-gradient">
@@ -742,10 +1578,16 @@
 
 </section>
 
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
 <footer class="footer">
+
   <div class="container footer__row">
 
     <div>
+
       <span
         id="scAdminEntry"
         role="button"
@@ -753,9 +1595,11 @@
       >
         © 2025 STOLAR CARP · Львів
       </span>
+
     </div>
 
     <div class="footer__links">
+
       <a href="https://invite.viber.com/?g=...">
         Viber
       </a>
@@ -767,10 +1611,16 @@
       >
         YouTube
       </a>
+
     </div>
 
   </div>
+
 </footer>
+
+<!-- =========================================================
+     ADMIN ENTRY
+     ========================================================= -->
 
 <script>
   (function(){
@@ -794,6 +1644,10 @@
     });
   })();
 </script>
+
+<!-- =========================================================
+     AUTH HEADER
+     ========================================================= -->
 
 <script>
   (function(){
@@ -841,6 +1695,7 @@
     }
 
     function getFirebaseAuth(){
+
       if (window.scAuth) {
         return window.scAuth;
       }
@@ -852,7 +1707,10 @@
         try {
           return window.firebase.auth();
         } catch (error) {
-          console.warn("Firebase Auth ще не готовий:", error);
+          console.warn(
+            "Firebase Auth ще не готовий:",
+            error
+          );
         }
       }
 
@@ -860,14 +1718,17 @@
     }
 
     function updateHeaderFromCache(){
+
       if (hasTeamCache()) {
         showLoggedIn();
       } else {
         showLoggedOut();
       }
+
     }
 
     function connectFirebaseAuth(){
+
       const auth = getFirebaseAuth();
 
       if (
@@ -878,11 +1739,13 @@
       }
 
       auth.onAuthStateChanged(function(user){
+
         if (user || hasTeamCache()) {
           showLoggedIn();
         } else {
           showLoggedOut();
         }
+
       });
     }
 
@@ -893,6 +1756,7 @@
     });
 
     logoutBtn.addEventListener("click", async function(){
+
       const confirmed = window.confirm(
         "Вийти з акаунта?"
       );
@@ -902,6 +1766,7 @@
       logoutBtn.disabled = true;
 
       try {
+
         const auth = getFirebaseAuth();
 
         if (
@@ -915,7 +1780,9 @@
         showLoggedOut();
 
         window.location.replace("/index.html");
+
       } catch (error) {
+
         console.error(
           "Помилка виходу з акаунта:",
           error
@@ -926,8 +1793,10 @@
         window.alert(
           "Не вдалося вийти з акаунта. Спробуйте ще раз."
         );
+
       }
     });
+
   })();
 </script>
 

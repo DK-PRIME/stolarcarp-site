@@ -5733,10 +5733,10 @@
                   showError(
                     `✅ Сезон ${esc(
                       SEASON_YEAR
-                    )} завершений та заархівований. ` +
-                    `Архів: ${esc(
+                    )} завершений. ` +
+                    `Збережено ${esc(
                       rating.archivedTo ||
-                      `seasonArchives/${SEASON_YEAR}`
+                      `у Архів ${SEASON_YEAR}`
                     )}`
                   );
 

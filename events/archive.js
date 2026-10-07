@@ -41,8 +41,11 @@
     return;
   }
 
-  const params = new URLSearchParams(window.location.search);
-  const seasonYear = params.get("year") || "2026";
+  const params =
+    new URLSearchParams(window.location.search);
+
+  const seasonYear =
+    params.get("year") || "2026";
 
   const FINALISTS_COUNT = 18;
   const BEST_COUNT_FOR_FINAL = 2;
@@ -53,7 +56,8 @@
   let fullRanking = [];
 
   if (pageTitle) {
-    pageTitle.textContent = `Архів сезону ${seasonYear}`;
+    pageTitle.textContent =
+      `Архів сезону ${seasonYear}`;
   }
 
   function esc(value) {
@@ -291,8 +295,11 @@
       }).length;
     }
 
-    const total = getSlotCount(slot);
-    const amur = getSlotAmurCount(slot);
+    const total =
+      getSlotCount(slot);
+
+    const amur =
+      getSlotAmurCount(slot);
 
     return Math.max(
       0,
@@ -907,13 +914,6 @@
     return null;
   }
 
-  /*
-   * Фінал у рейтингу STOLAR CARP:
-   * показуємо місце в зоні фіналу.
-   *
-   * Саме тому для KORSAR тут буде 5,
-   * а не загальне overallPlace = 16.
-   */
   function getActualFinalResult(team) {
     const finalStage =
       getFinalStageItem();
@@ -1271,20 +1271,6 @@
     );
   }
 
-  /*
-   * Визначаємо фактичні заміни у фіналі.
-   *
-   * OUT:
-   * команда з кваліфікаційного TOP-18,
-   * яка не стартувала у фіналі.
-   *
-   * IN:
-   * команда нижче TOP-18,
-   * яка фактично є у standings фіналу.
-   *
-   * Якщо замін декілька — резерви заходять
-   * у порядку кваліфікаційного рейтингу.
-   */
   function buildFinalReplacements(
     qualification
   ) {
@@ -1445,13 +1431,6 @@
             sourceTeam
           );
 
-        /*
-         * Для фіналіста теж беремо фактичне
-         * місце у зоні фіналу.
-         *
-         * Якщо команда відмовилась —
-         * фінал = "—".
-         */
         const finalData =
           actualFinal
             ? {
@@ -2010,63 +1989,12 @@
   }
 
   function renderTeamCell(row) {
-    const team =
-      esc(
-        row.team ||
-        "—"
-      );
-
-    if (row.replacementOut) {
-      return `
-        <div class="ranking-team-name">
-          ${team}
-        </div>
-
-        <div class="replacement replacement--out">
-          → ВІДМОВА
-        </div>
-
-        ${
-          row.replacementTeam
-            ? `
-              <div class="replacement-link">
-                → ${esc(
-                  row.replacementTeam
-                )}
-              </div>
-            `
-            : ""
-        }
-      `;
-    }
-
-    if (row.replacementIn) {
-      return `
-        <div class="ranking-team-name">
-          ${team}
-        </div>
-
-        <div class="replacement replacement--in">
-          ← ЗАМІНА
-        </div>
-
-        ${
-          row.replacedTeam
-            ? `
-              <div class="replacement-link replacement-link--in">
-                замість ${esc(
-                  row.replacedTeam
-                )}
-              </div>
-            `
-            : ""
-        }
-      `;
-    }
-
     return `
       <div class="ranking-team-name">
-        ${team}
+        ${esc(
+          row.team ||
+          "—"
+        )}
       </div>
     `;
   }
@@ -2163,12 +2091,6 @@
           "contender"
       );
 
-    const replacements =
-      contenders.filter(
-        row =>
-          row.replacementIn
-      );
-
     if (legend) {
       legend.innerHTML = `
         <span>
@@ -2182,17 +2104,6 @@
               <span>
                 Претендентів:
                 <b>${contenders.length}</b>
-              </span>
-            `
-            : ""
-        }
-
-        ${
-          replacements.length
-            ? `
-              <span class="legend-replacement">
-                Заміни:
-                <b>${replacements.length}</b>
               </span>
             `
             : ""
@@ -2266,11 +2177,6 @@
               : ""
           }
           ranking-finalist
-          ${
-            row.replacementOut
-              ? "ranking-replaced-out"
-              : ""
-          }
         ">
 
           <td class="r-place">
@@ -2411,11 +2317,6 @@
             ${
               actualFinal
                 ? "ranking-contender--final"
-                : ""
-            }
-            ${
-              row.replacementIn
-                ? "ranking-replacement-in"
                 : ""
             }
           ">
@@ -3344,10 +3245,6 @@
         color:#f8fafc;
       }
 
-      .season-ranking-legend .legend-replacement{
-        color:#22c55e;
-      }
-
       .season-ranking-wrap{
         width:100%;
         overflow:hidden;
@@ -3428,34 +3325,6 @@
         line-height:1.05;
       }
 
-      .replacement{
-        margin-top:2px;
-        font-size:6.5px;
-        line-height:1;
-        font-weight:950;
-        letter-spacing:.02em;
-      }
-
-      .replacement--out{
-        color:#f87171;
-      }
-
-      .replacement--in{
-        color:#22c55e;
-      }
-
-      .replacement-link{
-        margin-top:2px;
-        color:#fca5a5;
-        font-size:6px;
-        line-height:1.05;
-        font-weight:800;
-      }
-
-      .replacement-link--in{
-        color:#86efac;
-      }
-
       .season-ranking-table .r-place,
       .season-ranking-table .r-points{
         color:#f8fafc;
@@ -3476,22 +3345,6 @@
         color:#22c55e!important;
         background:rgba(34,197,94,.10)!important;
         font-weight:950;
-      }
-
-      .season-ranking-table .ranking-replaced-out td{
-        background:rgba(127,29,29,.09);
-      }
-
-      .season-ranking-table .ranking-replaced-out .r-team{
-        border-left:2px solid #ef4444;
-      }
-
-      .season-ranking-table .ranking-replacement-in td{
-        background:rgba(20,83,45,.11);
-      }
-
-      .season-ranking-table .ranking-replacement-in .r-team{
-        border-left:2px solid #22c55e;
       }
 
       .season-ranking-table .ranking-top-1 td{
@@ -3521,10 +3374,6 @@
 
       .season-ranking-table .ranking-contender--final .r-team{
         color:#f8fafc;
-      }
-
-      .season-ranking-table .ranking-replacement-in td{
-        background:rgba(20,83,45,.11);
       }
 
       .season-ranking-table .ranking-divider td{
@@ -3815,14 +3664,6 @@
           padding:3px;
           font-size:7px;
         }
-
-        .replacement{
-          font-size:5.8px;
-        }
-
-        .replacement-link{
-          font-size:5.5px;
-        }
       }
 
       @media(max-width:390px){
@@ -3836,14 +3677,6 @@
 
         .season-ranking-table .r-team{
           font-size:6.5px;
-        }
-
-        .replacement{
-          font-size:5.5px;
-        }
-
-        .replacement-link{
-          font-size:5.2px;
         }
 
         .archive-compact-table{

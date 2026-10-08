@@ -18,10 +18,40 @@
     Архів турнірів — STOLAR CARP
   </title>
 
+  <meta
+    name="description"
+    content="Архів турнірів STOLAR CARP: поточні та завершені сезони, результати етапів, фінали, рейтинги, призери та Big Fish."
+  >
+
+  <link
+    rel="icon"
+    type="image/png"
+    href="/assets/favicon.png"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="/assets/favicon.png"
+  >
+
+  <!-- =====================================================
+       GLOBAL CSS
+       ===================================================== -->
+
   <link
     rel="stylesheet"
-    href="../assets/css/main.css"
+    href="/assets/css/main.css?v=20261008"
   >
+
+  <!-- =====================================================
+       GLOBAL CONFIG
+       Єдине мобільне меню + автоматичний рік
+       ===================================================== -->
+
+  <script
+    defer
+    src="/assets/js/config.js?v=20261008-footer-year"
+  ></script>
 
   <style>
 
@@ -29,11 +59,11 @@
        PAGE
        ===================================================== */
 
-    body.archive-page{
-      min-height:100vh;
-      display:flex;
-      flex-direction:column;
-      margin:0;
+    body.archive-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
 
       background:
         radial-gradient(
@@ -53,124 +83,180 @@
           #030712 100%
         );
 
-      color:#e5e7eb;
+      color: #e5e7eb;
     }
 
-    main.main{
-      flex:1 0 auto;
+    .archive-page *,
+    .archive-page *::before,
+    .archive-page *::after {
+      box-sizing: border-box;
     }
 
+    main.main {
+      flex: 1 0 auto;
+    }
+
+    /* =====================================================
+       HEADER
+       ===================================================== */
+
+    .archive-page .header {
+      position: relative;
+      z-index: 2000;
+    }
+
+    .archive-page .header .header__row {
+      align-items: center;
+    }
+
+    .archive-page .header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      min-height: 56px;
+      padding: 8px 0;
+
+      text-decoration: none;
+    }
+
+    .archive-page .header .logo__mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+
+      border-radius: 12px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #f5d48a,
+          #b9832d
+        );
+
+      color: #10131b;
+
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .archive-page .header .logo__text {
+      font-weight: 900;
+      letter-spacing: .07em;
+      white-space: nowrap;
+    }
 
     /* =====================================================
        HERO
        ===================================================== */
 
-    .archive-hero{
-      text-align:center;
-      padding:56px 0 48px;
+    .archive-hero {
+      text-align: center;
+      padding: 56px 0 48px;
     }
 
-    .archive-kicker{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
+    .archive-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
 
-      margin-bottom:18px;
-      padding:8px 14px;
+      margin-bottom: 18px;
+      padding: 8px 14px;
 
-      border:1px solid rgba(250,204,21,.45);
-      border-radius:999px;
+      border: 1px solid rgba(250,204,21,.45);
+      border-radius: 999px;
 
-      background:rgba(15,23,42,.72);
+      background: rgba(15,23,42,.72);
 
-      color:#facc15;
+      color: #facc15;
 
-      font-weight:850;
-      font-size:.9rem;
-      letter-spacing:.04em;
-      text-transform:uppercase;
+      font-weight: 850;
+      font-size: .9rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
     }
 
-    .archive-title{
-      margin:0;
+    .archive-title {
+      margin: 0;
 
-      font-size:clamp(34px,8vw,72px);
-      line-height:1.06;
-      font-weight:950;
-      letter-spacing:-.04em;
+      font-size: clamp(34px,8vw,72px);
+      line-height: 1.06;
+      font-weight: 950;
+      letter-spacing: -.04em;
 
-      color:#f8fafc;
+      color: #f8fafc;
 
       text-shadow:
         0 16px 45px rgba(0,0,0,.55);
     }
 
-    .archive-subtitle{
-      max-width:680px;
-      margin:18px auto 0;
+    .archive-subtitle {
+      max-width: 680px;
+      margin: 18px auto 0;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
-      line-height:1.6;
+      line-height: 1.6;
 
-      font-size:clamp(14px,3.6vw,17px);
+      font-size: clamp(14px,3.6vw,17px);
     }
-
 
     /* =====================================================
        STATUS
        ===================================================== */
 
-    .archive-status{
-      min-height:22px;
-      margin:24px auto 0;
+    .archive-status {
+      min-height: 22px;
+      margin: 24px auto 0;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.86rem;
-      font-weight:750;
+      font-size: .86rem;
+      font-weight: 750;
     }
 
-    .archive-status.is-ok{
-      color:#86efac;
+    .archive-status.is-ok {
+      color: #86efac;
     }
 
-    .archive-status.is-error{
-      color:#fca5a5;
+    .archive-status.is-error {
+      color: #fca5a5;
     }
-
 
     /* =====================================================
        CURRENT SEASON
        ===================================================== */
 
-    .current-season-wrap{
-      max-width:760px;
-      margin:26px auto 0;
+    .current-season-wrap {
+      max-width: 760px;
+      margin: 26px auto 0;
     }
 
-    .season-card{
-      position:relative;
-      overflow:hidden;
+    .season-card {
+      position: relative;
+      overflow: hidden;
 
-      width:100%;
-      min-height:210px;
+      width: 100%;
+      min-height: 210px;
 
-      padding:24px;
+      padding: 24px;
 
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
 
-      text-decoration:none;
-      color:#fff;
+      text-decoration: none;
+      color: #fff;
 
-      border-radius:26px;
+      border-radius: 26px;
 
       border:
-        1px solid
-        rgba(34,197,94,.46);
+        1px solid rgba(34,197,94,.46);
 
       background:
         linear-gradient(
@@ -200,136 +286,133 @@
         box-shadow .22s ease;
     }
 
-    .season-card::before{
-      content:"";
+    .season-card::before {
+      content: "";
 
-      position:absolute;
-      inset:-80px -80px auto auto;
+      position: absolute;
+      inset: -80px -80px auto auto;
 
-      width:190px;
-      height:190px;
+      width: 190px;
+      height: 190px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
-      background:
-        rgba(250,204,21,.16);
+      background: rgba(250,204,21,.16);
 
-      filter:blur(8px);
+      filter: blur(8px);
 
-      pointer-events:none;
+      pointer-events: none;
     }
 
-    .season-card:hover{
-      transform:translateY(-5px);
+    .season-card:hover {
+      transform: translateY(-5px);
 
-      border-color:#22c55e;
+      border-color: #22c55e;
 
       box-shadow:
         0 34px 90px rgba(0,0,0,.62),
         0 0 0 1px rgba(34,197,94,.18);
     }
 
-    .season-top{
-      position:relative;
-      z-index:1;
+    .season-top {
+      position: relative;
+      z-index: 1;
     }
 
-    .season-status-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
+    .season-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
     }
 
-    .season-label{
-      color:#94a3b8;
+    .season-label {
+      color: #94a3b8;
 
-      font-size:.8rem;
-      font-weight:800;
+      font-size: .8rem;
+      font-weight: 800;
     }
 
-    .season-badge{
-      flex:0 0 auto;
+    .season-badge {
+      flex: 0 0 auto;
 
-      display:inline-flex;
-      align-items:center;
+      display: inline-flex;
+      align-items: center;
 
-      padding:5px 9px;
+      padding: 5px 9px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
       border:
-        1px solid
-        rgba(34,197,94,.36);
+        1px solid rgba(34,197,94,.36);
 
-      background:
-        rgba(15,23,42,.76);
+      background: rgba(15,23,42,.76);
 
-      color:#86efac;
+      color: #86efac;
 
-      font-size:.64rem;
-      font-weight:950;
-      letter-spacing:.05em;
-      text-transform:uppercase;
+      font-size: .64rem;
+      font-weight: 950;
+      letter-spacing: .05em;
+      text-transform: uppercase;
     }
 
-    .season-year{
-      margin-top:12px;
+    .season-year {
+      margin-top: 12px;
 
-      font-size:clamp(34px,8vw,50px);
-      line-height:1;
+      font-size: clamp(34px,8vw,50px);
+      line-height: 1;
 
-      font-weight:950;
-      letter-spacing:-.035em;
+      font-weight: 950;
+      letter-spacing: -.035em;
 
-      color:#facc15;
+      color: #facc15;
     }
 
-    .season-desc{
-      margin-top:13px;
+    .season-desc {
+      margin-top: 13px;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
-      line-height:1.45;
-      font-size:.9rem;
+      line-height: 1.45;
+      font-size: .9rem;
     }
 
-    .season-stats{
-      position:relative;
-      z-index:1;
+    .season-stats {
+      position: relative;
+      z-index: 1;
 
-      display:flex;
-      flex-wrap:wrap;
+      display: flex;
+      flex-wrap: wrap;
 
-      gap:6px 12px;
+      gap: 6px 12px;
 
-      margin-top:15px;
+      margin-top: 15px;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.75rem;
-      font-weight:750;
+      font-size: .75rem;
+      font-weight: 750;
     }
 
-    .season-stat strong{
-      color:#e5e7eb;
-      font-weight:950;
+    .season-stat strong {
+      color: #e5e7eb;
+      font-weight: 950;
     }
 
-    .season-btn{
-      position:relative;
-      z-index:1;
+    .season-btn {
+      position: relative;
+      z-index: 1;
 
-      margin-top:20px;
+      margin-top: 20px;
 
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
 
-      padding:13px 18px;
+      padding: 13px 18px;
 
-      border-radius:16px;
+      border-radius: 16px;
 
       background:
         linear-gradient(
@@ -338,76 +421,71 @@
           #f97316
         );
 
-      color:#111827;
+      color: #111827;
 
-      text-align:center;
-      font-weight:950;
+      text-align: center;
+      font-weight: 950;
 
       box-shadow:
         0 14px 32px rgba(249,115,22,.25);
     }
 
-
     /* =====================================================
        COMPLETED SEASONS
        ===================================================== */
 
-    .completed-seasons{
-      max-width:760px;
+    .completed-seasons {
+      max-width: 760px;
 
-      margin:
-        34px auto 0;
-
-      padding-top:24px;
+      margin: 34px auto 0;
+      padding-top: 24px;
 
       border-top:
-        1px solid
-        rgba(148,163,184,.14);
+        1px solid rgba(148,163,184,.14);
     }
 
-    .completed-seasons[hidden]{
-      display:none !important;
+    .completed-seasons[hidden] {
+      display: none !important;
     }
 
-    .completed-title{
-      margin:0 0 16px;
+    .completed-title {
+      margin: 0 0 16px;
 
-      text-align:left;
+      text-align: left;
 
-      color:#f8fafc;
+      color: #f8fafc;
 
-      font-size:1.05rem;
-      font-weight:950;
+      font-size: 1.05rem;
+      font-weight: 950;
     }
 
-    .completed-grid{
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
+    .completed-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
 
-      justify-content:flex-start;
+      justify-content: flex-start;
     }
 
-    .completed-season{
-      width:104px;
-      height:104px;
+    .completed-season {
+      width: 104px;
+      height: 104px;
 
-      flex:0 0 104px;
+      flex: 0 0 104px;
 
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      position:relative;
-      overflow:hidden;
+      position: relative;
+      overflow: hidden;
 
-      text-decoration:none;
+      text-decoration: none;
 
-      border-radius:20px;
+      border-radius: 20px;
 
       border:
-        1px solid
-        rgba(250,204,21,.38);
+        1px solid rgba(250,204,21,.38);
 
       background:
         radial-gradient(
@@ -430,136 +508,143 @@
         border-color .18s ease;
     }
 
-    .completed-season:hover{
-      transform:translateY(-3px);
-
-      border-color:#facc15;
+    .completed-season:hover {
+      transform: translateY(-3px);
+      border-color: #facc15;
     }
 
-    .completed-season::before{
-      content:"🏆";
+    .completed-season::before {
+      content: "🏆";
 
-      position:absolute;
+      position: absolute;
 
-      top:9px;
-      right:10px;
+      top: 9px;
+      right: 10px;
 
-      font-size:.8rem;
-      opacity:.50;
+      font-size: .8rem;
+      opacity: .50;
     }
 
-    .completed-year{
-      position:relative;
-      z-index:1;
+    .completed-year {
+      position: relative;
+      z-index: 1;
 
-      color:#facc15;
+      color: #facc15;
 
-      font-size:1.45rem;
-      font-weight:950;
-      letter-spacing:-.03em;
+      font-size: 1.45rem;
+      font-weight: 950;
+      letter-spacing: -.03em;
     }
-
 
     /* =====================================================
        EMPTY CURRENT
        ===================================================== */
 
-    .archive-empty{
-      max-width:700px;
+    .archive-empty {
+      max-width: 700px;
 
-      margin:26px auto 0;
+      margin: 26px auto 0;
+      padding: 20px 18px;
 
-      padding:20px 18px;
-
-      border-radius:20px;
+      border-radius: 20px;
 
       border:
-        1px solid
-        rgba(148,163,184,.18);
+        1px solid rgba(148,163,184,.18);
 
       background:
         rgba(15,23,42,.48);
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      text-align:center;
-      line-height:1.55;
+      text-align: center;
+      line-height: 1.55;
     }
 
-    .archive-empty[hidden]{
-      display:none !important;
+    .archive-empty[hidden] {
+      display: none !important;
     }
-
 
     /* =====================================================
        FOOTER
        ===================================================== */
 
-    footer.footer{
-      flex-shrink:0;
-      margin-top:auto;
+    footer.footer {
+      flex-shrink: 0;
+      margin-top: auto;
 
-      text-align:center;
+      text-align: center;
 
-      padding:22px 0;
+      padding: 22px 0;
 
-      font-size:.875rem;
+      font-size: .875rem;
 
-      color:#cbd5e1;
+      color: #cbd5e1;
 
       border-top:
-        1px solid
-        rgba(148,163,184,.12);
+        1px solid rgba(148,163,184,.12);
 
       background:
         rgba(2,6,23,.65);
     }
 
-    footer.footer a{
-      color:#facc15;
+    footer.footer a {
+      color: #facc15;
 
-      text-decoration:none;
+      text-decoration: none;
 
-      margin:0 8px;
+      margin: 0 8px;
 
-      font-weight:800;
+      font-weight: 800;
     }
-
 
     /* =====================================================
        MOBILE
        ===================================================== */
 
-    @media(max-width:768px){
+    @media (max-width: 768px) {
 
-      .archive-hero{
-        padding:42px 0 34px;
+      .archive-hero {
+        padding: 42px 0 34px;
       }
 
-      .season-card{
-        min-height:195px;
-        padding:21px;
+      .season-card {
+        min-height: 195px;
+        padding: 21px;
       }
 
-      .completed-seasons{
-        margin-top:28px;
+      .completed-seasons {
+        margin-top: 28px;
       }
 
-      .completed-grid{
-        gap:10px;
+      .completed-grid {
+        gap: 10px;
       }
 
-      .completed-season{
-        width:92px;
-        height:92px;
+      .completed-season {
+        width: 92px;
+        height: 92px;
 
-        flex-basis:92px;
+        flex-basis: 92px;
 
-        border-radius:18px;
+        border-radius: 18px;
       }
 
-      .completed-year{
-        font-size:1.25rem;
+      .completed-year {
+        font-size: 1.25rem;
+      }
+
+      .archive-page .header .logo__text {
+        font-size: 14px;
+      }
+
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .archive-page *,
+      .archive-page *::before,
+      .archive-page *::after {
+        transition-duration: .01ms !important;
       }
 
     }
@@ -581,7 +666,7 @@
 
     <a
       class="logo"
-      href="../index.html"
+      href="/index.html"
     >
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
@@ -592,6 +677,7 @@
       class="nav"
       id="nav"
     >
+
       <a href="/index.html" class="nav__link">
         Головна
       </a>
@@ -634,14 +720,22 @@
       <a href="/cabinet.html" class="nav__link">
         Мій кабінет
       </a>
+
     </nav>
 
+
+    <!-- ==================================================
+         BURGER
+         Керується виключно config.js
+         ================================================== -->
 
     <button
       class="burger"
       id="burger"
       type="button"
-      aria-label="Меню"
+      aria-label="Відкрити меню"
+      aria-controls="nav"
+      aria-expanded="false"
     >
       <span></span>
       <span></span>
@@ -686,12 +780,16 @@
     <div
       id="archiveStatus"
       class="archive-status"
+      role="status"
+      aria-live="polite"
     >
       Завантаження сезонів…
     </div>
 
 
-    <!-- ПОТОЧНИЙ СЕЗОН -->
+    <!-- ==================================================
+         ПОТОЧНИЙ СЕЗОН
+         ================================================== -->
 
     <div
       id="currentSeasonWrap"
@@ -708,7 +806,9 @@
     </div>
 
 
-    <!-- ЗАВЕРШЕНІ СЕЗОНИ -->
+    <!-- ==================================================
+         ЗАВЕРШЕНІ СЕЗОНИ
+         ================================================== -->
 
     <section
       id="completedSeasons"
@@ -734,25 +834,37 @@
 
 <!-- ======================================================
      FOOTER
+     Автоматичний рік через config.js
      ====================================================== -->
 
 <footer class="footer">
 
   <div class="container footer__row">
 
-    © 2026 STOLAR CARP · Львів
+    <div>
+      © <span id="footerYear">2025–2026</span>
+      STOLAR CARP · Львів
+    </div>
 
-    <a
-      href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
-    >
-      Viber
-    </a>
+    <div class="footer__links">
 
-    <a
-      href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
-    >
-      YouTube
-    </a>
+      <a
+        href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Viber
+      </a>
+
+      <a
+        href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        YouTube
+      </a>
+
+    </div>
 
   </div>
 
@@ -760,7 +872,7 @@
 
 
 <!-- ======================================================
-     FIREBASE
+     FIREBASE SDK
      ====================================================== -->
 
 <script
@@ -775,9 +887,10 @@
   src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
 ></script>
 
-<script
-  src="../assets/js/config.js?v=20260915-2"
-></script>
+
+<!-- ======================================================
+     FIREBASE INIT
+     ====================================================== -->
 
 <script
   src="../assets/js/firebase-init.js?v=20260915-3"
@@ -786,11 +899,12 @@
 
 <!-- ======================================================
      SEASONS
+     Логіка поточного та завершених сезонів
      ====================================================== -->
 
 <script>
 
-(async function(){
+(async function () {
 
   "use strict";
 
@@ -821,29 +935,29 @@
     );
 
 
-  // =======================================================
-  // HELPERS
-  // =======================================================
+  /* =======================================================
+     HELPERS
+     ======================================================= */
 
-  function esc(value){
+  function esc(value) {
 
     return String(
       value ?? ""
     ).replace(
       /[&<>"']/g,
       char => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#39;"
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
       }[char])
     );
 
   }
 
 
-  function num(value){
+  function num(value) {
 
     const n =
       Number(value);
@@ -855,7 +969,7 @@
   }
 
 
-  function normalizeYear(value){
+  function normalizeYear(value) {
 
     const raw =
       String(
@@ -874,19 +988,17 @@
   }
 
 
-  // =======================================================
-  // FIREBASE READY
-  // =======================================================
+  /* =======================================================
+     FIREBASE READY
+     ======================================================= */
 
-  try{
+  try {
 
-    if(
-      window.scReady
-    ){
+    if (window.scReady) {
       await window.scReady;
     }
 
-  }catch(error){
+  } catch (error) {
 
     console.error(
       "[Archive Index] Firebase:",
@@ -900,9 +1012,9 @@
     window.scDb;
 
 
-  if(!db){
+  if (!db) {
 
-    if(status){
+    if (status) {
 
       status.textContent =
         "Не вдалося підключитися до Firestore.";
@@ -917,38 +1029,36 @@
   }
 
 
-  // =======================================================
-  // SEASONS
-  // =======================================================
+  /* =======================================================
+     SEASONS
+     ======================================================= */
 
   const seasons =
     new Map();
 
 
-  function ensureSeason(year){
+  function ensureSeason(year) {
 
     const y =
       normalizeYear(year);
 
-    if(!y){
+    if (!y) {
       return null;
     }
 
-    if(
-      !seasons.has(y)
-    ){
+    if (!seasons.has(y)) {
 
       seasons.set(
         y,
         {
-          year:y,
+          year: y,
 
-          hasRating:false,
-          ratingArchived:false,
+          hasRating: false,
+          ratingArchived: false,
 
-          hasArchive:false,
+          hasArchive: false,
 
-          stagesCount:0
+          stagesCount: 0
         }
       );
 
@@ -959,27 +1069,24 @@
   }
 
 
-  // =======================================================
-  // LOAD SEASON RATING
-  // =======================================================
+  /* =======================================================
+     LOAD SEASON RATING
+     ======================================================= */
 
-  async function loadRatings(){
+  async function loadRatings() {
 
-    try{
+    try {
 
       const snap =
         await db
-          .collection(
-            "seasonRating"
-          )
+          .collection("seasonRating")
           .get();
 
 
       snap.forEach(doc => {
 
         const data =
-          doc.data() ||
-          {};
+          doc.data() || {};
 
         const year =
           normalizeYear(
@@ -990,7 +1097,7 @@
         const item =
           ensureSeason(year);
 
-        if(!item){
+        if (!item) {
           return;
         }
 
@@ -1000,15 +1107,14 @@
 
 
         item.ratingArchived =
-          data.archived ===
-          true;
+          data.archived === true;
 
 
-        if(
+        if (
           Array.isArray(
             data.archivedStages
           )
-        ){
+        ) {
 
           item.stagesCount =
             Math.max(
@@ -1023,7 +1129,7 @@
 
       return true;
 
-    }catch(error){
+    } catch (error) {
 
       console.warn(
         "[Archive Index] seasonRating:",
@@ -1037,27 +1143,24 @@
   }
 
 
-  // =======================================================
-  // LOAD ARCHIVES
-  // =======================================================
+  /* =======================================================
+     LOAD ARCHIVES
+     ======================================================= */
 
-  async function loadArchives(){
+  async function loadArchives() {
 
-    try{
+    try {
 
       const snap =
         await db
-          .collection(
-            "seasonArchives"
-          )
+          .collection("seasonArchives")
           .get();
 
 
       snap.forEach(doc => {
 
         const data =
-          doc.data() ||
-          {};
+          doc.data() || {};
 
         const year =
           normalizeYear(
@@ -1068,7 +1171,7 @@
         const item =
           ensureSeason(year);
 
-        if(!item){
+        if (!item) {
           return;
         }
 
@@ -1100,7 +1203,7 @@
 
       return true;
 
-    }catch(error){
+    } catch (error) {
 
       console.warn(
         "[Archive Index] seasonArchives:",
@@ -1114,9 +1217,9 @@
   }
 
 
-  // =======================================================
-  // LOAD ALL
-  // =======================================================
+  /* =======================================================
+     LOAD ALL
+     ======================================================= */
 
   const loadResults =
     await Promise.all([
@@ -1135,19 +1238,20 @@
     ];
 
 
-  // =======================================================
-  // CURRENT SEASON
-  // =======================================================
+  /* =======================================================
+     CURRENT SEASON
+     ======================================================= */
 
   /*
    * Поточний сезон:
    *
-   * є seasonRating/{year}
+   * Є seasonRating/{year}
    * і він ще НЕ archived.
    *
    * Якщо випадково є кілька —
    * показуємо найновіший.
    */
+
   const currentSeasons =
     allSeasons
       .filter(item =>
@@ -1156,7 +1260,7 @@
         !item.hasArchive
       )
       .sort(
-        (a,b) =>
+        (a, b) =>
           Number(b.year) -
           Number(a.year)
       );
@@ -1167,35 +1271,35 @@
     null;
 
 
-  // =======================================================
-  // ARCHIVED SEASONS
-  // =======================================================
+  /* =======================================================
+     ARCHIVED SEASONS
+     ======================================================= */
 
   /*
    * Завершений сезон показуємо
-   * ТІЛЬКИ коли реально є:
+   * тільки коли реально існує:
    *
    * seasonArchives/{year}
    */
+
   const archivedSeasons =
     allSeasons
       .filter(
         item =>
-          item.hasArchive ===
-          true
+          item.hasArchive === true
       )
       .sort(
-        (a,b) =>
+        (a, b) =>
           Number(b.year) -
           Number(a.year)
       );
 
 
-  // =======================================================
-  // CURRENT RENDER
-  // =======================================================
+  /* =======================================================
+     CURRENT RENDER
+     ======================================================= */
 
-  if(currentSeason){
+  if (currentSeason) {
 
     currentEmpty.hidden =
       true;
@@ -1266,7 +1370,7 @@
       </a>
     `;
 
-  }else{
+  } else {
 
     currentWrap.innerHTML =
       "";
@@ -1277,13 +1381,13 @@
   }
 
 
-  // =======================================================
-  // ARCHIVED RENDER
-  // =======================================================
+  /* =======================================================
+     ARCHIVED RENDER
+     ======================================================= */
 
-  if(
+  if (
     archivedSeasons.length
-  ){
+  ) {
 
     completedSection.hidden =
       false;
@@ -1312,7 +1416,7 @@
         )
         .join("");
 
-  }else{
+  } else {
 
     completedSection.hidden =
       true;
@@ -1323,25 +1427,25 @@
   }
 
 
-  // =======================================================
-  // STATUS
-  // =======================================================
+  /* =======================================================
+     STATUS
+     ======================================================= */
 
-  if(status){
+  if (status) {
 
-    if(
+    if (
       currentSeason
-    ){
+    ) {
 
       status.textContent =
-        `Поточних сезонів: 1`;
+        "Поточних сезонів: 1";
 
       status.className =
         "archive-status is-ok";
 
-    }else if(
+    } else if (
       archivedSeasons.length
-    ){
+    ) {
 
       status.textContent =
         "Поточний сезон завершено.";
@@ -1349,7 +1453,7 @@
       status.className =
         "archive-status";
 
-    }else{
+    } else {
 
       status.textContent =
         readSucceeded
@@ -1372,91 +1476,15 @@
 
 <!-- ======================================================
      MOBILE MENU
+
+     Окремого обробника тут НЕМАЄ.
+
+     Меню повністю керується:
+
+     /assets/js/config.js
+
+     Це усуває конфлікт подвійних натискань.
      ====================================================== -->
-
-<script>
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    const burger =
-      document.getElementById(
-        "burger"
-      );
-
-    const nav =
-      document.getElementById(
-        "nav"
-      );
-
-
-    if(
-      !burger ||
-      !nav
-    ){
-      return;
-    }
-
-
-    burger.addEventListener(
-      "click",
-      () => {
-
-        nav.classList.toggle(
-          "active"
-        );
-
-        nav.classList.toggle(
-          "nav--open"
-        );
-
-        burger.classList.toggle(
-          "active"
-        );
-
-        document.body.classList.toggle(
-          "menu-open"
-        );
-
-      }
-    );
-
-
-    nav.addEventListener(
-      "click",
-      event => {
-
-        if(
-          event.target
-            .classList
-            .contains(
-              "nav__link"
-            )
-        ){
-
-          nav.classList.remove(
-            "active",
-            "nav--open"
-          );
-
-          burger.classList.remove(
-            "active"
-          );
-
-          document.body.classList.remove(
-            "menu-open"
-          );
-
-        }
-
-      }
-    );
-
-  }
-);
-
-</script>
 
 
 </body>

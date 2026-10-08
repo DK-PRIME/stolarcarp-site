@@ -28,7 +28,7 @@
 
   <link
     rel="stylesheet"
-    href="assets/css/main.css?v=20261008-2"
+    href="assets/css/main.css?v=20261008-3"
   >
 
   <script
@@ -67,13 +67,20 @@
     }
 
     /* =========================================================
-       HEADER / BURGER FIX
+       HEADER
        ========================================================= */
 
     .cabinet-page .header {
-      position:relative;
+      position:sticky;
+      top:0;
       z-index:1000;
-      isolation:isolate;
+
+      overflow:visible;
+
+      background:rgba(2,6,23,.96);
+
+      backdrop-filter:blur(12px);
+      -webkit-backdrop-filter:blur(12px);
     }
 
     .cabinet-page .header__row {
@@ -83,6 +90,8 @@
       align-items:center;
 
       min-height:60px;
+
+      overflow:visible;
     }
 
     .cabinet-page .logo {
@@ -91,6 +100,10 @@
 
       min-width:0;
     }
+
+    /* =========================================================
+       BURGER BUTTON
+       ========================================================= */
 
     .cabinet-page #burger {
       position:relative;
@@ -116,7 +129,7 @@
        MOBILE NAVIGATION
        ========================================================= */
 
-    @media (max-width:850px) {
+    @media (max-width:860px) {
 
       .cabinet-page .header {
         overflow:visible;
@@ -126,6 +139,10 @@
         overflow:visible;
       }
 
+      /* =====================================================
+         BURGER — 3 ОДНАКОВІ БІЛІ РИСОЧКИ
+         ===================================================== */
+
       .cabinet-page #burger {
         display:flex !important;
 
@@ -133,48 +150,74 @@
         justify-content:center;
         flex-direction:column;
 
-        gap:5px;
+        gap:0;
 
-        min-width:44px;
-        min-height:44px;
+        width:54px;
+        min-width:54px;
+
+        height:54px;
+        min-height:54px;
 
         margin-left:auto;
+        padding:0;
 
         border:0;
 
         background:transparent;
 
+        box-shadow:none;
+
         cursor:pointer;
       }
 
       .cabinet-page #burger span {
-        display:block;
+        display:block !important;
 
-        width:25px;
-        height:3px;
+        width:42px !important;
+        height:4px !important;
 
-        border-radius:5px;
+        flex:0 0 4px;
 
-        background:#f8fafc;
+        margin:4px 0 !important;
+
+        border:0;
+        border-radius:4px;
+
+        background:#ffffff !important;
+
+        box-shadow:none;
 
         pointer-events:none;
 
+        transform-origin:center;
+
         transition:
-          transform .2s ease,
-          opacity .2s ease;
+          transform .22s ease,
+          opacity .22s ease;
       }
 
-      .cabinet-page #burger[aria-expanded="true"] span:nth-child(1) {
-        transform:translateY(8px) rotate(45deg);
+      /* =====================================================
+         BURGER OPEN → X
+         ===================================================== */
+
+      .cabinet-page #burger[aria-expanded="true"]
+      span:nth-child(1) {
+        transform:translateY(12px) rotate(45deg);
       }
 
-      .cabinet-page #burger[aria-expanded="true"] span:nth-child(2) {
+      .cabinet-page #burger[aria-expanded="true"]
+      span:nth-child(2) {
         opacity:0;
       }
 
-      .cabinet-page #burger[aria-expanded="true"] span:nth-child(3) {
-        transform:translateY(-8px) rotate(-45deg);
+      .cabinet-page #burger[aria-expanded="true"]
+      span:nth-child(3) {
+        transform:translateY(-12px) rotate(-45deg);
       }
+
+      /* =====================================================
+         MOBILE NAV
+         ===================================================== */
 
       .cabinet-page #nav {
         display:none !important;
@@ -207,8 +250,10 @@
         box-shadow:
           0 20px 50px rgba(0,0,0,.65);
 
+        overflow-x:hidden;
         overflow-y:auto;
 
+        max-height:calc(100vh - 95px);
         max-height:calc(100dvh - 95px);
       }
 
@@ -977,7 +1022,7 @@
        MOBILE / TABLET
        ========================================================= */
 
-    @media (max-width:850px) {
+    @media (max-width:860px) {
 
       .cabinet-grid {
         grid-template-columns:1fr;
@@ -1843,7 +1888,7 @@
      CABINET CORE
      ========================================================= -->
 
-<script src="assets/js/cabinet.js?v=20260916-9"></script>
+<script src="assets/js/cabinet.js?v=20261008-10"></script>
 
 <!-- =========================================================
      MY PARTICIPATION
@@ -1887,18 +1932,16 @@
   // MOBILE MENU
   // =========================================================
   //
-  // ВАЖЛИВО:
+  // cabinet.js відповідає за перемикання nav.open.
   //
-  // cabinet.js уже перемикає nav.open.
+  // Тут НЕ створюємо другий перемикач.
   //
-  // Тут НЕ додаємо другого обробника
-  // відкривання меню.
-  //
-  // Цей блок:
+  // Цей код:
   // - синхронізує aria-expanded
-  // - закриває меню при кліку поза ним
-  // - закриває меню клавішею Escape
-  // - закриває меню після переходу
+  // - синхронізує aria-label
+  // - закриває меню поза кнопкою
+  // - закриває меню через Escape
+  // - закриває меню при зміні розміру
   //
   // =========================================================
 
@@ -1943,19 +1986,12 @@
   }
 
   // ---------------------------------------------------------
-  // Синхронізація після обробника cabinet.js
+  // Синхронізація після cabinet.js
   // ---------------------------------------------------------
 
   burger.addEventListener(
     "click",
     function () {
-
-      /*
-       * cabinet.js перемикає клас open.
-       *
-       * Цей обробник лише оновлює
-       * доступний стан кнопки.
-       */
 
       syncMenuState();
 
@@ -2034,7 +2070,7 @@
     "resize",
     function () {
 
-      if (window.innerWidth > 850) {
+      if (window.innerWidth > 860) {
         closeMenu();
       }
 
@@ -2048,7 +2084,7 @@
   syncMenuState();
 
   console.log(
-    "✅ STOLAR CARP cabinet menu helpers ready"
+    "✅ STOLAR CARP cabinet menu ready"
   );
 
 })();

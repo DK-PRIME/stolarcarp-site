@@ -7,17 +7,25 @@
   <title>Партнери та спонсори | STOLAR CARP</title>
 
   <meta name="theme-color" content="#080c14">
+
   <meta
     name="description"
     content="Партнери STOLAR CARP. Підтримка проєкту та можливості співпраці."
   >
 
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" href="/assets/favicon.png">
 
-  <link rel="stylesheet" href="assets/css/main.css?v=20261008">
+  <link
+    rel="stylesheet"
+    href="/assets/css/main.css?v=20261008-5"
+  >
 
-  <script defer src="assets/js/config.js"></script>
+  <!-- Єдина конфігурація сайту та головного меню -->
+  <script
+    defer
+    src="/assets/js/config.js?v=20261008-2"
+  ></script>
 
   <style>
     /* =========================================================
@@ -43,7 +51,7 @@
       scroll-behavior: smooth;
     }
 
-    body {
+    body.sp-page {
       margin: 0;
       color: var(--sp-text);
 
@@ -83,18 +91,22 @@
 
     /* =========================================================
        HEADER
+       Не змінюємо глобальну логіку config.js
        ========================================================= */
 
-    .header {
-      position: relative;
-      z-index: 20;
+    body.sp-page .header {
+      position: sticky;
+      top: 0;
+      z-index: 2000;
+      overflow: visible;
     }
 
-    .header .header__row {
+    body.sp-page .header .header__row {
       align-items: center;
+      overflow: visible;
     }
 
-    .header .logo {
+    body.sp-page .header .logo {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -102,7 +114,7 @@
       text-decoration: none;
     }
 
-    .header .logo__mark {
+    body.sp-page .header .logo__mark {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -110,7 +122,7 @@
       line-height: 1;
     }
 
-    .header .logo__text {
+    body.sp-page .header .logo__text {
       white-space: nowrap;
     }
 
@@ -595,7 +607,6 @@
 
     /* =========================================================
        MONOBANK • BLURRED CARD NUMBER
-       Без написів поверх номера
        ========================================================= */
 
     .sp-bank {
@@ -804,9 +815,93 @@
        FOOTER
        ========================================================= */
 
-    .footer {
+    body.sp-page .footer {
       border-top:
         1px solid rgba(255, 255, 255, .08);
+    }
+
+    /* =========================================================
+       MOBILE NAVIGATION
+       Використовуємо клас .open із config.js
+       ========================================================= */
+
+    @media (max-width: 860px) {
+
+      body.sp-page .header .header__row {
+        position: relative;
+      }
+
+      body.sp-page .header #nav {
+        position: absolute;
+
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+
+        width: 100%;
+        max-height: calc(100dvh - 100px);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+
+        gap: 10px;
+        padding: 16px 14px;
+
+        overflow-x: hidden;
+        overflow-y: auto;
+
+        border-radius: 24px;
+
+        border:
+          1px solid rgba(255, 255, 255, .12);
+
+        background:
+          linear-gradient(
+            rgba(0, 0, 0, .55),
+            rgba(0, 0, 0, .75)
+          ),
+          url("/assets/dk-dva-kuma-banner.jpg")
+            center / cover no-repeat,
+          #0b0b0f;
+
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+
+        transform: translateY(-14px);
+
+        z-index: 2050;
+
+        transition:
+          opacity .2s ease,
+          transform .2s ease,
+          visibility .2s ease;
+      }
+
+      body.sp-page .header #nav.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateY(0);
+      }
+
+      body.sp-page .header #nav .nav__link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        min-width: min(190px, 100%);
+        max-width: 100%;
+
+        text-align: center;
+      }
+
+      body.sp-page .header #burger {
+        position: relative;
+        z-index: 2051;
+      }
     }
 
     /* =========================================================
@@ -891,7 +986,7 @@
   </style>
 </head>
 
-<body>
+<body class="sp-page">
 
   <!-- =======================================================
        HEADER
@@ -938,6 +1033,7 @@
         <a
           href="/sponsors.html"
           class="nav__link nav__link--active"
+          aria-current="page"
         >
           Спонсори
         </a>
@@ -1041,8 +1137,6 @@
           id="sponsorsGrid"
         >
 
-          <!-- Pugach Baits -->
-
           <a
             class="sp-sponsor"
             href="https://puhach.com"
@@ -1052,7 +1146,7 @@
 
             <img
               class="sp-sponsor__logo"
-              src="assets/sponsors/pugach.png"
+              src="/assets/sponsors/pugach.png"
               alt="Pugach Baits"
               loading="lazy"
             >
@@ -1076,8 +1170,6 @@
 
           </a>
 
-          <!-- ВКК -->
-
           <a
             class="sp-sponsor"
             href="https://vkk.in.ua"
@@ -1087,7 +1179,7 @@
 
             <img
               class="sp-sponsor__logo"
-              src="assets/sponsors/vkk.png"
+              src="/assets/sponsors/vkk.png"
               alt="Винниківський Короповий Клуб"
               loading="lazy"
             >
@@ -1200,7 +1292,11 @@
       </h2>
 
       <p class="sp-modal__description">
-        Ваша добровільна підтримка допомагає нам утримувати та розвивати сайт STOLAR CARP, вдосконалювати його можливості й робити участь у змаганнях інформативнішою. Дякуємо кожному, хто долучається до розвитку нашої платформи! ❤️
+        Ваша добровільна підтримка допомагає нам утримувати
+        та розвивати сайт STOLAR CARP, вдосконалювати його
+        можливості й робити участь у змаганнях інформативнішою.
+        Дякуємо кожному, хто долучається до розвитку
+        нашої платформи! ❤️
       </p>
 
       <!-- ===================================================
@@ -1221,12 +1317,6 @@
           Номер картки для переказу
         </div>
 
-        <!--
-          Номер розмитий при відкритті.
-          Жодних написів поверх цифр.
-          Натискання відкриває номер.
-        -->
-
         <button
           class="sp-bank__number"
           id="spCardNumber"
@@ -1244,10 +1334,6 @@
         </button>
 
       </div>
-
-      <!-- ===================================================
-           SUPPORT ACTIONS
-           =================================================== -->
 
       <div class="sp-modal__actions">
 
@@ -1461,8 +1547,6 @@
 
         </div>
 
-        <!-- Honeypot -->
-
         <div
           class="sp-honeypot"
           aria-hidden="true"
@@ -1519,7 +1603,7 @@
   </div>
 
   <!-- =======================================================
-       FOOTER
+       FOOTER • 2025–2026
        ======================================================= -->
 
   <footer class="footer">
@@ -1527,7 +1611,7 @@
     <div class="container footer__row">
 
       <div>
-        © <span id="footerYear">2026</span>
+        © 2025–<span id="footerYear">2026</span>
         STOLAR CARP · Львів
       </div>
 
@@ -1563,7 +1647,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
-  <script src="assets/js/firebase-init.js?v=20260813"></script>
+  <script src="/assets/js/firebase-init.js?v=20260813"></script>
 
   <!-- =======================================================
        PAGE LOGIC
@@ -1585,7 +1669,7 @@
       {
         id: "pugach",
         name: "Pugach Baits",
-        logoUrl: "assets/sponsors/pugach.png",
+        logoUrl: "/assets/sponsors/pugach.png",
         websiteUrl: "https://puhach.com",
         active: true,
         sortOrder: 1
@@ -1593,7 +1677,7 @@
       {
         id: "vkk",
         name: "Винниківський Короповий Клуб",
-        logoUrl: "assets/sponsors/vkk.png",
+        logoUrl: "/assets/sponsors/vkk.png",
         websiteUrl: "https://vkk.in.ua",
         active: true,
         sortOrder: 2
@@ -1601,23 +1685,16 @@
     ];
 
     const grid = $("sponsorsGrid");
-
     const form = $("sponsorApplicationForm");
-
     const submitBtn = $("submitSponsorApplication");
-
     const applicationMessage = $("applicationMessage");
 
     const supportModal = $("spSupportModal");
-
     const partnerModal = $("spPartnerModal");
 
     let db = null;
-
     let sending = false;
-
     let activeModal = null;
-
     let previousFocus = null;
 
     /* =====================================================
@@ -1683,7 +1760,6 @@
       }
 
       previousFocus = document.activeElement;
-
       activeModal = modal;
 
       modal.classList.add("is-open");
@@ -1696,6 +1772,13 @@
       document.body.classList.add(
         "sp-modal-open"
       );
+
+      // Закриваємо головне меню, якщо воно відкрите.
+      if (
+        typeof window.__scCloseMenu === "function"
+      ) {
+        window.__scCloseMenu();
+      }
 
       const dialog = modal.querySelector(
         ".sp-modal__dialog"
@@ -1738,9 +1821,7 @@
 
       if (event.key === "Escape") {
         event.preventDefault();
-
         closeModal();
-
         return;
       }
 
@@ -1767,7 +1848,6 @@
       }
 
       const first = focusable[0];
-
       const last = focusable[
         focusable.length - 1
       ];
@@ -1777,7 +1857,6 @@
         document.activeElement === first
       ) {
         event.preventDefault();
-
         last.focus();
 
       } else if (
@@ -1785,7 +1864,6 @@
         document.activeElement === last
       ) {
         event.preventDefault();
-
         first.focus();
       }
     }
@@ -1853,7 +1931,6 @@
         status.textContent = "";
       }
 
-      // Показуємо номер після натискання копіювання.
       revealCardNumber();
 
       try {
@@ -1878,7 +1955,6 @@
           );
 
           input.style.position = "fixed";
-
           input.style.left = "-9999px";
 
           document.body.appendChild(input);
@@ -1941,9 +2017,7 @@
       if (website) {
         card.href = website;
         card.target = "_blank";
-
-        card.rel =
-          "noopener noreferrer";
+        card.rel = "noopener noreferrer";
       }
 
       function addFallback() {
@@ -1966,16 +2040,13 @@
           "sp-sponsor__logo";
 
         img.src = logo;
-
         img.alt = name;
-
         img.loading = "lazy";
 
         img.addEventListener(
           "error",
           function () {
             img.remove();
-
             addFallback();
           },
           { once: true }
@@ -2008,7 +2079,6 @@
       label.textContent = name;
 
       meta.appendChild(dot);
-
       meta.appendChild(label);
 
       if (website) {
@@ -2074,7 +2144,6 @@
           "Інформація про партнерів оновлюється.";
 
         grid.appendChild(empty);
-
         return;
       }
 
@@ -2103,6 +2172,7 @@
             .hostname
             .replace(/^www\./, "")
             .toLowerCase();
+
         } catch (_) {}
       }
 
@@ -2161,7 +2231,6 @@
       for (let i = 0; i < 120; i++) {
         if (window.scDb) {
           db = window.scDb;
-
           return true;
         }
 
@@ -2183,7 +2252,6 @@
         console.warn(
           "[Sponsors] Firebase недоступний."
         );
-
         return;
       }
 
@@ -2230,7 +2298,6 @@
           "Не вдалося надіслати заявку.",
           "error"
         );
-
         return;
       }
 
@@ -2272,7 +2339,6 @@
           "Заповніть обов'язкові поля.",
           "error"
         );
-
         return;
       }
 
@@ -2292,7 +2358,6 @@
           "Оберіть формат співпраці.",
           "error"
         );
-
         return;
       }
 
@@ -2304,7 +2369,6 @@
           "Вкажіть коректне посилання на сайт.",
           "error"
         );
-
         return;
       }
 
@@ -2312,7 +2376,6 @@
 
       if (submitBtn) {
         submitBtn.disabled = true;
-
         submitBtn.textContent =
           "Надсилання…";
       }
@@ -2373,7 +2436,6 @@
 
         if (submitBtn) {
           submitBtn.disabled = false;
-
           submitBtn.textContent =
             "Надіслати заявку ↗";
         }
@@ -2388,10 +2450,12 @@
       const year = $("footerYear");
 
       if (year) {
-        year.textContent =
-          String(
+        year.textContent = String(
+          Math.max(
+            2026,
             new Date().getFullYear()
-          );
+          )
+        );
       }
 
       /* ===================================================
@@ -2408,9 +2472,7 @@
             status.textContent = "";
           }
 
-          // При кожному відкритті номер знову розмитий.
           hideCardNumber();
-
           openModal(supportModal);
         }
       );
@@ -2484,35 +2546,14 @@
         submitApplication
       );
 
-      /* ===================================================
-         MOBILE NAVIGATION
-         =================================================== */
-
-      const burger = $("burger");
-
-      const nav = $("nav");
-
-      if (burger && nav) {
-        burger.addEventListener(
-          "click",
-          () => {
-            const expanded =
-              burger.getAttribute(
-                "aria-expanded"
-              ) === "true";
-
-            burger.setAttribute(
-              "aria-expanded",
-              String(!expanded)
-            );
-
-            nav.classList.toggle(
-              "nav--open",
-              !expanded
-            );
-          }
-        );
-      }
+      /*
+       * МОБІЛЬНЕ МЕНЮ
+       *
+       * Тут НЕ додаємо burger.addEventListener().
+       * Головним меню керує виключно config.js.
+       *
+       * Клас відкритого меню: .open
+       */
 
       /* ===================================================
          LOAD SPONSORS

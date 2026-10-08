@@ -1,279 +1,376 @@
-/* assets/js/config.js */
-/* STOLAR CARP config — shared JS across pages (helpers only, NO Firebase init) */
+/* =========================================================
+   assets/js/config.js
+
+   STOLAR CARP • GLOBAL CONFIG
+
+   VERSION: 20261008-burger-fix
+
+   ✅ Автоматичний рік сезону
+   ✅ Єдиний контролер бургер-меню
+   ✅ Працює з defer та без defer
+   ✅ Захист від повторної ініціалізації
+   ✅ Закриття меню після вибору сторінки
+   ✅ Закриття після натискання поза меню
+   ✅ Закриття клавішею Escape
+   ✅ Закриття при переході на desktop
+   ✅ Favicon / Theme
+   ✅ CSV helpers
+   ✅ Live CSV
+   ✅ Rating / Awards
+   ✅ Registration windows
+   ✅ Go to cabinet
+
+   Firebase тут НЕ ініціалізується.
+   ========================================================= */
 
 (function () {
   "use strict";
 
-  console.log("✅ config.js LOADED v20260916-auto-season");
+  console.log(
+    "✅ STOLAR CARP config.js LOADED v20261008-burger-fix"
+  );
 
-  /* =========================
-     GLOBAL SITE CONFIG
-     ========================= */
+  /* =========================================================
+     1. GLOBAL CONFIG
+     ========================================================= */
 
-  const CURRENT_SEASON_YEAR =
-    String(new Date().getFullYear());
+  const CURRENT_SEASON_YEAR = String(
+    new Date().getFullYear()
+  );
 
-  /*
-   * Єдине глобальне місце сезону.
-   *
-   * 2026 -> seasonRating/2026
-   * 2027 -> seasonRating/2027
-   * 2028 -> seasonRating/2028
-   *
-   * Інші JS можуть брати:
-   *
-   * window.SC_CONFIG.seasonYear
-   */
   window.SC_CONFIG = {
     ...(window.SC_CONFIG || {}),
-
     seasonYear: CURRENT_SEASON_YEAR
   };
 
-  /*
-   * Додатковий короткий alias.
-   * Не обов'язковий, але зручний для старих/простих модулів.
-   */
-  window.SC_SEASON_YEAR =
-    CURRENT_SEASON_YEAR;
+  window.SC_SEASON_YEAR = CURRENT_SEASON_YEAR;
 
   console.log(
     "✅ STOLAR CARP season:",
     CURRENT_SEASON_YEAR
   );
 
-  /* =========================
-     Small helpers
-     ========================= */
+  /* =========================================================
+     2. HELPERS
+     ========================================================= */
 
-  const $ = (
-    sel,
-    root = document
-  ) =>
-    root.querySelector(sel);
+  const $ = (selector, root = document) => {
+    return root.querySelector(selector);
+  };
 
-  const safeURL = (
-    path
-  ) => {
-    /*
-     * Builds absolute URL
-     * respecting <base href="...">
-     */
+  function safeURL(path) {
     try {
       return new URL(
         path,
         document.baseURI
       ).href;
-
-    } catch {
+    } catch (_) {
       return path;
     }
-  };
+  }
 
-  /* =========================
-     Header / burger (STABLE)
-     ========================= */
+  function escapeHTML(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
 
-  (function headerBurger() {
-    const burger =
-      document.getElementById(
-        "burger"
-      );
+  function parseCSV(text) {
+    const lines = String(text || "")
+      .replace(/\r/g, "")
+      .split("\n")
+      .filter(line => line.trim().length);
 
-    const nav =
-      document.getElementById(
-        "nav"
-      );
+    return lines.map(line => {
+      const separator = line.includes("\t")
+        ? "\t"
+        : line.includes(";")
+          ? ";"
+          : ",";
 
-    if (
-      !burger ||
-      !nav
-    ) {
+      return line
+        .split(separator)
+        .map(cell =>
+          cell
+            .trim()
+            .replace(/^"(.*)"$/, "$1")
+        );
+    });
+  }
+
+  function toNum(value) {
+    const normalized = String(value ?? "")
+      .replace(",", ".")
+      .replace(/\s+/g, "");
+
+    const number = parseFloat(normalized);
+
+    return Number.isFinite(number)
+      ? number
+      : 0;
+  }
+
+  const kg = value => toNum(value).toFixed(3);
+
+  /* =========================================================
+     3. HEADER / BURGER MENU
+
+     ЄДИНИЙ ГЛОБАЛЬНИЙ КОНТРОЛЕР
+
+     HTML:
+
+     <nav class="nav" id="nav">...</nav>
+
+     <button
+       class="burger"
+       id="burger"
+       type="button"
+       aria-controls="nav"
+       aria-expanded="false"
+     >
+       <span></span>
+       <span></span>
+       <span></span>
+     </button>
+
+     ========================================================= */
+
+  function initHeaderBurger() {
+    const burger = document.getElementById("burger");
+    const nav = document.getElementById("nav");
+
+    if (!burger || !nav) {
       return;
     }
 
-    const OPEN_CLASS =
-      "open";
+    /*
+     * Захист від повторного запуску config.js.
+     */
 
-    const isOpen =
-      () =>
-        nav.classList.contains(
-          OPEN_CLASS
-        );
+    if (burger.dataset.scBurgerInitialized === "1") {
+      return;
+    }
 
-    const openMenu =
-      () => {
-        nav.classList.add(
-          OPEN_CLASS
-        );
+    burger.dataset.scBurgerInitialized = "1";
 
-        burger.setAttribute(
-          "aria-expanded",
-          "true"
-        );
+    const OPEN_CLASS = "open";
 
-        document.documentElement
-          .classList.add(
-            "nav-open"
-          );
+    const desktopMedia = window.matchMedia(
+      "(min-width: 861px)"
+    );
 
-        document.body
-          .classList.add(
-            "nav-open"
-          );
-      };
+    function isOpen() {
+      return nav.classList.contains(OPEN_CLASS);
+    }
 
-    const closeMenu =
-      () => {
-        nav.classList.remove(
-          OPEN_CLASS
-        );
+    function setMenuState(open) {
+      const shouldOpen = Boolean(open);
 
-        burger.setAttribute(
-          "aria-expanded",
-          "false"
-        );
+      nav.classList.toggle(
+        OPEN_CLASS,
+        shouldOpen
+      );
 
-        document.documentElement
-          .classList.remove(
-            "nav-open"
-          );
+      burger.classList.toggle(
+        OPEN_CLASS,
+        shouldOpen
+      );
 
-        document.body
-          .classList.remove(
-            "nav-open"
-          );
-      };
+      burger.setAttribute(
+        "aria-expanded",
+        String(shouldOpen)
+      );
 
-    const toggleMenu =
-      () =>
-        (
-          isOpen()
-            ? closeMenu()
-            : openMenu()
-        );
+      burger.setAttribute(
+        "aria-label",
+        shouldOpen
+          ? "Закрити меню"
+          : "Відкрити меню"
+      );
+
+      document.documentElement.classList.toggle(
+        "nav-open",
+        shouldOpen
+      );
+
+      document.body.classList.toggle(
+        "nav-open",
+        shouldOpen
+      );
+    }
+
+    function openMenu() {
+      setMenuState(true);
+    }
+
+    function closeMenu() {
+      setMenuState(false);
+    }
+
+    function toggleMenu() {
+      setMenuState(!isOpen());
+    }
+
+    /*
+     * Початковий стан.
+     */
 
     burger.setAttribute(
       "aria-controls",
       "nav"
     );
 
-    burger.setAttribute(
-      "aria-expanded",
-      "false"
-    );
+    closeMenu();
+
+    /*
+     * Основне натискання на бургер.
+     */
 
     burger.addEventListener(
       "click",
-      e => {
-        e.preventDefault();
+      function (event) {
+        event.preventDefault();
+
+        /*
+         * Не дозволяємо кліку потрапити
+         * до інших делегованих обробників.
+         */
+
+        event.stopPropagation();
+
         toggleMenu();
       }
     );
 
+    /*
+     * Закриття після вибору пункту меню.
+     */
+
     nav.addEventListener(
       "click",
-      e => {
-        const a =
-          e.target.closest(
-            "a"
-          );
+      function (event) {
+        const link = event.target.closest(
+          "a"
+        );
 
-        if (
-          a &&
-          isOpen()
-        ) {
+        if (link && isOpen()) {
           closeMenu();
         }
       }
     );
 
+    /*
+     * Закриття при натисканні
+     * поза меню.
+     */
+
     document.addEventListener(
       "click",
-      e => {
-        if (
-          !isOpen()
-        ) {
+      function (event) {
+        if (!isOpen()) {
           return;
         }
 
+        const clickedInsideNav = nav.contains(
+          event.target
+        );
+
+        const clickedBurger = burger.contains(
+          event.target
+        );
+
         if (
-          !nav.contains(
-            e.target
-          ) &&
-          !burger.contains(
-            e.target
-          )
+          !clickedInsideNav &&
+          !clickedBurger
         ) {
           closeMenu();
         }
       }
     );
+
+    /*
+     * Escape.
+     */
 
     document.addEventListener(
       "keydown",
-      e => {
+      function (event) {
         if (
-          e.key ===
-            "Escape" &&
+          event.key === "Escape" &&
           isOpen()
         ) {
+          closeMenu();
+          burger.focus();
+        }
+      }
+    );
+
+    /*
+     * Закриття при переході
+     * з мобільного режиму на desktop.
+     */
+
+    function handleDesktopChange() {
+      if (desktopMedia.matches) {
+        closeMenu();
+      }
+    }
+
+    if (
+      typeof desktopMedia.addEventListener === "function"
+    ) {
+      desktopMedia.addEventListener(
+        "change",
+        handleDesktopChange
+      );
+    } else {
+      desktopMedia.addListener(
+        handleDesktopChange
+      );
+    }
+
+    /*
+     * Закриття після повернення
+     * на сторінку через історію браузера.
+     */
+
+    window.addEventListener(
+      "pageshow",
+      function (event) {
+        if (event.persisted) {
           closeMenu();
         }
       }
     );
 
-    const mq =
-      window.matchMedia(
-        "(max-width: 860px)"
-      );
+    /*
+     * Глобальні функції для інших модулів.
+     */
 
-    const onMQ =
-      () => {
-        if (
-          !mq.matches
-        ) {
-          closeMenu();
-        }
-      };
+    window.__scCloseMenu = closeMenu;
+    window.__scOpenMenu = openMenu;
+    window.__scToggleMenu = toggleMenu;
 
-    if (
-      mq.addEventListener
-    ) {
-      mq.addEventListener(
-        "change",
-        onMQ
-      );
+    console.log(
+      "✅ STOLAR CARP burger initialized"
+    );
+  }
 
-    } else {
-      mq.addListener(
-        onMQ
-      );
-    }
+  /* =========================================================
+     4. FAVICON / THEME
+     ========================================================= */
 
-    window.__scCloseMenu =
-      closeMenu;
-  })();
+  function injectIcons() {
+    const head = document.head;
 
-  /* =========================
-     Inject favicon & theme meta
-     ========================= */
-
-  (function injectIcons() {
-    const head =
-      document.head;
-
-    if (
-      !head
-    ) {
+    if (!head) {
       return;
     }
 
-    const addLink = (
-      rel,
-      href,
-      type
-    ) => {
+    function addLink(rel, href, type) {
       if (
         head.querySelector(
           `link[rel="${rel}"]`
@@ -282,63 +379,39 @@
         return;
       }
 
-      const l =
-        document.createElement(
-          "link"
-        );
+      const link = document.createElement("link");
 
-      l.rel =
-        rel;
+      link.rel = rel;
+      link.href = safeURL(href);
 
-      l.href =
-        safeURL(
-          href
-        );
-
-      if (
-        type
-      ) {
-        l.type =
-          type;
+      if (type) {
+        link.type = type;
       }
 
-      head.appendChild(
-        l
+      head.appendChild(link);
+    }
+
+    function addMeta(name, content) {
+      let meta = head.querySelector(
+        `meta[name="${name}"]`
       );
-    };
 
-    const addMeta = (
-      name,
-      content
-    ) => {
-      let m =
-        head.querySelector(
-          `meta[name="${name}"]`
-        );
+      if (!meta) {
+        meta = document.createElement("meta");
 
-      if (
-        !m
-      ) {
-        m =
-          document.createElement(
-            "meta"
-          );
-
-        m.setAttribute(
+        meta.setAttribute(
           "name",
           name
         );
 
-        head.appendChild(
-          m
-        );
+        head.appendChild(meta);
       }
 
-      m.setAttribute(
+      meta.setAttribute(
         "content",
         content
       );
-    };
+    }
 
     addLink(
       "icon",
@@ -351,9 +424,6 @@
       "assets/favicon.png"
     );
 
-    /*
-     * DARK STATUS BAR
-     */
     addMeta(
       "theme-color",
       "#0b0f1a"
@@ -363,174 +433,46 @@
       "apple-mobile-web-app-status-bar-style",
       "black-translucent"
     );
-  })();
+  }
 
-  /* =========================
-     Utils
-     ========================= */
+  /* =========================================================
+     5. LIVE PAGE / CSV
+     ========================================================= */
 
-  const escapeHTML =
-    s =>
-      String(
-        s ?? ""
-      )
-        .replace(
-          /&/g,
-          "&amp;"
-        )
-        .replace(
-          /</g,
-          "&lt;"
-        )
-        .replace(
-          />/g,
-          "&gt;"
-        )
-        .replace(
-          /"/g,
-          "&quot;"
-        )
-        .replace(
-          /'/g,
-          "&#39;"
-        );
-
-  function parseCSV(
-    text
-  ) {
-    const lines =
-      String(
-        text ||
-        ""
-      )
-        .replace(
-          /\r/g,
-          ""
-        )
-        .split(
-          "\n"
-        )
-        .filter(
-          line =>
-            line
-              .trim()
-              .length
-        );
-
-    return lines.map(
-      line => {
-        const sep =
-          line.includes(
-            "\t"
-          )
-            ? "\t"
-            : line.includes(
-                ";"
-              )
-              ? ";"
-              : ",";
-
-        return line
-          .split(
-            sep
-          )
-          .map(
-            cell =>
-              cell
-                .trim()
-                .replace(
-                  /^"(.*)"$/,
-                  "$1"
-                )
-          );
-      }
+  function initLivePage() {
+    const paste = document.getElementById(
+      "csv-paste"
     );
-  }
 
-  function toNum(
-    x
-  ) {
-    const v =
-      String(
-        x ||
-        ""
-      )
-        .replace(
-          ",",
-          "."
-        )
-        .replace(
-          /\s+/g,
-          ""
-        );
+    const renderBtn = document.getElementById(
+      "render-csv"
+    );
 
-    const n =
-      parseFloat(
-        v
-      );
+    const liveBody = document.getElementById(
+      "live-body"
+    );
 
-    return Number.isFinite(
-      n
-    )
-      ? n
-      : 0;
-  }
+    const csvUrlInput = document.getElementById(
+      "csv-url"
+    );
 
-  const kg =
-    v =>
-      toNum(
-        v
-      ).toFixed(
-        3
-      );
+    const fetchBtn = document.getElementById(
+      "fetch-csv"
+    );
 
-  /* =========================
-     LIVE PAGE (optional)
-     ========================= */
+    const autoToggle = document.getElementById(
+      "auto-refresh"
+    );
 
-  (function livePage() {
-    const paste =
-      document.getElementById(
-        "csv-paste"
-      );
+    const statusText = document.getElementById(
+      "statusText"
+    );
 
-    const renderBtn =
-      document.getElementById(
-        "render-csv"
-      );
+    const statusDot = document.getElementById(
+      "statusDot"
+    );
 
-    const liveBody =
-      document.getElementById(
-        "live-body"
-      );
-
-    const csvUrlInput =
-      document.getElementById(
-        "csv-url"
-      );
-
-    const fetchBtn =
-      document.getElementById(
-        "fetch-csv"
-      );
-
-    const autoToggle =
-      document.getElementById(
-        "auto-refresh"
-      );
-
-    const statusText =
-      document.getElementById(
-        "statusText"
-      );
-
-    const statusDot =
-      document.getElementById(
-        "statusDot"
-      );
-
-    let autoTimer =
-      null;
+    let autoTimer = null;
 
     if (
       !paste &&
@@ -543,300 +485,214 @@
       return;
     }
 
-    const setStatus = (
-      type,
-      text
-    ) => {
-      if (
-        !statusText ||
-        !statusDot
-      ) {
+    function setStatus(type, message) {
+      if (!statusText || !statusDot) {
         return;
       }
 
-      statusDot
-        .classList
-        .remove(
-          "ok",
-          "err"
-        );
-
-      if (
-        type ===
-        "ok"
-      ) {
-        statusDot
-          .classList
-          .add(
-            "ok"
-          );
-      }
-
-      if (
-        type ===
+      statusDot.classList.remove(
+        "ok",
         "err"
-      ) {
-        statusDot
-          .classList
-          .add(
-            "err"
-          );
+      );
+
+      if (type === "ok") {
+        statusDot.classList.add("ok");
       }
 
-      statusText.textContent =
-        text ||
-        "";
-    };
+      if (type === "err") {
+        statusDot.classList.add("err");
+      }
 
-    const renderLiveTable =
-      rows => {
-        if (
-          !liveBody
-        ) {
-          return;
-        }
+      statusText.textContent = message || "";
+    }
 
-        liveBody.innerHTML =
-          rows
-            .map(
-              row =>
-                `<tr>${
-                  row
-                    .map(
-                      cell =>
-                        `<td>${
-                          escapeHTML(
-                            cell ||
-                            ""
-                          )
-                        }</td>`
-                    )
-                    .join(
-                      ""
-                    )
-                }</tr>`
-            )
-            .join(
-              ""
-            );
-      };
+    function renderLiveTable(rows) {
+      if (!liveBody) {
+        return;
+      }
 
-    const fetchCSV =
-      async url => {
-        const res =
-          await fetch(
-            url,
-            {
-              cache:
-                "no-store"
-            }
+      liveBody.innerHTML = rows
+        .map(row => {
+          return (
+            "<tr>" +
+            row
+              .map(cell => {
+                return (
+                  "<td>" +
+                  escapeHTML(cell || "") +
+                  "</td>"
+                );
+              })
+              .join("") +
+            "</tr>"
           );
+        })
+        .join("");
+    }
 
-        if (
-          !res.ok
-        ) {
-          throw new Error(
-            "HTTP " +
-            res.status
-          );
-        }
+    async function fetchCSV(url) {
+      const response = await fetch(url, {
+        cache: "no-store"
+      });
 
-        return parseCSV(
-          await res.text()
+      if (!response.ok) {
+        throw new Error(
+          "HTTP " + response.status
         );
-      };
+      }
 
-    const tick =
-      async () => {
-        const url =
-          (
-            csvUrlInput
-              ?.value ||
-            ""
-          ).trim();
+      return parseCSV(
+        await response.text()
+      );
+    }
 
-        if (
-          !url
-        ) {
-          return;
-        }
+    async function tick() {
+      const url = (
+        csvUrlInput?.value || ""
+      ).trim();
 
-        try {
-          setStatus(
-            "",
-            "Завантаження…"
-          );
+      if (!url) {
+        return;
+      }
 
-          const rows =
-            await fetchCSV(
-              url
-            );
+      try {
+        setStatus(
+          "",
+          "Завантаження…"
+        );
 
-          renderLiveTable(
-            rows
-          );
+        const rows = await fetchCSV(url);
 
-          setStatus(
-            "ok",
-            "Оновлено: " +
-              new Date()
-                .toLocaleTimeString(
-                  "uk-UA"
-                )
-          );
+        renderLiveTable(rows);
 
-        } catch (
-          e
-        ) {
-          setStatus(
-            "err",
-            "Помилка: " +
-              (
-                e?.message ||
-                e
-              )
-          );
-        }
-      };
+        setStatus(
+          "ok",
+          "Оновлено: " +
+            new Date().toLocaleTimeString(
+              "uk-UA"
+            )
+        );
+
+      } catch (error) {
+        setStatus(
+          "err",
+          "Помилка: " +
+            (error?.message || error)
+        );
+      }
+    }
+
+    /*
+     * Render pasted CSV.
+     */
 
     if (
       renderBtn &&
       paste &&
       liveBody
     ) {
-      renderBtn
-        .addEventListener(
-          "click",
-          () => {
-            try {
-              const rows =
-                parseCSV(
-                  paste.value
-                );
+      renderBtn.addEventListener(
+        "click",
+        function () {
+          try {
+            const rows = parseCSV(
+              paste.value
+            );
 
-              renderLiveTable(
-                rows
-              );
+            renderLiveTable(rows);
 
-              setStatus(
-                "ok",
-                "Оновлено з буфера"
-              );
+            setStatus(
+              "ok",
+              "Оновлено з буфера"
+            );
 
-            } catch (
-              e
-            ) {
-              setStatus(
-                "err",
-                "Помилка CSV: " +
-                  (
-                    e?.message ||
-                    e
-                  )
-              );
-            }
+          } catch (error) {
+            setStatus(
+              "err",
+              "Помилка CSV: " +
+                (error?.message || error)
+            );
           }
-        );
+        }
+      );
     }
+
+    /*
+     * Fetch CSV.
+     */
 
     if (
       fetchBtn &&
       csvUrlInput
     ) {
-      fetchBtn
-        .addEventListener(
-          "click",
-          async () => {
-            const url =
-              csvUrlInput
-                .value
-                .trim();
+      fetchBtn.addEventListener(
+        "click",
+        async function () {
+          const url = csvUrlInput.value.trim();
 
-            if (
-              !url
-            ) {
-              alert(
-                "Вкажіть посилання на CSV"
-              );
+          if (!url) {
+            alert(
+              "Вкажіть посилання на CSV"
+            );
 
-              return;
-            }
-
-            localStorage
-              .setItem(
-                "live_url",
-                url
-              );
-
-            await tick();
+            return;
           }
-        );
+
+          localStorage.setItem(
+            "live_url",
+            url
+          );
+
+          await tick();
+        }
+      );
     }
+
+    /*
+     * Auto refresh.
+     */
 
     if (
       autoToggle &&
       csvUrlInput
     ) {
-      autoToggle
-        .addEventListener(
-          "change",
-          async e => {
-            const on =
-              !!e.target
-                .checked;
+      autoToggle.addEventListener(
+        "change",
+        async function (event) {
+          const enabled = Boolean(
+            event.target.checked
+          );
 
-            localStorage
-              .setItem(
-                "live_auto",
-                on
-                  ? "1"
-                  : "0"
-              );
+          localStorage.setItem(
+            "live_auto",
+            enabled ? "1" : "0"
+          );
 
-            if (
-              autoTimer
-            ) {
-              clearInterval(
-                autoTimer
-              );
-            }
-
-            autoTimer =
-              null;
-
-            if (
-              on
-            ) {
-              await tick();
-
-              autoTimer =
-                setInterval(
-                  tick,
-                  60000
-                );
-            }
+          if (autoTimer) {
+            clearInterval(autoTimer);
           }
-        );
+
+          autoTimer = null;
+
+          if (enabled) {
+            await tick();
+
+            autoTimer = setInterval(
+              tick,
+              60000
+            );
+          }
+        }
+      );
 
       const savedUrl =
-        localStorage
-          .getItem(
-            "live_url"
-          ) ||
-        "";
+        localStorage.getItem("live_url") || "";
 
       const savedAuto =
-        localStorage
-          .getItem(
-            "live_auto"
-          ) ===
-        "1";
+        localStorage.getItem("live_auto") === "1";
 
-      csvUrlInput.value =
-        savedUrl;
-
-      autoToggle.checked =
-        savedAuto;
+      csvUrlInput.value = savedUrl;
+      autoToggle.checked = savedAuto;
 
       if (
         savedUrl &&
@@ -844,39 +700,34 @@
       ) {
         tick();
 
-        autoTimer =
-          setInterval(
-            tick,
-            60000
-          );
+        autoTimer = setInterval(
+          tick,
+          60000
+        );
       }
     }
-  })();
+  }
 
-  /* =========================
-     RATING + AWARDS (optional)
-     ========================= */
+  /* =========================================================
+     6. RATING / AWARDS
+     ========================================================= */
 
-  (function ratingAwards() {
-    const rateCSV =
-      document.getElementById(
-        "rating-csv"
-      );
+  function initRatingAwards() {
+    const rateCSV = document.getElementById(
+      "rating-csv"
+    );
 
-    const calcBtn =
-      document.getElementById(
-        "calc-awards"
-      );
+    const calcBtn = document.getElementById(
+      "calc-awards"
+    );
 
-    const topLake =
-      document.getElementById(
-        "top-lake"
-      );
+    const topLake = document.getElementById(
+      "top-lake"
+    );
 
-    const zonesWrap =
-      document.getElementById(
-        "zones-awards"
-      );
+    const zonesWrap = document.getElementById(
+      "zones-awards"
+    );
 
     if (
       !calcBtn ||
@@ -885,479 +736,331 @@
       return;
     }
 
-    const groupByZone =
-      rows => {
-        const byZ = {
-          A: [],
-          B: [],
-          C: []
-        };
-
-        rows.forEach(
-          row => {
-            const team =
-              row[0] ||
-              "";
-
-            const zone =
-              (
-                row[1] ||
-                ""
-              ).toUpperCase();
-
-            const weight =
-              toNum(
-                row[4]
-              );
-
-            if (
-              team &&
-              [
-                "A",
-                "B",
-                "C"
-              ].includes(
-                zone
-              )
-            ) {
-              byZ[
-                zone
-              ].push({
-                team,
-                weight
-              });
-            }
-          }
-        );
-
-        [
-          "A",
-          "B",
-          "C"
-        ].forEach(
-          zone =>
-            byZ[
-              zone
-            ].sort(
-              (
-                a,
-                b
-              ) =>
-                b.weight -
-                a.weight
-            )
-        );
-
-        return byZ;
+    function groupByZone(rows) {
+      const byZone = {
+        A: [],
+        B: [],
+        C: []
       };
 
-    const renderTopLake =
-      byZ => {
-        if (
-          !topLake
-        ) {
-          return;
-        }
+      rows.forEach(row => {
+        const team = row[0] || "";
 
-        const winners =
-          [
-            "A",
-            "B",
-            "C"
-          ]
-            .map(
-              zone =>
-                byZ[
-                  zone
-                ][0]
-            )
-            .filter(
-              Boolean
-            );
+        const zone = (
+          row[1] || ""
+        ).toUpperCase();
 
-        winners.sort(
-          (
-            a,
-            b
-          ) =>
-            b.weight -
-            a.weight
+        const weight = toNum(
+          row[4]
         );
 
-        topLake.innerHTML =
-          winners.length
-            ? winners
-                .map(
-                  (
-                    winner,
-                    index
-                  ) =>
-                    `<tr>
+        if (
+          team &&
+          ["A", "B", "C"].includes(zone)
+        ) {
+          byZone[zone].push({
+            team,
+            weight
+          });
+        }
+      });
+
+      ["A", "B", "C"].forEach(zone => {
+        byZone[zone].sort(
+          (a, b) => b.weight - a.weight
+        );
+      });
+
+      return byZone;
+    }
+
+    function renderTopLake(byZone) {
+      if (!topLake) {
+        return;
+      }
+
+      const winners = ["A", "B", "C"]
+        .map(zone => byZone[zone][0])
+        .filter(Boolean);
+
+      winners.sort(
+        (a, b) => b.weight - a.weight
+      );
+
+      topLake.innerHTML = winners.length
+        ? winners
+            .map((winner, index) => {
+              return `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${escapeHTML(winner.team)}</td>
+                  <td>${kg(winner.weight)}</td>
+                </tr>
+              `;
+            })
+            .join("")
+        : `
+          <tr>
+            <td colspan="3">
+              Немає даних
+            </td>
+          </tr>
+        `;
+    }
+
+    function renderZonesAwards(byZone) {
+      if (!zonesWrap) {
+        return;
+      }
+
+      zonesWrap.innerHTML = [
+        "A",
+        "B",
+        "C"
+      ]
+        .map(zone => {
+          const teams = byZone[zone];
+
+          const awards = [
+            teams[1],
+            teams[2],
+            teams[3]
+          ].filter(Boolean);
+
+          const rows = awards.length
+            ? awards
+                .map((winner, index) => {
+                  return `
+                    <tr>
                       <td>${index + 1}</td>
                       <td>${escapeHTML(winner.team)}</td>
                       <td>${kg(winner.weight)}</td>
-                    </tr>`
-                )
-                .join(
-                  ""
-                )
-            : `<tr>
+                    </tr>
+                  `;
+                })
+                .join("")
+            : `
+              <tr>
                 <td colspan="3">
-                  Немає даних
+                  Недостатньо даних
                 </td>
-              </tr>`;
-      };
+              </tr>
+            `;
 
-    const renderZonesAwards =
-      byZ => {
-        if (
-          !zonesWrap
-        ) {
-          return;
-        }
+          return `
+            <div class="card">
+              <h3>
+                Зона ${zone} — нагородження
+                (2→1, 3→2, 4→3)
+              </h3>
 
-        zonesWrap.innerHTML =
-          [
-            "A",
-            "B",
-            "C"
-          ]
-            .map(
-              zone => {
-                const arr =
-                  byZ[
-                    zone
-                  ];
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Місце</th>
+                    <th>Команда</th>
+                    <th>Вага, кг</th>
+                  </tr>
+                </thead>
 
-                const awards =
-                  [
-                    arr[1],
-                    arr[2],
-                    arr[3]
-                  ].filter(
-                    Boolean
-                  );
+                <tbody>
+                  ${rows}
+                </tbody>
+              </table>
+            </div>
+          `;
+        })
+        .join("");
+    }
 
-                const rows =
-                  awards.length
-                    ? awards
-                        .map(
-                          (
-                            winner,
-                            index
-                          ) =>
-                            `<tr>
-                              <td>${index + 1}</td>
-                              <td>${escapeHTML(winner.team)}</td>
-                              <td>${kg(winner.weight)}</td>
-                            </tr>`
-                        )
-                        .join(
-                          ""
-                        )
-                    : `<tr>
-                        <td colspan="3">
-                          Недостатньо даних
-                        </td>
-                      </tr>`;
+    calcBtn.addEventListener(
+      "click",
+      function () {
+        try {
+          const rows = parseCSV(
+            rateCSV.value
+          );
 
-                return `
-                  <div class="card">
-                    <h3>
-                      Зона ${zone} — нагородження
-                      (2→1, 3→2, 4→3)
-                    </h3>
-
-                    <table class="table">
-                      <thead>
-                        <tr>
-                          <th>Місце</th>
-                          <th>Команда</th>
-                          <th>Вага, кг</th>
-                        </tr>
-                      </thead>
-
-                      <tbody>
-                        ${rows}
-                      </tbody>
-                    </table>
-                  </div>
-                `;
-              }
+          const body =
+            rows[0] &&
+            /команда/i.test(
+              rows[0][0] || ""
             )
-            .join(
-              ""
-            );
-      };
+              ? rows.slice(1)
+              : rows;
 
-    calcBtn
-      .addEventListener(
-        "click",
-        () => {
-          try {
-            const rows =
-              parseCSV(
-                rateCSV.value
-              );
+          const byZone = groupByZone(
+            body
+          );
 
-            const body =
-              rows[0] &&
-              /команда/i.test(
-                rows[0][0] ||
-                ""
-              )
-                ? rows.slice(
-                    1
-                  )
-                : rows;
+          renderTopLake(byZone);
+          renderZonesAwards(byZone);
 
-            const byZ =
-              groupByZone(
-                body
-              );
+          const ready = document.getElementById(
+            "awards-ready"
+          );
 
-            renderTopLake(
-              byZ
-            );
-
-            renderZonesAwards(
-              byZ
-            );
-
-            const ready =
-              document.getElementById(
-                "awards-ready"
-              );
-
-            if (
-              ready
-            ) {
-              ready.style.display =
-                "block";
-            }
-
-          } catch (
-            e
-          ) {
-            alert(
-              "Помилка CSV: " +
-                (
-                  e?.message ||
-                  e
-                )
-            );
+          if (ready) {
+            ready.style.display = "block";
           }
+
+        } catch (error) {
+          alert(
+            "Помилка CSV: " +
+              (error?.message || error)
+          );
         }
-      );
-  })();
+      }
+    );
+  }
 
-  /* =========================
-     AUTO REGISTRATION WINDOWS
-     ========================= */
+  /* =========================================================
+     7. AUTO REGISTRATION WINDOWS
+     ========================================================= */
 
-  (function autoRegButtons() {
-    const stagesWrap =
-      document.getElementById(
-        "stages"
-      );
+  function initAutoRegButtons() {
+    const stagesWrap = document.getElementById(
+      "stages"
+    );
 
-    if (
-      !stagesWrap
-    ) {
+    if (!stagesWrap) {
       return;
     }
 
-    const DAY =
-      86400000;
+    const DAY = 86400000;
 
-    const toDate =
-      s =>
-        s
-          ? new Date(
-              s +
-              "T00:00:00"
-            )
-          : null;
+    function toDate(value) {
+      return value
+        ? new Date(
+            value + "T00:00:00"
+          )
+        : null;
+    }
 
     stagesWrap
       .querySelectorAll(
         ".card[data-id][data-start]"
       )
-      .forEach(
-        card => {
-          const id =
-            card.dataset.id;
+      .forEach(card => {
+        const id = card.dataset.id;
 
-          /*
-           * Раніше було:
-           *
-           * "2026-01-01"
-           *
-           * Тепер автоматично:
-           *
-           * 2026 -> 2026-01-01
-           * 2027 -> 2027-01-01
-           */
-          const fallbackStart =
-            `${CURRENT_SEASON_YEAR}-01-01`;
+        const fallbackStart =
+          `${CURRENT_SEASON_YEAR}-01-01`;
 
-          const s =
-            toDate(
-              card.dataset.start ||
-              fallbackStart
-            );
+        const start = toDate(
+          card.dataset.start ||
+          fallbackStart
+        );
 
-          if (
-            !id ||
-            !s
-          ) {
-            return;
-          }
-
-          const open =
-            card.dataset.regOpen
-              ? toDate(
-                  card.dataset.regOpen
-                )
-              : new Date(
-                  s.getTime() -
-                  14 *
-                  DAY
-                );
-
-          const close =
-            card.dataset.regClose
-              ? toDate(
-                  card.dataset.regClose
-                )
-              : new Date(
-                  s.getTime() -
-                  6 *
-                  3600 *
-                  1000
-                );
-
-          let regBtn =
-            card.querySelector(
-              "[data-reg]"
-            );
-
-          if (
-            !regBtn
-          ) {
-            const btns =
-              card.querySelector(
-                ".btns"
-              ) ||
-              card.appendChild(
-                Object.assign(
-                  document.createElement(
-                    "div"
-                  ),
-                  {
-                    className:
-                      "btns"
-                  }
-                )
-              );
-
-            regBtn =
-              document.createElement(
-                "a"
-              );
-
-            regBtn.className =
-              "btn btn--primary";
-
-            regBtn.setAttribute(
-              "data-reg",
-              ""
-            );
-
-            regBtn.href =
-              `register.html?stage=${
-                encodeURIComponent(
-                  id
-                )
-              }`;
-
-            btns.prepend(
-              regBtn
-            );
-          }
-
-          const now =
-            new Date();
-
-          if (
-            now <
-            open
-          ) {
-            regBtn.textContent =
-              "Реєстрація скоро";
-
-            regBtn.style.opacity =
-              ".6";
-
-            regBtn.style.pointerEvents =
-              "none";
-
-          } else if (
-            now >
-            close
-          ) {
-            regBtn.textContent =
-              "Реєстрацію закрито";
-
-            regBtn.style.opacity =
-              ".6";
-
-            regBtn.style.pointerEvents =
-              "none";
-
-          } else {
-            regBtn.textContent =
-              "Реєстрація";
-
-            regBtn.style.opacity =
-              "";
-
-            regBtn.style.pointerEvents =
-              "";
-          }
+        if (
+          !id ||
+          !start
+        ) {
+          return;
         }
-      );
-  })();
 
-})();
+        const open = card.dataset.regOpen
+          ? toDate(
+              card.dataset.regOpen
+            )
+          : new Date(
+              start.getTime() -
+              14 * DAY
+            );
 
-/* ===============================
-   GO TO CABINET
-   burger + desktop
-   =============================== */
+        const close = card.dataset.regClose
+          ? toDate(
+              card.dataset.regClose
+            )
+          : new Date(
+              start.getTime() -
+              6 * 3600 * 1000
+            );
 
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-    const goCabinet =
-      document.getElementById(
-        "goCabinet"
-      );
+        let regBtn = card.querySelector(
+          "[data-reg]"
+        );
+
+        if (!regBtn) {
+          const buttons = card.querySelector(
+            ".btns"
+          ) || card.appendChild(
+            Object.assign(
+              document.createElement("div"),
+              {
+                className: "btns"
+              }
+            )
+          );
+
+          regBtn = document.createElement("a");
+
+          regBtn.className =
+            "btn btn--primary";
+
+          regBtn.setAttribute(
+            "data-reg",
+            ""
+          );
+
+          regBtn.href =
+            `register.html?stage=${encodeURIComponent(id)}`;
+
+          buttons.prepend(regBtn);
+        }
+
+        const now = new Date();
+
+        if (now < open) {
+          regBtn.textContent =
+            "Реєстрація скоро";
+
+          regBtn.style.opacity = ".6";
+          regBtn.style.pointerEvents = "none";
+
+        } else if (now > close) {
+          regBtn.textContent =
+            "Реєстрацію закрито";
+
+          regBtn.style.opacity = ".6";
+          regBtn.style.pointerEvents = "none";
+
+        } else {
+          regBtn.textContent =
+            "Реєстрація";
+
+          regBtn.style.opacity = "";
+          regBtn.style.pointerEvents = "";
+        }
+      });
+  }
+
+  /* =========================================================
+     8. GO TO CABINET
+     ========================================================= */
+
+  function initGoCabinet() {
+    const goCabinet = document.getElementById(
+      "goCabinet"
+    );
+
+    if (!goCabinet) {
+      return;
+    }
 
     if (
-      !goCabinet
+      goCabinet.dataset.scCabinetInitialized === "1"
     ) {
       return;
     }
 
+    goCabinet.dataset.scCabinetInitialized = "1";
+
     goCabinet.addEventListener(
       "click",
-      e => {
-        e.preventDefault();
+      function (event) {
+        event.preventDefault();
 
-        /*
-         * Firebase ще не ініціалізований
-         */
         if (
           !window.firebase ||
           !window.firebase.auth
@@ -1368,22 +1071,72 @@ document.addEventListener(
           return;
         }
 
-        const user =
-          window.firebase
-            .auth()
-            .currentUser;
+        const user = window.firebase
+          .auth()
+          .currentUser;
 
-        if (
-          user
-        ) {
-          window.location.href =
-            "/cabinet.html";
-
-        } else {
-          window.location.href =
-            "/auth.html";
-        }
+        window.location.href = user
+          ? "/cabinet.html"
+          : "/auth.html";
       }
     );
   }
-);
+
+  /* =========================================================
+     9. DOM INITIALIZATION
+
+     Головне виправлення:
+
+     Не запускаємо burger раніше,
+     ніж HTML буде готовий.
+     ========================================================= */
+
+  let initialized = false;
+
+  function init() {
+    if (initialized) {
+      return;
+    }
+
+    initialized = true;
+
+    /*
+     * Header.
+     */
+
+    initHeaderBurger();
+
+    /*
+     * Icons.
+     */
+
+    injectIcons();
+
+    /*
+     * Optional modules.
+     */
+
+    initLivePage();
+    initRatingAwards();
+    initAutoRegButtons();
+    initGoCabinet();
+
+    console.log(
+      "✅ STOLAR CARP config initialized"
+    );
+  }
+
+  if (
+    document.readyState === "loading"
+  ) {
+    document.addEventListener(
+      "DOMContentLoaded",
+      init,
+      { once: true }
+    );
+
+  } else {
+    init();
+  }
+
+})();

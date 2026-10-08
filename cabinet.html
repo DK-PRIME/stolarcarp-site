@@ -2,20 +2,42 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
   <title>Мій кабінет · STOLAR CARP</title>
 
-  <link rel="icon" type="image/png" href="assets/favicon.png">
-  <link rel="apple-touch-icon" href="assets/favicon.png">
+  <link
+    rel="icon"
+    type="image/png"
+    href="assets/favicon.png"
+  >
 
-  <meta name="theme-color" content="#020617">
+  <link
+    rel="apple-touch-icon"
+    href="assets/favicon.png"
+  >
 
-  <link rel="stylesheet" href="assets/css/main.css?v=20261008">
+  <meta
+    name="theme-color"
+    content="#020617"
+  >
 
-  <script defer src="assets/js/config.js?v=20261008"></script>
+  <link
+    rel="stylesheet"
+    href="assets/css/main.css?v=20261008-2"
+  >
+
+  <script
+    defer
+    src="assets/js/config.js?v=20261008"
+  ></script>
 
   <style>
+
     /* =========================================================
        STOLAR CARP • COMPACT CABINET
        ========================================================= */
@@ -42,6 +64,186 @@
       margin:0 auto;
       padding-top:15px;
       padding-bottom:45px;
+    }
+
+    /* =========================================================
+       HEADER / BURGER FIX
+       ========================================================= */
+
+    .cabinet-page .header {
+      position:relative;
+      z-index:1000;
+      isolation:isolate;
+    }
+
+    .cabinet-page .header__row {
+      position:relative;
+
+      display:flex;
+      align-items:center;
+
+      min-height:60px;
+    }
+
+    .cabinet-page .logo {
+      position:relative;
+      z-index:1;
+
+      min-width:0;
+    }
+
+    .cabinet-page #burger {
+      position:relative;
+      z-index:1002;
+
+      flex-shrink:0;
+
+      cursor:pointer;
+
+      pointer-events:auto;
+
+      touch-action:manipulation;
+
+      -webkit-tap-highlight-color:transparent;
+    }
+
+    .cabinet-page #burger:focus-visible {
+      outline:2px solid #facc15;
+      outline-offset:4px;
+    }
+
+    /* =========================================================
+       MOBILE NAVIGATION
+       ========================================================= */
+
+    @media (max-width:850px) {
+
+      .cabinet-page .header {
+        overflow:visible;
+      }
+
+      .cabinet-page .header__row {
+        overflow:visible;
+      }
+
+      .cabinet-page #burger {
+        display:flex !important;
+
+        align-items:center;
+        justify-content:center;
+        flex-direction:column;
+
+        gap:5px;
+
+        min-width:44px;
+        min-height:44px;
+
+        margin-left:auto;
+
+        border:0;
+
+        background:transparent;
+
+        cursor:pointer;
+      }
+
+      .cabinet-page #burger span {
+        display:block;
+
+        width:25px;
+        height:3px;
+
+        border-radius:5px;
+
+        background:#f8fafc;
+
+        pointer-events:none;
+
+        transition:
+          transform .2s ease,
+          opacity .2s ease;
+      }
+
+      .cabinet-page #burger[aria-expanded="true"] span:nth-child(1) {
+        transform:translateY(8px) rotate(45deg);
+      }
+
+      .cabinet-page #burger[aria-expanded="true"] span:nth-child(2) {
+        opacity:0;
+      }
+
+      .cabinet-page #burger[aria-expanded="true"] span:nth-child(3) {
+        transform:translateY(-8px) rotate(-45deg);
+      }
+
+      .cabinet-page #nav {
+        display:none !important;
+
+        position:absolute;
+
+        top:calc(100% + 6px);
+        left:10px;
+        right:10px;
+
+        width:auto;
+        max-width:none;
+
+        z-index:1001;
+
+        flex-direction:column;
+        align-items:stretch;
+
+        gap:3px;
+
+        margin:0;
+        padding:12px;
+
+        border-radius:15px;
+
+        border:1px solid rgba(250,204,21,.25);
+
+        background:#0f172a;
+
+        box-shadow:
+          0 20px 50px rgba(0,0,0,.65);
+
+        overflow-y:auto;
+
+        max-height:calc(100dvh - 95px);
+      }
+
+      .cabinet-page #nav.open {
+        display:flex !important;
+      }
+
+      .cabinet-page #nav .nav__link {
+        display:block;
+
+        width:100%;
+
+        padding:12px 14px;
+
+        border-radius:9px;
+
+        color:#e5e7eb;
+
+        text-decoration:none;
+
+        font-size:.9rem;
+        font-weight:750;
+
+        line-height:1.4;
+
+        white-space:normal;
+      }
+
+      .cabinet-page #nav .nav__link:hover,
+      .cabinet-page #nav .nav__link--active {
+        color:#facc15;
+
+        background:rgba(250,204,21,.1);
+      }
+
     }
 
     /* =========================================================
@@ -179,6 +381,7 @@
       border-radius:10px;
 
       background:rgba(250,204,21,.09);
+
       border:1px solid rgba(250,204,21,.17);
 
       font-size:.98rem;
@@ -775,6 +978,7 @@
        ========================================================= */
 
     @media (max-width:850px) {
+
       .cabinet-grid {
         grid-template-columns:1fr;
 
@@ -785,9 +989,11 @@
           "achievements"
           "navigation";
       }
+
     }
 
     @media (max-width:640px) {
+
       .cabinet-shell {
         padding-top:10px;
         padding-bottom:30px;
@@ -860,9 +1066,11 @@
       .stat-value {
         font-size:1.08rem;
       }
+
     }
 
     @media (max-width:350px) {
+
       .profile-actions {
         flex-wrap:wrap;
       }
@@ -871,15 +1079,19 @@
       .avatar-small-btn {
         font-size:.69rem;
       }
+
     }
 
     @media (prefers-reduced-motion:reduce) {
+
       .cabinet-page *,
       .cabinet-page *::before,
       .cabinet-page *::after {
         transition:none !important;
       }
+
     }
+
   </style>
 </head>
 
@@ -890,54 +1102,97 @@
      ========================================================= -->
 
 <header class="header">
+
   <div class="container header__row">
 
-    <a class="logo" href="index.html">
-      <span class="logo__mark">SC</span>
-      <span class="logo__text">STOLAR CARP</span>
+    <a
+      class="logo"
+      href="index.html"
+    >
+
+      <span class="logo__mark">
+        SC
+      </span>
+
+      <span class="logo__text">
+        STOLAR CARP
+      </span>
+
     </a>
 
-    <nav class="nav" id="nav">
+    <nav
+      class="nav"
+      id="nav"
+      aria-label="Основна навігація"
+    >
 
-      <a href="index.html" class="nav__link">
+      <a
+        href="index.html"
+        class="nav__link"
+      >
         Головна
       </a>
 
-      <a href="rules.html" class="nav__link">
+      <a
+        href="rules.html"
+        class="nav__link"
+      >
         Регламент
       </a>
 
-      <a href="formats.html" class="nav__link">
+      <a
+        href="formats.html"
+        class="nav__link"
+      >
         Формат змагань
       </a>
 
-      <a href="register.html" class="nav__link">
+      <a
+        href="register.html"
+        class="nav__link"
+      >
         Реєстрація
       </a>
 
-      <a href="live.html" class="nav__link">
+      <a
+        href="live.html"
+        class="nav__link"
+      >
         Live
       </a>
 
-      <a href="rating.html" class="nav__link">
+      <a
+        href="rating.html"
+        class="nav__link"
+      >
         Рейтинг
       </a>
 
-      <a href="lakes.html" class="nav__link">
+      <a
+        href="lakes.html"
+        class="nav__link"
+      >
         Водойми
       </a>
 
-      <a href="sponsors.html" class="nav__link">
+      <a
+        href="sponsors.html"
+        class="nav__link"
+      >
         Спонсори
       </a>
 
-      <a href="events/index.html" class="nav__link">
+      <a
+        href="events/index.html"
+        class="nav__link"
+      >
         Архів
       </a>
 
       <a
         href="cabinet.html"
         class="nav__link nav__link--active"
+        aria-current="page"
       >
         Мій кабінет
       </a>
@@ -948,17 +1203,24 @@
       class="burger"
       id="burger"
       type="button"
-      aria-label="Меню"
+      aria-label="Відкрити меню"
       aria-controls="nav"
       aria-expanded="false"
     >
+
       <span></span>
       <span></span>
       <span></span>
+
     </button>
 
   </div>
+
 </header>
+
+<!-- =========================================================
+     MAIN
+     ========================================================= -->
 
 <main class="main">
 
@@ -1001,9 +1263,11 @@
             </div>
 
             <div class="cabinet-card-heading">
+
               <h1 class="card-title">
                 Мій профіль
               </h1>
+
             </div>
 
           </div>
@@ -1051,6 +1315,7 @@
               <div class="profile-phone">
 
                 📞
+
                 <span id="userPhoneText">
                   —
                 </span>
@@ -1294,7 +1559,9 @@
 
               <div class="meta-pill">
 
-                <strong>Роль:</strong>
+                <strong>
+                  Роль:
+                </strong>
 
                 <span id="userRoleText">
                   —
@@ -1440,32 +1707,60 @@
               href="register.html"
               class="cabinet-quick-link"
             >
-              <span>🏆 Реєстрація</span>
-              <span class="cabinet-quick-link-arrow">→</span>
+
+              <span>
+                🏆 Реєстрація
+              </span>
+
+              <span class="cabinet-quick-link-arrow">
+                →
+              </span>
+
             </a>
 
             <a
               href="live.html"
               class="cabinet-quick-link"
             >
-              <span>🔴 Live</span>
-              <span class="cabinet-quick-link-arrow">→</span>
+
+              <span>
+                🔴 Live
+              </span>
+
+              <span class="cabinet-quick-link-arrow">
+                →
+              </span>
+
             </a>
 
             <a
               href="rating.html"
               class="cabinet-quick-link"
             >
-              <span>📊 Рейтинг</span>
-              <span class="cabinet-quick-link-arrow">→</span>
+
+              <span>
+                📊 Рейтинг
+              </span>
+
+              <span class="cabinet-quick-link-arrow">
+                →
+              </span>
+
             </a>
 
             <a
               href="events/index.html"
               class="cabinet-quick-link"
             >
-              <span>🗂️ Архів</span>
-              <span class="cabinet-quick-link-arrow">→</span>
+
+              <span>
+                🗂️ Архів
+              </span>
+
+              <span class="cabinet-quick-link-arrow">
+                →
+              </span>
+
             </a>
 
           </div>
@@ -1489,8 +1784,12 @@
   <div class="container footer__row">
 
     <div>
-      © <span id="footerYear">2026</span>
+
+      ©
+      <span id="footerYear">2026</span>
+
       STOLAR CARP · Львів
+
     </div>
 
   </div>
@@ -1572,38 +1871,186 @@
 (function () {
   "use strict";
 
-  const yearEl = document.getElementById("footerYear");
+  // =========================================================
+  // FOOTER YEAR
+  // =========================================================
+
+  const yearEl =
+    document.getElementById("footerYear");
 
   if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
+    yearEl.textContent =
+      new Date().getFullYear();
   }
 
-  /*
-    Меню відкриває cabinet.js.
-    Тут лише синхронізуємо aria-expanded.
-  */
+  // =========================================================
+  // MOBILE MENU
+  // =========================================================
+  //
+  // ВАЖЛИВО:
+  //
+  // cabinet.js уже перемикає nav.open.
+  //
+  // Тут НЕ додаємо другого обробника
+  // відкривання меню.
+  //
+  // Цей блок:
+  // - синхронізує aria-expanded
+  // - закриває меню при кліку поза ним
+  // - закриває меню клавішею Escape
+  // - закриває меню після переходу
+  //
+  // =========================================================
 
-  const burger = document.getElementById("burger");
-  const nav = document.getElementById("nav");
+  const burger =
+    document.getElementById("burger");
 
-  if (burger && nav) {
+  const nav =
+    document.getElementById("nav");
 
-    burger.addEventListener("click", function () {
-      burger.setAttribute(
-        "aria-expanded",
-        nav.classList.contains("open")
-          ? "true"
-          : "false"
-      );
-    });
+  if (!burger || !nav) {
+    console.warn(
+      "[STOLAR CARP] Елементи меню не знайдено"
+    );
+    return;
+  }
 
-    nav.addEventListener("click", function (event) {
-      if (event.target.closest(".nav__link")) {
-        burger.setAttribute("aria-expanded", "false");
+  function syncMenuState() {
+
+    const isOpen =
+      nav.classList.contains("open");
+
+    burger.setAttribute(
+      "aria-expanded",
+      String(isOpen)
+    );
+
+    burger.setAttribute(
+      "aria-label",
+      isOpen
+        ? "Закрити меню"
+        : "Відкрити меню"
+    );
+
+  }
+
+  function closeMenu() {
+
+    nav.classList.remove("open");
+
+    syncMenuState();
+
+  }
+
+  // ---------------------------------------------------------
+  // Синхронізація після обробника cabinet.js
+  // ---------------------------------------------------------
+
+  burger.addEventListener(
+    "click",
+    function () {
+
+      /*
+       * cabinet.js перемикає клас open.
+       *
+       * Цей обробник лише оновлює
+       * доступний стан кнопки.
+       */
+
+      syncMenuState();
+
+    }
+  );
+
+  // ---------------------------------------------------------
+  // Закриття після вибору сторінки
+  // ---------------------------------------------------------
+
+  nav.addEventListener(
+    "click",
+    function (event) {
+
+      const link =
+        event.target.closest(".nav__link");
+
+      if (link) {
+        closeMenu();
       }
-    });
 
-  }
+    }
+  );
+
+  // ---------------------------------------------------------
+  // Закриття при натисканні поза меню
+  // ---------------------------------------------------------
+
+  document.addEventListener(
+    "click",
+    function (event) {
+
+      if (
+        !nav.classList.contains("open")
+      ) {
+        return;
+      }
+
+      if (
+        burger.contains(event.target)
+      ) {
+        return;
+      }
+
+      if (
+        nav.contains(event.target)
+      ) {
+        return;
+      }
+
+      closeMenu();
+
+    }
+  );
+
+  // ---------------------------------------------------------
+  // Escape
+  // ---------------------------------------------------------
+
+  document.addEventListener(
+    "keydown",
+    function (event) {
+
+      if (event.key === "Escape") {
+        closeMenu();
+      }
+
+    }
+  );
+
+  // ---------------------------------------------------------
+  // Resize
+  // ---------------------------------------------------------
+
+  window.addEventListener(
+    "resize",
+    function () {
+
+      if (window.innerWidth > 850) {
+        closeMenu();
+      }
+
+    }
+  );
+
+  // ---------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------
+
+  syncMenuState();
+
+  console.log(
+    "✅ STOLAR CARP cabinet menu helpers ready"
+  );
+
 })();
 </script>
 

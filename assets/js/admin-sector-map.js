@@ -1,4 +1,4 @@
-// STOLAR CARP • Карти архівних етапів, v1
+// STOLAR CARP • Карти архівних етапів, v1.1
 // Читає seasonResults.
 // Зберігає тільки sectorMaps/{year}/stages/{stageDocId}.
 
@@ -8,7 +8,6 @@
   const OWNER_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
   const LAKE_ID = "lelehivka";
 
-  // Номер фізичного сектора, X%, Y%.
   const POINTS = [
     [1,84.54,13.14],[2,80.24,13.58],[3,74.78,14.03],[4,70.30,14.32],
     [5,65.73,14.32],[6,60.98,14.62],[7,56.32,14.32],[8,51.30,14.77],
@@ -23,11 +22,11 @@
   const text = value => String(value ?? "").trim();
 
   const esc = value => text(value).replace(/[&<>"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
   }[c]));
 
   const number = value => {
@@ -35,16 +34,13 @@
       value == null ||
       text(value) === "" ||
       typeof value === "boolean"
-    ) {
-      return null;
-    }
+    ) return null;
 
     const n = Number(text(value).replace(",", "."));
     return Number.isFinite(n) && n >= 0 ? n : null;
   };
 
-  const latin = value => text(value)
-    .toUpperCase()
+  const latin = value => text(value).toUpperCase()
     .replace(/А/g, "A")
     .replace(/В/g, "B")
     .replace(/С/g, "C");
@@ -66,22 +62,18 @@
 
     if (prefixed) {
       if (zone && zone !== prefixed[1]) return null;
-
       zone = prefixed[1];
       raw = prefixed[2];
     }
 
-    if (
-      !/^[ABC]$/.test(zone) ||
-      !/^\d+$/.test(raw)
-    ) {
+    if (!/^[ABC]$/.test(zone) || !/^\d+$/.test(raw)) {
       return null;
     }
 
     const sector = Number(raw);
 
     return sector >= 1 && sector <= 99
-      ? { zone, sector, drawKey: `${zone}${sector}` }
+      ? {zone, sector, drawKey: `${zone}${sector}`}
       : null;
   }
 
@@ -114,25 +106,19 @@
         return;
       }
 
-      slots.set(slot.drawKey, { ...slot, row });
+      slots.set(slot.drawKey, {...slot, row});
     });
 
-    return { slots, issues };
+    return {slots, issues};
   }
 
   function hasCatch(row) {
     if (!row) return false;
 
     const keys = [
-      "totalWeight",
-      "totalCount",
-      "bigFish",
-      "carpCount",
-      "amurCount",
-      "sturgeonCount",
-      "carpWeight",
-      "amurWeight",
-      "sturgeonWeight"
+      "totalWeight", "totalCount", "bigFish",
+      "carpCount", "amurCount", "sturgeonCount",
+      "carpWeight", "amurWeight", "sturgeonWeight"
     ];
 
     if (keys.some(key => (number(row[key]) || 0) > 0)) {
@@ -149,14 +135,8 @@
       if (!slot) return false;
 
       return [
-        "c",
-        "count",
-        "fishCount",
-        "w",
-        "weight",
-        "total",
-        "totalWeight",
-        "big"
+        "c", "count", "fishCount", "w",
+        "weight", "total", "totalWeight", "big"
       ].some(
         key => (number(slot[key]) || 0) > 0
       ) || [
@@ -269,9 +249,7 @@
   }
 
   function canonical(value) {
-    if (Array.isArray(value)) {
-      return value.map(canonical);
-    }
+    if (Array.isArray(value)) return value.map(canonical);
 
     if (value && typeof value === "object") {
       return Object.fromEntries(
@@ -284,7 +262,6 @@
     return value ?? null;
   }
 
-  // Для локальної перевірки моделі через Node.js.
   if (typeof module === "object" && module.exports) {
     module.exports = {
       parseSlot,
@@ -298,7 +275,6 @@
   }
 
   const $ = id => document.getElementById(id);
-
   if (!$("mapApp")) return;
 
   const S = {
@@ -326,13 +302,48 @@
 
   function errorMessage(error) {
     if (String(error?.code).includes("permission-denied")) {
-      return (
-        "Немає доступу до Firestore. Перевір UID адміністратора " +
-        "та правила для sectorMaps. Незбережені зміни залишилися на сторінці."
-      );
+      const detail = error.scRequest;
+      const project =
+        S.db?.app?.options?.projectId || "не визначено";
+
+      return [
+        "Firestore відхилив запит.",
+        detail
+          ? `${detail.operation}: ${detail.path}`
+          : "Операцію не визначено.",
+        `Firebase-проєкт: ${project}`,
+        `Код: ${error.code}`,
+        S.dirty
+          ? "Незбережені зміни карти залишилися на сторінці."
+          : ""
+      ].filter(Boolean).join("\n");
     }
 
     return error?.message || String(error);
+  }
+
+  async function dbRequest(operation, path, task) {
+    try {
+      return await task();
+    } catch (error) {
+      const wrapped = new Error(
+        error?.message || String(error)
+      );
+
+      wrapped.code = error?.code;
+      wrapped.scRequest =
+        error?.scRequest || {operation, path};
+
+      throw wrapped;
+    }
+  }
+
+  function serverRead(ref, isList = false) {
+    return dbRequest(
+      isList ? "Список" : "Читання",
+      ref.path,
+      () => ref.get({source: "server"})
+    );
   }
 
   function controls() {
@@ -450,16 +461,18 @@
     message("Завантажую архівні етапи…");
 
     const results = await Promise.allSettled([
-      S.db
-        .collection("seasonResults")
-        .doc(year)
-        .collection("stages")
-        .get({ source: "server" }),
-
-      S.db
-        .collection("seasonArchives")
-        .doc(year)
-        .get({ source: "server" })
+      serverRead(
+        S.db
+          .collection("seasonResults")
+          .doc(year)
+          .collection("stages"),
+        true
+      ),
+      serverRead(
+        S.db
+          .collection("seasonArchives")
+          .doc(year)
+      )
     ]);
 
     requireAccess();
@@ -488,7 +501,7 @@
         title: stageLabel(doc.id, doc.data(), metadata)
       }))
       .sort((a, b) =>
-        a.title.localeCompare(b.title, "uk", { numeric: true })
+        a.title.localeCompare(b.title, "uk", {numeric: true})
       );
 
     S.year = year;
@@ -523,8 +536,8 @@
     message("Завантажую результат і карту етапу…");
 
     const [source, saved] = await Promise.all([
-      sourceRef(S.year, id).get({ source: "server" }),
-      mapRef(S.year, id).get({ source: "server" })
+      serverRead(sourceRef(S.year, id)),
+      serverRead(mapRef(S.year, id))
     ]);
 
     requireAccess();
@@ -567,11 +580,11 @@
     const rows = data.standings;
     const hash = await fingerprint(rows ?? null);
 
-    S.current = { ...stage, data, rows };
+    S.current = {...stage, data, rows};
     S.sourceHash = hash;
 
     S.assignments = old
-      ? old.assignments.map(a => ({ ...a }))
+      ? old.assignments.map(a => ({...a}))
       : [];
 
     S.empty = old ? [...old.emptyLakeSectors] : [];
@@ -639,9 +652,9 @@
     $("mapPins")
       .querySelectorAll("[data-lake]")
       .forEach(button => {
-        button.addEventListener("click", () => {
-          selectSector(Number(button.dataset.lake));
-        });
+        button.addEventListener("click", () =>
+          selectSector(Number(button.dataset.lake))
+        );
       });
 
     const ordered = S.assignments.slice().sort(slotSort);
@@ -713,11 +726,8 @@
           </td>
         </tr>
       `;
-    }).join("") || `
-      <tr>
-        <td colspan="5">Ще немає прив’язок.</td>
-      </tr>
-    `;
+    }).join("") ||
+      '<tr><td colspan="5">Ще немає прив’язок.</td></tr>';
 
     $("mapSummary").textContent =
       `У розстановці: ${check.selected} · ` +
@@ -911,55 +921,68 @@
 
     message("Зберігаю карту…");
 
-    await S.db.runTransaction(async tx => {
-      const source = await tx.get(sourceRef(year, id));
-      const saved = await tx.get(mapRef(year, id));
-
-      requireAccess();
-
-      if (
-        !source.exists ||
-        await fingerprint(
-          source.data().standings ?? null
-        ) !== S.sourceHash
-      ) {
-        throw new Error(
-          "Архівний результат змінився. Перезавантаж етап " +
-          "і перевір прив’язки перед збереженням."
+    await dbRequest(
+      "Збереження",
+      mapRef(year, id).path,
+      () => S.db.runTransaction(async tx => {
+        const source = await dbRequest(
+          "Читання результату перед збереженням",
+          sourceRef(year, id).path,
+          () => tx.get(sourceRef(year, id))
         );
-      }
 
-      const old = saved.exists ? saved.data() : null;
-
-      if ((old?.revision || 0) !== expectedRevision) {
-        throw new Error(
-          "Карту вже змінили в іншій вкладці. Перезавантаж етап; " +
-          "твої зміни не перезаписали чужі."
+        const saved = await dbRequest(
+          "Читання карти перед збереженням",
+          mapRef(year, id).path,
+          () => tx.get(mapRef(year, id))
         );
-      }
 
-      const stamp =
-        window.firebase.firestore.FieldValue.serverTimestamp();
+        requireAccess();
 
-      tx.set(mapRef(year, id), {
-        schemaVersion: 1,
-        lakeId: LAKE_ID,
-        mapVersion: 1,
-        seasonYear: year,
-        stageDocId: id,
-        sourcePath: `seasonResults/${year}/stages/${id}`,
-        sourceSignature: S.sourceHash,
-        stageTitle: S.current.title,
-        assignments,
-        emptyLakeSectors: empty,
-        status: check.ready ? "ready" : "draft",
-        revision: expectedRevision + 1,
-        createdAt: old?.createdAt || stamp,
-        createdBy: old?.createdBy || OWNER_UID,
-        updatedAt: stamp,
-        updatedBy: OWNER_UID
-      });
-    });
+        if (
+          !source.exists ||
+          await fingerprint(
+            source.data().standings ?? null
+          ) !== S.sourceHash
+        ) {
+          throw new Error(
+            "Архівний результат змінився. Перезавантаж етап " +
+            "і перевір прив’язки перед збереженням."
+          );
+        }
+
+        const old = saved.exists ? saved.data() : null;
+
+        if ((old?.revision || 0) !== expectedRevision) {
+          throw new Error(
+            "Карту вже змінили в іншій вкладці. Перезавантаж етап; " +
+            "твої зміни не перезаписали чужі."
+          );
+        }
+
+        const stamp =
+          window.firebase.firestore.FieldValue.serverTimestamp();
+
+        tx.set(mapRef(year, id), {
+          schemaVersion: 1,
+          lakeId: LAKE_ID,
+          mapVersion: 1,
+          seasonYear: year,
+          stageDocId: id,
+          sourcePath: `seasonResults/${year}/stages/${id}`,
+          sourceSignature: S.sourceHash,
+          stageTitle: S.current.title,
+          assignments,
+          emptyLakeSectors: empty,
+          status: check.ready ? "ready" : "draft",
+          revision: expectedRevision + 1,
+          createdAt: old?.createdAt || stamp,
+          createdBy: old?.createdBy || OWNER_UID,
+          updatedAt: stamp,
+          updatedBy: OWNER_UID
+        });
+      })
+    );
 
     S.revision = expectedRevision + 1;
     S.dirty = false;
@@ -1043,10 +1066,9 @@
         );
       }
 
-      const profile = await S.db
-        .collection("users")
-        .doc(user.uid)
-        .get({ source: "server" });
+      const profile = await serverRead(
+        S.db.collection("users").doc(user.uid)
+      );
 
       if (
         !profile.exists ||
@@ -1057,13 +1079,11 @@
 
       S.user = user;
       S.allowed = true;
-
       $("mapApp").hidden = false;
 
       S.auth.onAuthStateChanged(value => {
         if (value?.uid !== OWNER_UID) {
           S.allowed = false;
-
           $("mapApp").hidden = true;
           controls();
 

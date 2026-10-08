@@ -1,54 +1,21 @@
-// ============================================================
-// STOLAR CARP • КАРТИ СЕКТОРІВ
-// Версія: 2.1 • 08.10.2026
-//
-// РЕЖИМИ:
-//
-// PREPARE
-//   Підготовка секторів до жеребкування.
-//   Джерело: competitions
-//   sectorMaps/{year}/stages/{compId}__{stageKey}
-//
-// ARCHIVE
-//   Прив'язка архівних результатів до фізичних секторів.
-//   Джерело: seasonResults/{year}/stages
-//   Збереження: sectorMaps/{year}/stages
-//
-// HISTORY
-//   Історичні турніри інших організаторів.
-//   historicalSectorResults/{year}/tournaments
-//
-// ГАРАНТІЇ:
-//
-// - LIVE не змінюється.
-// - Архівні результати не змінюються.
-// - Сезонний рейтинг не змінюється.
-// - Фізичні сектори Лелехівки: 1–26.
-// - Карта сумісна з draw_admin.js.
-// - Контроль revision.
-// - Контроль джерела архівних результатів.
-// - Чернетка не вважається готовою картою.
-// - Підтримка TEAM / SOLO / ONEOFF.
-// ============================================================
+// assets/js/admin-sector-map.js
+// STOLAR CARP • Карти секторів • v2.2 • 08.10.2026
+// Компактний HTML v2.2: одна форма для кожного режиму.
+// Записує тільки sectorMaps та historicalSectorResults.
+// competitions і seasonResults читаються, LIVE та рейтинг не змінюються.
 
 (function () {
   "use strict";
 
-  const VERSION = "2.1";
-
+  const VERSION = "2.2";
   const OWNER_UID = "5Dt6fN64c3aWACYV1WacxV2BHDl2";
-
   const LAKE_ID = "lelehivka";
-
   const MAX_LAKE_SECTOR = 26;
-
+  const MAP_WIDTH = 1615;
+  const MAP_HEIGHT = 974;
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 2.5;
   const ZOOM_STEP = 0.25;
-
-  const MAP_WIDTH = 1615;
-  const MAP_HEIGHT = 974;
-
   const REQUEST_TIMEOUT = 20000;
 
   const MODE = Object.freeze({
@@ -57,51 +24,55 @@
     HISTORY: "history"
   });
 
-  // ==========================================================
-  // PHYSICAL SECTORS
-  // ==========================================================
-
   const POINTS = [
-    [1, 84.54, 13.14],
-    [2, 80.24, 13.58],
-    [3, 74.78, 14.03],
-    [4, 70.30, 14.32],
-    [5, 65.73, 14.32],
-    [6, 60.98, 14.62],
-    [7, 56.32, 14.32],
-    [8, 51.30, 14.77],
-    [9, 47.00, 14.62],
-    [10, 42.79, 14.47],
-    [11, 38.49, 15.07],
-    [12, 34.54, 15.07],
-    [13, 30.06, 14.77],
-    [14, 25.49, 14.32],
-    [15, 20.83, 13.88],
-    [16, 16.80, 13.58],
-    [17, 16.80, 66.03],
-    [18, 21.19, 71.16],
-    [19, 25.40, 77.40],
-    [20, 29.17, 81.78],
-    [21, 36.00, 81.70],
-    [22, 63.22, 81.85],
-    [23, 67.79, 82.00],
-    [24, 72.36, 81.85],
-    [25, 76.93, 82.00],
-    [26, 81.50, 81.85]
+    [1, 84.54, 13.14], [2, 80.24, 13.58],
+    [3, 74.78, 14.03], [4, 70.30, 14.32],
+    [5, 65.73, 14.32], [6, 60.98, 14.62],
+    [7, 56.32, 14.32], [8, 51.30, 14.77],
+    [9, 47.00, 14.62], [10, 42.79, 14.47],
+    [11, 38.49, 15.07], [12, 34.54, 15.07],
+    [13, 30.06, 14.77], [14, 25.49, 14.32],
+    [15, 20.83, 13.88], [16, 16.80, 13.58],
+    [17, 16.80, 66.03], [18, 21.19, 71.16],
+    [19, 25.40, 77.40], [20, 29.17, 81.78],
+    [21, 36.00, 81.70], [22, 63.22, 81.85],
+    [23, 67.79, 82.00], [24, 72.36, 81.85],
+    [25, 76.93, 82.00], [26, 81.50, 81.85]
   ];
 
-  const VALID_SECTORS = new Set(
-    POINTS.map(point => point[0])
-  );
-
-  // ==========================================================
-  // HELPERS
-  // ==========================================================
-
+  const VALID_SECTORS = new Set(POINTS.map(point => point[0]));
   const $ = id => document.getElementById(id);
+  const txt = value => String(value ?? "").trim();
 
-  const txt = value =>
-    String(value ?? "").trim();
+  const S = {
+    db: null,
+    auth: null,
+    allowed: false,
+    busy: false,
+    started: false,
+
+    dirty: false,
+    metaDirty: false,
+    resultDirty: false,
+    newHistory: false,
+
+    mode: MODE.PREPARE,
+    year: "2026",
+    stages: [],
+    current: null,
+
+    assignments: [],
+    empty: [],
+    historicalRows: {},
+
+    revision: 0,
+    sourceHash: "",
+    selected: 1,
+    zoom: 1,
+    lastZone: "A"
+  };
+
+  // Helpers
 
   function esc(value) {
     return txt(value).replace(/[&<>"']/g, char => ({
@@ -115,8 +86,7 @@
 
   function num(value) {
     if (
-      value === null ||
-      value === undefined ||
+      value == null ||
       typeof value === "boolean" ||
       txt(value) === ""
     ) {
@@ -124,29 +94,20 @@
     }
 
     const result = Number(
-      txt(value).replace(",", ".")
+      txt(value).replace(/\s/g, "").replace(",", ".")
     );
 
-    return Number.isFinite(result)
-      ? result
-      : null;
+    return Number.isFinite(result) ? result : null;
   }
 
   function nonNegative(value) {
-    const valueNumber = num(value);
-
-    return valueNumber !== null && valueNumber >= 0
-      ? valueNumber
-      : null;
+    const result = num(value);
+    return result !== null && result >= 0 ? result : null;
   }
 
   function positiveInteger(value) {
-    const valueNumber = num(value);
-
-    return Number.isInteger(valueNumber) &&
-      valueNumber > 0
-      ? valueNumber
-      : null;
+    const result = num(value);
+    return Number.isInteger(result) && result > 0 ? result : null;
   }
 
   function latin(value) {
@@ -159,25 +120,17 @@
 
   function parseSlot(zoneValue, sectorValue) {
     let zone = latin(zoneValue);
-
-    let raw = latin(sectorValue)
-      .replace(/[\s_-]+/g, "");
+    let raw = latin(sectorValue).replace(/[\s_-]+/g, "");
 
     const match = raw.match(/^([ABC])(\d+)$/);
 
     if (match) {
-      if (zone && zone !== match[1]) {
-        return null;
-      }
-
+      if (zone && zone !== match[1]) return null;
       zone = match[1];
       raw = match[2];
     }
 
-    if (
-      !/^[ABC]$/.test(zone) ||
-      !/^\d+$/.test(raw)
-    ) {
+    if (!/^[ABC]$/.test(zone) || !/^\d+$/.test(raw)) {
       return null;
     }
 
@@ -198,12 +151,20 @@
     };
   }
 
-  function normalizeAssignment(value) {
-    if (!value || typeof value !== "object") {
-      return null;
-    }
+  function assignmentFor(sector, slot) {
+    return {
+      lakeSectorId: `sector-${sector}`,
+      lakeSectorNumber: sector,
+      zone: slot.zone,
+      sector: slot.sector,
+      drawKey: slot.drawKey
+    };
+  }
 
-    const lakeSectorNumber = positiveInteger(
+  function normalizeAssignment(value) {
+    if (!value || typeof value !== "object") return null;
+
+    const sector = positiveInteger(
       value.lakeSectorNumber ??
       value.physicalSector ??
       value.lakeSector
@@ -211,25 +172,12 @@
 
     const slot = parseSlot(
       value.zone ?? value.drawZone,
-      value.sector ??
-      value.drawSector ??
-      value.drawKey
+      value.sector ?? value.drawSector ?? value.drawKey
     );
 
-    if (
-      !VALID_SECTORS.has(lakeSectorNumber) ||
-      !slot
-    ) {
-      return null;
-    }
-
-    return {
-      lakeSectorId: `sector-${lakeSectorNumber}`,
-      lakeSectorNumber,
-      zone: slot.zone,
-      sector: slot.sector,
-      drawKey: slot.drawKey
-    };
+    return VALID_SECTORS.has(sector) && slot
+      ? assignmentFor(sector, slot)
+      : null;
   }
 
   function teamName(row) {
@@ -243,75 +191,70 @@
 
   function weight(value) {
     const result = nonNegative(value);
+    return result === null ? "—" : result.toFixed(3);
+  }
 
-    return result === null
-      ? "—"
-      : result.toFixed(3);
+  function rowTotalWeight(row) {
+    return nonNegative(
+      row?.totalWeight ??
+      row?.totalWeightKg ??
+      row?.totals?.totalWeightKg ??
+      row?.totals?.totalWeight
+    );
+  }
+
+  function rowTotalCount(row) {
+    return nonNegative(
+      row?.totalCount ??
+      row?.fishCount ??
+      row?.totals?.fishCount ??
+      row?.totals?.totalCount
+    );
   }
 
   function sortSlots(a, b) {
-    const order = {
-      A: 0,
-      B: 1,
-      C: 2
-    };
+    const order = { A: 0, B: 1, C: 2 };
 
     return (
-      (order[a.zone] ?? 99) -
-      (order[b.zone] ?? 99) ||
+      (order[a.zone] ?? 99) - (order[b.zone] ?? 99) ||
       a.sector - b.sector
     );
   }
 
   function setText(id, value) {
-    const element = $(id);
-
-    if (element) {
-      element.textContent = value;
-    }
+    if ($(id)) $(id).textContent = value;
   }
 
-  function setHidden(id, hidden) {
-    const element = $(id);
-
-    if (element) {
-      element.hidden = Boolean(hidden);
-    }
+  function setHidden(id, value) {
+    if ($(id)) $(id).hidden = Boolean(value);
   }
 
-  function setDisabled(id, disabled) {
-    const element = $(id);
-
-    if (element) {
-      element.disabled = Boolean(disabled);
-    }
+  function setDisabled(id, value) {
+    if ($(id)) $(id).disabled = Boolean(value);
   }
 
-  function safeId(value) {
-    return txt(value)
-      .normalize("NFKD")
-      .toLowerCase()
-      .replace(/[^a-z0-9а-яіїєґ_-]+/gi, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 70);
+  function yearValue(value) {
+    const year = txt(value);
+
+    if (
+      !/^\d{4}$/.test(year) ||
+      Number(year) < 1990 ||
+      Number(year) > 2100
+    ) {
+      throw new Error("Введи рік від 1990 до 2100.");
+    }
+
+    return year;
   }
 
   function canonical(value) {
-    if (Array.isArray(value)) {
-      return value.map(canonical);
-    }
+    if (Array.isArray(value)) return value.map(canonical);
 
-    if (
-      value &&
-      typeof value === "object"
-    ) {
+    if (value && typeof value === "object") {
       return Object.fromEntries(
         Object.keys(value)
           .sort()
-          .map(key => [
-            key,
-            canonical(value[key])
-          ])
+          .map(key => [key, canonical(value[key])])
       );
     }
 
@@ -329,7 +272,7 @@
       JSON.stringify(canonical(value))
     );
 
-    const hash = await crypto.subtle.digest(
+    const hash = await window.crypto.subtle.digest(
       "SHA-256",
       bytes
     );
@@ -341,118 +284,27 @@
   }
 
   function serverTimestamp() {
-    return firebase.firestore.FieldValue.serverTimestamp();
+    return window.firebase.firestore.FieldValue.serverTimestamp();
   }
 
-  // ==========================================================
-  // STATE
-  // ==========================================================
-
-  const S = {
-    db: null,
-    auth: null,
-
-    allowed: false,
-    busy: false,
-    dirty: false,
-
-    mode: MODE.PREPARE,
-    year: "2026",
-
-    stages: [],
-    current: null,
-
-    assignments: [],
-    empty: [],
-
-    historicalRows: {},
-
-    revision: 0,
-    sourceHash: "",
-
-    selected: 1,
-    zoom: 1,
-
-    started: false
-  };
-
-  // ==========================================================
-  // STATUS
-  // ==========================================================
-
   function message(value, kind = "") {
-    const element = $("mapStatus");
+    setText("mapStatus", value);
 
-    if (element) {
-      element.textContent = value;
-      element.dataset.kind = kind;
+    if ($("mapStatus")) {
+      $("mapStatus").dataset.kind = kind;
     }
-
-    console.log(
-      `[Sector maps v${VERSION}]`,
-      value
-    );
   }
 
   function errorMessage(error) {
-    if (
-      txt(error?.code).includes("permission-denied")
-    ) {
+    if (txt(error?.code).includes("permission-denied")) {
       return (
-        "Firestore заборонив операцію.\n" +
-        "Перевір правила доступу до колекції.\n" +
+        "Firestore заборонив операцію. " +
+        "Перевір доступ до потрібної колекції.\n" +
         `Код: ${error.code}`
       );
     }
 
     return error?.message || String(error);
-  }
-
-  function timed(promise, label) {
-    let timer;
-
-    return Promise.race([
-      Promise.resolve(promise),
-
-      new Promise((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error(label)),
-          REQUEST_TIMEOUT
-        );
-      })
-    ]).finally(() => {
-      clearTimeout(timer);
-    });
-  }
-
-  function read(ref) {
-    return timed(
-      ref.get({ source: "server" }),
-      `Перевищено час очікування: ${ref.path}`
-    );
-  }
-
-  async function run(task) {
-    if (S.busy || !S.allowed) {
-      return;
-    }
-
-    S.busy = true;
-    controls();
-
-    try {
-      await task();
-    } catch (error) {
-      console.error(error);
-
-      message(
-        errorMessage(error),
-        "error"
-      );
-    } finally {
-      S.busy = false;
-      controls();
-    }
   }
 
   function requireAccess() {
@@ -466,71 +318,155 @@
     }
   }
 
+  function timed(promise, label) {
+    let timer;
+
+    return Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(label)),
+          REQUEST_TIMEOUT
+        );
+      })
+    ]).finally(() => clearTimeout(timer));
+  }
+
+  function read(ref) {
+    return timed(
+      ref.get({ source: "server" }),
+      "Перевищено час очікування відповіді Firestore."
+    );
+  }
+
+  // Таймер не скасовує запис Firestore.
+  // Редактор заблокований до завершення транзакції.
+  async function waitWrite(promise) {
+    const timer = setTimeout(() => {
+      if (S.allowed) {
+        message(
+          "Збереження триває довше звичайного. " +
+          "Дочекайся відповіді сервера…"
+        );
+      }
+    }, REQUEST_TIMEOUT);
+
+    try {
+      return await promise;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function run(task) {
+    if (S.busy || !S.allowed) return;
+
+    S.busy = true;
+    controls();
+
+    try {
+      requireAccess();
+      await task();
+    } catch (error) {
+      console.error(error);
+      message(errorMessage(error), "error");
+    } finally {
+      S.busy = false;
+      controls();
+    }
+  }
+
+  function edit(task) {
+    if (S.busy || !S.allowed || !S.current) return;
+
+    try {
+      requireAccess();
+      task();
+    } catch (error) {
+      message(errorMessage(error), "error");
+    }
+  }
+
+  function hasUnsaved() {
+    return S.dirty || S.metaDirty || S.resultDirty;
+  }
+
+  function mayLeave() {
+    return !hasUnsaved() || window.confirm(
+      "Є незбережені зміни. Перейти без збереження?"
+    );
+  }
+
+  function mayLeaveResult() {
+    return !S.resultDirty || window.confirm(
+      "Результат у формі ще не застосовано. " +
+      "Відкинути введення для цього сектора?"
+    );
+  }
+
   function controls() {
     const locked = S.busy || !S.allowed;
 
-    setDisabled("loadYear", locked);
-    setDisabled("mapYear", locked);
-    setDisabled("mapStage", locked);
+    setDisabled("loadFields", locked);
+    setDisabled("editFields", locked || !S.current);
 
-    const editFields = $("editFields");
-
-    if (editFields) {
-      editFields.disabled = locked || !S.current;
-    }
-
-    [
-      "lakeSector",
-      "archiveSlot",
-      "manualZone",
-      "manualNumber",
-      "assignSlot",
-      "historicalTeam",
-      "historicalPlace",
-      "historicalWeight",
-      "historicalCount",
-      "historicalApply",
-      "historicalRemove"
-    ].forEach(id => {
-      setDisabled(
-        id,
-        locked || !S.current
-      );
-    });
-
-    setDisabled(
-      "removeSlot",
-      locked ||
-      !S.current ||
-      !S.assignments.some(
-        item =>
-          item.lakeSectorNumber === S.selected
-      )
-    );
-
-    setDisabled(
-      "saveMap",
-      locked ||
-      !S.current ||
-      !S.dirty
-    );
-
-    setDisabled(
-      "createHistory",
-      locked ||
-      S.mode !== MODE.HISTORY
-    );
+    $("historicalSection")
+      ?.querySelectorAll("input, select, button")
+      .forEach(element => {
+        element.disabled = locked;
+      });
 
     document
       .querySelectorAll("[data-map-mode]")
       .forEach(button => {
         button.disabled = locked;
       });
+
+    setDisabled(
+      "saveMap",
+      locked || !S.current || !hasUnsaved()
+    );
+
+    setDisabled(
+      "saveHistoricalMeta",
+      locked || (!S.current && !S.newHistory)
+    );
+
+    setDisabled(
+      "removeSlot",
+      locked ||
+      !S.current ||
+      !S.assignments.some(
+        item => item.lakeSectorNumber === S.selected
+      )
+    );
+
+    setDisabled("zoomOut", locked || S.zoom <= MIN_ZOOM);
+    setDisabled("zoomIn", locked || S.zoom >= MAX_ZOOM);
+
+    const fished =
+      $("historicalParticipation")?.value === "fished";
+
+    [
+      "historicalTeam",
+      "historicalPlace",
+      "historicalWeight",
+      "historicalFishCount"
+    ].forEach(id => {
+      setDisabled(id, locked || !S.current || !fished);
+    });
+
+    setText(
+      "saveState",
+      hasUnsaved()
+        ? "Є незбережені зміни"
+        : S.revision
+          ? "Збережено"
+          : "Ще не збережено"
+    );
   }
 
-  // ==========================================================
-  // FIRESTORE REFERENCES
-  // ==========================================================
+  // Firestore
 
   function mapRef(year, id) {
     return S.db
@@ -555,544 +491,204 @@
       .collection("tournaments");
   }
 
-  function historyRef(year, id) {
-    return historyCollection(year).doc(id);
-  }
-
-  // ==========================================================
-  // INTERFACE
-  // ==========================================================
+  // HTML
 
   function installInterface() {
-    const app = $("mapApp");
+    const required = [
+      "mapApp", "mapStatus", "stageLoaderSection",
+      "loadFields", "mapYear", "loadYear",
+      "mapStage", "mapStageLabel", "mapEditor",
+      "editFields", "selectedStageTitle",
+      "currentMapModeBadge", "mapViewport",
+      "mapCanvas", "mapPins", "mappingSection",
+      "lakeImage", "lakeSector", "archiveSlot",
+      "manualSlot", "manualZone", "manualNumber",
+      "slotPreview", "assignSlot", "removeSlot",
+      "emptySectors", "emptyDetails", "mapSummary",
+      "mapCoverage", "saveMap", "saveState",
+      "mappingRows", "mappingTableTitle",
+      "zoomIn", "zoomOut", "zoomReset", "zoomValue",
+      "historicalSection", "historicalYear",
+      "loadHistorical", "historicalTournament",
+      "newHistorical", "historicalMetaEditor",
+      "historicalTitle", "historicalOrganizer",
+      "historicalLake", "historicalStart",
+      "historicalEnd", "saveHistoricalMeta",
+      "historicalResultSection", "historicalSectorNumber",
+      "historicalDrawKey", "historicalTeam",
+      "historicalPlace", "historicalWeight",
+      "historicalFishCount", "historicalParticipation",
+      "saveHistoricalResult", "clearHistoricalResult",
+      "historicalResultStatus", "historicalTableSection",
+      "historicalResultsRows", "historicalTotals"
+    ];
 
-    if (!app) {
-      throw new Error(
-        "HTML не містить елемент #mapApp."
-      );
-    }
-
-    const firstCard = app.querySelector(".maps-card");
-
-    if (!firstCard) {
-      throw new Error(
-        "Не знайдено блок вибору етапу."
-      );
-    }
-
-    if (!$("mapModeCard")) {
-      const modeCard = document.createElement("section");
-
-      modeCard.className = "maps-card";
-      modeCard.id = "mapModeCard";
-
-      modeCard.innerHTML = `
-        <h2>Режим роботи</h2>
-
-        <div class="sc-map-modes">
-
-          <button
-            type="button"
-            data-map-mode="prepare"
-          >
-            <strong>🟢 Підготовка</strong>
-            <small>
-              До жеребкування · TEAM / SOLO
-            </small>
-          </button>
-
-          <button
-            type="button"
-            data-map-mode="archive"
-          >
-            <strong>🔵 Архівні етапи</strong>
-            <small>
-              Завершені етапи STOLAR CARP
-            </small>
-          </button>
-
-          <button
-            type="button"
-            data-map-mode="history"
-          >
-            <strong>🟡 Історичні</strong>
-            <small>
-              Старі турніри · інші організатори
-            </small>
-          </button>
-
-        </div>
-
-        <p
-          id="modeDescription"
-          class="maps-preview"
-        ></p>
-      `;
-
-      app.insertBefore(
-        modeCard,
-        firstCard
-      );
-    }
-
-    if (!$("historyCreateCard")) {
-      const card = document.createElement("section");
-
-      card.id = "historyCreateCard";
-      card.className = "maps-card";
-      card.hidden = true;
-
-      card.innerHTML = `
-        <h2>Додати історичний турнір</h2>
-
-        <div class="maps-row">
-
-          <label class="maps-field">
-            Назва турніру
-
-            <input
-              id="historyTitle"
-              maxlength="160"
-              placeholder="Кубок Лелехівки"
-            >
-          </label>
-
-          <label class="maps-field">
-            Організатор
-
-            <input
-              id="historyOrganizer"
-              maxlength="120"
-              placeholder="Назва організатора"
-            >
-          </label>
-
-        </div>
-
-        <div class="maps-row" style="margin-top:12px">
-
-          <button
-            id="createHistory"
-            type="button"
-            class="primary"
-          >
-            Створити турнір
-          </button>
-
-        </div>
-      `;
-
-      app.insertBefore(
-        card,
-        firstCard.nextSibling
-      );
-    }
-
-    if (!$("historicalEditor")) {
-      const editor = $("mapEditor");
-
-      if (!editor) {
+    for (const id of required) {
+      if (
+        document.querySelectorAll(`[id="${id}"]`).length !== 1
+      ) {
         throw new Error(
-          "HTML не містить #mapEditor."
+          `HTML має містити рівно один елемент #${id}. ` +
+          "Перевір також підключення старого JS."
         );
       }
-
-      const block = document.createElement("div");
-
-      block.id = "historicalEditor";
-      block.hidden = true;
-
-      block.innerHTML = `
-        <section class="maps-card">
-
-          <h2>Історичний результат сектора</h2>
-
-          <p
-            id="historicalSectorLabel"
-            class="maps-preview"
-          ></p>
-
-          <div class="maps-row">
-
-            <label class="maps-field wide">
-              Команда
-
-              <input
-                id="historicalTeam"
-                maxlength="160"
-                placeholder="Назва команди"
-              >
-            </label>
-
-            <label class="maps-field">
-              Зайняте місце
-
-              <input
-                id="historicalPlace"
-                type="number"
-                min="1"
-                step="1"
-              >
-            </label>
-
-            <label class="maps-field">
-              Сумарна вага, кг
-
-              <input
-                id="historicalWeight"
-                inputmode="decimal"
-                placeholder="0.000"
-              >
-            </label>
-
-            <label class="maps-field">
-              Кількість риб
-
-              <input
-                id="historicalCount"
-                type="number"
-                min="0"
-                step="1"
-              >
-            </label>
-
-          </div>
-
-          <div class="maps-row" style="margin-top:12px">
-
-            <button
-              id="historicalApply"
-              type="button"
-              class="primary"
-            >
-              Додати результат
-            </button>
-
-            <button
-              id="historicalRemove"
-              type="button"
-              class="danger"
-            >
-              Видалити результат
-            </button>
-
-          </div>
-
-          <p class="maps-muted">
-            Після внесення результатів збережи турнір.
-          </p>
-
-        </section>
-      `;
-
-      editor.appendChild(block);
     }
 
-    if (!$("scMapV21Styles")) {
-      const style = document.createElement("style");
-
-      style.id = "scMapV21Styles";
-
-      style.textContent = `
-        .sc-map-modes {
-          display: grid;
-          gap: 10px;
-        }
-
-        .sc-map-modes button {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-
-          width: 100%;
-          min-height: 72px;
-          padding: 14px;
-
-          text-align: left;
-
-          background: #1e293b;
-          border: 1px solid #475569;
-          border-radius: 14px;
-
-          cursor: pointer;
-        }
-
-        .sc-map-modes strong {
-          font-size: 16px;
-        }
-
-        .sc-map-modes small {
-          max-width: 48%;
-          color: #a8b6c9;
-          font-size: 12px;
-          text-align: right;
-        }
-
-        .sc-map-modes button.active {
-          border-color: #facc15;
-          color: #facc15;
-          background: #292719;
-
-          box-shadow:
-            0 0 0 1px rgba(250,204,21,.25);
-        }
-
-        .sc-map-modes button:disabled {
-          opacity: .6;
-          cursor: wait;
-        }
-
-        #mapPins .map-pin {
-          width: 23px !important;
-          height: 23px !important;
-
-          min-width: 0 !important;
-          min-height: 0 !important;
-
-          padding: 0 !important;
-
-          border-radius: 50% !important;
-          border: 1.5px solid #fff;
-
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-
-          line-height: 1;
-
-          box-shadow:
-            0 1px 4px rgba(0,0,0,.75);
-
-          pointer-events: auto;
-          cursor: pointer;
-        }
-
-        #mapPins .map-pin > span {
-          font-size: 11px;
-          font-weight: 900;
-        }
-
-        #mapPins .map-pin > small {
-          font-size: 6px;
-          font-weight: 800;
-          line-height: 1;
-          white-space: nowrap;
-        }
-
-        #mapPins .map-pin[data-zone="A"] {
-          background: #14783d;
-        }
-
-        #mapPins .map-pin[data-zone="B"] {
-          background: #2059bc;
-        }
-
-        #mapPins .map-pin[data-zone="C"] {
-          background: #ba242b;
-        }
-
-        #mapPins .map-pin[data-empty="true"] {
-          opacity: .55;
-        }
-
-        #mapPins .map-pin[aria-pressed="true"] {
-          z-index: 10;
-
-          border: 2px solid #ffd21c;
-
-          box-shadow:
-            0 0 0 1px rgba(255,210,28,.65),
-            0 0 7px rgba(255,210,28,.7);
-        }
-
-        @media (max-width:640px) {
-          .sc-map-modes button {
-            min-height: 68px;
-            padding: 12px;
-          }
-
-          .sc-map-modes strong {
-            font-size: 14px;
-          }
-
-          .sc-map-modes small {
-            font-size: 11px;
-          }
-
-          #mapPins .map-pin {
-            width: 15px !important;
-            height: 15px !important;
-          }
-
-          #mapPins .map-pin > span {
-            font-size: 8px;
-          }
-
-          #mapPins .map-pin > small {
-            font-size: 4.5px;
-          }
-
-          #mapPins .map-pin[aria-pressed="true"] {
-            border-width: 1.5px;
-          }
-        }
-      `;
-
-      document.head.appendChild(style);
+    if (
+      document.querySelectorAll("[data-map-mode]").length !== 3
+    ) {
+      throw new Error(
+        "HTML має містити три кнопки режимів."
+      );
     }
 
-    const heading = document.querySelector(
-      ".maps-page h1"
-    );
-
-    if (heading) {
-      heading.textContent = "🗺️ Карти секторів";
-    }
-
-    const subtitle = heading?.nextElementSibling;
-
-    if (subtitle) {
-      subtitle.textContent =
-        "Лелехівка · фізичні сектори водойми №1–26";
-    }
-  }
-
-  // ==========================================================
-  // MODE
-  // ==========================================================
-
-  function modeDescription() {
-    switch (S.mode) {
-      case MODE.PREPARE:
-        return (
-          "Підготовка до жеребкування. " +
-          "Обери змагання та розподіли фізичні сектори " +
-          "між зонами A/B/C. " +
-          "Готова карта матиме статус ready."
-        );
-
-      case MODE.HISTORY:
-        return (
-          "Історичні турніри. " +
-          "Можна створити турнір та внести " +
-          "результати по фізичних секторах водойми."
-        );
-
-      default:
-        return (
-          "Архівні етапи STOLAR CARP. " +
-          "Прив'язка результатів до фізичних секторів " +
-          "без зміни архіву."
-        );
-    }
+    $("lakeSector").innerHTML = POINTS
+      .map(([sector]) => `
+        <option value="${sector}">
+          Сектор озера №${sector}
+        </option>
+      `)
+      .join("");
   }
 
   function updateModeUI() {
+    const history = S.mode === MODE.HISTORY;
+    const prepare = S.mode === MODE.PREPARE;
+
     document
       .querySelectorAll("[data-map-mode]")
       .forEach(button => {
-        button.classList.toggle(
-          "active",
-          button.dataset.mapMode === S.mode
-        );
+        const active = button.dataset.mapMode === S.mode;
+
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
       });
 
+    setHidden("stageLoaderSection", history);
+    setHidden("historicalSection", !history);
+
+    setHidden(
+      "historicalMetaEditor",
+      !history || (!S.current && !S.newHistory)
+    );
+
+    setHidden("mapEditor", !S.current);
+
+    setHidden(
+      "historicalResultSection",
+      !history || !S.current
+    );
+
+    setHidden(
+      "historicalTableSection",
+      !history || !S.current
+    );
+
     setText(
-      "modeDescription",
-      modeDescription()
+      "mapStageLabel",
+      prepare ? "Етап для підготовки" : "Архівний етап"
     );
-
-    setHidden(
-      "historyCreateCard",
-      S.mode !== MODE.HISTORY
-    );
-
-    setHidden(
-      "historicalEditor",
-      S.mode !== MODE.HISTORY ||
-      !S.current
-    );
-
-    const label = $("mapStage")?.closest("label");
-
-    if (label) {
-      const textNode = Array.from(label.childNodes)
-        .find(node => node.nodeType === Node.TEXT_NODE);
-
-      if (textNode) {
-        textNode.textContent =
-          S.mode === MODE.PREPARE
-            ? "Етап для підготовки "
-            : S.mode === MODE.HISTORY
-              ? "Історичний турнір "
-              : "Архівний етап ";
-      }
-    }
 
     setText(
       "saveMap",
-      S.mode === MODE.PREPARE
-        ? "Зберегти розстановку"
-        : S.mode === MODE.HISTORY
-          ? "Зберегти історичний турнір"
-          : "Зберегти карту етапу"
+      history
+        ? "💾 Зберегти турнір"
+        : prepare
+          ? "💾 Зберегти розстановку"
+          : "💾 Зберегти карту етапу"
     );
+
+    setText(
+      "saveHistoricalMeta",
+      S.newHistory
+        ? "💾 Створити турнір"
+        : "💾 Зберегти турнір"
+    );
+
+    setText(
+      "currentMapModeBadge",
+      history
+        ? "Історичні"
+        : prepare
+          ? "Підготовка"
+          : "Архів"
+    );
+
+    $("currentMapModeBadge").className =
+      "maps-badge " +
+      (
+        history
+          ? "maps-badge--gold"
+          : prepare
+            ? "maps-badge--green"
+            : "maps-badge--blue"
+      );
+
+    setHidden("mappingSection", history);
+
+    $("archiveSlot").closest("label").hidden =
+      S.mode !== MODE.ARCHIVE;
+
+    setText(
+      "mappingTableTitle",
+      prepare
+        ? "Підготовлена розстановка"
+        : "Відповідність секторів"
+    );
+
+    const summary = $("emptyDetails").querySelector("summary");
+
+    if (summary) {
+      summary.textContent = prepare
+        ? "Сектори, які не використовуємо"
+        : "Неявки / Порожні сектори";
+    }
   }
 
-  async function switchMode(mode) {
-    if (
-      S.busy ||
-      mode === S.mode ||
-      !Object.values(MODE).includes(mode)
-    ) {
-      return;
-    }
+  function fillStageOptions(selectedId = "") {
+    S.stages.sort((a, b) =>
+      a.title.localeCompare(b.title, "uk", { numeric: true })
+    );
 
-    if (!mayLeave()) {
-      return;
-    }
+    const options = S.stages.map(stage => `
+      <option value="${esc(stage.id)}">
+        ${esc(stage.title)}
+      </option>
+    `).join("");
 
-    S.mode = mode;
+    $("mapStage").innerHTML =
+      '<option value="">Обери етап</option>' + options;
 
-    clearStage();
+    $("historicalTournament").innerHTML =
+      '<option value="">Обери турнір</option>' +
+      (S.mode === MODE.HISTORY ? options : "");
 
-    updateModeUI();
-
-    await run(loadYear);
+    $(
+      S.mode === MODE.HISTORY
+        ? "historicalTournament"
+        : "mapStage"
+    ).value = selectedId;
   }
 
-  function clearStage() {
+  function resetSelection() {
     S.current = null;
-    S.stages = [];
-
     S.assignments = [];
     S.empty = [];
-
     S.historicalRows = {};
 
     S.revision = 0;
     S.sourceHash = "";
-
     S.selected = 1;
     S.zoom = 1;
+    S.lastZone = "A";
+
     S.dirty = false;
-
-    if ($("mapStage")) {
-      $("mapStage").innerHTML =
-        '<option value="">Обери етап</option>';
-    }
-
-    setHidden("mapEditor", true);
-    setHidden("historicalEditor", true);
-
-    controls();
+    S.metaDirty = false;
+    S.resultDirty = false;
+    S.newHistory = false;
   }
 
-  // ==========================================================
-  // ARCHIVE DATA
-  // ==========================================================
+  // Джерела
 
   function readRows(rows) {
     const slots = new Map();
@@ -1101,134 +697,79 @@
     if (!Array.isArray(rows)) {
       return {
         slots,
-        issues: [
-          "Архівний документ не містить standings."
-        ]
+        issues: ["Архів не містить standings."]
       };
+    }
+
+    if (!rows.length) {
+      issues.push("В архіві ще немає результатів.");
     }
 
     rows.forEach((row, index) => {
       const slot = parseSlot(
         row?.zone || row?.drawZone,
-        row?.sector ??
-        row?.drawSector ??
-        row?.drawKey
+        row?.sector ?? row?.drawSector ?? row?.drawKey
       );
 
       if (!slot) {
         issues.push(
           `Некоректний сектор у рядку ${index + 1}.`
         );
-
-        return;
-      }
-
-      if (slots.has(slot.drawKey)) {
+      } else if (slots.has(slot.drawKey)) {
         issues.push(
           `Дублюється сектор ${slot.drawKey}.`
         );
-
-        return;
+      } else {
+        slots.set(slot.drawKey, { ...slot, row });
       }
-
-      slots.set(slot.drawKey, {
-        ...slot,
-        row
-      });
     });
 
-    return {
-      slots,
-      issues
-    };
-  }
-
-  function rowTotalWeight(row) {
-    return nonNegative(
-      row?.totalWeight ??
-      row?.totalWeightKg ??
-      row?.totals?.totalWeightKg ??
-      row?.totals?.totalWeight
-    );
-  }
-
-  function rowTotalCount(row) {
-    return nonNegative(
-      row?.totalCount ??
-      row?.fishCount ??
-      row?.totals?.fishCount ??
-      row?.totals?.totalCount
-    );
+    return { slots, issues };
   }
 
   function hasCatch(row) {
-    if (!row) {
-      return false;
-    }
-
-    const fields = [
-      rowTotalWeight(row),
-      rowTotalCount(row),
-      nonNegative(row.bigFish),
-      nonNegative(row.bigFishKg),
-      nonNegative(row.carpCount),
-      nonNegative(row.amurCount),
-      nonNegative(row.sturgeonCount)
-    ];
+    if (!row) return false;
 
     if (
-      fields.some(value => (value || 0) > 0)
+      [
+        rowTotalWeight(row),
+        rowTotalCount(row),
+        row.bigFish,
+        row.bigFishKg,
+        row.carpCount,
+        row.amurCount,
+        row.sturgeonCount
+      ].some(value => (nonNegative(value) || 0) > 0)
     ) {
       return true;
     }
 
-    const weighings =
-      row.weighings &&
-      typeof row.weighings === "object"
-        ? Object.values(row.weighings)
-        : [];
-
-    return weighings.some(weighing => {
-      if (!weighing || typeof weighing !== "object") {
-        return false;
-      }
-
-      return (
-        (nonNegative(weighing.total) || 0) > 0 ||
-        (nonNegative(weighing.count) || 0) > 0 ||
-        (nonNegative(weighing.totalWeightKg) || 0) > 0 ||
-        (nonNegative(weighing.fishCount) || 0) > 0
-      );
-    });
+    return Object.values(row.weighings || {}).some(value =>
+      value &&
+      [
+        value.total,
+        value.count,
+        value.totalWeightKg,
+        value.fishCount
+      ].some(item => (nonNegative(item) || 0) > 0)
+    );
   }
 
-  // ==========================================================
-  // COMPETITIONS
-  // ==========================================================
-
   function yearFromDate(value) {
-    if (!value) {
-      return "";
-    }
+    if (!value) return "";
 
-    if (typeof value.toDate === "function") {
-      const date = value.toDate();
+    const date = typeof value.toDate === "function"
+      ? value.toDate()
+      : value;
 
+    if (date instanceof Date) {
       return Number.isFinite(date.getTime())
         ? String(date.getFullYear())
         : "";
     }
 
-    if (value instanceof Date) {
-      return Number.isFinite(value.getTime())
-        ? String(value.getFullYear())
-        : "";
-    }
-
-    const raw = txt(value);
-
-    const match = raw.match(
-      /(?:^|[^\d])(20\d{2})(?:[^\d]|$)/
+    const match = txt(date).match(
+      /(?:^|[^\d])(20\d{2}|2100)(?:[^\d]|$)/
     );
 
     return match ? match[1] : "";
@@ -1249,21 +790,16 @@
       return String(direct);
     }
 
-    const dates = [
+    for (const value of [
       event?.startDate,
       event?.startAt,
       event?.date,
       data?.startDate,
       data?.startAt,
       data?.date
-    ];
-
-    for (const value of dates) {
+    ]) {
       const year = yearFromDate(value);
-
-      if (year) {
-        return year;
-      }
+      if (year) return year;
     }
 
     return "";
@@ -1273,13 +809,9 @@
     const data = doc.data() || {};
 
     const events =
-      Array.isArray(data.events) &&
-      data.events.length
+      Array.isArray(data.events) && data.events.length
         ? data.events
-        : [{
-            key: "main",
-            title: "Основний етап"
-          }];
+        : [{ key: "main", title: "Основний етап" }];
 
     return events.map((event, index) => {
       const stageKey = txt(
@@ -1289,436 +821,284 @@
         `stage-${index + 1}`
       );
 
-      const competitionTitle = txt(
-        data.title ||
-        data.name ||
-        doc.id
-      );
-
-      const eventTitle = txt(
-        event.title ||
-        event.name ||
-        stageKey
-      );
-
-      const lakeId = txt(
-        event.lakeId ||
-        data.lakeId ||
-        LAKE_ID
-      );
-
       const format = txt(
-        event.format ||
-        data.format ||
-        data.type
-      ).toLowerCase();
-
-      const entryType = txt(
-        event.entryType ||
-        data.entryType ||
-        (format.includes("solo") ? "solo" : "team")
+        event.format || data.format || data.type
       ).toLowerCase();
 
       return {
         id: `${doc.id}__${stageKey}`,
 
         title:
-          `${competitionTitle} · ${eventTitle}`,
+          `${txt(data.title || data.name || doc.id)} · ` +
+          `${txt(event.title || event.name || stageKey)}`,
 
         competitionId: doc.id,
         stageKey,
-
-        competition: data,
-        event,
-
         year: competitionYear(data, event),
+        lakeId: txt(event.lakeId || data.lakeId || LAKE_ID),
+        format,
 
-        lakeId,
-        entryType,
-        format
+        entryType: txt(
+          event.entryType ||
+          data.entryType ||
+          (format.includes("solo") ? "solo" : "team")
+        ).toLowerCase()
       };
     });
   }
 
-  async function loadPrepareStages(year) {
-    const snapshot = await read(
-      S.db.collection("competitions")
-    );
+  async function fetchStages(mode, year) {
+    if (mode === MODE.PREPARE) {
+      const snapshot = await read(
+        S.db.collection("competitions")
+      );
 
-    const stages = [];
-
-    snapshot.docs.forEach(doc => {
-      competitionStages(doc).forEach(stage => {
-        if (
+      return snapshot.docs
+        .flatMap(competitionStages)
+        .filter(stage =>
           stage.year === year &&
           stage.lakeId === LAKE_ID
-        ) {
-          stages.push(stage);
-        }
-      });
-    });
-
-    return stages;
-  }
-
-  // ==========================================================
-  // ARCHIVE STAGES
-  // ==========================================================
-
-  async function loadArchiveStages(year) {
-    const snapshot = await read(
-      S.db
-        .collection("seasonResults")
-        .doc(year)
-        .collection("stages")
-    );
-
-    return snapshot.docs
-      .map(doc => {
-        const data = doc.data() || {};
-
-        return {
-          id: doc.id,
-
-          title: txt(
-            data.stageName ||
-            data.title ||
-            data.stageId ||
-            doc.id
-          ),
-
-          lakeId: txt(data.lakeId || LAKE_ID),
-
-          data
-        };
-      })
-      .filter(stage => stage.lakeId === LAKE_ID);
-  }
-
-  // ==========================================================
-  // HISTORICAL STAGES
-  // ==========================================================
-
-  async function loadHistoricalStages(year) {
-    const snapshot = await read(
-      historyCollection(year)
-    );
-
-    return snapshot.docs
-      .map(doc => {
-        const data = doc.data() || {};
-
-        return {
-          id: doc.id,
-          title: txt(data.title || doc.id),
-          lakeId: txt(data.lakeId || LAKE_ID),
-          data
-        };
-      })
-      .filter(stage => stage.lakeId === LAKE_ID);
-  }
-
-  // ==========================================================
-  // LOAD YEAR
-  // ==========================================================
-
-  async function loadYear() {
-    requireAccess();
-
-    const year = txt($("mapYear")?.value);
-
-    if (!/^20\d{2}$/.test(year)) {
-      throw new Error(
-        "Введи коректний рік."
-      );
+        );
     }
 
-    message(
-      `Завантажую ${year} рік…`
+    const collection = mode === MODE.HISTORY
+      ? historyCollection(year)
+      : S.db
+          .collection("seasonResults")
+          .doc(year)
+          .collection("stages");
+
+    const snapshot = await read(collection);
+
+    return snapshot.docs.map(doc => {
+      const data = doc.data() || {};
+
+      return {
+        id: doc.id,
+
+        title: txt(
+          mode === MODE.HISTORY
+            ? data.title || doc.id
+            : data.stageName ||
+              data.title ||
+              data.stageId ||
+              doc.id
+        ),
+
+        lakeId: txt(data.lakeId || LAKE_ID)
+      };
+    }).filter(stage => stage.lakeId === LAKE_ID);
+  }
+
+  async function loadYear(mode = S.mode, value) {
+    const year = yearValue(
+      value ??
+      $(
+        mode === MODE.HISTORY
+          ? "historicalYear"
+          : "mapYear"
+      ).value
     );
 
-    let stages = [];
+    message(`Завантажую ${year} рік…`);
 
-    if (S.mode === MODE.PREPARE) {
-      stages = await loadPrepareStages(year);
-    } else if (S.mode === MODE.ARCHIVE) {
-      stages = await loadArchiveStages(year);
-    } else {
-      stages = await loadHistoricalStages(year);
-    }
+    const stages = await fetchStages(mode, year);
 
     requireAccess();
+    resetSelection();
 
-    stages.sort((a, b) =>
-      a.title.localeCompare(
-        b.title,
-        "uk",
-        { numeric: true }
-      )
-    );
-
+    S.mode = mode;
     S.year = year;
-
-    clearStage();
-
     S.stages = stages;
 
-    $("mapStage").innerHTML =
-      '<option value="">Обери етап</option>' +
-      stages.map(stage => `
-        <option value="${esc(stage.id)}">
-          ${esc(stage.title)}
-        </option>
-      `).join("");
+    $("mapYear").value = year;
+    $("historicalYear").value = year;
+
+    fillStageOptions();
+    updateModeUI();
 
     message(
       stages.length
-        ? `Знайдено етапів: ${stages.length}. Обери потрібний.`
-        : "За цей рік етапів не знайдено.",
+        ? `Знайдено: ${stages.length}. Обери потрібний запис.`
+        : "За цей рік записів не знайдено.",
       stages.length ? "ok" : ""
     );
   }
 
-  // ==========================================================
-  // CREATE HISTORY
-  // ==========================================================
-
-  async function createHistory() {
-    requireAccess();
-
-    if (S.mode !== MODE.HISTORY) {
-      throw new Error(
-        "Створення доступне тільки в історичному режимі."
-      );
-    }
-
-    const title = txt(
-      $("historyTitle")?.value
-    );
-
-    const organizer = txt(
-      $("historyOrganizer")?.value
-    );
-
-    if (!title) {
-      throw new Error(
-        "Введи назву турніру."
-      );
-    }
-
-    const id =
-      `historical-${Date.now()}-${safeId(title)}`;
-
-    const ref = historyRef(S.year, id);
-
-    const stamp = serverTimestamp();
-
-    await timed(
-      ref.set({
-        schemaVersion: 1,
-
-        lakeId: LAKE_ID,
-        year: S.year,
-
-        title,
-        organizer,
-
-        assignments: [],
-        emptyLakeSectors: [],
-
-        results: [],
-
-        status: "draft",
-        revision: 1,
-
-        createdAt: stamp,
-        createdBy: OWNER_UID,
-
-        updatedAt: stamp,
-        updatedBy: OWNER_UID
-      }),
-
-      "Не вдалося створити історичний турнір."
-    );
-
-    await loadYear();
-
-    $("mapStage").value = id;
-
-    await loadStage(id);
-  }
-
-  // ==========================================================
-  // LOAD STAGE
-  // ==========================================================
-
   async function loadStage(id) {
-    requireAccess();
-
-    const stage = S.stages.find(
-      item => item.id === id
-    );
+    const stage = S.stages.find(item => item.id === id);
 
     if (!stage) {
-      throw new Error(
-        "Етап не знайдено."
-      );
+      throw new Error("Запис не знайдено у списку.");
     }
 
     message("Завантажую карту…");
 
-    let saved = null;
-    let data = null;
-    let rows = [];
+    const mode = S.mode;
+    const year = S.year;
 
+    let data;
+    let saved;
+    let rows = [];
     let sourceHash = "";
 
-    if (S.mode === MODE.ARCHIVE) {
+    if (mode === MODE.HISTORY) {
+      const snapshot = await read(
+        historyCollection(year).doc(id)
+      );
+
+      if (!snapshot.exists) {
+        throw new Error(
+          "Історичний турнір більше не існує."
+        );
+      }
+
+      saved = data = snapshot.data() || {};
+
+      if (txt(saved.year) !== year) {
+        throw new Error(
+          "Рік історичного турніру не збігається."
+        );
+      }
+
+      if (
+        saved.results != null &&
+        !Array.isArray(saved.results)
+      ) {
+        throw new Error(
+          "Історичні результати мають некоректний формат."
+        );
+      }
+
+      rows = saved.results || [];
+
+    } else {
+      const sourceRef = mode === MODE.ARCHIVE
+        ? archiveRef(year, id)
+        : S.db
+            .collection("competitions")
+            .doc(stage.competitionId);
+
       const [source, map] = await Promise.all([
-        read(archiveRef(S.year, id)),
-        read(mapRef(S.year, id))
+        read(sourceRef),
+        read(mapRef(year, id))
       ]);
 
       if (!source.exists) {
         throw new Error(
-          "Архівний етап не знайдено."
+          "Джерело етапу більше не існує."
         );
       }
 
       data = source.data() || {};
+      saved = map.exists ? map.data() : null;
 
-      rows = data.standings;
+      if (mode === MODE.ARCHIVE) {
+        rows = data.standings;
+        sourceHash = await fingerprint(rows ?? null);
 
-      sourceHash = await fingerprint(
-        rows ?? null
-      );
-
-      saved = map.exists
-        ? map.data()
-        : null;
-    }
-
-    if (S.mode === MODE.PREPARE) {
-      const [competition, map] = await Promise.all([
-        read(
-          S.db
-            .collection("competitions")
-            .doc(stage.competitionId)
-        ),
-        read(mapRef(S.year, id))
-      ]);
-
-      if (!competition.exists) {
-        throw new Error(
-          "Змагання більше не існують."
+      } else {
+        const fresh = competitionStages({
+          id: stage.competitionId,
+          data: () => data
+        }).find(item =>
+          item.id === id &&
+          item.year === year &&
+          item.lakeId === LAKE_ID
         );
-      }
 
-      data = competition.data() || {};
-
-      saved = map.exists
-        ? map.data()
-        : null;
-    }
-
-    if (S.mode === MODE.HISTORY) {
-      const history = await read(
-        historyRef(S.year, id)
-      );
-
-      if (!history.exists) {
-        throw new Error(
-          "Історичний турнір не знайдено."
-        );
-      }
-
-      saved = history.data() || {};
-
-      data = saved;
-
-      rows = Array.isArray(saved.results)
-        ? saved.results
-        : [];
-    }
-
-    if (
-      saved?.lakeId &&
-      saved.lakeId !== LAKE_ID
-    ) {
-      throw new Error(
-        "Карта належить іншій водоймі."
-      );
-    }
-
-    if (
-      saved &&
-      S.mode !== MODE.HISTORY &&
-      (
-        txt(saved.seasonYear) !== S.year ||
-        saved.stageDocId !== id ||
-        Number(saved.schemaVersion) !== 1
-      )
-    ) {
-      throw new Error(
-        "Збережена карта має несумісну схему."
-      );
-    }
-
-    if (
-      S.mode === MODE.HISTORY &&
-      saved &&
-      Number(saved.schemaVersion) !== 1
-    ) {
-      throw new Error(
-        "Історичний турнір має несумісну схему."
-      );
-    }
-
-    const assignments = [];
-
-    if (Array.isArray(saved?.assignments)) {
-      saved.assignments.forEach((value, index) => {
-        const normalized = normalizeAssignment(value);
-
-        if (!normalized) {
+        if (!fresh) {
           throw new Error(
-            `Некоректна прив'язка №${index + 1} у збереженій карті.`
+            "Етап змінився. Завантаж список заново."
           );
         }
 
-        assignments.push(normalized);
-      });
+        Object.assign(stage, fresh);
+      }
+
+      if (
+        saved &&
+        (
+          txt(saved.seasonYear) !== year ||
+          saved.stageDocId !== id
+        )
+      ) {
+        throw new Error(
+          "Збережена карта належить іншому етапу або року."
+        );
+      }
     }
 
-    const empty = Array.isArray(saved?.emptyLakeSectors)
-      ? saved.emptyLakeSectors.map(Number)
-      : [];
-
     if (
-      empty.some(value => !VALID_SECTORS.has(value))
+      saved &&
+      (
+        Number(saved.schemaVersion) !== 1 ||
+        saved.lakeId !== LAKE_ID
+      )
     ) {
       throw new Error(
-        "У карті знайдено некоректні порожні сектори."
+        "Несумісна схема карти або інша водойма."
+      );
+    }
+
+    if (
+      saved?.assignments != null &&
+      !Array.isArray(saved.assignments)
+    ) {
+      throw new Error("Некоректний формат прив'язок.");
+    }
+
+    if (
+      saved?.emptyLakeSectors != null &&
+      !Array.isArray(saved.emptyLakeSectors)
+    ) {
+      throw new Error(
+        "Некоректний формат порожніх секторів."
+      );
+    }
+
+    const assignments = (saved?.assignments || [])
+      .map((item, index) => {
+        const normalized = normalizeAssignment(item);
+
+        if (!normalized) {
+          throw new Error(
+            `Некоректна прив'язка №${index + 1}.`
+          );
+        }
+
+        return normalized;
+      });
+
+    const empty = [
+      ...new Set(
+        (saved?.emptyLakeSectors || []).map(Number)
+      )
+    ];
+
+    if (
+      empty.some(sector => !VALID_SECTORS.has(sector))
+    ) {
+      throw new Error(
+        "Некоректний номер порожнього сектора."
       );
     }
 
     const historicalRows = {};
 
-    if (S.mode === MODE.HISTORY) {
-      rows.forEach(row => {
+    if (mode === MODE.HISTORY) {
+      for (const row of rows) {
         const sector = positiveInteger(
           row?.lakeSectorNumber
         );
 
-        if (!VALID_SECTORS.has(sector)) {
+        if (
+          !VALID_SECTORS.has(sector) ||
+          historicalRows[sector]
+        ) {
           throw new Error(
-            "Історичний результат містить некоректний фізичний сектор."
-          );
-        }
-
-        if (historicalRows[sector]) {
-          throw new Error(
-            `Дублюється історичний результат сектора №${sector}.`
+            "Некоректний або повторний сектор " +
+            "в історичних результатах."
           );
         }
 
@@ -1726,71 +1106,103 @@
           ...row,
           lakeSectorNumber: sector
         };
-      });
+      }
     }
+
+    const revision = Number(saved?.revision ?? 0);
+
+    if (!Number.isInteger(revision) || revision < 0) {
+      throw new Error(
+        "Некоректна revision документа."
+      );
+    }
+
+    requireAccess();
+    resetSelection();
 
     S.current = {
       ...stage,
+      title: txt(data.title || stage.title),
       data,
       rows
     };
 
+    if (mode !== MODE.HISTORY) {
+      S.current.title = stage.title;
+    }
+
     S.assignments = assignments;
-    S.empty = [...new Set(empty)];
-
+    S.empty = empty;
     S.historicalRows = historicalRows;
-
-    S.revision = Number(
-      saved?.revision || 0
-    );
-
+    S.revision = revision;
     S.sourceHash = sourceHash;
 
-    S.selected = 1;
-    S.zoom = 1;
-    S.dirty = false;
+    if (mode === MODE.HISTORY) {
+      fillHistoricalMeta(data);
+    }
 
-    setText(
-      "selectedStageTitle",
-      `${S.year} · ${stage.title}`
-    );
-
-    setHidden("mapEditor", false);
-
+    fillStageOptions(id);
     updateModeUI();
-
     render();
-    selectSector(1);
+    selectSector(1, true);
 
-    requestAnimationFrame(resizeMap);
+    requestAnimationFrame(resetZoom);
 
-    if (
-      S.mode === MODE.ARCHIVE &&
+    const archiveChanged =
+      mode === MODE.ARCHIVE &&
       saved?.sourceSignature &&
-      saved.sourceSignature !== sourceHash
-    ) {
-      message(
-        "Увага: джерело архівних результатів змінилося. " +
-        "Перевір прив'язки перед повторним збереженням.",
-        "error"
-      );
-    } else {
-      message(
-        saved
+      saved.sourceSignature !== sourceHash;
+
+    message(
+      archiveChanged
+        ? "Архівні результати змінилися після збереження карти. " +
+          "Перевір прив'язки перед збереженням."
+        : saved
           ? `Карту завантажено. Статус: ${saved.status || "невідомий"}.`
           : "Нова карта. Можна починати розстановку.",
-        "ok"
-      );
-    }
+      archiveChanged ? "error" : "ok"
+    );
   }
 
-  // ==========================================================
-  // VALIDATION
-  // ==========================================================
+  // Перевірки
+
+  function historyRowError(row) {
+    if (!txt(row.teamName)) {
+      return "немає назви команди";
+    }
+
+    if (
+      !Number.isInteger(row.place) ||
+      row.place < 1
+    ) {
+      return "некоректне місце";
+    }
+
+    const total = rowTotalWeight(row);
+    const count = rowTotalCount(row);
+
+    if (
+      total === null ||
+      !Number.isInteger(count) ||
+      count < 0
+    ) {
+      return "некоректна вага або кількість риб";
+    }
+
+    if (
+      (count === 0 && total !== 0) ||
+      (count > 0 && total <= 0)
+    ) {
+      return "вага не відповідає кількості риб";
+    }
+
+    return "";
+  }
 
   function inspectMap() {
     const errors = [];
     const incomplete = [];
+    const missingHistory = [];
 
     const physical = new Set();
     const drawKeys = new Set();
@@ -1804,9 +1216,7 @@
     }
 
     for (const assignment of S.assignments) {
-      const sector = Number(
-        assignment.lakeSectorNumber
-      );
+      const sector = assignment.lakeSectorNumber;
 
       const slot = parseSlot(
         assignment.zone,
@@ -1819,9 +1229,8 @@
         slot.drawKey !== assignment.drawKey
       ) {
         errors.push(
-          `Некоректна прив'язка сектора №${sector}.`
+          `Некоректна прив'язка №${sector}.`
         );
-
         continue;
       }
 
@@ -1840,41 +1249,37 @@
       physical.add(sector);
       drawKeys.add(slot.drawKey);
 
-      if (S.mode === MODE.ARCHIVE) {
-        const row = source.slots.get(
-          slot.drawKey
-        )?.row;
+      if (source) {
+        const row = source.slots.get(slot.drawKey)?.row;
 
-        if (
-          !row &&
-          !S.empty.includes(sector)
-        ) {
-          incomplete.push(
-            `${slot.drawKey}: немає архівного результату.`
-          );
-        }
-
-        if (
-          row &&
-          !S.empty.includes(sector) &&
-          (
+        if (!S.empty.includes(sector)) {
+          if (!row) {
+            incomplete.push(
+              `${slot.drawKey}: немає архівного результату.`
+            );
+          } else if (
             rowTotalWeight(row) === null ||
-            rowTotalCount(row) === null
-          )
-        ) {
-          incomplete.push(
-            `${slot.drawKey}: бракує ваги або кількості риб.`
-          );
-        }
-
-        if (
-          S.empty.includes(sector) &&
-          hasCatch(row)
-        ) {
+            !Number.isInteger(rowTotalCount(row))
+          ) {
+            incomplete.push(
+              `${slot.drawKey}: бракує коректної ваги ` +
+              "або кількості риб."
+            );
+          }
+        } else if (hasCatch(row)) {
           errors.push(
-            `${slot.drawKey}: є улов, але сектор позначено порожнім.`
+            `${slot.drawKey}: є улов, ` +
+            "але сектор позначено порожнім."
           );
         }
+      }
+
+      if (
+        S.mode === MODE.HISTORY &&
+        !S.empty.includes(sector) &&
+        !S.historicalRows[sector]
+      ) {
+        missingHistory.push(`№${sector}`);
       }
     }
 
@@ -1886,13 +1291,17 @@
       }
     }
 
-    if (!S.assignments.length) {
+    if (missingHistory.length) {
       incomplete.push(
-        "Ще немає прив'язок."
+        `Без результату: ${missingHistory.join(", ")}.`
       );
     }
 
-    if (S.mode === MODE.ARCHIVE) {
+    if (!S.assignments.length) {
+      incomplete.push("Ще немає прив'язок.");
+    }
+
+    if (source) {
       const missing = [...source.slots.keys()]
         .filter(key => !drawKeys.has(key));
 
@@ -1904,119 +1313,59 @@
     }
 
     if (S.mode === MODE.HISTORY) {
-      for (
-        const [sectorKey, row] of
-        Object.entries(S.historicalRows)
-      ) {
-        const sector = Number(sectorKey);
+      const entries = Object.entries(S.historicalRows);
+
+      if (!entries.length) {
+        incomplete.push(
+          "Не внесено жодного результату."
+        );
+      }
+
+      for (const [key, row] of entries) {
+        const sector = Number(key);
 
         if (!physical.has(sector)) {
           errors.push(
-            `Результат сектора №${sector} не має прив'язки.`
-          );
-        }
-
-        if (!txt(row.teamName)) {
-          errors.push(
-            `Сектор №${sector}: немає назви команди.`
-          );
-        }
-
-        if (
-          !Number.isInteger(row.place) ||
-          row.place < 1
-        ) {
-          errors.push(
-            `Сектор №${sector}: некоректне місце.`
-          );
-        }
-
-        if (
-          rowTotalWeight(row) === null ||
-          !Number.isInteger(row.totalCount) ||
-          row.totalCount < 0
-        ) {
-          errors.push(
-            `Сектор №${sector}: некоректна вага або кількість риб.`
+            `Результат №${sector} не має прив'язки.`
           );
         }
 
         if (S.empty.includes(sector)) {
           errors.push(
-            `Сектор №${sector} має результат, але позначений порожнім.`
+            `№${sector}: одночасно є результат ` +
+            "і позначка «пустував»."
           );
+        }
+
+        const issue = historyRowError(row);
+
+        if (issue) {
+          errors.push(`№${sector}: ${issue}.`);
         }
       }
     }
 
-    if (S.mode === MODE.PREPARE) {
-      if (S.assignments.length > MAX_LAKE_SECTOR) {
-        errors.push(
-          "Кількість прив'язок перевищує 26."
-        );
-      }
-
-      if (
-        S.assignments.length > 0 &&
-        S.assignments.length === S.empty.length
-      ) {
-        incomplete.push(
-          "Усі сектори позначені порожніми."
-        );
-      }
+    if (
+      S.mode === MODE.PREPARE &&
+      S.assignments.length &&
+      S.assignments.length === S.empty.length
+    ) {
+      incomplete.push(
+        "Немає секторів для учасників."
+      );
     }
 
     return {
       errors,
       incomplete,
-
-      ready:
-        errors.length === 0 &&
-        incomplete.length === 0,
-
-      selected: S.assignments.length,
-      empty: S.empty.length,
-
-      included:
-        S.assignments.length -
-        S.empty.length
+      ready: !errors.length && !incomplete.length
     };
   }
 
-  // ==========================================================
-  // SLOT OPTIONS
-  // ==========================================================
-
-  function availableSlots() {
-    if (S.mode === MODE.ARCHIVE) {
-      return [...readRows(S.current.rows)
-        .slots.values()]
-        .sort(sortSlots);
-    }
-
-    const slots = [];
-
-    for (const zone of ["A", "B", "C"]) {
-      for (
-        let sector = 1;
-        sector <= MAX_LAKE_SECTOR;
-        sector++
-      ) {
-        slots.push({
-          zone,
-          sector,
-          drawKey: `${zone}${sector}`
-        });
-      }
-    }
-
-    return slots;
-  }
+  // Відображення
 
   function rowForAssignment(assignment) {
-    if (!assignment) {
-      return null;
-    }
+    if (!assignment) return null;
 
     if (S.mode === MODE.ARCHIVE) {
       return readRows(S.current.rows)
@@ -2032,266 +1381,240 @@
     return null;
   }
 
-  function resultText(row) {
-    if (!row) {
-      return "—";
+  function participation(assignment) {
+    if (
+      S.empty.includes(assignment.lakeSectorNumber)
+    ) {
+      return S.mode === MODE.PREPARE
+        ? "Не використовується"
+        : "Пустував";
     }
 
-    const totalWeight = rowTotalWeight(row);
-    const totalCount = rowTotalCount(row);
+    if (S.mode === MODE.PREPARE) {
+      return "Заплановано";
+    }
 
-    const place = nonNegative(
-      row.place ??
-      row.zonePlace ??
-      row.overallPlace
-    );
-
-    const result =
-      `${weight(totalWeight)} кг · ` +
-      `${totalCount ?? "—"} риб`;
-
-    return place !== null
-      ? `${place} місце · ${result}`
-      : result;
+    return rowForAssignment(assignment)
+      ? "Ловили"
+      : "Немає даних";
   }
 
-  // ==========================================================
-  // RENDER
-  // ==========================================================
+  function resultText(row) {
+    if (!row) return "—";
+
+    const place = positiveInteger(
+      row.place ?? row.zonePlace ?? row.overallPlace
+    );
+
+    return (
+      (place ? `${place} місце · ` : "") +
+      `${weight(rowTotalWeight(row))} кг · ` +
+      `${rowTotalCount(row) ?? "—"} риб`
+    );
+  }
 
   function render() {
-    if (!S.current) {
-      return;
-    }
+    if (!S.current) return;
 
-    const check = inspectMap();
+    setText(
+      "selectedStageTitle",
+      `${S.year} · ${S.current.title}`
+    );
 
-    const pins = $("mapPins");
+    $("mapPins").innerHTML = POINTS
+      .map(([sector, x, y]) => {
+        const assignment = S.assignments.find(
+          item => item.lakeSectorNumber === sector
+        );
 
-    pins.innerHTML = POINTS.map(([sector, x, y]) => {
-      const assignment = S.assignments.find(
-        item => item.lakeSectorNumber === sector
-      );
+        const empty = S.empty.includes(sector);
 
-      const empty = S.empty.includes(sector);
-
-      return `
-        <button
-          type="button"
-          class="map-pin"
-          data-lake="${sector}"
-          data-zone="${esc(assignment?.zone || "")}"
-          data-empty="${empty}"
-          aria-pressed="${sector === S.selected}"
-          style="left:${x}%;top:${y}%"
-          aria-label="Сектор озера №${sector}"
-        >
-          <span>${sector}</span>
-
-          <small>
-            ${esc(
+        return `
+          <button
+            type="button"
+            class="map-pin"
+            data-lake="${sector}"
+            data-zone="${esc(assignment?.zone || "")}"
+            data-empty="${empty}"
+            aria-pressed="${sector === S.selected}"
+            style="left:${x}%;top:${y}%"
+            aria-label="Сектор озера №${sector}${
+              assignment ? `, ${esc(assignment.drawKey)}` : ""
+            }"
+          >
+            <span>${sector}</span>
+            <small>${esc(
               assignment
-                ? assignment.drawKey +
-                  (empty ? " ×" : "")
+                ? assignment.drawKey + (empty ? " ×" : "")
                 : ""
-            )}
-          </small>
-        </button>
-      `;
-    }).join("");
+            )}</small>
+          </button>
+        `;
+      })
+      .join("");
 
-    pins
-      .querySelectorAll("[data-lake]")
-      .forEach(button => {
-        button.addEventListener("click", () => {
-          if (!S.busy) {
-            selectSector(
-              Number(button.dataset.lake)
-            );
-          }
-        });
-      });
+    const ordered = [...S.assignments].sort(
+      (a, b) => a.lakeSectorNumber - b.lakeSectorNumber
+    );
 
-    const ordered = [...S.assignments]
-      .sort(
-        (a, b) =>
-          a.lakeSectorNumber -
-          b.lakeSectorNumber
-      );
-
-    $("mappingRows").innerHTML =
-      ordered.map(assignment => {
+    $("mappingRows").innerHTML = ordered
+      .map(assignment => {
         const row = rowForAssignment(assignment);
-
-        const sector = assignment.lakeSectorNumber;
 
         return `
           <tr>
-            <td>№${sector}</td>
+            <td>№${assignment.lakeSectorNumber}</td>
             <td>${esc(assignment.drawKey)}</td>
             <td>${esc(teamName(row))}</td>
             <td>${esc(resultText(row))}</td>
-
-            <td>
-              ${
-                S.empty.includes(sector)
-                  ? "Пустував"
-                  : "Ловили"
-              }
-            </td>
+            <td>${esc(participation(assignment))}</td>
           </tr>
         `;
-      }).join("") ||
-      `
-        <tr>
-          <td colspan="5">
-            Ще немає прив'язок.
-          </td>
-        </tr>
-      `;
+      })
+      .join("") ||
+      '<tr><td colspan="5">Ще немає прив\'язок.</td></tr>';
 
-    $("emptySectors").innerHTML =
-      ordered.map(assignment => {
+    $("emptySectors").innerHTML = ordered
+      .map(assignment => {
         const sector = assignment.lakeSectorNumber;
 
         return `
           <label class="maps-check">
-
             <input
               type="checkbox"
               data-empty-sector="${sector}"
               ${S.empty.includes(sector) ? "checked" : ""}
-              ${S.busy ? "disabled" : ""}
             >
-
             <span>
-              ${esc(assignment.drawKey)}
-              · озеро №${sector}
+              ${esc(assignment.drawKey)} · озеро №${sector}
             </span>
-
           </label>
         `;
-      }).join("") ||
+      })
+      .join("") ||
       '<p class="maps-muted">Немає секторів.</p>';
 
-    $("emptySectors")
-      .querySelectorAll("[data-empty-sector]")
-      .forEach(input => {
-        input.addEventListener("change", () => {
-          if (S.busy) {
-            render();
-            return;
-          }
+    const check = inspectMap();
 
-          const sector = Number(
-            input.dataset.emptySector
-          );
-
-          const assignment = S.assignments.find(
-            item =>
-              item.lakeSectorNumber === sector
-          );
-
-          if (
-            input.checked &&
-            S.mode === MODE.ARCHIVE &&
-            hasCatch(rowForAssignment(assignment))
-          ) {
-            input.checked = false;
-
-            message(
-              "Сектор має улов. Позначити його порожнім не можна.",
-              "error"
-            );
-
-            return;
-          }
-
-          if (
-            input.checked &&
-            S.mode === MODE.HISTORY &&
-            S.historicalRows[sector]
-          ) {
-            input.checked = false;
-
-            message(
-              "Спочатку видали історичний результат сектора.",
-              "error"
-            );
-
-            return;
-          }
-
-          S.empty = input.checked
-            ? [...new Set([...S.empty, sector])]
-            : S.empty.filter(
-                value => value !== sector
-              );
-
-          changed();
-        });
-      });
+    const fished = ordered.filter(item =>
+      !S.empty.includes(item.lakeSectorNumber) &&
+      rowForAssignment(item)
+    ).length;
 
     setText(
       "mapSummary",
-      `У розстановці: ${check.selected} · ` +
-      `Пустували: ${check.empty} · ` +
-      `Ловили: ${check.included}`
+      S.mode === MODE.PREPARE
+        ? `У розстановці: ${ordered.length} · ` +
+          `Для учасників: ${ordered.length - S.empty.length} · ` +
+          `Не використовуємо: ${S.empty.length}`
+        : `У розстановці: ${ordered.length} · ` +
+          `Ловили: ${fished} · ` +
+          `Пустували: ${S.empty.length} · ` +
+          `Немає даних: ${ordered.length - S.empty.length - fished}`
     );
 
     setText(
       "mapCoverage",
       check.ready
-        ? "Карта готова."
-        : [
-            ...check.errors,
-            ...check.incomplete
-          ].join(" ") ||
-          "Карта ще не завершена."
+        ? S.mode === MODE.PREPARE
+          ? "Розстановка коректна."
+          : "Дані прив'язаних секторів заповнено."
+        : [...check.errors, ...check.incomplete].join("\n")
     );
 
-    setText(
-      "saveState",
-      S.dirty
-        ? "Є незбережені зміни"
-        : S.revision
-          ? "Збережено"
-          : "Ще не збережено"
-    );
+    if (S.mode === MODE.HISTORY) {
+      renderHistoricalTable(ordered);
+    }
 
     controls();
   }
 
-  // ==========================================================
-  // SELECT SECTOR
-  // ==========================================================
+  function renderHistoricalTable(ordered) {
+    $("historicalResultsRows").innerHTML = ordered
+      .map(assignment => {
+        const row = S.historicalRows[
+          assignment.lakeSectorNumber
+        ];
 
-  function selectSector(sector) {
-    if (
-      !S.current ||
-      !VALID_SECTORS.has(sector)
+        return `
+          <tr>
+            <td>№${assignment.lakeSectorNumber}</td>
+            <td>${esc(assignment.drawKey)}</td>
+            <td>${esc(
+              row ? teamName(row) : participation(assignment)
+            )}</td>
+            <td>${esc(row?.place ?? "—")}</td>
+            <td>${weight(rowTotalWeight(row))}</td>
+            <td>${esc(rowTotalCount(row) ?? "—")}</td>
+          </tr>
+        `;
+      })
+      .join("") ||
+      '<tr><td colspan="6">Ще немає результатів.</td></tr>';
+
+    const rows = Object.values(S.historicalRows);
+
+    const totalGrams = rows.reduce(
+      (sum, row) =>
+        sum + Math.round((rowTotalWeight(row) || 0) * 1000),
+      0
+    );
+
+    const count = rows.reduce(
+      (sum, row) => sum + (rowTotalCount(row) || 0),
+      0
+    );
+
+    setText(
+      "historicalTotals",
+      `Результатів: ${rows.length} · ` +
+      `Вага: ${(totalGrams / 1000).toFixed(3)} кг · ` +
+      `Риб: ${count}`
+    );
+  }
+
+  // Номер у зоні — без списку з 78 варіантів
+
+  function nextNumber(zone) {
+    const used = new Set(
+      S.assignments
+        .filter(item =>
+          item.zone === zone &&
+          item.lakeSectorNumber !== S.selected
+        )
+        .map(item => item.sector)
+    );
+
+    for (
+      let number = 1;
+      number <= MAX_LAKE_SECTOR;
+      number++
     ) {
-      return;
+      if (!used.has(number)) return number;
     }
 
-    S.selected = sector;
+    return 1;
+  }
 
-    $("lakeSector").value = String(sector);
-
+  function fillSlotControls() {
     const assignment = S.assignments.find(
-      item => item.lakeSectorNumber === sector
+      item => item.lakeSectorNumber === S.selected
     );
 
     const used = new Set(
       S.assignments
-        .filter(
-          item =>
-            item.lakeSectorNumber !== sector
+        .filter(item =>
+          item.lakeSectorNumber !== S.selected
         )
         .map(item => item.drawKey)
     );
 
-    const slots = availableSlots();
+    const slots = S.mode === MODE.ARCHIVE
+      ? [...readRows(S.current.rows).slots.values()]
+          .sort(sortSlots)
+      : [];
+
+    $("lakeSector").value = String(S.selected);
 
     $("archiveSlot").innerHTML =
       '<option value="">Обери позначення</option>' +
@@ -2303,160 +1626,148 @@
           ${esc(slot.drawKey)}
         </option>
       `).join("") +
-      `
-        <option value="manual">
-          Ввести вручну…
-        </option>
-      `;
+      '<option value="manual">Ввести вручну…</option>';
 
-    if (assignment) {
-      $("archiveSlot").value = slots.some(
-        slot =>
+    $("archiveSlot").value = assignment
+      ? slots.some(slot =>
           slot.drawKey === assignment.drawKey
-      )
+        )
         ? assignment.drawKey
-        : "manual";
-    } else {
-      $("archiveSlot").value = "";
-    }
+        : "manual"
+      : "";
 
     $("manualZone").value =
-      assignment?.zone || "A";
+      assignment?.zone || S.lastZone;
 
     $("manualNumber").value =
-      assignment?.sector || 1;
+      assignment?.sector ||
+      nextNumber($("manualZone").value);
+
+    preview();
+  }
+
+  function selectSector(sector, force = false) {
+    if (
+      !S.current ||
+      !VALID_SECTORS.has(sector)
+    ) {
+      return;
+    }
+
+    if (!force && sector === S.selected) return;
+
+    if (!force && !mayLeaveResult()) {
+      $("lakeSector").value = String(S.selected);
+      return;
+    }
+
+    S.selected = sector;
+    S.resultDirty = false;
+
+    fillSlotControls();
 
     $("mapPins")
       .querySelectorAll("[data-lake]")
       .forEach(button => {
         button.setAttribute(
           "aria-pressed",
-          String(
-            Number(button.dataset.lake) === sector
-          )
+          String(Number(button.dataset.lake) === sector)
         );
       });
 
     if (S.mode === MODE.HISTORY) {
-      loadHistoricalEditor(sector);
+      fillHistoricalResult();
     }
 
-    preview();
     controls();
   }
 
-  // ==========================================================
-  // CHOSEN SLOT
-  // ==========================================================
-
   function chosenSlot() {
-    if ($("archiveSlot").value === "manual") {
-      return parseSlot(
-        $("manualZone").value,
-        $("manualNumber").value
-      );
-    }
-
-    return parseSlot(
-      "",
-      $("archiveSlot").value
-    );
+    return (
+      S.mode !== MODE.ARCHIVE ||
+      $("archiveSlot").value === "manual"
+    )
+      ? parseSlot(
+          $("manualZone").value,
+          $("manualNumber").value
+        )
+      : parseSlot("", $("archiveSlot").value);
   }
 
   function preview() {
-    if (!S.current) {
-      return;
-    }
+    if (!S.current) return;
 
     setHidden(
       "manualSlot",
+      S.mode === MODE.ARCHIVE &&
       $("archiveSlot").value !== "manual"
     );
 
     const slot = chosenSlot();
 
     if (!slot) {
-      setText(
-        "slotPreview",
-        "Обери позначення."
-      );
-
+      setText("slotPreview", "Обери позначення.");
       return;
     }
-
-    const row = S.mode === MODE.ARCHIVE
-      ? readRows(S.current.rows)
-          .slots.get(slot.drawKey)?.row
-      : S.mode === MODE.HISTORY
-        ? S.historicalRows[S.selected]
-        : null;
 
     setText(
       "slotPreview",
-      `Озеро №${S.selected} → ${slot.drawKey}\n` +
-      (
-        row
-          ? `${teamName(row)}\n${resultText(row)}`
-          : "Результат ще не внесено."
-      )
+      `№${S.selected} → ${slot.drawKey}`
     );
   }
 
-  // ==========================================================
-  // ASSIGN
-  // ==========================================================
+  function checkCollision(slot, sector) {
+    const other = S.assignments.find(item =>
+      item.drawKey === slot.drawKey &&
+      item.lakeSectorNumber !== sector
+    );
 
-  function assign() {
+    if (other) {
+      throw new Error(
+        `${slot.drawKey} уже прив'язано до фізичного ` +
+        `сектора №${other.lakeSectorNumber}.`
+      );
+    }
+  }
+
+  function putAssignment(slot, sector) {
+    S.assignments = S.assignments.filter(
+      item => item.lakeSectorNumber !== sector
+    );
+
+    S.assignments.push(
+      assignmentFor(sector, slot)
+    );
+  }
+
+  function changed(refreshResult = false) {
+    S.dirty = true;
+
+    render();
+    fillSlotControls();
+
     if (
-      !S.current ||
-      S.busy ||
-      !S.allowed
+      refreshResult &&
+      S.mode === MODE.HISTORY
     ) {
-      return;
+      S.resultDirty = false;
+      fillHistoricalResult();
     }
 
+    controls();
+  }
+
+  function assign() {
     const slot = chosenSlot();
 
     if (!slot) {
-      message(
-        "Обери правильне позначення.",
-        "error"
-      );
-
-      return;
+      throw new Error("Обери правильне позначення.");
     }
 
-    if (S.mode === MODE.ARCHIVE) {
-      const source = readRows(S.current.rows);
-
-      if (!source.slots.has(slot.drawKey)) {
-        message(
-          "Цього позначення немає в архівних результатах.",
-          "error"
-        );
-
-        return;
-      }
-    }
-
-    const collision = S.assignments.find(
-      item =>
-        item.drawKey === slot.drawKey &&
-        item.lakeSectorNumber !== S.selected
-    );
-
-    if (collision) {
-      message(
-        `${slot.drawKey} уже використовується.`,
-        "error"
-      );
-
-      return;
-    }
+    checkCollision(slot, S.selected);
 
     const previous = S.assignments.find(
-      item =>
-        item.lakeSectorNumber === S.selected
+      item => item.lakeSectorNumber === S.selected
     );
 
     if (
@@ -2464,27 +1775,16 @@
       S.historicalRows[S.selected] &&
       previous?.drawKey !== slot.drawKey
     ) {
-      message(
-        "Спочатку видали історичний результат перед зміною позначення.",
-        "error"
+      throw new Error(
+        "Для зміни позначення разом із результатом " +
+        "використай поле «Турнірне позначення» " +
+        "у формі результату."
       );
-
-      return;
     }
 
-    S.assignments = S.assignments.filter(
-      item =>
-        item.lakeSectorNumber !== S.selected
-    );
+    putAssignment(slot, S.selected);
 
-    S.assignments.push({
-      lakeSectorId: `sector-${S.selected}`,
-      lakeSectorNumber: S.selected,
-
-      zone: slot.zone,
-      sector: slot.sector,
-      drawKey: slot.drawKey
-    });
+    S.lastZone = slot.zone;
 
     if (previous?.drawKey !== slot.drawKey) {
       S.empty = S.empty.filter(
@@ -2492,303 +1792,475 @@
       );
     }
 
+    if (S.mode === MODE.HISTORY) {
+      $("historicalDrawKey").value = slot.drawKey;
+    }
+
     changed();
 
     message(
-      `Озеро №${S.selected} → ${slot.drawKey}. Збережи карту.`,
+      `Озеро №${S.selected} → ${slot.drawKey}. Збережи зміни.`,
       "ok"
     );
   }
 
   function removeAssignment() {
     if (
-      !S.current ||
-      S.busy ||
-      !S.allowed
-    ) {
-      return;
-    }
-
-    if (
       S.mode === MODE.HISTORY &&
       S.historicalRows[S.selected]
     ) {
-      message(
-        "Спочатку видали результат цього сектора.",
-        "error"
+      throw new Error(
+        "Спочатку очисти результат цього сектора."
       );
-
-      return;
     }
 
+    if (!mayLeaveResult()) return;
+
     S.assignments = S.assignments.filter(
-      item =>
-        item.lakeSectorNumber !== S.selected
+      item => item.lakeSectorNumber !== S.selected
     );
 
     S.empty = S.empty.filter(
       sector => sector !== S.selected
     );
 
-    changed();
+    changed(true);
   }
 
-  // ==========================================================
-  // HISTORICAL RESULTS
-  // ==========================================================
+  function toggleEmpty(input) {
+    const sector = Number(input.dataset.emptySector);
+    const checked = input.checked;
 
-  function loadHistoricalEditor(sector) {
-    const row = S.historicalRows[sector] || {};
-
-    setText(
-      "historicalSectorLabel",
-      `Фізичний сектор озера №${sector}`
+    const assignment = S.assignments.find(
+      item => item.lakeSectorNumber === sector
     );
 
-    $("historicalTeam").value =
-      row.teamName || "";
+    if (!assignment) return;
 
-    $("historicalPlace").value =
-      row.place ?? "";
+    if (
+      checked &&
+      S.mode === MODE.ARCHIVE &&
+      hasCatch(rowForAssignment(assignment))
+    ) {
+      input.checked = false;
 
-    $("historicalWeight").value =
-      row.totalWeight ?? "";
+      throw new Error(
+        "Сектор має улов. Позначити його порожнім не можна."
+      );
+    }
 
-    $("historicalCount").value =
-      row.totalCount ?? "";
+    if (
+      checked &&
+      S.mode === MODE.HISTORY &&
+      S.historicalRows[sector]
+    ) {
+      input.checked = false;
+
+      throw new Error(
+        "Спочатку очисти результат сектора " +
+        "або зміни участь у формі результату."
+      );
+    }
+
+    if (
+      sector === S.selected &&
+      !mayLeaveResult()
+    ) {
+      input.checked = !checked;
+      return;
+    }
+
+    S.empty = checked
+      ? [...new Set([...S.empty, sector])]
+      : S.empty.filter(value => value !== sector);
+
+    changed(sector === S.selected);
+  }
+
+  // Історичні турніри
+
+  function fillHistoricalMeta(data = {}) {
+    $("historicalTitle").value = txt(data.title);
+    $("historicalOrganizer").value = txt(data.organizer);
+    $("historicalLake").value = LAKE_ID;
+    $("historicalStart").value = txt(data.startDate);
+    $("historicalEnd").value = txt(data.endDate);
+
+    S.metaDirty = false;
+  }
+
+  function historicalMeta() {
+    const title = txt($("historicalTitle").value);
+    const organizer = txt($("historicalOrganizer").value);
+    const startDate = txt($("historicalStart").value);
+    const endDate = txt($("historicalEnd").value);
+
+    if (!title || title.length > 150) {
+      throw new Error(
+        "Введи назву турніру, не довшу за 150 символів."
+      );
+    }
+
+    if (organizer.length > 120) {
+      throw new Error("Назва організатора задовга.");
+    }
+
+    if ($("historicalLake").value !== LAKE_ID) {
+      throw new Error(
+        "Ця карта призначена для Лелехівки."
+      );
+    }
+
+    for (const date of [startDate, endDate]) {
+      if (!date) continue;
+
+      const parsed = new Date(`${date}T00:00:00Z`);
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        !Number.isFinite(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== date
+      ) {
+        throw new Error(
+          "Введи коректні дати турніру."
+        );
+      }
+    }
+
+    if (
+      startDate &&
+      endDate &&
+      endDate < startDate
+    ) {
+      throw new Error(
+        "Дата завершення не може бути раніше початку."
+      );
+    }
+
+    return {
+      title,
+      organizer,
+      startDate,
+      endDate
+    };
+  }
+
+  async function beginHistory() {
+    const year = yearValue(
+      $("historicalYear").value
+    );
+
+    if (year !== S.year) {
+      await loadYear(MODE.HISTORY, year);
+    }
+
+    resetSelection();
+
+    S.newHistory = true;
+
+    fillHistoricalMeta();
+    fillStageOptions();
+    updateModeUI();
+
+    $("historicalTitle").focus();
+
+    message(
+      `Новий турнір за ${S.year} рік. ` +
+      "Введи назву та збережи його."
+    );
+  }
+
+  async function createHistory() {
+    if (
+      S.mode !== MODE.HISTORY ||
+      !S.newHistory
+    ) {
+      throw new Error(
+        "Спочатку натисни «Створити новий турнір»."
+      );
+    }
+
+    if (
+      yearValue($("historicalYear").value) !== S.year
+    ) {
+      throw new Error(
+        "Рік у полі змінено. Для іншого року " +
+        "спочатку завантаж турніри за цей рік."
+      );
+    }
+
+    const meta = historicalMeta();
+    const year = S.year;
+    const ref = historyCollection(year).doc();
+
+    const payload = {
+      schemaVersion: 1,
+      lakeId: LAKE_ID,
+      year,
+      ...meta,
+
+      assignments: [],
+      emptyLakeSectors: [],
+      results: [],
+
+      status: "draft",
+      revision: 1,
+
+      createdAt: serverTimestamp(),
+      createdBy: OWNER_UID,
+
+      updatedAt: serverTimestamp(),
+      updatedBy: OWNER_UID
+    };
+
+    message("Створюю історичний турнір…");
+
+    await waitWrite(
+      S.db.runTransaction(async transaction => {
+        const old = await transaction.get(ref);
+
+        requireAccess();
+
+        if (old.exists) {
+          throw new Error(
+            "Запис із цим ID уже існує. Спробуй ще раз."
+          );
+        }
+
+        transaction.set(ref, payload);
+      })
+    );
+
+    requireAccess();
+    resetSelection();
+
+    const stage = {
+      id: ref.id,
+      title: meta.title,
+      lakeId: LAKE_ID
+    };
+
+    S.stages.push(stage);
+
+    S.current = {
+      ...stage,
+      data: payload,
+      rows: []
+    };
+
+    S.revision = 1;
+
+    fillHistoricalMeta(meta);
+    fillStageOptions(ref.id);
+    updateModeUI();
+    render();
+    selectSector(1, true);
+
+    requestAnimationFrame(resetZoom);
+
+    message(
+      "Турнір створено як чернетку. Обери сектор і внеси результат.",
+      "ok"
+    );
+  }
+
+  function fillHistoricalResult() {
+    const sector = S.selected;
+    const row = S.historicalRows[sector];
+
+    const assignment = S.assignments.find(
+      item => item.lakeSectorNumber === sector
+    );
+
+    $("historicalSectorNumber").value = sector;
+    $("historicalDrawKey").value = assignment?.drawKey || "";
+    $("historicalTeam").value = row?.teamName || "";
+    $("historicalPlace").value = row?.place ?? "";
+    $("historicalWeight").value = rowTotalWeight(row) ?? "";
+    $("historicalFishCount").value = rowTotalCount(row) ?? "";
+
+    $("historicalParticipation").value =
+      S.empty.includes(sector)
+        ? "empty"
+        : row
+          ? "fished"
+          : "unknown";
+
+    setText(
+      "historicalResultStatus",
+      row
+        ? "Результат внесено."
+        : S.empty.includes(sector)
+          ? "Сектор позначено порожнім."
+          : "Немає даних."
+    );
   }
 
   function applyHistoricalResult() {
     if (
-      !S.current ||
       S.mode !== MODE.HISTORY ||
-      S.busy ||
-      !S.allowed
+      !S.current
     ) {
-      return;
+      throw new Error(
+        "Спочатку обери історичний турнір."
+      );
     }
 
     const sector = S.selected;
 
-    const assignment = S.assignments.find(
-      item =>
-        item.lakeSectorNumber === sector
+    const slot = parseSlot(
+      "",
+      $("historicalDrawKey").value
     );
 
-    if (!assignment) {
-      message(
-        "Спочатку прив'яжи фізичний сектор до позначення.",
-        "error"
+    if (!slot) {
+      throw new Error(
+        "Введи турнірне позначення: A1, B3, C5 тощо."
       );
-
-      return;
     }
 
-    const name = txt(
-      $("historicalTeam").value
-    );
+    checkCollision(slot, sector);
 
-    const place = positiveInteger(
-      $("historicalPlace").value
-    );
-
-    const totalWeight = nonNegative(
-      $("historicalWeight").value
-    );
-
-    const totalCount = num(
-      $("historicalCount").value
-    );
-
-    if (!name) {
-      message(
-        "Введи назву команди.",
-        "error"
-      );
-
-      return;
-    }
-
-    if (place === null) {
-      message(
-        "Місце має бути цілим числом від 1.",
-        "error"
-      );
-
-      return;
-    }
-
-    if (totalWeight === null) {
-      message(
-        "Введи коректну сумарну вагу.",
-        "error"
-      );
-
-      return;
-    }
+    const state = $("historicalParticipation").value;
 
     if (
-      !Number.isInteger(totalCount) ||
-      totalCount < 0
+      !["fished", "empty", "unknown"].includes(state)
     ) {
-      message(
-        "Кількість риб має бути цілим невід'ємним числом.",
-        "error"
+      throw new Error(
+        "Обери коректний стан участі."
       );
-
-      return;
     }
 
-    if (
-      totalCount === 0 &&
-      totalWeight > 0
-    ) {
-      message(
-        "При нульовій кількості риб вага має бути нульовою.",
-        "error"
+    let row = null;
+
+    if (state === "fished") {
+      const enteredWeight = nonNegative(
+        $("historicalWeight").value
       );
 
-      return;
+      row = {
+        lakeSectorNumber: sector,
+        zone: slot.zone,
+        sector: slot.sector,
+        drawKey: slot.drawKey,
+
+        teamName: txt($("historicalTeam").value),
+
+        place: positiveInteger(
+          $("historicalPlace").value
+        ),
+
+        totalWeight: enteredWeight === null
+          ? null
+          : Number(enteredWeight.toFixed(3)),
+
+        totalCount: num(
+          $("historicalFishCount").value
+        )
+      };
+
+      const issue = historyRowError(row);
+
+      if (issue) {
+        throw new Error(
+          `Сектор №${sector}: ${issue}.`
+        );
+      }
+
+      if (row.teamName.length > 150) {
+        throw new Error("Назва команди задовга.");
+      }
     }
 
-    if (
-      totalCount > 0 &&
-      totalWeight === 0
-    ) {
-      message(
-        "Якщо є риба, сумарна вага повинна бути більшою за нуль.",
-        "error"
-      );
+    putAssignment(slot, sector);
 
-      return;
+    if (row) {
+      S.historicalRows[sector] = row;
+    } else {
+      delete S.historicalRows[sector];
     }
-
-    S.historicalRows[sector] = {
-      lakeSectorNumber: sector,
-
-      zone: assignment.zone,
-      sector: assignment.sector,
-      drawKey: assignment.drawKey,
-
-      teamName: name,
-      place,
-
-      totalWeight: Number(
-        totalWeight.toFixed(3)
-      ),
-
-      totalCount
-    };
 
     S.empty = S.empty.filter(
       value => value !== sector
     );
 
-    changed();
+    if (state === "empty") {
+      S.empty.push(sector);
+    }
+
+    S.resultDirty = false;
+
+    changed(true);
+
+    setText(
+      "historicalResultStatus",
+      "Додано в чернетку. Збережи турнір."
+    );
 
     message(
-      `Результат сектора №${sector} додано. Збережи турнір.`,
+      `Сектор №${sector}: зміни в чернетці. Збережи турнір.`,
       "ok"
     );
   }
 
-  function removeHistoricalResult() {
-    if (
-      S.mode !== MODE.HISTORY ||
-      S.busy ||
-      !S.allowed
-    ) {
-      return;
-    }
-
-    if (!S.historicalRows[S.selected]) {
-      message(
-        "Для цього сектора немає результату."
-      );
-
-      return;
-    }
-
+  function clearHistoricalResult() {
     delete S.historicalRows[S.selected];
 
-    changed();
+    S.empty = S.empty.filter(
+      sector => sector !== S.selected
+    );
+
+    S.resultDirty = false;
+
+    changed(true);
 
     message(
-      "Історичний результат видалено з чернетки."
+      "Результат очищено в чернетці. Збережи турнір."
     );
   }
 
-  // ==========================================================
-  // CHANGED
-  // ==========================================================
+  // Збереження
 
-  function changed() {
-    S.dirty = true;
-
-    render();
-    selectSector(S.selected);
+  function sortedAssignments() {
+    return S.assignments
+      .map(item =>
+        assignmentFor(item.lakeSectorNumber, item)
+      )
+      .sort(
+        (a, b) => a.lakeSectorNumber - b.lakeSectorNumber
+      );
   }
 
-  // ==========================================================
-  // SAVE PREPARE / ARCHIVE
-  // ==========================================================
-
   async function saveSectorMap() {
-    requireAccess();
-
     const check = inspectMap();
 
     if (check.errors.length) {
-      throw new Error(
-        check.errors.join("\n")
-      );
+      throw new Error(check.errors.join("\n"));
     }
 
+    const mode = S.mode;
     const year = S.year;
-    const id = S.current.id;
-
+    const current = { ...S.current };
+    const signature = S.sourceHash;
     const expectedRevision = S.revision;
 
-    const assignments = S.assignments
-      .map(assignment => ({
-        lakeSectorId:
-          `sector-${assignment.lakeSectorNumber}`,
-
-        lakeSectorNumber:
-          assignment.lakeSectorNumber,
-
-        zone: assignment.zone,
-        sector: assignment.sector,
-        drawKey: assignment.drawKey
-      }))
-      .sort(
-        (a, b) =>
-          a.lakeSectorNumber -
-          b.lakeSectorNumber
-      );
+    const assignments = sortedAssignments();
 
     const emptyLakeSectors = [...new Set(S.empty)]
       .sort((a, b) => a - b);
 
-    const ref = mapRef(year, id);
+    const ref = mapRef(year, current.id);
 
-    const sourceRef = S.mode === MODE.ARCHIVE
-      ? archiveRef(year, id)
+    const sourceRef = mode === MODE.ARCHIVE
+      ? archiveRef(year, current.id)
       : S.db
           .collection("competitions")
-          .doc(S.current.competitionId);
+          .doc(current.competitionId);
 
-    await timed(
+    await waitWrite(
       S.db.runTransaction(async transaction => {
-        // Усі читання перед записами.
-
-        const source = await transaction.get(
-          sourceRef
-        );
-
-        const saved = await transaction.get(
-          ref
-        );
+        const source = await transaction.get(sourceRef);
+        const snapshot = await transaction.get(ref);
 
         requireAccess();
 
@@ -2798,61 +2270,60 @@
           );
         }
 
-        if (S.mode === MODE.ARCHIVE) {
-          const actualHash = await fingerprint(
+        if (mode === MODE.ARCHIVE) {
+          const actual = await fingerprint(
             source.data().standings ?? null
           );
 
-          if (actualHash !== S.sourceHash) {
+          if (actual !== signature) {
             throw new Error(
-              "Архів змінився. Перезавантаж етап."
+              "Архів змінився. " +
+              "Перезавантаж етап перед збереженням."
             );
           }
-        } else {
-          const sourceStages = competitionStages(
-            {
-              id: S.current.competitionId,
-              data: () => source.data()
-            }
-          );
 
-          const exists = sourceStages.some(
-            stage =>
-              stage.stageKey === S.current.stageKey &&
-              stage.year === year &&
-              stage.lakeId === LAKE_ID
+        } else {
+          const exists = competitionStages({
+            id: current.competitionId,
+            data: () => source.data()
+          }).some(stage =>
+            stage.id === current.id &&
+            stage.year === year &&
+            stage.lakeId === LAKE_ID
           );
 
           if (!exists) {
             throw new Error(
-              "Змагання або етап змінилися. Перезавантаж список."
+              "Етап змінився. Перезавантаж список."
             );
           }
         }
 
-        const old = saved.exists
-          ? saved.data()
+        const old = snapshot.exists
+          ? snapshot.data()
           : null;
 
         if (
-          Number(old?.revision || 0) !==
-          expectedRevision
+          Number(old?.revision ?? 0) !== expectedRevision
         ) {
           throw new Error(
-            "Карту змінили в іншій вкладці. Перезавантаж її."
+            "Карту змінили в іншій вкладці. " +
+            "Перезавантаж її; поточні зміни ще не збережено."
           );
         }
 
         if (
           old &&
           (
+            Number(old.schemaVersion) !== 1 ||
+            old.lakeId !== LAKE_ID ||
             txt(old.seasonYear) !== year ||
-            old.stageDocId !== id ||
-            old.lakeId !== LAKE_ID
+            old.stageDocId !== current.id
           )
         ) {
           throw new Error(
-            "Існуюча карта має іншу прив'язку до етапу."
+            "Існуюча карта має несумісну схему " +
+            "або іншу прив'язку."
           );
         }
 
@@ -2860,22 +2331,17 @@
 
         const payload = {
           schemaVersion: 1,
-
           lakeId: LAKE_ID,
           mapVersion: 1,
 
           seasonYear: year,
-          stageDocId: id,
-
-          stageTitle: S.current.title,
+          stageDocId: current.id,
+          stageTitle: current.title,
 
           assignments,
           emptyLakeSectors,
 
-          status: check.ready
-            ? "ready"
-            : "draft",
-
+          status: check.ready ? "ready" : "draft",
           revision: expectedRevision + 1,
 
           createdAt: old?.createdAt || stamp,
@@ -2885,34 +2351,31 @@
           updatedBy: OWNER_UID
         };
 
-        if (S.mode === MODE.ARCHIVE) {
+        if (mode === MODE.ARCHIVE) {
           payload.sourcePath =
-            `seasonResults/${year}/stages/${id}`;
+            `seasonResults/${year}/stages/${current.id}`;
 
-          payload.sourceSignature =
-            S.sourceHash;
+          payload.sourceSignature = signature;
+
         } else {
           payload.sourcePath =
-            `competitions/${S.current.competitionId}`;
+            `competitions/${current.competitionId}`;
 
-          payload.competitionId =
-            S.current.competitionId;
-
-          payload.stageKey =
-            S.current.stageKey;
-
-          payload.entryType =
-            S.current.entryType || "team";
-
-          payload.format =
-            S.current.format || "";
+          payload.competitionId = current.competitionId;
+          payload.stageKey = current.stageKey;
+          payload.entryType = current.entryType || "team";
+          payload.format = current.format || "";
         }
 
-        transaction.set(ref, payload);
-      }),
-
-      "Не вдалося зберегти карту."
+        transaction.set(
+          ref,
+          payload,
+          { merge: true }
+        );
+      })
     );
+
+    requireAccess();
 
     S.revision = expectedRevision + 1;
     S.dirty = false;
@@ -2921,70 +2384,78 @@
 
     message(
       check.ready
-        ? "Карту збережено. Статус: ready. Розстановка готова."
-        : "Карту збережено як draft. Заверши розстановку перед жеребкуванням.",
+        ? "Карту збережено. Статус: ready."
+        : "Карту збережено як чернетку: draft.",
       "ok"
     );
   }
 
-  // ==========================================================
-  // SAVE HISTORY
-  // ==========================================================
-
   async function saveHistory() {
-    requireAccess();
+    const meta = historicalMeta();
+
+    // Загальне збереження застосовує введення у формі.
+    if (S.resultDirty) {
+      applyHistoricalResult();
+    }
 
     const check = inspectMap();
 
     if (check.errors.length) {
-      throw new Error(
-        check.errors.join("\n")
-      );
+      throw new Error(check.errors.join("\n"));
     }
 
+    const year = S.year;
     const id = S.current.id;
     const expectedRevision = S.revision;
 
-    const assignments = [...S.assignments]
-      .sort(
-        (a, b) =>
-          a.lakeSectorNumber -
-          b.lakeSectorNumber
-      );
+    const assignments = sortedAssignments();
 
-    const results = Object.values(
-      S.historicalRows
-    )
+    const results = Object.values(S.historicalRows)
       .map(row => {
         const assignment = assignments.find(
           item =>
-            item.lakeSectorNumber ===
-            row.lakeSectorNumber
+            item.lakeSectorNumber === row.lakeSectorNumber
         );
 
         if (!assignment) {
           throw new Error(
-            `Немає прив'язки для сектора №${row.lakeSectorNumber}.`
+            `Результат №${row.lakeSectorNumber} не має прив'язки.`
           );
         }
 
         return {
           ...row,
-
           zone: assignment.zone,
           sector: assignment.sector,
           drawKey: assignment.drawKey
         };
       })
       .sort(
-        (a, b) =>
-          a.lakeSectorNumber -
-          b.lakeSectorNumber
+        (a, b) => a.lakeSectorNumber - b.lakeSectorNumber
       );
 
-    const ref = historyRef(S.year, id);
+    const emptyLakeSectors = [...new Set(S.empty)]
+      .sort((a, b) => a - b);
 
-    await timed(
+    const ref = historyCollection(year).doc(id);
+
+    const payload = {
+      ...meta,
+
+      assignments,
+      emptyLakeSectors,
+      results,
+
+      status: check.ready ? "ready" : "draft",
+      revision: expectedRevision + 1,
+
+      updatedAt: serverTimestamp(),
+      updatedBy: OWNER_UID
+    };
+
+    message("Зберігаю історичний турнір…");
+
+    await waitWrite(
       S.db.runTransaction(async transaction => {
         const snapshot = await transaction.get(ref);
 
@@ -2992,72 +2463,83 @@
 
         if (!snapshot.exists) {
           throw new Error(
-            "Історичний турнір не знайдено."
+            "Історичний турнір більше не існує."
           );
         }
 
         const old = snapshot.data();
 
         if (
-          Number(old.revision || 0) !==
-          expectedRevision
+          Number(old.revision ?? 0) !== expectedRevision
         ) {
           throw new Error(
-            "Турнір змінили в іншій вкладці. Перезавантаж його."
+            "Турнір змінили в іншій вкладці. " +
+            "Перезавантаж його; поточні зміни ще не збережено."
           );
         }
 
         if (
+          Number(old.schemaVersion) !== 1 ||
           old.lakeId !== LAKE_ID ||
-          txt(old.year) !== S.year
+          txt(old.year) !== year
         ) {
           throw new Error(
-            "Історичний турнір має іншу водойму або рік."
+            "Турнір має іншу водойму, рік або схему."
           );
         }
 
-        transaction.update(ref, {
-          assignments,
-
-          emptyLakeSectors:
-            [...new Set(S.empty)]
-              .sort((a, b) => a - b),
-
-          results,
-
-          status: check.ready
-            ? "ready"
-            : "draft",
-
-          revision: expectedRevision + 1,
-
-          updatedAt: serverTimestamp(),
-          updatedBy: OWNER_UID
-        });
-      }),
-
-      "Не вдалося зберегти історичний турнір."
+        transaction.update(ref, payload);
+      })
     );
 
-    S.revision = expectedRevision + 1;
-    S.dirty = false;
+    requireAccess();
 
+    S.revision = expectedRevision + 1;
+    S.current.title = meta.title;
+
+    S.current.data = {
+      ...S.current.data,
+      ...payload
+    };
+
+    const stage = S.stages.find(
+      item => item.id === id
+    );
+
+    if (stage) stage.title = meta.title;
+
+    S.dirty = false;
+    S.metaDirty = false;
+    S.resultDirty = false;
+
+    fillStageOptions(id);
     render();
+
+    setText(
+      "historicalResultStatus",
+      "Турнір збережено на сервері."
+    );
 
     message(
       check.ready
         ? "Історичний турнір збережено. Статус: ready."
-        : "Історичний турнір збережено як чернетку.",
+        : "Історичний турнір збережено як чернетку: draft. " +
+          "Перевір сектори без даних.",
       "ok"
     );
   }
 
   async function save() {
-    requireAccess();
+    if (
+      S.mode === MODE.HISTORY &&
+      S.newHistory
+    ) {
+      return createHistory();
+    }
 
     if (!S.current) {
       throw new Error(
-        "Спочатку обери етап."
+        "Спочатку обери етап або турнір."
       );
     }
 
@@ -3070,21 +2552,17 @@
     }
   }
 
-  // ==========================================================
-  // MAP ZOOM
-  // ==========================================================
+  // Масштаб
 
   function resizeMap() {
     const viewport = $("mapViewport");
     const canvas = $("mapCanvas");
 
-    if (!viewport || !canvas) {
-      return;
-    }
-
-    const width = viewport.clientWidth;
-
-    if (!width) {
+    if (
+      !viewport ||
+      !canvas ||
+      !viewport.clientWidth
+    ) {
       return;
     }
 
@@ -3094,32 +2572,21 @@
     );
 
     canvas.style.width =
-      `${width * S.zoom}px`;
+      `${viewport.clientWidth * S.zoom}px`;
 
     canvas.style.height = "auto";
-
     canvas.style.aspectRatio =
       `${MAP_WIDTH} / ${MAP_HEIGHT}`;
 
     viewport.style.overflow =
-      S.zoom > MIN_ZOOM
-        ? "auto"
-        : "hidden";
+      S.zoom > MIN_ZOOM ? "auto" : "hidden";
 
     setText(
       "zoomValue",
       `${Math.round(S.zoom * 100)}%`
     );
 
-    setDisabled(
-      "zoomOut",
-      S.zoom <= MIN_ZOOM
-    );
-
-    setDisabled(
-      "zoomIn",
-      S.zoom >= MAX_ZOOM
-    );
+    controls();
   }
 
   function resetZoom() {
@@ -3127,40 +2594,14 @@
 
     resizeMap();
 
-    const viewport = $("mapViewport");
-
-    if (viewport) {
-      viewport.scrollLeft = 0;
-      viewport.scrollTop = 0;
-    }
+    $("mapViewport").scrollLeft = 0;
+    $("mapViewport").scrollTop = 0;
   }
 
-  // ==========================================================
-  // LEAVE CONFIRMATION
-  // ==========================================================
-
-  function mayLeave() {
-    return (
-      !S.dirty ||
-      window.confirm(
-        "Є незбережені зміни. Перейти без збереження?"
-      )
-    );
-  }
-
-  // ==========================================================
-  // EVENTS
-  // ==========================================================
+  // Події
 
   function on(id, event, handler) {
-    const element = $(id);
-
-    if (element) {
-      element.addEventListener(
-        event,
-        handler
-      );
-    }
+    $(id)?.addEventListener(event, handler);
   }
 
   function bindEvents() {
@@ -3168,156 +2609,227 @@
       .querySelectorAll("[data-map-mode]")
       .forEach(button => {
         button.addEventListener("click", () => {
-          switchMode(button.dataset.mapMode);
+          const mode = button.dataset.mapMode;
+
+          if (
+            !S.busy &&
+            mode !== S.mode &&
+            Object.values(MODE).includes(mode) &&
+            mayLeave()
+          ) {
+            run(() => loadYear(mode, S.year));
+          }
         });
       });
 
-    on("loadYear", "click", () => {
-      if (mayLeave()) {
-        run(loadYear);
+    const reload = () => {
+      if (!S.busy && mayLeave()) {
+        run(() => loadYear());
       }
-    });
+    };
 
-    on("mapYear", "keydown", event => {
-      if (event.key === "Enter") {
-        event.preventDefault();
+    on("loadYear", "click", reload);
+    on("loadHistorical", "click", reload);
 
-        if (mayLeave()) {
-          run(loadYear);
-        }
-      }
-    });
-
-    on("mapStage", "change", () => {
-      const element = $("mapStage");
-
-      const id = element.value;
-      const previous = S.current?.id || "";
-
-      if (!mayLeave()) {
-        element.value = previous;
-        return;
-      }
-
-      if (!id) {
-        clearSelectedStageOnly();
-        return;
-      }
-
-      run(async () => {
-        try {
-          await loadStage(id);
-        } catch (error) {
-          element.value = previous;
-          throw error;
+    ["mapYear", "historicalYear"].forEach(id => {
+      on(id, "keydown", event => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          reload();
         }
       });
     });
 
-    on("lakeSector", "change", () => {
-      selectSector(
-        Number($("lakeSector").value)
-      );
+    ["mapStage", "historicalTournament"].forEach(id => {
+      on(id, "change", () => {
+        const element = $(id);
+        const next = element.value;
+        const previous = S.current?.id || "";
+
+        if (S.busy || !mayLeave()) {
+          element.value = previous;
+          return;
+        }
+
+        if (!next) {
+          resetSelection();
+          updateModeUI();
+          controls();
+
+          message("Обери етап або турнір.");
+          return;
+        }
+
+        run(async () => {
+          try {
+            await loadStage(next);
+          } catch (error) {
+            element.value = previous;
+            throw error;
+          }
+        });
+      });
+    });
+
+    on("newHistorical", "click", () => {
+      if (!S.busy && mayLeave()) {
+        run(beginHistory);
+      }
+    });
+
+    on("saveHistoricalMeta", "click", () => run(save));
+    on("saveMap", "click", () => run(save));
+
+    [
+      "historicalTitle",
+      "historicalOrganizer",
+      "historicalLake",
+      "historicalStart",
+      "historicalEnd"
+    ].forEach(id => {
+      on(id, "input", () => {
+        if (
+          !S.busy &&
+          S.allowed &&
+          S.mode === MODE.HISTORY
+        ) {
+          S.metaDirty = true;
+          controls();
+        }
+      });
     });
 
     [
-      "archiveSlot",
-      "manualZone",
-      "manualNumber"
+      "historicalDrawKey",
+      "historicalTeam",
+      "historicalPlace",
+      "historicalWeight",
+      "historicalFishCount",
+      "historicalParticipation"
     ].forEach(id => {
+      const mark = () => {
+        if (
+          !S.busy &&
+          S.allowed &&
+          S.current &&
+          S.mode === MODE.HISTORY
+        ) {
+          S.resultDirty = true;
+
+          setText(
+            "historicalResultStatus",
+            "Є незбережене введення."
+          );
+
+          controls();
+        }
+      };
+
+      on(id, "input", mark);
+      on(id, "change", mark);
+    });
+
+    on(
+      "saveHistoricalResult",
+      "click",
+      () => edit(applyHistoricalResult)
+    );
+
+    on(
+      "clearHistoricalResult",
+      "click",
+      () => edit(clearHistoricalResult)
+    );
+
+    on("lakeSector", "change", () => {
+      edit(() => {
+        selectSector(Number($("lakeSector").value));
+      });
+    });
+
+    on("mapPins", "click", event => {
+      const button = event.target.closest("[data-lake]");
+
+      if (button) {
+        edit(() => {
+          selectSector(Number(button.dataset.lake));
+        });
+      }
+    });
+
+    on("emptySectors", "change", event => {
+      if (event.target.matches("[data-empty-sector]")) {
+        edit(() => toggleEmpty(event.target));
+      }
+    });
+
+    on("manualZone", "change", () => {
+      if (S.current && !S.busy) {
+        $("manualNumber").value =
+          nextNumber($("manualZone").value);
+
+        preview();
+      }
+    });
+
+    ["archiveSlot", "manualNumber"].forEach(id => {
       on(id, "input", preview);
       on(id, "change", preview);
     });
 
-    on("assignSlot", "click", assign);
+    on("assignSlot", "click", () => edit(assign));
 
     on(
       "removeSlot",
       "click",
-      removeAssignment
+      () => edit(removeAssignment)
     );
-
-    on(
-      "historicalApply",
-      "click",
-      applyHistoricalResult
-    );
-
-    on(
-      "historicalRemove",
-      "click",
-      removeHistoricalResult
-    );
-
-    on("createHistory", "click", () => {
-      run(createHistory);
-    });
-
-    on("saveMap", "click", () => {
-      run(save);
-    });
 
     on("zoomIn", "click", () => {
-      S.zoom = Math.min(
-        MAX_ZOOM,
-        S.zoom + ZOOM_STEP
-      );
-
-      resizeMap();
+      edit(() => {
+        S.zoom += ZOOM_STEP;
+        resizeMap();
+      });
     });
 
     on("zoomOut", "click", () => {
-      S.zoom = Math.max(
-        MIN_ZOOM,
-        S.zoom - ZOOM_STEP
-      );
-
-      resizeMap();
+      edit(() => {
+        S.zoom -= ZOOM_STEP;
+        resizeMap();
+      });
     });
 
-    on("zoomReset", "click", resetZoom);
+    on("zoomReset", "click", () => edit(resetZoom));
 
     on("lakeImage", "error", () => {
       setHidden("imageError", false);
     });
 
+    on("lakeImage", "load", () => {
+      setHidden("imageError", true);
+      resizeMap();
+    });
+
+    if (
+      $("lakeImage").complete &&
+      !$("lakeImage").naturalWidth
+    ) {
+      setHidden("imageError", false);
+    }
+
     window.addEventListener("resize", () => {
       requestAnimationFrame(resizeMap);
     });
 
-    window.addEventListener(
-      "beforeunload",
-      event => {
-        if (S.dirty) {
-          event.preventDefault();
-          event.returnValue = "";
-        }
+    window.addEventListener("beforeunload", event => {
+      if (hasUnsaved() || S.busy) {
+        event.preventDefault();
+        event.returnValue = "";
       }
-    );
+    });
   }
 
-  function clearSelectedStageOnly() {
-    S.current = null;
-
-    S.assignments = [];
-    S.empty = [];
-    S.historicalRows = {};
-
-    S.revision = 0;
-    S.sourceHash = "";
-    S.dirty = false;
-
-    setHidden("mapEditor", true);
-    setHidden("historicalEditor", true);
-
-    controls();
-
-    message("Обери етап.");
-  }
-
-  // ==========================================================
-  // FIREBASE
-  // ==========================================================
+  // Запуск
 
   async function waitFirebase() {
     if (window.scReady) {
@@ -3327,25 +2839,25 @@
       );
     }
 
-    if (
-      !window.scDb ||
-      !window.scAuth
-    ) {
+    let interval;
+
+    try {
       await timed(
         new Promise(resolve => {
-          const interval = setInterval(() => {
-            if (
-              window.scDb &&
-              window.scAuth
-            ) {
-              clearInterval(interval);
+          if (window.scDb && window.scAuth) {
+            return resolve();
+          }
+
+          interval = setInterval(() => {
+            if (window.scDb && window.scAuth) {
               resolve();
             }
           }, 100);
         }),
-
         "Firebase не ініціалізовано."
       );
+    } finally {
+      clearInterval(interval);
     }
 
     S.db = window.scDb;
@@ -3353,47 +2865,44 @@
   }
 
   function waitAuth() {
-    return timed(
-      new Promise((resolve, reject) => {
-        let unsubscribe = null;
-        let settled = false;
+    return new Promise((resolve, reject) => {
+      let unsubscribe = null;
+      let settled = false;
 
-        const done = user => {
-          if (settled) {
-            return;
-          }
+      const finish = (error, user) => {
+        if (settled) return;
 
-          settled = true;
+        settled = true;
+        clearTimeout(timer);
 
-          if (unsubscribe) {
-            unsubscribe();
-          }
+        if (unsubscribe) unsubscribe();
 
+        if (error) {
+          reject(error);
+        } else {
           resolve(user);
-        };
-
-        unsubscribe = S.auth.onAuthStateChanged(
-          done,
-          reject
-        );
-
-        if (settled && unsubscribe) {
-          unsubscribe();
         }
-      }),
+      };
 
-      "Не вдалося перевірити авторизацію."
-    );
+      const timer = setTimeout(() => {
+        finish(
+          new Error("Не вдалося перевірити авторизацію.")
+        );
+      }, REQUEST_TIMEOUT);
+
+      unsubscribe = S.auth.onAuthStateChanged(
+        user => finish(null, user),
+        error => finish(error)
+      );
+
+      if (settled && unsubscribe) {
+        unsubscribe();
+      }
+    });
   }
 
-  // ==========================================================
-  // BOOT
-  // ==========================================================
-
   async function boot() {
-    if (S.started) {
-      return;
-    }
+    if (S.started) return;
 
     S.started = true;
 
@@ -3409,19 +2918,14 @@
 
       const user = await waitAuth();
 
-      if (
-        !user ||
-        user.uid !== OWNER_UID
-      ) {
+      if (!user || user.uid !== OWNER_UID) {
         throw new Error(
           "Доступ тільки для власника STOLAR CARP."
         );
       }
 
       const profile = await read(
-        S.db
-          .collection("users")
-          .doc(user.uid)
+        S.db.collection("users").doc(user.uid)
       );
 
       if (
@@ -3433,6 +2937,10 @@
         );
       }
 
+      if (S.auth.currentUser?.uid !== OWNER_UID) {
+        throw new Error("Сесію завершено.");
+      }
+
       S.allowed = true;
 
       S.auth.onAuthStateChanged(value => {
@@ -3440,54 +2948,47 @@
           S.allowed = false;
 
           setHidden("mapApp", true);
-
           controls();
 
           message(
-            "Сесію завершено.",
+            "Сесію завершено. Увійди та перезавантаж сторінку.",
             "error"
           );
         }
       });
 
-      const requestedYear = new URLSearchParams(
+      const requested = new URLSearchParams(
         location.search
       ).get("year");
 
-      $("mapYear").value =
-        /^20\d{2}$/.test(txt(requestedYear))
-          ? requestedYear
-          : String(new Date().getFullYear());
+      let year = String(new Date().getFullYear());
 
-      $("lakeSector").innerHTML =
-        POINTS.map(([sector]) => `
-          <option value="${sector}">
-            Сектор озера №${sector}
-          </option>
-        `).join("");
+      if (requested) {
+        try {
+          year = yearValue(requested);
+        } catch (_) {}
+      }
+
+      $("mapYear").value = year;
+      $("historicalYear").value = year;
 
       setHidden("mapApp", false);
 
       updateModeUI();
       bindEvents();
-
       controls();
 
-      await run(loadYear);
+      await run(() => loadYear(MODE.PREPARE, year));
 
     } catch (error) {
-      console.error(error);
+      S.allowed = false;
 
-      message(
-        errorMessage(error),
-        "error"
-      );
+      setHidden("mapApp", true);
+
+      console.error(error);
+      message(errorMessage(error), "error");
     }
   }
-
-  // ==========================================================
-  // START
-  // ==========================================================
 
   if (document.readyState === "loading") {
     document.addEventListener(
@@ -3498,5 +2999,4 @@
   } else {
     boot();
   }
-
 })();

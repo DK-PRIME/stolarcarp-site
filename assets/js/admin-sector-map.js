@@ -1,23 +1,25 @@
 // ============================================================
 // STOLAR CARP • Карти архівних етапів
-// Версія: 1.2 • 08.10.2026
+// Версія: 1.3 • 08.10.2026
 //
-// Джерело результатів:
+// Джерело:
 // seasonResults/{year}/stages/{stageDocId}
 //
-// Збереження карт:
+// Збереження:
 // sectorMaps/{year}/stages/{stageDocId}
 //
-// ОНОВЛЕННЯ v1.2:
+// ОНОВЛЕННЯ v1.3:
 //
-// ✅ Повна карта вміщується по ширині екрана
-// ✅ Адаптація під телефон і комп'ютер
-// ✅ Виправлені координати секторів 22–26
+// ✅ Лелехівка: тільки фізичні сектори №1–26
+// ✅ Сектори №27–30 не показуються
+// ✅ Чіткі круглі маркери секторів
+// ✅ Колір маркера відповідає зоні A/B/C
+// ✅ Вибраний сектор виділяється золотим
+// ✅ Координати №22–26 виправлені
+// ✅ Адаптація під телефон
 // ✅ Масштабування 100–250%
-// ✅ Кнопка 100% повертає повний огляд
-// ✅ Новий етап відкривається при 100%
+// ✅ Захист раніше збережених прив'язок
 // ✅ Архівні результати не змінюються
-// ✅ Прив'язки секторів зберігаються
 // ============================================================
 
 (function () {
@@ -31,6 +33,8 @@
 
   const LAKE_ID = "lelehivka";
 
+  const MAX_LAKE_SECTOR = 26;
+
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 2.5;
   const ZOOM_STEP = 0.25;
@@ -41,20 +45,13 @@
   // ==========================================================
   // LELEHIVKA • PHYSICAL SECTORS
   //
-  // Координати у відсотках від зображення.
+  // Постійні фізичні номери водойми.
+  // Не залежать від жеребкування.
   //
-  // ВАЖЛИВО:
-  // Це постійні фізичні номери секторів водойми.
-  // Вони не залежать від жеребкування етапу.
-  //
-  // Виправлення:
-  // №22 -> колишнє місце №24
-  // №23 -> колишнє місце №25
-  // №24–26 -> посунуті праворуч
+  // №27–30 не використовуються.
   // ==========================================================
 
   const POINTS = [
-
     [1, 84.54, 13.14],
     [2, 80.24, 13.58],
     [3, 74.78, 14.03],
@@ -82,24 +79,18 @@
 
     [21, 33.47, 81.70],
 
-    // ========================================================
-    // ВИПРАВЛЕНІ СЕКТОРИ 22–26
-    // ========================================================
+    // Виправлені позиції 22–26
 
     [22, 63.22, 81.85],
     [23, 67.79, 82.00],
     [24, 72.36, 81.85],
     [25, 76.93, 82.00],
-    [26, 81.50, 81.85],
-
-    // ========================================================
-
-    [27, 90.46, 51.84],
-    [28, 90.55, 42.93],
-    [29, 90.55, 34.46],
-    [30, 90.64, 27.03]
-
+    [26, 81.50, 81.85]
   ];
+
+  const VALID_LAKE_SECTORS = new Set(
+    POINTS.map(point => point[0])
+  );
 
   // ==========================================================
   // HELPERS
@@ -118,7 +109,6 @@
     }[c]));
 
   const number = value => {
-
     if (
       value == null ||
       text(value) === "" ||
@@ -150,10 +140,13 @@
       row?.participantName
     ) || "—";
 
-  const weight = value =>
-    number(value) == null
+  const weight = value => {
+    const n = number(value);
+
+    return n == null
       ? "—"
-      : number(value).toFixed(3);
+      : n.toFixed(3);
+  };
 
   const slotSort = (a, b) =>
     a.zone.localeCompare(b.zone) ||
@@ -164,18 +157,14 @@
   // ==========================================================
 
   function parseSlot(zoneValue, sectorValue) {
-
     let zone = latin(zoneValue);
 
     let raw = latin(sectorValue)
       .replace(/[\s_-]+/g, "");
 
-    const prefixed = raw.match(
-      /^([ABC])(\d+)$/
-    );
+    const prefixed = raw.match(/^([ABC])(\d+)$/);
 
     if (prefixed) {
-
       if (
         zone &&
         zone !== prefixed[1]
@@ -210,12 +199,10 @@
   // ==========================================================
 
   function readRows(rows) {
-
     const slots = new Map();
     const issues = [];
 
     if (!Array.isArray(rows)) {
-
       return {
         slots,
         issues: [
@@ -225,7 +212,6 @@
     }
 
     rows.forEach((row, index) => {
-
       const slot = parseSlot(
         row?.zone || row?.drawZone,
         row?.sector ??
@@ -234,7 +220,6 @@
       );
 
       if (!slot) {
-
         issues.push(
           `Немає коректного сектора: ${team(row)} (рядок ${index + 1}).`
         );
@@ -243,7 +228,6 @@
       }
 
       if (slots.has(slot.drawKey)) {
-
         issues.push(
           `В архіві дублюється ${slot.drawKey}.`
         );
@@ -258,7 +242,6 @@
           row
         }
       );
-
     });
 
     return {
@@ -272,7 +255,6 @@
   // ==========================================================
 
   function hasCatch(row) {
-
     if (!row) return false;
 
     const keys = [
@@ -302,7 +284,6 @@
       row.w4,
       ...Object.values(row.weighings || {})
     ].some(slot => {
-
       if (!slot) return false;
 
       return [
@@ -334,7 +315,6 @@
               ) > 0
           )
       );
-
     });
   }
 
@@ -347,25 +327,16 @@
     assignments,
     emptyNumbers
   ) {
-
     const source = readRows(rows);
 
     const errors = [];
-
-    const incomplete = [
-      ...source.issues
-    ];
+    const incomplete = [...source.issues];
 
     const used = new Set();
-
     const physical = new Set();
-
-    const empty = new Set(
-      emptyNumbers
-    );
+    const empty = new Set(emptyNumbers);
 
     for (const a of assignments) {
-
       const slot = parseSlot(
         a.zone,
         a.sector
@@ -375,14 +346,13 @@
 
       if (
         !Number.isInteger(n) ||
-        n < 1 ||
-        n > 30 ||
+        !VALID_LAKE_SECTORS.has(n) ||
         !slot ||
         a.drawKey !== slot.drawKey
       ) {
-
         errors.push(
-          "Некоректна прив’язка сектора."
+          `Некоректна прив'язка фізичного сектора №${n}. ` +
+          `Для Лелехівки дозволені тільки №1–${MAX_LAKE_SECTOR}.`
         );
 
         continue;
@@ -392,9 +362,8 @@
         physical.has(n) ||
         used.has(slot.drawKey)
       ) {
-
         errors.push(
-          `Повторна прив’язка: №${n} / ${slot.drawKey}.`
+          `Повторна прив'язка: №${n} / ${slot.drawKey}.`
         );
       }
 
@@ -402,33 +371,28 @@
       used.add(slot.drawKey);
 
       const row =
-        source.slots.get(
-          slot.drawKey
-        )?.row;
+        source.slots.get(slot.drawKey)?.row;
 
       if (
         empty.has(n) &&
         hasCatch(row)
       ) {
-
         errors.push(
-          `${slot.drawKey} / озеро №${n}: є улов, тому сектор не може бути порожнім.`
+          `${slot.drawKey} / озеро №${n}: ` +
+          "є улов, тому сектор не може бути порожнім."
         );
       }
 
       if (!empty.has(n)) {
-
         if (!row) {
-
           incomplete.push(
-            `${slot.drawKey}: немає результату в архіві. Перевір номер або познач неявку.`
+            `${slot.drawKey}: немає результату в архіві. ` +
+            "Перевір номер або познач неявку."
           );
-
         } else if (
           number(row.totalWeight) == null ||
           number(row.totalCount) == null
         ) {
-
           incomplete.push(
             `${slot.drawKey}: у результаті бракує ваги або кількості риби.`
           );
@@ -437,37 +401,33 @@
     }
 
     for (const n of empty) {
-
-      if (!physical.has(n)) {
-
+      if (!VALID_LAKE_SECTORS.has(n)) {
         errors.push(
-          `Неявка №${n} не має прив’язки.`
+          `Неявка №${n}: цей фізичний сектор не використовується.`
+        );
+      } else if (!physical.has(n)) {
+        errors.push(
+          `Неявка №${n} не має прив'язки.`
         );
       }
     }
 
-    const missing = [
-      ...source.slots.keys()
-    ].filter(
-      key => !used.has(key)
-    );
+    const missing = [...source.slots.keys()]
+      .filter(key => !used.has(key));
 
     if (missing.length) {
-
       incomplete.push(
-        `Ще не прив’язано: ${missing.join(", ")}.`
+        `Ще не прив'язано: ${missing.join(", ")}.`
       );
     }
 
     if (!assignments.length) {
-
       incomplete.push(
-        "Ще немає прив’язок."
+        "Ще немає прив'язок."
       );
     }
 
     if (!source.slots.size) {
-
       incomplete.push(
         "В архіві немає придатних результатів цього етапу."
       );
@@ -477,11 +437,14 @@
       errors,
       incomplete,
       missing,
+
       ready:
         !errors.length &&
         !incomplete.length,
+
       selected: assignments.length,
       empty: empty.size,
+
       included:
         assignments.length -
         empty.size
@@ -493,7 +456,6 @@
   // ==========================================================
 
   function canonical(value) {
-
     if (Array.isArray(value)) {
       return value.map(canonical);
     }
@@ -502,7 +464,6 @@
       value &&
       typeof value === "object"
     ) {
-
       return Object.fromEntries(
         Object.keys(value)
           .sort()
@@ -526,7 +487,6 @@
     typeof module === "object" &&
     module.exports
   ) {
-
     module.exports = {
       parseSlot,
       readRows,
@@ -553,7 +513,6 @@
   // ==========================================================
 
   const S = {
-
     db: null,
     auth: null,
     user: null,
@@ -573,32 +532,185 @@
     sourceHash: "",
 
     selected: 1,
-
     zoom: 1
-
   };
+
+  // ==========================================================
+  // MAP PIN STYLES
+  //
+  // Стилі додаються тільки на сторінці карти.
+  // Не змінюють інші сторінки STOLAR CARP.
+  // ==========================================================
+
+  function installPinStyles() {
+    if ($("scSectorMapPinStyles")) return;
+
+    const style = document.createElement("style");
+
+    style.id = "scSectorMapPinStyles";
+
+    style.textContent = `
+      #mapCanvas {
+        position: relative;
+        box-sizing: border-box;
+      }
+
+      #mapPins {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      #mapPins .map-pin {
+        position: absolute;
+        z-index: 2;
+
+        width: clamp(20px, 3.2vw, 38px);
+        height: clamp(20px, 3.2vw, 38px);
+
+        padding: 0;
+        margin: 0;
+
+        transform: translate(-50%, -50%);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        gap: 0;
+
+        border-radius: 50%;
+
+        border: 2px solid #ffffff;
+
+        background: #172033;
+        color: #ffffff;
+
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, .8),
+          0 0 0 1px rgba(0, 0, 0, .55);
+
+        font-family: Arial, sans-serif;
+        font-weight: 900;
+
+        cursor: pointer;
+        pointer-events: auto;
+
+        touch-action: manipulation;
+
+        transition:
+          box-shadow .15s ease,
+          border-color .15s ease;
+      }
+
+      #mapPins .map-pin > span {
+        display: block;
+
+        font-size: clamp(10px, 1.5vw, 17px);
+        font-weight: 900;
+
+        line-height: 1.05;
+        letter-spacing: -.4px;
+
+        color: #ffffff;
+
+        text-shadow:
+          0 1px 2px rgba(0, 0, 0, .75);
+      }
+
+      #mapPins .map-pin > small {
+        display: block;
+
+        max-width: 100%;
+
+        font-size: clamp(6px, .85vw, 10px);
+        font-weight: 800;
+
+        line-height: 1;
+
+        color: #ffffff;
+
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      #mapPins .map-pin[data-zone="A"] {
+        background: #14783d;
+        border-color: #b8ffd0;
+      }
+
+      #mapPins .map-pin[data-zone="B"] {
+        background: #2059bc;
+        border-color: #c4dcff;
+      }
+
+      #mapPins .map-pin[data-zone="C"] {
+        background: #ba242b;
+        border-color: #ffd0d0;
+      }
+
+      #mapPins .map-pin[data-empty="true"] {
+        opacity: .75;
+        border-style: dashed;
+      }
+
+      #mapPins .map-pin[aria-pressed="true"] {
+        z-index: 10;
+
+        border: 3px solid #ffd21c;
+
+        box-shadow:
+          0 0 0 3px rgba(255, 210, 28, .55),
+          0 0 15px rgba(255, 210, 28, .85),
+          0 3px 9px rgba(0, 0, 0, .85);
+      }
+
+      #mapPins .map-pin:focus-visible {
+        outline: 3px solid #ffd21c;
+        outline-offset: 4px;
+      }
+
+      @media (max-width: 640px) {
+        #mapPins .map-pin {
+          width: 22px;
+          height: 22px;
+
+          border-width: 1.5px;
+        }
+
+        #mapPins .map-pin > span {
+          font-size: 11px;
+          letter-spacing: -.5px;
+        }
+
+        #mapPins .map-pin > small {
+          font-size: 6px;
+        }
+
+        #mapPins .map-pin[aria-pressed="true"] {
+          border-width: 2px;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
+  }
 
   // ==========================================================
   // MESSAGES
   // ==========================================================
 
-  function message(
-    value,
-    kind = ""
-  ) {
-
+  function message(value, kind = "") {
     $("mapStatus").textContent = value;
-
     $("mapStatus").dataset.kind = kind;
   }
 
   function errorMessage(error) {
-
     if (
       String(error?.code)
         .includes("permission-denied")
     ) {
-
       const detail = error.scRequest;
 
       const project =
@@ -613,13 +725,11 @@
           : "Операцію не визначено.",
 
         `Firebase-проєкт: ${project}`,
-
         `Код: ${error.code}`,
 
         S.dirty
           ? "Незбережені зміни карти залишилися на сторінці."
           : ""
-
       ].filter(Boolean).join("\n");
     }
 
@@ -635,13 +745,9 @@
     path,
     task
   ) {
-
     try {
-
       return await task();
-
     } catch (error) {
-
       const wrapped = new Error(
         error?.message || String(error)
       );
@@ -658,11 +764,7 @@
     }
   }
 
-  function serverRead(
-    ref,
-    isList = false
-  ) {
-
+  function serverRead(ref, isList = false) {
     return dbRequest(
       isList ? "Список" : "Читання",
       ref.path,
@@ -677,7 +779,6 @@
   // ==========================================================
 
   function controls() {
-
     $("loadFields").disabled =
       S.busy || !S.allowed;
 
@@ -687,9 +788,14 @@
       !S.current;
 
     $("saveMap").disabled =
+      S.busy ||
+      !S.allowed ||
+      !S.current ||
       !S.dirty;
 
     $("mapStage").disabled =
+      S.busy ||
+      !S.allowed ||
       !S.stages.length;
   }
 
@@ -698,7 +804,6 @@
   // ==========================================================
 
   async function run(task) {
-
     if (
       S.busy ||
       !S.allowed
@@ -707,15 +812,11 @@
     }
 
     S.busy = true;
-
     controls();
 
     try {
-
       await task();
-
     } catch (error) {
-
       console.error(
         "[Sector maps]",
         error
@@ -725,11 +826,8 @@
         errorMessage(error),
         "error"
       );
-
     } finally {
-
       S.busy = false;
-
       controls();
     }
   }
@@ -739,7 +837,6 @@
   // ==========================================================
 
   function mayLeave() {
-
     return (
       !S.dirty ||
       window.confirm(
@@ -753,12 +850,10 @@
   // ==========================================================
 
   function requireAccess() {
-
     if (
       !S.allowed ||
       S.auth.currentUser?.uid !== OWNER_UID
     ) {
-
       throw new Error(
         "Потрібно увійти під акаунтом адміністратора."
       );
@@ -770,7 +865,6 @@
   // ==========================================================
 
   function sourceRef(year, id) {
-
     return S.db
       .collection("seasonResults")
       .doc(year)
@@ -779,7 +873,6 @@
   }
 
   function mapRef(year, id) {
-
     return S.db
       .collection("sectorMaps")
       .doc(year)
@@ -792,9 +885,7 @@
   // ==========================================================
 
   async function fingerprint(rows) {
-
     if (!window.crypto?.subtle) {
-
       throw new Error(
         "Відкрий сторінку через HTTPS на сайті."
       );
@@ -813,13 +904,10 @@
         bytes
       );
 
-    return [
-      ...new Uint8Array(hash)
-    ]
+    return [...new Uint8Array(hash)]
       .map(
         b =>
-          b.toString(16)
-            .padStart(2, "0")
+          b.toString(16).padStart(2, "0")
       )
       .join("");
   }
@@ -833,7 +921,6 @@
     data,
     metadata
   ) {
-
     const meta = metadata.find(
       item =>
         text(item.stageDocId) === id
@@ -861,12 +948,10 @@
   // ==========================================================
 
   async function loadYear() {
-
     const year =
       text($("mapYear").value);
 
     if (!/^\d{4}$/.test(year)) {
-
       throw new Error(
         "Введи рік чотирма цифрами, наприклад 2026."
       );
@@ -878,7 +963,6 @@
 
     const results =
       await Promise.allSettled([
-
         serverRead(
           S.db
             .collection("seasonResults")
@@ -892,16 +976,13 @@
             .collection("seasonArchives")
             .doc(year)
         )
-
       ]);
 
     requireAccess();
 
     if (
-      results[0].status !==
-      "fulfilled"
+      results[0].status !== "fulfilled"
     ) {
-
       throw results[0].reason;
     }
 
@@ -918,7 +999,6 @@
     if (
       results[1].status === "rejected"
     ) {
-
       console.warn(
         "[Sector maps] Назви з seasonArchives недоступні."
       );
@@ -928,6 +1008,7 @@
       results[0].value.docs
         .map(doc => ({
           id: doc.id,
+
           title: stageLabel(
             doc.id,
             doc.data(),
@@ -946,11 +1027,9 @@
         );
 
     S.year = year;
-
     S.stages = stages;
 
     S.current = null;
-
     S.dirty = false;
 
     $("mapEditor").hidden = true;
@@ -975,14 +1054,12 @@
   // ==========================================================
 
   async function loadStage(id) {
-
     const stage =
       S.stages.find(
         item => item.id === id
       );
 
     if (!stage) {
-
       throw new Error(
         "Обери архівний етап."
       );
@@ -994,7 +1071,6 @@
 
     const [source, saved] =
       await Promise.all([
-
         serverRead(
           sourceRef(S.year, id)
         ),
@@ -1002,13 +1078,11 @@
         serverRead(
           mapRef(S.year, id)
         )
-
       ]);
 
     requireAccess();
 
     if (!source.exists) {
-
       throw new Error(
         "Цього етапу вже немає в архіві. Онови список."
       );
@@ -1030,7 +1104,6 @@
         old.stageDocId !== id
       )
     ) {
-
       throw new Error(
         "Збережена карта має іншу версію, водойму або етап. " +
         "Автоматичне перезаписування заблоковано."
@@ -1040,30 +1113,20 @@
     if (
       old &&
       (
-        !Array.isArray(
-          old.assignments
-        ) ||
-        !Array.isArray(
-          old.emptyLakeSectors
-        ) ||
-        !Number.isInteger(
-          old.revision
-        )
+        !Array.isArray(old.assignments) ||
+        !Array.isArray(old.emptyLakeSectors) ||
+        !Number.isInteger(old.revision)
       )
     ) {
-
       throw new Error(
         "Некоректний документ карти. Його не буде перезаписано."
       );
     }
 
-    const rows =
-      data.standings;
+    const rows = data.standings;
 
     const hash =
-      await fingerprint(
-        rows ?? null
-      );
+      await fingerprint(rows ?? null);
 
     S.current = {
       ...stage,
@@ -1073,18 +1136,17 @@
 
     S.sourceHash = hash;
 
+    // Усі старі прив'язки зберігаємо в пам'яті.
+    // Нічого не видаляємо автоматично.
+
     S.assignments = old
       ? old.assignments.map(
-          a => ({
-            ...a
-          })
+          a => ({...a})
         )
       : [];
 
     S.empty = old
-      ? [
-          ...old.emptyLakeSectors
-        ]
+      ? [...old.emptyLakeSectors]
       : [];
 
     S.revision =
@@ -1096,9 +1158,6 @@
     );
 
     S.selected = 1;
-
-    // Новий етап завжди відкривається
-    // з повним оглядом водойми.
     S.zoom = 1;
 
     $("selectedStageTitle").textContent =
@@ -1107,12 +1166,34 @@
     $("mapEditor").hidden = false;
 
     render();
-
     selectSector(1);
 
-    requestAnimationFrame(() => {
-      resizeMap();
-    });
+    requestAnimationFrame(
+      resizeMap
+    );
+
+    const obsolete =
+      S.assignments.filter(
+        a =>
+          !VALID_LAKE_SECTORS.has(
+            a.lakeSectorNumber
+          )
+      );
+
+    if (obsolete.length) {
+      message(
+        "У збереженій карті є прив'язки до секторів, " +
+        "які більше не використовуються: " +
+        obsolete
+          .map(a => `№${a.lakeSectorNumber}`)
+          .join(", ") +
+        ". Вони залишилися в документі. " +
+        "Перед наступним збереженням їх потрібно перевірити.",
+        "error"
+      );
+
+      return;
+    }
 
     message(
       old &&
@@ -1120,7 +1201,7 @@
         ? "Результати архіву змінилися після збереження карти. Перевір відповідності та збережи карту ще раз."
         : old
           ? "Збережену карту завантажено."
-          : "Нова карта. Прив’яжи турнірні позначення до секторів озера."
+          : "Нова карта. Прив'яжи турнірні позначення до секторів озера."
     );
   }
 
@@ -1129,7 +1210,6 @@
   // ==========================================================
 
   function resultText(row) {
-
     return row
       ? `${weight(row.totalWeight)} кг · ${number(row.totalCount) ?? "—"} риб`
       : "Немає запису в архіві";
@@ -1140,7 +1220,6 @@
   // ==========================================================
 
   function render() {
-
     const source =
       readRows(S.current.rows);
 
@@ -1152,55 +1231,50 @@
       );
 
     // ========================================================
-    // MAP PINS
+    // MAP PINS • ONLY 1–26
     // ========================================================
 
     $("mapPins").innerHTML =
-      POINTS.map(
-        ([n, x, y]) => {
+      POINTS.map(([n, x, y]) => {
+        const a =
+          S.assignments.find(
+            item =>
+              item.lakeSectorNumber === n
+          );
 
-          const a =
-            S.assignments.find(
-              item =>
-                item.lakeSectorNumber === n
-            );
+        const empty =
+          S.empty.includes(n);
 
-          const empty =
-            S.empty.includes(n);
+        const label = a
+          ? `${a.drawKey}${empty ? " ×" : ""}`
+          : "—";
 
-          return `
-            <button
-              type="button"
-              class="map-pin"
-              data-lake="${n}"
-              data-zone="${a?.zone || ""}"
-              data-empty="${empty}"
-              aria-pressed="${n === S.selected}"
-              aria-label="Сектор озера ${n}${a ? `, ${esc(a.drawKey)}` : ", не задіяний"}${empty ? ", пустував" : ""}"
-              style="left:${x}%;top:${y}%"
-            >
-              <span>${n}</span>
-              <small>${a ? esc(a.drawKey) : "—"}${empty ? " ×" : ""}</small>
-            </button>
-          `;
-        }
-      ).join("");
+        return `
+          <button
+            type="button"
+            class="map-pin"
+            data-lake="${n}"
+            data-zone="${esc(a?.zone || "")}"
+            data-empty="${empty}"
+            aria-pressed="${n === S.selected}"
+            aria-label="Сектор озера №${n}${a ? `, ${esc(a.drawKey)}` : ", не задіяний"}${empty ? ", пустував" : ""}"
+            style="left:${x}%;top:${y}%"
+          >
+            <span>${n}</span>
+            <small>${esc(label)}</small>
+          </button>
+        `;
+      }).join("");
 
     $("mapPins")
-      .querySelectorAll(
-        "[data-lake]"
-      )
+      .querySelectorAll("[data-lake]")
       .forEach(button => {
-
         button.addEventListener(
           "click",
           () => selectSector(
-            Number(
-              button.dataset.lake
-            )
+            Number(button.dataset.lake)
           )
         );
-
       });
 
     // ========================================================
@@ -1215,7 +1289,6 @@
     $("emptySectors").innerHTML =
       ordered.length
         ? ordered.map(a => {
-
             const row =
               source.slots.get(
                 a.drawKey
@@ -1227,6 +1300,7 @@
                   type="checkbox"
                   data-empty-sector="${a.lakeSectorNumber}"
                   ${S.empty.includes(a.lakeSectorNumber) ? "checked" : ""}
+                  ${VALID_LAKE_SECTORS.has(a.lakeSectorNumber) ? "" : "disabled"}
                 >
                 <span>
                   ${esc(a.drawKey)} · озеро №${a.lakeSectorNumber}
@@ -1237,20 +1311,15 @@
                 </span>
               </label>
             `;
-
           }).join("")
-        : '<p class="maps-muted">Спочатку додай прив’язки секторів.</p>';
+        : '<p class="maps-muted">Спочатку додай прив'язки секторів.</p>';
 
     $("emptySectors")
-      .querySelectorAll(
-        "[data-empty-sector]"
-      )
+      .querySelectorAll("[data-empty-sector]")
       .forEach(input => {
-
         input.addEventListener(
           "change",
           () => {
-
             const n =
               Number(
                 input.dataset.emptySector
@@ -1272,11 +1341,11 @@
                 )?.row
               )
             ) {
-
               input.checked = false;
 
               message(
-                `${a.drawKey}: в архіві є улов. Перевір відповідність сектора; позначити неявку зараз не можна.`,
+                `${a.drawKey}: в архіві є улов. ` +
+                "Позначити неявку зараз не можна.",
                 "error"
               );
 
@@ -1285,21 +1354,14 @@
 
             S.empty =
               input.checked
-                ? [
-                    ...new Set([
-                      ...S.empty,
-                      n
-                    ])
-                  ]
+                ? [...new Set([...S.empty, n])]
                 : S.empty.filter(
-                    value =>
-                      value !== n
+                    value => value !== n
                   );
 
             changed();
           }
         );
-
       });
 
     // ========================================================
@@ -1308,38 +1370,35 @@
 
     $("mappingRows").innerHTML =
       ordered.map(a => {
-
         const row =
           source.slots.get(
             a.drawKey
           )?.row;
 
+        const obsolete =
+          !VALID_LAKE_SECTORS.has(
+            a.lakeSectorNumber
+          );
+
         return `
           <tr>
+            <td>№${a.lakeSectorNumber}</td>
+            <td>${esc(a.drawKey)}</td>
+            <td>${esc(team(row))}</td>
+            <td>${esc(resultText(row))}</td>
             <td>
-              №${a.lakeSectorNumber}
-            </td>
-
-            <td>
-              ${esc(a.drawKey)}
-            </td>
-
-            <td>
-              ${esc(team(row))}
-            </td>
-
-            <td>
-              ${esc(resultText(row))}
-            </td>
-
-            <td>
-              ${S.empty.includes(a.lakeSectorNumber) ? "Пустував" : "Ловили"}
+              ${
+                obsolete
+                  ? "Не використовується"
+                  : S.empty.includes(a.lakeSectorNumber)
+                    ? "Пустував"
+                    : "Ловили"
+              }
             </td>
           </tr>
         `;
-
       }).join("") ||
-      '<tr><td colspan="5">Ще немає прив’язок.</td></tr>';
+      '<tr><td colspan="5">Ще немає прив'язок.</td></tr>';
 
     // ========================================================
     // SUMMARY
@@ -1352,12 +1411,16 @@
 
     $("mapCoverage").textContent =
       check.ready
-        ? "Усі архівні сектори прив’язані. Карта готова для статистики."
+        ? "Усі архівні сектори прив'язані. Карта готова для статистики."
         : [
             ...check.errors,
             ...check.incomplete
           ].join(" ") +
-          " Можна зберегти незавершену карту як чернетку, якщо немає помилок.";
+          (
+            check.errors.length
+              ? " Виправ помилки перед збереженням."
+              : " Можна зберегти незавершену карту як чернетку."
+          );
 
     $("saveState").textContent =
       S.dirty
@@ -1374,6 +1437,9 @@
   // ==========================================================
 
   function selectSector(n) {
+    if (!VALID_LAKE_SECTORS.has(n)) {
+      return;
+    }
 
     S.selected = n;
 
@@ -1381,9 +1447,7 @@
       String(n);
 
     const source =
-      readRows(
-        S.current.rows
-      );
+      readRows(S.current.rows);
 
     const a =
       S.assignments.find(
@@ -1391,24 +1455,18 @@
           item.lakeSectorNumber === n
       );
 
-    const used =
-      new Set(
-        S.assignments
-          .filter(
-            item =>
-              item.lakeSectorNumber !== n
-          )
-          .map(
-            item => item.drawKey
-          )
-      );
+    const used = new Set(
+      S.assignments
+        .filter(
+          item =>
+            item.lakeSectorNumber !== n
+        )
+        .map(item => item.drawKey)
+    );
 
     $("archiveSlot").innerHTML =
       '<option value="">Обери позначення</option>' +
-
-      [
-        ...source.slots.values()
-      ]
+      [...source.slots.values()]
         .sort(slotSort)
         .map(slot => `
           <option
@@ -1416,21 +1474,16 @@
             ${used.has(slot.drawKey) ? "disabled" : ""}
           >
             ${slot.drawKey} · ${esc(team(slot.row))}
-            ${used.has(slot.drawKey) ? " · вже прив’язано" : ""}
+            ${used.has(slot.drawKey) ? " · вже прив'язано" : ""}
           </option>
-        `)
-        .join("") +
-
+        `).join("") +
       '<option value="manual">Номер, якого немає в архіві…</option>';
 
-    $("archiveSlot").value =
-      a
-        ? source.slots.has(
-            a.drawKey
-          )
-          ? a.drawKey
-          : "manual"
-        : "";
+    $("archiveSlot").value = a
+      ? source.slots.has(a.drawKey)
+        ? a.drawKey
+        : "manual"
+      : "";
 
     $("manualZone").value =
       a?.zone || "A";
@@ -1442,20 +1495,14 @@
       !a;
 
     $("mapPins")
-      .querySelectorAll(
-        "[data-lake]"
-      )
+      .querySelectorAll("[data-lake]")
       .forEach(button => {
-
         button.setAttribute(
           "aria-pressed",
           String(
-            Number(
-              button.dataset.lake
-            ) === n
+            Number(button.dataset.lake) === n
           )
         );
-
       });
 
     preview();
@@ -1466,7 +1513,6 @@
   // ==========================================================
 
   function chosenSlot() {
-
     return $("archiveSlot").value === "manual"
       ? parseSlot(
           $("manualZone").value,
@@ -1483,21 +1529,16 @@
   // ==========================================================
 
   function preview() {
-
     $("manualSlot").hidden =
       $("archiveSlot").value !== "manual";
 
     const slot =
       chosenSlot();
 
-    const row =
-      slot
-        ? readRows(
-            S.current.rows
-          ).slots.get(
-            slot.drawKey
-          )?.row
-        : null;
+    const row = slot
+      ? readRows(S.current.rows)
+          .slots.get(slot.drawKey)?.row
+      : null;
 
     $("slotPreview").textContent =
       !slot
@@ -1506,7 +1547,8 @@
           (
             row
               ? `${team(row)}\n${resultText(row)}`
-              : "Цього номера немає в архіві. Для порожнього сектора додай його та познач неявку."
+              : "Цього номера немає в архіві. " +
+                "Для порожнього сектора додай його та познач неявку."
           );
   }
 
@@ -1515,14 +1557,10 @@
   // ==========================================================
 
   function changed() {
-
     S.dirty = true;
 
     render();
-
-    selectSector(
-      S.selected
-    );
+    selectSector(S.selected);
   }
 
   // ==========================================================
@@ -1530,12 +1568,19 @@
   // ==========================================================
 
   function assign() {
+    if (!VALID_LAKE_SECTORS.has(S.selected)) {
+      message(
+        "Обраний фізичний сектор не використовується.",
+        "error"
+      );
+
+      return;
+    }
 
     const slot =
       chosenSlot();
 
     if (!slot) {
-
       message(
         "Обери сектор етапу або введи зону A/B/C та номер 1–99.",
         "error"
@@ -1552,9 +1597,8 @@
       );
 
     if (collision) {
-
       message(
-        `${slot.drawKey} уже прив’язаний до озера №${collision.lakeSectorNumber}.`,
+        `${slot.drawKey} уже прив'язаний до озера №${collision.lakeSectorNumber}.`,
         "error"
       );
 
@@ -1574,7 +1618,6 @@
       );
 
     S.assignments.push({
-
       lakeSectorId:
         `sector-${S.selected}`,
 
@@ -1582,25 +1625,22 @@
         S.selected,
 
       ...slot
-
     });
 
     if (
-      previous?.drawKey !==
-      slot.drawKey
+      previous?.drawKey !== slot.drawKey
     ) {
-
       S.empty =
         S.empty.filter(
-          n =>
-            n !== S.selected
+          n => n !== S.selected
         );
     }
 
     changed();
 
     message(
-      `Озеро №${S.selected} прив’язано до ${slot.drawKey}. Збережи карту етапу.`
+      `Озеро №${S.selected} прив'язано до ${slot.drawKey}. ` +
+      "Збережи карту етапу."
     );
   }
 
@@ -1609,8 +1649,13 @@
   // ==========================================================
 
   async function save() {
-
     requireAccess();
+
+    if (!S.current) {
+      throw new Error(
+        "Спочатку обери архівний етап."
+      );
+    }
 
     const check =
       inspect(
@@ -1619,20 +1664,14 @@
         S.empty
       );
 
-    if (
-      check.errors.length
-    ) {
-
+    if (check.errors.length) {
       throw new Error(
         check.errors.join("\n")
       );
     }
 
-    const id =
-      S.current.id;
-
-    const year =
-      S.year;
+    const id = S.current.id;
+    const year = S.year;
 
     const expectedRevision =
       S.revision;
@@ -1640,22 +1679,15 @@
     const assignments =
       S.assignments
         .map(a => ({
-
           lakeSectorId:
             `sector-${a.lakeSectorNumber}`,
 
           lakeSectorNumber:
             a.lakeSectorNumber,
 
-          zone:
-            a.zone,
-
-          sector:
-            a.sector,
-
-          drawKey:
-            a.drawKey
-
+          zone: a.zone,
+          sector: a.sector,
+          drawKey: a.drawKey
         }))
         .sort(
           (a, b) =>
@@ -1664,13 +1696,8 @@
         );
 
     const empty =
-      [
-        ...new Set(
-          S.empty
-        )
-      ].sort(
-        (a, b) => a - b
-      );
+      [...new Set(S.empty)]
+        .sort((a, b) => a - b);
 
     message(
       "Зберігаю карту…"
@@ -1683,11 +1710,11 @@
       () =>
         S.db.runTransaction(
           async tx => {
-
             const source =
               await dbRequest(
                 "Читання результату перед збереженням",
                 sourceRef(year, id).path,
+
                 () =>
                   tx.get(
                     sourceRef(year, id)
@@ -1698,6 +1725,7 @@
               await dbRequest(
                 "Читання карти перед збереженням",
                 mapRef(year, id).path,
+
                 () =>
                   tx.get(
                     mapRef(year, id)
@@ -1709,14 +1737,12 @@
             if (
               !source.exists ||
               await fingerprint(
-                source.data().standings ??
-                null
+                source.data().standings ?? null
               ) !== S.sourceHash
             ) {
-
               throw new Error(
-                "Архівний результат змінився. Перезавантаж етап " +
-                "і перевір прив’язки перед збереженням."
+                "Архівний результат змінився. " +
+                "Перезавантаж етап і перевір прив'язки."
               );
             }
 
@@ -1729,10 +1755,9 @@
               (old?.revision || 0) !==
               expectedRevision
             ) {
-
               throw new Error(
-                "Карту вже змінили в іншій вкладці. Перезавантаж етап; " +
-                "твої зміни не перезаписали чужі."
+                "Карту вже змінили в іншій вкладці. " +
+                "Перезавантаж етап."
               );
             }
 
@@ -1744,19 +1769,13 @@
             tx.set(
               mapRef(year, id),
               {
-
                 schemaVersion: 1,
 
-                lakeId:
-                  LAKE_ID,
-
+                lakeId: LAKE_ID,
                 mapVersion: 1,
 
-                seasonYear:
-                  year,
-
-                stageDocId:
-                  id,
+                seasonYear: year,
+                stageDocId: id,
 
                 sourcePath:
                   `seasonResults/${year}/stages/${id}`,
@@ -1769,8 +1788,7 @@
 
                 assignments,
 
-                emptyLakeSectors:
-                  empty,
+                emptyLakeSectors: empty,
 
                 status:
                   check.ready
@@ -1781,22 +1799,15 @@
                   expectedRevision + 1,
 
                 createdAt:
-                  old?.createdAt ||
-                  stamp,
+                  old?.createdAt || stamp,
 
                 createdBy:
-                  old?.createdBy ||
-                  OWNER_UID,
+                  old?.createdBy || OWNER_UID,
 
-                updatedAt:
-                  stamp,
-
-                updatedBy:
-                  OWNER_UID
-
+                updatedAt: stamp,
+                updatedBy: OWNER_UID
               }
             );
-
           }
         )
     );
@@ -1811,29 +1822,16 @@
     message(
       check.ready
         ? "Карту збережено. Вона готова для розрахунку статистики."
-        : "Чернетку карти збережено. Заверши прив’язки, щоб включити етап у статистику.",
+        : "Чернетку карти збережено. Заверши прив'язки, щоб включити етап у статистику.",
       "ok"
     );
   }
 
   // ==========================================================
   // RESPONSIVE MAP
-  //
-  // ГОЛОВНЕ ВИПРАВЛЕННЯ:
-  //
-  // 100% = ширина доступного контейнера.
-  //
-  // На телефоні карта більше НЕ має
-  // примусової ширини 1120 px.
-  //
-  // На комп'ютері карта також вміщується
-  // у своє вікно.
-  //
-  // При збільшенні можна прокручувати карту.
   // ==========================================================
 
   function resizeMap() {
-
     const viewport =
       $("mapViewport");
 
@@ -1850,9 +1848,7 @@
     const availableWidth =
       viewport.clientWidth;
 
-    if (
-      !availableWidth
-    ) {
+    if (!availableWidth) {
       return;
     }
 
@@ -1875,9 +1871,6 @@
 
     canvas.style.aspectRatio =
       `${MAP_WIDTH} / ${MAP_HEIGHT}`;
-
-    // При 100% вся карта відображається
-    // без горизонтального прокручування.
 
     viewport.style.maxHeight =
       "none";
@@ -1913,7 +1906,6 @@
   // ==========================================================
 
   function resetMapZoom() {
-
     S.zoom = MIN_ZOOM;
 
     resizeMap();
@@ -1922,7 +1914,6 @@
       $("mapViewport");
 
     if (viewport) {
-
       viewport.scrollLeft = 0;
       viewport.scrollTop = 0;
     }
@@ -1932,34 +1923,22 @@
   // TIMEOUT
   // ==========================================================
 
-  function timed(
-    promise,
-    label
-  ) {
-
+  function timed(promise, label) {
     let timer;
 
     return Promise.race([
-
       promise,
 
-      new Promise(
-        (_, reject) => {
-
-          timer = setTimeout(
-            () =>
-              reject(
-                new Error(label)
-              ),
-            15000
-          );
-
-        }
-      )
-
+      new Promise((_, reject) => {
+        timer = setTimeout(
+          () => reject(
+            new Error(label)
+          ),
+          15000
+        );
+      })
     ]).finally(
-      () =>
-        clearTimeout(timer)
+      () => clearTimeout(timer)
     );
   }
 
@@ -1968,71 +1947,71 @@
   // ==========================================================
 
   async function boot() {
-
     try {
-
       if (window.scReady) {
-
         await timed(
           window.scReady,
           "Firebase не відповів. Онови сторінку."
         );
       }
 
-      S.db =
-        window.scDb;
-
-      S.auth =
-        window.scAuth;
+      S.db = window.scDb;
+      S.auth = window.scAuth;
 
       if (
         !S.db ||
         !S.auth
       ) {
-
         throw new Error(
-          "Firebase не ініціалізований. Перевір assets/js/firebase-init.js."
+          "Firebase не ініціалізований. " +
+          "Перевір assets/js/firebase-init.js."
         );
       }
 
       const user =
         await timed(
-          new Promise(
-            (resolve, reject) => {
+          new Promise((resolve, reject) => {
+            let unsubscribe = null;
+            let settled = false;
 
-              let unsubscribe = null;
+            const onUser = value => {
+              if (settled) return;
 
-              unsubscribe =
-                S.auth.onAuthStateChanged(
-                  value => {
+              settled = true;
+              resolve(value);
 
-                    if (unsubscribe) {
-                      unsubscribe();
-                    }
+              if (unsubscribe) {
+                unsubscribe();
+              }
+            };
 
-                    resolve(value);
+            unsubscribe =
+              S.auth.onAuthStateChanged(
+                onUser,
+                reject
+              );
 
-                  },
-                  reject
-                );
-
+            if (
+              settled &&
+              unsubscribe
+            ) {
+              unsubscribe();
             }
-          ),
+          }),
 
           "Не вдалося перевірити вхід. Онови сторінку."
         );
 
       if (!user) {
-
         throw new Error(
-          "Спочатку увійди в адмінпанель, потім відкрий карти етапів."
+          "Спочатку увійди в адмінпанель, " +
+          "потім відкрий карти етапів."
         );
       }
 
       if (
         user.uid !== OWNER_UID
       ) {
-
         throw new Error(
           "Редагування карт доступне тільки власнику STOLAR CARP."
         );
@@ -2049,25 +2028,21 @@
         !profile.exists ||
         profile.data().role !== "admin"
       ) {
-
         throw new Error(
           "Акаунт не має ролі admin."
         );
       }
 
       S.user = user;
-
       S.allowed = true;
 
       $("mapApp").hidden = false;
 
       S.auth.onAuthStateChanged(
         value => {
-
           if (
             value?.uid !== OWNER_UID
           ) {
-
             S.allowed = false;
 
             $("mapApp").hidden = true;
@@ -2075,7 +2050,8 @@
             controls();
 
             message(
-              "Сесію завершено. Увійди через адмінпанель та онови сторінку.",
+              "Сесію завершено. " +
+              "Увійди через адмінпанель та онови сторінку.",
               "error"
             );
           }
@@ -2086,7 +2062,9 @@
         new URLSearchParams(
           location.search
         ).get("year") ||
-        "2026";
+        String(new Date().getFullYear());
+
+      // Тільки фізичні сектори 1–26
 
       $("lakeSector").innerHTML =
         POINTS.map(
@@ -2100,7 +2078,6 @@
       await run(loadYear);
 
     } catch (error) {
-
       message(
         errorMessage(error),
         "error"
@@ -2109,30 +2086,21 @@
   }
 
   // ==========================================================
-  // EVENTS • LOAD YEAR
+  // EVENTS
   // ==========================================================
 
   $("loadYear").addEventListener(
     "click",
     () => {
-
-      if (
-        mayLeave()
-      ) {
-
+      if (mayLeave()) {
         run(loadYear);
       }
     }
   );
 
-  // ==========================================================
-  // EVENTS • STAGE
-  // ==========================================================
-
   $("mapStage").addEventListener(
     "change",
     () => {
-
       const id =
         $("mapStage").value;
 
@@ -2143,7 +2111,6 @@
         !id ||
         !mayLeave()
       ) {
-
         $("mapStage").value =
           previous;
 
@@ -2151,13 +2118,9 @@
       }
 
       run(async () => {
-
         try {
-
           await loadStage(id);
-
         } catch (error) {
-
           $("mapStage").value =
             previous;
 
@@ -2167,14 +2130,9 @@
     }
   );
 
-  // ==========================================================
-  // EVENTS • SELECT LAKE SECTOR
-  // ==========================================================
-
   $("lakeSector").addEventListener(
     "change",
     () => {
-
       selectSector(
         Number(
           $("lakeSector").value
@@ -2183,74 +2141,48 @@
     }
   );
 
-  // ==========================================================
-  // EVENTS • SLOT PREVIEW
-  // ==========================================================
-
   [
     "archiveSlot",
     "manualZone",
     "manualNumber"
   ].forEach(id => {
-
     $(id).addEventListener(
       "input",
       preview
     );
-
   });
-
-  // ==========================================================
-  // EVENTS • ASSIGN
-  // ==========================================================
 
   $("assignSlot").addEventListener(
     "click",
     assign
   );
 
-  // ==========================================================
-  // EVENTS • REMOVE
-  // ==========================================================
-
   $("removeSlot").addEventListener(
     "click",
     () => {
-
       S.assignments =
         S.assignments.filter(
           a =>
-            a.lakeSectorNumber !==
-            S.selected
+            a.lakeSectorNumber !== S.selected
         );
 
       S.empty =
         S.empty.filter(
-          n =>
-            n !== S.selected
+          n => n !== S.selected
         );
 
       changed();
     }
   );
 
-  // ==========================================================
-  // EVENTS • SAVE
-  // ==========================================================
-
   $("saveMap").addEventListener(
     "click",
     () => run(save)
   );
 
-  // ==========================================================
-  // EVENTS • ZOOM IN
-  // ==========================================================
-
   $("zoomIn").addEventListener(
     "click",
     () => {
-
       S.zoom = Math.min(
         MAX_ZOOM,
         S.zoom + ZOOM_STEP
@@ -2260,14 +2192,9 @@
     }
   );
 
-  // ==========================================================
-  // EVENTS • ZOOM OUT
-  // ==========================================================
-
   $("zoomOut").addEventListener(
     "click",
     () => {
-
       S.zoom = Math.max(
         MIN_ZOOM,
         S.zoom - ZOOM_STEP
@@ -2277,53 +2204,32 @@
     }
   );
 
-  // ==========================================================
-  // EVENTS • RESET ZOOM
-  // ==========================================================
-
   $("zoomReset").addEventListener(
     "click",
     resetMapZoom
   );
 
-  // ==========================================================
-  // IMAGE ERROR
-  // ==========================================================
-
   $("lakeImage").addEventListener(
     "error",
     () => {
-
       $("imageError").hidden = false;
     }
   );
 
-  // ==========================================================
-  // WINDOW RESIZE
-  // ==========================================================
-
   window.addEventListener(
     "resize",
     () => {
-
       requestAnimationFrame(
         resizeMap
       );
     }
   );
 
-  // ==========================================================
-  // UNSAVED CHANGES WARNING
-  // ==========================================================
-
   window.addEventListener(
     "beforeunload",
     event => {
-
       if (S.dirty) {
-
         event.preventDefault();
-
         event.returnValue = "";
       }
     }
@@ -2332,6 +2238,8 @@
   // ==========================================================
   // START
   // ==========================================================
+
+  installPinStyles();
 
   controls();
 

@@ -11,12 +11,21 @@
     content="Спортивні коропові водойми STOLAR CARP: Лелехівка, Пристань, Bounty, Доброгостів, Трофейна Долина, Кореличі, Прилбичі та Едельвейс."
   >
 
-  <link rel="icon" type="image/png" href="/assets/favicon.png">
-  <link rel="apple-touch-icon" href="/assets/favicon.png">
   <meta name="theme-color" content="#020617">
 
-  <link rel="stylesheet" href="/assets/css/main.css">
-  <script defer src="/assets/js/config.js"></script>
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
+  <link rel="apple-touch-icon" href="/assets/favicon.png">
+
+  <link
+    rel="stylesheet"
+    href="/assets/css/main.css?v=20261008-5"
+  >
+
+  <!-- Єдина конфігурація сайту та мобільного меню -->
+  <script
+    defer
+    src="/assets/js/config.js?v=20261008-2"
+  ></script>
 
   <style>
     /* =====================================================
@@ -55,12 +64,15 @@
        ===================================================== */
 
     .lakes-page .header {
-      position: relative;
-      z-index: 50;
+      position: sticky;
+      top: 0;
+      z-index: 2000;
+      overflow: visible;
     }
 
     .lakes-page .header .header__row {
       align-items: center;
+      overflow: visible;
     }
 
     .lakes-page .header .logo {
@@ -82,7 +94,13 @@
       flex: 0 0 42px;
 
       border-radius: 12px;
-      background: linear-gradient(145deg,#f5d48a,#b9832d);
+
+      background:
+        linear-gradient(
+          145deg,
+          #f5d48a,
+          #b9832d
+        );
 
       color: #10131b;
       font-size: 15px;
@@ -92,6 +110,7 @@
     .lakes-page .header .logo__text {
       font-weight: 900;
       letter-spacing: .07em;
+      white-space: nowrap;
     }
 
     /* =====================================================
@@ -116,7 +135,9 @@
       margin-bottom: 24px;
       padding: 30px 32px;
 
-      border: 1px solid rgba(232,191,104,.22);
+      border:
+        1px solid rgba(232,191,104,.22);
+
       border-radius: 22px;
 
       background:
@@ -131,7 +152,8 @@
           #080e1a 75%
         );
 
-      box-shadow: 0 20px 55px rgba(0,0,0,.22);
+      box-shadow:
+        0 20px 55px rgba(0,0,0,.22);
     }
 
     .lakes-hero::after {
@@ -175,7 +197,13 @@
       height: 27px;
 
       border-radius: 8px;
-      background: linear-gradient(135deg,#ffe3a0,#c58e35);
+
+      background:
+        linear-gradient(
+          135deg,
+          #ffe3a0,
+          #c58e35
+        );
 
       color: #10131b;
       font-size: 10px;
@@ -207,6 +235,7 @@
 
       -webkit-background-clip: text;
       background-clip: text;
+
       color: transparent;
     }
 
@@ -228,7 +257,13 @@
       margin-top: 19px;
 
       border-radius: 20px;
-      background: linear-gradient(90deg,#ffe3a0,#b9832d);
+
+      background:
+        linear-gradient(
+          90deg,
+          #ffe3a0,
+          #b9832d
+        );
     }
 
     /* =====================================================
@@ -257,9 +292,13 @@
 
       padding: 7px 12px;
 
-      border: 1px solid rgba(232,191,104,.3);
+      border:
+        1px solid rgba(232,191,104,.3);
+
       border-radius: 100px;
-      background: rgba(232,191,104,.08);
+
+      background:
+        rgba(232,191,104,.08);
 
       color: var(--lake-gold-light);
       font-size: 11px;
@@ -273,7 +312,8 @@
 
     .lakes-grid {
       display: grid;
-      grid-template-columns: repeat(3,minmax(0,1fr));
+      grid-template-columns:
+        repeat(3,minmax(0,1fr));
       gap: 18px;
     }
 
@@ -289,7 +329,9 @@
       overflow: hidden;
       padding: 0;
 
-      border: 1px solid var(--lake-border);
+      border:
+        1px solid var(--lake-border);
+
       border-radius: 19px;
 
       background:
@@ -299,7 +341,8 @@
           #080e1a 85%
         );
 
-      box-shadow: 0 15px 40px rgba(0,0,0,.2);
+      box-shadow:
+        0 15px 40px rgba(0,0,0,.2);
 
       transition:
         transform .25s ease,
@@ -309,8 +352,12 @@
 
     .lake-card:hover {
       transform: translateY(-4px);
-      border-color: rgba(232,191,104,.45);
-      box-shadow: 0 22px 50px rgba(0,0,0,.3);
+
+      border-color:
+        rgba(232,191,104,.45);
+
+      box-shadow:
+        0 22px 50px rgba(0,0,0,.3);
     }
 
     /* =====================================================
@@ -319,8 +366,10 @@
 
     .lake-photo {
       position: relative;
+
       width: 100%;
       aspect-ratio: 16 / 9;
+
       overflow: hidden;
 
       background:
@@ -338,10 +387,14 @@
 
     .lake-photo img {
       display: block;
+
       width: 100%;
       height: 100%;
+
       object-fit: cover;
-      transition: transform .4s ease;
+
+      transition:
+        transform .4s ease;
     }
 
     .lake-card:hover .lake-photo img {
@@ -350,6 +403,7 @@
 
     .lake-photo::after {
       content: "";
+
       position: absolute;
       inset: 0;
 
@@ -377,6 +431,7 @@
       font-size: 75px;
       font-weight: 900;
       letter-spacing: -.08em;
+
       color: rgba(232,191,104,.14);
     }
 
@@ -387,6 +442,7 @@
     .lake-label {
       position: absolute;
       z-index: 2;
+
       left: 15px;
       bottom: 14px;
 
@@ -401,7 +457,8 @@
       font-weight: 900;
       line-height: 1.3;
 
-      text-shadow: 0 2px 10px rgba(0,0,0,.6);
+      text-shadow:
+        0 2px 10px rgba(0,0,0,.6);
     }
 
     .lake-label::before {
@@ -412,8 +469,11 @@
       flex: 0 0 7px;
 
       border-radius: 50%;
+
       background: #e8bf68;
-      box-shadow: 0 0 12px rgba(232,191,104,.6);
+
+      box-shadow:
+        0 0 12px rgba(232,191,104,.6);
     }
 
     /* =====================================================
@@ -424,6 +484,7 @@
       display: flex;
       flex: 1;
       flex-direction: column;
+
       padding: 17px;
     }
 
@@ -447,6 +508,7 @@
 
     .lake-description {
       margin: 0;
+
       color: #cbd5e1;
       font-size: 12px;
       line-height: 1.7;
@@ -460,6 +522,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
+
       margin-top: 14px;
     }
 
@@ -469,10 +532,13 @@
 
       padding: 6px 9px;
 
-      border: 1px solid rgba(148,163,184,.2);
+      border:
+        1px solid rgba(148,163,184,.2);
+
       border-radius: 100px;
 
-      background: rgba(2,6,23,.42);
+      background:
+        rgba(2,6,23,.42);
 
       color: #cbd5e1;
       font-size: 10px;
@@ -481,8 +547,12 @@
     }
 
     .lake-tag--gold {
-      border-color: rgba(232,191,104,.25);
-      background: rgba(232,191,104,.08);
+      border-color:
+        rgba(232,191,104,.25);
+
+      background:
+        rgba(232,191,104,.08);
+
       color: var(--lake-gold-light);
     }
 
@@ -512,7 +582,12 @@
       border: 0;
       border-radius: 11px;
 
-      background: linear-gradient(135deg,#ffe3a0,#d7a44e);
+      background:
+        linear-gradient(
+          135deg,
+          #ffe3a0,
+          #d7a44e
+        );
 
       color: #10131b;
       font-size: 12px;
@@ -543,10 +618,13 @@
       min-height: 38px;
       padding: 9px 12px;
 
-      border: 1px solid rgba(148,163,184,.22);
+      border:
+        1px solid rgba(148,163,184,.22);
+
       border-radius: 10px;
 
-      background: rgba(2,6,23,.35);
+      background:
+        rgba(2,6,23,.35);
 
       color: #cbd5e1;
       font-size: 11px;
@@ -555,7 +633,9 @@
     }
 
     .btn-website:hover {
-      border-color: rgba(232,191,104,.4);
+      border-color:
+        rgba(232,191,104,.4);
+
       color: var(--lake-gold-light);
     }
 
@@ -564,7 +644,93 @@
        ===================================================== */
 
     .lakes-page .footer {
-      border-top: 1px solid rgba(148,163,184,.12);
+      border-top:
+        1px solid rgba(148,163,184,.12);
+    }
+
+    /* =====================================================
+       MOBILE NAVIGATION
+       config.js використовує .nav.open
+       ===================================================== */
+
+    @media (max-width: 860px) {
+
+      .lakes-page .header .header__row {
+        position: relative;
+      }
+
+      .lakes-page .header #nav {
+        position: absolute;
+
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+
+        width: 100%;
+        max-height: calc(100dvh - 100px);
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+
+        gap: 10px;
+        padding: 16px 14px;
+
+        overflow-x: hidden;
+        overflow-y: auto;
+
+        border-radius: 24px;
+
+        border:
+          1px solid rgba(255,255,255,.12);
+
+        background:
+          linear-gradient(
+            rgba(0,0,0,.55),
+            rgba(0,0,0,.75)
+          ),
+          url("/assets/dk-dva-kuma-banner.jpg")
+            center / cover no-repeat,
+          #0b0b0f;
+
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+
+        transform: translateY(-14px);
+
+        z-index: 2050;
+
+        transition:
+          opacity .2s ease,
+          transform .2s ease,
+          visibility .2s ease;
+      }
+
+      .lakes-page .header #nav.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+
+        transform: translateY(0);
+      }
+
+      .lakes-page .header #nav .nav__link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        min-width: min(190px, 100%);
+        max-width: 100%;
+
+        text-align: center;
+      }
+
+      .lakes-page .header #burger {
+        position: relative;
+        z-index: 2051;
+      }
     }
 
     /* =====================================================
@@ -572,12 +738,15 @@
        ===================================================== */
 
     @media (max-width: 960px) {
+
       .lakes-grid {
-        grid-template-columns: repeat(2,minmax(0,1fr));
+        grid-template-columns:
+          repeat(2,minmax(0,1fr));
       }
     }
 
     @media (max-width: 640px) {
+
       .section--lakes {
         padding: 14px 11px 50px;
       }
@@ -628,6 +797,7 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+
       .lakes-page *,
       .lakes-page *::before,
       .lakes-page *::after {
@@ -652,16 +822,51 @@
       </a>
 
       <nav class="nav" id="nav">
-        <a href="/index.html" class="nav__link">Головна</a>
-        <a href="/rules.html" class="nav__link">Регламент</a>
-        <a href="/formats.html" class="nav__link">Формат змагань</a>
-        <a href="/register.html" class="nav__link">Реєстрація</a>
-        <a href="/live.html" class="nav__link">Live</a>
-        <a href="/rating.html" class="nav__link">Рейтинг</a>
-        <a href="/lakes.html" class="nav__link nav__link--active">Водойми</a>
-        <a href="/sponsors.html" class="nav__link">Спонсори</a>
-        <a href="/events/index.html" class="nav__link">Архів</a>
-        <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+
+        <a href="/index.html" class="nav__link">
+          Головна
+        </a>
+
+        <a href="/rules.html" class="nav__link">
+          Регламент
+        </a>
+
+        <a href="/formats.html" class="nav__link">
+          Формат змагань
+        </a>
+
+        <a href="/register.html" class="nav__link">
+          Реєстрація
+        </a>
+
+        <a href="/live.html" class="nav__link">
+          Live
+        </a>
+
+        <a href="/rating.html" class="nav__link">
+          Рейтинг
+        </a>
+
+        <a
+          href="/lakes.html"
+          class="nav__link nav__link--active"
+          aria-current="page"
+        >
+          Водойми
+        </a>
+
+        <a href="/sponsors.html" class="nav__link">
+          Спонсори
+        </a>
+
+        <a href="/events/index.html" class="nav__link">
+          Архів
+        </a>
+
+        <a href="/cabinet.html" class="nav__link">
+          Мій кабінет
+        </a>
+
       </nav>
 
       <button
@@ -685,9 +890,12 @@
        ===================================================== -->
 
   <main class="main">
+
     <section class="container section section--lakes">
 
-      <!-- HERO -->
+      <!-- =================================================
+           HERO
+           ================================================= -->
 
       <div class="lakes-hero">
 
@@ -710,11 +918,18 @@
 
       </div>
 
-      <!-- TOOLBAR -->
+      <!-- =================================================
+           TOOLBAR
+           ================================================= -->
 
       <div class="lakes-toolbar">
+
         <h2>Каталог водойм</h2>
-        <span class="lakes-count">8 водойм</span>
+
+        <span class="lakes-count">
+          8 водойм
+        </span>
+
       </div>
 
       <!-- =====================================================
@@ -727,16 +942,24 @@
              1. ЛЕЛЕХІВКА
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="lelehivka">
+        <article
+          class="card lake-card"
+          data-lake-id="lelehivka"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/lelehivka.jpg"
               alt="Спортивна водойма Лелехівка"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Лелехівка</span>
+
+            <span class="lake-label">
+              Лелехівка
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -753,12 +976,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">Карпфішинг</span>
-              <span class="lake-tag">До 27 секторів</span>
-              <span class="lake-tag">Короп · Амур</span>
+
+              <span class="lake-tag lake-tag--gold">
+                Карпфішинг
+              </span>
+
+              <span class="lake-tag">
+                До 27 секторів
+              </span>
+
+              <span class="lake-tag">
+                Короп · Амур
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=49.955633%2C23.674474"
@@ -776,25 +1010,35 @@
               >
                 Сайт водойми
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              2. ПРИСТАНЬ
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="prystan">
+        <article
+          class="card lake-card"
+          data-lake-id="prystan"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/prystan.jpg"
               alt="Спортивна водойма Пристань"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Пристань</span>
+
+            <span class="lake-label">
+              Пристань
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -810,12 +1054,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">Спортивна риболовля</span>
-              <span class="lake-tag">Короп</span>
-              <span class="lake-tag">Білий амур</span>
+
+              <span class="lake-tag lake-tag--gold">
+                Спортивна риболовля
+              </span>
+
+              <span class="lake-tag">
+                Короп
+              </span>
+
+              <span class="lake-tag">
+                Білий амур
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=50.224026%2C23.944066"
@@ -824,25 +1079,35 @@
               >
                 Показати на карті
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              3. BOUNTY
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="bounty">
+        <article
+          class="card lake-card"
+          data-lake-id="bounty"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/bounty.jpg"
               alt="Спортивна водойма Bounty"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Bounty</span>
+
+            <span class="lake-label">
+              Bounty
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -859,12 +1124,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">Big Fish</span>
-              <span class="lake-tag">Карпфішинг</span>
-              <span class="lake-tag">Турніри</span>
+
+              <span class="lake-tag lake-tag--gold">
+                Big Fish
+              </span>
+
+              <span class="lake-tag">
+                Карпфішинг
+              </span>
+
+              <span class="lake-tag">
+                Турніри
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=49.989020%2C23.513452"
@@ -873,25 +1149,35 @@
               >
                 Показати на карті
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              4. ДОБРОГОСТІВ
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="dobrohostiv">
+        <article
+          class="card lake-card"
+          data-lake-id="dobrohostiv"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/dobrohostiv.jpg"
               alt="Спортивна водойма Доброгостів"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Доброгостів</span>
+
+            <span class="lake-label">
+              Доброгостів
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -908,12 +1194,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">34 га</span>
-              <span class="lake-tag">Близько 30 секторів</span>
-              <span class="lake-tag">Короп · Амур</span>
+
+              <span class="lake-tag lake-tag--gold">
+                34 га
+              </span>
+
+              <span class="lake-tag">
+                Близько 30 секторів
+              </span>
+
+              <span class="lake-tag">
+                Короп · Амур
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=Спортивне+озеро+Доброгостівське+Львівська+область"
@@ -922,25 +1219,35 @@
               >
                 Показати на карті
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              5. ТРОФЕЙНА ДОЛИНА
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="trofeina_dolyna">
+        <article
+          class="card lake-card"
+          data-lake-id="trofeina_dolyna"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/trofeina-dolyna.jpg"
               alt="Спортивна водойма Трофейна Долина"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Трофейна Долина</span>
+
+            <span class="lake-label">
+              Трофейна Долина
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -957,12 +1264,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">3,6 га</span>
-              <span class="lake-tag">Короп кої</span>
-              <span class="lake-tag">Трофейний короп</span>
+
+              <span class="lake-tag lake-tag--gold">
+                3,6 га
+              </span>
+
+              <span class="lake-tag">
+                Короп кої
+              </span>
+
+              <span class="lake-tag">
+                Трофейний короп
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=Трофейна+Долина+Родатичі"
@@ -980,25 +1298,35 @@
               >
                 Сайт водойми
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              6. КОРЕЛИЧІ
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="korelychi">
+        <article
+          class="card lake-card"
+          data-lake-id="korelychi"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/korelychi.jpg"
               alt="Спортивна водойма Кореличі"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Кореличі</span>
+
+            <span class="lake-label">
+              Кореличі
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -1016,12 +1344,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">Близько 10 га</span>
-              <span class="lake-tag">Карпфішинг</span>
-              <span class="lake-tag">Флет-фідер</span>
+
+              <span class="lake-tag lake-tag--gold">
+                Близько 10 га
+              </span>
+
+              <span class="lake-tag">
+                Карпфішинг
+              </span>
+
+              <span class="lake-tag">
+                Флет-фідер
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=Korelychi+Trophy+Lake+Львівська+область"
@@ -1030,25 +1369,35 @@
               >
                 Показати на карті
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              7. ПРИЛБИЧІ / TRIDENT LAKE
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="prylbychi">
+        <article
+          class="card lake-card"
+          data-lake-id="prylbychi"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/prylbychi.jpg"
               alt="Спортивна водойма Прилбичі Trident Lake"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Прилбичі · Trident Lake</span>
+
+            <span class="lake-label">
+              Прилбичі · Trident Lake
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -1066,12 +1415,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">120 га</span>
-              <span class="lake-tag">90 секторів</span>
-              <span class="lake-tag">Big Fish</span>
+
+              <span class="lake-tag lake-tag--gold">
+                120 га
+              </span>
+
+              <span class="lake-tag">
+                90 секторів
+              </span>
+
+              <span class="lake-tag">
+                Big Fish
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=49.900025%2C23.486660"
@@ -1089,25 +1449,35 @@
               >
                 Сайт водойми
               </a>
+
             </div>
 
           </div>
+
         </article>
 
         <!-- =================================================
              8. ЕДЕЛЬВЕЙС
              ================================================= -->
 
-        <article class="card lake-card" data-lake-id="edelveys">
+        <article
+          class="card lake-card"
+          data-lake-id="edelveys"
+        >
 
           <div class="lake-photo">
+
             <img
               src="/assets/edelveys.jpg"
               alt="Спортивна водойма Едельвейс"
               loading="lazy"
               onerror="this.parentElement.classList.add('lake-photo--empty');this.remove();"
             >
-            <span class="lake-label">Едельвейс</span>
+
+            <span class="lake-label">
+              Едельвейс
+            </span>
+
           </div>
 
           <div class="lake-body">
@@ -1125,12 +1495,23 @@
             </p>
 
             <div class="lake-tags">
-              <span class="lake-tag lake-tag--gold">13,3 га</span>
-              <span class="lake-tag">Глибина до 4 м</span>
-              <span class="lake-tag">Короп · Амур</span>
+
+              <span class="lake-tag lake-tag--gold">
+                13,3 га
+              </span>
+
+              <span class="lake-tag">
+                Глибина до 4 м
+              </span>
+
+              <span class="lake-tag">
+                Короп · Амур
+              </span>
+
             </div>
 
             <div class="lake-actions">
+
               <a
                 class="btn-route"
                 href="https://www.google.com/maps/search/?api=1&amp;query=Озеро+Едельвейс+Хом'яківка+Івано-Франківська+область"
@@ -1148,28 +1529,34 @@
               >
                 Сайт водойми
               </a>
+
             </div>
 
           </div>
+
         </article>
 
       </div>
+
     </section>
+
   </main>
 
   <!-- =====================================================
-       FOOTER
+       FOOTER • 2025–2026
        ===================================================== -->
 
   <footer class="footer">
+
     <div class="container footer__row">
 
       <div>
-        © <span id="footerYear">2026</span>
+        © 2025–<span id="footerYear">2026</span>
         STOLAR CARP · Львів
       </div>
 
       <div class="footer__links">
+
         <a
           href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
           target="_blank"
@@ -1185,19 +1572,89 @@
         >
           YouTube
         </a>
+
       </div>
 
     </div>
+
   </footer>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const year = document.getElementById("footerYear");
+  <!-- =====================================================
+       PAGE LOGIC
+       ===================================================== -->
 
-      if (year) {
-        year.textContent = new Date().getFullYear();
+  <script>
+    (function () {
+      "use strict";
+
+      function initLakesPage() {
+
+        /* =================================================
+           FOOTER • 2025–CURRENT YEAR
+           ================================================= */
+
+        const year =
+          document.getElementById("footerYear");
+
+        if (year) {
+          year.textContent = String(
+            Math.max(
+              2026,
+              new Date().getFullYear()
+            )
+          );
+        }
+
+        /* =================================================
+           DYNAMIC LAKES COUNT
+           ================================================= */
+
+        const grid =
+          document.getElementById("lakesGrid");
+
+        const counter =
+          document.querySelector(".lakes-count");
+
+        if (grid && counter) {
+          const count =
+            grid.querySelectorAll(
+              ".lake-card"
+            ).length;
+
+          counter.textContent =
+            count + (
+              count === 1
+                ? " водойма"
+                : count >= 2 && count <= 4
+                  ? " водойми"
+                  : " водойм"
+            );
+        }
+
+        /*
+         * МОБІЛЬНЕ МЕНЮ
+         *
+         * Додатковий обробник burger тут НЕ потрібен.
+         * Головним меню керує config.js.
+         *
+         * Для відкритого меню використовується:
+         *
+         * nav.classList.add("open")
+         *
+         * Це запобігає конфлікту двох обробників.
+         */
       }
-    });
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          initLakesPage
+        );
+      } else {
+        initLakesPage();
+      }
+
+    })();
   </script>
 
 </body>

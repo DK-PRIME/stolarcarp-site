@@ -18,10 +18,40 @@
     Архів сезону — STOLAR CARP
   </title>
 
+  <meta
+    name="description"
+    content="Архів сезонів STOLAR CARP: результати етапів, фінал, підсумковий рейтинг, призери та Big Fish."
+  >
+
+  <link
+    rel="icon"
+    type="image/png"
+    href="/assets/favicon.png"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="/assets/favicon.png"
+  >
+
+  <!-- =====================================================
+       GLOBAL STYLES
+       ===================================================== -->
+
   <link
     rel="stylesheet"
-    href="../assets/css/main.css"
+    href="/assets/css/main.css?v=20261008"
   >
+
+  <!-- =====================================================
+       GLOBAL CONFIG
+       Єдине мобільне меню + автоматичний рік
+       ===================================================== -->
+
+  <script
+    defer
+    src="/assets/js/config.js?v=20261008"
+  ></script>
 
   <style>
 
@@ -29,9 +59,9 @@
        PAGE
        ===================================================== */
 
-    body.archive-page{
-      min-height:100vh;
-      margin:0;
+    body.archive-page {
+      min-height: 100vh;
+      margin: 0;
 
       background:
         radial-gradient(
@@ -51,476 +81,436 @@
           #030712 100%
         );
 
-      color:#e5e7eb;
+      color: #e5e7eb;
     }
 
+    .archive-page *,
+    .archive-page *::before,
+    .archive-page *::after {
+      box-sizing: border-box;
+    }
+
+    /* =====================================================
+       HEADER
+       ===================================================== */
+
+    .archive-page .header {
+      position: relative;
+      z-index: 2000;
+    }
+
+    .archive-page .header .header__row {
+      align-items: center;
+    }
+
+    .archive-page .header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      min-height: 56px;
+      padding: 8px 0;
+
+      text-decoration: none;
+    }
+
+    .archive-page .header .logo__mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+
+      border-radius: 12px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #f5d48a,
+          #b9832d
+        );
+
+      color: #10131b;
+
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .archive-page .header .logo__text {
+      font-weight: 900;
+      letter-spacing: .07em;
+      white-space: nowrap;
+    }
 
     /* =====================================================
        MAIN
        ===================================================== */
 
-    .season-archive-main{
-      padding-top:20px;
-      padding-bottom:70px;
+    .season-archive-main {
+      padding-top: 20px;
+      padding-bottom: 70px;
     }
-
 
     /* =====================================================
        BACK
        ===================================================== */
 
-    .back-link{
-      display:inline-flex;
-      align-items:center;
-      gap:7px;
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
 
-      margin:14px 0 8px;
+      margin: 14px 0 8px;
 
-      color:#facc15;
+      color: #facc15;
 
-      text-decoration:none;
-      font-weight:850;
-      font-size:.9rem;
+      text-decoration: none;
+      font-weight: 850;
+      font-size: .9rem;
     }
 
-    .back-link:hover{
-      color:#fde68a;
+    .back-link:hover {
+      color: #fde68a;
     }
-
 
     /* =====================================================
        HERO
        ===================================================== */
 
-    .season-hero{
-      text-align:center;
+    .season-hero {
+      text-align: center;
 
       padding:
         22px 0
         26px;
     }
 
-    .season-kicker{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap:7px;
+    .season-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
 
-      padding:7px 12px;
+      padding: 7px 12px;
 
-      border-radius:999px;
+      border-radius: 999px;
 
       border:
-        1px solid
-        rgba(
-          250,
-          204,
-          21,
-          .40
-        );
+        1px solid rgba(250,204,21,.40);
 
       background:
-        rgba(
-          15,
-          23,
-          42,
-          .65
-        );
+        rgba(15,23,42,.65);
 
-      color:#facc15;
+      color: #facc15;
 
-      font-size:.78rem;
-      font-weight:900;
+      font-size: .78rem;
+      font-weight: 900;
 
-      letter-spacing:.08em;
-
-      text-transform:uppercase;
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
 
-    .archive-title{
-      margin:
-        15px 0 0;
+    .archive-title {
+      margin: 15px 0 0;
 
-      text-align:center;
+      text-align: center;
 
       font-size:
-        clamp(
-          32px,
-          7vw,
-          58px
-        );
+        clamp(32px,7vw,58px);
 
-      line-height:1.05;
+      line-height: 1.05;
+      font-weight: 950;
+      letter-spacing: -.035em;
 
-      font-weight:950;
-
-      letter-spacing:-.035em;
-
-      color:#f8fafc;
+      color: #f8fafc;
 
       text-shadow:
-        0 18px 42px
-        rgba(
-          0,
-          0,
-          0,
-          .45
-        );
+        0 18px 42px rgba(0,0,0,.45);
     }
 
-    .season-hero-sub{
-      max-width:620px;
+    .season-hero-sub {
+      max-width: 620px;
 
-      margin:
-        12px auto 0;
+      margin: 12px auto 0;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.92rem;
-
-      line-height:1.55;
+      font-size: .92rem;
+      line-height: 1.55;
     }
-
 
     /* =====================================================
        GENERAL CARD
        ===================================================== */
 
-    .archive-card{
-      margin:
-        18px 0;
+    .archive-card {
+      margin: 18px 0;
+      padding: 16px;
 
-      padding:
-        16px;
-
-      border-radius:
-        20px;
+      border-radius: 20px;
 
       border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .20
-        );
+        1px solid rgba(148,163,184,.20);
 
       background:
         radial-gradient(
           circle at top left,
-          rgba(
-            250,
-            204,
-            21,
-            .045
-          ),
+          rgba(250,204,21,.045),
           transparent 42%
         ),
-        rgba(
-          15,
-          23,
-          42,
-          .78
-        );
+        rgba(15,23,42,.78);
 
       box-shadow:
-        0 18px 42px
-        rgba(
-          0,
-          0,
-          0,
-          .28
-        );
+        0 18px 42px rgba(0,0,0,.28);
     }
 
-    .archive-card-title{
-      margin:0;
+    .archive-card-title {
+      margin: 0;
 
-      color:#f8fafc;
+      color: #f8fafc;
 
-      font-size:1.12rem;
-
-      font-weight:950;
+      font-size: 1.12rem;
+      font-weight: 950;
     }
 
-    .archive-card-sub{
-      margin-top:5px;
+    .archive-card-sub {
+      margin-top: 5px;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.82rem;
-
-      line-height:1.45;
+      font-size: .82rem;
+      line-height: 1.45;
     }
-
 
     /* =====================================================
        MESSAGE
        ===================================================== */
 
-    .muted{
-      color:#94a3b8;
+    .muted {
+      color: #94a3b8;
     }
 
-    .err{
-      color:#ef4444;
+    .err {
+      color: #ef4444;
     }
 
-    .ok{
-      color:#22c55e;
+    .ok {
+      color: #22c55e;
     }
 
-    #msg{
-      margin-top:8px;
+    #msg {
+      margin-top: 8px;
+      min-height: 20px;
 
-      min-height:20px;
-
-      font-size:.85rem;
-
-      font-weight:750;
+      font-size: .85rem;
+      font-weight: 750;
     }
-
 
     /* =====================================================
        SEASON SUMMARY
        ===================================================== */
 
-    #seasonArchiveSummary{
-      margin-top:4px;
+    #seasonArchiveSummary {
+      margin-top: 4px;
     }
-
 
     /* =====================================================
        STAGES
        ===================================================== */
 
-    #stagesList{
-      margin-top:12px;
+    #stagesList {
+      margin-top: 12px;
     }
 
-    .stage-btn{
-      width:100%;
+    .stage-btn {
+      width: 100%;
 
-      margin:
-        8px 0;
+      margin: 8px 0;
+      padding: 14px;
 
-      padding:
-        14px;
+      text-align: left;
+      cursor: pointer;
 
-      text-align:left;
-
-      cursor:pointer;
-
-      border-radius:
-        15px;
+      border-radius: 15px;
 
       border:
-        1px solid
-        rgba(
-          148,
-          163,
-          184,
-          .22
-        );
+        1px solid rgba(148,163,184,.22);
 
-      background:#111827;
+      background: #111827;
+      color: #e5e7eb;
 
-      color:#e5e7eb;
-
-      font-weight:850;
+      font-weight: 850;
 
       box-shadow:
-        0 10px 24px
-        rgba(
-          0,
-          0,
-          0,
-          .18
-        );
+        0 10px 24px rgba(0,0,0,.18);
+
+      transition:
+        border-color .2s ease,
+        transform .2s ease;
     }
 
-    .stage-btn:hover{
-      border-color:#facc15;
+    .stage-btn:hover {
+      border-color: #facc15;
+      transform: translateY(-1px);
     }
-
 
     /* =====================================================
        RESULT SECTION
        ===================================================== */
 
-    #resultSection{
-      scroll-margin-top:20px;
+    #resultSection {
+      scroll-margin-top: 20px;
     }
 
-    .stage-detail-head{
-      text-align:center;
+    .stage-detail-head {
+      text-align: center;
 
-      margin:
-        32px 0 14px;
+      margin: 32px 0 14px;
     }
 
-    .stage-detail-title{
-      margin:0;
+    .stage-detail-title {
+      margin: 0;
 
       font-size:
-        clamp(
-          28px,
-          7vw,
-          48px
-        );
+        clamp(28px,7vw,48px);
 
-      font-weight:950;
-
-      color:#f8fafc;
+      font-weight: 950;
+      color: #f8fafc;
     }
 
-    #stageMeta{
-      margin-top:7px;
+    #stageMeta {
+      margin-top: 7px;
 
-      text-align:center;
+      text-align: center;
 
-      color:#94a3b8;
+      color: #94a3b8;
 
-      font-size:.86rem;
-
-      font-weight:750;
+      font-size: .86rem;
+      font-weight: 750;
     }
-
 
     /* =====================================================
-       ZONES — BASE FALLBACK
-       archive.js додає точні compact styles
+       ZONES
+       Базові стилі.
+       archive.js додає compact styles.
        ===================================================== */
 
-    #zonesWrap{
-      width:100%;
+    #zonesWrap {
+      width: 100%;
     }
 
-    .zone-card{
-      margin:
-        14px 0;
-
-      padding:
-        12px;
+    .zone-card {
+      margin: 14px 0;
+      padding: 12px;
 
       border:
-        1px solid
-        #2f3144;
+        1px solid #2f3144;
 
-      border-radius:
-        18px;
+      border-radius: 18px;
 
-      background:
-        #11111a;
+      background: #11111a;
     }
 
-    .zone-head{
-      display:flex;
+    .zone-head {
+      display: flex;
 
-      justify-content:
-        space-between;
+      justify-content: space-between;
+      align-items: center;
 
-      align-items:
-        center;
-
-      gap:10px;
-
-      margin-bottom:
-        10px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
-    .zone-head h2{
-      margin:0;
+    .zone-head h2 {
+      margin: 0;
 
       font-size:
-        clamp(
-          32px,
-          8vw,
-          58px
-        );
+        clamp(32px,8vw,58px);
     }
 
-    .zone-badge{
-      padding:
-        8px 14px;
+    .zone-badge {
+      padding: 8px 14px;
 
-      border-radius:
-        999px;
+      border-radius: 999px;
 
       border:
-        2px solid
-        #333;
+        2px solid #333;
 
-      background:
-        #111;
+      background: #111;
+      color: #d1d5db;
 
-      color:
-        #d1d5db;
-
-      white-space:
-        nowrap;
+      white-space: nowrap;
     }
-
 
     /* =====================================================
        FOOT NOTE
        ===================================================== */
 
-    .archive-bottom-note{
-      margin:
-        18px 0
-        38px;
+    .archive-bottom-note {
+      margin: 18px 0 38px;
 
-      text-align:center;
+      text-align: center;
 
-      color:#64748b;
+      color: #64748b;
 
-      font-size:.8rem;
-
-      line-height:1.45;
+      font-size: .8rem;
+      line-height: 1.45;
     }
-
 
     /* =====================================================
        FOOTER
        ===================================================== */
 
-    footer.footer{
-      margin-top:
-        30px;
-    }
+    .archive-page .footer {
+      margin-top: 30px;
 
+      border-top:
+        1px solid rgba(148,163,184,.12);
+    }
 
     /* =====================================================
        MOBILE
        ===================================================== */
 
-    @media(
-      max-width:768px
-    ){
+    @media (max-width: 768px) {
 
-      .season-archive-main{
-        padding-top:
-          8px;
+      .season-archive-main {
+        padding-top: 8px;
       }
 
-      .season-hero{
+      .season-hero {
         padding:
           14px 0
           18px;
       }
 
-      .archive-card{
-        padding:
-          13px;
-
-        border-radius:
-          17px;
+      .archive-card {
+        padding: 13px;
+        border-radius: 17px;
       }
 
-      .stage-btn{
-        padding:
-          13px 12px;
+      .stage-btn {
+        padding: 13px 12px;
+      }
+
+      .archive-title {
+        font-size:
+          clamp(30px,8vw,44px);
+      }
+
+      .season-hero-sub {
+        font-size: .84rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+      .archive-page *,
+      .archive-page *::before,
+      .archive-page *::after {
+        transition-duration: .01ms !important;
       }
     }
 
@@ -542,7 +532,7 @@
 
     <a
       class="logo"
-      href="../index.html"
+      href="/index.html"
     >
 
       <span class="logo__mark">
@@ -634,11 +624,18 @@
     </nav>
 
 
+    <!-- ==================================================
+         BURGER
+         Керується тільки config.js
+         ================================================== -->
+
     <button
       class="burger"
       id="burger"
       type="button"
-      aria-label="Меню"
+      aria-label="Відкрити меню"
+      aria-controls="nav"
+      aria-expanded="false"
     >
 
       <span></span>
@@ -657,10 +654,7 @@
      ====================================================== -->
 
 <main
-  class="
-    container
-    season-archive-main
-  "
+  class="container season-archive-main"
 >
 
 
@@ -710,7 +704,9 @@
   <div id="seasonArchiveSummary">
 
 
-    <!-- TOP 3 -->
+    <!-- ==================================================
+         TOP 3
+         ================================================== -->
 
     <section
       id="seasonArchivePodium"
@@ -730,7 +726,9 @@
     </section>
 
 
-    <!-- BIG FISH -->
+    <!-- ==================================================
+         BIG FISH
+         ================================================== -->
 
     <section
       id="seasonArchiveBigFish"
@@ -750,7 +748,9 @@
     </section>
 
 
-    <!-- FULL RANKING -->
+    <!-- ==================================================
+         FULL RANKING
+         ================================================== -->
 
     <section
       id="seasonArchiveRanking"
@@ -802,6 +802,8 @@
     <div
       id="msg"
       class="muted"
+      role="status"
+      aria-live="polite"
     >
       Завантаження…
     </div>
@@ -853,6 +855,7 @@
 
 <!-- ======================================================
      FOOTER
+     Автоматично оновлюється через config.js
      ====================================================== -->
 
 <footer class="footer">
@@ -860,19 +863,24 @@
   <div class="container footer__row">
 
     <div>
-      © 2025 STOLAR CARP · Львів
+      © <span id="footerYear">2025–2026</span>
+      STOLAR CARP · Львів
     </div>
 
     <div class="footer__links">
 
       <a
         href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+        target="_blank"
+        rel="noopener noreferrer"
       >
         Viber
       </a>
 
       <a
         href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+        target="_blank"
+        rel="noopener noreferrer"
       >
         YouTube
       </a>
@@ -885,7 +893,7 @@
 
 
 <!-- ======================================================
-     FIREBASE
+     FIREBASE SDK
      ====================================================== -->
 
 <script
@@ -901,17 +909,24 @@
 ></script>
 
 
+<!-- ======================================================
+     FIREBASE INIT
+     ====================================================== -->
+
 <script
   src="../assets/js/firebase-init.js?v=20260915-1"
 ></script>
 
 
-<!--
-  Наш новий архів:
-  seasonArchives/{year}
-  +
-  seasonResults/{year}/stages
--->
+<!-- ======================================================
+     ARCHIVE LOGIC
+
+     seasonArchives/{year}
+     +
+     seasonResults/{year}/stages
+
+     Уся логіка архіву залишається в archive.js
+     ====================================================== -->
 
 <script
   src="archive.js?v=20260915-season-2"
@@ -919,90 +934,16 @@
 
 
 <!-- ======================================================
-     MOBILE MENU
+     ВАЖЛИВО
+
+     Окремого JavaScript для мобільного меню тут немає.
+
+     Мобільним меню керує виключно:
+
+     /assets/js/config.js
+
+     Це запобігає конфлікту обробників натискання.
      ====================================================== -->
-
-<script>
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    const burger =
-      document.getElementById(
-        "burger"
-      );
-
-    const nav =
-      document.getElementById(
-        "nav"
-      );
-
-    if (
-      !burger ||
-      !nav
-    ) {
-      return;
-    }
-
-    burger.addEventListener(
-      "click",
-      () => {
-
-        nav.classList.toggle(
-          "active"
-        );
-
-        nav.classList.toggle(
-          "nav--open"
-        );
-
-        burger.classList.toggle(
-          "active"
-        );
-
-        document.body.classList.toggle(
-          "menu-open"
-        );
-
-      }
-    );
-
-
-    nav.addEventListener(
-      "click",
-      event => {
-
-        if (
-          event.target
-            .classList
-            .contains(
-              "nav__link"
-            )
-        ) {
-
-          nav.classList.remove(
-            "active",
-            "nav--open"
-          );
-
-          burger.classList.remove(
-            "active"
-          );
-
-          document.body.classList.remove(
-            "menu-open"
-          );
-
-        }
-
-      }
-    );
-
-  }
-);
-
-</script>
 
 
 </body>

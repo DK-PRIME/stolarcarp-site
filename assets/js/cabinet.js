@@ -2,80 +2,395 @@
 // STOLAR CARP — Кабінет учасника
 // Firebase compat 10.12.2
 //
+// VERSION: 20261008-cabinet-burger-fix-v9
+//
+// ✅ Мобільне меню
+// ✅ Автоматичне створення кнопки burger
+// ✅ Відкриття / закриття меню
+// ✅ Закриття при натисканні поза меню
+// ✅ Закриття після вибору пункту
+// ✅ Підтримка Escape
+//
 // ✅ firstName = Ім'я
 // ✅ lastName = Прізвище
 // ✅ fullName = Прізвище Ім'я
-// ✅ legacy fullName не розбиваємо автоматично
+// ✅ legacy fullName автоматично НЕ розбиваємо
 //
-// ✅ редагування:
+// ✅ Редагування:
 //    - Прізвище
 //    - Ім'я
 //    - Телефон
 //    - Місто
 //
-// ✅ SOLO public_participants синхронізується при зміні ПІБ
+// ✅ SOLO public_participants синхронізується
+//    при зміні ПІБ
+//
 // ✅ TEAM-заявки НЕ перейменовуються
 //
-// ✅ профіль
-// ✅ аватар
-// ✅ команда
-// ✅ склад команди
+// ✅ Профіль
+// ✅ Аватар Cloudinary
+// ✅ Команда
+// ✅ Склад команди
 //
 // ❌ cabinet.js НЕ працює з "Моя участь"
 // ❌ cabinet.js НЕ читає competitions
 // ❌ cabinet.js НЕ читає registrations
 // ❌ cabinet.js НЕ рендерить #myCompetitions
 //
-// ✅ "Моя участь" повністю належить:
-//    assets/js/my_participation.js
+// "Моя участь":
+// assets/js/my_participation.js
 
 (function () {
   "use strict";
 
   console.log(
-    "✅ cabinet.js LOADED v20260916-cabinet-core-v8"
+    "✅ cabinet.js LOADED v20261008-cabinet-burger-fix-v9"
   );
 
   // =========================================================
   // BURGER MENU
   // =========================================================
 
-  const burger =
-    document.getElementById(
-      "burger"
+  function initBurgerMenu() {
+    const header = document.querySelector(".header");
+
+    if (!header) {
+      console.warn(
+        "[cabinet] Header .header не знайдено"
+      );
+      return;
+    }
+
+    const nav = header.querySelector(".nav");
+
+    if (!nav) {
+      console.warn(
+        "[cabinet] Навігацію .nav не знайдено"
+      );
+      return;
+    }
+
+    const headerRow =
+      header.querySelector(".header__row") || header;
+
+    let burger =
+      header.querySelector("#burger") ||
+      header.querySelector(".burger");
+
+    // Якщо кнопки немає — створюємо.
+    if (!burger) {
+      burger = document.createElement("button");
+
+      burger.id = "burger";
+      burger.className = "burger";
+      burger.type = "button";
+
+      burger.innerHTML = `
+        <span></span>
+        <span></span>
+        <span></span>
+      `;
+
+      headerRow.appendChild(burger);
+
+      console.log(
+        "✅ Burger button created automatically"
+      );
+    }
+
+    if (!burger.id) {
+      burger.id = "burger";
+    }
+
+    burger.classList.add("burger");
+
+    if (burger.tagName === "BUTTON") {
+      burger.type = "button";
+    }
+
+    // Якщо HTML має інший вміст кнопки,
+    // залишаємо три смужки.
+    if (!burger.querySelector("span")) {
+      burger.innerHTML = `
+        <span></span>
+        <span></span>
+        <span></span>
+      `;
+    }
+
+    if (!nav.id) {
+      nav.id = "cabinetMobileNav";
+    }
+
+    burger.setAttribute(
+      "aria-controls",
+      nav.id
     );
 
-  const nav =
-    document.querySelector(
-      ".nav"
+    burger.setAttribute(
+      "aria-expanded",
+      "false"
     );
 
-  if (
-    burger &&
-    nav
-  ) {
-    burger.addEventListener(
-      "click",
-      () => {
-        nav.classList.toggle(
-          "open"
-        );
-      }
+    burger.setAttribute(
+      "aria-label",
+      "Відкрити меню"
     );
 
-    nav.addEventListener(
-      "click",
-      event => {
-        if (
-          event.target.classList.contains(
-            "nav__link"
-          )
-        ) {
-          nav.classList.remove(
-            "open"
-          );
+    // Не підключаємо події повторно.
+    if (burger.dataset.scMenuInitialized === "1") {
+      return;
+    }
+
+    burger.dataset.scMenuInitialized = "1";
+
+    // =======================================================
+    // MOBILE MENU STYLES
+    // =======================================================
+
+    // Додаткові стилі для випадків, коли
+    // сторінка перевизначає main.css.
+
+    if (!document.getElementById("scCabinetBurgerStyles")) {
+      const style = document.createElement("style");
+
+      style.id = "scCabinetBurgerStyles";
+
+      style.textContent = `
+        @media (max-width:860px) {
+
+          .header .header__row {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+          }
+
+          .header .burger {
+            display:flex !important;
+            flex-direction:column;
+            align-items:center;
+            justify-content:center;
+
+            flex:0 0 48px;
+
+            width:48px;
+            height:48px;
+
+            padding:8px;
+
+            position:relative;
+            z-index:2100;
+
+            visibility:visible !important;
+            opacity:1 !important;
+
+            pointer-events:auto !important;
+
+            border:1px solid rgba(255,255,255,.15);
+            border-radius:12px;
+
+            background:rgba(255,255,255,.06);
+
+            cursor:pointer;
+
+            -webkit-tap-highlight-color:transparent;
+          }
+
+          .header .burger span {
+            display:block;
+
+            width:26px;
+            height:3px;
+
+            margin:3px 0;
+
+            border-radius:3px;
+
+            background:#ffffff;
+
+            transition:
+              transform .22s ease,
+              opacity .22s ease;
+          }
+
+          .header .burger.active span:nth-child(1) {
+            transform:translateY(9px) rotate(45deg);
+          }
+
+          .header .burger.active span:nth-child(2) {
+            opacity:0;
+          }
+
+          .header .burger.active span:nth-child(3) {
+            transform:translateY(-9px) rotate(-45deg);
+          }
+
+          .header .nav {
+            position:absolute;
+
+            left:12px;
+            right:12px;
+
+            top:calc(100% + 8px);
+
+            z-index:2050;
+
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+
+            gap:10px;
+
+            width:auto;
+            height:auto;
+
+            max-height:calc(100dvh - 100px);
+
+            padding:16px 14px;
+
+            overflow-y:auto;
+            -webkit-overflow-scrolling:touch;
+
+            border:1px solid rgba(255,255,255,.12);
+            border-radius:22px;
+
+            background:
+              linear-gradient(
+                rgba(0,0,0,.58),
+                rgba(0,0,0,.76)
+              ),
+              url("../dk-dva-kuma-banner.jpg")
+              center / cover no-repeat;
+
+            box-shadow:0 22px 60px rgba(0,0,0,.65);
+
+            opacity:0;
+            visibility:hidden;
+
+            transform:translateY(-12px);
+
+            pointer-events:none;
+
+            transition:
+              opacity .22s ease,
+              transform .22s ease,
+              visibility .22s ease;
+          }
+
+          .header .nav.open,
+          .header .nav.active {
+            opacity:1;
+            visibility:visible;
+
+            transform:translateY(0);
+
+            pointer-events:auto;
+          }
+
+          .header .nav__link {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+
+            min-width:190px;
+            max-width:78vw;
+
+            padding:12px 18px;
+
+            border-radius:999px;
+
+            border:1px solid rgba(255,255,255,.20);
+
+            background:rgba(0,0,0,.28);
+
+            color:#f2f3f5;
+
+            text-align:center;
+            white-space:nowrap;
+
+            font-size:1.02rem;
+          }
+
         }
+
+        @media (min-width:861px) {
+          .header .burger {
+            display:none !important;
+          }
+        }
+      `;
+
+      document.head.appendChild(style);
+    }
+
+    // =======================================================
+    // OPEN / CLOSE
+    // =======================================================
+
+    function setMenuOpen(open) {
+      const isOpen = Boolean(open);
+
+      nav.classList.toggle("open", isOpen);
+
+      // Прибираємо можливий конфлікт двох класів.
+      nav.classList.remove("active");
+
+      burger.classList.toggle("active", isOpen);
+
+      burger.setAttribute(
+        "aria-expanded",
+        String(isOpen)
+      );
+
+      burger.setAttribute(
+        "aria-label",
+        isOpen ? "Закрити меню" : "Відкрити меню"
+      );
+    }
+
+    burger.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const isOpen =
+        nav.classList.contains("open") ||
+        nav.classList.contains("active");
+
+      setMenuOpen(!isOpen);
+    });
+
+    nav.addEventListener("click", event => {
+      const link = event.target.closest(".nav__link");
+
+      if (link) {
+        setMenuOpen(false);
       }
+    });
+
+    document.addEventListener("click", event => {
+      if (
+        !burger.contains(event.target) &&
+        !nav.contains(event.target)
+      ) {
+        setMenuOpen(false);
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      if (window.innerWidth > 860) {
+        setMenuOpen(false);
+      }
+    });
+
+    console.log(
+      "✅ STOLAR CARP mobile burger initialized"
     );
   }
 
@@ -90,17 +405,10 @@
   // FIREBASE WAIT
   // =========================================================
 
-  async function waitFirebase(
-    maxMs = 12000
-  ) {
-    const startedAt =
-      Date.now();
+  async function waitFirebase(maxMs = 12000) {
+    const startedAt = Date.now();
 
-    while (
-      Date.now() -
-        startedAt <
-      maxMs
-    ) {
+    while (Date.now() - startedAt < maxMs) {
       if (
         window.scAuth &&
         window.scDb &&
@@ -109,18 +417,12 @@
         return;
       }
 
-      await new Promise(
-        resolve =>
-          setTimeout(
-            resolve,
-            100
-          )
-      );
+      await new Promise(resolve => {
+        setTimeout(resolve, 100);
+      });
     }
 
-    throw new Error(
-      "Firebase не готовий"
-    );
+    throw new Error("Firebase не готовий");
   }
 
   // =========================================================
@@ -129,81 +431,44 @@
 
   const Cache = {
     data: {
-      user:
-        null,
-
-      team:
-        null,
-
-      members:
-        [],
-
-      userLastUpdate:
-        0
+      user: null,
+      team: null,
+      members: [],
+      userLastUpdate: 0
     },
 
-    isUserValid(
-      maxAgeMs = 60000
-    ) {
+    isUserValid(maxAgeMs = 60000) {
       return Boolean(
         this.data.userLastUpdate &&
-        (
-          Date.now() -
-            this.data.userLastUpdate <
-          maxAgeMs
-        )
+        Date.now() - this.data.userLastUpdate < maxAgeMs
       );
     },
 
-    setUser(
-      value
-    ) {
-      this.data.user =
-        value;
-
-      this.data.userLastUpdate =
-        Date.now();
+    setUser(value) {
+      this.data.user = value;
+      this.data.userLastUpdate = Date.now();
     },
 
-    setTeam(
-      value
-    ) {
-      this.data.team =
-        value;
+    setTeam(value) {
+      this.data.team = value;
     },
 
-    setMembers(
-      value
-    ) {
-      this.data.members =
-        Array.isArray(
-          value
-        )
-          ? value
-          : [];
+    setMembers(value) {
+      this.data.members = Array.isArray(value)
+        ? value
+        : [];
     },
 
-    get(
-      key
-    ) {
-      return this.data[
-        key
-      ];
+    get(key) {
+      return this.data[key];
     },
 
     clear() {
       this.data = {
-        user:
-          null,
-
-        team:
-          null,
-
-        members:
-          [],
-
-        userLastUpdate:
-          0
+        user: null,
+        team: null,
+        members: [],
+        userLastUpdate: 0
       };
     }
   };
@@ -212,261 +477,178 @@
   // DOM
   // =========================================================
 
-  const statusEl =
-    document.getElementById(
-      "cabinetStatus"
-    );
+  let statusEl = null;
+  let contentEl = null;
+  let teamNameEl = null;
+  let userFullNameEl = null;
+  let userCityEl = null;
+  let captainTextEl = null;
+  let userRoleEl = null;
+  let userPhoneEl = null;
+  let joinCodePillEl = null;
+  let joinCodeTextEl = null;
+  let avatarWrapper = null;
+  let avatarImgEl = null;
+  let avatarPhEl = null;
+  let membersEl = null;
 
-  const contentEl =
-    document.getElementById(
-      "cabinetContent"
-    );
+  let editProfileBtn = null;
+  let saveProfileBtn = null;
+  let cancelProfileBtn = null;
+  let profileEditBox = null;
+  let lastNameInput = null;
+  let firstNameInput = null;
+  let phoneInput = null;
+  let cityInput = null;
+  let profileEditMsg = null;
 
-  const teamNameEl =
-    document.getElementById(
-      "teamNameText"
-    );
+  function initDom() {
+    statusEl =
+      document.getElementById("cabinetStatus");
 
-  const userFullNameEl =
-    document.getElementById(
-      "userFullName"
-    );
+    contentEl =
+      document.getElementById("cabinetContent");
 
-  const userCityEl =
-    document.getElementById(
-      "userCity"
-    );
+    teamNameEl =
+      document.getElementById("teamNameText");
 
-  const captainTextEl =
-    document.getElementById(
-      "captainText"
-    );
+    userFullNameEl =
+      document.getElementById("userFullName");
 
-  const userRoleEl =
-    document.getElementById(
-      "userRoleText"
-    );
+    userCityEl =
+      document.getElementById("userCity");
 
-  const userPhoneEl =
-    document.getElementById(
-      "userPhoneText"
-    );
+    captainTextEl =
+      document.getElementById("captainText");
 
-  const joinCodePillEl =
-    document.getElementById(
-      "joinCodePill"
-    );
+    userRoleEl =
+      document.getElementById("userRoleText");
 
-  const joinCodeTextEl =
-    document.getElementById(
-      "joinCodeText"
-    );
+    userPhoneEl =
+      document.getElementById("userPhoneText");
 
-  const avatarWrapper =
-    document.getElementById(
-      "avatarWrapper"
-    );
+    joinCodePillEl =
+      document.getElementById("joinCodePill");
 
-  const avatarImgEl =
-    document.getElementById(
-      "cabinetAvatarImg"
-    );
+    joinCodeTextEl =
+      document.getElementById("joinCodeText");
 
-  const avatarPhEl =
-    document.getElementById(
-      "cabinetAvatarPlaceholder"
-    );
+    avatarWrapper =
+      document.getElementById("avatarWrapper");
 
-  const membersEl =
-    document.getElementById(
-      "membersContainer"
-    );
+    avatarImgEl =
+      document.getElementById("cabinetAvatarImg");
 
-  // =========================================================
-  // PROFILE EDIT DOM
-  // =========================================================
+    avatarPhEl =
+      document.getElementById("cabinetAvatarPlaceholder");
 
-  const editProfileBtn =
-    document.getElementById(
-      "editProfileBtn"
-    );
+    membersEl =
+      document.getElementById("membersContainer");
 
-  const saveProfileBtn =
-    document.getElementById(
-      "saveProfileBtn"
-    );
+    editProfileBtn =
+      document.getElementById("editProfileBtn");
 
-  const cancelProfileBtn =
-    document.getElementById(
-      "cancelProfileBtn"
-    );
+    saveProfileBtn =
+      document.getElementById("saveProfileBtn");
 
-  const profileEditBox =
-    document.getElementById(
-      "profileEditBox"
-    );
+    cancelProfileBtn =
+      document.getElementById("cancelProfileBtn");
 
-  const lastNameInput =
-    document.getElementById(
-      "lastNameInput"
-    );
+    profileEditBox =
+      document.getElementById("profileEditBox");
 
-  const firstNameInput =
-    document.getElementById(
-      "firstNameInput"
-    );
+    lastNameInput =
+      document.getElementById("lastNameInput");
 
-  const phoneInput =
-    document.getElementById(
-      "phoneInput"
-    );
+    firstNameInput =
+      document.getElementById("firstNameInput");
 
-  const cityInput =
-    document.getElementById(
-      "cityInput"
-    );
+    phoneInput =
+      document.getElementById("phoneInput");
 
-  const profileEditMsg =
-    document.getElementById(
-      "profileEditMsg"
-    );
+    cityInput =
+      document.getElementById("cityInput");
+
+    profileEditMsg =
+      document.getElementById("profileEditMsg");
+  }
 
   // =========================================================
   // STATE
   // =========================================================
 
-  let isEditingProfile =
-    false;
+  let isEditingProfile = false;
+  let isSavingProfile = false;
 
-  let isSavingProfile =
-    false;
+  let lastProfileSnap = null;
 
-  let lastProfileSnap =
-    null;
+  let unsubUser = null;
+  let unsubTeam = null;
+  let unsubMembers = null;
 
-  let unsubUser =
-    null;
-
-  let unsubTeam =
-    null;
-
-  let unsubMembers =
-    null;
-
-  let activeTeamId =
-    "__INIT__";
+  let activeTeamId = "__INIT__";
 
   // =========================================================
   // HELPERS
   // =========================================================
 
-  function setStatus(
-    text
-  ) {
-    if (
-      statusEl
-    ) {
-      statusEl.textContent =
-        text ||
-        "";
+  function setStatus(text) {
+    if (statusEl) {
+      statusEl.textContent = text || "";
     }
   }
 
   function showContent() {
-    if (
-      contentEl
-    ) {
-      contentEl.style.display =
-        "block";
+    if (contentEl) {
+      contentEl.style.display = "block";
     }
   }
 
   function hideContent() {
-    if (
-      contentEl
-    ) {
-      contentEl.style.display =
-        "none";
+    if (contentEl) {
+      contentEl.style.display = "none";
     }
   }
 
-  function norm(
-    value
-  ) {
-    return String(
-      value ??
-      ""
-    )
-      .replace(
-        /\s+/g,
-        " "
-      )
+  function norm(value) {
+    return String(value ?? "")
+      .replace(/\s+/g, " ")
       .trim();
   }
 
-  function normLower(
-    value
-  ) {
-    return norm(
-      value
-    )
-      .toLowerCase();
+  function normLower(value) {
+    return norm(value).toLowerCase();
   }
 
-  function roleText(
-    role
-  ) {
-    return (
-      role ===
-      "admin"
-        ? "Адміністратор"
-        : role ===
-            "judge"
-          ? "Суддя"
-          : role ===
-              "captain"
-            ? "Капітан команди"
-            : "Учасник команди"
-    );
+  function roleText(role) {
+    if (role === "admin") {
+      return "Адміністратор";
+    }
+
+    if (role === "judge") {
+      return "Суддя";
+    }
+
+    if (role === "captain") {
+      return "Капітан команди";
+    }
+
+    return "Учасник команди";
   }
 
-  function escapeHtml(
-    value
-  ) {
-    return String(
-      value ||
-      ""
-    )
-      .replace(
-        /&/g,
-        "&amp;"
-      )
-      .replace(
-        /</g,
-        "&lt;"
-      )
-      .replace(
-        />/g,
-        "&gt;"
-      )
-      .replace(
-        /"/g,
-        "&quot;"
-      )
-      .replace(
-        /'/g,
-        "&#039;"
-      );
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   function serverTimestamp() {
     try {
-      return window
-        .firebase
-        .firestore
-        .FieldValue
-        .serverTimestamp();
-
+      return window.firebase.firestore
+        .FieldValue.serverTimestamp();
     } catch {
       return null;
     }
@@ -476,177 +658,76 @@
   // NAME HELPERS
   // =========================================================
 
-  function cleanNamePart(
-    value
-  ) {
-    return String(
-      value ||
-      ""
-    )
+  function cleanNamePart(value) {
+    return String(value || "")
       .trim()
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        40
-      );
+      .replace(/\s+/g, " ")
+      .slice(0, 40);
   }
 
-  /*
-   * CANONICAL:
-   *
-   * Прізвище Ім'я
-   */
-  function buildFullName(
-    lastName,
-    firstName
-  ) {
-    const last =
-      cleanNamePart(
-        lastName
-      );
+  function buildFullName(lastName, firstName) {
+    const last = cleanNamePart(lastName);
+    const first = cleanNamePart(firstName);
 
-    const first =
-      cleanNamePart(
-        firstName
-      );
-
-    if (
-      !last ||
-      !first
-    ) {
+    if (!last || !first) {
       return "";
     }
 
-    return (
-      `${last} ${first}`
-    );
+    return `${last} ${first}`;
   }
 
-  /*
-   * Відображення:
-   *
-   * 1. lastName + firstName
-   * 2. legacy fullName
-   * 3. legacy name
-   *
-   * Старий fullName
-   * автоматично НЕ ділимо.
-   */
-  function getDisplayName(
-    userData
-  ) {
-    const data =
-      userData ||
-      {};
+  function getDisplayName(userData) {
+    const data = userData || {};
 
-    const canonical =
-      buildFullName(
-        data.lastName,
-        data.firstName
-      );
+    const canonical = buildFullName(
+      data.lastName,
+      data.firstName
+    );
 
-    if (
-      canonical
-    ) {
+    if (canonical) {
       return canonical;
     }
 
     return (
-      norm(
-        data.fullName
-      )
-      ||
-      norm(
-        data.name
-      )
-      ||
+      norm(data.fullName) ||
+      norm(data.name) ||
       ""
     );
   }
 
-  function cleanPhone(
-    value
-  ) {
-    return String(
-      value ||
-      ""
-    )
+  function cleanPhone(value) {
+    return String(value || "")
       .trim()
-      .replace(
-        /[^\d+\-\s()]/g,
-        ""
-      )
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        25
-      );
+      .replace(/[^\d+\-\s()]/g, "")
+      .replace(/\s+/g, " ")
+      .slice(0, 25);
   }
 
-  function cleanCity(
-    value
-  ) {
-    return String(
-      value ||
-      ""
-    )
+  function cleanCity(value) {
+    return String(value || "")
       .trim()
-      .replace(
-        /\s+/g,
-        " "
-      )
-      .slice(
-        0,
-        40
-      );
+      .replace(/\s+/g, " ")
+      .slice(0, 40);
   }
 
   // =========================================================
   // SOLO PUBLIC SYNC
   // =========================================================
 
-  function isSoloPublicDoc(
-    docId,
-    data
-  ) {
-    const d =
-      data ||
-      {};
+  function isSoloPublicDoc(docId, data) {
+    const d = data || {};
 
-    if (
-      normLower(
-        d.entryType
-      ) ===
-      "solo"
-    ) {
+    if (normLower(d.entryType) === "solo") {
       return true;
     }
 
-    if (
-      norm(
-        docId
-      ).includes(
-        "__solo__"
-      )
-    ) {
+    if (norm(docId).includes("__solo__")) {
       return true;
     }
 
     return false;
   }
 
-  /*
-   * Оновлюємо ТІЛЬКИ SOLO
-   * public_participants.
-   *
-   * TEAM-заявки не чіпаємо.
-   */
   async function syncSoloPublicParticipants(
     db,
     uid,
@@ -654,128 +735,84 @@
     lastName,
     fullName
   ) {
-    const userUid =
-      norm(
-        uid
+    const userUid = norm(uid);
+
+    if (!userUid) {
+      return {
+        found: 0,
+        updated: 0
+      };
+    }
+
+    const snap = await db
+      .collection("public_participants")
+      .where("uid", "==", userUid)
+      .get();
+
+    if (snap.empty) {
+      return {
+        found: 0,
+        updated: 0
+      };
+    }
+
+    const refs = [];
+
+    snap.forEach(doc => {
+      const data = doc.data() || {};
+
+      if (!isSoloPublicDoc(doc.id, data)) {
+        return;
+      }
+
+      refs.push(doc.ref);
+    });
+
+    if (!refs.length) {
+      return {
+        found: snap.size,
+        updated: 0
+      };
+    }
+
+    // Firestore batch має обмеження.
+    // Використовуємо невеликі групи.
+    const BATCH_SIZE = 400;
+
+    for (let start = 0; start < refs.length; start += BATCH_SIZE) {
+      const chunk = refs.slice(
+        start,
+        start + BATCH_SIZE
       );
 
-    if (
-      !userUid
-    ) {
-      return {
-        found:
-          0,
+      const batch = db.batch();
 
-        updated:
-          0
-      };
-    }
-
-    const snap =
-      await db
-        .collection(
-          "public_participants"
-        )
-        .where(
-          "uid",
-          "==",
-          userUid
-        )
-        .get();
-
-    if (
-      snap.empty
-    ) {
-      return {
-        found:
-          0,
-
-        updated:
-          0
-      };
-    }
-
-    const refs =
-      [];
-
-    snap.forEach(
-      doc => {
-        const data =
-          doc.data() ||
-          {};
-
-        if (
-          !isSoloPublicDoc(
-            doc.id,
-            data
-          )
-        ) {
-          return;
-        }
-
-        refs.push(
-          doc.ref
-        );
-      }
-    );
-
-    if (
-      !refs.length
-    ) {
-      return {
-        found:
-          snap.size,
-
-        updated:
-          0
-      };
-    }
-
-    const batch =
-      db.batch();
-
-    refs.forEach(
-      ref => {
+      chunk.forEach(ref => {
         const upd = {
           firstName,
           lastName,
           fullName,
 
-          participantName:
-            fullName,
+          participantName: fullName,
+          displayName: fullName,
 
-          displayName:
-            fullName,
-
-          /*
-           * Legacy compatibility.
-           */
-          captain:
-            fullName
+          // Legacy compatibility
+          captain: fullName
         };
 
-        const ts =
-          serverTimestamp();
+        const ts = serverTimestamp();
 
-        if (
-          ts
-        ) {
-          upd.updatedAt =
-            ts;
+        if (ts) {
+          upd.updatedAt = ts;
         }
 
-        batch.set(
-          ref,
-          upd,
-          {
-            merge:
-              true
-          }
-        );
-      }
-    );
+        batch.set(ref, upd, {
+          merge: true
+        });
+      });
 
-    await batch.commit();
+      await batch.commit();
+    }
 
     console.log(
       "✅ SOLO public_participants synced:",
@@ -784,11 +821,8 @@
     );
 
     return {
-      found:
-        snap.size,
-
-      updated:
-        refs.length
+      found: snap.size,
+      updated: refs.length
     };
   }
 
@@ -796,58 +830,33 @@
   // AVATAR
   // =========================================================
 
-  function setAvatarUrl(
-    url
-  ) {
-    if (
-      !avatarImgEl ||
-      !avatarPhEl
-    ) {
+  function setAvatarUrl(url) {
+    if (!avatarImgEl || !avatarPhEl) {
       return;
     }
 
-    const cleanUrl =
-      norm(
-        url
-      );
+    const cleanUrl = norm(url);
 
-    if (
-      cleanUrl
-    ) {
-      avatarImgEl.src =
-        cleanUrl;
+    if (cleanUrl) {
+      avatarImgEl.src = cleanUrl;
+      avatarImgEl.style.display = "block";
 
-      avatarImgEl.style.display =
-        "block";
+      avatarPhEl.style.display = "none";
 
-      avatarPhEl.style.display =
-        "none";
-
-      if (
-        avatarWrapper
-      ) {
-        avatarWrapper.style.cursor =
-          "pointer";
+      if (avatarWrapper) {
+        avatarWrapper.style.cursor = "pointer";
       }
 
       return;
     }
 
-    avatarImgEl.removeAttribute(
-      "src"
-    );
+    avatarImgEl.removeAttribute("src");
+    avatarImgEl.style.display = "none";
 
-    avatarImgEl.style.display =
-      "none";
+    avatarPhEl.style.display = "block";
 
-    avatarPhEl.style.display =
-      "block";
-
-    if (
-      avatarWrapper
-    ) {
-      avatarWrapper.style.cursor =
-        "default";
+    if (avatarWrapper) {
+      avatarWrapper.style.cursor = "default";
     }
   }
 
@@ -856,137 +865,78 @@
   // =========================================================
 
   function stopTeamSubscriptions() {
-    if (
-      typeof unsubTeam ===
-      "function"
-    ) {
+    if (typeof unsubTeam === "function") {
       unsubTeam();
     }
 
-    if (
-      typeof unsubMembers ===
-      "function"
-    ) {
+    if (typeof unsubMembers === "function") {
       unsubMembers();
     }
 
-    unsubTeam =
-      null;
-
-    unsubMembers =
-      null;
+    unsubTeam = null;
+    unsubMembers = null;
   }
 
   function cleanup() {
-    if (
-      typeof unsubUser ===
-      "function"
-    ) {
+    if (typeof unsubUser === "function") {
       unsubUser();
     }
 
-    unsubUser =
-      null;
+    unsubUser = null;
 
     stopTeamSubscriptions();
 
-    activeTeamId =
-      "__INIT__";
+    activeTeamId = "__INIT__";
   }
 
   // =========================================================
   // PROFILE EDIT HELPERS
   // =========================================================
 
-  function setEditMsg(
-    text,
-    type
-  ) {
-    if (
-      !profileEditMsg
-    ) {
+  function setEditMsg(text, type) {
+    if (!profileEditMsg) {
       return;
     }
 
-    profileEditMsg.textContent =
-      text ||
-      "";
+    profileEditMsg.textContent = text || "";
 
     profileEditMsg.classList.remove(
       "ok",
       "err"
     );
 
-    if (
-      type ===
-      "ok"
-    ) {
-      profileEditMsg.classList.add(
-        "ok"
-      );
+    if (type === "ok") {
+      profileEditMsg.classList.add("ok");
     }
 
-    if (
-      type ===
-      "err"
-    ) {
-      profileEditMsg.classList.add(
-        "err"
-      );
+    if (type === "err") {
+      profileEditMsg.classList.add("err");
     }
   }
 
-  function fillProfileInputs(
-    userData
-  ) {
-    const data =
-      userData ||
-      {};
+  function fillProfileInputs(userData) {
+    const data = userData || {};
 
-    /*
-     * Legacy fullName
-     * НЕ ділимо.
-     */
-    if (
-      lastNameInput
-    ) {
-      lastNameInput.value =
-        norm(
-          data.lastName
-        );
+    // Legacy fullName не розділяємо.
+
+    if (lastNameInput) {
+      lastNameInput.value = norm(data.lastName);
     }
 
-    if (
-      firstNameInput
-    ) {
-      firstNameInput.value =
-        norm(
-          data.firstName
-        );
+    if (firstNameInput) {
+      firstNameInput.value = norm(data.firstName);
     }
 
-    if (
-      phoneInput
-    ) {
-      phoneInput.value =
-        norm(
-          data.phone
-        );
+    if (phoneInput) {
+      phoneInput.value = norm(data.phone);
     }
 
-    if (
-      cityInput
-    ) {
-      cityInput.value =
-        norm(
-          data.city
-        );
+    if (cityInput) {
+      cityInput.value = norm(data.city);
     }
   }
 
-  function openEditProfile(
-    userData
-  ) {
+  function openEditProfile(userData) {
     if (
       !profileEditBox ||
       !lastNameInput ||
@@ -1002,53 +952,31 @@
       lastProfileSnap ||
       {};
 
-    isEditingProfile =
-      true;
+    isEditingProfile = true;
 
-    lastProfileSnap =
-      data;
+    lastProfileSnap = data;
 
-    profileEditBox.style.display =
-      "block";
+    profileEditBox.style.display = "block";
 
-    if (
-      editProfileBtn
-    ) {
-      editProfileBtn.style.display =
-        "none";
+    if (editProfileBtn) {
+      editProfileBtn.style.display = "none";
     }
 
-    if (
-      saveProfileBtn
-    ) {
-      saveProfileBtn.style.display =
-        "inline-flex";
+    if (saveProfileBtn) {
+      saveProfileBtn.style.display = "inline-flex";
     }
 
-    if (
-      cancelProfileBtn
-    ) {
-      cancelProfileBtn.style.display =
-        "inline-flex";
+    if (cancelProfileBtn) {
+      cancelProfileBtn.style.display = "inline-flex";
     }
 
-    fillProfileInputs(
-      data
-    );
+    fillProfileInputs(data);
 
     if (
-      getDisplayName(
-        data
-      )
-      &&
+      getDisplayName(data) &&
       (
-        !norm(
-          data.lastName
-        )
-        ||
-        !norm(
-          data.firstName
-        )
+        !norm(data.lastName) ||
+        !norm(data.firstName)
       )
     ) {
       setEditMsg(
@@ -1059,134 +987,72 @@
       return;
     }
 
-    setEditMsg(
-      "",
-      ""
-    );
+    setEditMsg("", "");
   }
 
   function closeEditProfile() {
-    isEditingProfile =
-      false;
+    isEditingProfile = false;
 
-    if (
-      profileEditBox
-    ) {
-      profileEditBox.style.display =
-        "none";
+    if (profileEditBox) {
+      profileEditBox.style.display = "none";
     }
 
-    if (
-      editProfileBtn
-    ) {
-      editProfileBtn.style.display =
-        "inline-flex";
+    if (editProfileBtn) {
+      editProfileBtn.style.display = "inline-flex";
     }
 
-    if (
-      saveProfileBtn
-    ) {
-      saveProfileBtn.style.display =
-        "none";
+    if (saveProfileBtn) {
+      saveProfileBtn.style.display = "none";
     }
 
-    if (
-      cancelProfileBtn
-    ) {
-      cancelProfileBtn.style.display =
-        "none";
+    if (cancelProfileBtn) {
+      cancelProfileBtn.style.display = "none";
     }
 
-    setEditMsg(
-      "",
-      ""
-    );
+    setEditMsg("", "");
   }
 
   // =========================================================
   // USER RENDER
   // =========================================================
 
-  function renderUserInfo(
-    userData
-  ) {
-    const data =
-      userData ||
-      {};
+  function renderUserInfo(userData) {
+    const data = userData || {};
 
     const name =
-      getDisplayName(
-        data
-      )
-      ||
+      getDisplayName(data) ||
       "Без імені";
 
-    const city =
-      norm(
-        data.city
-      );
+    const city = norm(data.city);
 
-    if (
-      userFullNameEl
-    ) {
-      userFullNameEl.textContent =
-        name;
+    if (userFullNameEl) {
+      userFullNameEl.textContent = name;
     }
 
-    if (
-      userCityEl
-    ) {
-      if (
-        city
-      ) {
-        userCityEl.textContent =
-          city;
-
-        userCityEl.style.display =
-          "block";
-
+    if (userCityEl) {
+      if (city) {
+        userCityEl.textContent = city;
+        userCityEl.style.display = "block";
       } else {
-        userCityEl.textContent =
-          "";
-
-        userCityEl.style.display =
-          "none";
+        userCityEl.textContent = "";
+        userCityEl.style.display = "none";
       }
     }
 
-    /*
-     * Legacy HTML support.
-     */
-    if (
-      captainTextEl
-    ) {
+    // Legacy HTML support
+    if (captainTextEl) {
       captainTextEl.textContent =
-        name +
-        (
-          city
-            ? ` · ${city}`
-            : ""
-        );
+        name + (city ? ` · ${city}` : "");
     }
 
-    if (
-      userRoleEl
-    ) {
+    if (userRoleEl) {
       userRoleEl.textContent =
-        roleText(
-          data.role
-        );
+        roleText(data.role);
     }
 
-    if (
-      userPhoneEl
-    ) {
+    if (userPhoneEl) {
       userPhoneEl.textContent =
-        norm(
-          data.phone
-        )
-        ||
-        "—";
+        norm(data.phone) || "—";
     }
 
     setAvatarUrl(
@@ -1195,16 +1061,9 @@
       ""
     );
 
-    /*
-     * Не перетираємо поля,
-     * поки людина редагує.
-     */
-    if (
-      !isEditingProfile
-    ) {
-      fillProfileInputs(
-        data
-      );
+    // Не змінюємо поля під час редагування.
+    if (!isEditingProfile) {
+      fillProfileInputs(data);
     }
   }
 
@@ -1212,84 +1071,52 @@
   // AVATAR POPUP
   // =========================================================
 
-  function openImagePopup(
-    imageUrl
-  ) {
+  function openImagePopup(imageUrl) {
     const popup =
-      document.getElementById(
-        "avatarPopup"
-      );
+      document.getElementById("avatarPopup");
 
     const popupImg =
-      document.getElementById(
-        "avatarPopupImg"
-      );
+      document.getElementById("avatarPopupImg");
 
-    if (
-      !popup ||
-      !popupImg ||
-      !imageUrl
-    ) {
+    if (!popup || !popupImg || !imageUrl) {
       return;
     }
 
-    popupImg.src =
-      imageUrl;
+    popupImg.src = imageUrl;
+    popup.style.display = "flex";
 
-    popup.style.display =
-      "flex";
-
-    document.body.style.overflow =
-      "hidden";
+    document.body.style.overflow = "hidden";
   }
 
   function closeImagePopup() {
     const popup =
-      document.getElementById(
-        "avatarPopup"
-      );
+      document.getElementById("avatarPopup");
 
-    if (
-      !popup
-    ) {
+    if (!popup) {
       return;
     }
 
-    popup.style.display =
-      "none";
-
-    document.body.style.overflow =
-      "";
+    popup.style.display = "none";
+    document.body.style.overflow = "";
   }
 
   function enableAvatarPopup() {
     const popup =
-      document.getElementById(
-        "avatarPopup"
-      );
+      document.getElementById("avatarPopup");
 
-    if (
-      !popup
-    ) {
+    if (!popup) {
       return;
     }
 
-    if (
-      avatarWrapper &&
-      avatarImgEl
-    ) {
+    if (avatarWrapper && avatarImgEl) {
       avatarWrapper.addEventListener(
         "click",
         () => {
           if (
-            avatarImgEl.style.display !==
-              "none"
-            &&
+            avatarImgEl.style.display !== "none" &&
             avatarImgEl.src
           ) {
-            openImagePopup(
-              avatarImgEl.src
-            );
+            openImagePopup(avatarImgEl.src);
           }
         }
       );
@@ -1299,11 +1126,8 @@
       "click",
       event => {
         if (
-          event.target ===
-          popup
-          ||
-          event.target.id ===
-            "avatarPopupImg"
+          event.target === popup ||
+          event.target.id === "avatarPopupImg"
         ) {
           closeImagePopup();
         }
@@ -1313,10 +1137,7 @@
     document.addEventListener(
       "keydown",
       event => {
-        if (
-          event.key ===
-          "Escape"
-        ) {
+        if (event.key === "Escape") {
           closeImagePopup();
         }
       }
@@ -1327,29 +1148,18 @@
   // MEMBERS
   // =========================================================
 
-  function renderMembers(
-    list
-  ) {
-    if (
-      !membersEl
-    ) {
+  function renderMembers(list) {
+    if (!membersEl) {
       return;
     }
 
-    const members =
-      Array.isArray(
-        list
-      )
-        ? list
-        : [];
+    const members = Array.isArray(list)
+      ? list
+      : [];
 
-    membersEl.innerHTML =
-      "";
+    membersEl.innerHTML = "";
 
-    if (
-      members.length ===
-      0
-    ) {
+    if (members.length === 0) {
       membersEl.innerHTML =
         '<div class="form__hint">Склад команди поки порожній.</div>';
 
@@ -1358,185 +1168,128 @@
 
     members
       .slice()
-      .sort(
-        (
-          a,
-          b
-        ) => {
-          const aCaptain =
-            a?.role ===
-            "captain"
-              ? 1
-              : 0;
+      .sort((a, b) => {
+        const aCaptain =
+          a?.role === "captain" ? 1 : 0;
 
-          const bCaptain =
-            b?.role ===
-            "captain"
-              ? 1
-              : 0;
+        const bCaptain =
+          b?.role === "captain" ? 1 : 0;
 
-          if (
-            aCaptain !==
-            bCaptain
-          ) {
-            return (
-              bCaptain -
-              aCaptain
-            );
-          }
-
-          return getDisplayName(
-            a
-          ).localeCompare(
-            getDisplayName(
-              b
-            ),
-            "uk"
-          );
+        if (aCaptain !== bCaptain) {
+          return bCaptain - aCaptain;
         }
-      )
-      .forEach(
-        member => {
-          const name =
-            getDisplayName(
-              member
-            )
-            ||
-            member.email
-            ||
-            "Учасник";
 
-          const role =
-            roleText(
-              member.role
-            );
+        return getDisplayName(a).localeCompare(
+          getDisplayName(b),
+          "uk"
+        );
+      })
+      .forEach(member => {
+        const name =
+          getDisplayName(member) ||
+          member.email ||
+          "Учасник";
 
-          const avatarUrl =
-            norm(
-              member.avatarUrl ||
-              member.photoURL ||
-              ""
-            );
+        const role =
+          roleText(member.role);
 
-          const hasAvatar =
-            Boolean(
-              avatarUrl
-            );
+        const avatarUrl = norm(
+          member.avatarUrl ||
+          member.photoURL ||
+          ""
+        );
 
-          const row =
-            document.createElement(
-              "div"
-            );
+        const hasAvatar =
+          Boolean(avatarUrl);
 
-          row.className =
-            "card";
+        const row =
+          document.createElement("div");
 
-          row.style.cssText =
-            "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
+        row.className = "card";
 
-          const avatarHtml =
-            hasAvatar
-              ? `
-                <div
-                  class="member-avatar-wrap"
-                  style="
-                    width:50px;
-                    height:50px;
-                    border-radius:50%;
-                    overflow:hidden;
-                    border:2px solid #facc15;
-                    cursor:pointer;
-                    flex-shrink:0;
-                  "
-                >
-                  <img
-                    src="${escapeHtml(
-                      avatarUrl
-                    )}"
-                    alt=""
-                    style="
-                      width:100%;
-                      height:100%;
-                      object-fit:cover;
-                    "
-                  >
-                </div>
-              `
-              : `
-                <div
-                  style="
-                    width:50px;
-                    height:50px;
-                    border-radius:50%;
-                    background:#1f2937;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    font-size:24px;
-                    flex-shrink:0;
-                  "
-                >
-                  👤
-                </div>
-              `;
+        row.style.cssText =
+          "padding:12px;margin-top:10px;display:flex;align-items:center;gap:12px;";
 
-          row.innerHTML = `
-            ${avatarHtml}
-
+        const avatarHtml = hasAvatar
+          ? `
             <div
+              class="member-avatar-wrap"
               style="
-                min-width:0;
+                width:50px;
+                height:50px;
+                border-radius:50%;
+                overflow:hidden;
+                border:2px solid #facc15;
+                cursor:pointer;
+                flex-shrink:0;
               "
             >
-              <div
+              <img
+                src="${escapeHtml(avatarUrl)}"
+                alt=""
                 style="
-                  font-weight:800;
-                  overflow:hidden;
-                  text-overflow:ellipsis;
+                  width:100%;
+                  height:100%;
+                  object-fit:cover;
                 "
               >
-                ${escapeHtml(
-                  name
-                )}
-              </div>
-
-              <div class="form__hint">
-                ${escapeHtml(
-                  role
-                )}
-              </div>
+            </div>
+          `
+          : `
+            <div
+              style="
+                width:50px;
+                height:50px;
+                border-radius:50%;
+                background:#1f2937;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                font-size:24px;
+                flex-shrink:0;
+              "
+            >
+              👤
             </div>
           `;
 
-          if (
-            hasAvatar
-          ) {
-            const avatarWrap =
-              row.querySelector(
-                ".member-avatar-wrap"
-              );
+        row.innerHTML = `
+          ${avatarHtml}
 
-            if (
-              avatarWrap
-            ) {
-              avatarWrap.addEventListener(
-                "click",
-                event => {
-                  event.stopPropagation();
+          <div style="min-width:0;">
+            <div
+              style="
+                font-weight:800;
+                overflow:hidden;
+                text-overflow:ellipsis;
+              "
+            >
+              ${escapeHtml(name)}
+            </div>
 
-                  openImagePopup(
-                    avatarUrl
-                  );
-                }
-              );
-            }
+            <div class="form__hint">
+              ${escapeHtml(role)}
+            </div>
+          </div>
+        `;
+
+        if (hasAvatar) {
+          const avatarWrap =
+            row.querySelector(".member-avatar-wrap");
+
+          if (avatarWrap) {
+            avatarWrap.addEventListener(
+              "click",
+              event => {
+                event.stopPropagation();
+                openImagePopup(avatarUrl);
+              }
+            );
           }
-
-          membersEl.appendChild(
-            row
-          );
         }
-      );
+
+        membersEl.appendChild(row);
+      });
   }
 
   // =========================================================
@@ -1544,42 +1297,21 @@
   // =========================================================
 
   function renderFromCache() {
-    const user =
-      Cache.get(
-        "user"
-      );
+    const user = Cache.get("user");
 
-    if (
-      !Cache.isUserValid()
-      ||
-      !user
-    ) {
+    if (!Cache.isUserValid() || !user) {
       return false;
     }
 
-    renderUserInfo(
-      user
-    );
+    renderUserInfo(user);
 
-    const team =
-      Cache.get(
-        "team"
-      );
+    const team = Cache.get("team");
+    const members = Cache.get("members");
 
-    const members =
-      Cache.get(
-        "members"
-      );
-
-    if (
-      team
-    ) {
-      if (
-        teamNameEl
-      ) {
+    if (team) {
+      if (teamNameEl) {
         teamNameEl.textContent =
-          team.name ||
-          "Команда";
+          team.name || "Команда";
       }
 
       if (
@@ -1592,33 +1324,20 @@
 
         joinCodeTextEl.textContent =
           team.joinCode;
-
-      } else if (
-        joinCodePillEl
-      ) {
-        joinCodePillEl.style.display =
-          "none";
+      } else if (joinCodePillEl) {
+        joinCodePillEl.style.display = "none";
       }
-
     } else {
-      if (
-        teamNameEl
-      ) {
-        teamNameEl.textContent =
-          "Без команди";
+      if (teamNameEl) {
+        teamNameEl.textContent = "Без команди";
       }
 
-      if (
-        joinCodePillEl
-      ) {
-        joinCodePillEl.style.display =
-          "none";
+      if (joinCodePillEl) {
+        joinCodePillEl.style.display = "none";
       }
     }
 
-    renderMembers(
-      members
-    );
+    renderMembers(members);
 
     return true;
   }
@@ -1627,332 +1346,204 @@
   // TEAM
   // =========================================================
 
-  function subscribeTeam(
-    db,
-    teamId
-  ) {
-    const id =
-      norm(
-        teamId
-      );
+  function subscribeTeam(db, teamId) {
+    const id = norm(teamId);
 
-    if (
-      !id
-    ) {
-      Cache.setTeam(
-        null
-      );
+    if (!id) {
+      Cache.setTeam(null);
+      Cache.setMembers([]);
 
-      Cache.setMembers(
-        []
-      );
-
-      if (
-        teamNameEl
-      ) {
-        teamNameEl.textContent =
-          "Без команди";
+      if (teamNameEl) {
+        teamNameEl.textContent = "Без команди";
       }
 
-      if (
-        joinCodePillEl
-      ) {
-        joinCodePillEl.style.display =
-          "none";
+      if (joinCodePillEl) {
+        joinCodePillEl.style.display = "none";
       }
 
-      renderMembers(
-        []
-      );
+      renderMembers([]);
 
       return;
     }
 
-    /*
-     * TEAM document.
-     */
-    unsubTeam =
-      db
-        .collection(
-          "teams"
-        )
-        .doc(
-          id
-        )
-        .onSnapshot(
-          snap => {
-            if (
-              !snap.exists
-            ) {
-              Cache.setTeam(
-                null
-              );
+    // TEAM DOCUMENT
 
-              if (
-                teamNameEl
-              ) {
-                teamNameEl.textContent =
-                  "Команда";
-              }
+    unsubTeam = db
+      .collection("teams")
+      .doc(id)
+      .onSnapshot(
+        snap => {
+          if (!snap.exists) {
+            Cache.setTeam(null);
 
-              if (
-                joinCodePillEl
-              ) {
-                joinCodePillEl.style.display =
-                  "none";
-              }
-
-              return;
+            if (teamNameEl) {
+              teamNameEl.textContent = "Команда";
             }
 
-            const team =
-              snap.data() ||
-              {};
-
-            Cache.setTeam(
-              team
-            );
-
-            if (
-              teamNameEl
-            ) {
-              teamNameEl.textContent =
-                team.name ||
-                "Команда";
+            if (joinCodePillEl) {
+              joinCodePillEl.style.display = "none";
             }
 
-            if (
-              team.joinCode &&
-              joinCodePillEl &&
-              joinCodeTextEl
-            ) {
-              joinCodePillEl.style.display =
-                "inline-flex";
-
-              joinCodeTextEl.textContent =
-                team.joinCode;
-
-            } else if (
-              joinCodePillEl
-            ) {
-              joinCodePillEl.style.display =
-                "none";
-            }
-          },
-
-          err => {
-            console.warn(
-              "[cabinet] team:",
-              err
-            );
+            return;
           }
-        );
 
-    /*
-     * TEAM MEMBERS.
-     */
-    unsubMembers =
-      db
-        .collection(
-          "users"
-        )
-        .where(
-          "teamId",
-          "==",
-          id
-        )
-        .onSnapshot(
-          qs => {
-            const list =
-              [];
+          const team = snap.data() || {};
 
-            qs.forEach(
-              doc => {
-                list.push({
-                  id:
-                    doc.id,
+          Cache.setTeam(team);
 
-                  ...(
-                    doc.data() ||
-                    {}
-                  )
-                });
-              }
-            );
-
-            Cache.setMembers(
-              list
-            );
-
-            renderMembers(
-              list
-            );
-          },
-
-          err => {
-            console.warn(
-              "[cabinet] members:",
-              err
-            );
-
-            renderMembers(
-              Cache.get(
-                "members"
-              )
-              ||
-              []
-            );
+          if (teamNameEl) {
+            teamNameEl.textContent =
+              team.name || "Команда";
           }
-        );
-  }
 
-  function ensureTeamSubscription(
-    db,
-    teamId
-  ) {
-    const nextTeamId =
-      norm(
-        teamId
+          if (
+            team.joinCode &&
+            joinCodePillEl &&
+            joinCodeTextEl
+          ) {
+            joinCodePillEl.style.display =
+              "inline-flex";
+
+            joinCodeTextEl.textContent =
+              team.joinCode;
+          } else if (joinCodePillEl) {
+            joinCodePillEl.style.display = "none";
+          }
+        },
+
+        err => {
+          console.warn(
+            "[cabinet] team:",
+            err
+          );
+        }
       );
 
-    /*
-     * Якщо teamId не змінився —
-     * не створюємо нові listeners.
-     */
-    if (
-      nextTeamId ===
-      activeTeamId
-    ) {
+    // TEAM MEMBERS
+
+    unsubMembers = db
+      .collection("users")
+      .where("teamId", "==", id)
+      .onSnapshot(
+        qs => {
+          const list = [];
+
+          qs.forEach(doc => {
+            list.push({
+              id: doc.id,
+              ...(doc.data() || {})
+            });
+          });
+
+          Cache.setMembers(list);
+          renderMembers(list);
+        },
+
+        err => {
+          console.warn(
+            "[cabinet] members:",
+            err
+          );
+
+          renderMembers(
+            Cache.get("members") || []
+          );
+        }
+      );
+  }
+
+  function ensureTeamSubscription(db, teamId) {
+    const nextTeamId = norm(teamId);
+
+    if (nextTeamId === activeTeamId) {
       return;
     }
 
     stopTeamSubscriptions();
 
-    activeTeamId =
-      nextTeamId;
+    activeTeamId = nextTeamId;
 
-    subscribeTeam(
-      db,
-      nextTeamId
-    );
+    subscribeTeam(db, nextTeamId);
   }
 
   // =========================================================
   // USER
   // =========================================================
 
-  function subscribeUser(
-    db,
-    uid
-  ) {
-    const hasCache =
-      renderFromCache();
+  function subscribeUser(db, uid) {
+    const hasCache = renderFromCache();
 
-    if (
-      !hasCache
-    ) {
-      setStatus(
-        "Завантаження…"
-      );
+    if (!hasCache) {
+      setStatus("Завантаження…");
     }
 
     showContent();
 
-    unsubUser =
-      db
-        .collection(
-          "users"
-        )
-        .doc(
-          uid
-        )
-        .onSnapshot(
-          snap => {
-            if (
-              !snap.exists
-            ) {
-              setStatus(
-                "Анкета користувача не знайдена."
-              );
-
-              showContent();
-
-              return;
-            }
-
-            const userData =
-              snap.data() ||
-              {};
-
-            Cache.setUser(
-              userData
-            );
-
-            lastProfileSnap =
-              userData;
-
-            renderUserInfo(
-              userData
-            );
-
-            ensureTeamSubscription(
-              db,
-              userData.teamId ||
-              ""
-            );
-
+    unsubUser = db
+      .collection("users")
+      .doc(uid)
+      .onSnapshot(
+        snap => {
+          if (!snap.exists) {
             setStatus(
-              "Кабінет завантажено."
+              "Анкета користувача не знайдена."
             );
 
             showContent();
-
-            setTimeout(
-              () => {
-                if (
-                  statusEl?.textContent ===
-                  "Кабінет завантажено."
-                ) {
-                  statusEl.textContent =
-                    "";
-                }
-              },
-              700
-            );
-          },
-
-          err => {
-            console.error(
-              "[cabinet] user:",
-              err
-            );
-
-            if (
-              !hasCache
-            ) {
-              setStatus(
-                "Помилка читання профілю."
-              );
-            }
-
-            showContent();
+            return;
           }
-        );
+
+          const userData = snap.data() || {};
+
+          Cache.setUser(userData);
+
+          lastProfileSnap = userData;
+
+          renderUserInfo(userData);
+
+          ensureTeamSubscription(
+            db,
+            userData.teamId || ""
+          );
+
+          setStatus("Кабінет завантажено.");
+
+          showContent();
+
+          setTimeout(() => {
+            if (
+              statusEl?.textContent ===
+              "Кабінет завантажено."
+            ) {
+              statusEl.textContent = "";
+            }
+          }, 700);
+        },
+
+        err => {
+          console.error(
+            "[cabinet] user:",
+            err
+          );
+
+          if (!hasCache) {
+            setStatus(
+              "Помилка читання профілю."
+            );
+          }
+
+          showContent();
+        }
+      );
   }
 
   // =========================================================
   // CLOUDINARY
   // =========================================================
 
-  function setupCloudinaryWidget(
-    auth,
-    db
-  ) {
-    const CLOUDINARY_CLOUD =
-      "dxlr12gzc";
-
-    const CLOUDINARY_PRESET =
-      "avatar_upload";
+  function setupCloudinaryWidget(auth, db) {
+    const CLOUDINARY_CLOUD = "dxlr12gzc";
+    const CLOUDINARY_PRESET = "avatar_upload";
 
     const openWidgetBtn =
       document.getElementById(
@@ -1960,271 +1551,167 @@
       );
 
     const msgEl =
-      document.getElementById(
-        "avatarMsg"
-      );
+      document.getElementById("avatarMsg");
 
-    if (
-      !openWidgetBtn ||
-      !window.cloudinary
-    ) {
+    if (!openWidgetBtn || !window.cloudinary) {
       console.warn(
         "[cabinet] Cloudinary Widget не доступний"
       );
-
       return;
     }
 
-    function setMsg(
-      text,
-      type
-    ) {
-      if (
-        !msgEl
-      ) {
+    function setMsg(text, type) {
+      if (!msgEl) {
         return;
       }
 
-      msgEl.textContent =
-        text ||
-        "";
+      msgEl.textContent = text || "";
 
       msgEl.classList.remove(
         "ok",
         "err"
       );
 
-      if (
-        type ===
-        "ok"
-      ) {
-        msgEl.classList.add(
-          "ok"
-        );
+      if (type === "ok") {
+        msgEl.classList.add("ok");
       }
 
-      if (
-        type ===
-        "err"
-      ) {
-        msgEl.classList.add(
-          "err"
-        );
+      if (type === "err") {
+        msgEl.classList.add("err");
       }
     }
 
     openWidgetBtn.addEventListener(
       "click",
       () => {
-        const user =
-          auth.currentUser;
+        const user = auth.currentUser;
 
-        if (
-          !user
-        ) {
+        if (!user) {
           setMsg(
             "Увійдіть у акаунт",
             "err"
           );
-
           return;
         }
 
         const widget =
-          window.cloudinary
-            .createUploadWidget(
-              {
-                cloudName:
-                  CLOUDINARY_CLOUD,
+          window.cloudinary.createUploadWidget(
+            {
+              cloudName: CLOUDINARY_CLOUD,
+              uploadPreset: CLOUDINARY_PRESET,
 
-                uploadPreset:
-                  CLOUDINARY_PRESET,
+              folder: `avatars/${user.uid}`,
 
-                folder:
-                  `avatars/${user.uid}`,
+              sources: [
+                "local",
+                "camera"
+              ],
 
-                sources: [
-                  "local",
-                  "camera"
-                ],
+              multiple: false,
+              maxFileSize: 5000000,
 
-                multiple:
-                  false,
+              cropping: true,
+              croppingAspectRatio: 1,
+              showSkipCropButton: false,
 
-                maxFileSize:
-                  5000000,
+              language: "uk",
 
-                cropping:
-                  true,
-
-                croppingAspectRatio:
-                  1,
-
-                showSkipCropButton:
-                  false,
-
-                language:
-                  "uk",
-
-                styles: {
-                  palette: {
-                    window:
-                      "#0f172a",
-
-                    sourceBg:
-                      "#1e293b",
-
-                    windowBorder:
-                      "#facc15",
-
-                    tabIcon:
-                      "#facc15",
-
-                    inactiveTabIcon:
-                      "#94a3b8",
-
-                    menuIcons:
-                      "#facc15",
-
-                    link:
-                      "#facc15",
-
-                    action:
-                      "#facc15",
-
-                    inProgress:
-                      "#f97316",
-
-                    complete:
-                      "#22c55e",
-
-                    error:
-                      "#ef4444",
-
-                    textDark:
-                      "#020617",
-
-                    textLight:
-                      "#e2e8f0"
-                  }
-                }
-              },
-
-              async (
-                error,
-                result
-              ) => {
-                if (
-                  error
-                ) {
-                  console.error(
-                    "[cabinet] cloudinary:",
-                    error
-                  );
-
-                  setMsg(
-                    "Помилка завантаження",
-                    "err"
-                  );
-
-                  return;
-                }
-
-                if (
-                  !result ||
-                  result.event !==
-                    "success"
-                ) {
-                  return;
-                }
-
-                const secureUrl =
-                  norm(
-                    result.info
-                      ?.secure_url
-                  );
-
-                if (
-                  !secureUrl
-                ) {
-                  setMsg(
-                    "Cloudinary не повернув URL",
-                    "err"
-                  );
-
-                  return;
-                }
-
-                try {
-                  setMsg(
-                    "Зберігаю…",
-                    ""
-                  );
-
-                  const update = {
-                    avatarUrl:
-                      secureUrl
-                  };
-
-                  const ts =
-                    serverTimestamp();
-
-                  if (
-                    ts
-                  ) {
-                    update.updatedAt =
-                      ts;
-                  }
-
-                  await db
-                    .collection(
-                      "users"
-                    )
-                    .doc(
-                      user.uid
-                    )
-                    .set(
-                      update,
-                      {
-                        merge:
-                          true
-                      }
-                    );
-
-                  setAvatarUrl(
-                    secureUrl
-                  );
-
-                  setMsg(
-                    "Аватар оновлено!",
-                    "ok"
-                  );
-
-                  setTimeout(
-                    () => {
-                      setMsg(
-                        "",
-                        ""
-                      );
-                    },
-                    3000
-                  );
-
-                } catch (
-                  err
-                ) {
-                  console.error(
-                    "[cabinet] avatar save:",
-                    err
-                  );
-
-                  setMsg(
-                    "Помилка збереження",
-                    "err"
-                  );
+              styles: {
+                palette: {
+                  window: "#0f172a",
+                  sourceBg: "#1e293b",
+                  windowBorder: "#facc15",
+                  tabIcon: "#facc15",
+                  inactiveTabIcon: "#94a3b8",
+                  menuIcons: "#facc15",
+                  link: "#facc15",
+                  action: "#facc15",
+                  inProgress: "#f97316",
+                  complete: "#22c55e",
+                  error: "#ef4444",
+                  textDark: "#020617",
+                  textLight: "#e2e8f0"
                 }
               }
-            );
+            },
+
+            async (error, result) => {
+              if (error) {
+                console.error(
+                  "[cabinet] cloudinary:",
+                  error
+                );
+
+                setMsg(
+                  "Помилка завантаження",
+                  "err"
+                );
+
+                return;
+              }
+
+              if (
+                !result ||
+                result.event !== "success"
+              ) {
+                return;
+              }
+
+              const secureUrl = norm(
+                result.info?.secure_url
+              );
+
+              if (!secureUrl) {
+                setMsg(
+                  "Cloudinary не повернув URL",
+                  "err"
+                );
+                return;
+              }
+
+              try {
+                setMsg("Зберігаю…", "");
+
+                const update = {
+                  avatarUrl: secureUrl
+                };
+
+                const ts = serverTimestamp();
+
+                if (ts) {
+                  update.updatedAt = ts;
+                }
+
+                await db
+                  .collection("users")
+                  .doc(user.uid)
+                  .set(update, {
+                    merge: true
+                  });
+
+                setAvatarUrl(secureUrl);
+
+                setMsg(
+                  "Аватар оновлено!",
+                  "ok"
+                );
+
+                setTimeout(() => {
+                  setMsg("", "");
+                }, 3000);
+              } catch (err) {
+                console.error(
+                  "[cabinet] avatar save:",
+                  err
+                );
+
+                setMsg(
+                  "Помилка збереження",
+                  "err"
+                );
+              }
+            }
+          );
 
         widget.open();
       }
@@ -2235,10 +1722,7 @@
   // PROFILE EDIT EVENTS
   // =========================================================
 
-  function setupProfileEdit(
-    auth,
-    db
-  ) {
+  function setupProfileEdit(auth, db) {
     if (
       !editProfileBtn ||
       !saveProfileBtn ||
@@ -2256,239 +1740,165 @@
       return;
     }
 
-    // ---------------------------------------------------------
     // EDIT
-    // ---------------------------------------------------------
 
     editProfileBtn.addEventListener(
       "click",
       () => {
         openEditProfile(
           lastProfileSnap ||
-          Cache.get(
-            "user"
-          ) ||
+          Cache.get("user") ||
           {}
         );
       }
     );
 
-    // ---------------------------------------------------------
     // CANCEL
-    // ---------------------------------------------------------
 
     cancelProfileBtn.addEventListener(
       "click",
       () => {
         const current =
           lastProfileSnap ||
-          Cache.get(
-            "user"
-          ) ||
+          Cache.get("user") ||
           {};
 
-        fillProfileInputs(
-          current
-        );
+        fillProfileInputs(current);
 
         closeEditProfile();
       }
     );
 
-    // ---------------------------------------------------------
     // SAVE
-    // ---------------------------------------------------------
 
     saveProfileBtn.addEventListener(
       "click",
       async () => {
-        if (
-          isSavingProfile
-        ) {
+        if (isSavingProfile) {
           return;
         }
 
-        const user =
-          auth.currentUser;
+        const user = auth.currentUser;
 
-        if (
-          !user
-        ) {
+        if (!user) {
           setEditMsg(
             "Увійдіть у акаунт.",
             "err"
           );
-
           return;
         }
 
-        const lastName =
-          cleanNamePart(
-            lastNameInput.value
-          );
+        const lastName = cleanNamePart(
+          lastNameInput.value
+        );
 
-        const firstName =
-          cleanNamePart(
-            firstNameInput.value
-          );
+        const firstName = cleanNamePart(
+          firstNameInput.value
+        );
 
-        const phone =
-          cleanPhone(
-            phoneInput.value
-          );
+        const phone = cleanPhone(
+          phoneInput.value
+        );
 
-        const city =
-          cleanCity(
-            cityInput.value
-          );
+        const city = cleanCity(
+          cityInput.value
+        );
 
-        if (
-          !lastName
-        ) {
+        if (!lastName) {
           setEditMsg(
             "Вкажіть прізвище.",
             "err"
           );
 
           lastNameInput.focus();
-
           return;
         }
 
-        if (
-          !firstName
-        ) {
+        if (!firstName) {
           setEditMsg(
             "Вкажіть імʼя.",
             "err"
           );
 
           firstNameInput.focus();
-
           return;
         }
 
-        if (
-          !phone
-        ) {
+        if (!phone) {
           setEditMsg(
             "Вкажіть номер телефону.",
             "err"
           );
 
           phoneInput.focus();
-
           return;
         }
 
-        const fullName =
-          buildFullName(
-            lastName,
-            firstName
-          );
+        const fullName = buildFullName(
+          lastName,
+          firstName
+        );
 
-        if (
-          !fullName
-        ) {
+        if (!fullName) {
           setEditMsg(
             "Не вдалося сформувати ПІБ.",
             "err"
           );
-
           return;
         }
 
         const previous =
           lastProfileSnap ||
-          Cache.get(
-            "user"
-          ) ||
+          Cache.get("user") ||
           {};
 
         const nameChanged =
-          (
-            norm(
-              previous.lastName
-            ) !==
-            lastName
-          )
-          ||
-          (
-            norm(
-              previous.firstName
-            ) !==
-            firstName
-          );
+          norm(previous.lastName) !== lastName ||
+          norm(previous.firstName) !== firstName;
 
         try {
-          isSavingProfile =
-            true;
+          isSavingProfile = true;
+          saveProfileBtn.disabled = true;
 
-          saveProfileBtn.disabled =
-            true;
+          setEditMsg("Зберігаю…", "");
 
-          setEditMsg(
-            "Зберігаю…",
-            ""
-          );
-
-          // ===================================================
+          // ===============================================
           // 1. USERS
-          // ===================================================
+          // ===============================================
 
           const localUpdate = {
             lastName,
             firstName,
             fullName,
             phone,
-
-            city:
-              city ||
-              ""
+            city: city || ""
           };
 
           const firestoreUpdate = {
             ...localUpdate
           };
 
-          const ts =
-            serverTimestamp();
+          const ts = serverTimestamp();
 
-          if (
-            ts
-          ) {
-            firestoreUpdate.updatedAt =
-              ts;
+          if (ts) {
+            firestoreUpdate.updatedAt = ts;
           }
 
           await db
-            .collection(
-              "users"
-            )
-            .doc(
-              user.uid
-            )
-            .set(
-              firestoreUpdate,
-              {
-                merge:
-                  true
-              }
-            );
+            .collection("users")
+            .doc(user.uid)
+            .set(firestoreUpdate, {
+              merge: true
+            });
 
-          // ===================================================
+          // ===============================================
           // 2. SOLO PUBLIC SYNC
-          // ===================================================
+          // ===============================================
 
-          let publicSyncError =
-            null;
+          let publicSyncError = null;
+          let publicSyncResult = null;
 
-          let publicSyncResult =
-            null;
-
-          if (
-            nameChanged
-          ) {
+          if (nameChanged) {
             try {
               publicSyncResult =
                 await syncSoloPublicParticipants(
@@ -2498,12 +1908,8 @@
                   lastName,
                   fullName
                 );
-
-            } catch (
-              syncError
-            ) {
-              publicSyncError =
-                syncError;
+            } catch (syncError) {
+              publicSyncError = syncError;
 
               console.error(
                 "❌ SOLO public_participants sync error:",
@@ -2512,30 +1918,24 @@
             }
           }
 
-          // ===================================================
+          // ===============================================
           // 3. LOCAL CACHE
-          // ===================================================
+          // ===============================================
 
           lastProfileSnap = {
             ...previous,
             ...localUpdate
           };
 
-          Cache.setUser(
-            lastProfileSnap
-          );
+          Cache.setUser(lastProfileSnap);
 
-          renderUserInfo(
-            lastProfileSnap
-          );
+          renderUserInfo(lastProfileSnap);
 
-          // ===================================================
+          // ===============================================
           // RESULT
-          // ===================================================
+          // ===============================================
 
-          if (
-            publicSyncError
-          ) {
+          if (publicSyncError) {
             setEditMsg(
               `Профіль збережено: ${fullName}. Але SOLO-заявки не синхронізовано.`,
               "err"
@@ -2546,14 +1946,12 @@
 
           if (
             nameChanged &&
-            publicSyncResult?.updated >
-              0
+            publicSyncResult?.updated > 0
           ) {
             setEditMsg(
               `Збережено: ${fullName}. SOLO-заявки оновлено.`,
               "ok"
             );
-
           } else {
             setEditMsg(
               `Збережено: ${fullName}`,
@@ -2561,16 +1959,10 @@
             );
           }
 
-          setTimeout(
-            () => {
-              closeEditProfile();
-            },
-            700
-          );
-
-        } catch (
-          error
-        ) {
+          setTimeout(() => {
+            closeEditProfile();
+          }, 700);
+        } catch (error) {
           console.error(
             "[cabinet] profile save:",
             error
@@ -2580,13 +1972,9 @@
             "Помилка збереження. Перевірте правила доступу.",
             "err"
           );
-
         } finally {
-          isSavingProfile =
-            false;
-
-          saveProfileBtn.disabled =
-            false;
+          isSavingProfile = false;
+          saveProfileBtn.disabled = false;
         }
       }
     );
@@ -2596,107 +1984,71 @@
   // INIT
   // =========================================================
 
-  (async () => {
+  async function initCabinet() {
+    // DOM завантажений.
+    initDom();
+
+    // Мобільне меню не залежить від Firebase.
+    initBurgerMenu();
+
     try {
-      /*
-       * Якщо є локальний кеш профілю —
-       * показуємо одразу.
-       */
       const hasUserCache =
         renderFromCache();
 
-      if (
-        hasUserCache
-      ) {
+      if (hasUserCache) {
         showContent();
-
-        setStatus(
-          "Оновлення…"
-        );
-
+        setStatus("Оновлення…");
       } else {
-        setStatus(
-          "Завантаження…"
-        );
+        setStatus("Завантаження…");
       }
 
       await waitFirebase();
 
-      const auth =
-        window.scAuth;
+      const auth = window.scAuth;
+      const db = window.scDb;
 
-      const db =
-        window.scDb;
+      auth.onAuthStateChanged(user => {
+        cleanup();
 
-      auth.onAuthStateChanged(
-        user => {
-          cleanup();
+        if (!user) {
+          Cache.clear();
 
-          if (
-            !user
-          ) {
-            Cache.clear();
-
-            setStatus(
-              "Ви не увійшли. Переходимо…"
-            );
-
-            hideContent();
-
-            setTimeout(
-              () => {
-                window.location.href =
-                  "auth.html";
-              },
-              400
-            );
-
-            return;
-          }
-
-          if (
-            user.uid ===
-            ADMIN_UID
-          ) {
-            setStatus(
-              "Адмін-акаунт → перехід…"
-            );
-
-            hideContent();
-
-            setTimeout(
-              () => {
-                window.location.href =
-                  "admin.html";
-              },
-              200
-            );
-
-            return;
-          }
-
-          subscribeUser(
-            db,
-            user.uid
+          setStatus(
+            "Ви не увійшли. Переходимо…"
           );
-        }
-      );
 
-      setupCloudinaryWidget(
-        auth,
-        db
-      );
+          hideContent();
+
+          setTimeout(() => {
+            window.location.href = "auth.html";
+          }, 400);
+
+          return;
+        }
+
+        if (user.uid === ADMIN_UID) {
+          setStatus(
+            "Адмін-акаунт → перехід…"
+          );
+
+          hideContent();
+
+          setTimeout(() => {
+            window.location.href = "admin.html";
+          }, 200);
+
+          return;
+        }
+
+        subscribeUser(db, user.uid);
+      });
+
+      setupCloudinaryWidget(auth, db);
 
       enableAvatarPopup();
 
-      setupProfileEdit(
-        auth,
-        db
-      );
-
-    } catch (
-      error
-    ) {
+      setupProfileEdit(auth, db);
+    } catch (error) {
       console.error(
         "[cabinet] init:",
         error
@@ -2704,14 +2056,25 @@
 
       setStatus(
         "Помилка: " +
-        (
-          error?.message ||
-          error
-        )
+        (error?.message || error)
       );
 
       showContent();
     }
-  })();
+  }
+
+  // =========================================================
+  // DOM READY
+  // =========================================================
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "DOMContentLoaded",
+      initCabinet,
+      { once: true }
+    );
+  } else {
+    initCabinet();
+  }
 
 })();

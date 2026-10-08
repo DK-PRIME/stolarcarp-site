@@ -1,137 +1,138 @@
 // assets/js/admin-weighings.js
 // STOLAR CARP • Адмін зважування + архів + очищення LIVE
 //
-// ✅ TEAM + SOLO
-// ✅ TEAM -> teamId + teamName
-// ✅ SOLO -> uid + participantName
-// ✅ SOLO canonical name -> Прізвище Ім'я
-// ✅ SOLO "Учасник" НЕ вважається справжнім ім'ям
-// ✅ SOLO structured registration -> lastName + firstName
-// ✅ SOLO fallback -> users/{uid}
-// ✅ SOLO legacy name використовується тільки після structured/profile
-// ✅ SOLO одразу синхронізується в stageResults для LIVE
-// ✅ Вага кожної риби окремо
-// ✅ Галочка "Амур" біля кожної риби
-// ✅ Короп = fishType: "carp"
-// ✅ Амур = fishType: "amur"
-// ✅ bigCarp = найбільший короп
-// ✅ bigAmur = найбільший амур
-// ✅ backward compatible зі старими weights: [4.560, 7.100]
-// ✅ У зважуваннях показує тільки активний етап із settings/app
+// VERSION 2026.10.08
 //
-// ✅ season:
-//    • можна архівувати
-//    • пише в seasonResults
-//    • перераховує seasonRating
-//    • після очищення LIVE активує наступний етап
+// TEAM + SOLO
+// Фізичні сектори водойми
+// Короп + Амур
+// LIVE + seasonResults + seasonRating
 //
-// ✅ oneoff:
-//    • НЕ архівується в seasonResults
-//    • НЕ потрапляє в seasonRating
-//    • після завершення можна одразу очистити LIVE
-//    • після очищення активний LIVE закривається
+// Фізичний сектор:
+//   lakeId
+//   lakeSectorNumber
+//   lakeSectorId
 //
-// ✅ Stalker Solo:
-//    • використовує uid як ID учасника
-//    • у LIVE передає participantName
-//    • participantName = Прізвище Ім'я
-//    • teamName НЕ використовується як ім'я
+// Турнірний сектор:
+//   drawZone
+//   drawSector
+//   drawKey
 //
-// ✅ Stalker Teams:
-//    • поки залишається TEAM
+// Джерела фізичного сектора:
+//   1. registrations
+//   2. sectorMaps/{year}/stages/{stageDocId}
 //
-// ✅ unknown type:
-//    • зважування працює
-//    • архів/очищення блокуються для безпеки
+// Фізичні сектори не визначаються за A1/B1/C1 автоматично.
 
-(function(){
+(function () {
   "use strict";
 
   const auth = window.scAuth;
-  const db   = window.scDb;
-  const fb   = window.firebase;
+  const db = window.scDb;
+  const fb = window.firebase;
 
   const $ = id => document.getElementById(id);
 
-  const stageSelect    = $("stageSelect");
-  const wSelect        = $("wSelect");
-  const msgEl          = $("msg");
-  const dbgEl          = $("debug");
-  const zonesWrap      = $("zonesWrap");
+  const stageSelect = $("stageSelect");
+  const wSelect = $("wSelect");
+  const msgEl = $("msg");
+  const dbgEl = $("debug");
+  const zonesWrap = $("zonesWrap");
   const archiveSection = $("archiveSection");
-  const seasonYearInp  = $("seasonYear");
-  const btnArchive     = $("btnArchive");
-  const btnClearLive   = $("btnClearLive");
-  const archiveMsg     = $("archiveMsg");
+  const seasonYearInp = $("seasonYear");
+  const btnArchive = $("btnArchive");
+  const btnClearLive = $("btnClearLive");
+  const archiveMsg = $("archiveMsg");
 
   const ENTRY_TEAM = "team";
   const ENTRY_SOLO = "solo";
 
+  const DEFAULT_LAKE_ID = "lelehivka";
+
   let currentTeams = [];
   let currentCompetitionKind = "unknown";
   let currentEntryType = ENTRY_TEAM;
+  let currentStageYear = "";
 
   const competitionInfoCache = new Map();
   const userNameCache = new Map();
+  const sectorMapCache = new Map();
 
-  // =========================================================
+  let tableLoadId = 0;
+  let operationBusy = false;
+
+  // =====================================================
   // HELPERS
-  // =========================================================
+  // =====================================================
 
-  function esc(s){
-    return String(s ?? "").replace(/[&<>"']/g, m => ({
-      "&":"&amp;",
-      "<":"&lt;",
-      ">":"&gt;",
-      '"':"&quot;",
-      "'":"&#39;"
+  function norm(value) {
+    return String(value ?? "").trim();
+  }
+
+  function normLower(value) {
+    return norm(value).toLowerCase();
+  }
+
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, m => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
     }[m]));
   }
 
-  function norm(s){
-    return String(s ?? "").trim();
-  }
-
-  function normLower(s){
-    return norm(s).toLowerCase();
-  }
-
-  function num(v){
+  function num(value) {
     const n = Number(
-      String(v ?? "").replace(",", ".")
+      String(value ?? "").replace(",", ".")
     );
 
-    return Number.isFinite(n)
-      ? n
-      : 0;
+    return Number.isFinite(n) ? n : 0;
   }
 
-  function isSoloMode(){
+  function firstDefined(...values) {
+    for (const value of values) {
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== ""
+      ) {
+        return value;
+      }
+    }
+
+    return "";
+  }
+
+  function timestamp() {
+    return fb.firestore.FieldValue.serverTimestamp();
+  }
+
+  function currentUid() {
+    return auth.currentUser?.uid || "admin";
+  }
+
+  function isSoloMode() {
     return currentEntryType === ENTRY_SOLO;
   }
 
-  function isSoloTeam(team){
-    return normLower(
-      team?.entryType
-    ) === ENTRY_SOLO;
+  function isSoloTeam(team) {
+    return normLower(team?.entryType) === ENTRY_SOLO;
   }
 
-  function entityLabel(){
-    return isSoloMode()
-      ? "Учасник"
-      : "Команда";
+  function entityLabel() {
+    return isSoloMode() ? "Учасник" : "Команда";
   }
 
-  function entityCountLabel(count){
+  function entityCountLabel(count) {
     return isSoloMode()
       ? `учасників: ${count}`
       : `команд: ${count}`;
   }
 
-  function entityIdOf(team){
-    if (!team) {
-      return "";
-    }
+  function entityIdOf(team) {
+    if (!team) return "";
 
     if (isSoloTeam(team)) {
       return norm(
@@ -147,209 +148,152 @@
     );
   }
 
-  // =========================================================
-  // FISH
-  // =========================================================
+  function setMsg(text, ok = true) {
+    if (!msgEl) return;
 
-  function fishKg(f){
+    msgEl.textContent = text || "";
+    msgEl.className =
+      "muted " + (text ? (ok ? "ok" : "err") : "");
+  }
+
+  function setDbg(text) {
+    if (dbgEl) {
+      dbgEl.textContent = text || "";
+    }
+  }
+
+  function setArchiveMsg(text, ok = true) {
+    if (!archiveMsg) return;
+
+    archiveMsg.textContent = text || "";
+    archiveMsg.className =
+      "muted " + (text ? (ok ? "ok" : "err") : "");
+  }
+
+  // =====================================================
+  // FISH
+  // =====================================================
+
+  function fishKg(fish) {
     if (
-      typeof f === "number" ||
-      typeof f === "string"
+      typeof fish === "number" ||
+      typeof fish === "string"
     ) {
-      return num(f);
+      return num(fish);
     }
 
     return num(
-      f?.kg ??
-      f?.weight ??
-      f?.value
+      firstDefined(
+        fish?.kg,
+        fish?.weight,
+        fish?.value
+      )
     );
   }
 
-  function fishIsAmur(f){
-    if (
-      !f ||
-      typeof f !== "object"
-    ) {
+  function fishIsAmur(fish) {
+    if (!fish || typeof fish !== "object") {
       return false;
     }
 
     return (
-      f.isAmur === true ||
-      f.fishType === "amur" ||
-      f.type === "amur"
+      fish.isAmur === true ||
+      fish.fishType === "amur" ||
+      fish.type === "amur"
     );
   }
 
-  function normalizeFishItem(f){
-    const kg =
-      fishKg(f);
+  function normalizeFishItem(fish) {
+    const kg = fishKg(fish);
 
-    if (kg <= 0) {
-      return null;
-    }
+    if (kg <= 0) return null;
 
-    const isAmur =
-      fishIsAmur(f);
+    const isAmur = fishIsAmur(fish);
 
     return {
       kg,
-
-      fishType:
-        isAmur
-          ? "amur"
-          : "carp",
-
+      fishType: isAmur ? "amur" : "carp",
       isAmur
     };
   }
 
-  function normalizeFishArray(arr){
-    return Array.isArray(arr)
-      ? arr
-          .map(normalizeFishItem)
-          .filter(Boolean)
-      : [];
+  function normalizeFishArray(arr) {
+    if (!Array.isArray(arr)) return [];
+
+    return arr
+      .map(normalizeFishItem)
+      .filter(Boolean);
   }
 
-  function fishStats(fishArr){
-    const fish =
-      normalizeFishArray(
-        fishArr
-      );
+  function fishStats(arr) {
+    const fish = normalizeFishArray(arr);
 
-    const total =
-      fish.reduce(
-        (s, f) =>
-          s + num(f.kg),
-        0
-      );
+    const carp = fish.filter(
+      f => f.fishType === "carp"
+    );
 
-    const count =
-      fish.length;
+    const amur = fish.filter(
+      f => f.fishType === "amur"
+    );
 
-    const bigFish =
-      count
-        ? Math.max(
-            ...fish.map(
-              f => num(f.kg)
-            )
-          )
+    const sum = list =>
+      list.reduce((s, f) => s + num(f.kg), 0);
+
+    const max = list =>
+      list.length
+        ? Math.max(...list.map(f => num(f.kg)))
         : 0;
-
-    const carp =
-      fish.filter(
-        f =>
-          f.fishType === "carp"
-      );
-
-    const amur =
-      fish.filter(
-        f =>
-          f.fishType === "amur"
-      );
-
-    const carpWeight =
-      carp.reduce(
-        (s, f) =>
-          s + num(f.kg),
-        0
-      );
-
-    const amurWeight =
-      amur.reduce(
-        (s, f) =>
-          s + num(f.kg),
-        0
-      );
 
     return {
       fish,
-      total,
-      count,
-      bigFish,
 
-      bigCarp:
-        carp.length
-          ? Math.max(
-              ...carp.map(
-                f => num(f.kg)
-              )
-            )
-          : 0,
+      total: sum(fish),
+      count: fish.length,
 
-      bigAmur:
-        amur.length
-          ? Math.max(
-              ...amur.map(
-                f => num(f.kg)
-              )
-            )
-          : 0,
+      bigFish: max(fish),
+      bigCarp: max(carp),
+      bigAmur: max(amur),
 
-      carpCount:
-        carp.length,
+      carpCount: carp.length,
+      amurCount: amur.length,
 
-      amurCount:
-        amur.length,
-
-      carpWeight,
-      amurWeight
+      carpWeight: sum(carp),
+      amurWeight: sum(amur)
     };
   }
 
-  // =========================================================
-  // COMPETITION TYPE
-  // =========================================================
+  // =====================================================
+  // COMPETITION
+  // =====================================================
 
-  function detectCompetitionKind(
-    compId,
-    data
-  ){
-    const c =
-      data || {};
+  function detectCompetitionKind(compId, data) {
+    const c = data || {};
+
+    if (c.isSeason === true) return "season";
+    if (c.isOneoff === true) return "oneoff";
+
+    const raw = normLower(
+      c.type ||
+      c.competitionType ||
+      c.kind ||
+      c.mode
+    );
 
     if (
-      c.isSeason === true
+      ["season", "seasonal", "championship"]
+        .includes(raw)
     ) {
       return "season";
     }
 
     if (
-      c.isOneoff === true
+      ["oneoff", "one-off", "single", "standalone"]
+        .includes(raw)
     ) {
       return "oneoff";
     }
 
-    const raw =
-      norm(
-        c.type ||
-        c.competitionType ||
-        c.kind ||
-        c.mode ||
-        ""
-      ).toLowerCase();
-
-    if (
-      raw === "season" ||
-      raw === "seasonal" ||
-      raw === "championship"
-    ) {
-      return "season";
-    }
-
-    if (
-      raw === "oneoff" ||
-      raw === "one-off" ||
-      raw === "single" ||
-      raw === "standalone"
-    ) {
-      return "oneoff";
-    }
-
-    const id =
-      norm(compId)
-        .toLowerCase();
+    const id = normLower(compId);
 
     if (
       id.startsWith("season-") ||
@@ -371,9 +315,8 @@
   async function getCompetitionInfo(
     compId,
     force = false
-  ){
-    const id =
-      norm(compId);
+  ) {
+    const id = norm(compId);
 
     if (!id) {
       return {
@@ -383,135 +326,98 @@
       };
     }
 
-    if (
-      !force &&
-      competitionInfoCache.has(id)
-    ) {
+    if (!force && competitionInfoCache.has(id)) {
       return competitionInfoCache.get(id);
     }
 
-    const snap =
-      await db
-        .collection("competitions")
-        .doc(id)
-        .get();
+    const snap = await db
+      .collection("competitions")
+      .doc(id)
+      .get();
 
-    const data =
-      snap.exists
-        ? snap.data() || {}
-        : {};
+    const data = snap.exists
+      ? snap.data() || {}
+      : {};
 
     const info = {
-      exists:
-        snap.exists,
-
+      exists: snap.exists,
       data,
-
-      kind:
-        detectCompetitionKind(
-          id,
-          data
-        )
+      kind: detectCompetitionKind(id, data)
     };
 
-    competitionInfoCache.set(
-      id,
-      info
-    );
+    competitionInfoCache.set(id, info);
 
     return info;
   }
 
-  // =========================================================
-  // EVENTS / ENTRY TYPE
-  // =========================================================
-
-  function eventKey(ev, idx){
-    return String(
-      ev?.key ||
-      ev?.stageId ||
-      ev?.id ||
-      `stage-${idx + 1}`
-    ).trim();
+  function eventKey(event, index) {
+    return norm(
+      event?.key ||
+      event?.stageId ||
+      event?.id ||
+      `stage-${index + 1}`
+    );
   }
 
-  function eventTitle(ev, idx){
-    return String(
-      ev?.name ||
-      ev?.title ||
-      ev?.label ||
-      `Етап ${idx + 1}`
-    ).trim();
+  function eventTitle(event, index) {
+    return norm(
+      event?.name ||
+      event?.title ||
+      event?.label ||
+      `Етап ${index + 1}`
+    );
   }
 
   function findCompetitionEvent(
     competition,
     stageKey
-  ){
-    const events =
-      Array.isArray(
-        competition?.events
-      )
-        ? competition.events
-        : [];
+  ) {
+    const events = Array.isArray(competition?.events)
+      ? competition.events
+      : [];
 
     return events.find(
-      (ev, idx) =>
-        eventKey(
-          ev,
-          idx
-        ) === norm(stageKey)
+      (event, index) =>
+        eventKey(event, index) === norm(stageKey)
     ) || null;
   }
 
   function resolveCompetitionEntryType(
     competition,
     stageKey
-  ){
-    const c =
-      competition || {};
+  ) {
+    const c = competition || {};
 
-    const event =
-      findCompetitionEvent(
-        c,
-        stageKey
-      );
+    const event = findCompetitionEvent(
+      c,
+      stageKey
+    );
 
-    const key =
-      normLower(
-        event?.key ||
-        event?.stageId ||
-        event?.id ||
-        stageKey
-      );
+    const key = normLower(
+      event?.key ||
+      event?.stageId ||
+      event?.id ||
+      stageKey
+    );
 
-    const title =
-      normLower(
-        event?.title ||
-        event?.name ||
-        event?.label ||
-        ""
-      );
+    const title = normLower(
+      event?.title ||
+      event?.name ||
+      event?.label
+    );
 
-    /*
-     * Поточний фінал залишається TEAM.
-     */
     const isFinal =
       event?.isFinal === true ||
       key === "final" ||
       key.includes("фінал") ||
       title.includes("фінал");
 
-    if (isFinal) {
-      return ENTRY_TEAM;
-    }
+    if (isFinal) return ENTRY_TEAM;
 
-    const explicit =
-      normLower(
-        event?.entryType ||
-        c.entryType ||
-        ""
-      );
+    const explicit = normLower(
+      event?.entryType ||
+      c.entryType
+    );
 
     if (
       explicit === ENTRY_SOLO ||
@@ -520,267 +426,460 @@
       return explicit;
     }
 
-    /*
-     * Legacy stalker-solo.
-     */
-    const format =
-      normLower(
-        event?.format ||
-        event?.engine?.baseFormat ||
-        c.format ||
-        c.engine?.baseFormat ||
-        ""
-      )
-        .replace(/\s+/g, "")
-        .replace(/_/g, "-");
+    const format = normLower(
+      event?.format ||
+      event?.engine?.baseFormat ||
+      c.format ||
+      c.engine?.baseFormat
+    )
+      .replace(/\s+/g, "")
+      .replace(/_/g, "-");
 
-    if (
-      format === "stalker-solo"
-    ) {
-      return ENTRY_SOLO;
-    }
-
-    return ENTRY_TEAM;
+    return format === "stalker-solo"
+      ? ENTRY_SOLO
+      : ENTRY_TEAM;
   }
 
-  function configureCompetitionModeUI(kind){
-    currentCompetitionKind =
-      kind || "unknown";
+  function configureCompetitionModeUI(kind) {
+    currentCompetitionKind = kind || "unknown";
 
     if (btnArchive) {
-      if (
-        currentCompetitionKind ===
-        "season"
-      ) {
-        btnArchive.style.display =
-          "";
+      btnArchive.style.display =
+        kind === "season" ? "" : "none";
 
-        btnArchive.disabled =
-          false;
-
-      } else {
-        btnArchive.style.display =
-          "none";
-
-        btnArchive.disabled =
-          true;
-      }
+      btnArchive.disabled =
+        kind !== "season" || operationBusy;
     }
 
     if (seasonYearInp) {
       seasonYearInp.disabled =
-        currentCompetitionKind !==
-        "season";
+        kind !== "season";
     }
 
     if (btnClearLive) {
       btnClearLive.disabled =
-        currentCompetitionKind ===
-        "unknown";
+        kind === "unknown" || operationBusy;
     }
   }
 
-  function showCompetitionModeHint(){
-    if (
-      currentCompetitionKind ===
-      "oneoff"
-    ) {
+  function showCompetitionModeHint() {
+    if (currentCompetitionKind === "oneoff") {
       setArchiveMsg(
-        "ℹ️ Одиночне змагання. Архів сезону вимкнений. " +
-        "seasonResults і seasonRating не використовуються. " +
-        "Після завершення змагання можна одразу натиснути «Очистити LIVE».",
+        "ℹ️ Одиночне змагання. Після завершення можна очистити LIVE. Сезонний рейтинг не змінюється.",
         true
       );
 
       return;
     }
 
-    if (
-      currentCompetitionKind ===
-      "unknown"
-    ) {
+    if (currentCompetitionKind === "unknown") {
       setArchiveMsg(
-        "⚠️ Не вдалося визначити тип змагання. " +
-        "Зважування працює, але архів і очищення LIVE заблоковані для безпеки.",
+        "⚠️ Тип змагання невідомий. Архів та очищення LIVE заблоковані.",
         false
       );
 
       return;
     }
 
-    setArchiveMsg(
-      "",
-      true
+    setArchiveMsg("", true);
+  }
+
+  // =====================================================
+  // PHYSICAL LAKE SECTORS
+  // =====================================================
+
+  function validLakeSectorNumber(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return null;
+    }
+
+    const n = Number(value);
+
+    if (
+      !Number.isInteger(n) ||
+      n < 1 ||
+      n > 9999
+    ) {
+      return null;
+    }
+
+    return n;
+  }
+
+  function lakeSectorId(number) {
+    const n = validLakeSectorNumber(number);
+
+    return n === null
+      ? null
+      : `sector-${n}`;
+  }
+
+  function normalizeLakeId(value) {
+    return norm(value);
+  }
+
+  function normalizeDrawZone(value) {
+    return norm(value).toUpperCase();
+  }
+
+  function normalizeDrawSector(value) {
+    return norm(value);
+  }
+
+  function drawKeyOf(zone, sector) {
+    const z = normalizeDrawZone(zone);
+    const s = normalizeDrawSector(sector);
+
+    if (!z || !s) return "";
+
+    return `${z}${s}`;
+  }
+
+  function getStageYear(competition, fallback = "") {
+    const value = firstDefined(
+      competition?.seasonYear,
+      competition?.year,
+      fallback
+    );
+
+    return norm(value);
+  }
+
+  function lakeInfoFromRegistration(
+    registration,
+    competition
+  ) {
+    const r = registration || {};
+    const c = competition || {};
+
+    const number = validLakeSectorNumber(
+      firstDefined(
+        r.lakeSectorNumber,
+        r.physicalSectorNumber,
+        r.physicalSector,
+        r.lakeSector?.number
+      )
+    );
+
+    const lakeId = normalizeLakeId(
+      firstDefined(
+        r.lakeId,
+        r.waterbodyId,
+        r.lake?.id,
+        c.lakeId,
+        c.waterbodyId
+      )
+    );
+
+    return {
+      lakeId,
+      lakeSectorNumber: number,
+      lakeSectorId: lakeSectorId(number)
+    };
+  }
+
+  function lakeInfoFromMapAssignment(
+    assignment,
+    fallbackLakeId
+  ) {
+    const a = assignment || {};
+
+    const number = validLakeSectorNumber(
+      firstDefined(
+        a.lakeSectorNumber,
+        a.physicalSectorNumber,
+        a.physicalSector,
+        a.lakeSectorId
+          ? String(a.lakeSectorId)
+              .replace(/^sector-/, "")
+          : ""
+      )
+    );
+
+    return {
+      lakeId: normalizeLakeId(
+        a.lakeId || fallbackLakeId
+      ),
+      lakeSectorNumber: number,
+      lakeSectorId: lakeSectorId(number)
+    };
+  }
+
+  function normalizeMapAssignments(mapData) {
+    const data = mapData || {};
+
+    const assignments = Array.isArray(
+      data.assignments
+    )
+      ? data.assignments
+      : [];
+
+    const byDrawKey = new Map();
+
+    assignments.forEach(assignment => {
+      const key = norm(
+        assignment.drawKey ||
+        drawKeyOf(
+          assignment.zone,
+          assignment.sector
+        )
+      ).toUpperCase();
+
+      if (!key) return;
+
+      const lake = lakeInfoFromMapAssignment(
+        assignment,
+        data.lakeId
+      );
+
+      if (lake.lakeSectorNumber === null) {
+        return;
+      }
+
+      byDrawKey.set(key, lake);
+    });
+
+    return {
+      exists: true,
+      status: norm(data.status),
+      lakeId: norm(data.lakeId),
+      byDrawKey
+    };
+  }
+
+  async function loadSectorMap(
+    seasonYear,
+    stageDocId,
+    force = false
+  ) {
+    const year = norm(seasonYear);
+    const id = norm(stageDocId);
+
+    if (!year || !id) {
+      return {
+        exists: false,
+        status: "",
+        lakeId: "",
+        byDrawKey: new Map()
+      };
+    }
+
+    const cacheKey = `${year}/${id}`;
+
+    if (!force && sectorMapCache.has(cacheKey)) {
+      return sectorMapCache.get(cacheKey);
+    }
+
+    const snap = await db
+      .collection("sectorMaps")
+      .doc(year)
+      .collection("stages")
+      .doc(id)
+      .get();
+
+    const result = snap.exists
+      ? normalizeMapAssignments(snap.data())
+      : {
+          exists: false,
+          status: "",
+          lakeId: "",
+          byDrawKey: new Map()
+        };
+
+    sectorMapCache.set(cacheKey, result);
+
+    return result;
+  }
+
+  function resolveLakeSector(
+    registration,
+    competition,
+    map,
+    zone,
+    sector
+  ) {
+    const fromRegistration =
+      lakeInfoFromRegistration(
+        registration,
+        competition
+      );
+
+    const key = drawKeyOf(zone, sector);
+
+    const fromMap =
+      map?.byDrawKey?.get(key) || null;
+
+    // Якщо сектор указано в реєстрації,
+    // перевіряємо відповідність із картою.
+    if (
+      fromRegistration.lakeSectorNumber !== null
+    ) {
+      if (
+        fromMap &&
+        fromMap.lakeSectorNumber !==
+          fromRegistration.lakeSectorNumber
+      ) {
+        throw new Error(
+          `Конфлікт секторів ${key}: ` +
+          `registrations = №${fromRegistration.lakeSectorNumber}, ` +
+          `sectorMaps = №${fromMap.lakeSectorNumber}.`
+        );
+      }
+
+      return {
+        lakeId:
+          fromRegistration.lakeId ||
+          fromMap?.lakeId ||
+          "",
+
+        lakeSectorNumber:
+          fromRegistration.lakeSectorNumber,
+
+        lakeSectorId:
+          fromRegistration.lakeSectorId,
+
+        lakeSectorSource:
+          "registration"
+      };
+    }
+
+    if (fromMap) {
+      return {
+        ...fromMap,
+        lakeSectorSource: "sectorMap"
+      };
+    }
+
+    return {
+      lakeId:
+        fromRegistration.lakeId ||
+        map?.lakeId ||
+        "",
+
+      lakeSectorNumber: null,
+      lakeSectorId: null,
+      lakeSectorSource: "unknown"
+    };
+  }
+
+  function lakeFields(entity) {
+    const number = validLakeSectorNumber(
+      entity?.lakeSectorNumber
+    );
+
+    return {
+      lakeId: norm(entity?.lakeId),
+      lakeSectorNumber: number,
+      lakeSectorId: lakeSectorId(number)
+    };
+  }
+
+  function lakeSectorLabel(entity) {
+    const number = validLakeSectorNumber(
+      entity?.lakeSectorNumber
+    );
+
+    return number === null
+      ? "Фізичний сектор: не визначено"
+      : `Фізичний сектор водойми: №${number}`;
+  }
+
+  function checkDuplicatePhysicalSectors(rows) {
+    const seen = new Map();
+
+    for (const row of rows) {
+      const lakeId = norm(row.lakeId);
+      const number = validLakeSectorNumber(
+        row.lakeSectorNumber
+      );
+
+      if (!lakeId || number === null) {
+        continue;
+      }
+
+      const key = `${lakeId}/${number}`;
+      const previous = seen.get(key);
+
+      if (previous) {
+        throw new Error(
+          `Фізичний сектор №${number} (${lakeId}) ` +
+          `призначено двічі: ${previous} і ` +
+          `${row.zone}${row.sector}.`
+        );
+      }
+
+      seen.set(
+        key,
+        `${row.zone}${row.sector}`
+      );
+    }
+  }
+
+  // =====================================================
+  // AUTH
+  // =====================================================
+
+  async function requireAdmin(user) {
+    const snap = await db
+      .collection("users")
+      .doc(user.uid)
+      .get();
+
+    return (
+      snap.exists &&
+      normLower(snap.data()?.role) === "admin"
     );
   }
 
-  // =========================================================
-  // UI
-  // =========================================================
+  // =====================================================
+  // SOLO NAMES
+  // =====================================================
 
-  function setMsg(
-    t,
-    ok = true
-  ){
-    if (!msgEl) {
-      return;
-    }
-
-    msgEl.textContent =
-      t || "";
-
-    msgEl.className =
-      "muted " +
-      (
-        t
-          ? (
-              ok
-                ? "ok"
-                : "err"
-            )
-          : ""
-      );
-  }
-
-  function setDbg(t){
-    if (!dbgEl) {
-      return;
-    }
-
-    dbgEl.textContent =
-      t || "";
-  }
-
-  function setArchiveMsg(
-    t,
-    ok = true
-  ){
-    if (!archiveMsg) {
-      return;
-    }
-
-    archiveMsg.textContent =
-      t || "";
-
-    archiveMsg.className =
-      "muted " +
-      (
-        t
-          ? (
-              ok
-                ? "ok"
-                : "err"
-            )
-          : ""
-      );
-  }
-
-  // =========================================================
-  // AUTH
-  // =========================================================
-
-  async function requireAdmin(user){
-    const snap =
-      await db
-        .collection("users")
-        .doc(user.uid)
-        .get();
-
-    const role =
-      snap.exists
-        ? String(
-            (snap.data() || {}).role ||
-            ""
-          )
-        : "";
-
-    return role === "admin";
-  }
-
-  // =========================================================
-  // USER / SOLO NAME
-  // =========================================================
-
-  /*
-   * Єдиний правильний формат SOLO:
-   *
-   * ПРІЗВИЩЕ ІМ'Я
-   *
-   * Наприклад:
-   *
-   * lastName  = "Цьотар"
-   * firstName = "Василь"
-   *
-   * => "Цьотар Василь"
-   *
-   * По батькові не використовуємо.
-   */
-
-  function isPlaceholderParticipantName(value){
-    const v =
-      normLower(value)
-        .replace(/[.!]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
+  function isPlaceholderParticipantName(value) {
+    const v = normLower(value)
+      .replace(/[.!]/g, "")
+      .replace(/\s+/g, " ");
 
     return (
       !v ||
-      v === "учасник" ||
-      v === "учасник команди" ||
-      v === "participant" ||
-      v === "player" ||
-      v === "команда" ||
-      v === "team" ||
-      v === "користувач" ||
-      v === "user" ||
-      v === "—" ||
-      v === "-"
-    );
-  }
-
-  function isProbablyEmail(value){
-    const v =
-      norm(value);
-
-    return (
-      v.includes("@") &&
-      v.includes(".")
+      [
+        "учасник",
+        "учасник команди",
+        "participant",
+        "player",
+        "команда",
+        "team",
+        "користувач",
+        "user",
+        "—",
+        "-"
+      ].includes(v) ||
+      /^учасник\s*\d*$/.test(v) ||
+      /^participant\s*\d*$/.test(v)
     );
   }
 
   function validParticipantName(
     value,
     oldTeamName = ""
-  ){
-    const name =
-      norm(value);
+  ) {
+    const name = norm(value);
 
     if (
       !name ||
-      isPlaceholderParticipantName(
-        name
-      ) ||
-      isProbablyEmail(
-        name
-      )
+      isPlaceholderParticipantName(name) ||
+      name.includes("@")
     ) {
       return "";
     }
 
-    const teamName =
-      norm(
-        oldTeamName
-      );
-
-    /*
-     * Стару назву команди
-     * не дозволяємо використовувати
-     * як ім'я SOLO-учасника.
-     */
     if (
-      teamName &&
-      normLower(name) ===
-        normLower(teamName)
+      oldTeamName &&
+      normLower(name) === normLower(oldTeamName)
     ) {
       return "";
     }
@@ -788,73 +887,39 @@
     return name;
   }
 
-  /*
-   * Основне джерело ПІБ.
-   *
-   * Завжди:
-   *
-   * lastName + firstName
-   *
-   * Тобто:
-   * Прізвище Ім'я
-   */
   function canonicalParticipantNameFromObject(
     data,
     oldTeamName = ""
-  ){
-    const d =
-      data || {};
+  ) {
+    const d = data || {};
 
-    const firstName =
-      validParticipantName(
-        d.firstName ||
-        d.firstname ||
-        d.first_name ||
-        d.givenName ||
-        "",
-        oldTeamName
-      );
+    const firstName = validParticipantName(
+      d.firstName ||
+      d.firstname ||
+      d.first_name ||
+      d.givenName,
+      oldTeamName
+    );
 
-    const lastName =
-      validParticipantName(
-        d.lastName ||
-        d.lastname ||
-        d.last_name ||
-        d.surname ||
-        d.familyName ||
-        "",
-        oldTeamName
-      );
+    const lastName = validParticipantName(
+      d.lastName ||
+      d.lastname ||
+      d.last_name ||
+      d.surname ||
+      d.familyName,
+      oldTeamName
+    );
 
-    if (
-      firstName &&
-      lastName
-    ) {
-      return (
-        `${lastName} ${firstName}`
-      );
-    }
-
-    return "";
+    return firstName && lastName
+      ? `${lastName} ${firstName}`
+      : "";
   }
 
-  /*
-   * Legacy fallback.
-   *
-   * Старий текст НЕ перевертаємо,
-   * НЕ скорочуємо
-   * і НЕ намагаємось вгадати,
-   * де ім'я / прізвище / по батькові.
-   *
-   * Це використовується тільки тоді,
-   * коли немає нормальних structured fields.
-   */
   function legacyParticipantNameFromObject(
     data,
     oldTeamName = ""
-  ){
-    const d =
-      data || {};
+  ) {
+    const d = data || {};
 
     const candidates = [
       d.participantName,
@@ -865,98 +930,51 @@
       d.captain
     ];
 
-    for (
-      const candidate
-      of candidates
-    ) {
-      const found =
-        validParticipantName(
-          candidate,
-          oldTeamName
-        );
+    for (const candidate of candidates) {
+      const name = validParticipantName(
+        candidate,
+        oldTeamName
+      );
 
-      if (
-        found
-      ) {
-        return found;
-      }
+      if (name) return name;
     }
 
     return "";
   }
 
-  async function getUserNameByUid(uid){
-    const id =
-      norm(uid);
+  async function getUserNameByUid(uid) {
+    const id = norm(uid);
 
-    if (!id) {
-      return "";
+    if (!id) return "";
+
+    if (userNameCache.has(id)) {
+      return userNameCache.get(id);
     }
 
-    if (
-      userNameCache.has(id)
-    ) {
-      return (
-        userNameCache.get(id) ||
-        ""
-      );
-    }
-
-    let name =
-      "";
+    let name = "";
 
     try {
-      const snap =
-        await db
-          .collection("users")
-          .doc(id)
-          .get();
+      const snap = await db
+        .collection("users")
+        .doc(id)
+        .get();
 
-      if (
-        snap.exists
-      ) {
-        const u =
-          snap.data() ||
-          {};
+      if (snap.exists) {
+        const user = snap.data() || {};
 
-        /*
-         * 1. ПРАВИЛЬНІ structured fields:
-         *
-         * lastName + firstName
-         */
         name =
-          canonicalParticipantNameFromObject(
-            u
-          );
-
-        /*
-         * 2. Якщо structured fields немає —
-         * використовуємо legacy ПІБ як є.
-         *
-         * Нічого не переставляємо.
-         */
-        if (
-          !name
-        ) {
-          name =
-            legacyParticipantNameFromObject(
-              u
-            );
-        }
+          canonicalParticipantNameFromObject(user) ||
+          legacyParticipantNameFromObject(user);
       }
-
-    } catch(e) {
+    } catch (error) {
       console.warn(
-        "[admin-weighings] user name:",
+        "[admin-weighings] User:",
         id,
-        e
+        error
       );
     }
 
-    userNameCache.set(
-      id,
-      name
-    );
+    userNameCache.set(id, name);
 
     return name;
   }
@@ -964,135 +982,52 @@
   async function resolveSoloParticipantName(
     registration,
     uid
-  ){
-    const r =
-      registration ||
-      {};
+  ) {
+    const r = registration || {};
 
-    const oldTeamName =
-      norm(
-        r.teamName ||
-        r.team ||
-        ""
-      );
+    const oldTeamName = norm(
+      r.teamName || r.team
+    );
 
-    // -------------------------------------------------------
-    // 1. STRUCTURED FIELDS З REGISTRATION
-    //
-    // lastName + firstName
-    //
-    // Найвищий пріоритет.
-    // -------------------------------------------------------
-
-    const registrationCanonical =
+    const canonical =
       canonicalParticipantNameFromObject(
         r,
         oldTeamName
       );
 
-    if (
-      registrationCanonical
-    ) {
-      return registrationCanonical;
-    }
+    if (canonical) return canonical;
 
-    // -------------------------------------------------------
-    // 2. users/{uid}
-    //
-    // ВАЖЛИВО:
-    //
-    // профіль читаємо ДО старого participantName.
-    //
-    // Тому стара заявка:
-    //
-    // participantName = "Василь Цьотар"
-    //
-    // не переб'є профіль:
-    //
-    // firstName = "Василь"
-    // lastName  = "Цьотар"
-    //
-    // => "Цьотар Василь"
-    // -------------------------------------------------------
+    const profile = validParticipantName(
+      await getUserNameByUid(uid),
+      oldTeamName
+    );
 
-    const profileName =
-      await getUserNameByUid(
-        uid
-      );
+    if (profile) return profile;
 
-    const validProfileName =
-      validParticipantName(
-        profileName,
-        oldTeamName
-      );
-
-    if (
-      validProfileName
-    ) {
-      return validProfileName;
-    }
-
-    // -------------------------------------------------------
-    // 3. LEGACY REGISTRATION
-    //
-    // Тільки якщо немає structured registration
-    // і немає нормального users/{uid}.
-    //
-    // Нічого не переставляємо.
-    // -------------------------------------------------------
-
-    const legacyName =
+    return (
       legacyParticipantNameFromObject(
         r,
         oldTeamName
-      );
-
-    if (
-      legacyName
-    ) {
-      return legacyName;
-    }
-
-    /*
-     * Тільки якщо реально
-     * ніде немає нормального імені.
-     */
-    return "Учасник";
+      ) ||
+      "Учасник"
+    );
   }
 
-  // =========================================================
+  // =====================================================
   // IDS
-  // =========================================================
+  // =====================================================
 
-  function parseStageValue(v){
-    const parts =
-      String(v || "")
-        .split("||");
+  function parseStageValue(value) {
+    const parts = norm(value).split("||");
 
     return {
-      compId:
-        norm(
-          parts[0] ||
-          ""
-        ),
-
-      stageKey:
-        norm(
-          parts
-            .slice(1)
-            .join("||") ||
-          ""
-        )
+      compId: norm(parts[0]),
+      stageKey: norm(parts.slice(1).join("||"))
     };
   }
 
-  function stageResultsId(
-    compId,
-    stageKey
-  ){
-    return (
-      `${compId}__${stageKey}`
-    );
+  function stageResultsId(compId, stageKey) {
+    return `${compId}__${stageKey}`;
   }
 
   function weighingDocId(
@@ -1100,760 +1035,430 @@
     stageKey,
     wNo,
     entityId
-  ){
+  ) {
     return (
-      `${compId}||${stageKey}||W${Number(wNo)}||${entityId}`
+      `${compId}||${stageKey}||` +
+      `W${Number(wNo)}||${entityId}`
     );
   }
 
-  // =========================================================
-  // IDENTITY PAYLOAD
-  // =========================================================
+  function identityFields(team) {
+    const entityId = entityIdOf(team);
 
-  function identityFields(team){
-    const entityId =
-      entityIdOf(team);
-
-    if (
-      isSoloTeam(team)
-    ) {
+    if (isSoloTeam(team)) {
       const participantName =
         validParticipantName(
-          team.participantName ||
-          team.team ||
-          ""
-        ) ||
-        "Учасник";
+          team.participantName || team.team
+        ) || "Учасник";
 
       return {
-        entryType:
-          ENTRY_SOLO,
-
+        entryType: ENTRY_SOLO,
         entityId,
-
-        uid:
-          norm(
-            team.uid ||
-            entityId
-          ),
-
+        uid: norm(team.uid || entityId),
         participantName,
-
-        displayName:
-          participantName,
-
-        teamId:
-          null,
-
-        teamName:
-          null,
-
-        team:
-          null
+        displayName: participantName,
+        teamId: null,
+        teamName: null,
+        team: null
       };
     }
 
     return {
-      entryType:
-        ENTRY_TEAM,
-
+      entryType: ENTRY_TEAM,
       entityId,
-
-      teamId:
-        norm(
-          team.teamId ||
-          entityId
-        ),
-
-      teamName:
-        norm(
-          team.team
-        ) ||
-        "—",
-
-      team:
-        norm(
-          team.team
-        ) ||
-        "—"
+      teamId: norm(team.teamId || entityId),
+      teamName: norm(team.team) || "—",
+      team: norm(team.team) || "—"
     };
   }
 
-  // =========================================================
+  // =====================================================
   // NEXT STAGE
-  // =========================================================
+  // =====================================================
 
-  function fallbackNextStageKey(stageKey){
-    const raw =
-      String(
-        stageKey ||
-        ""
-      ).trim();
-
-    const m =
-      raw.match(
-        /^(.*?)(\d+)$/
-      );
-
-    if (!m) {
-      return "";
-    }
-
-    const prefix =
-      m[1];
-
-    const n =
-      Number(
-        m[2]
-      );
-
-    if (
-      !Number.isFinite(n)
-    ) {
-      return "";
-    }
-
-    return (
-      `${prefix}${n + 1}`
+  function fallbackNextStageKey(stageKey) {
+    const match = norm(stageKey).match(
+      /^(.*?)(\d+)$/
     );
+
+    if (!match) return "";
+
+    return `${match[1]}${Number(match[2]) + 1}`;
   }
 
   async function getNextStageInfo(
     compId,
     currentStageKey
-  ){
-    const info =
-      await getCompetitionInfo(
-        compId,
-        true
+  ) {
+    const info = await getCompetitionInfo(
+      compId,
+      true
+    );
+
+    if (!info.exists) return null;
+
+    const events = Array.isArray(info.data.events)
+      ? info.data.events
+      : [];
+
+    if (events.length) {
+      const stages = events.map(
+        (event, index) => ({
+          key: eventKey(event, index),
+          title: eventTitle(event, index)
+        })
       );
 
-    if (!info.exists) {
-      return null;
-    }
+      const index = stages.findIndex(
+        stage => stage.key === currentStageKey
+      );
 
-    const c =
-      info.data ||
-      {};
-
-    const events =
-      Array.isArray(
-        c.events
-      )
-        ? c.events
-        : [];
-
-    if (
-      events.length
-    ) {
-      const keys =
-        events
-          .map(
-            (ev, idx) => ({
-              key:
-                eventKey(
-                  ev,
-                  idx
-                ),
-
-              title:
-                eventTitle(
-                  ev,
-                  idx
-                )
-            })
-          )
-          .filter(
-            x => x.key
-          );
-
-      const idx =
-        keys.findIndex(
-          x =>
-            x.key ===
-            currentStageKey
-        );
-
-      if (
-        idx >= 0
-      ) {
-        if (
-          keys[idx + 1]
-        ) {
-          return {
-            key:
-              keys[idx + 1]
-                .key,
-
-            title:
-              keys[idx + 1]
-                .title,
-
-            source:
-              "events"
-          };
-        }
-
-        return null;
+      if (index >= 0) {
+        return stages[index + 1]
+          ? {
+              ...stages[index + 1],
+              source: "events"
+            }
+          : null;
       }
-    }
 
-    const fallback =
-      fallbackNextStageKey(
-        currentStageKey
+      // Якщо events існують, але поточний
+      // етап не знайдено, не вигадуємо наступний.
+      throw new Error(
+        `Етап ${currentStageKey} відсутній ` +
+        `у competitions/${compId}.events.`
       );
-
-    if (
-      fallback
-    ) {
-      return {
-        key:
-          fallback,
-
-        title:
-          fallback,
-
-        source:
-          "fallback"
-      };
     }
 
-    return null;
-  }
+    const fallback = fallbackNextStageKey(
+      currentStageKey
+    );
 
-  // =========================================================
-  // DELETE BATCHES
-  // =========================================================
-
-  async function deleteDocsInBatches(
-    docs,
-    label
-  ){
-    let deleted =
-      0;
-
-    for (
-      let i = 0;
-      i < docs.length;
-      i += 400
-    ) {
-      const batch =
-        db.batch();
-
-      const chunk =
-        docs.slice(
-          i,
-          i + 400
-        );
-
-      chunk.forEach(
-        d => {
-          batch.delete(
-            d.ref
-          );
+    return fallback
+      ? {
+          key: fallback,
+          title: fallback,
+          source: "fallback"
         }
-      );
-
-      await batch.commit();
-
-      deleted +=
-        chunk.length;
-
-      setArchiveMsg(
-        `🧹 ${label}: ${deleted}/${docs.length}`,
-        true
-      );
-    }
-
-    return deleted;
+      : null;
   }
 
-  // =========================================================
-  // ACTIVE STAGE ONLY
-  // =========================================================
+  // =====================================================
+  // ACTIVE STAGE
+  // =====================================================
 
-  async function loadStages(){
-    if (!stageSelect) {
-      return;
-    }
+  async function loadStages() {
+    if (!stageSelect) return;
 
     stageSelect.innerHTML =
-      `<option value="">— Завантаження активного етапу… —</option>`;
+      `<option value="">— Завантаження… —</option>`;
 
     try {
-      const appSnap =
-        await db
-          .collection("settings")
-          .doc("app")
-          .get();
+      const appSnap = await db
+        .collection("settings")
+        .doc("app")
+        .get();
 
-      const app =
-        appSnap.exists
-          ? appSnap.data() || {}
-          : {};
+      const app = appSnap.exists
+        ? appSnap.data() || {}
+        : {};
 
-      const activeCompetitionId =
-        norm(
-          app.activeCompetitionId
-        );
+      const compId = norm(
+        app.activeCompetitionId
+      );
 
-      const activeStageId =
-        norm(
-          app.activeStageId
-        );
+      const stageKey = norm(
+        app.activeStageId
+      );
 
-      if (
-        !activeCompetitionId ||
-        !activeStageId
-      ) {
-        currentCompetitionKind =
-          "unknown";
-
-        currentEntryType =
-          ENTRY_TEAM;
-
-        configureCompetitionModeUI(
-          "unknown"
-        );
-
+      if (!compId || !stageKey) {
         stageSelect.innerHTML =
           `<option value="">— Немає активного етапу —</option>`;
+
+        currentTeams = [];
+        currentStageYear = "";
+
+        configureCompetitionModeUI("unknown");
+
+        if (zonesWrap) zonesWrap.innerHTML = "";
+
+        if (archiveSection) {
+          archiveSection.style.display = "none";
+        }
 
         setMsg(
           "Немає активного етапу для зважування.",
           false
         );
 
-        if (
-          zonesWrap
-        ) {
-          zonesWrap.innerHTML =
-            "";
-        }
-
-        if (
-          archiveSection
-        ) {
-          archiveSection
-            .style
-            .display =
-            "none";
-        }
-
-        currentTeams =
-          [];
-
         return;
       }
 
-      const compInfo =
-        await getCompetitionInfo(
-          activeCompetitionId,
-          true
+      const info = await getCompetitionInfo(
+        compId,
+        true
+      );
+
+      if (!info.exists) {
+        throw new Error(
+          `Турнір competitions/${compId} не знайдено.`
         );
-
-      if (
-        !compInfo.exists
-      ) {
-        currentCompetitionKind =
-          "unknown";
-
-        currentEntryType =
-          ENTRY_TEAM;
-
-        configureCompetitionModeUI(
-          "unknown"
-        );
-
-        stageSelect.innerHTML =
-          `<option value="">— Турнір не знайдено —</option>`;
-
-        setMsg(
-          "Активний турнір не знайдено в competitions.",
-          false
-        );
-
-        if (
-          zonesWrap
-        ) {
-          zonesWrap.innerHTML =
-            "";
-        }
-
-        if (
-          archiveSection
-        ) {
-          archiveSection
-            .style
-            .display =
-            "none";
-        }
-
-        currentTeams =
-          [];
-
-        return;
       }
 
-      const c =
-        compInfo.data ||
-        {};
+      const c = info.data;
 
       currentEntryType =
         resolveCompetitionEntryType(
           c,
-          activeStageId
+          stageKey
         );
 
-      configureCompetitionModeUI(
-        compInfo.kind
+      currentStageYear = getStageYear(
+        c,
+        seasonYearInp?.value || ""
       );
-
-      const brand =
-        c.brand ||
-        "STOLAR CARP";
-
-      const year =
-        c.year ||
-        c.seasonYear ||
-        "";
-
-      const compTitle =
-        c.name ||
-        c.title ||
-        (
-          year
-            ? `Season ${year}`
-            : activeCompetitionId
-        );
-
-      const events =
-        Array.isArray(
-          c.events
-        )
-          ? c.events
-          : [];
-
-      let activeStageTitle =
-        norm(
-          app.activeStageTitle
-        ) ||
-        activeStageId;
-
-      events.forEach(
-        (ev, idx) => {
-          const key =
-            eventKey(
-              ev,
-              idx
-            );
-
-          if (
-            key ===
-            activeStageId
-          ) {
-            activeStageTitle =
-              eventTitle(
-                ev,
-                idx
-              );
-          }
-        }
-      );
-
-      const value =
-        `${activeCompetitionId}||${activeStageId}`;
-
-      const label =
-        `${brand} · ${compTitle} — ${activeStageTitle}`;
-
-      stageSelect.innerHTML =
-        `<option value="${esc(value)}" selected>${esc(label)}</option>`;
-
-      stageSelect.value =
-        value;
 
       if (
-        compInfo.kind ===
-        "oneoff"
+        seasonYearInp &&
+        currentStageYear
       ) {
-        setMsg(
-          `✅ Активне одиночне змагання: ${activeStageTitle} · ${currentEntryType.toUpperCase()}`,
-          true
-        );
-
-      } else if (
-        compInfo.kind ===
-        "season"
-      ) {
-        setMsg(
-          `✅ Активний етап сезону: ${activeStageTitle} · ${currentEntryType.toUpperCase()}`,
-          true
-        );
-
-      } else {
-        setMsg(
-          `⚠️ Активний етап: ${activeStageTitle}. Тип змагання не визначено.`,
-          false
-        );
+        seasonYearInp.value = currentStageYear;
       }
 
-    } catch(e) {
-      console.error(e);
+      configureCompetitionModeUI(info.kind);
 
-      currentCompetitionKind =
-        "unknown";
-
-      currentEntryType =
-        ENTRY_TEAM;
-
-      configureCompetitionModeUI(
-        "unknown"
+      const event = findCompetitionEvent(
+        c,
+        stageKey
       );
+
+      const title =
+        event
+          ? eventTitle(
+              event,
+              c.events.indexOf(event)
+            )
+          : norm(
+              app.activeStageTitle || stageKey
+            );
+
+      const compTitle = norm(
+        c.name ||
+        c.title ||
+        compId
+      );
+
+      const brand = norm(
+        c.brand || "STOLAR CARP"
+      );
+
+      const value = `${compId}||${stageKey}`;
+
+      stageSelect.innerHTML = `
+        <option value="${esc(value)}" selected>
+          ${esc(brand)} · ${esc(compTitle)}
+          — ${esc(title)}
+        </option>
+      `;
+
+      stageSelect.value = value;
+
+      const typeText =
+        info.kind === "season"
+          ? "Сезонний етап"
+          : info.kind === "oneoff"
+            ? "Одиночне змагання"
+            : "Невідомий тип змагання";
+
+      setMsg(
+        `${typeText}: ${title} · ` +
+        currentEntryType.toUpperCase(),
+        info.kind !== "unknown"
+      );
+
+    } catch (error) {
+      console.error(error);
+
+      configureCompetitionModeUI("unknown");
 
       stageSelect.innerHTML =
         `<option value="">— Помилка —</option>`;
 
       setMsg(
-        "Помилка завантаження активного етапу: " +
-        e.message,
+        "Помилка активного етапу: " +
+        error.message,
         false
       );
     }
   }
 
-  // =========================================================
+  // =====================================================
   // REGISTRATIONS
-  // =========================================================
+  // =====================================================
 
   async function loadTeamsFromRegistrations(
     compId,
     stageKey
-  ){
-    const info =
-      await getCompetitionInfo(
-        compId
-      );
+  ) {
+    const info = await getCompetitionInfo(compId);
+
+    const competition = info.data || {};
 
     currentEntryType =
       resolveCompetitionEntryType(
-        info.data || {},
+        competition,
         stageKey
       );
 
-    let qRef =
-      db
-        .collection("registrations")
-        .where(
-          "competitionId",
-          "==",
-          compId
-        )
-        .where(
-          "status",
-          "==",
-          "confirmed"
-        );
+    const year = getStageYear(
+      competition,
+      currentStageYear ||
+      seasonYearInp?.value ||
+      ""
+    );
 
-    if (
-      stageKey === "main" ||
-      !stageKey
-    ) {
-      qRef =
-        qRef.where(
-          "stageId",
-          "in",
-          [null, "main"]
-        );
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
 
-    } else {
-      qRef =
-        qRef.where(
-          "stageId",
-          "==",
-          stageKey
-        );
+    let sectorMap;
+
+    try {
+      sectorMap = await loadSectorMap(
+        year,
+        stageDocId,
+        true
+      );
+    } catch (error) {
+      console.warn(
+        "[admin-weighings] Sector map:",
+        error
+      );
+
+      sectorMap = {
+        exists: false,
+        status: "",
+        lakeId: "",
+        byDrawKey: new Map()
+      };
     }
 
-    const q =
-      await qRef.get();
+    let query = db
+      .collection("registrations")
+      .where("competitionId", "==", compId)
+      .where("status", "==", "confirmed");
 
-    const docs =
-      q.docs || [];
+    if (!stageKey || stageKey === "main") {
+      query = query.where(
+        "stageId",
+        "in",
+        [null, "main"]
+      );
+    } else {
+      query = query.where(
+        "stageId",
+        "==",
+        stageKey
+      );
+    }
 
-    const teams =
-      (
-        await Promise.all(
-          docs.map(
-            async d => {
-              const r =
-                d.data() ||
-                {};
+    const snap = await query.get();
 
-              const zone =
-                String(
-                  r.drawZone ||
-                  r.zone ||
-                  ""
-                )
-                  .trim()
-                  .toUpperCase();
+    const teams = (
+      await Promise.all(
+        snap.docs.map(async doc => {
+          const r = doc.data() || {};
 
-              const sector =
-                r.drawSector ??
-                r.sector ??
-                r.place ??
-                "";
+          const zone = normalizeDrawZone(
+            r.drawZone || r.zone
+          );
 
-              if (!zone) {
-                return null;
-              }
+          const sector = normalizeDrawSector(
+            firstDefined(
+              r.drawSector,
+              r.sector,
+              r.place
+            )
+          );
 
-              // =============================================
-              // SOLO
-              // =============================================
+          if (!zone || !sector) return null;
 
-              if (
-                currentEntryType ===
-                ENTRY_SOLO
-              ) {
-                let uid =
-                  norm(
-                    r.uid ||
-                    r.participantUid ||
-                    r.userId ||
-                    r.registeredByUid ||
-                    ""
-                  );
+          const lake = resolveLakeSector(
+            r,
+            competition,
+            sectorMap,
+            zone,
+            sector
+          );
 
-                /*
-                 * Canonical SOLO doc:
-                 *
-                 * COMP__main__solo__UID
-                 */
-                if (
-                  !uid &&
-                  d.id.includes(
-                    "__solo__"
-                  )
-                ) {
-                  uid =
-                    norm(
-                      d.id
-                        .split(
-                          "__solo__"
-                        )
-                        .pop()
-                    );
-                }
+          const common = {
+            regId: doc.id,
+            zone,
+            sector,
+            drawZone: zone,
+            drawSector: sector,
+            drawKey: drawKeyOf(zone, sector),
+            ...lake
+          };
 
-                const entityId =
-                  uid ||
-                  d.id;
+          if (currentEntryType === ENTRY_SOLO) {
+            let uid = norm(
+              r.uid ||
+              r.participantUid ||
+              r.userId ||
+              r.registeredByUid
+            );
 
-                /*
-                 * Ім'я SOLO:
-                 *
-                 * 1. registration lastName + firstName
-                 * 2. users/{uid} lastName + firstName
-                 * 3. legacy registration
-                 */
-                const participantName =
-                  await resolveSoloParticipantName(
-                    r,
-                    uid
-                  );
-
-                return {
-                  regId:
-                    d.id,
-
-                  entryType:
-                    ENTRY_SOLO,
-
-                  entityId,
-
-                  uid:
-                    uid ||
-                    entityId,
-
-                  participantName,
-
-                  legacyTeamId:
-                    norm(
-                      r.teamId
-                    ),
-
-                  teamId:
-                    null,
-
-                  team:
-                    participantName,
-
-                  zone,
-
-                  sector:
-                    String(
-                      sector
-                    )
-                };
-              }
-
-              // =============================================
-              // TEAM
-              // =============================================
-
-              const teamId =
-                norm(
-                  r.teamId
-                );
-
-              if (
-                !teamId
-              ) {
-                return null;
-              }
-
-              const teamName =
-                norm(
-                  r.teamName ||
-                  r.team ||
-                  r.name ||
-                  "Команда"
-                );
-
-              return {
-                regId:
-                  d.id,
-
-                entryType:
-                  ENTRY_TEAM,
-
-                entityId:
-                  teamId,
-
-                teamId,
-
-                uid:
-                  norm(
-                    r.uid
-                  ),
-
-                team:
-                  teamName,
-
-                zone,
-
-                sector:
-                  String(
-                    sector
-                  )
-              };
+            if (
+              !uid &&
+              doc.id.includes("__solo__")
+            ) {
+              uid = norm(
+                doc.id.split("__solo__").pop()
+              );
             }
-          )
-        )
+
+            const entityId = uid || doc.id;
+
+            const participantName =
+              await resolveSoloParticipantName(
+                r,
+                uid
+              );
+
+            return {
+              ...common,
+              entryType: ENTRY_SOLO,
+              entityId,
+              uid: uid || entityId,
+              participantName,
+              legacyTeamId: norm(r.teamId),
+              teamId: null,
+              team: participantName
+            };
+          }
+
+          const teamId = norm(r.teamId);
+
+          if (!teamId) return null;
+
+          return {
+            ...common,
+            entryType: ENTRY_TEAM,
+            entityId: teamId,
+            teamId,
+            uid: norm(r.uid),
+            team: norm(
+              r.teamName ||
+              r.team ||
+              r.name ||
+              "Команда"
+            )
+          };
+        })
       )
-        .filter(Boolean);
+    ).filter(Boolean);
 
     const zoneOrder = {
       A: 1,
@@ -1861,602 +1466,286 @@
       C: 3
     };
 
-    teams.sort(
-      (a, b) => {
-        const za =
-          zoneOrder[
-            a.zone
-          ] ||
-          9;
+    teams.sort((a, b) => {
+      const za = zoneOrder[a.zone] || 9;
+      const zb = zoneOrder[b.zone] || 9;
 
-        const zb =
-          zoneOrder[
-            b.zone
-          ] ||
-          9;
+      if (za !== zb) return za - zb;
 
-        if (
-          za !== zb
-        ) {
-          return za - zb;
-        }
+      const na = Number(a.sector);
+      const nb = Number(b.sector);
 
-        const na =
-          Number(
-            String(
-              a.sector
-            ).replace(
-              /[^\d.]/g,
-              ""
-            )
-          );
-
-        const nb =
-          Number(
-            String(
-              b.sector
-            ).replace(
-              /[^\d.]/g,
-              ""
-            )
-          );
-
-        if (
-          Number.isFinite(na) &&
-          Number.isFinite(nb) &&
-          na !== nb
-        ) {
-          return na - nb;
-        }
-
-        return String(
-          a.sector
-        ).localeCompare(
-          String(
-            b.sector
-          ),
-          "uk"
-        );
+      if (
+        Number.isFinite(na) &&
+        Number.isFinite(nb) &&
+        na !== nb
+      ) {
+        return na - nb;
       }
-    );
+
+      return a.sector.localeCompare(
+        b.sector,
+        "uk"
+      );
+    });
+
+    checkDuplicatePhysicalSectors(teams);
 
     return teams;
   }
 
-  // =========================================================
-  // SOLO -> SYNC STAGERESULTS FOR LIVE
-  // =========================================================
+  // =====================================================
+  // LIVE SOLO SYNC
+  // =====================================================
 
   async function syncSoloParticipantsToStageResults(
     compId,
     stageKey,
     participants
-  ){
-    if (
-      currentEntryType !==
-      ENTRY_SOLO
-    ) {
+  ) {
+    if (currentEntryType !== ENTRY_SOLO) {
       return;
     }
 
-    const list =
-      Array.isArray(
-        participants
-      )
-        ? participants.filter(
-            p =>
-              isSoloTeam(p) &&
-              entityIdOf(p)
-          )
-        : [];
+    const list = participants.filter(
+      p => isSoloTeam(p) && entityIdOf(p)
+    );
 
-    if (
-      !list.length
-    ) {
-      return;
-    }
+    if (!list.length) return;
 
-    const stageDocId =
-      stageResultsId(
-        compId,
-        stageKey
-      );
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
 
-    const stageRef =
-      db
-        .collection("stageResults")
-        .doc(stageDocId);
+    const stageRef = db
+      .collection("stageResults")
+      .doc(stageDocId);
 
-    const stageSnap =
-      await stageRef.get();
+    await db.runTransaction(async tx => {
+      const snap = await tx.get(stageRef);
 
-    const stageData =
-      stageSnap.exists
-        ? stageSnap.data() || {}
+      const data = snap.exists
+        ? snap.data() || {}
         : {};
 
-    const teamsArr =
-      Array.isArray(
-        stageData.teams
-      )
-        ? stageData.teams.slice()
+      const teams = Array.isArray(data.teams)
+        ? data.teams.slice()
         : [];
 
-    list.forEach(
-      participant => {
-        const entityId =
-          entityIdOf(
-            participant
-          );
+      list.forEach(participant => {
+        const entityId = entityIdOf(
+          participant
+        );
 
-        const uid =
-          norm(
-            participant.uid ||
-            entityId
-          );
+        const uid = norm(
+          participant.uid || entityId
+        );
 
-        const participantName =
-          validParticipantName(
-            participant.participantName ||
-            participant.team ||
-            ""
-          ) ||
-          "Учасник";
+        const legacyTeamId = norm(
+          participant.legacyTeamId
+        );
 
-        const legacyTeamId =
-          norm(
-            participant.legacyTeamId
-          );
-
-        const idx =
-          teamsArr.findIndex(
-            row => {
-              if (!row) {
-                return false;
-              }
-
-              if (
-                norm(row.uid) &&
-                norm(row.uid) === uid
-              ) {
-                return true;
-              }
-
-              if (
-                norm(row.entityId) &&
-                norm(row.entityId) ===
-                entityId
-              ) {
-                return true;
-              }
-
-              /*
-               * Старий TEAM row
-               * перетворюємо на SOLO row.
-               */
-              if (
-                legacyTeamId &&
-                norm(row.teamId) ===
-                  legacyTeamId
-              ) {
-                return true;
-              }
-
-              return false;
-            }
-          );
+        const index = teams.findIndex(row => (
+          row &&
+          (
+            (uid && norm(row.uid) === uid) ||
+            (
+              norm(row.entityId) === entityId &&
+              entityId
+            ) ||
+            (
+              legacyTeamId &&
+              norm(row.teamId) === legacyTeamId
+            )
+          )
+        ));
 
         const patch = {
-          entryType:
-            ENTRY_SOLO,
+          ...identityFields(participant),
 
-          entityId,
+          zone: participant.zone,
+          sector: participant.sector,
 
-          uid,
+          drawZone: participant.zone,
+          drawSector: participant.sector,
+          drawKey: participant.drawKey,
 
-          participantName,
-
-          displayName:
-            participantName,
-
-          teamId:
-            null,
-
-          teamName:
-            null,
-
-          team:
-            null,
-
-          zone:
-            participant.zone,
-
-          sector:
-            participant.sector,
-
-          drawZone:
-            participant.zone,
-
-          drawSector:
-            participant.sector,
-
-          drawKey:
-            `${participant.zone}${participant.sector}`
+          ...lakeFields(participant)
         };
 
-        if (
-          idx >= 0
-        ) {
-          teamsArr[idx] = {
-            ...teamsArr[idx],
+        if (index >= 0) {
+          teams[index] = {
+            ...teams[index],
             ...patch
           };
-
         } else {
-          teamsArr.push(
-            patch
-          );
+          teams.push(patch);
         }
-      }
-    );
+      });
 
-    await stageRef.set(
-      {
-        compId,
+      tx.set(
+        stageRef,
+        {
+          compId,
+          stageId: stageKey,
+          competitionType:
+            currentCompetitionKind,
+          entryType: ENTRY_SOLO,
 
-        stageId:
-          stageKey,
+          stageName:
+            data.stageName ||
+            data.name ||
+            stageDocId,
 
-        competitionType:
-          currentCompetitionKind,
+          teams,
 
-        entryType:
-          ENTRY_SOLO,
+          archived: false,
+          isLive: true,
+          isActive: true,
 
-        stageName:
-          stageData.stageName ||
-          stageData.name ||
-          stageDocId,
-
-        teams:
-          teamsArr,
-
-        archived:
-          false,
-
-        isLive:
-          true,
-
-        isActive:
-          true,
-
-        updatedAt:
-          fb.firestore
-            .FieldValue
-            .serverTimestamp()
-      },
-      {
-        merge: true
-      }
-    );
+          updatedAt: timestamp()
+        },
+        { merge: true }
+      );
+    });
   }
 
-  // =========================================================
+  // =====================================================
   // LOAD WEIGHING
-  // =========================================================
+  // =====================================================
 
   async function loadTeamData(
     compId,
     stageKey,
     team,
     wNo
-  ){
-    const primaryId =
-      entityIdOf(
-        team
-      );
+  ) {
+    const ids = [
+      entityIdOf(team),
+      norm(team.legacyTeamId)
+    ].filter(Boolean);
 
-    const candidateIds =
-      [];
+    const candidateIds = [...new Set(ids)];
 
-    if (
-      primaryId
-    ) {
-      candidateIds.push(
-        primaryId
-      );
-    }
-
-    /*
-     * Legacy SOLO:
-     * старе зважування могло бути
-     * записано по teamId.
-     */
-    const legacyTeamId =
-      norm(
-        team?.legacyTeamId
-      );
-
-    if (
-      legacyTeamId &&
-      !candidateIds.includes(
-        legacyTeamId
-      )
-    ) {
-      candidateIds.push(
-        legacyTeamId
-      );
-    }
-
-    // ---------------------------------------------------------
-    // WEIGHINGS
-    // ---------------------------------------------------------
-
-    for (
-      const candidateId
-      of candidateIds
-    ) {
-      const wId =
-        weighingDocId(
-          compId,
-          stageKey,
-          wNo,
-          candidateId
-        );
-
-      try {
-        const wSnap =
-          await db
-            .collection("weighings")
-            .doc(wId)
-            .get();
-
-        if (
-          wSnap.exists
-        ) {
-          const d =
-            wSnap.data() ||
-            {};
-
-          const fish =
-            normalizeFishArray(
-              d.weights ||
-              d.fish ||
-              d.weightsKg ||
-              []
-            );
-
-          return {
-            source:
-              d.source ===
-                "admin-weigh"
-                ? "admin"
-                : "judge",
-
-            weights:
-              fish,
-
-            totalWeightKg:
-              num(
-                d.totalWeightKg
-              ),
-
-            fishCount:
-              num(
-                d.fishCount
-              ),
-
-            bigFishKg:
-              num(
-                d.bigFishKg
-              ),
-
-            bigCarpKg:
-              num(
-                d.bigCarpKg ||
-                d.bigCarp
-              ),
-
-            bigAmurKg:
-              num(
-                d.bigAmurKg ||
-                d.bigAmur
-              )
-          };
-        }
-
-      } catch(e) {
-        console.warn(
-          "weighings read error:",
-          e
-        );
-      }
-    }
-
-    // ---------------------------------------------------------
-    // STAGE RESULTS SUBCOLLECTION
-    // ---------------------------------------------------------
-
-    const stageDocId =
-      stageResultsId(
+    for (const id of candidateIds) {
+      const docId = weighingDocId(
         compId,
-        stageKey
+        stageKey,
+        wNo,
+        id
       );
 
-    for (
-      const candidateId
-      of candidateIds
-    ) {
-      try {
-        const sSnap =
-          await db
-            .collection("stageResults")
-            .doc(stageDocId)
-            .collection("teams")
-            .doc(candidateId)
-            .get();
+      const snap = await db
+        .collection("weighings")
+        .doc(docId)
+        .get();
 
-        if (
-          sSnap.exists
-        ) {
-          const d =
-            sSnap.data() ||
-            {};
+      if (!snap.exists) continue;
 
-          const slot =
-            (d.weighings || {})[
-              `W${wNo}`
-            ] ||
-            {};
+      const data = snap.data() || {};
 
-          const fish =
-            normalizeFishArray(
-              slot.fish ||
-              slot.fishKg ||
-              []
-            );
+      return {
+        source:
+          data.source === "admin-weigh"
+            ? "admin"
+            : "judge",
 
-          return {
-            source:
-              "admin",
+        weights: normalizeFishArray(
+          data.weights ||
+          data.fish ||
+          data.weightsKg ||
+          []
+        )
+      };
+    }
 
-            weights:
-              fish,
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
 
-            totalWeightKg:
-              num(
-                slot.total
-              ),
+    for (const id of candidateIds) {
+      const snap = await db
+        .collection("stageResults")
+        .doc(stageDocId)
+        .collection("teams")
+        .doc(id)
+        .get();
 
-            fishCount:
-              num(
-                slot.count
-              ),
+      if (!snap.exists) continue;
 
-            bigFishKg:
-              num(
-                slot.big
-              ),
+      const data = snap.data() || {};
 
-            bigCarpKg:
-              num(
-                slot.bigCarp
-              ),
+      const slot =
+        data.weighings?.[`W${wNo}`] ||
+        null;
 
-            bigAmurKg:
-              num(
-                slot.bigAmur
-              )
-          };
-        }
+      if (!slot) continue;
 
-      } catch(e) {
-        console.warn(
-          "stageResults read error:",
-          e
-        );
-      }
+      return {
+        source: "admin",
+        weights: normalizeFishArray(
+          slot.fish ||
+          slot.fishKg ||
+          []
+        )
+      };
     }
 
     return {
-      source:
-        "none",
-
-      weights:
-        [],
-
-      totalWeightKg:
-        0,
-
-      fishCount:
-        0,
-
-      bigFishKg:
-        0,
-
-      bigCarpKg:
-        0,
-
-      bigAmurKg:
-        0
+      source: "none",
+      weights: []
     };
   }
 
-  // =========================================================
-  // TABLE
-  // =========================================================
+  // =====================================================
+  // TABLE HTML
+  // =====================================================
 
-  function zoneBlock(
-    zone,
-    rowsHtml,
-    count
-  ){
+  function zoneBlock(zone, html, count) {
     return `
       <div class="card">
 
         <div class="zoneTitle">
-
-          <h3>
-            Зона ${esc(zone)}
-          </h3>
+          <h3>Зона ${esc(zone)}</h3>
 
           <span class="badge">
-            ${esc(
-              entityCountLabel(
-                count
-              )
-            )}
+            ${esc(entityCountLabel(count))}
           </span>
-
         </div>
 
         <div class="table-wrap">
-          ${rowsHtml}
+          ${html}
         </div>
 
       </div>
     `;
   }
 
-  function fishInputHTML(f){
-    const fish =
-      normalizeFishItem(f) || {
-        kg:
-          "",
+  function fishInputHTML(value) {
+    const fish = normalizeFishItem(value) || {
+      kg: "",
+      fishType: "carp",
+      isAmur: false
+    };
 
-        fishType:
-          "carp",
-
-        isAmur:
-          false
-      };
-
-    const val =
-      num(
-        fish.kg
-      ) > 0
-        ? num(
-            fish.kg
-          ).toFixed(3)
-        : "";
+    const val = num(fish.kg) > 0
+      ? num(fish.kg).toFixed(3)
+      : "";
 
     const checked =
-      fish.fishType ===
-        "amur"
+      fish.fishType === "amur"
         ? "checked"
         : "";
 
     const cls =
-      fish.fishType ===
-        "amur"
+      fish.fishType === "amur"
         ? " fishLine-amur"
         : "";
 
     return `
-      <div
-        class="fishLine${cls}"
-        data-fish-line
-      >
+      <div class="fishLine${cls}" data-fish-line>
 
         <input
           class="fishInput"
@@ -2464,7 +1753,7 @@
           placeholder="0.000"
           value="${esc(val)}"
           data-fish
-        />
+        >
 
         <label class="amurCheck">
 
@@ -2474,9 +1763,7 @@
             ${checked}
           >
 
-          <span>
-            Амур
-          </span>
+          <span>Амур</span>
 
         </label>
 
@@ -2490,496 +1777,379 @@
     wKey,
     compId,
     stageKey
-  ){
-    if (
-      !teams.length
-    ) {
+  ) {
+    if (!teams.length) {
       return `
         <div class="muted">
-          ${
-            isSoloMode()
-              ? `Немає учасників у зоні ${esc(zone)}.`
-              : `Немає команд у зоні ${esc(zone)}.`
-          }
+          Немає ${isSoloMode() ? "учасників" : "команд"}
+          у зоні ${esc(zone)}.
         </div>
       `;
     }
 
-    const wNo =
-      Number(
-        wKey.replace(
-          "W",
-          ""
-        )
-      );
+    const wNo = Number(
+      wKey.replace("W", "")
+    );
 
-    const head = `
+    const rows = await Promise.all(
+      teams.map(async team => {
+        const data = await loadTeamData(
+          compId,
+          stageKey,
+          team,
+          wNo
+        );
+
+        const fish = normalizeFishArray(
+          data.weights
+        );
+
+        const stats = fishStats(fish);
+
+        const sourceClass =
+          data.source === "judge"
+            ? "source-judge"
+            : data.source === "admin"
+              ? "source-admin"
+              : "source-none";
+
+        const sourceText =
+          data.source === "judge"
+            ? "суддя"
+            : data.source === "admin"
+              ? "адмін"
+              : "—";
+
+        const entityId = entityIdOf(team);
+
+        const physicalSector =
+          validLakeSectorNumber(
+            team.lakeSectorNumber
+          );
+
+        return `
+          <tr
+            data-entity="${esc(entityId)}"
+            data-zone="${esc(team.zone)}"
+          >
+
+            <td>
+
+              <div class="pill">
+                ${esc(team.sector)}
+              </div>
+
+              <div class="small">
+                ${
+                  physicalSector !== null
+                    ? `📍 Озеро №${physicalSector}`
+                    : "📍 Не прив'язано"
+                }
+              </div>
+
+            </td>
+
+            <td>
+
+              <div class="teamName">
+                ${esc(team.team)}
+              </div>
+
+              <div class="teamMeta">
+                ${esc(
+                  isSoloTeam(team)
+                    ? team.uid || entityId
+                    : team.teamId || entityId
+                )}
+              </div>
+
+            </td>
+
+            <td>
+
+              <div class="fishWrap">
+
+                ${
+                  fish.length
+                    ? fish.map(fishInputHTML).join("")
+                    : `<span class="muted">
+                         Немає риби
+                       </span>`
+                }
+
+                <button
+                  class="btnPlus"
+                  type="button"
+                  data-plus
+                >
+                  +
+                </button>
+
+              </div>
+
+              <div class="small">
+                Вага окремо. Галочка — амур.
+              </div>
+
+            </td>
+
+            <td style="text-align:right;">
+
+              <div class="sumBox" data-sum>
+                ${stats.total.toFixed(3)}
+              </div>
+
+              <div class="small" data-fish-stats>
+                Короп BF: ${stats.bigCarp.toFixed(3)}
+                · Амур BF: ${stats.bigAmur.toFixed(3)}
+              </div>
+
+            </td>
+
+            <td style="text-align:center;">
+
+              <span
+                class="source-badge ${sourceClass}"
+              >
+                ${sourceText}
+              </span>
+
+            </td>
+
+            <td style="text-align:right;">
+
+              <button
+                class="btnSaveMini"
+                type="button"
+                data-save
+              >
+                Зберегти
+              </button>
+
+              <div class="small" data-status></div>
+
+            </td>
+
+          </tr>
+        `;
+      })
+    );
+
+    return `
       <table>
 
         <thead>
           <tr>
-
-            <th>
-              Сектор
-            </th>
-
-            <th>
-              ${esc(
-                entityLabel()
-              )}
-            </th>
-
-            <th>
-              Риба (${esc(wKey)})
-            </th>
-
-            <th>
-              Сума
-            </th>
-
-            <th>
-              Джерело
-            </th>
-
-            <th>
-              Дія
-            </th>
-
+            <th>Сектор</th>
+            <th>${esc(entityLabel())}</th>
+            <th>Риба (${esc(wKey)})</th>
+            <th>Сума</th>
+            <th>Джерело</th>
+            <th>Дія</th>
           </tr>
         </thead>
 
         <tbody>
+          ${rows.join("")}
+        </tbody>
+
+      </table>
     `;
-
-    const bodyRows =
-      await Promise.all(
-        teams.map(
-          async t => {
-            const data =
-              await loadTeamData(
-                compId,
-                stageKey,
-                t,
-                wNo
-              );
-
-            const fish =
-              normalizeFishArray(
-                data.weights ||
-                []
-              );
-
-            const inputs =
-              fish
-                .map(
-                  fishInputHTML
-                )
-                .join("");
-
-            const stats =
-              fishStats(
-                fish
-              );
-
-            let sourceClass =
-              "source-none";
-
-            let sourceText =
-              "—";
-
-            if (
-              data.source ===
-              "judge"
-            ) {
-              sourceClass =
-                "source-judge";
-
-              sourceText =
-                "суддя";
-
-            } else if (
-              data.source ===
-              "admin"
-            ) {
-              sourceClass =
-                "source-admin";
-
-              sourceText =
-                "адмін";
-            }
-
-            const entityId =
-              entityIdOf(
-                t
-              );
-
-            return `
-              <tr
-                data-entity="${esc(entityId)}"
-                data-zone="${esc(t.zone)}"
-              >
-
-                <td>
-                  <div class="pill">
-                    ${esc(t.sector || "—")}
-                  </div>
-                </td>
-
-                <td>
-
-                  <div class="teamName">
-                    ${esc(t.team)}
-                  </div>
-
-                  <div class="teamMeta">
-                    ${
-                      isSoloTeam(t)
-                        ? esc(t.uid || entityId)
-                        : esc(t.teamId || entityId)
-                    }
-                  </div>
-
-                </td>
-
-                <td>
-
-                  <div class="fishWrap">
-
-                    ${
-                      inputs ||
-                      `<span class="muted">
-                        Немає риби
-                      </span>`
-                    }
-
-                    <button
-                      class="btnPlus"
-                      type="button"
-                      data-plus
-                    >
-                      +
-                    </button>
-
-                  </div>
-
-                  <div class="small">
-                    Вага окремо. Галочка тільки якщо це амур.
-                  </div>
-
-                </td>
-
-                <td style="text-align:right;">
-
-                  <div
-                    class="sumBox"
-                    data-sum
-                  >
-                    ${stats.total.toFixed(3)}
-                  </div>
-
-                  <div
-                    class="small"
-                    data-fish-stats
-                  >
-                    Короп BF:
-                    ${stats.bigCarp.toFixed(3)}
-                    ·
-                    Амур BF:
-                    ${stats.bigAmur.toFixed(3)}
-                  </div>
-
-                </td>
-
-                <td style="text-align:center;">
-
-                  <span
-                    class="source-badge ${sourceClass}"
-                  >
-                    ${sourceText}
-                  </span>
-
-                </td>
-
-                <td style="text-align:right;">
-
-                  <button
-                    class="btnSaveMini"
-                    type="button"
-                    data-save
-                  >
-                    Зберегти
-                  </button>
-
-                  <div
-                    class="small"
-                    data-status
-                  ></div>
-
-                </td>
-
-              </tr>
-            `;
-          }
-        )
-      );
-
-    return (
-      head +
-      bodyRows.join("") +
-      `</tbody></table>`
-    );
   }
 
-  // =========================================================
-  // ROW CALC
-  // =========================================================
+  // =====================================================
+  // FISH ROW EVENTS
+  // =====================================================
 
-  function recalcRowSum(tr){
-    const fish =
-      collectFish(
-        tr
+  function collectFish(tr) {
+    const result = [];
+
+    tr.querySelectorAll(
+      "[data-fish-line]"
+    ).forEach(line => {
+      const input = line.querySelector(
+        "input[data-fish]"
       );
 
-    const stats =
-      fishStats(
-        fish
+      const checkbox = line.querySelector(
+        "input[data-amur]"
       );
 
-    const sumEl =
-      tr.querySelector(
-        "[data-sum]"
-      );
+      const kg = num(input?.value);
 
-    if (
-      sumEl
-    ) {
+      if (kg <= 0) return;
+
+      const isAmur = !!checkbox?.checked;
+
+      result.push({
+        kg,
+        fishType: isAmur ? "amur" : "carp",
+        isAmur
+      });
+    });
+
+    return result;
+  }
+
+  function recalcRowSum(tr) {
+    const stats = fishStats(
+      collectFish(tr)
+    );
+
+    const sumEl = tr.querySelector(
+      "[data-sum]"
+    );
+
+    if (sumEl) {
       sumEl.textContent =
-        stats.total
-          .toFixed(3);
+        stats.total.toFixed(3);
     }
 
-    const statsEl =
-      tr.querySelector(
-        "[data-fish-stats]"
-      );
+    const statsEl = tr.querySelector(
+      "[data-fish-stats]"
+    );
 
-    if (
-      statsEl
-    ) {
+    if (statsEl) {
       statsEl.textContent =
         `Короп BF: ${stats.bigCarp.toFixed(3)} · ` +
         `Амур BF: ${stats.bigAmur.toFixed(3)}`;
     }
   }
 
-  function collectFish(tr){
-    const arr =
-      [];
+  // =====================================================
+  // SAVE HELPERS
+  // =====================================================
 
-    tr
-      .querySelectorAll(
-        "[data-fish-line]"
-      )
-      .forEach(
-        line => {
-          const inp =
-            line.querySelector(
-              "input[data-fish]"
-            );
+  function stageArrayRowMatches(row, team) {
+    if (!row || !team) return false;
 
-          const chk =
-            line.querySelector(
-              "input[data-amur]"
-            );
+    const entityId = entityIdOf(team);
 
-          const kg =
-            num(
-              inp?.value
-            );
-
-          if (
-            kg > 0
-          ) {
-            const isAmur =
-              !!chk?.checked;
-
-            arr.push({
-              kg,
-
-              fishType:
-                isAmur
-                  ? "amur"
-                  : "carp",
-
-              isAmur
-            });
-          }
-        }
+    if (isSoloTeam(team)) {
+      const uid = norm(
+        team.uid || entityId
       );
 
-    return arr;
-  }
-
-  // =========================================================
-  // SAVE
-  // =========================================================
-
-  function stageArrayRowMatches(
-    row,
-    team
-  ){
-    if (
-      !row ||
-      !team
-    ) {
-      return false;
-    }
-
-    const entityId =
-      entityIdOf(
-        team
-      );
-
-    if (
-      isSoloTeam(
-        team
-      )
-    ) {
-      const uid =
-        norm(
-          team.uid ||
-          entityId
-        );
-
-      if (
-        uid &&
-        norm(row.uid) ===
-          uid
-      ) {
-        return true;
-      }
-
-      if (
-        entityId &&
-        norm(row.entityId) ===
-          entityId
-      ) {
-        return true;
-      }
-
-      const legacyTeamId =
-        norm(
-          team.legacyTeamId
-        );
-
-      if (
-        legacyTeamId &&
-        norm(row.teamId) ===
-          legacyTeamId
-      ) {
-        return true;
-      }
-
-      return false;
-    }
-
-    return (
-      norm(row.teamId) ===
-      norm(
-        team.teamId
-      )
-    );
-  }
-
-  async function getOldTeamDocForSave(
-    compId,
-    stageKey,
-    team
-  ){
-    const stageDocId =
-      stageResultsId(
-        compId,
-        stageKey
-      );
-
-    const ids =
-      [];
-
-    const entityId =
-      entityIdOf(
-        team
-      );
-
-    if (
-      entityId
-    ) {
-      ids.push(
-        entityId
-      );
-    }
-
-    const legacyTeamId =
-      norm(
+      const legacyTeamId = norm(
         team.legacyTeamId
       );
 
-    if (
-      legacyTeamId &&
-      !ids.includes(
-        legacyTeamId
-      )
-    ) {
-      ids.push(
-        legacyTeamId
+      return (
+        (uid && norm(row.uid) === uid) ||
+        (
+          entityId &&
+          norm(row.entityId) === entityId
+        ) ||
+        (
+          legacyTeamId &&
+          norm(row.teamId) === legacyTeamId
+        )
       );
     }
 
-    for (
-      const id
-      of ids
-    ) {
-      const ref =
-        db
-          .collection("stageResults")
-          .doc(stageDocId)
-          .collection("teams")
-          .doc(id);
+    return (
+      norm(row.teamId) === norm(team.teamId)
+    );
+  }
 
-      const snap =
-        await ref.get();
-
-      if (
-        snap.exists
-      ) {
-        return {
-          ref,
-          snap,
-
-          data:
-            snap.data() ||
-            {}
-        };
-      }
-    }
-
-    const canonicalRef =
-      db
-        .collection("stageResults")
-        .doc(stageDocId)
-        .collection("teams")
-        .doc(entityId);
-
+  function weighingSlot(stats) {
     return {
-      ref:
-        canonicalRef,
+      fish: stats.fish,
 
-      snap:
-        null,
+      fishKg: stats.fish.map(
+        f => num(f.kg)
+      ),
 
-      data:
-        {}
+      total: stats.total,
+      count: stats.count,
+
+      big: stats.bigFish,
+      bigCarp: stats.bigCarp,
+      bigAmur: stats.bigAmur,
+
+      carpCount: stats.carpCount,
+      amurCount: stats.amurCount,
+
+      carpWeight: stats.carpWeight,
+      amurWeight: stats.amurWeight
     };
   }
+
+  function calculateAllWeighings(weighings) {
+    const result = {
+      totalWeight: 0,
+      bigFish: 0,
+      bigCarp: 0,
+      bigAmur: 0,
+
+      totalCount: 0,
+      carpCount: 0,
+      amurCount: 0,
+
+      carpWeight: 0,
+      amurWeight: 0,
+
+      sums: {}
+    };
+
+    for (let i = 1; i <= 4; i++) {
+      const key = `W${i}`;
+      const slot = weighings[key] || {};
+
+      result.sums[key] = num(slot.total);
+
+      result.totalWeight += num(slot.total);
+      result.totalCount += num(slot.count);
+
+      result.bigFish = Math.max(
+        result.bigFish,
+        num(slot.big)
+      );
+
+      result.bigCarp = Math.max(
+        result.bigCarp,
+        num(slot.bigCarp)
+      );
+
+      result.bigAmur = Math.max(
+        result.bigAmur,
+        num(slot.bigAmur)
+      );
+
+      result.carpCount += num(
+        slot.carpCount
+      );
+
+      result.amurCount += num(
+        slot.amurCount
+      );
+
+      result.carpWeight += num(
+        slot.carpWeight
+      );
+
+      result.amurWeight += num(
+        slot.amurWeight
+      );
+    }
+
+    return result;
+  }
+
+  function liveWSlot(slot) {
+    const s = slot || {};
+
+    return {
+      c: num(s.count),
+      w: num(s.total),
+      bigCarp: num(s.bigCarp),
+      bigAmur: num(s.bigAmur)
+    };
+  }
+
+  // =====================================================
+  // SAVE TEAM / PARTICIPANT
+  // =====================================================
 
   async function saveTeam(
     compId,
@@ -2987,1761 +2157,1227 @@
     wKey,
     team,
     fish
-  ){
-    const wNo =
-      Number(
-        wKey.replace(
-          "W",
-          ""
-        )
-      );
+  ) {
+    const entityId = entityIdOf(team);
 
-    const stageDocId =
-      stageResultsId(
-        compId,
-        stageKey
-      );
-
-    const entityId =
-      entityIdOf(
-        team
-      );
-
-    if (
-      !entityId
-    ) {
+    if (!entityId) {
       throw new Error(
-        "Немає ID учасника/команди."
+        "Немає ID учасника або команди."
       );
     }
 
-    const identity =
-      identityFields(
-        team
-      );
-
-    const ts =
-      fb.firestore
-        .FieldValue
-        .serverTimestamp();
-
-    const stats =
-      fishStats(
-        fish
-      );
-
-    const fishArr =
-      stats.fish;
-
-    const wDocId =
-      weighingDocId(
-        compId,
-        stageKey,
-        wNo,
-        entityId
-      );
-
-    // ---------------------------------------------------------
-    // WEIGHINGS
-    // ---------------------------------------------------------
-
-    await db
-      .collection("weighings")
-      .doc(wDocId)
-      .set(
-        {
-          compId,
-
-          stageId:
-            stageKey,
-
-          competitionType:
-            currentCompetitionKind,
-
-          entryType:
-            identity.entryType,
-
-          entityId:
-            identity.entityId,
-
-          ...(isSoloTeam(team)
-            ? {
-                uid:
-                  identity.uid,
-
-                participantName:
-                  identity.participantName,
-
-                displayName:
-                  identity.displayName,
-
-                teamId:
-                  null,
-
-                teamName:
-                  null
-              }
-            : {
-                teamId:
-                  identity.teamId,
-
-                teamName:
-                  identity.teamName
-              }
-          ),
-
-          weighNo:
-            wNo,
-
-          zone:
-            team.zone,
-
-          sector:
-            Number(
-              team.sector ||
-              0
-            ),
-
-          weights:
-            fishArr,
-
-          weightsKg:
-            fishArr.map(
-              f =>
-                num(
-                  f.kg
-                )
-            ),
-
-          fishCount:
-            stats.count,
-
-          totalWeightKg:
-            stats.total,
-
-          bigFishKg:
-            stats.bigFish,
-
-          bigCarpKg:
-            stats.bigCarp,
-
-          bigAmurKg:
-            stats.bigAmur,
-
-          carpCount:
-            stats.carpCount,
-
-          amurCount:
-            stats.amurCount,
-
-          carpWeightKg:
-            stats.carpWeight,
-
-          amurWeightKg:
-            stats.amurWeight,
-
-          status:
-            "submitted",
-
-          source:
-            "admin-weigh",
-
-          updatedAt:
-            ts,
-
-          updatedBy:
-            auth.currentUser
-              ? auth.currentUser.uid
-              : "admin"
-        },
-        {
-          merge: true
-        }
-      );
-
-    // ---------------------------------------------------------
-    // stageResults/{stage}/teams/{entityId}
-    // ---------------------------------------------------------
-
-    const canonicalTeamRef =
-      db
-        .collection("stageResults")
-        .doc(stageDocId)
-        .collection("teams")
-        .doc(entityId);
-
-    const oldInfo =
-      await getOldTeamDocForSave(
-        compId,
-        stageKey,
-        team
-      );
-
-    const old =
-      oldInfo.data ||
-      {};
-
-    const weighings = {
-      ...(old.weighings || {})
-    };
-
-    weighings[wKey] = {
-      fish:
-        fishArr,
-
-      fishKg:
-        fishArr.map(
-          f =>
-            num(
-              f.kg
-            )
-        ),
-
-      total:
-        stats.total,
-
-      count:
-        stats.count,
-
-      big:
-        stats.bigFish,
-
-      bigCarp:
-        stats.bigCarp,
-
-      bigAmur:
-        stats.bigAmur,
-
-      carpCount:
-        stats.carpCount,
-
-      amurCount:
-        stats.amurCount,
-
-      carpWeight:
-        stats.carpWeight,
-
-      amurWeight:
-        stats.amurWeight
-    };
-
-    let totalWeight =
-      0;
-
-    let bigFish =
-      0;
-
-    let bigCarp =
-      0;
-
-    let bigAmur =
-      0;
-
-    let totalCount =
-      0;
-
-    let carpCount =
-      0;
-
-    let amurCount =
-      0;
-
-    let carpWeight =
-      0;
-
-    let amurWeight =
-      0;
-
-    const sums =
-      {};
-
-    [
-      "W1",
-      "W2",
-      "W3",
-      "W4"
-    ].forEach(
-      k => {
-        const slot =
-          weighings[k] ||
-          {};
-
-        const slotTotal =
-          num(
-            slot.total
-          );
-
-        const slotBig =
-          num(
-            slot.big
-          );
-
-        const slotBigCarp =
-          num(
-            slot.bigCarp
-          );
-
-        const slotBigAmur =
-          num(
-            slot.bigAmur
-          );
-
-        const slotCount =
-          num(
-            slot.count
-          );
-
-        sums[k] =
-          slotTotal;
-
-        totalWeight +=
-          slotTotal;
-
-        bigFish =
-          Math.max(
-            bigFish,
-            slotBig
-          );
-
-        bigCarp =
-          Math.max(
-            bigCarp,
-            slotBigCarp
-          );
-
-        bigAmur =
-          Math.max(
-            bigAmur,
-            slotBigAmur
-          );
-
-        totalCount +=
-          slotCount;
-
-        carpCount +=
-          num(
-            slot.carpCount
-          );
-
-        amurCount +=
-          num(
-            slot.amurCount
-          );
-
-        carpWeight +=
-          num(
-            slot.carpWeight
-          );
-
-        amurWeight +=
-          num(
-            slot.amurWeight
-          );
-      }
+    const wNo = Number(
+      wKey.replace("W", "")
     );
 
-    await canonicalTeamRef.set(
-      {
-        compId,
+    if (![1, 2, 3, 4].includes(wNo)) {
+      throw new Error(
+        "Невірний номер зважування."
+      );
+    }
 
-        stageId:
-          stageKey,
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
+
+    const identity = identityFields(team);
+    const lake = lakeFields(team);
+
+    const stats = fishStats(fish);
+
+    const wDocId = weighingDocId(
+      compId,
+      stageKey,
+      wNo,
+      entityId
+    );
+
+    const weighingRef = db
+      .collection("weighings")
+      .doc(wDocId);
+
+    const stageRef = db
+      .collection("stageResults")
+      .doc(stageDocId);
+
+    const canonicalTeamRef = stageRef
+      .collection("teams")
+      .doc(entityId);
+
+    const legacyTeamId = norm(
+      team.legacyTeamId
+    );
+
+    const legacyTeamRef =
+      legacyTeamId &&
+      legacyTeamId !== entityId
+        ? stageRef
+            .collection("teams")
+            .doc(legacyTeamId)
+        : null;
+
+    // Транзакція не допускає втрати
+    // інших зважувань при одночасних записах.
+    await db.runTransaction(async tx => {
+      const [
+        stageSnap,
+        canonicalSnap,
+        legacySnap
+      ] = await Promise.all([
+        tx.get(stageRef),
+        tx.get(canonicalTeamRef),
+        legacyTeamRef
+          ? tx.get(legacyTeamRef)
+          : Promise.resolve(null)
+      ]);
+
+      const stageData = stageSnap.exists
+        ? stageSnap.data() || {}
+        : {};
+
+      const oldTeam =
+        canonicalSnap.exists
+          ? canonicalSnap.data() || {}
+          : legacySnap?.exists
+            ? legacySnap.data() || {}
+            : {};
+
+      const weighings = {
+        ...(oldTeam.weighings || {})
+      };
+
+      weighings[wKey] = weighingSlot(stats);
+
+      const totals = calculateAllWeighings(
+        weighings
+      );
+
+      const common = {
+        ...identity,
+
+        zone: team.zone,
+        sector: team.sector,
+
+        drawZone: team.zone,
+        drawSector: team.sector,
+        drawKey: team.drawKey,
+
+        ...lake
+      };
+
+      const weighingPayload = {
+        compId,
+        stageId: stageKey,
 
         competitionType:
           currentCompetitionKind,
 
-        ...identity,
+        ...common,
 
-        zone:
-          team.zone,
+        weighNo: wNo,
 
-        sector:
-          team.sector,
+        weights: stats.fish,
 
-        drawZone:
-          team.zone,
+        weightsKg: stats.fish.map(
+          f => num(f.kg)
+        ),
 
-        drawSector:
-          team.sector,
+        fishCount: stats.count,
+        totalWeightKg: stats.total,
 
-        drawKey:
-          `${team.zone}${team.sector}`,
+        bigFishKg: stats.bigFish,
+        bigCarpKg: stats.bigCarp,
+        bigAmurKg: stats.bigAmur,
 
-        weighings,
-        sums,
+        carpCount: stats.carpCount,
+        amurCount: stats.amurCount,
 
-        totalWeight,
+        carpWeightKg: stats.carpWeight,
+        amurWeightKg: stats.amurWeight,
 
-        bigFish,
-        bigCarp,
-        bigAmur,
+        status: "submitted",
+        source: "admin-weigh",
 
-        totalCount,
-        carpCount,
-        amurCount,
+        updatedAt: timestamp(),
+        updatedBy: currentUid()
+      };
 
-        carpWeight,
-        amurWeight,
+      tx.set(
+        weighingRef,
+        weighingPayload,
+        { merge: true }
+      );
 
-        updatedAt:
-          ts,
+      tx.set(
+        canonicalTeamRef,
+        {
+          compId,
+          stageId: stageKey,
 
-        updatedBy:
-          auth.currentUser
-            ? auth.currentUser.uid
-            : "admin"
-      },
-      {
-        merge: true
-      }
-    );
+          competitionType:
+            currentCompetitionKind,
 
-    // ---------------------------------------------------------
-    // stageResults/{stage}.teams[]
-    // ---------------------------------------------------------
+          ...common,
 
-    const stageRef =
-      db
-        .collection("stageResults")
-        .doc(stageDocId);
+          weighings,
+          sums: totals.sums,
 
-    const stageSnap =
-      await stageRef.get();
+          totalWeight: totals.totalWeight,
+          bigFish: totals.bigFish,
+          bigCarp: totals.bigCarp,
+          bigAmur: totals.bigAmur,
 
-    const stageData =
-      stageSnap.exists
-        ? stageSnap.data() || {}
-        : {};
+          totalCount: totals.totalCount,
+          carpCount: totals.carpCount,
+          amurCount: totals.amurCount,
 
-    const teamsArr =
-      Array.isArray(
+          carpWeight: totals.carpWeight,
+          amurWeight: totals.amurWeight,
+
+          updatedAt: timestamp(),
+          updatedBy: currentUid()
+        },
+        { merge: true }
+      );
+
+      const teamsArr = Array.isArray(
         stageData.teams
       )
         ? stageData.teams.slice()
         : [];
 
-    const idx =
-      teamsArr.findIndex(
-        x =>
-          stageArrayRowMatches(
-            x,
-            team
-          )
+      const index = teamsArr.findIndex(
+        row => stageArrayRowMatches(row, team)
       );
 
-    const rowObj = {
-      ...identity,
+      const rowObj = {
+        ...common,
 
-      zone:
-        team.zone,
+        w1: liveWSlot(weighings.W1),
+        w2: liveWSlot(weighings.W2),
+        w3: liveWSlot(weighings.W3),
+        w4: liveWSlot(weighings.W4),
 
-      sector:
-        team.sector,
+        totalWeight: totals.totalWeight,
+        bigFish: totals.bigFish,
+        bigCarp: totals.bigCarp,
+        bigAmur: totals.bigAmur,
 
-      drawZone:
-        team.zone,
+        totalCount: totals.totalCount,
+        carpCount: totals.carpCount,
+        amurCount: totals.amurCount,
 
-      drawSector:
-        team.sector,
+        carpWeight: totals.carpWeight,
+        amurWeight: totals.amurWeight,
 
-      drawKey:
-        `${team.zone}${team.sector}`,
-
-      w1: {
-        c:
-          num(
-            (weighings.W1 || {})
-              .count
-          ),
-
-        w:
-          num(
-            (weighings.W1 || {})
-              .total
-          ),
-
-        bigCarp:
-          num(
-            (weighings.W1 || {})
-              .bigCarp
-          ),
-
-        bigAmur:
-          num(
-            (weighings.W1 || {})
-              .bigAmur
-          )
-      },
-
-      w2: {
-        c:
-          num(
-            (weighings.W2 || {})
-              .count
-          ),
-
-        w:
-          num(
-            (weighings.W2 || {})
-              .total
-          ),
-
-        bigCarp:
-          num(
-            (weighings.W2 || {})
-              .bigCarp
-          ),
-
-        bigAmur:
-          num(
-            (weighings.W2 || {})
-              .bigAmur
-          )
-      },
-
-      w3: {
-        c:
-          num(
-            (weighings.W3 || {})
-              .count
-          ),
-
-        w:
-          num(
-            (weighings.W3 || {})
-              .total
-          ),
-
-        bigCarp:
-          num(
-            (weighings.W3 || {})
-              .bigCarp
-          ),
-
-        bigAmur:
-          num(
-            (weighings.W3 || {})
-              .bigAmur
-          )
-      },
-
-      w4: {
-        c:
-          num(
-            (weighings.W4 || {})
-              .count
-          ),
-
-        w:
-          num(
-            (weighings.W4 || {})
-              .total
-          ),
-
-        bigCarp:
-          num(
-            (weighings.W4 || {})
-              .bigCarp
-          ),
-
-        bigAmur:
-          num(
-            (weighings.W4 || {})
-              .bigAmur
-          )
-      },
-
-      totalWeight,
-
-      bigFish,
-      bigCarp,
-      bigAmur,
-
-      totalCount,
-      carpCount,
-      amurCount,
-
-      carpWeight,
-      amurWeight,
-
-      total:
-        totalCount
-    };
-
-    if (
-      idx >= 0
-    ) {
-      teamsArr[idx] = {
-        ...teamsArr[idx],
-        ...rowObj
+        total: totals.totalCount
       };
 
-    } else {
-      teamsArr.push(
-        rowObj
-      );
-    }
-
-    await stageRef.set(
-      {
-        compId,
-
-        stageId:
-          stageKey,
-
-        competitionType:
-          currentCompetitionKind,
-
-        entryType:
-          currentEntryType,
-
-        stageName:
-          stageData.stageName ||
-          stageData.name ||
-          stageDocId,
-
-        teams:
-          teamsArr,
-
-        archived:
-          false,
-
-        isLive:
-          true,
-
-        isActive:
-          true,
-
-        updatedAt:
-          ts
-      },
-      {
-        merge: true
+      if (index >= 0) {
+        teamsArr[index] = {
+          ...teamsArr[index],
+          ...rowObj
+        };
+      } else {
+        teamsArr.push(rowObj);
       }
-    );
+
+      tx.set(
+        stageRef,
+        {
+          compId,
+          stageId: stageKey,
+
+          competitionType:
+            currentCompetitionKind,
+
+          entryType:
+            currentEntryType,
+
+          stageName:
+            stageData.stageName ||
+            stageData.name ||
+            stageDocId,
+
+          teams: teamsArr,
+
+          archived: false,
+          isLive: true,
+          isActive: true,
+
+          updatedAt: timestamp()
+        },
+        { merge: true }
+      );
+    });
 
     return {
-      totalWeight,
-      bigFish,
-      bigCarp,
-      bigAmur,
-      totalCount
+      ...stats,
+      lakeSectorNumber: lake.lakeSectorNumber
     };
   }
 
-  // =========================================================
+  // =====================================================
   // LOAD TABLES
-  // =========================================================
+  // =====================================================
 
-  async function loadTables(){
-    const {
-      compId,
-      stageKey
-    } =
-      parseStageValue(
-        stageSelect.value
-      );
+  async function loadTables() {
+    if (!stageSelect || !wSelect) return;
 
-    const wKey =
-      wSelect.value;
+    const requestId = ++tableLoadId;
 
-    if (
-      !compId ||
-      !stageKey
-    ) {
+    const { compId, stageKey } =
+      parseStageValue(stageSelect.value);
+
+    const wKey = wSelect.value;
+
+    if (!compId || !stageKey) {
       setMsg(
-        "Немає активного етапу для зважування.",
+        "Немає активного етапу.",
         false
       );
-
       return;
     }
 
-    try {
-      const info =
-        await getCompetitionInfo(
-          compId
-        );
-
-      configureCompetitionModeUI(
-        info.kind
-      );
-
-      currentEntryType =
-        resolveCompetitionEntryType(
-          info.data || {},
-          stageKey
-        );
-
-    } catch(e) {
-      console.warn(
-        "Competition type error:",
-        e
-      );
-    }
-
-    setMsg(
-      isSoloMode()
-        ? "Завантажую учасників…"
-        : "Завантажую команди…",
-      true
-    );
-
+    setMsg("Завантажую зважування…");
     setDbg("");
 
     try {
-      /*
-       * Щоб після зміни ПІБ
-       * або виправлення профілю
-       * не залишився старий кеш.
-       */
-      if (
-        isSoloMode()
-      ) {
+      const info = await getCompetitionInfo(
+        compId,
+        true
+      );
+
+      configureCompetitionModeUI(info.kind);
+
+      currentEntryType =
+        resolveCompetitionEntryType(
+          info.data,
+          stageKey
+        );
+
+      if (isSoloMode()) {
         userNameCache.clear();
       }
 
-      currentTeams =
+      const teams =
         await loadTeamsFromRegistrations(
           compId,
           stageKey
         );
 
-    } catch(e) {
-      console.error(e);
+      if (requestId !== tableLoadId) return;
 
-      setMsg(
-        "Помилка читання registrations: " +
-        e.message,
-        false
-      );
+      currentTeams = teams;
 
-      setDbg(
-        String(e)
-      );
+      if (!teams.length) {
+        if (zonesWrap) zonesWrap.innerHTML = "";
 
-      return;
-    }
+        if (archiveSection) {
+          archiveSection.style.display = "none";
+        }
 
-    if (
-      !currentTeams.length
-    ) {
-      setMsg(
-        isSoloMode()
-          ? "Не знайдено підтверджених учасників."
-          : "Не знайдено підтверджених команд.",
-        false
-      );
+        setMsg(
+          "Немає підтверджених учасників із жеребкуванням.",
+          false
+        );
 
-      setDbg(
-        "Перевір: competitionId, stageId, status=confirmed, drawZone у registrations."
-      );
-
-      if (
-        zonesWrap
-      ) {
-        zonesWrap.innerHTML =
-          "";
+        return;
       }
 
-      if (
-        archiveSection
-      ) {
-        archiveSection
-          .style
-          .display =
-          "none";
-      }
-
-      return;
-    }
-
-    /*
-     * КЛЮЧОВЕ ДЛЯ LIVE.
-     *
-     * Для SOLO одразу записуємо:
-     *
-     * uid
-     * participantName
-     * displayName
-     *
-     * у stageResults.teams[]
-     *
-     * навіть якщо ще немає риби.
-     */
-    if (
-      isSoloMode()
-    ) {
-      try {
+      if (isSoloMode()) {
         await syncSoloParticipantsToStageResults(
           compId,
           stageKey,
-          currentTeams
-        );
-
-      } catch(e) {
-        console.error(
-          "SOLO stageResults sync:",
-          e
-        );
-
-        setMsg(
-          "Учасники завантажені, але не вдалося синхронізувати SOLO-імена в LIVE: " +
-          e.message,
-          false
+          teams
         );
       }
-    }
 
-    const zones = {
-      A: [],
-      B: [],
-      C: []
-    };
+      const zones = {
+        A: [],
+        B: [],
+        C: []
+      };
 
-    currentTeams.forEach(
-      t => {
-        if (
-          zones[t.zone]
-        ) {
-          zones[t.zone]
-            .push(t);
+      teams.forEach(team => {
+        if (zones[team.zone]) {
+          zones[team.zone].push(team);
         }
-      }
-    );
+      });
 
-    setMsg(
-      isSoloMode()
-        ? `✅ Учасників: ${currentTeams.length}. Завантажую дані…`
-        : `✅ Команди: ${currentTeams.length}. Завантажую дані…`,
-      true
-    );
-
-    const [
-      htmlA,
-      htmlB,
-      htmlC
-    ] =
-      await Promise.all([
-        buildTable(
-          "A",
-          zones.A,
-          wKey,
-          compId,
-          stageKey
-        ),
-
-        buildTable(
-          "B",
-          zones.B,
-          wKey,
-          compId,
-          stageKey
-        ),
-
-        buildTable(
-          "C",
-          zones.C,
-          wKey,
-          compId,
-          stageKey
+      const html = await Promise.all(
+        ["A", "B", "C"].map(zone =>
+          buildTable(
+            zone,
+            zones[zone],
+            wKey,
+            compId,
+            stageKey
+          )
         )
-      ]);
+      );
 
-    if (
-      zonesWrap
-    ) {
-      zonesWrap.innerHTML =
-        zoneBlock(
-          "A",
-          htmlA,
-          zones.A.length
-        ) +
+      if (requestId !== tableLoadId) return;
 
-        zoneBlock(
-          "B",
-          htmlB,
-          zones.B.length
-        ) +
+      if (zonesWrap) {
+        zonesWrap.innerHTML = ["A", "B", "C"]
+          .map((zone, index) =>
+            zoneBlock(
+              zone,
+              html[index],
+              zones[zone].length
+            )
+          )
+          .join("");
+      }
 
-        zoneBlock(
-          "C",
-          htmlC,
-          zones.C.length
-        );
+      if (archiveSection) {
+        archiveSection.style.display = "block";
+      }
+
+      const mapped = teams.filter(
+        t => t.lakeSectorNumber !== null
+      ).length;
+
+      const unmapped = teams.length - mapped;
+
+      setMsg(
+        `✅ Таблиці готові. ` +
+        `${entityCountLabel(teams.length)}. ` +
+        `Фізичних секторів прив'язано: ${mapped}.` +
+        (
+          unmapped
+            ? ` Не прив'язано: ${unmapped}.`
+            : ""
+        ),
+        unmapped === 0
+      );
+
+      showCompetitionModeHint();
+
+    } catch (error) {
+      console.error(error);
+
+      setMsg(
+        "Помилка завантаження: " +
+        error.message,
+        false
+      );
+
+      setDbg(String(error));
     }
-
-    if (
-      archiveSection
-    ) {
-      archiveSection
-        .style
-        .display =
-        "block";
-    }
-
-    showCompetitionModeHint();
-
-    setMsg(
-      `✅ Таблиці готові. ${compId}__${stageKey} · ${wKey} · ${currentEntryType.toUpperCase()}`,
-      true
-    );
   }
 
-  // =========================================================
+  // =====================================================
   // TABLE EVENTS
-  // =========================================================
+  // =====================================================
 
-  if (
-    zonesWrap
-  ) {
+  if (zonesWrap) {
     zonesWrap.addEventListener(
       "input",
-      ev => {
-        const tr =
-          ev.target.closest(
-            "tr[data-entity]"
-          );
-
-        if (
-          tr &&
-          ev.target.matches(
-            "input[data-fish]"
-          )
-        ) {
-          recalcRowSum(
-            tr
-          );
+      event => {
+        if (!event.target.matches(
+          "input[data-fish]"
+        )) {
+          return;
         }
+
+        const tr = event.target.closest(
+          "tr[data-entity]"
+        );
+
+        if (tr) recalcRowSum(tr);
       }
     );
 
     zonesWrap.addEventListener(
       "change",
-      ev => {
-        if (
-          !ev.target.matches(
-            "input[data-amur]"
-          )
-        ) {
+      event => {
+        if (!event.target.matches(
+          "input[data-amur]"
+        )) {
           return;
         }
 
-        const line =
-          ev.target.closest(
-            "[data-fish-line]"
-          );
+        const line = event.target.closest(
+          "[data-fish-line]"
+        );
 
-        const tr =
-          ev.target.closest(
-            "tr[data-entity]"
-          );
+        const tr = event.target.closest(
+          "tr[data-entity]"
+        );
 
-        if (
-          line
-        ) {
+        if (line) {
           line.classList.toggle(
             "fishLine-amur",
-            ev.target.checked
+            event.target.checked
           );
         }
 
-        if (
-          tr
-        ) {
-          recalcRowSum(
-            tr
-          );
-        }
+        if (tr) recalcRowSum(tr);
       }
     );
 
     zonesWrap.addEventListener(
       "click",
-      async ev => {
-        const btnPlus =
-          ev.target.closest(
-            "[data-plus]"
+      async event => {
+        const plus = event.target.closest(
+          "[data-plus]"
+        );
+
+        const save = event.target.closest(
+          "[data-save]"
+        );
+
+        if (!plus && !save) return;
+
+        const tr = event.target.closest(
+          "tr[data-entity]"
+        );
+
+        if (!tr) return;
+
+        if (plus) {
+          const wrap = tr.querySelector(
+            ".fishWrap"
           );
 
-        const btnSave =
-          ev.target.closest(
-            "[data-save]"
+          if (!wrap) return;
+
+          wrap.querySelector(".muted")?.remove();
+
+          const holder = document.createElement(
+            "div"
           );
 
-        const tr =
-          ev.target.closest(
-            "tr[data-entity]"
-          );
+          holder.innerHTML = fishInputHTML(
+            null
+          ).trim();
 
-        if (
-          !tr
-        ) {
-          return;
-        }
-
-        const {
-          compId,
-          stageKey
-        } =
-          parseStageValue(
-            stageSelect.value
-          );
-
-        const wKey =
-          wSelect.value;
-
-        // -----------------------------------------------------
-        // ADD FISH
-        // -----------------------------------------------------
-
-        if (
-          btnPlus
-        ) {
-          const wrap =
-            tr.querySelector(
-              ".fishWrap"
-            );
-
-          const noFish =
-            wrap.querySelector(
-              ".muted"
-            );
-
-          if (
-            noFish
-          ) {
-            noFish.remove();
-          }
-
-          const holder =
-            document.createElement(
-              "div"
-            );
-
-          holder.innerHTML =
-            fishInputHTML(
-              null
-            ).trim();
-
-          const line =
-            holder.firstElementChild;
+          const line = holder.firstElementChild;
 
           wrap.insertBefore(
             line,
-            wrap.querySelector(
-              "[data-plus]"
-            )
+            wrap.querySelector("[data-plus]")
           );
 
-          const inp =
-            line.querySelector(
-              "input[data-fish]"
-            );
+          line.querySelector(
+            "input[data-fish]"
+          )?.focus();
 
-          if (
-            inp
-          ) {
-            inp.focus();
-          }
-
-          recalcRowSum(
-            tr
-          );
-
+          recalcRowSum(tr);
           return;
         }
 
-        // -----------------------------------------------------
-        // SAVE
-        // -----------------------------------------------------
+        if (operationBusy || save.disabled) {
+          return;
+        }
 
-        if (
-          btnSave
-        ) {
-          const statusEl =
-            tr.querySelector(
-              "[data-status]"
-            );
+        const { compId, stageKey } =
+          parseStageValue(stageSelect.value);
 
-          const entityId =
-            tr.getAttribute(
-              "data-entity"
-            );
+        const wKey = wSelect.value;
 
-          const teamObj =
-            currentTeams.find(
-              x =>
-                entityIdOf(x) ===
-                entityId
-            );
+        const entityId = tr.getAttribute(
+          "data-entity"
+        );
 
-          if (
-            !teamObj
-          ) {
-            if (
-              statusEl
-            ) {
-              statusEl.textContent =
-                isSoloMode()
-                  ? "❌ Немає учасника"
-                  : "❌ Немає команди";
-            }
+        const team = currentTeams.find(
+          item => entityIdOf(item) === entityId
+        );
 
-            return;
-          }
+        const statusEl = tr.querySelector(
+          "[data-status]"
+        );
 
-          if (
-            statusEl
-          ) {
+        if (!team) {
+          if (statusEl) {
             statusEl.textContent =
-              "Зберігаю…";
+              "❌ Учасника не знайдено";
+          }
+          return;
+        }
+
+        save.disabled = true;
+
+        if (statusEl) {
+          statusEl.textContent = "Зберігаю…";
+        }
+
+        try {
+          const result = await saveTeam(
+            compId,
+            stageKey,
+            wKey,
+            team,
+            collectFish(tr)
+          );
+
+          if (statusEl) {
+            statusEl.innerHTML = `
+              <span class="ok">✅ Збережено</span><br>
+              BF короп: ${result.bigCarp.toFixed(3)}<br>
+              BF амур: ${result.bigAmur.toFixed(3)}
+            `;
           }
 
-          try {
-            const fish =
-              collectFish(
-                tr
-              );
+          const badge = tr.querySelector(
+            ".source-badge"
+          );
 
-            const result =
-              await saveTeam(
-                compId,
-                stageKey,
-                wKey,
-                teamObj,
-                fish
-              );
+          if (badge) {
+            badge.className =
+              "source-badge source-admin";
 
-            if (
-              statusEl
-            ) {
-              statusEl.innerHTML =
-                `<span class='ok'>✅ Збережено</span><br>` +
-                `<span>BF короп: ${result.bigCarp.toFixed(3)}</span><br>` +
-                `<span>BF амур: ${result.bigAmur.toFixed(3)}</span>`;
-            }
-
-            recalcRowSum(
-              tr
-            );
-
-            const sourceBadge =
-              tr.querySelector(
-                ".source-badge"
-              );
-
-            if (
-              sourceBadge
-            ) {
-              sourceBadge.className =
-                "source-badge source-admin";
-
-              sourceBadge.textContent =
-                "адмін";
-            }
-
-            setMsg(
-              isSoloMode()
-                ? "✅ SOLO-зважування збережено. У LIVE передано ім'я учасника."
-                : "✅ Збережено в weighings + stageResults. Короп/амур враховано.",
-              true
-            );
-
-            setDbg(
-              `weighings/${
-                weighingDocId(
-                  compId,
-                  stageKey,
-                  Number(
-                    wKey.replace(
-                      "W",
-                      ""
-                    )
-                  ),
-                  entityIdOf(
-                    teamObj
-                  )
-                )
-              }`
-            );
-
-          } catch(e) {
-            console.error(e);
-
-            if (
-              statusEl
-            ) {
-              statusEl.innerHTML =
-                "<span class='err'>❌ Помилка</span>";
-            }
-
-            setMsg(
-              "Помилка збереження: " +
-              e.message,
-              false
-            );
-
-            setDbg(
-              String(e)
-            );
+            badge.textContent = "адмін";
           }
+
+          setMsg(
+            `✅ Зважування збережено. ` +
+            lakeSectorLabel(team),
+            true
+          );
+
+          setDbg(
+            weighingDocId(
+              compId,
+              stageKey,
+              Number(wKey.replace("W", "")),
+              entityId
+            )
+          );
+
+        } catch (error) {
+          console.error(error);
+
+          if (statusEl) {
+            statusEl.textContent =
+              "❌ Помилка збереження";
+          }
+
+          setMsg(
+            error.message,
+            false
+          );
+
+        } finally {
+          save.disabled = false;
         }
       }
     );
   }
 
-  // =========================================================
-  // BUILD ARCHIVE FROM WEIGHINGS
-  // =========================================================
+  // =====================================================
+  // ARCHIVE HELPERS
+  // =====================================================
+
+  function archiveRowFromStageTeam(
+    team,
+    fallbackId = ""
+  ) {
+    const t = team || {};
+
+    const entryType = normLower(
+      t.entryType
+    ) === ENTRY_SOLO
+      ? ENTRY_SOLO
+      : ENTRY_TEAM;
+
+    const entityId = norm(
+      t.entityId ||
+      (
+        entryType === ENTRY_SOLO
+          ? t.uid
+          : t.teamId
+      ) ||
+      fallbackId
+    );
+
+    const identity =
+      entryType === ENTRY_SOLO
+        ? {
+            entryType,
+            entityId,
+            uid: norm(t.uid || entityId),
+            participantName: norm(
+              t.participantName ||
+              t.displayName ||
+              "Учасник"
+            ),
+            teamId: null
+          }
+        : {
+            entryType,
+            entityId,
+            teamId: norm(t.teamId || entityId)
+          };
+
+    const weighings = t.weighings || {};
+
+    const slot = index => {
+      const fromWeighings = weighings[
+        `W${index}`
+      ];
+
+      if (fromWeighings) {
+        return liveWSlot(fromWeighings);
+      }
+
+      const legacy = t[`w${index}`] || {};
+
+      return {
+        c: num(
+          firstDefined(
+            legacy.c,
+            legacy.count
+          )
+        ),
+
+        w: num(
+          firstDefined(
+            legacy.w,
+            legacy.total
+          )
+        ),
+
+        bigCarp: num(legacy.bigCarp),
+        bigAmur: num(legacy.bigAmur)
+      };
+    };
+
+    return {
+      ...identity,
+
+      team:
+        entryType === ENTRY_SOLO
+          ? norm(
+              t.participantName ||
+              t.displayName ||
+              "Учасник"
+            )
+          : norm(
+              t.team ||
+              t.teamName ||
+              "—"
+            ),
+
+      zone: norm(
+        t.zone || t.drawZone
+      ),
+
+      sector: norm(
+        firstDefined(
+          t.sector,
+          t.drawSector
+        )
+      ),
+
+      drawZone: norm(
+        t.drawZone || t.zone
+      ),
+
+      drawSector: norm(
+        firstDefined(
+          t.drawSector,
+          t.sector
+        )
+      ),
+
+      drawKey: norm(
+        t.drawKey ||
+        drawKeyOf(
+          t.drawZone || t.zone,
+          firstDefined(
+            t.drawSector,
+            t.sector
+          )
+        )
+      ),
+
+      ...lakeFields(t),
+
+      w1: slot(1),
+      w2: slot(2),
+      w3: slot(3),
+      w4: slot(4),
+
+      totalWeight: num(t.totalWeight),
+      bigFish: num(t.bigFish),
+      bigCarp: num(t.bigCarp),
+      bigAmur: num(t.bigAmur),
+
+      totalCount: num(
+        firstDefined(
+          t.totalCount,
+          t.total
+        )
+      ),
+
+      carpCount: num(t.carpCount),
+      amurCount: num(t.amurCount),
+
+      carpWeight: num(t.carpWeight),
+      amurWeight: num(t.amurWeight)
+    };
+  }
 
   async function buildArchiveTeamsFromWeighings(
     compId,
     stageKey
-  ){
-    const snap =
-      await db
-        .collection("weighings")
-        .where(
-          "compId",
-          "==",
-          compId
+  ) {
+    const snap = await db
+      .collection("weighings")
+      .where("compId", "==", compId)
+      .where("stageId", "==", stageKey)
+      .get();
+
+    const byEntity = new Map();
+
+    snap.forEach(doc => {
+      const w = doc.data() || {};
+
+      const entryType =
+        normLower(w.entryType) === ENTRY_SOLO
+          ? ENTRY_SOLO
+          : ENTRY_TEAM;
+
+      const entityId = norm(
+        w.entityId ||
+        (
+          entryType === ENTRY_SOLO
+            ? w.uid
+            : w.teamId
         )
-        .where(
-          "stageId",
-          "==",
-          stageKey
-        )
-        .get();
+      );
 
-    const byTeam =
-      new Map();
+      if (!entityId) return;
 
-    snap.forEach(
-      d => {
-        const w =
-          d.data() ||
-          {};
+      const weighNo = Number(w.weighNo);
 
-        const teamId =
-          String(
-            w.teamId ||
-            ""
-          );
-
-        if (
-          !teamId
-        ) {
-          return;
-        }
-
-        const weighNo =
-          Number(
-            w.weighNo ||
-            0
-          );
-
-        if (
-          !(
-            weighNo >= 1 &&
-            weighNo <= 4
-          )
-        ) {
-          return;
-        }
-
-        const old =
-          byTeam.get(
-            teamId
-          ) || {
-            teamId,
-
-            team:
-              String(
-                w.teamName ||
-                "—"
-              ),
-
-            zone:
-              String(
-                w.zone ||
-                ""
-              ),
-
-            sector:
-              String(
-                w.sector ||
-                ""
-              ),
-
-            w1:{
-              c:0,
-              w:0,
-              bigCarp:0,
-              bigAmur:0
-            },
-
-            w2:{
-              c:0,
-              w:0,
-              bigCarp:0,
-              bigAmur:0
-            },
-
-            w3:{
-              c:0,
-              w:0,
-              bigCarp:0,
-              bigAmur:0
-            },
-
-            w4:{
-              c:0,
-              w:0,
-              bigCarp:0,
-              bigAmur:0
-            },
-
-            totalWeight:
-              0,
-
-            bigFish:
-              0,
-
-            bigCarp:
-              0,
-
-            bigAmur:
-              0,
-
-            totalCount:
-              0,
-
-            carpCount:
-              0,
-
-            amurCount:
-              0,
-
-            carpWeight:
-              0,
-
-            amurWeight:
-              0
-          };
-
-        const fish =
-          normalizeFishArray(
-            w.weights ||
-            w.fish ||
-            w.weightsKg ||
-            []
-          );
-
-        const stats =
-          fishStats(
-            fish
-          );
-
-        old[
-          `w${weighNo}`
-        ] = {
-          c:
-            stats.count,
-
-          w:
-            stats.total,
-
-          bigCarp:
-            stats.bigCarp,
-
-          bigAmur:
-            stats.bigAmur
-        };
-
-        old.totalWeight +=
-          stats.total;
-
-        old.totalCount +=
-          stats.count;
-
-        old.bigFish =
-          Math.max(
-            old.bigFish,
-            stats.bigFish
-          );
-
-        old.bigCarp =
-          Math.max(
-            old.bigCarp,
-            stats.bigCarp
-          );
-
-        old.bigAmur =
-          Math.max(
-            old.bigAmur,
-            stats.bigAmur
-          );
-
-        old.carpCount +=
-          stats.carpCount;
-
-        old.amurCount +=
-          stats.amurCount;
-
-        old.carpWeight +=
-          stats.carpWeight;
-
-        old.amurWeight +=
-          stats.amurWeight;
-
-        byTeam.set(
-          teamId,
-          old
-        );
+      if (![1, 2, 3, 4].includes(weighNo)) {
+        return;
       }
+
+      const old = byEntity.get(entityId) || {
+        ...archiveRowFromStageTeam({
+          ...w,
+          entryType,
+          entityId,
+          totalWeight: 0,
+          totalCount: 0
+        }),
+
+        totalWeight: 0,
+        bigFish: 0,
+        bigCarp: 0,
+        bigAmur: 0,
+
+        totalCount: 0,
+        carpCount: 0,
+        amurCount: 0,
+
+        carpWeight: 0,
+        amurWeight: 0
+      };
+
+      const stats = fishStats(
+        w.weights ||
+        w.fish ||
+        w.weightsKg ||
+        []
+      );
+
+      old[`w${weighNo}`] = {
+        c: stats.count,
+        w: stats.total,
+        bigCarp: stats.bigCarp,
+        bigAmur: stats.bigAmur
+      };
+
+      old.totalWeight += stats.total;
+      old.totalCount += stats.count;
+
+      old.bigFish = Math.max(
+        old.bigFish,
+        stats.bigFish
+      );
+
+      old.bigCarp = Math.max(
+        old.bigCarp,
+        stats.bigCarp
+      );
+
+      old.bigAmur = Math.max(
+        old.bigAmur,
+        stats.bigAmur
+      );
+
+      old.carpCount += stats.carpCount;
+      old.amurCount += stats.amurCount;
+
+      old.carpWeight += stats.carpWeight;
+      old.amurWeight += stats.amurWeight;
+
+      byEntity.set(entityId, old);
+    });
+
+    return [...byEntity.values()];
+  }
+
+  async function enrichArchiveWithLakeSectors(
+    rows,
+    compId,
+    stageKey,
+    seasonYear
+  ) {
+    const info = await getCompetitionInfo(compId);
+
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
     );
 
-    return Array.from(
-      byTeam.values()
+    const map = await loadSectorMap(
+      seasonYear,
+      stageDocId,
+      true
+    );
+
+    const registrationRows =
+      currentTeams.length
+        ? currentTeams
+        : await loadTeamsFromRegistrations(
+            compId,
+            stageKey
+          );
+
+    const byEntity = new Map();
+    const byDrawKey = new Map();
+
+    registrationRows.forEach(team => {
+      byEntity.set(entityIdOf(team), team);
+      byDrawKey.set(team.drawKey, team);
+    });
+
+    const enriched = rows.map(row => {
+      const entityId = norm(
+        row.entityId ||
+        row.teamId ||
+        row.uid
+      );
+
+      const drawKey = norm(
+        row.drawKey ||
+        drawKeyOf(row.zone, row.sector)
+      );
+
+      const registration =
+        byEntity.get(entityId) ||
+        byDrawKey.get(drawKey) ||
+        null;
+
+      const lake = resolveLakeSector(
+        registration || row,
+        info.data,
+        map,
+        row.zone,
+        row.sector
+      );
+
+      return {
+        ...row,
+
+        drawZone: row.drawZone || row.zone,
+        drawSector: row.drawSector || row.sector,
+        drawKey,
+
+        ...lakeFields(lake)
+      };
+    });
+
+    checkDuplicatePhysicalSectors(enriched);
+
+    return enriched;
+  }
+
+  function calculateStandings(rows) {
+    const sorted = rows.slice().sort((a, b) => {
+      if (b.totalWeight !== a.totalWeight) {
+        return b.totalWeight - a.totalWeight;
+      }
+
+      if (b.bigFish !== a.bigFish) {
+        return b.bigFish - a.bigFish;
+      }
+
+      return b.totalCount - a.totalCount;
+    });
+
+    // Загальне місце зберігаємо окремо.
+    const zoneCounters = new Map();
+
+    sorted.forEach(row => {
+      const zone = norm(row.zone);
+
+      if (!zoneCounters.has(zone)) {
+        zoneCounters.set(zone, []);
+      }
+
+      zoneCounters.get(zone).push(row);
+    });
+
+    const zonePlaces = new Map();
+
+    zoneCounters.forEach((zoneRows, zone) => {
+      zoneRows
+        .slice()
+        .sort((a, b) => {
+          if (b.totalWeight !== a.totalWeight) {
+            return b.totalWeight - a.totalWeight;
+          }
+
+          if (b.bigFish !== a.bigFish) {
+            return b.bigFish - a.bigFish;
+          }
+
+          return b.totalCount - a.totalCount;
+        })
+        .forEach((row, index) => {
+          zonePlaces.set(
+            `${zone}/${row.entityId}`,
+            index + 1
+          );
+        });
+    });
+
+    return sorted.map((row, index) => {
+      const zonePlace = zonePlaces.get(
+        `${row.zone}/${row.entityId}`
+      ) || index + 1;
+
+      return {
+        ...row,
+
+        place: index + 1,
+        overallPlace: index + 1,
+
+        zonePlace,
+
+        // Для звичайних етапів бали
+        // визначаються місцем у зоні.
+        points: zonePlace
+      };
+    });
+  }
+
+  function isFinalStage(
+    competition,
+    stageKey
+  ) {
+    const event = findCompetitionEvent(
+      competition,
+      stageKey
+    );
+
+    const text = normLower(
+      `${stageKey} ` +
+      `${event?.title || ""} ` +
+      `${event?.name || ""}`
+    );
+
+    return (
+      event?.isFinal === true ||
+      text.includes("final") ||
+      text.includes("фінал")
     );
   }
 
-  // =========================================================
-  // REBUILD SEASON RATING
-  // =========================================================
+  // =====================================================
+  // SEASON RATING
+  // =====================================================
 
   async function rebuildSeasonRatingFromArchive(
-    seasonYear,
-    ts
-  ){
-    const archivedStagesSnap =
-      await db
-        .collection("seasonResults")
-        .doc(seasonYear)
-        .collection("stages")
-        .get();
+    seasonYear
+  ) {
+    const snap = await db
+      .collection("seasonResults")
+      .doc(seasonYear)
+      .collection("stages")
+      .get();
 
-    const byTeam =
-      new Map();
+    const byTeam = new Map();
+    const archivedStages = [];
 
-    const archivedStages =
-      [];
+    for (const stageDoc of snap.docs) {
+      const stage = stageDoc.data() || {};
 
-    for (
-      const stageDoc
-      of archivedStagesSnap.docs
-    ) {
-      const stage =
-        stageDoc.data() ||
-        {};
+      const compId = norm(stage.compId);
 
-      const stageDocId =
-        stageDoc.id;
-
-      const compId =
-        norm(
-          stage.compId
-        );
-
-      let kind =
-        "unknown";
-
-      try {
-        if (
-          compId
-        ) {
-          const info =
-            await getCompetitionInfo(
-              compId
-            );
-
-          kind =
-            info.kind;
+      let kind = detectCompetitionKind(
+        compId,
+        {
+          type: stage.competitionType
         }
+      );
 
-      } catch(e) {
-        console.warn(
-          "[SeasonRating] Не вдалося визначити тип:",
-          compId,
-          e
-        );
-      }
-
-      if (
-        kind === "unknown"
-      ) {
-        kind =
-          detectCompetitionKind(
-            compId,
-            {
-              type:
-                stage.competitionType
-            }
-          );
-      }
-
-      if (
-        kind !== "season"
-      ) {
-        console.warn(
-          `[SeasonRating] Пропускаю НЕ сезонний архів: ${stageDocId} (${kind})`
+      if (kind === "unknown" && compId) {
+        const info = await getCompetitionInfo(
+          compId
         );
 
-        continue;
+        kind = info.kind;
       }
 
-      const rows =
-        Array.isArray(
-          stage.standings
-        )
-          ? stage.standings
-          : [];
+      if (kind !== "season") continue;
+
+      const stageDocId = stageDoc.id;
 
       archivedStages.push({
         stageDocId,
-
-        compId:
-          stage.compId ||
-          "",
-
-        stageId:
-          stage.stageId ||
-          "",
-
+        compId,
+        stageId: stage.stageId || "",
         stageName:
-          stage.stageName ||
-          stageDocId,
+          stage.stageName || stageDocId,
 
-        competitionType:
-          "season",
+        competitionType: "season",
+        isFinal: stage.isFinal === true,
 
-        archivedAt:
-          stage.archivedAt ||
-          null
+        archivedAt: stage.archivedAt || null
       });
 
-      rows.forEach(
-        row => {
-          const teamId =
-            String(
-              row.teamId ||
-              ""
-            );
+      const rows = Array.isArray(
+        stage.standings
+      )
+        ? stage.standings
+        : [];
 
-          if (
-            !teamId
-          ) {
-            return;
-          }
+      rows.forEach(row => {
+        const teamId = norm(row.teamId);
 
-          const old =
-            byTeam.get(
-              teamId
-            ) || {
-              teamId,
+        if (!teamId) return;
 
-              team:
-                String(
-                  row.team ||
-                  "—"
-                ),
+        const old = byTeam.get(teamId) || {
+          teamId,
+          team: norm(row.team) || "—",
+          stages: {}
+        };
 
-              stages:
-                {}
-            };
+        old.team = norm(row.team) || old.team;
 
-          old.team =
-            String(
-              row.team ||
-              old.team ||
-              "—"
-            );
+        old.stages[stageDocId] = {
+          stageDocId,
 
-          old.stages[
-            stageDocId
-          ] = {
-            stageDocId,
+          compId,
+          stageId: stage.stageId || "",
+          stageName:
+            stage.stageName || stageDocId,
 
-            compId:
-              stage.compId ||
-              "",
+          place: num(row.place),
 
-            stageId:
-              stage.stageId ||
-              "",
+          zonePlace: num(
+            firstDefined(
+              row.zonePlace,
+              row.points,
+              row.place
+            )
+          ),
 
-            stageName:
-              stage.stageName ||
-              stageDocId,
+          overallPlace: num(
+            firstDefined(
+              row.overallPlace,
+              row.place
+            )
+          ),
 
-            place:
-              num(
-                row.place
-              ),
+          points: num(
+            firstDefined(
+              row.points,
+              row.place
+            )
+          ),
 
-            points:
-              num(
-                row.points ||
-                row.place
-              ),
+          totalWeight: num(row.totalWeight),
+          bigFish: num(row.bigFish),
+          bigCarp: num(row.bigCarp),
+          bigAmur: num(row.bigAmur),
 
-            totalWeight:
-              num(
-                row.totalWeight
-              ),
+          totalCount: num(row.totalCount)
+        };
 
-            bigFish:
-              num(
-                row.bigFish
-              ),
-
-            bigCarp:
-              num(
-                row.bigCarp
-              ),
-
-            bigAmur:
-              num(
-                row.bigAmur
-              ),
-
-            totalCount:
-              num(
-                row.totalCount
-              )
-          };
-
-          byTeam.set(
-            teamId,
-            old
-          );
-        }
-      );
+        byTeam.set(teamId, old);
+      });
     }
 
-    const teams =
-      Array.from(
-        byTeam.values()
-      )
-        .map(
-          t => {
-            const vals =
-              Object.values(
-                t.stages ||
-                {}
-              );
-
-            return {
-              ...t,
-
-              played:
-                vals.length,
-
-              totalPoints:
-                vals.reduce(
-                  (s, x) =>
-                    s +
-                    num(
-                      x.points
-                    ),
-                  0
-                ),
-
-              totalWeight:
-                vals.reduce(
-                  (s, x) =>
-                    s +
-                    num(
-                      x.totalWeight
-                    ),
-                  0
-                ),
-
-              bigFish:
-                vals.reduce(
-                  (m, x) =>
-                    Math.max(
-                      m,
-                      num(
-                        x.bigFish
-                      )
-                    ),
-                  0
-                ),
-
-              bigCarp:
-                vals.reduce(
-                  (m, x) =>
-                    Math.max(
-                      m,
-                      num(
-                        x.bigCarp
-                      )
-                    ),
-                  0
-                ),
-
-              bigAmur:
-                vals.reduce(
-                  (m, x) =>
-                    Math.max(
-                      m,
-                      num(
-                        x.bigAmur
-                      )
-                    ),
-                  0
-                ),
-
-              totalCount:
-                vals.reduce(
-                  (s, x) =>
-                    s +
-                    num(
-                      x.totalCount
-                    ),
-                  0
-                )
-            };
-          }
-        )
-        .sort(
-          (a, b) => {
-            if (
-              a.totalPoints !==
-              b.totalPoints
-            ) {
-              return (
-                a.totalPoints -
-                b.totalPoints
-              );
-            }
-
-            if (
-              b.totalWeight !==
-              a.totalWeight
-            ) {
-              return (
-                b.totalWeight -
-                a.totalWeight
-              );
-            }
-
-            return (
-              b.bigFish -
-              a.bigFish
-            );
-          }
-        )
-        .map(
-          (t, i) => ({
-            ...t,
-
-            seasonPlace:
-              i + 1
-          })
+    const teams = [...byTeam.values()]
+      .map(team => {
+        const stages = Object.values(
+          team.stages
         );
+
+        const sortedPoints = stages
+          .map(s => num(s.points))
+          .sort((a, b) => a - b);
+
+        const bestTwo = sortedPoints.slice(0, 2);
+
+        const ratingPoints =
+          bestTwo.reduce(
+            (sum, value) => sum + value,
+            0
+          ) +
+          (bestTwo.length === 1 ? 8 : 0);
+
+        return {
+          ...team,
+
+          played: stages.length,
+
+          totalPoints: ratingPoints,
+
+          totalWeight: stages.reduce(
+            (sum, s) =>
+              sum + num(s.totalWeight),
+            0
+          ),
+
+          bigFish: Math.max(
+            0,
+            ...stages.map(s => num(s.bigFish))
+          ),
+
+          bigCarp: Math.max(
+            0,
+            ...stages.map(s => num(s.bigCarp))
+          ),
+
+          bigAmur: Math.max(
+            0,
+            ...stages.map(s => num(s.bigAmur))
+          ),
+
+          totalCount: stages.reduce(
+            (sum, s) =>
+              sum + num(s.totalCount),
+            0
+          )
+        };
+      })
+      .sort((a, b) => {
+        if (a.totalPoints !== b.totalPoints) {
+          return a.totalPoints - b.totalPoints;
+        }
+
+        if (a.totalWeight !== b.totalWeight) {
+          return b.totalWeight - a.totalWeight;
+        }
+
+        return b.bigFish - a.bigFish;
+      })
+      .map((team, index) => ({
+        ...team,
+        seasonPlace: index + 1
+      }));
 
     await db
       .collection("seasonRating")
@@ -4750,539 +3386,120 @@
         {
           seasonYear,
 
-          updatedAt:
-            ts,
-
-          source:
-            "seasonResults",
+          source: "seasonResults",
 
           archivedStages,
+          teams,
 
-          teams
+          updatedAt: timestamp()
         },
-        {
-          merge: true
-        }
+        { merge: true }
       );
 
     return {
-      teamsCount:
-        teams.length,
-
-      stagesCount:
-        archivedStages.length
+      teamsCount: teams.length,
+      stagesCount: archivedStages.length
     };
   }
 
-  // =========================================================
-  // ARCHIVE SEASON STAGE
-  // =========================================================
+  // =====================================================
+  // ARCHIVE
+  // =====================================================
 
-  async function archiveStage(){
-    const {
-      compId,
-      stageKey
-    } =
-      parseStageValue(
-        stageSelect.value
-      );
+  async function archiveStage() {
+    if (operationBusy) return;
 
-    const seasonYear =
-      norm(
-        seasonYearInp?.value
-      ) ||
-      "2026";
+    const { compId, stageKey } =
+      parseStageValue(stageSelect.value);
 
-    if (
-      !compId ||
-      !stageKey
-    ) {
-      setArchiveMsg(
-        "Спочатку обери етап.",
-        false
-      );
-
-      return;
-    }
-
-    let compInfo;
-
-    try {
-      compInfo =
-        await getCompetitionInfo(
-          compId,
-          true
-        );
-
-    } catch(e) {
-      console.error(e);
-
-      setArchiveMsg(
-        "❌ Не вдалося перевірити тип змагання.",
-        false
-      );
-
-      return;
-    }
-
-    configureCompetitionModeUI(
-      compInfo.kind
+    const seasonYear = norm(
+      seasonYearInp?.value ||
+      currentStageYear
     );
 
-    if (
-      compInfo.kind ===
-      "oneoff"
-    ) {
+    if (!compId || !stageKey) {
       setArchiveMsg(
-        "❌ Це одиночне змагання. " +
-        "Воно НЕ архівується в seasonResults і НЕ впливає на сезонний рейтинг. " +
-        "Після завершення просто натисни «Очистити LIVE».",
+        "Немає активного етапу.",
         false
       );
-
       return;
     }
 
-    if (
-      compInfo.kind !==
-      "season"
-    ) {
+    if (!seasonYear) {
       setArchiveMsg(
-        "❌ Тип змагання не визначено. Архівацію заблоковано для безпеки.",
+        "Укажи рік сезону.",
         false
       );
-
       return;
     }
 
-    const stageDocId =
-      stageResultsId(
-        compId,
-        stageKey
-      );
-
-    if (
-      !confirm(
-        `Архівувати СЕЗОННИЙ етап ${stageDocId} у сезон ${seasonYear}?`
-      )
-    ) {
-      return;
-    }
-
-    if (
-      btnArchive
-    ) {
-      btnArchive.disabled =
-        true;
-    }
-
-    setArchiveMsg(
-      "STEP 0 — Підготовка…",
+    const info = await getCompetitionInfo(
+      compId,
       true
     );
 
+    configureCompetitionModeUI(info.kind);
+
+    if (info.kind !== "season") {
+      setArchiveMsg(
+        "Архівація дозволена тільки для сезонних змагань.",
+        false
+      );
+      return;
+    }
+
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
+
+    if (!confirm(
+      `Архівувати ${stageDocId} у сезон ${seasonYear}?`
+    )) {
+      return;
+    }
+
+    operationBusy = true;
+    configureCompetitionModeUI(info.kind);
+
     try {
-      const ts =
-        fb.firestore
-          .FieldValue
-          .serverTimestamp();
-
-      const stageRef =
-        db
-          .collection("stageResults")
-          .doc(stageDocId);
+      const stageRef = db
+        .collection("stageResults")
+        .doc(stageDocId);
 
       setArchiveMsg(
-        "STEP 1 — Читаю stageResults…",
-        true
+        "STEP 1 — Читаю LIVE…"
       );
 
-      const stageSnap =
-        await stageRef.get();
+      const stageSnap = await stageRef.get();
 
-      const stageData =
-        stageSnap.exists
-          ? stageSnap.data() || {}
-          : {};
+      const stageData = stageSnap.exists
+        ? stageSnap.data() || {}
+        : {};
 
-      setArchiveMsg(
-        "STEP 2 — Збираю команди з stageResults/teams…",
-        true
-      );
+      const teamsSnap = await stageRef
+        .collection("teams")
+        .get();
 
-      const teamsSnap =
-        await stageRef
-          .collection("teams")
-          .get();
+      let teamsData = [];
 
-      let teamsData =
-        [];
-
-      teamsSnap.forEach(
-        d => {
-          const t =
-            d.data() ||
-            {};
-
-          teamsData.push({
-            teamId:
-              String(
-                t.teamId ||
-                d.id
-              ),
-
-            team:
-              String(
-                t.team ||
-                t.teamName ||
-                "—"
-              ),
-
-            zone:
-              String(
-                t.zone ||
-                ""
-              ),
-
-            sector:
-              String(
-                t.sector ||
-                ""
-              ),
-
-            w1:
-              t.weighings?.W1
-                ? {
-                    c:
-                      num(
-                        t.weighings
-                          .W1
-                          .count
-                      ),
-
-                    w:
-                      num(
-                        t.weighings
-                          .W1
-                          .total
-                      ),
-
-                    bigCarp:
-                      num(
-                        t.weighings
-                          .W1
-                          .bigCarp
-                      ),
-
-                    bigAmur:
-                      num(
-                        t.weighings
-                          .W1
-                          .bigAmur
-                      )
-                  }
-                : {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-            w2:
-              t.weighings?.W2
-                ? {
-                    c:
-                      num(
-                        t.weighings
-                          .W2
-                          .count
-                      ),
-
-                    w:
-                      num(
-                        t.weighings
-                          .W2
-                          .total
-                      ),
-
-                    bigCarp:
-                      num(
-                        t.weighings
-                          .W2
-                          .bigCarp
-                      ),
-
-                    bigAmur:
-                      num(
-                        t.weighings
-                          .W2
-                          .bigAmur
-                      )
-                  }
-                : {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-            w3:
-              t.weighings?.W3
-                ? {
-                    c:
-                      num(
-                        t.weighings
-                          .W3
-                          .count
-                      ),
-
-                    w:
-                      num(
-                        t.weighings
-                          .W3
-                          .total
-                      ),
-
-                    bigCarp:
-                      num(
-                        t.weighings
-                          .W3
-                          .bigCarp
-                      ),
-
-                    bigAmur:
-                      num(
-                        t.weighings
-                          .W3
-                          .bigAmur
-                      )
-                  }
-                : {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-            w4:
-              t.weighings?.W4
-                ? {
-                    c:
-                      num(
-                        t.weighings
-                          .W4
-                          .count
-                      ),
-
-                    w:
-                      num(
-                        t.weighings
-                          .W4
-                          .total
-                      ),
-
-                    bigCarp:
-                      num(
-                        t.weighings
-                          .W4
-                          .bigCarp
-                      ),
-
-                    bigAmur:
-                      num(
-                        t.weighings
-                          .W4
-                          .bigAmur
-                      )
-                  }
-                : {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-            totalWeight:
-              num(
-                t.totalWeight
-              ),
-
-            bigFish:
-              num(
-                t.bigFish
-              ),
-
-            bigCarp:
-              num(
-                t.bigCarp
-              ),
-
-            bigAmur:
-              num(
-                t.bigAmur
-              ),
-
-            totalCount:
-              num(
-                t.totalCount
-              ),
-
-            carpCount:
-              num(
-                t.carpCount
-              ),
-
-            amurCount:
-              num(
-                t.amurCount
-              ),
-
-            carpWeight:
-              num(
-                t.carpWeight
-              ),
-
-            amurWeight:
-              num(
-                t.amurWeight
-              )
-          });
-        }
-      );
-
-      if (
-        !teamsData.length &&
-        Array.isArray(
-          stageData.teams
-        )
-      ) {
-        setArchiveMsg(
-          "STEP 2B — Беру команди з stageResults.teams…",
-          true
+      if (!teamsSnap.empty) {
+        teamsData = teamsSnap.docs.map(doc =>
+          archiveRowFromStageTeam(
+            doc.data(),
+            doc.id
+          )
         );
-
-        teamsData =
-          stageData.teams
-            .map(
-              t => ({
-                teamId:
-                  String(
-                    t.teamId ||
-                    ""
-                  ),
-
-                team:
-                  String(
-                    t.team ||
-                    t.teamName ||
-                    "—"
-                  ),
-
-                zone:
-                  String(
-                    t.zone ||
-                    ""
-                  ),
-
-                sector:
-                  String(
-                    t.sector ||
-                    ""
-                  ),
-
-                w1:
-                  t.w1 || {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-                w2:
-                  t.w2 || {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-                w3:
-                  t.w3 || {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-                w4:
-                  t.w4 || {
-                    c:0,
-                    w:0,
-                    bigCarp:0,
-                    bigAmur:0
-                  },
-
-                totalWeight:
-                  num(
-                    t.totalWeight
-                  ),
-
-                bigFish:
-                  num(
-                    t.bigFish
-                  ),
-
-                bigCarp:
-                  num(
-                    t.bigCarp
-                  ),
-
-                bigAmur:
-                  num(
-                    t.bigAmur
-                  ),
-
-                totalCount:
-                  num(
-                    t.total ||
-                    t.totalCount
-                  ),
-
-                carpCount:
-                  num(
-                    t.carpCount
-                  ),
-
-                amurCount:
-                  num(
-                    t.amurCount
-                  ),
-
-                carpWeight:
-                  num(
-                    t.carpWeight
-                  ),
-
-                amurWeight:
-                  num(
-                    t.amurWeight
-                  )
-              })
-            )
-            .filter(
-              t =>
-                t.teamId
-            );
+      } else if (
+        Array.isArray(stageData.teams) &&
+        stageData.teams.length
+      ) {
+        teamsData = stageData.teams.map(
+          row => archiveRowFromStageTeam(row)
+        );
       }
 
-      if (
-        !teamsData.length
-      ) {
-        setArchiveMsg(
-          "STEP 2C — stageResults порожній, збираю напряму з weighings…",
-          true
-        );
-
+      if (!teamsData.length) {
         teamsData =
           await buildArchiveTeamsFromWeighings(
             compId,
@@ -5290,490 +3507,279 @@
           );
       }
 
-      if (
-        !teamsData.length
-      ) {
-        setArchiveMsg(
-          "❌ Немає команд для архівації. Немає даних ні в stageResults, ні в weighings.",
-          false
+      if (!teamsData.length) {
+        throw new Error(
+          "Немає результатів для архівації."
         );
-
-        return;
       }
 
       setArchiveMsg(
-        "STEP 3 — Рахую місця…",
-        true
+        "STEP 2 — Перевіряю фізичні сектори…"
       );
 
-      const standings =
-        teamsData
-          .slice()
-          .sort(
-            (a, b) => {
-              if (
-                b.totalWeight !==
-                a.totalWeight
-              ) {
-                return (
-                  b.totalWeight -
-                  a.totalWeight
-                );
-              }
+      teamsData =
+        await enrichArchiveWithLakeSectors(
+          teamsData,
+          compId,
+          stageKey,
+          seasonYear
+        );
 
-              if (
-                b.bigFish !==
-                a.bigFish
-              ) {
-                return (
-                  b.bigFish -
-                  a.bigFish
-                );
-              }
-
-              return (
-                b.totalCount -
-                a.totalCount
-              );
-            }
-          )
-          .map(
-            (t, i) => ({
-              place:
-                i + 1,
-
-              points:
-                i + 1,
-
-              teamId:
-                t.teamId,
-
-              team:
-                t.team,
-
-              zone:
-                t.zone,
-
-              sector:
-                t.sector,
-
-              w1:
-                t.w1,
-
-              w2:
-                t.w2,
-
-              w3:
-                t.w3,
-
-              w4:
-                t.w4,
-
-              totalWeight:
-                num(
-                  t.totalWeight
-                ),
-
-              bigFish:
-                num(
-                  t.bigFish
-                ),
-
-              bigCarp:
-                num(
-                  t.bigCarp
-                ),
-
-              bigAmur:
-                num(
-                  t.bigAmur
-                ),
-
-              totalCount:
-                num(
-                  t.totalCount
-                ),
-
-              carpCount:
-                num(
-                  t.carpCount
-                ),
-
-              amurCount:
-                num(
-                  t.amurCount
-                ),
-
-              carpWeight:
-                num(
-                  t.carpWeight
-                ),
-
-              amurWeight:
-                num(
-                  t.amurWeight
-                )
-            })
-          );
+      const mapped = teamsData.filter(
+        row => row.lakeSectorNumber !== null
+      ).length;
 
       setArchiveMsg(
-        "STEP 4 — Записую архів СЕЗОННОГО етапу…",
-        true
+        "STEP 3 — Розраховую місця…"
       );
 
-      const archiveRef =
-        db
-          .collection("seasonResults")
-          .doc(seasonYear)
-          .collection("stages")
-          .doc(stageDocId);
+      const standings = calculateStandings(
+        teamsData
+      );
+
+      const finalStage = isFinalStage(
+        info.data,
+        stageKey
+      );
+
+      // Фінал отримує бали за загальне місце.
+      if (finalStage) {
+        standings.forEach(row => {
+          row.points = row.overallPlace;
+        });
+      }
+
+      const summary = {
+        teamsCount: standings.length,
+
+        mappedLakeSectors: mapped,
+
+        totalWeight: standings.reduce(
+          (s, t) => s + num(t.totalWeight),
+          0
+        ),
+
+        maxBigFish: Math.max(
+          0,
+          ...standings.map(t => num(t.bigFish))
+        ),
+
+        maxBigCarp: Math.max(
+          0,
+          ...standings.map(t => num(t.bigCarp))
+        ),
+
+        maxBigAmur: Math.max(
+          0,
+          ...standings.map(t => num(t.bigAmur))
+        ),
+
+        totalCount: standings.reduce(
+          (s, t) => s + num(t.totalCount),
+          0
+        ),
+
+        carpCount: standings.reduce(
+          (s, t) => s + num(t.carpCount),
+          0
+        ),
+
+        amurCount: standings.reduce(
+          (s, t) => s + num(t.amurCount),
+          0
+        )
+      };
+
+      const archiveRef = db
+        .collection("seasonResults")
+        .doc(seasonYear)
+        .collection("stages")
+        .doc(stageDocId);
+
+      setArchiveMsg(
+        "STEP 4 — Записую архів…"
+      );
 
       await archiveRef.set(
         {
           seasonYear,
-
           compId,
-
-          stageId:
-            stageKey,
-
+          stageId: stageKey,
           stageDocId,
 
-          competitionType:
-            "season",
+          competitionType: "season",
 
           stageName:
             stageData.stageName ||
             stageData.name ||
             stageDocId,
 
-          archivedAt:
-            ts,
+          isFinal: finalStage,
 
-          archivedBy:
-            auth.currentUser
-              ? auth.currentUser.uid
-              : "unknown",
+          lakeId: norm(
+            info.data.lakeId ||
+            info.data.waterbodyId
+          ),
 
           standings,
+          summary,
 
-          summary: {
-            teamsCount:
-              standings.length,
+          archivedAt: timestamp(),
+          archivedBy: currentUid(),
 
-            totalWeight:
-              standings.reduce(
-                (s, t) =>
-                  s +
-                  num(
-                    t.totalWeight
-                  ),
-                0
-              ),
-
-            maxBigFish:
-              standings.reduce(
-                (m, t) =>
-                  Math.max(
-                    m,
-                    num(
-                      t.bigFish
-                    )
-                  ),
-                0
-              ),
-
-            maxBigCarp:
-              standings.reduce(
-                (m, t) =>
-                  Math.max(
-                    m,
-                    num(
-                      t.bigCarp
-                    )
-                  ),
-                0
-              ),
-
-            maxBigAmur:
-              standings.reduce(
-                (m, t) =>
-                  Math.max(
-                    m,
-                    num(
-                      t.bigAmur
-                    )
-                  ),
-                0
-              ),
-
-            totalCount:
-              standings.reduce(
-                (s, t) =>
-                  s +
-                  num(
-                    t.totalCount
-                  ),
-                0
-              ),
-
-            carpCount:
-              standings.reduce(
-                (s, t) =>
-                  s +
-                  num(
-                    t.carpCount
-                  ),
-                0
-              ),
-
-            amurCount:
-              standings.reduce(
-                (s, t) =>
-                  s +
-                  num(
-                    t.amurCount
-                  ),
-                0
-              )
-          },
-
-          isArchived:
-            true,
-
-          isActive:
-            false
+          isArchived: true,
+          isActive: false
         },
-        {
-          merge: true
-        }
+        { merge: true }
       );
 
-      const verify =
-        await archiveRef.get();
+      const verify = await archiveRef.get();
 
-      if (
-        !verify.exists
-      ) {
+      if (!verify.exists) {
         throw new Error(
-          "Архів не записався."
+          "Не вдалося підтвердити запис архіву."
         );
       }
 
       setArchiveMsg(
-        "STEP 5 — Перераховую сезонний рейтинг ТІЛЬКИ із season…",
-        true
+        "STEP 5 — Перераховую рейтинг…"
       );
 
-      const ratingInfo =
+      const rating =
         await rebuildSeasonRatingFromArchive(
-          seasonYear,
-          ts
+          seasonYear
         );
 
       setArchiveMsg(
-        "STEP 6 — Позначаю LIVE як архівований…",
-        true
+        "STEP 6 — Закриваю архівований LIVE…"
       );
 
       await stageRef.set(
         {
-          competitionType:
-            "season",
+          competitionType: "season",
 
-          archived:
-            true,
+          archived: true,
+          isLive: false,
+          isActive: false,
 
-          isLive:
-            false,
-
-          isActive:
-            false,
-
-          archivedAt:
-            ts,
+          archivedAt: timestamp(),
 
           archivedTo:
-            `seasonResults/${seasonYear}/stages/${stageDocId}`
+            `seasonResults/${seasonYear}/` +
+            `stages/${stageDocId}`
         },
-        {
-          merge: true
-        }
+        { merge: true }
       );
 
       setArchiveMsg(
         `✅ Архів готовий. ` +
-        `Етап: ${standings.length} команд. ` +
-        `Рейтинг: ${ratingInfo.teamsCount} команд / ` +
-        `${ratingInfo.stagesCount} сезонних етапів. ` +
-        `Тепер можна натиснути «Очистити LIVE».`,
+        `Команд: ${standings.length}. ` +
+        `Фізичних секторів: ${mapped}. ` +
+        `Рейтинг: ${rating.teamsCount} команд. ` +
+        `Можна очистити LIVE.`,
         true
       );
 
       setMsg(
-        "✅ Сезонний етап архівовано. Тепер можна очистити LIVE перед наступним етапом.",
+        "✅ Етап архівовано.",
         true
       );
 
-    } catch(e) {
-      console.error(
-        "Archive error:",
-        e
-      );
+    } catch (error) {
+      console.error(error);
 
       setArchiveMsg(
-        `❌ ПОМИЛКА
-CODE: ${e.code || "—"}
-MSG: ${e.message || "—"}
-STACK: ${e.stack || "—"}`,
+        `❌ Помилка архівування: ${error.message}`,
         false
       );
 
     } finally {
-      if (
-        btnArchive
-      ) {
-        btnArchive.disabled =
-          currentCompetitionKind !==
-          "season";
-      }
+      operationBusy = false;
+      configureCompetitionModeUI(
+        currentCompetitionKind
+      );
     }
   }
 
-  // =========================================================
-  // ACTIVATE NEXT SEASON STAGE
-  // =========================================================
+  // =====================================================
+  // DELETE
+  // =====================================================
+
+  async function deleteDocsInBatches(
+    docs,
+    label
+  ) {
+    let deleted = 0;
+
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = db.batch();
+
+      const chunk = docs.slice(i, i + 400);
+
+      chunk.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+
+      deleted += chunk.length;
+
+      setArchiveMsg(
+        `🧹 ${label}: ${deleted}/${docs.length}`
+      );
+    }
+
+    return deleted;
+  }
+
+  // =====================================================
+  // ACTIVATE NEXT
+  // =====================================================
 
   async function activateNextStage(
     compId,
     currentStageKey,
     currentStageDocId
-  ){
-    const info =
-      await getCompetitionInfo(
-        compId,
-        true
-      );
+  ) {
+    const next = await getNextStageInfo(
+      compId,
+      currentStageKey
+    );
 
-    if (
-      info.kind !==
-      "season"
-    ) {
-      return null;
-    }
-
-    const next =
-      await getNextStageInfo(
-        compId,
-        currentStageKey
-      );
-
-    if (
-      !next ||
-      !next.key
-    ) {
-      await db
-        .collection("settings")
-        .doc("app")
-        .set(
-          {
-            activeCompetitionId:
-              "",
-
-            activeStageId:
-              "",
-
-            activeKey:
-              "",
-
-            activeStageResultsId:
-              "",
-
-            activeStageTitle:
-              "",
-
-            liveClosed:
-              true,
-
-            liveClosedAt:
-              fb.firestore
-                .FieldValue
-                .serverTimestamp(),
-
-            liveClosedFrom:
-              currentStageDocId,
-
-            previousCompetitionId:
-              compId,
-
-            previousStageId:
-              currentStageKey,
-
-            previousStageResultsId:
-              currentStageDocId
-          },
-          {
-            merge: true
-          }
-        );
-
-      return null;
-    }
-
-    const nextStageDocId =
-      stageResultsId(
-        compId,
-        next.key
-      );
-
-    await db
+    const appRef = db
       .collection("settings")
-      .doc("app")
-      .set(
+      .doc("app");
+
+    if (!next) {
+      await appRef.set(
         {
-          activeCompetitionId:
-            compId,
+          activeCompetitionId: "",
+          activeStageId: "",
+          activeKey: "",
+          activeStageResultsId: "",
+          activeStageTitle: "",
 
-          activeStageId:
-            next.key,
+          liveClosed: true,
+          liveClosedAt: timestamp(),
+          liveClosedFrom: currentStageDocId,
 
-          activeKey:
-            nextStageDocId,
-
-          activeStageResultsId:
-            nextStageDocId,
-
-          liveClosed:
-            false,
-
-          liveClosedAt:
-            null,
-
-          liveClosedFrom:
-            currentStageDocId,
-
-          previousCompetitionId:
-            compId,
-
-          previousStageId:
-            currentStageKey,
-
+          previousCompetitionId: compId,
+          previousStageId: currentStageKey,
           previousStageResultsId:
             currentStageDocId,
 
-          activeStageTitle:
-            next.title ||
-            next.key,
-
-          updatedAt:
-            fb.firestore
-              .FieldValue
-              .serverTimestamp()
+          updatedAt: timestamp()
         },
-        {
-          merge: true
-        }
+        { merge: true }
       );
+
+      return null;
+    }
+
+    const nextStageDocId = stageResultsId(
+      compId,
+      next.key
+    );
 
     await db
       .collection("stageResults")
@@ -5781,19 +3787,14 @@ STACK: ${e.stack || "—"}`,
       .set(
         {
           compId,
+          stageId: next.key,
 
-          stageId:
-            next.key,
-
-          competitionType:
-            "season",
+          competitionType: "season",
 
           stageName:
-            next.title ||
-            nextStageDocId,
+            next.title || nextStageDocId,
 
-          teams:
-            [],
+          teams: [],
 
           zones: {
             A: [],
@@ -5801,375 +3802,281 @@ STACK: ${e.stack || "—"}`,
             C: []
           },
 
-          archived:
-            false,
+          archived: false,
+          isLive: true,
+          isActive: true,
 
-          isLive:
-            true,
-
-          isActive:
-            true,
-
-          preparedAt:
-            fb.firestore
-              .FieldValue
-              .serverTimestamp()
+          preparedAt: timestamp()
         },
-        {
-          merge: true
-        }
+        { merge: true }
       );
 
+    await appRef.set(
+      {
+        activeCompetitionId: compId,
+        activeStageId: next.key,
+
+        activeKey: nextStageDocId,
+        activeStageResultsId: nextStageDocId,
+
+        activeStageTitle:
+          next.title || next.key,
+
+        liveClosed: false,
+        liveClosedAt: null,
+
+        liveClosedFrom: currentStageDocId,
+
+        previousCompetitionId: compId,
+        previousStageId: currentStageKey,
+        previousStageResultsId:
+          currentStageDocId,
+
+        updatedAt: timestamp()
+      },
+      { merge: true }
+    );
+
     return {
-      stageKey:
-        next.key,
-
-      stageDocId:
-        nextStageDocId,
-
-      title:
-        next.title ||
-        next.key,
-
-      source:
-        next.source
+      stageKey: next.key,
+      stageDocId: nextStageDocId,
+      title: next.title || next.key
     };
   }
 
-  // =========================================================
-  // CLOSE ONEOFF LIVE
-  // =========================================================
+  // =====================================================
+  // CLOSE ONEOFF
+  // =====================================================
 
   async function closeOneoffLive(
     compId,
-    currentStageKey,
-    currentStageDocId
-  ){
-    const appRef =
-      db
-        .collection("settings")
-        .doc("app");
+    stageKey,
+    stageDocId
+  ) {
+    const appRef = db
+      .collection("settings")
+      .doc("app");
 
-    const appSnap =
-      await appRef.get();
+    const snap = await appRef.get();
 
-    const app =
-      appSnap.exists
-        ? appSnap.data() || {}
-        : {};
+    const app = snap.exists
+      ? snap.data() || {}
+      : {};
 
     const patch = {
-      liveClosed:
-        true,
+      liveClosed: true,
+      liveClosedAt: timestamp(),
+      liveClosedFrom: stageDocId,
 
-      liveClosedAt:
-        fb.firestore
-          .FieldValue
-          .serverTimestamp(),
+      previousCompetitionId: compId,
+      previousStageId: stageKey,
+      previousStageResultsId: stageDocId,
 
-      liveClosedFrom:
-        currentStageDocId,
-
-      previousCompetitionId:
-        compId,
-
-      previousStageId:
-        currentStageKey,
-
-      previousStageResultsId:
-        currentStageDocId,
-
-      updatedAt:
-        fb.firestore
-          .FieldValue
-          .serverTimestamp()
+      updatedAt: timestamp()
     };
 
     if (
-      norm(
-        app.activeCompetitionId
-      ) === compId &&
-      norm(
-        app.activeStageId
-      ) === currentStageKey
+      norm(app.activeCompetitionId) === compId &&
+      norm(app.activeStageId) === stageKey
     ) {
-      patch.activeCompetitionId =
-        "";
-
-      patch.activeStageId =
-        "";
-
-      patch.activeKey =
-        "";
-
-      patch.activeStageResultsId =
-        "";
-
-      patch.activeStageTitle =
-        "";
+      Object.assign(patch, {
+        activeCompetitionId: "",
+        activeStageId: "",
+        activeKey: "",
+        activeStageResultsId: "",
+        activeStageTitle: ""
+      });
     }
 
     await appRef.set(
       patch,
-      {
-        merge: true
-      }
+      { merge: true }
     );
   }
 
-  // =========================================================
+  // =====================================================
   // CLEAR LIVE
-  // =========================================================
+  // =====================================================
 
-  async function clearLiveStage(){
-    const {
-      compId,
-      stageKey
-    } =
-      parseStageValue(
-        stageSelect.value
-      );
+  async function clearLiveStage() {
+    if (operationBusy) return;
 
-    const seasonYear =
-      norm(
-        seasonYearInp?.value
-      ) ||
-      "2026";
+    const { compId, stageKey } =
+      parseStageValue(stageSelect.value);
 
-    if (
-      !compId ||
-      !stageKey
-    ) {
-      setArchiveMsg(
-        "Спочатку обери етап.",
-        false
-      );
-
-      return;
-    }
-
-    let compInfo;
-
-    try {
-      compInfo =
-        await getCompetitionInfo(
-          compId,
-          true
-        );
-
-    } catch(e) {
-      console.error(e);
-
-      setArchiveMsg(
-        "❌ Не вдалося перевірити тип змагання.",
-        false
-      );
-
-      return;
-    }
-
-    configureCompetitionModeUI(
-      compInfo.kind
+    const seasonYear = norm(
+      seasonYearInp?.value ||
+      currentStageYear
     );
 
-    if (
-      compInfo.kind ===
-      "unknown"
-    ) {
+    if (!compId || !stageKey) {
       setArchiveMsg(
-        "❌ Тип змагання не визначено. Очищення LIVE заблоковано для безпеки.",
+        "Немає активного етапу.",
         false
       );
-
       return;
     }
 
-    const isSeason =
-      compInfo.kind ===
-      "season";
+    const info = await getCompetitionInfo(
+      compId,
+      true
+    );
 
-    const isOneoff =
-      compInfo.kind ===
-      "oneoff";
+    configureCompetitionModeUI(info.kind);
 
-    const stageDocId =
-      stageResultsId(
-        compId,
-        stageKey
+    if (info.kind === "unknown") {
+      setArchiveMsg(
+        "Невідомий тип змагання. Очищення заблоковано.",
+        false
       );
-
-    if (
-      isSeason
-    ) {
-      const archiveRef =
-        db
-          .collection("seasonResults")
-          .doc(seasonYear)
-          .collection("stages")
-          .doc(stageDocId);
-
-      const archiveSnap =
-        await archiveRef.get();
-
-      if (
-        !archiveSnap.exists
-      ) {
-        setArchiveMsg(
-          "❌ Це сезонний етап. Спочатку архівуй його. Без архіву сезонний LIVE чистити не можна.",
-          false
-        );
-
-        return;
-      }
-
-      const archiveData =
-        archiveSnap.data() ||
-        {};
-
-      const archiveKind =
-        detectCompetitionKind(
-          archiveData.compId ||
-          compId,
-          {
-            type:
-              archiveData.competitionType ||
-              "season"
-          }
-        );
-
-      if (
-        archiveKind !==
-        "season"
-      ) {
-        setArchiveMsg(
-          "❌ Архів знайдений, але він не позначений як season. Очищення заблоковано.",
-          false
-        );
-
-        return;
-      }
-    }
-
-    let confirmText =
-      "";
-
-    if (
-      isSeason
-    ) {
-      confirmText =
-        `Очистити LIVE сезонного етапу ${stageDocId}?\n\n` +
-        `Буде видалено:\n` +
-        `• weighings цього етапу\n` +
-        `• stageResults цього етапу\n` +
-        `• stageResults/teams цього етапу\n\n` +
-        `Архів seasonResults НЕ буде видалено.\n` +
-        `seasonRating НЕ буде видалено.\n\n` +
-        `Після очищення система автоматично активує наступний етап сезону.`;
-    }
-
-    if (
-      isOneoff
-    ) {
-      confirmText =
-        `Завершити одиночне змагання та очистити LIVE ${stageDocId}?\n\n` +
-        `Буде видалено:\n` +
-        `• weighings цього змагання\n` +
-        `• stageResults цього змагання\n` +
-        `• stageResults/teams цього змагання\n\n` +
-        `ВАЖЛИВО:\n` +
-        `• seasonResults НЕ створюється\n` +
-        `• seasonRating НЕ змінюється\n` +
-        `• одиночне змагання НЕ впливає на рейтинг сезону\n\n` +
-        `Після очищення активний LIVE буде закрито.`;
-    }
-
-    if (
-      !confirm(
-        confirmText
-      )
-    ) {
       return;
     }
 
-    if (
-      btnClearLive
-    ) {
-      btnClearLive.disabled =
-        true;
+    const isSeason = info.kind === "season";
+    const isOneoff = info.kind === "oneoff";
+
+    const stageDocId = stageResultsId(
+      compId,
+      stageKey
+    );
+
+    if (isSeason) {
+      if (!seasonYear) {
+        setArchiveMsg(
+          "Укажи рік сезону.",
+          false
+        );
+        return;
+      }
+
+      const archiveSnap = await db
+        .collection("seasonResults")
+        .doc(seasonYear)
+        .collection("stages")
+        .doc(stageDocId)
+        .get();
+
+      if (!archiveSnap.exists) {
+        setArchiveMsg(
+          "❌ Спочатку архівуй сезонний етап.",
+          false
+        );
+        return;
+      }
+
+      const archiveData = archiveSnap.data() || {};
+
+      if (
+        normLower(
+          archiveData.competitionType
+        ) !== "season"
+      ) {
+        setArchiveMsg(
+          "❌ Архів не позначений як season.",
+          false
+        );
+        return;
+      }
     }
+
+    // Перевіряємо, що адміністратор не
+    // намагається очистити вже неактивний етап.
+    const appSnap = await db
+      .collection("settings")
+      .doc("app")
+      .get();
+
+    const app = appSnap.exists
+      ? appSnap.data() || {}
+      : {};
+
+    if (
+      norm(app.activeCompetitionId) !== compId ||
+      norm(app.activeStageId) !== stageKey
+    ) {
+      setArchiveMsg(
+        "❌ Цей етап уже не є активним. " +
+        "Очищення заблоковано.",
+        false
+      );
+      return;
+    }
+
+    const confirmText = isSeason
+      ? (
+          `Очистити LIVE ${stageDocId}?\n\n` +
+          `Архів сезону залишиться.\n` +
+          `Рейтинг сезону залишиться.\n\n` +
+          `Після очищення активується наступний етап.`
+        )
+      : (
+          `Завершити одиночне змагання ${stageDocId}?\n\n` +
+          `LIVE та зважування буде видалено.\n` +
+          `Сезонний рейтинг не зміниться.`
+        );
+
+    if (!confirm(confirmText)) return;
+
+    operationBusy = true;
+    configureCompetitionModeUI(info.kind);
 
     try {
+      // Визначаємо наступний етап до видалення,
+      // щоб помилка конфігурації не виникла
+      // після очищення даних.
+      let next = null;
+
+      if (isSeason) {
+        next = await getNextStageInfo(
+          compId,
+          stageKey
+        );
+      }
+
       setArchiveMsg(
-        "🧹 Очищаю LIVE…",
-        true
+        "🧹 Видаляю weighings…"
       );
 
-      const weighingsSnap =
-        await db
-          .collection("weighings")
-          .where(
-            "compId",
-            "==",
-            compId
-          )
-          .where(
-            "stageId",
-            "==",
-            stageKey
-          )
-          .get();
+      const weighingsSnap = await db
+        .collection("weighings")
+        .where("compId", "==", compId)
+        .where("stageId", "==", stageKey)
+        .get();
 
       const deletedWeighings =
         await deleteDocsInBatches(
           weighingsSnap.docs,
-          "Видалено weighings"
+          "weighings"
         );
 
-      const stageRef =
-        db
-          .collection("stageResults")
-          .doc(stageDocId);
+      const stageRef = db
+        .collection("stageResults")
+        .doc(stageDocId);
 
-      const teamsSnap =
-        await stageRef
-          .collection("teams")
-          .get();
+      const teamsSnap = await stageRef
+        .collection("teams")
+        .get();
 
       const deletedTeams =
         await deleteDocsInBatches(
           teamsSnap.docs,
-          "Видалено stageResults/teams"
+          "stageResults/teams"
         );
 
       await stageRef.delete();
 
-      let activated =
-        null;
+      let activated = null;
 
-      if (
-        isSeason
-      ) {
-        setArchiveMsg(
-          "🔁 Активую наступний сезонний етап…",
-          true
+      if (isSeason) {
+        // next уже перевірений вище.
+        activated = await activateNextStage(
+          compId,
+          stageKey,
+          stageDocId
         );
-
-        activated =
-          await activateNextStage(
-            compId,
-            stageKey,
-            stageDocId
-          );
       }
 
-      if (
-        isOneoff
-      ) {
-        setArchiveMsg(
-          "🔒 Закриваю LIVE одиночного змагання…",
-          true
-        );
-
+      if (isOneoff) {
         await closeOneoffLive(
           compId,
           stageKey,
@@ -6177,216 +4084,135 @@ STACK: ${e.stack || "—"}`,
         );
       }
 
+      ++tableLoadId;
+
+      currentTeams = [];
+
+      if (zonesWrap) {
+        zonesWrap.innerHTML = "";
+      }
+
+      if (archiveSection) {
+        archiveSection.style.display = "none";
+      }
+
       await loadStages();
 
-      if (
-        zonesWrap
-      ) {
-        zonesWrap.innerHTML =
-          "";
-      }
+      setArchiveMsg(
+        `✅ LIVE очищено. ` +
+        `Зважувань: ${deletedWeighings}. ` +
+        `Записів команд: ${deletedTeams}. ` +
+        (
+          isOneoff
+            ? "Одиночне змагання закрито."
+            : activated
+              ? `Активовано: ${activated.title}.`
+              : "Наступного етапу немає."
+        ),
+        true
+      );
 
-      if (
-        archiveSection
-      ) {
-        archiveSection
-          .style
-          .display =
-          "none";
-      }
-
-      currentTeams =
-        [];
-
-      if (
-        isOneoff
-      ) {
-        setArchiveMsg(
-          `✅ Одиночне змагання завершено. ` +
-          `Видалено weighings: ${deletedWeighings}, ` +
-          `teams: ${deletedTeams}. ` +
-          `seasonResults і seasonRating НЕ змінювалися.`,
-          true
-        );
-
-        setMsg(
-          "✅ Одиночне змагання завершено. LIVE очищено і закрито. Рейтинг сезону не змінювався.",
-          true
-        );
-
-      } else if (
-        activated
-      ) {
-        setArchiveMsg(
-          `✅ LIVE сезонного етапу очищено. ` +
-          `Видалено weighings: ${deletedWeighings}, ` +
-          `teams: ${deletedTeams}. ` +
-          `Активовано: ${activated.title}.`,
-          true
-        );
-
-        setMsg(
-          `✅ LIVE очищено. Автоматично активовано наступний етап: ${activated.title}`,
-          true
-        );
-
-      } else {
-        setArchiveMsg(
-          `✅ LIVE сезонного етапу очищено. ` +
-          `Видалено weighings: ${deletedWeighings}, ` +
-          `teams: ${deletedTeams}. ` +
-          `Наступного етапу немає.`,
-          true
-        );
-
-        setMsg(
-          "✅ LIVE очищено. Наступного сезонного етапу немає — LIVE закрито.",
-          true
-        );
-      }
+      setMsg(
+        "✅ Очищення завершено.",
+        true
+      );
 
       setDbg("");
 
-    } catch(e) {
-      console.error(e);
+    } catch (error) {
+      console.error(error);
 
       setArchiveMsg(
-        "❌ Помилка очищення LIVE: " +
-        (
-          e.message ||
-          e
-        ),
+        "❌ Помилка очищення: " +
+        error.message,
         false
       );
 
     } finally {
-      if (
-        btnClearLive
-      ) {
-        btnClearLive.disabled =
-          currentCompetitionKind ===
-          "unknown";
-      }
+      operationBusy = false;
+      configureCompetitionModeUI(
+        currentCompetitionKind
+      );
     }
   }
 
-  // =========================================================
+  // =====================================================
   // INIT
-  // =========================================================
+  // =====================================================
 
-  async function init(){
-    if (
-      !auth ||
-      !db ||
-      !fb
-    ) {
+  async function init() {
+    if (!auth || !db || !fb) {
       setMsg(
         "Firebase не ініціалізувався.",
         false
       );
-
       return;
     }
 
-    auth.onAuthStateChanged(
-      async user => {
-        if (
-          !user
-        ) {
-          setMsg(
-            "Увійди як адмін.",
-            false
-          );
-
-          return;
-        }
-
-        let ok =
-          false;
-
-        try {
-          ok =
-            await requireAdmin(
-              user
-            );
-
-        } catch(e) {
-          console.error(e);
-
-          setMsg(
-            "Помилка перевірки прав адміністратора.",
-            false
-          );
-
-          return;
-        }
-
-        if (
-          !ok
-        ) {
-          setMsg(
-            "Доступ заборонено.",
-            false
-          );
-
-          setTimeout(
-            () => {
-              window.location.href =
-                "index.html";
-            },
-            2000
-          );
-
-          return;
-        }
-
-        await loadStages();
-
-        const btnReloadStages =
-          $("btnReloadStages");
-
-        const btnLoadTables =
-          $("btnLoadTables");
-
-        if (
-          btnReloadStages
-        ) {
-          btnReloadStages.onclick =
-            async () => {
-              setMsg(
-                "Оновлюю активний етап…",
-                true
-              );
-
-              competitionInfoCache.clear();
-              userNameCache.clear();
-
-              await loadStages();
-            };
-        }
-
-        if (
-          btnLoadTables
-        ) {
-          btnLoadTables.onclick =
-            loadTables;
-        }
-
-        if (
-          btnArchive
-        ) {
-          btnArchive.onclick =
-            archiveStage;
-        }
-
-        if (
-          btnClearLive
-        ) {
-          btnClearLive.onclick =
-            clearLiveStage;
-        }
+    auth.onAuthStateChanged(async user => {
+      if (!user) {
+        setMsg(
+          "Увійди як адміністратор.",
+          false
+        );
+        return;
       }
-    );
+
+      let allowed = false;
+
+      try {
+        allowed = await requireAdmin(user);
+      } catch (error) {
+        console.error(error);
+
+        setMsg(
+          "Помилка перевірки прав адміністратора.",
+          false
+        );
+
+        return;
+      }
+
+      if (!allowed) {
+        setMsg(
+          "Доступ заборонено.",
+          false
+        );
+        return;
+      }
+
+      await loadStages();
+
+      const btnReloadStages = $(
+        "btnReloadStages"
+      );
+
+      const btnLoadTables = $(
+        "btnLoadTables"
+      );
+
+      if (btnReloadStages) {
+        btnReloadStages.onclick = async () => {
+          competitionInfoCache.clear();
+          userNameCache.clear();
+          sectorMapCache.clear();
+
+          await loadStages();
+        };
+      }
+
+      if (btnLoadTables) {
+        btnLoadTables.onclick = loadTables;
+      }
+
+      if (btnArchive) {
+        btnArchive.onclick = archiveStage;
+      }
+
+      if (btnClearLive) {
+        btnClearLive.onclick = clearLiveStage;
+      }
+    });
   }
 
   init();

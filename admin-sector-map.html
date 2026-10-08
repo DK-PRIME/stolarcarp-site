@@ -2,213 +2,627 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
 
   <title>STOLAR CARP • Карти етапів</title>
 
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    *{box-sizing:border-box}
-    body{margin:0;background:#020617;color:#e5e7eb;font:16px/1.45 system-ui,sans-serif}
-    [hidden]{display:none!important}
 
-    .maps-page{max-width:1180px;margin:auto;padding:20px 12px 60px}
-    .maps-page a{color:#facc15}
-    .maps-page h1{font-size:26px;margin:14px 0 4px}
-    .maps-page h2{font-size:19px;margin:0 0 12px}
+    /* ==========================================
+       BASE
+    ========================================== */
 
-    .maps-card{
-      margin:14px 0;
-      padding:16px;
-      border:1px solid #334155;
-      border-radius:18px;
-      background:#0f172a;
-      min-width:0;
+    * {
+      box-sizing: border-box;
     }
 
-    .maps-page fieldset{min-width:0;margin:0;padding:0;border:0}
-    .maps-page fieldset:disabled{opacity:.65}
+    html {
+      width: 100%;
+      overflow-x: hidden;
+    }
 
-    .maps-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
-    .maps-field{display:grid;gap:5px;flex:1;min-width:150px}
-    .maps-field.wide{flex-basis:100%}
+    body {
+      margin: 0;
+      min-width: 0;
+      background: #020617;
+      color: #e5e7eb;
+      font: 16px/1.45 system-ui, sans-serif;
+      overflow-x: hidden;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    .maps-page {
+      width: 100%;
+      max-width: 1180px;
+      margin: auto;
+      padding: 20px 12px 60px;
+      min-width: 0;
+    }
+
+    .maps-page a {
+      color: #facc15;
+    }
+
+    .maps-page h1 {
+      font-size: 26px;
+      margin: 14px 0 4px;
+    }
+
+    .maps-page h2 {
+      font-size: 19px;
+      margin: 0 0 12px;
+    }
+
+    /* ==========================================
+       CARDS
+    ========================================== */
+
+    .maps-card {
+      width: 100%;
+      min-width: 0;
+      margin: 14px 0;
+      padding: 16px;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      background: #0f172a;
+    }
+
+    .maps-page fieldset {
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+
+    .maps-page fieldset:disabled {
+      opacity: .65;
+    }
+
+    /* ==========================================
+       FORMS
+    ========================================== */
+
+    .maps-row {
+      display: flex;
+      gap: 10px;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .maps-field {
+      display: grid;
+      gap: 5px;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .maps-field.wide {
+      flex-basis: 100%;
+    }
 
     .maps-page input,
     .maps-page select,
-    .maps-page button{font:inherit}
+    .maps-page button {
+      font: inherit;
+    }
 
     .maps-page input:not([type=checkbox]),
-    .maps-page select{
-      width:100%;
-      min-height:44px;
-      padding:9px 11px;
-      background:#020617;
-      color:#e5e7eb;
-      border:1px solid #475569;
-      border-radius:10px;
+    .maps-page select {
+      width: 100%;
+      min-height: 44px;
+      padding: 9px 11px;
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #475569;
+      border-radius: 10px;
     }
 
-    .maps-page button{
-      min-height:44px;
-      padding:9px 13px;
-      border:1px solid #475569;
-      border-radius:10px;
-      background:#1e293b;
-      color:#f8fafc;
-      cursor:pointer;
+    .maps-page button {
+      min-height: 44px;
+      padding: 9px 13px;
+      border: 1px solid #475569;
+      border-radius: 10px;
+      background: #1e293b;
+      color: #f8fafc;
+      cursor: pointer;
     }
 
-    .maps-page button:disabled{cursor:default;opacity:.5}
-    .maps-page button.primary{
-      background:#facc15;
-      color:#111827;
-      border-color:#facc15;
-      font-weight:700;
-    }
-    .maps-page button.danger{color:#fca5a5}
-    .maps-page :focus-visible{outline:3px solid #facc15;outline-offset:3px}
-
-    .maps-muted{color:#a8b6c9}
-    .maps-status{margin:12px 0;white-space:pre-line;overflow-wrap:anywhere}
-    .maps-status[data-kind=error]{color:#fca5a5}
-    .maps-status[data-kind=ok]{color:#86efac}
-
-    .maps-toolbar{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin:12px 0;
-    }
-    .maps-toolbar output{min-width:54px;text-align:center}
-
-    .maps-viewport{
-      overflow:auto;
-      max-height:650px;
-      border-radius:12px;
-      background:#172b3c;
-      overscroll-behavior:contain;
+    .maps-page button:disabled {
+      cursor: default;
+      opacity: .5;
     }
 
-    .maps-canvas{position:relative;aspect-ratio:1615/974}
-    .maps-canvas img{
-      display:block;
-      width:100%;
-      height:100%;
-      pointer-events:none;
-      user-select:none;
+    .maps-page button.primary {
+      background: #facc15;
+      color: #111827;
+      border-color: #facc15;
+      font-weight: 700;
     }
 
-    .maps-page .map-pin{
-      position:absolute;
-      transform:translate(-50%,-50%);
-      width:38px;
-      height:42px;
-      min-height:0;
-      padding:2px;
-      border:2px solid #d1d5db;
-      border-radius:12px;
-      background:#334155;
-      color:#fff;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      font-size:13px;
-      line-height:1.1;
-      font-weight:700;
+    .maps-page button.danger {
+      color: #fca5a5;
     }
 
-    .map-pin small{font-size:10px;min-height:11px}
-    .maps-page .map-pin[data-zone=A]{background:#166534}
-    .maps-page .map-pin[data-zone=B]{background:#1d4ed8}
-    .maps-page .map-pin[data-zone=C]{background:#b91c1c}
-    .maps-page .map-pin[data-empty=true]{border-style:dashed;opacity:.7}
-    .maps-page .map-pin[aria-pressed=true]{
-      outline:3px solid #facc15;
-      outline-offset:3px;
-      z-index:3;
+    .maps-page :focus-visible {
+      outline: 3px solid #facc15;
+      outline-offset: 3px;
     }
 
-    .maps-grid{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-      gap:14px;
+    /* ==========================================
+       STATUS
+    ========================================== */
+
+    .maps-muted {
+      color: #a8b6c9;
     }
 
-    .maps-check{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      min-height:46px;
-      padding:6px 0;
-      border-bottom:1px solid #334155;
+    .maps-status {
+      margin: 12px 0;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
     }
 
-    .maps-check input{
-      width:22px;
-      height:22px;
-      flex:0 0 auto;
-      accent-color:#facc15;
+    .maps-status[data-kind=error] {
+      color: #fca5a5;
     }
 
-    .maps-table-wrap{overflow:auto;margin-top:12px}
-    .maps-page table{width:100%;border-collapse:collapse;font-size:14px}
+    .maps-status[data-kind=ok] {
+      color: #86efac;
+    }
+
+    /* ==========================================
+       MAP TOOLBAR
+    ========================================== */
+
+    .maps-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+
+    .maps-toolbar output {
+      min-width: 54px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .maps-toolbar button {
+      min-width: 44px;
+    }
+
+    .maps-toolbar .map-fit-button {
+      min-width: 120px;
+      background: #facc15;
+      color: #111827;
+      border-color: #facc15;
+      font-weight: 700;
+    }
+
+    .map-legend {
+      flex-basis: 100%;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ==========================================
+       MAP VIEWPORT
+
+       Початковий стан:
+       вся карта вміщується по ширині.
+
+       Після збільшення:
+       дозволене прокручування.
+    ========================================== */
+
+    .maps-viewport {
+      position: relative;
+
+      width: 100%;
+      max-width: 100%;
+
+      min-width: 0;
+
+      overflow: auto;
+
+      max-height: none;
+
+      border-radius: 12px;
+
+      background: #172b3c;
+
+      overscroll-behavior: contain;
+
+      -webkit-overflow-scrolling: touch;
+
+      scrollbar-width: thin;
+    }
+
+    /* ==========================================
+       MAP CANVAS
+
+       Пропорції оригінального зображення:
+       1615 × 974
+    ========================================== */
+
+    .maps-canvas {
+      position: relative;
+
+      width: 100%;
+      max-width: none;
+
+      aspect-ratio: 1615 / 974;
+
+      height: auto;
+
+      min-width: 0;
+
+      margin: 0;
+
+      padding: 0;
+
+      overflow: visible;
+
+      background: #172b3c;
+    }
+
+    .maps-canvas img {
+      display: block;
+
+      width: 100%;
+      height: 100%;
+
+      object-fit: fill;
+
+      pointer-events: none;
+
+      user-select: none;
+
+      -webkit-user-drag: none;
+    }
+
+    #mapPins {
+      position: absolute;
+
+      inset: 0;
+
+      width: 100%;
+      height: 100%;
+
+      pointer-events: none;
+    }
+
+    /* ==========================================
+       SECTOR PINS
+    ========================================== */
+
+    .maps-page .map-pin {
+      position: absolute;
+
+      transform: translate(-50%, -50%);
+
+      width: 38px;
+      height: 42px;
+
+      min-height: 0;
+
+      padding: 2px;
+
+      border: 2px solid #d1d5db;
+
+      border-radius: 12px;
+
+      background: #334155;
+
+      color: #fff;
+
+      display: flex;
+      flex-direction: column;
+
+      align-items: center;
+      justify-content: center;
+
+      font-size: 13px;
+      line-height: 1.1;
+
+      font-weight: 700;
+
+      pointer-events: auto;
+
+      touch-action: manipulation;
+
+      cursor: pointer;
+    }
+
+    .map-pin small {
+      font-size: 10px;
+      min-height: 11px;
+    }
+
+    .maps-page .map-pin[data-zone=A] {
+      background: #166534;
+    }
+
+    .maps-page .map-pin[data-zone=B] {
+      background: #1d4ed8;
+    }
+
+    .maps-page .map-pin[data-zone=C] {
+      background: #b91c1c;
+    }
+
+    .maps-page .map-pin[data-empty=true] {
+      border-style: dashed;
+      opacity: .7;
+    }
+
+    .maps-page .map-pin[aria-pressed=true] {
+      outline: 3px solid #facc15;
+      outline-offset: 3px;
+      z-index: 3;
+    }
+
+    /* ==========================================
+       TWO COLUMN LAYOUT
+    ========================================== */
+
+    .maps-grid {
+      display: grid;
+
+      grid-template-columns:
+        minmax(0,1fr)
+        minmax(0,1fr);
+
+      gap: 14px;
+    }
+
+    /* ==========================================
+       CHECKBOXES
+    ========================================== */
+
+    .maps-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      min-height: 46px;
+
+      padding: 6px 0;
+
+      border-bottom: 1px solid #334155;
+    }
+
+    .maps-check input {
+      width: 22px;
+      height: 22px;
+
+      flex: 0 0 auto;
+
+      accent-color: #facc15;
+    }
+
+    /* ==========================================
+       TABLE
+    ========================================== */
+
+    .maps-table-wrap {
+      overflow: auto;
+      margin-top: 12px;
+    }
+
+    .maps-page table {
+      width: 100%;
+
+      border-collapse: collapse;
+
+      font-size: 14px;
+    }
 
     .maps-page th,
-    .maps-page td{
-      padding:8px;
-      text-align:left;
-      border-bottom:1px solid #334155;
-      vertical-align:top;
+    .maps-page td {
+      padding: 8px;
+
+      text-align: left;
+
+      border-bottom: 1px solid #334155;
+
+      vertical-align: top;
     }
 
-    .maps-page th{color:#a8b6c9;font-weight:500}
-    .maps-page td{overflow-wrap:anywhere}
-    .maps-page td:first-child{white-space:nowrap}
-
-    .maps-preview{
-      margin:12px 0;
-      padding:10px;
-      background:#020617;
-      border-radius:10px;
-      white-space:pre-line;
-      overflow-wrap:anywhere;
+    .maps-page th {
+      color: #a8b6c9;
+      font-weight: 500;
     }
 
-    .maps-page details summary{
-      cursor:pointer;
-      padding:8px 0;
-      font-weight:700;
+    .maps-page td {
+      overflow-wrap: anywhere;
     }
 
-    .maps-save{
-      display:flex;
-      gap:12px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin-top:14px;
+    .maps-page td:first-child {
+      white-space: nowrap;
     }
 
-    @media(max-width:720px){
-      .maps-grid{grid-template-columns:1fr}
-      .maps-card{padding:12px}
-      .maps-page h1{font-size:23px}
+    /* ==========================================
+       PREVIEW
+    ========================================== */
+
+    .maps-preview {
+      margin: 12px 0;
+
+      padding: 10px;
+
+      background: #020617;
+
+      border-radius: 10px;
+
+      white-space: pre-line;
+
+      overflow-wrap: anywhere;
     }
 
-    @media(pointer:coarse){
-      .maps-page .map-pin{width:44px;height:46px}
+    .maps-page details summary {
+      cursor: pointer;
+
+      padding: 8px 0;
+
+      font-weight: 700;
     }
+
+    /* ==========================================
+       SAVE
+    ========================================== */
+
+    .maps-save {
+      display: flex;
+
+      gap: 12px;
+
+      align-items: center;
+
+      flex-wrap: wrap;
+
+      margin-top: 14px;
+    }
+
+    /* ==========================================
+       TABLET
+    ========================================== */
+
+    @media (max-width: 720px) {
+
+      .maps-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .maps-card {
+        padding: 12px;
+      }
+
+      .maps-page h1 {
+        font-size: 23px;
+      }
+
+    }
+
+    /* ==========================================
+       MOBILE
+    ========================================== */
+
+    @media (max-width: 640px) {
+
+      .maps-page {
+        padding: 12px 8px 40px;
+      }
+
+      .maps-card {
+        padding: 10px;
+
+        border-radius: 14px;
+      }
+
+      .maps-toolbar {
+        gap: 6px;
+      }
+
+      .maps-toolbar button {
+        min-height: 42px;
+
+        padding: 8px 11px;
+      }
+
+      .maps-toolbar output {
+        min-width: 48px;
+
+        font-size: 14px;
+      }
+
+      .maps-viewport {
+        width: 100%;
+
+        max-width: 100%;
+
+        max-height: none;
+
+        overflow: auto;
+      }
+
+      .maps-canvas {
+        aspect-ratio: 1615 / 974;
+      }
+
+      /*
+       * На телефоні позначки компактніші,
+       * щоб менше перекривати карту.
+       */
+
+      .maps-page .map-pin {
+        width: 24px;
+        height: 28px;
+
+        min-height: 0;
+
+        padding: 1px;
+
+        border-width: 1px;
+
+        border-radius: 7px;
+
+        font-size: 10px;
+      }
+
+      .maps-page .map-pin small {
+        font-size: 7px;
+
+        min-height: 8px;
+      }
+
+      .maps-page .map-pin[aria-pressed=true] {
+        outline-width: 2px;
+        outline-offset: 1px;
+      }
+
+      .map-legend {
+        font-size: 12px;
+      }
+
+    }
+
+    /* ==========================================
+       TOUCH
+    ========================================== */
+
+    @media (pointer: coarse) {
+
+      .maps-page .map-pin {
+        touch-action: manipulation;
+      }
+
+    }
+
   </style>
 </head>
 
 <body>
+
 <main class="maps-page">
 
-  <a href="admin.html">← Адмінпанель</a>
+  <a href="admin.html">
+    ← Адмінпанель
+  </a>
 
-  <h1>Карти архівних етапів</h1>
+  <h1>
+    Карти архівних етапів
+  </h1>
 
   <p class="maps-muted">
     Лелехівка · постійні сектори водойми №1–30
@@ -225,12 +639,19 @@
 
   <div id="mapApp" hidden>
 
+    <!-- ======================================
+         LOAD STAGE
+    ======================================= -->
+
     <section class="maps-card">
+
       <fieldset id="loadFields">
+
         <div class="maps-row">
 
           <label class="maps-field">
             Сезон
+
             <input
               id="mapYear"
               inputmode="numeric"
@@ -239,90 +660,168 @@
             >
           </label>
 
-          <button id="loadYear" type="button">
+          <button
+            id="loadYear"
+            type="button"
+          >
             Завантажити етапи
           </button>
 
           <label class="maps-field wide">
             Архівний етап
+
             <select id="mapStage">
-              <option value="">Обери етап</option>
+              <option value="">
+                Обери етап
+              </option>
             </select>
           </label>
 
         </div>
+
       </fieldset>
+
     </section>
 
+    <!-- ======================================
+         EDITOR
+    ======================================= -->
+
     <section id="mapEditor" hidden>
+
       <fieldset id="editFields">
 
+        <!-- ==================================
+             MAP
+        =================================== -->
+
         <div class="maps-card">
-          <h2 id="selectedStageTitle">Розстановка</h2>
+
+          <h2 id="selectedStageTitle">
+            Розстановка
+          </h2>
 
           <p class="maps-muted">
-            Натисни сектор озера на карті або вибери його зі списку нижче.
-            Карту можна прокручувати.
+            Натисни сектор озера на карті
+            або вибери його зі списку нижче.
+            У початковому масштабі карта
+            відображається повністю.
           </p>
 
+          <!-- ZOOM -->
+
           <div class="maps-toolbar">
+
             <button
               id="zoomOut"
               type="button"
               aria-label="Зменшити карту"
-            >−</button>
+            >
+              −
+            </button>
 
-            <output id="zoomValue">100%</output>
+            <output id="zoomValue">
+              100%
+            </output>
 
             <button
               id="zoomIn"
               type="button"
               aria-label="Збільшити карту"
-            >+</button>
+            >
+              +
+            </button>
 
-            <button id="zoomReset" type="button">100%</button>
+            <button
+              id="zoomReset"
+              type="button"
+              class="map-fit-button"
+            >
+              ⛶ Уся карта
+            </button>
 
-            <span class="maps-muted">
-              A — зелений · B — синій · C — червоний · × — пустував
+            <span class="maps-muted map-legend">
+              A — зелений ·
+              B — синій ·
+              C — червоний ·
+              × — пустував
             </span>
+
           </div>
 
-          <div id="mapViewport" class="maps-viewport">
-            <div id="mapCanvas" class="maps-canvas">
+          <!-- MAP VIEWPORT -->
+
+          <div
+            id="mapViewport"
+            class="maps-viewport"
+          >
+
+            <div
+              id="mapCanvas"
+              class="maps-canvas"
+            >
 
               <img
                 id="lakeImage"
+
                 src="https://carpibook.com/media/lakes/maps/lelehivka_copy.png"
+
                 alt="Карта озера Лелехівка"
+
                 width="1615"
                 height="974"
+
                 referrerpolicy="no-referrer"
+
+                draggable="false"
               >
 
               <div id="mapPins"></div>
 
             </div>
+
           </div>
 
-          <p id="imageError" class="maps-muted" hidden>
+          <p
+            id="imageError"
+            class="maps-muted"
+            hidden
+          >
             Зображення не завантажилося.
             Можна працювати зі списком секторів нижче.
           </p>
+
         </div>
+
+        <!-- ==================================
+             ASSIGNMENT
+        =================================== -->
 
         <div class="maps-grid">
 
           <section class="maps-card">
-            <h2>Прив’язка сектора</h2>
+
+            <h2>
+              Прив’язка сектора
+            </h2>
 
             <label class="maps-field">
+
               Постійний сектор озера
+
               <select id="lakeSector"></select>
+
             </label>
 
-            <label class="maps-field" style="margin-top:12px">
+            <label
+              class="maps-field"
+              style="margin-top:12px"
+            >
+
               Позначення на цьому етапі
+
               <select id="archiveSlot"></select>
+
             </label>
 
             <div
@@ -331,17 +830,23 @@
               hidden
               style="margin-top:12px"
             >
+
               <label class="maps-field">
+
                 Зона
+
                 <select id="manualZone">
                   <option>A</option>
                   <option>B</option>
                   <option>C</option>
                 </select>
+
               </label>
 
               <label class="maps-field">
+
                 Номер у зоні
+
                 <input
                   id="manualNumber"
                   type="number"
@@ -350,14 +855,20 @@
                   step="1"
                   value="1"
                 >
+
               </label>
+
             </div>
 
-            <div id="slotPreview" class="maps-preview">
+            <div
+              id="slotPreview"
+              class="maps-preview"
+            >
               Обери позначення з архіву.
             </div>
 
             <div class="maps-row">
+
               <button
                 id="assignSlot"
                 class="primary"
@@ -373,13 +884,20 @@
               >
                 Зняти прив’язку
               </button>
+
             </div>
+
           </section>
+
+          <!-- EMPTY SECTORS -->
 
           <section class="maps-card">
 
             <details id="emptyDetails">
-              <summary>Неявки / Порожні сектори</summary>
+
+              <summary>
+                Неявки / Порожні сектори
+              </summary>
 
               <p class="maps-muted">
                 Познач тільки порожні сектори.
@@ -388,6 +906,7 @@
               </p>
 
               <div id="emptySectors"></div>
+
             </details>
 
             <p
@@ -396,9 +915,13 @@
               aria-live="polite"
             ></p>
 
-            <p id="mapCoverage" class="maps-muted"></p>
+            <p
+              id="mapCoverage"
+              class="maps-muted"
+            ></p>
 
             <div class="maps-save">
+
               <button
                 id="saveMap"
                 class="primary"
@@ -412,17 +935,29 @@
                 class="maps-muted"
                 aria-live="polite"
               ></span>
+
             </div>
 
           </section>
+
         </div>
 
+        <!-- ==================================
+             MAPPING TABLE
+        =================================== -->
+
         <section class="maps-card">
-          <h2>Відповідність секторів</h2>
+
+          <h2>
+            Відповідність секторів
+          </h2>
 
           <div class="maps-table-wrap">
+
             <table>
+
               <thead>
+
                 <tr>
                   <th>Озеро</th>
                   <th>Етап</th>
@@ -430,24 +965,42 @@
                   <th>Результат</th>
                   <th>Участь</th>
                 </tr>
+
               </thead>
 
               <tbody id="mappingRows"></tbody>
+
             </table>
+
           </div>
+
         </section>
 
       </fieldset>
+
     </section>
+
   </div>
+
 </main>
 
+<!-- ==========================================
+     FIREBASE
+========================================== -->
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script src="assets/js/firebase-init.js?v=20260813"></script>
-<script src="assets/js/admin-sector-map.js?v=20261007"></script>
+
+<!-- ==========================================
+     MAP LOGIC
+========================================== -->
+
+<script src="assets/js/admin-sector-map.js?v=20261008"></script>
 
 </body>
 </html>

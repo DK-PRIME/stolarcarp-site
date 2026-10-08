@@ -16,10 +16,14 @@
   <link rel="preload" href="/assets/css/main.css" as="style">
   <link rel="stylesheet" href="/assets/css/main.css">
 
-  <!-- CONFIG -->
-  <script defer src="/assets/js/config.js?v=20260802-1"></script>
+  <!-- =========================================================
+       GLOBAL CONFIG • MENU + FOOTER YEAR
+       ========================================================= -->
+  <script defer src="/assets/js/config.js?v=20261008-footer-year"></script>
 
-  <!-- FIREBASE -->
+  <!-- =========================================================
+       FIREBASE COMPAT SDK
+       ========================================================= -->
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -915,7 +919,7 @@
 <body class="register-page">
 
   <!-- =====================================================
-       HEADER
+       HEADER • STOLAR CARP
        ===================================================== -->
 
   <header class="header">
@@ -936,7 +940,7 @@
         <a href="/lakes.html" class="nav__link">Водойми</a>
         <a href="/sponsors.html" class="nav__link">Спонсори</a>
         <a href="/events/index.html" class="nav__link">Архів</a>
-        <a href="#" class="nav__link" id="goCabinet">Мій кабінет</a>
+        <a href="/cabinet.html" class="nav__link" id="goCabinet">Мій кабінет</a>
       </nav>
 
       <button
@@ -1193,15 +1197,14 @@
   </main>
 
   <!-- =====================================================
-       FOOTER
+       FOOTER • STOLAR CARP
        ===================================================== -->
 
   <footer class="footer">
-
     <div class="container footer__row">
 
       <div>
-        © <span id="footerYear">2026</span>
+        © <span id="footerYear">2025–2026</span>
         STOLAR CARP · Львів
       </div>
 
@@ -1226,16 +1229,7 @@
       </div>
 
     </div>
-
   </footer>
-
-  <!-- UI ONLY -->
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const year = document.getElementById("footerYear");
-      if (year) year.textContent = new Date().getFullYear();
-    });
-  </script>
 
 </body>
 </html>

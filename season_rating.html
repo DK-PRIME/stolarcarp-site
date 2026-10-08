@@ -1,42 +1,92 @@
 <!doctype html>
 <html lang="uk" data-season-rating-ready="0">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
 
-  <title>Рейтинг команд сезону — STOLAR CARP</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
-  <link rel="stylesheet" href="assets/css/main.css" />
+  <meta
+    name="theme-color"
+    content="#020617"
+  >
 
-  <!-- Firebase -->
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <title>
+    Рейтинг команд сезону — STOLAR CARP
+  </title>
 
-  <!-- App -->
-  <script defer src="assets/js/firebase-init.js"></script>
-  <script defer src="assets/js/config.js"></script>
+  <link
+    rel="stylesheet"
+    href="assets/css/main.css"
+  >
 
-  <!-- Рейтинг команд сезону -->
-  <!--
-    ВАЖЛИВО:
-    version query змінено, щоб браузер/хостинг
-    гарантовано завантажив актуальний season_rating.js
-  -->
+  <!-- =====================================================
+       FIREBASE SDK
+       ===================================================== -->
+
+  <script
+    defer
+    src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"
+  ></script>
+
+  <script
+    defer
+    src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"
+  ></script>
+
+  <script
+    defer
+    src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"
+  ></script>
+
+  <!-- =====================================================
+       STOLAR CARP • CONFIG
+       ===================================================== -->
+
+  <script
+    defer
+    src="assets/js/config.js?v=20261008-footer-year"
+  ></script>
+
+  <script
+    defer
+    src="assets/js/firebase-init.js?v=20261008"
+  ></script>
+
+  <!-- =====================================================
+       SEASON RATING
+       ===================================================== -->
+
   <script
     defer
     src="assets/js/season_rating.js?v=20261007-1"
     onerror="
-      document.documentElement.setAttribute('data-season-rating-ready','1');
-      const box=document.getElementById('seasonRatingError');
-      if(box){
-        box.style.display='block';
-        box.textContent='⚠️ Не вдалося завантажити assets/js/season_rating.js';
+      document.documentElement.setAttribute(
+        'data-season-rating-ready',
+        '1'
+      );
+
+      const box = document.getElementById(
+        'seasonRatingError'
+      );
+
+      if (box) {
+        box.style.display = 'block';
+        box.textContent =
+          '⚠️ Не вдалося завантажити assets/js/season_rating.js';
       }
     "
   ></script>
 
   <style>
+
+    /* =====================================================
+       VARIABLES
+       ===================================================== */
+
     :root{
       --line:rgba(255,255,255,.08);
 
@@ -54,17 +104,47 @@
       --panel2:#05060a;
     }
 
+
+    /* =====================================================
+       PAGE
+       ===================================================== */
+
+    body{
+      min-height:100vh;
+
+      display:flex;
+      flex-direction:column;
+
+      margin:0;
+
+      background:
+        radial-gradient(
+          circle at 50% -10%,
+          rgba(30,41,59,.75),
+          transparent 45%
+        ),
+        #020617;
+    }
+
+    main.main{
+      flex:1 0 auto;
+    }
+
+
     /* =====================================================
        READY
        ===================================================== */
 
-    html[data-season-rating-ready="0"] .season-rating-content{
+    html[data-season-rating-ready="0"]
+    .season-rating-content{
       display:none !important;
     }
 
-    html[data-season-rating-ready="1"] .season-rating-loader{
+    html[data-season-rating-ready="1"]
+    .season-rating-loader{
       display:none !important;
     }
+
 
     /* =====================================================
        LOADER
@@ -75,7 +155,9 @@
       padding:14px;
 
       border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
+
+      border:
+        1px solid rgba(255,255,255,.10);
 
       background:
         linear-gradient(
@@ -100,6 +182,8 @@
       width:10px;
       height:10px;
 
+      flex:0 0 10px;
+
       border-radius:999px;
 
       background:var(--gold2);
@@ -112,6 +196,7 @@
     }
 
     @keyframes seasonPulse{
+
       0%,100%{
         transform:scale(1);
         opacity:.85;
@@ -121,6 +206,7 @@
         transform:scale(1.25);
         opacity:1;
       }
+
     }
 
     .season-rating-loader__title{
@@ -129,9 +215,11 @@
 
     .season-rating-loader__sub{
       margin-top:6px;
+
       opacity:.75;
       line-height:1.45;
     }
+
 
     /* =====================================================
        HERO
@@ -142,7 +230,9 @@
       padding:24px 22px;
 
       border-radius:20px;
-      border:1px solid rgba(255,255,255,.10);
+
+      border:
+        1px solid rgba(255,255,255,.10);
 
       background:
         radial-gradient(
@@ -185,6 +275,7 @@
       opacity:.9;
     }
 
+
     /* =====================================================
        BACK BUTTON
        ===================================================== */
@@ -212,12 +303,20 @@
 
       text-decoration:none;
       font-weight:800;
+
+      transition:
+        border-color .2s ease,
+        background .2s ease;
     }
 
     .back-to-qualification:hover{
       border-color:
         rgba(250,204,21,.35);
+
+      background:
+        rgba(250,204,21,.06);
     }
+
 
     /* =====================================================
        ERROR
@@ -242,8 +341,9 @@
       line-height:1.5;
     }
 
+
     /* =====================================================
-       TABLE
+       TABLE CARD
        ===================================================== */
 
     .season-rating-card{
@@ -267,6 +367,7 @@
       margin-left:-4%;
 
       border-radius:14px;
+
       overflow:hidden;
 
       border:
@@ -283,6 +384,11 @@
         0 14px 30px rgba(0,0,0,.75);
     }
 
+
+    /* =====================================================
+       TABLE
+       ===================================================== */
+
     .table--season-final{
       width:100%;
 
@@ -292,8 +398,7 @@
 
       font-size:.7rem;
 
-      background:
-        var(--panel2);
+      background:var(--panel2);
     }
 
     .table--season-final thead{
@@ -335,6 +440,7 @@
 
     .table--season-final tbody tr{
       height:40px;
+
       background:var(--panel);
     }
 
@@ -372,8 +478,9 @@
       text-align:left;
     }
 
+
     /* =====================================================
-       WIDTHS
+       COLUMN WIDTHS
        ===================================================== */
 
     .col-place{
@@ -403,6 +510,7 @@
     .col-big{
       width:7%;
     }
+
 
     /* =====================================================
        STAGE
@@ -436,6 +544,7 @@
       opacity:.55;
     }
 
+
     /* =====================================================
        FINAL
        ===================================================== */
@@ -445,8 +554,9 @@
       color:#e5e7eb;
     }
 
+
     /* =====================================================
-       POINTS / BIG
+       POINTS / BIG FISH
        ===================================================== */
 
     .col-points b{
@@ -460,11 +570,13 @@
 
     .season-bigfish-winner{
       color:#f59e0b !important;
+
       font-weight:900 !important;
 
       text-shadow:
         0 0 6px rgba(245,158,11,.35);
     }
+
 
     /* =====================================================
        TOP 3
@@ -510,6 +622,7 @@
       line-height:1;
     }
 
+
     /* =====================================================
        PODIUM
        ===================================================== */
@@ -524,7 +637,10 @@
 
     .podium-grid{
       display:grid;
-      grid-template-columns:repeat(3,1fr);
+
+      grid-template-columns:
+        repeat(3,1fr);
+
       gap:12px;
     }
 
@@ -586,6 +702,8 @@
       font-weight:950;
 
       color:#f8fafc;
+
+      overflow-wrap:anywhere;
     }
 
     .podium-points{
@@ -595,6 +713,7 @@
 
       color:#cbd5e1;
     }
+
 
     /* =====================================================
        BIG FISH
@@ -623,6 +742,7 @@
 
     .season-bigfish-title{
       font-size:1.05rem;
+
       font-weight:950;
       color:#f59e0b;
     }
@@ -640,8 +760,11 @@
 
     .season-bigfish-team{
       font-size:1.1rem;
+
       font-weight:950;
       color:#f8fafc;
+
+      overflow-wrap:anywhere;
     }
 
     .season-bigfish-weight{
@@ -659,6 +782,7 @@
       font-size:.82rem;
       color:#94a3b8;
     }
+
 
     /* =====================================================
        ADMIN — ARCHIVE SEASON
@@ -786,6 +910,7 @@
 
     .season-admin-btn:disabled{
       opacity:.48;
+
       cursor:not-allowed;
       transform:none;
     }
@@ -828,6 +953,7 @@
 
     .season-admin-btn--cancel.is-visible{
       display:inline-flex;
+
       align-items:center;
       justify-content:center;
     }
@@ -876,6 +1002,7 @@
       color:#86efac;
     }
 
+
     /* =====================================================
        NOTE
        ===================================================== */
@@ -888,6 +1015,17 @@
 
       opacity:.72;
     }
+
+
+    /* =====================================================
+       FOOTER
+       ===================================================== */
+
+    footer.footer{
+      flex-shrink:0;
+      margin-top:auto;
+    }
+
 
     /* =====================================================
        MOBILE
@@ -902,6 +1040,7 @@
       .podium-grid{
         grid-template-columns:1fr;
       }
+
     }
 
     @media(max-width:480px){
@@ -947,20 +1086,31 @@
       .season-admin-btn{
         width:100%;
       }
+
     }
+
   </style>
+
 </head>
+
 
 <body>
 
+
+<!-- ======================================================
+     HEADER
+     ====================================================== -->
+
 <header class="header">
+
   <div class="container header__row">
 
     <a
       class="logo"
-      href="index.html"
+      href="/index.html"
       aria-label="STOLAR CARP"
     >
+
       <span class="logo__mark">
         SC
       </span>
@@ -968,70 +1118,122 @@
       <span class="logo__text">
         STOLAR CARP
       </span>
+
     </a>
+
+
+    <!-- NAVIGATION -->
 
     <nav
       class="nav"
       id="nav"
+      aria-label="Основна навігація"
     >
-      <a href="/index.html" class="nav__link">
+
+      <a
+        href="/index.html"
+        class="nav__link"
+      >
         Головна
       </a>
 
-      <a href="/rules.html" class="nav__link">
+      <a
+        href="/rules.html"
+        class="nav__link"
+      >
         Регламент
       </a>
 
-      <a href="/formats.html" class="nav__link">
+      <a
+        href="/formats.html"
+        class="nav__link"
+      >
         Формат змагань
       </a>
 
-      <a href="/register.html" class="nav__link">
+      <a
+        href="/register.html"
+        class="nav__link"
+      >
         Реєстрація
       </a>
 
-      <a href="/live.html" class="nav__link">
+      <a
+        href="/live.html"
+        class="nav__link"
+      >
         Live
       </a>
 
-      <a href="/rating.html" class="nav__link nav__link--active">
+      <a
+        href="/rating.html"
+        class="nav__link nav__link--active"
+        aria-current="page"
+      >
         Рейтинг
       </a>
 
-      <a href="/lakes.html" class="nav__link">
+      <a
+        href="/lakes.html"
+        class="nav__link"
+      >
         Водойми
       </a>
 
-      <a href="/sponsors.html" class="nav__link">
+      <a
+        href="/sponsors.html"
+        class="nav__link"
+      >
         Спонсори
       </a>
 
-      <a href="/events/index.html" class="nav__link">
+      <a
+        href="/events/index.html"
+        class="nav__link"
+      >
         Архів
       </a>
 
-      <a href="/cabinet.html" class="nav__link">
+      <a
+        href="/cabinet.html"
+        class="nav__link"
+      >
         Мій кабінет
       </a>
+
     </nav>
+
+
+    <!-- MOBILE BURGER -->
 
     <button
       class="burger"
       id="burger"
       type="button"
       aria-label="Відкрити меню"
+      aria-controls="nav"
+      aria-expanded="false"
     >
+
       <span></span>
       <span></span>
       <span></span>
+
     </button>
 
   </div>
+
 </header>
+
+
+<!-- ======================================================
+     MAIN
+     ====================================================== -->
 
 <main class="main">
 
   <section class="container section">
+
 
     <!-- ===================================================
          HERO
@@ -1059,16 +1261,24 @@
         етапів та Фіналу сезону.
       </p>
 
+
+      <!-- ERROR -->
+
       <div
         class="season-rating-error"
         id="seasonRatingError"
+        role="alert"
       ></div>
+
+
+      <!-- LOADER -->
 
       <div
         class="season-rating-loader"
         role="status"
         aria-live="polite"
       >
+
         <div class="season-rating-loader__row">
 
           <span
@@ -1091,14 +1301,18 @@
 
     </div>
 
-    <!-- BACK -->
+
+    <!-- ===================================================
+         BACK
+         =================================================== -->
 
     <a
       class="back-to-qualification"
-      href="rating.html"
+      href="/rating.html"
     >
       ← Вихід у фінал
     </a>
+
 
     <!-- ===================================================
          CONTENT
@@ -1106,11 +1320,17 @@
 
     <div class="season-rating-content">
 
+
+      <!-- =================================================
+           TABLE
+           ================================================= -->
+
       <div class="season-rating-card">
 
         <h2>
           🏆 Рейтинг команд сезону
         </h2>
+
 
         <div class="season-rating-table-wrapper">
 
@@ -1131,7 +1351,8 @@
                 </th>
 
                 <!--
-                  season_rating.js автоматично вставить:
+                  season_rating.js
+                  автоматично вставляє:
                   Е1 / Е2 / Е3 / Е4...
                 -->
 
@@ -1155,6 +1376,7 @@
 
             </thead>
 
+
             <tbody id="seasonFinalRows">
             </tbody>
 
@@ -1162,17 +1384,36 @@
 
         </div>
 
+
         <p class="season-rating-note">
-          Підсумкове місце сезону визначається так:<br>
-          <b>1)</b> менша сума балів усіх відбіркових етапів та Фіналу — вище місце;<br>
-          <b>2)</b> при однакових балах — вище команда з більшою загальною вагою;<br>
-          <b>3)</b> якщо вага однакова — вище команда з більшим Big Fish сезону.
+
+          Підсумкове місце сезону визначається так:
+
+          <br>
+
+          <b>1)</b>
+          менша сума балів усіх відбіркових етапів
+          та Фіналу — вище місце;
+
+          <br>
+
+          <b>2)</b>
+          при однакових балах — вище команда
+          з більшою загальною вагою;
+
+          <br>
+
+          <b>3)</b>
+          якщо вага однакова — вище команда
+          з більшим Big Fish сезону.
+
         </p>
 
       </div>
 
+
       <!-- =================================================
-           ПРИЗЕРИ
+           PODIUM
            ================================================= -->
 
       <section class="season-podium">
@@ -1182,6 +1423,9 @@
         </h2>
 
         <div class="podium-grid">
+
+
+          <!-- FIRST -->
 
           <article class="podium-card podium-card--1">
 
@@ -1209,6 +1453,9 @@
 
           </article>
 
+
+          <!-- SECOND -->
+
           <article class="podium-card podium-card--2">
 
             <div class="podium-medal">
@@ -1234,6 +1481,9 @@
             </div>
 
           </article>
+
+
+          <!-- THIRD -->
 
           <article class="podium-card podium-card--3">
 
@@ -1265,6 +1515,7 @@
 
       </section>
 
+
       <!-- =================================================
            BIG FISH
            ================================================= -->
@@ -1295,6 +1546,7 @@
 
           </div>
 
+
           <div
             class="season-bigfish-weight"
             id="seasonBigFishWeight"
@@ -1305,6 +1557,7 @@
         </div>
 
       </section>
+
 
       <!-- =================================================
            ADMIN ONLY
@@ -1330,12 +1583,16 @@
           в архіві сезону.
         </div>
 
+
         <div class="season-admin-warning">
           ⚠️ Після успішного створення архіву активний
           «Вихід у фінал» і «Рейтинг команд сезону»
-          будуть очищені. Дані Етапів та Фіналу спочатку
+          будуть очищені.
+
+          Дані Етапів та Фіналу спочатку
           повинні бути збережені в архіві сезону.
         </div>
+
 
         <div class="season-admin-actions">
 
@@ -1357,6 +1614,7 @@
 
         </div>
 
+
         <div
           class="season-admin-status"
           id="seasonArchiveStatus"
@@ -1371,26 +1629,35 @@
 
 </main>
 
+
+<!-- ======================================================
+     FOOTER
+     ====================================================== -->
+
 <footer class="footer">
 
   <div class="container footer__row">
 
     <div>
-      © 2025 STOLAR CARP · Львів
+      © <span id="footerYear">2025–2026</span>
+      STOLAR CARP · Львів
     </div>
+
 
     <div class="footer__links">
 
       <a
         href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
-        rel="noopener"
+        target="_blank"
+        rel="noopener noreferrer"
       >
         Viber
       </a>
 
       <a
         href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
-        rel="noopener"
+        target="_blank"
+        rel="noopener noreferrer"
       >
         YouTube
       </a>
@@ -1401,97 +1668,64 @@
 
 </footer>
 
+
+<!-- ======================================================
+     PAGE DIAGNOSTICS
+     ====================================================== -->
+
 <script>
-  document.addEventListener(
-    "DOMContentLoaded",
-    () => {
 
-      const burger =
-        document.getElementById("burger");
+document.addEventListener(
+  "DOMContentLoaded",
+  () => {
 
-      const nav =
-        document.getElementById("nav");
+    /*
+     * STOLAR CARP
+     *
+     * Мобільним меню керує
+     * assets/js/config.js.
+     *
+     * Другий обробник натискання
+     * на burger тут не створюємо.
+     */
 
-      if (burger && nav) {
 
-        burger.addEventListener(
-          "click",
-          () => {
+    // ==========================================
+    // ARCHIVE BUTTON DIAGNOSTICS
+    // ==========================================
 
-            nav.classList.toggle("active");
-            nav.classList.toggle("nav--open");
-            burger.classList.toggle("active");
+    const archiveButton =
+      document.getElementById(
+        "archiveSeasonButton"
+      );
 
-            document.body.classList.toggle(
-              "menu-open"
-            );
-          }
-        );
+    if (archiveButton) {
 
-        nav.addEventListener(
-          "click",
-          e => {
+      archiveButton.style.pointerEvents =
+        "auto";
 
-            if (
-              e.target.classList.contains(
-                "nav__link"
-              )
-            ) {
+      archiveButton.style.touchAction =
+        "manipulation";
 
-              nav.classList.remove(
-                "active",
-                "nav--open"
-              );
+      console.log(
+        "[Season Archive HTML] button found:",
+        archiveButton
+      );
 
-              burger.classList.remove(
-                "active"
-              );
+    } else {
 
-              document.body.classList.remove(
-                "menu-open"
-              );
-            }
-          }
-        );
-      }
+      console.error(
+        "[Season Archive HTML] #archiveSeasonButton not found"
+      );
 
-      /*
-       * ДІАГНОСТИКА КНОПКИ АРХІВАЦІЇ
-       *
-       * Цей код НЕ виконує архівацію.
-       * Архівацію виконує season_rating.js.
-       *
-       * Тут лише перевіряємо, що сама кнопка
-       * фізично присутня в DOM і доступна для натискання.
-       */
-      const archiveButton =
-        document.getElementById(
-          "archiveSeasonButton"
-        );
+    }
 
-      if (archiveButton) {
+  },
+  { once:true }
+);
 
-        archiveButton.style.pointerEvents =
-          "auto";
-
-        archiveButton.style.touchAction =
-          "manipulation";
-
-        console.log(
-          "[Season Archive HTML] button found:",
-          archiveButton
-        );
-
-      } else {
-
-        console.error(
-          "[Season Archive HTML] #archiveSeasonButton not found"
-        );
-      }
-    },
-    { once:true }
-  );
 </script>
+
 
 </body>
 </html>

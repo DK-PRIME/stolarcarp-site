@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="uk">
+
 <head>
   <meta charset="utf-8">
 
@@ -26,9 +27,13 @@
     content="#020617"
   >
 
+  <!-- =====================================================
+       СПІЛЬНИЙ CSS ДЛЯ ВСЬОГО САЙТУ
+       ===================================================== -->
+
   <link
     rel="stylesheet"
-    href="assets/css/main.css?v=20261008-3"
+    href="assets/css/main.css?v=20261008-4"
   >
 
   <script
@@ -40,6 +45,12 @@
 
     /* =========================================================
        STOLAR CARP • COMPACT CABINET
+
+       ВАЖЛИВО:
+       HEADER, LOGO, BURGER, NAV
+       ПОВНІСТЮ КЕРУЮТЬСЯ main.css.
+
+       Тут немає окремих стилів для меню.
        ========================================================= */
 
     body.cabinet-page {
@@ -59,236 +70,17 @@
       box-sizing:border-box;
     }
 
+    /* =========================================================
+       CABINET SHELL
+       ========================================================= */
+
     .cabinet-shell {
       max-width:1080px;
+
       margin:0 auto;
+
       padding-top:15px;
       padding-bottom:45px;
-    }
-
-    /* =========================================================
-       HEADER
-       ========================================================= */
-
-    .cabinet-page .header {
-      position:sticky;
-      top:0;
-      z-index:1000;
-
-      overflow:visible;
-
-      background:rgba(2,6,23,.96);
-
-      backdrop-filter:blur(12px);
-      -webkit-backdrop-filter:blur(12px);
-    }
-
-    .cabinet-page .header__row {
-      position:relative;
-
-      display:flex;
-      align-items:center;
-
-      min-height:60px;
-
-      overflow:visible;
-    }
-
-    .cabinet-page .logo {
-      position:relative;
-      z-index:1;
-
-      min-width:0;
-    }
-
-    /* =========================================================
-       BURGER BUTTON
-       ========================================================= */
-
-    .cabinet-page #burger {
-      position:relative;
-      z-index:1002;
-
-      flex-shrink:0;
-
-      cursor:pointer;
-
-      pointer-events:auto;
-
-      touch-action:manipulation;
-
-      -webkit-tap-highlight-color:transparent;
-    }
-
-    .cabinet-page #burger:focus-visible {
-      outline:2px solid #facc15;
-      outline-offset:4px;
-    }
-
-    /* =========================================================
-       MOBILE NAVIGATION
-       ========================================================= */
-
-    @media (max-width:860px) {
-
-      .cabinet-page .header {
-        overflow:visible;
-      }
-
-      .cabinet-page .header__row {
-        overflow:visible;
-      }
-
-      /* =====================================================
-         BURGER — 3 ОДНАКОВІ БІЛІ РИСОЧКИ
-         ===================================================== */
-
-      .cabinet-page #burger {
-        display:flex !important;
-
-        align-items:center;
-        justify-content:center;
-        flex-direction:column;
-
-        gap:0;
-
-        width:54px;
-        min-width:54px;
-
-        height:54px;
-        min-height:54px;
-
-        margin-left:auto;
-        padding:0;
-
-        border:0;
-
-        background:transparent;
-
-        box-shadow:none;
-
-        cursor:pointer;
-      }
-
-      .cabinet-page #burger span {
-        display:block !important;
-
-        width:42px !important;
-        height:4px !important;
-
-        flex:0 0 4px;
-
-        margin:4px 0 !important;
-
-        border:0;
-        border-radius:4px;
-
-        background:#ffffff !important;
-
-        box-shadow:none;
-
-        pointer-events:none;
-
-        transform-origin:center;
-
-        transition:
-          transform .22s ease,
-          opacity .22s ease;
-      }
-
-      /* =====================================================
-         BURGER OPEN → X
-         ===================================================== */
-
-      .cabinet-page #burger[aria-expanded="true"]
-      span:nth-child(1) {
-        transform:translateY(12px) rotate(45deg);
-      }
-
-      .cabinet-page #burger[aria-expanded="true"]
-      span:nth-child(2) {
-        opacity:0;
-      }
-
-      .cabinet-page #burger[aria-expanded="true"]
-      span:nth-child(3) {
-        transform:translateY(-12px) rotate(-45deg);
-      }
-
-      /* =====================================================
-         MOBILE NAV
-         ===================================================== */
-
-      .cabinet-page #nav {
-        display:none !important;
-
-        position:absolute;
-
-        top:calc(100% + 6px);
-        left:10px;
-        right:10px;
-
-        width:auto;
-        max-width:none;
-
-        z-index:1001;
-
-        flex-direction:column;
-        align-items:stretch;
-
-        gap:3px;
-
-        margin:0;
-        padding:12px;
-
-        border-radius:15px;
-
-        border:1px solid rgba(250,204,21,.25);
-
-        background:#0f172a;
-
-        box-shadow:
-          0 20px 50px rgba(0,0,0,.65);
-
-        overflow-x:hidden;
-        overflow-y:auto;
-
-        max-height:calc(100vh - 95px);
-        max-height:calc(100dvh - 95px);
-      }
-
-      .cabinet-page #nav.open {
-        display:flex !important;
-      }
-
-      .cabinet-page #nav .nav__link {
-        display:block;
-
-        width:100%;
-
-        padding:12px 14px;
-
-        border-radius:9px;
-
-        color:#e5e7eb;
-
-        text-decoration:none;
-
-        font-size:.9rem;
-        font-weight:750;
-
-        line-height:1.4;
-
-        white-space:normal;
-      }
-
-      .cabinet-page #nav .nav__link:hover,
-      .cabinet-page #nav .nav__link--active {
-        color:#facc15;
-
-        background:rgba(250,204,21,.1);
-      }
-
     }
 
     /* =========================================================
@@ -563,6 +355,7 @@
 
     .profile-actions {
       display:flex;
+
       gap:8px;
 
       margin-top:13px;
@@ -780,6 +573,7 @@
       align-items:center;
 
       flex-wrap:wrap;
+
       gap:5px;
 
       max-width:100%;
@@ -875,6 +669,7 @@
 
     #membersContainer .form__hint {
       color:#94a3b8;
+
       font-size:.75rem;
     }
 
@@ -884,6 +679,7 @@
 
     #myCompetitions {
       min-width:0;
+
       overflow-wrap:anywhere;
     }
 
@@ -1005,6 +801,7 @@
       background:rgba(0,0,0,.88);
 
       backdrop-filter:blur(5px);
+      -webkit-backdrop-filter:blur(5px);
 
       cursor:zoom-out;
     }
@@ -1050,6 +847,7 @@
 
       .cabinet-card {
         padding:13px;
+
         border-radius:15px;
       }
 
@@ -1091,12 +889,14 @@
 
       .profile-actions {
         gap:7px;
+
         margin-top:12px;
       }
 
       .profile-btn,
       .avatar-small-btn {
         padding:9px 7px;
+
         font-size:.72rem;
       }
 
@@ -1127,6 +927,10 @@
 
     }
 
+    /* =========================================================
+       REDUCED MOTION
+       ========================================================= */
+
     @media (prefers-reduced-motion:reduce) {
 
       .cabinet-page *,
@@ -1138,17 +942,22 @@
     }
 
   </style>
+
 </head>
 
 <body class="cabinet-page">
 
 <!-- =========================================================
      HEADER
+
+     УСІ СТИЛІ БЕРУТЬСЯ З main.css
      ========================================================= -->
 
 <header class="header">
 
   <div class="container header__row">
+
+    <!-- LOGO -->
 
     <a
       class="logo"
@@ -1164,6 +973,8 @@
       </span>
 
     </a>
+
+    <!-- NAVIGATION -->
 
     <nav
       class="nav"
@@ -1244,6 +1055,8 @@
 
     </nav>
 
+    <!-- BURGER: СТАНДАРТНИЙ ІЗ main.css -->
+
     <button
       class="burger"
       id="burger"
@@ -1271,9 +1084,7 @@
 
   <section class="container cabinet-shell">
 
-    <!-- =====================================================
-         STATUS
-         ===================================================== -->
+    <!-- STATUS -->
 
     <div
       id="cabinetStatus"
@@ -1283,9 +1094,7 @@
       Перевірка доступу…
     </div>
 
-    <!-- =====================================================
-         CONTENT
-         ===================================================== -->
+    <!-- CABINET CONTENT -->
 
     <div
       id="cabinetContent"
@@ -1930,19 +1739,12 @@
 
   // =========================================================
   // MOBILE MENU
-  // =========================================================
   //
-  // cabinet.js відповідає за перемикання nav.open.
+  // cabinet.js уже перемикає клас nav.open.
   //
-  // Тут НЕ створюємо другий перемикач.
+  // Тут НЕ додаємо другого перемикача.
   //
-  // Цей код:
-  // - синхронізує aria-expanded
-  // - синхронізує aria-label
-  // - закриває меню поза кнопкою
-  // - закриває меню через Escape
-  // - закриває меню при зміні розміру
-  //
+  // Використовуємо спільні стилі main.css.
   // =========================================================
 
   const burger =
@@ -1955,13 +1757,19 @@
     console.warn(
       "[STOLAR CARP] Елементи меню не знайдено"
     );
+
     return;
   }
+
+  // =========================================================
+  // SYNC STATE
+  // =========================================================
 
   function syncMenuState() {
 
     const isOpen =
-      nav.classList.contains("open");
+      nav.classList.contains("open") ||
+      nav.classList.contains("active");
 
     burger.setAttribute(
       "aria-expanded",
@@ -1977,30 +1785,41 @@
 
   }
 
+  // =========================================================
+  // CLOSE MENU
+  // =========================================================
+
   function closeMenu() {
 
     nav.classList.remove("open");
+    nav.classList.remove("active");
+
+    burger.classList.remove("open");
+    burger.classList.remove("active");
 
     syncMenuState();
 
   }
 
-  // ---------------------------------------------------------
-  // Синхронізація після cabinet.js
-  // ---------------------------------------------------------
+  // =========================================================
+  // SYNC AFTER cabinet.js
+  // =========================================================
 
   burger.addEventListener(
     "click",
     function () {
+
+      // cabinet.js перемикає nav.open.
+      // Тут лише синхронізуємо стан.
 
       syncMenuState();
 
     }
   );
 
-  // ---------------------------------------------------------
-  // Закриття після вибору сторінки
-  // ---------------------------------------------------------
+  // =========================================================
+  // CLOSE AFTER NAVIGATION
+  // =========================================================
 
   nav.addEventListener(
     "click",
@@ -2016,29 +1835,27 @@
     }
   );
 
-  // ---------------------------------------------------------
-  // Закриття при натисканні поза меню
-  // ---------------------------------------------------------
+  // =========================================================
+  // CLOSE OUTSIDE
+  // =========================================================
 
   document.addEventListener(
     "click",
     function (event) {
 
-      if (
-        !nav.classList.contains("open")
-      ) {
+      const isOpen =
+        nav.classList.contains("open") ||
+        nav.classList.contains("active");
+
+      if (!isOpen) {
         return;
       }
 
-      if (
-        burger.contains(event.target)
-      ) {
+      if (burger.contains(event.target)) {
         return;
       }
 
-      if (
-        nav.contains(event.target)
-      ) {
+      if (nav.contains(event.target)) {
         return;
       }
 
@@ -2047,9 +1864,9 @@
     }
   );
 
-  // ---------------------------------------------------------
-  // Escape
-  // ---------------------------------------------------------
+  // =========================================================
+  // ESCAPE
+  // =========================================================
 
   document.addEventListener(
     "keydown",
@@ -2062,9 +1879,9 @@
     }
   );
 
-  // ---------------------------------------------------------
-  // Resize
-  // ---------------------------------------------------------
+  // =========================================================
+  // RESIZE
+  // =========================================================
 
   window.addEventListener(
     "resize",
@@ -2077,14 +1894,14 @@
     }
   );
 
-  // ---------------------------------------------------------
-  // INIT
-  // ---------------------------------------------------------
+  // =========================================================
+  // INITIAL STATE
+  // =========================================================
 
   syncMenuState();
 
   console.log(
-    "✅ STOLAR CARP cabinet menu ready"
+    "✅ STOLAR CARP cabinet uses shared main.css menu"
   );
 
 })();

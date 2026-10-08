@@ -3,9 +3,10 @@
 
    STOLAR CARP • GLOBAL CONFIG
 
-   VERSION: 20261008-burger-fix
+   VERSION: 20261008-footer-year
 
    ✅ Автоматичний рік сезону
+   ✅ Автоматичний рік у footer: 2025–2026
    ✅ Єдиний контролер бургер-меню
    ✅ Працює з defer та без defer
    ✅ Захист від повторної ініціалізації
@@ -27,7 +28,7 @@
   "use strict";
 
   console.log(
-    "✅ STOLAR CARP config.js LOADED v20261008-burger-fix"
+    "✅ STOLAR CARP config.js LOADED v20261008-footer-year"
   );
 
   /* =========================================================
@@ -38,9 +39,14 @@
     new Date().getFullYear()
   );
 
+  const SITE_START_YEAR = 2025;
+
   window.SC_CONFIG = {
     ...(window.SC_CONFIG || {}),
-    seasonYear: CURRENT_SEASON_YEAR
+
+    seasonYear: CURRENT_SEASON_YEAR,
+
+    siteStartYear: SITE_START_YEAR
   };
 
   window.SC_SEASON_YEAR = CURRENT_SEASON_YEAR;
@@ -236,7 +242,7 @@
 
         /*
          * Не дозволяємо кліку потрапити
-         * до інших делегованих обробників.
+         * до делегованих обробників.
          */
 
         event.stopPropagation();
@@ -360,7 +366,43 @@
   }
 
   /* =========================================================
-     4. FAVICON / THEME
+     4. AUTOMATIC FOOTER YEAR
+
+     2026 → 2025–2026
+     2027 → 2025–2027
+     2028 → 2025–2028
+
+     Працює на всіх сторінках,
+     де є #footerYear.
+
+     Не змінює рік сезону Firebase.
+     ========================================================= */
+
+  function initFooterYear() {
+    const currentYear = new Date().getFullYear();
+
+    const yearText = currentYear > SITE_START_YEAR
+      ? `${SITE_START_YEAR}–${currentYear}`
+      : String(SITE_START_YEAR);
+
+    window.SC_CONFIG.footerYear = yearText;
+
+    const yearElements = document.querySelectorAll(
+      "#footerYear, [data-sc-footer-year]"
+    );
+
+    yearElements.forEach(element => {
+      element.textContent = yearText;
+    });
+
+    console.log(
+      "✅ STOLAR CARP footer:",
+      yearText
+    );
+  }
+
+  /* =========================================================
+     5. FAVICON / THEME
      ========================================================= */
 
   function injectIcons() {
@@ -436,7 +478,7 @@
   }
 
   /* =========================================================
-     5. LIVE PAGE / CSV
+     6. LIVE PAGE / CSV
      ========================================================= */
 
   function initLivePage() {
@@ -709,7 +751,7 @@
   }
 
   /* =========================================================
-     6. RATING / AWARDS
+     7. RATING / AWARDS
      ========================================================= */
 
   function initRatingAwards() {
@@ -915,7 +957,7 @@
   }
 
   /* =========================================================
-     7. AUTO REGISTRATION WINDOWS
+     8. AUTO REGISTRATION WINDOWS
      ========================================================= */
 
   function initAutoRegButtons() {
@@ -1036,7 +1078,7 @@
   }
 
   /* =========================================================
-     8. GO TO CABINET
+     9. GO TO CABINET
      ========================================================= */
 
   function initGoCabinet() {
@@ -1083,12 +1125,9 @@
   }
 
   /* =========================================================
-     9. DOM INITIALIZATION
+     10. DOM INITIALIZATION
 
-     Головне виправлення:
-
-     Не запускаємо burger раніше,
-     ніж HTML буде готовий.
+     Запускаємо після готовності HTML.
      ========================================================= */
 
   let initialized = false;
@@ -1101,10 +1140,16 @@
     initialized = true;
 
     /*
-     * Header.
+     * Header / burger.
      */
 
     initHeaderBurger();
+
+    /*
+     * Footer year.
+     */
+
+    initFooterYear();
 
     /*
      * Icons.

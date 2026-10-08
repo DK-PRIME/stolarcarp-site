@@ -5,14 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>Офіційний регламент — STOLAR CARP</title>
-  <meta name="description" content="Офіційний регламент спортивних змагань STOLAR CARP. Правила участі, ловлі, зважування, визначення переможців, дисципліни та безпеки.">
+
+  <meta
+    name="description"
+    content="Офіційний регламент спортивних змагань STOLAR CARP. Правила участі, ловлі, зважування, визначення переможців, дисципліни та безпеки."
+  >
 
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/favicon.png">
+
   <meta name="theme-color" content="#020617">
 
   <link rel="stylesheet" href="assets/css/main.css">
-  <script defer src="assets/js/config.js"></script>
+
+  <!--
+    STOLAR CARP • GLOBAL CONFIG
+
+    Керує:
+    - мобільним меню;
+    - автоматичним роком у футері.
+
+    Не додаємо другий обробник burger.
+  -->
+  <script
+    defer
+    src="assets/js/config.js?v=20261008-footer-year"
+  ></script>
 
   <style>
     /* =========================================================
@@ -41,7 +59,13 @@
 
     body.rules-page {
       margin: 0;
+      min-height: 100vh;
+
+      display: flex;
+      flex-direction: column;
+
       color: var(--rules-text);
+
       background:
         radial-gradient(
           ellipse at 50% -5%,
@@ -56,6 +80,10 @@
         var(--rules-bg);
     }
 
+    .rules-page .main {
+      flex: 1 0 auto;
+    }
+
     .rules-page *,
     .rules-page *::before,
     .rules-page *::after {
@@ -66,7 +94,9 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* HEADER */
+    /* =========================================================
+       HEADER
+       ========================================================= */
 
     .rules-page .header .header__row {
       align-items: center;
@@ -76,8 +106,10 @@
       display: flex;
       align-items: center;
       gap: 10px;
+
       min-height: 56px;
       padding: 8px 0;
+
       text-decoration: none;
     }
 
@@ -85,9 +117,11 @@
       width: 42px;
       height: 42px;
       flex: 0 0 42px;
+
       display: flex;
       align-items: center;
       justify-content: center;
+
       border-radius: 12px;
     }
 
@@ -95,7 +129,9 @@
       white-space: nowrap;
     }
 
-    /* LAYOUT */
+    /* =========================================================
+       LAYOUT
+       ========================================================= */
 
     .rules-shell {
       max-width: 1160px;
@@ -103,14 +139,19 @@
       padding: 30px 20px 90px;
     }
 
-    /* HERO */
+    /* =========================================================
+       HERO
+       ========================================================= */
 
     .rules-hero {
       position: relative;
       overflow: hidden;
+
       padding: 52px 38px;
+
       border: 1px solid rgba(232,191,104,.24);
       border-radius: 26px;
+
       background:
         radial-gradient(
           circle at 85% 0%,
@@ -122,16 +163,20 @@
           #152033,
           #080e1b 75%
         );
+
       box-shadow: 0 24px 65px rgba(0,0,0,.22);
     }
 
     .rules-hero::before {
       content: "";
+
       position: absolute;
       top: 0;
       left: 38px;
       right: 38px;
+
       height: 2px;
+
       background: linear-gradient(
         90deg,
         transparent,
@@ -144,8 +189,11 @@
       display: inline-flex;
       align-items: center;
       gap: 9px;
+
       margin-bottom: 20px;
+
       color: var(--rules-gold);
+
       font-size: 11px;
       font-weight: 800;
       letter-spacing: 2.5px;
@@ -154,15 +202,19 @@
 
     .rules-eyebrow::before {
       content: "";
+
       width: 20px;
       height: 1px;
+
       background: var(--rules-gold);
     }
 
     .rules-hero h1 {
       margin: 0;
       max-width: 850px;
+
       color: #fff;
+
       font-size: clamp(30px, 5vw, 54px);
       font-weight: 900;
       line-height: 1.12;
@@ -172,13 +224,16 @@
     .rules-hero h1 span {
       display: block;
       margin-top: 8px;
+
       color: var(--rules-gold);
     }
 
     .rules-hero__description {
       max-width: 720px;
       margin: 22px 0 0;
+
       color: #b7c3d5;
+
       font-size: 15px;
       line-height: 1.8;
     }
@@ -187,41 +242,54 @@
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
+
       margin-top: 28px;
     }
 
     .rules-meta {
       padding: 9px 14px;
+
       border: 1px solid rgba(232,191,104,.2);
       border-radius: 100px;
+
       background: rgba(232,191,104,.07);
+
       color: #e8d3a7;
+
       font-size: 12px;
       font-weight: 700;
     }
 
-    /* QUICK FACTS */
+    /* =========================================================
+       QUICK FACTS
+       ========================================================= */
 
     .rules-facts {
       display: grid;
       grid-template-columns: repeat(4, minmax(0,1fr));
       gap: 14px;
+
       margin-top: 20px;
     }
 
     .rules-fact {
       min-width: 0;
       padding: 22px 16px;
+
       text-align: center;
+
       border: 1px solid var(--rules-border);
       border-radius: 16px;
+
       background: rgba(15,23,42,.85);
     }
 
     .rules-fact__value {
       display: block;
       margin-bottom: 7px;
+
       color: var(--rules-gold);
+
       font-size: 25px;
       font-weight: 900;
       line-height: 1.2;
@@ -229,26 +297,34 @@
 
     .rules-fact__label {
       display: block;
+
       color: var(--rules-muted);
+
       font-size: 12px;
       line-height: 1.5;
     }
 
-    /* NOTICE */
+    /* =========================================================
+       NOTICE
+       ========================================================= */
 
     .rules-notice {
       display: flex;
       gap: 16px;
+
       margin: 24px 0;
       padding: 21px 23px;
+
       border: 1px solid rgba(251,191,36,.25);
       border-left: 3px solid #fbbf24;
       border-radius: 14px;
+
       background: rgba(120,53,15,.11);
     }
 
     .rules-notice__icon {
       flex: 0 0 auto;
+
       font-size: 23px;
       line-height: 1;
     }
@@ -256,41 +332,56 @@
     .rules-notice strong {
       display: block;
       margin-bottom: 7px;
+
       color: #fde68a;
+
       font-size: 14px;
     }
 
     .rules-notice p {
       margin: 0;
+
       color: #d8c8a8;
+
       font-size: 13px;
       line-height: 1.8;
     }
 
-    /* CONTENT LAYOUT */
+    /* =========================================================
+       CONTENT LAYOUT
+       ========================================================= */
 
     .rules-layout {
       display: grid;
+
       grid-template-columns: 265px minmax(0,1fr);
       align-items: start;
+
       gap: 25px;
       margin-top: 30px;
     }
 
-    /* TABLE OF CONTENTS */
+    /* =========================================================
+       TABLE OF CONTENTS
+       ========================================================= */
 
     .rules-sidebar {
       position: sticky;
       top: 24px;
+
       padding: 22px 15px;
+
       border: 1px solid var(--rules-border);
       border-radius: var(--rules-radius);
+
       background: rgba(15,23,42,.95);
     }
 
     .rules-sidebar__title {
       padding: 0 10px 15px;
+
       color: var(--rules-gold);
+
       font-size: 11px;
       font-weight: 900;
       letter-spacing: 2px;
@@ -307,13 +398,20 @@
       display: flex;
       align-items: flex-start;
       gap: 11px;
+
       padding: 11px 10px;
+
       border-radius: 9px;
+
       color: #aebbd0;
       text-decoration: none;
+
       font-size: 12px;
       line-height: 1.5;
-      transition: background .2s, color .2s;
+
+      transition:
+        background .2s,
+        color .2s;
     }
 
     .rules-toc a:hover,
@@ -324,11 +422,14 @@
 
     .rules-toc__number {
       flex: 0 0 22px;
+
       color: var(--rules-gold);
       font-weight: 800;
     }
 
-    /* SECTIONS */
+    /* =========================================================
+       SECTIONS
+       ========================================================= */
 
     .rules-content {
       min-width: 0;
@@ -337,9 +438,12 @@
     .rules-section {
       margin-bottom: 22px;
       padding: 30px;
+
       border: 1px solid var(--rules-border);
       border-radius: var(--rules-radius);
+
       background: rgba(15,23,42,.78);
+
       scroll-margin-top: 90px;
     }
 
@@ -347,8 +451,10 @@
       display: flex;
       align-items: center;
       gap: 16px;
+
       margin-bottom: 26px;
       padding-bottom: 21px;
+
       border-bottom: 1px solid rgba(148,163,184,.13);
     }
 
@@ -356,20 +462,27 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
       width: 47px;
       height: 47px;
       flex: 0 0 47px;
+
       border: 1px solid rgba(232,191,104,.28);
       border-radius: 12px;
+
       background: rgba(232,191,104,.08);
+
       color: var(--rules-gold);
+
       font-size: 18px;
       font-weight: 900;
     }
 
     .rules-section__heading h2 {
       margin: 0;
+
       color: #fff;
+
       font-size: 20px;
       font-weight: 800;
       line-height: 1.35;
@@ -385,7 +498,9 @@
 
     .rules-group h3 {
       margin: 0 0 13px;
+
       color: var(--rules-gold-light);
+
       font-size: 15px;
       font-weight: 800;
       line-height: 1.5;
@@ -393,7 +508,9 @@
 
     .rules-group p {
       margin: 0 0 13px;
+
       color: #cbd5e1;
+
       font-size: 13px;
       line-height: 1.85;
     }
@@ -402,27 +519,35 @@
       display: flex;
       flex-direction: column;
       gap: 11px;
+
       margin: 0;
       padding: 0;
+
       list-style: none;
     }
 
     .rules-list > li {
       position: relative;
       padding-left: 20px;
+
       color: #cbd5e1;
+
       font-size: 13px;
       line-height: 1.85;
     }
 
     .rules-list > li::before {
       content: "";
+
       position: absolute;
       top: 10px;
       left: 0;
+
       width: 6px;
       height: 6px;
+
       border-radius: 50%;
+
       background: var(--rules-gold);
     }
 
@@ -441,19 +566,24 @@
       margin: 5px 0;
     }
 
-    /* ALLOWED / FORBIDDEN */
+    /* =========================================================
+       ALLOWED / FORBIDDEN
+       ========================================================= */
 
     .rules-dual {
       display: grid;
       grid-template-columns: repeat(2,minmax(0,1fr));
+
       gap: 14px;
       margin-top: 16px;
     }
 
     .rules-status {
       padding: 20px;
+
       border: 1px solid var(--rules-border);
       border-radius: 13px;
+
       background: rgba(2,6,23,.35);
     }
 
@@ -467,6 +597,7 @@
 
     .rules-status h4 {
       margin: 0 0 13px;
+
       font-size: 13px;
       font-weight: 900;
     }
@@ -482,7 +613,9 @@
     .rules-status ul {
       margin: 0;
       padding-left: 17px;
+
       color: #cbd5e1;
+
       font-size: 12px;
       line-height: 1.85;
     }
@@ -491,16 +624,22 @@
       margin-bottom: 7px;
     }
 
-    /* IMPORTANT BLOCK */
+    /* =========================================================
+       IMPORTANT BLOCK
+       ========================================================= */
 
     .rules-highlight {
       margin: 18px 0;
       padding: 17px 20px;
+
       border: 1px solid rgba(232,191,104,.2);
       border-left: 3px solid var(--rules-gold);
       border-radius: 11px;
+
       background: rgba(232,191,104,.055);
+
       color: #e7d7b7;
+
       font-size: 13px;
       line-height: 1.85;
     }
@@ -512,42 +651,56 @@
     .rules-danger {
       margin: 18px 0;
       padding: 17px 20px;
+
       border: 1px solid rgba(251,113,133,.2);
       border-left: 3px solid var(--rules-red);
       border-radius: 11px;
+
       background: rgba(127,29,29,.11);
+
       color: #fecdd3;
+
       font-size: 13px;
       line-height: 1.85;
     }
 
-    /* TABLE */
+    /* =========================================================
+       TABLE
+       ========================================================= */
 
     .rules-table-wrap {
       width: 100%;
       overflow-x: auto;
+
       border: 1px solid var(--rules-border);
       border-radius: 13px;
     }
 
     .rules-table {
       width: 100%;
+
       border-collapse: collapse;
+
       font-size: 12px;
       line-height: 1.65;
     }
 
     .rules-table th {
       padding: 15px 17px;
+
       background: rgba(232,191,104,.09);
+
       color: var(--rules-gold-light);
+
       text-align: left;
       font-weight: 800;
     }
 
     .rules-table td {
       padding: 15px 17px;
+
       border-top: 1px solid rgba(148,163,184,.1);
+
       color: #cbd5e1;
       vertical-align: top;
     }
@@ -559,7 +712,9 @@
     .rules-badge {
       display: inline-block;
       padding: 5px 9px;
+
       border-radius: 6px;
+
       font-size: 10px;
       font-weight: 900;
       white-space: nowrap;
@@ -575,22 +730,33 @@
       background: rgba(244,63,94,.13);
     }
 
-    /* CONTACTS */
+    /* =========================================================
+       CONTACTS
+       ========================================================= */
 
     .rules-contacts {
       display: grid;
       grid-template-columns: repeat(2,minmax(0,1fr));
+
       gap: 13px;
     }
 
     .rules-contact {
       display: block;
+      min-width: 0;
+
       padding: 21px;
+
       border: 1px solid rgba(232,191,104,.2);
       border-radius: 13px;
+
       background: rgba(232,191,104,.045);
+
       text-decoration: none;
-      transition: border-color .2s, transform .2s;
+
+      transition:
+        border-color .2s,
+        transform .2s;
     }
 
     .rules-contact:hover {
@@ -601,34 +767,43 @@
     .rules-contact small {
       display: block;
       margin-bottom: 8px;
+
       color: var(--rules-muted);
       font-size: 11px;
     }
 
     .rules-contact strong {
       color: var(--rules-gold-light);
+
       font-size: 16px;
       white-space: nowrap;
     }
 
-    /* BOTTOM */
+    /* =========================================================
+       BOTTOM
+       ========================================================= */
 
     .rules-bottom {
       margin-top: 30px;
       padding: 26px;
+
       border: 1px solid rgba(232,191,104,.22);
       border-radius: 16px;
+
       background: linear-gradient(
         135deg,
         rgba(232,191,104,.09),
         rgba(15,23,42,.8)
       );
+
       text-align: center;
     }
 
     .rules-bottom__title {
       margin: 0 0 10px;
+
       color: var(--rules-gold);
+
       font-size: 18px;
       font-weight: 900;
     }
@@ -636,39 +811,54 @@
     .rules-bottom p {
       max-width: 650px;
       margin: 0 auto;
+
       color: #cbd5e1;
+
       font-size: 13px;
       line-height: 1.8;
     }
 
     .rules-back-top {
       display: inline-flex;
+
       margin-top: 20px;
       padding: 11px 20px;
+
       border: 1px solid rgba(232,191,104,.35);
       border-radius: 9px;
+
       color: var(--rules-gold-light);
+
       text-decoration: none;
+
       font-size: 12px;
       font-weight: 800;
     }
 
-    /* MOBILE TOC */
+    /* =========================================================
+       MOBILE TABLE OF CONTENTS
+       ========================================================= */
 
     .rules-mobile-toc {
       display: none;
+
       margin-bottom: 20px;
+
       border: 1px solid var(--rules-border);
       border-radius: 13px;
+
       background: var(--rules-card);
       overflow: hidden;
     }
 
     .rules-mobile-toc summary {
       padding: 18px 20px;
+
       color: var(--rules-gold);
+
       font-size: 13px;
       font-weight: 900;
+
       cursor: pointer;
     }
 
@@ -676,9 +866,21 @@
       padding: 0 10px 12px;
     }
 
-    /* RESPONSIVE */
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    .rules-page .footer {
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
 
     @media (max-width: 900px) {
+
       .rules-layout {
         grid-template-columns: 1fr;
       }
@@ -690,9 +892,11 @@
       .rules-mobile-toc {
         display: block;
       }
+
     }
 
     @media (max-width: 650px) {
+
       .rules-shell {
         padding: 16px 12px 65px;
       }
@@ -742,6 +946,7 @@
         width: 39px;
         height: 39px;
         flex-basis: 39px;
+
         font-size: 15px;
       }
 
@@ -766,9 +971,15 @@
       .rules-table td {
         padding: 12px;
       }
+
     }
 
+    /* =========================================================
+       PRINT
+       ========================================================= */
+
     @media print {
+
       body.rules-page {
         color: #111;
         background: #fff;
@@ -792,6 +1003,7 @@
       .rules-bottom {
         color: #111;
         background: #fff;
+
         border: 1px solid #ccc;
         box-shadow: none;
       }
@@ -807,51 +1019,120 @@
       .rules-table td {
         color: #111;
       }
+
     }
+
   </style>
 </head>
 
+
 <body class="rules-page">
 
+
+<!-- =========================================================
+     HEADER
+     ========================================================= -->
+
 <header class="header">
+
   <div class="container header__row">
 
-    <a class="logo" href="index.html">
+    <a
+      class="logo"
+      href="/index.html"
+      aria-label="STOLAR CARP"
+    >
       <span class="logo__mark">SC</span>
       <span class="logo__text">STOLAR CARP</span>
     </a>
 
-    <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
-      <a href="/rules.html" class="nav__link nav__link--active">Регламент</a>
-      <a href="/formats.html" class="nav__link">Формат змагань</a>
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+    <nav
+      class="nav"
+      id="nav"
+      aria-label="Основна навігація"
+    >
+
+      <a href="/index.html" class="nav__link">
+        Головна
+      </a>
+
+      <a
+        href="/rules.html"
+        class="nav__link nav__link--active"
+        aria-current="page"
+      >
+        Регламент
+      </a>
+
+      <a href="/formats.html" class="nav__link">
+        Формат змагань
+      </a>
+
+      <a href="/register.html" class="nav__link">
+        Реєстрація
+      </a>
+
+      <a href="/live.html" class="nav__link">
+        Live
+      </a>
+
+      <a href="/rating.html" class="nav__link">
+        Рейтинг
+      </a>
+
+      <a href="/lakes.html" class="nav__link">
+        Водойми
+      </a>
+
+      <a href="/sponsors.html" class="nav__link">
+        Спонсори
+      </a>
+
+      <a href="/events/index.html" class="nav__link">
+        Архів
+      </a>
+
+      <a href="/cabinet.html" class="nav__link">
+        Мій кабінет
+      </a>
+
     </nav>
 
-    <button class="burger" id="burger"
-            type="button"
-            aria-label="Відкрити меню"
-            aria-controls="nav"
-            aria-expanded="false">
+    <!--
+      Мобільне меню відкриває config.js.
+      Окремий JS для burger тут не потрібний.
+    -->
+
+    <button
+      class="burger"
+      id="burger"
+      type="button"
+      aria-label="Відкрити меню"
+      aria-controls="nav"
+      aria-expanded="false"
+    >
       <span></span>
       <span></span>
       <span></span>
     </button>
 
   </div>
+
 </header>
+
+
+<!-- =========================================================
+     MAIN
+     ========================================================= -->
 
 <main class="main" id="top">
 
 <div class="rules-shell">
 
-  <!-- HERO -->
+
+  <!-- =======================================================
+       HERO
+       ======================================================= -->
 
   <section class="rules-hero">
 
@@ -874,13 +1155,16 @@
 
     <div class="rules-hero__meta">
       <span class="rules-meta">Класика + Flat Feeder</span>
-      <span class="rules-meta">Catch & Release</span>
+      <span class="rules-meta">Catch &amp; Release</span>
       <span class="rules-meta">Редакція 25.01.2026</span>
     </div>
 
   </section>
 
-  <!-- QUICK FACTS -->
+
+  <!-- =======================================================
+       QUICK FACTS
+       ======================================================= -->
 
   <div class="rules-facts">
 
@@ -906,7 +1190,7 @@
     </div>
 
     <div class="rules-fact">
-      <span class="rules-fact__value">C&R</span>
+      <span class="rules-fact__value">C&amp;R</span>
       <span class="rules-fact__label">
         Зловив — відпустив
       </span>
@@ -914,12 +1198,17 @@
 
   </div>
 
-  <!-- WARNING -->
+
+  <!-- =======================================================
+       WARNING
+       ======================================================= -->
 
   <div class="rules-notice">
+
     <div class="rules-notice__icon">⚠</div>
 
     <div>
+
       <strong>ОБОВ'ЯЗКОВО ДО ВИКОНАННЯ</strong>
 
       <p>
@@ -928,33 +1217,99 @@
         розбіжностей. Незнання правил водойми
         не звільняє учасників від відповідальності.
       </p>
+
     </div>
+
   </div>
 
-  <!-- MOBILE CONTENTS -->
+
+  <!-- =======================================================
+       MOBILE CONTENTS
+       ======================================================= -->
 
   <details class="rules-mobile-toc" id="mobileRulesToc">
-    <summary>ЗМІСТ РЕГЛАМЕНТУ — ВІДКРИТИ РОЗДІЛИ</summary>
+
+    <summary>
+      ЗМІСТ РЕГЛАМЕНТУ — ВІДКРИТИ РОЗДІЛИ
+    </summary>
 
     <nav class="rules-toc" aria-label="Зміст регламенту">
-      <a href="#section-1"><span class="rules-toc__number">01</span>Загальні положення</a>
-      <a href="#section-2"><span class="rules-toc__number">02</span>Участь та реєстрація</a>
-      <a href="#section-3"><span class="rules-toc__number">03</span>Організація та сектори</a>
-      <a href="#section-4"><span class="rules-toc__number">04</span>Правила ловлі</a>
-      <a href="#section-5"><span class="rules-toc__number">05</span>Годування</a>
-      <a href="#section-6"><span class="rules-toc__number">06</span>Зважування та риба</a>
-      <a href="#section-7"><span class="rules-toc__number">07</span>Переможці та призи</a>
-      <a href="#section-8"><span class="rules-toc__number">08</span>Fair Play</a>
-      <a href="#section-9"><span class="rules-toc__number">09</span>Дисципліна та штрафи</a>
-      <a href="#section-10"><span class="rules-toc__number">10</span>Безпека</a>
-      <a href="#section-11"><span class="rules-toc__number">11</span>Протести</a>
-      <a href="#section-12"><span class="rules-toc__number">12</span>Контакти</a>
+
+      <a href="#section-1">
+        <span class="rules-toc__number">01</span>
+        Загальні положення
+      </a>
+
+      <a href="#section-2">
+        <span class="rules-toc__number">02</span>
+        Участь та реєстрація
+      </a>
+
+      <a href="#section-3">
+        <span class="rules-toc__number">03</span>
+        Організація та сектори
+      </a>
+
+      <a href="#section-4">
+        <span class="rules-toc__number">04</span>
+        Правила ловлі
+      </a>
+
+      <a href="#section-5">
+        <span class="rules-toc__number">05</span>
+        Годування
+      </a>
+
+      <a href="#section-6">
+        <span class="rules-toc__number">06</span>
+        Зважування та риба
+      </a>
+
+      <a href="#section-7">
+        <span class="rules-toc__number">07</span>
+        Переможці та призи
+      </a>
+
+      <a href="#section-8">
+        <span class="rules-toc__number">08</span>
+        Fair Play
+      </a>
+
+      <a href="#section-9">
+        <span class="rules-toc__number">09</span>
+        Дисципліна та штрафи
+      </a>
+
+      <a href="#section-10">
+        <span class="rules-toc__number">10</span>
+        Безпека
+      </a>
+
+      <a href="#section-11">
+        <span class="rules-toc__number">11</span>
+        Протести
+      </a>
+
+      <a href="#section-12">
+        <span class="rules-toc__number">12</span>
+        Контакти
+      </a>
+
     </nav>
+
   </details>
+
+
+  <!-- =======================================================
+       CONTENT LAYOUT
+       ======================================================= -->
 
   <div class="rules-layout">
 
-    <!-- DESKTOP SIDEBAR -->
+
+    <!-- =====================================================
+         DESKTOP SIDEBAR
+         ===================================================== -->
 
     <aside class="rules-sidebar">
 
@@ -962,28 +1317,86 @@
         Зміст документа
       </div>
 
-      <nav class="rules-toc" aria-label="Навігація регламентом">
-        <a href="#section-1"><span class="rules-toc__number">01</span>Загальні положення</a>
-        <a href="#section-2"><span class="rules-toc__number">02</span>Участь та реєстрація</a>
-        <a href="#section-3"><span class="rules-toc__number">03</span>Організація та сектори</a>
-        <a href="#section-4"><span class="rules-toc__number">04</span>Правила ловлі</a>
-        <a href="#section-5"><span class="rules-toc__number">05</span>Годування</a>
-        <a href="#section-6"><span class="rules-toc__number">06</span>Зважування та риба</a>
-        <a href="#section-7"><span class="rules-toc__number">07</span>Переможці та призи</a>
-        <a href="#section-8"><span class="rules-toc__number">08</span>Fair Play</a>
-        <a href="#section-9"><span class="rules-toc__number">09</span>Дисципліна та штрафи</a>
-        <a href="#section-10"><span class="rules-toc__number">10</span>Безпека</a>
-        <a href="#section-11"><span class="rules-toc__number">11</span>Протести</a>
-        <a href="#section-12"><span class="rules-toc__number">12</span>Контакти</a>
+      <nav
+        class="rules-toc"
+        aria-label="Навігація регламентом"
+      >
+
+        <a href="#section-1">
+          <span class="rules-toc__number">01</span>
+          Загальні положення
+        </a>
+
+        <a href="#section-2">
+          <span class="rules-toc__number">02</span>
+          Участь та реєстрація
+        </a>
+
+        <a href="#section-3">
+          <span class="rules-toc__number">03</span>
+          Організація та сектори
+        </a>
+
+        <a href="#section-4">
+          <span class="rules-toc__number">04</span>
+          Правила ловлі
+        </a>
+
+        <a href="#section-5">
+          <span class="rules-toc__number">05</span>
+          Годування
+        </a>
+
+        <a href="#section-6">
+          <span class="rules-toc__number">06</span>
+          Зважування та риба
+        </a>
+
+        <a href="#section-7">
+          <span class="rules-toc__number">07</span>
+          Переможці та призи
+        </a>
+
+        <a href="#section-8">
+          <span class="rules-toc__number">08</span>
+          Fair Play
+        </a>
+
+        <a href="#section-9">
+          <span class="rules-toc__number">09</span>
+          Дисципліна та штрафи
+        </a>
+
+        <a href="#section-10">
+          <span class="rules-toc__number">10</span>
+          Безпека
+        </a>
+
+        <a href="#section-11">
+          <span class="rules-toc__number">11</span>
+          Протести
+        </a>
+
+        <a href="#section-12">
+          <span class="rules-toc__number">12</span>
+          Контакти
+        </a>
+
       </nav>
 
     </aside>
 
-    <!-- CONTENT -->
+
+    <!-- =====================================================
+         REGULATIONS
+         ===================================================== -->
 
     <div class="rules-content">
 
-      <!-- SECTION 1 -->
+
+      <!-- ===================================================
+           SECTION 1
+           =================================================== -->
 
       <section class="rules-section" id="section-1">
 
@@ -993,12 +1406,16 @@
         </div>
 
         <div class="rules-group">
+
           <h3>1.1. Принципи проведення турніру</h3>
 
           <ul class="rules-list">
+
             <li>
               Усі змагання проводяться за принципом
-              <strong>Catch & Release — «зловив — відпустив».</strong>
+              <strong>
+                Catch &amp; Release — «зловив — відпустив».
+              </strong>
             </li>
 
             <li>
@@ -1012,13 +1429,17 @@
               рівних умов, прозорого суддівства,
               взаємної поваги та спортивної етики.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>1.2. Мінімальна кількість учасників</h3>
 
           <ul class="rules-list">
+
             <li>
               Змагання проводяться за умови участі
               <strong>не менше 12 команд.</strong>
@@ -1029,13 +1450,17 @@
               організатор має право перенести дату,
               змінити формат або скасувати змагання.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>1.3. Джек-поти «Big Fish Total»</h3>
 
           <ul class="rules-list">
+
             <li>
               Участь у джек-потах є добровільною.
             </li>
@@ -1054,12 +1479,17 @@
               утримувати частину коштів на організаційні
               та адміністративні витрати.
             </li>
+
           </ul>
+
         </div>
 
       </section>
 
-      <!-- SECTION 2 -->
+
+      <!-- ===================================================
+           SECTION 2
+           =================================================== -->
 
       <section class="rules-section" id="section-2">
 
@@ -1069,19 +1499,25 @@
         </div>
 
         <div class="rules-group">
+
           <h3>2.1. Тривалість та розклад</h3>
 
           <div class="rules-highlight">
-            <strong>Тривалість турніру — 48 годин.</strong><br>
-            Старт: п'ятниця, 12:00.<br>
+            <strong>Тривалість турніру — 48 годин.</strong>
+            <br>
+            Старт: п'ятниця, 12:00.
+            <br>
             Фініш: неділя, 12:00.
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>2.2. Формат участі</h3>
 
           <ul class="rules-list">
+
             <li>
               <strong>Командний формат:</strong>
               від 1 до 3 повноцінних учасників.
@@ -1102,13 +1538,17 @@
               Цей регламент поширюється як на
               командний, так і на сольний формат.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>2.3. Реєстрація та оплата</h3>
 
           <ul class="rules-list">
+
             <li>
               <strong>
                 Реєстрація вважається дійсною
@@ -1141,6 +1581,7 @@
               кошти повертаються за вирахуванням
               банківської комісії.
             </li>
+
           </ul>
 
           <div class="rules-danger">
@@ -1148,9 +1589,11 @@
             відповідно до чинних умов турніру
             сплачений внесок не повертається.
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>2.4. Організаційний фонд</h3>
 
           <p>
@@ -1172,9 +1615,11 @@
             організаційний фонд відповідно
             до потреб проведення турніру.
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>2.5. Технічні уточнення</h3>
 
           <p>
@@ -1183,11 +1628,15 @@
             суті змагань, з обов'язковим повідомленням
             учасників до старту.
           </p>
+
         </div>
 
       </section>
 
-      <!-- SECTION 3 -->
+
+      <!-- ===================================================
+           SECTION 3
+           =================================================== -->
 
       <section class="rules-section" id="section-3">
 
@@ -1197,9 +1646,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>3.1. Жеребкування</h3>
 
           <ul class="rules-list">
+
             <li>
               Розподіл секторів та зон
               здійснюється шляхом жеребкування.
@@ -1222,13 +1673,17 @@
               та нагородження публікується
               на сайті та у Viber-групі.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>3.2. Межі сектора</h3>
 
           <ul class="rules-list">
+
             <li>
               Учасники зобов'язані дотримуватися
               встановлених меж своєї зони ловлі.
@@ -1240,10 +1695,13 @@
               секторам зони, або в напрямку,
               визначеному суддею.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>3.3. Пересування транспортом</h3>
 
           <div class="rules-danger">
@@ -1257,12 +1715,15 @@
             у форс-мажорних обставинах
             та виключно за згодою судді.
           </p>
+
         </div>
 
         <div class="rules-group">
+
           <h3>3.4. Вхід у воду</h3>
 
           <ul class="rules-list">
+
             <li>
               <strong>До старту:</strong>
               дозволено заходити у воду
@@ -1283,12 +1744,17 @@
               дозволяється виключно
               для підсачування риби.
             </li>
+
           </ul>
+
         </div>
 
       </section>
 
-      <!-- SECTION 4 -->
+
+      <!-- ===================================================
+           SECTION 4
+           =================================================== -->
 
       <section class="rules-section" id="section-4">
 
@@ -1298,9 +1764,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>4.1. Вудилища</h3>
 
           <ul class="rules-list">
+
             <li>
               Максимальна довжина вудилища —
               <strong>4,57 м.</strong>
@@ -1333,13 +1801,17 @@
               робоче вудилище, доки одне
               з двох робочих не вимотане.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>4.2. Закидання та виважування</h3>
 
           <ul class="rules-list">
+
             <li>
               Закидання та виважування
               здійснюють виключно учасники,
@@ -1355,19 +1827,25 @@
             <li>
               Єдиний виняток — допомога судді
               у форс-мажорних обставинах:
+
               <ul>
                 <li>переплутування снастей між секторами;</li>
                 <li>небезпека для риби;</li>
                 <li>небезпека для рибалки.</li>
               </ul>
+
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>4.3. Маркеріння</h3>
 
           <ul class="rules-list">
+
             <li>
               Маркеріння дозволено
               без вимотування двох робочих вудилищ.
@@ -1378,13 +1856,17 @@
               після заїзду в сектор
               та до фінішу змагань.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>4.4. Волосінь та шок-лідер</h3>
 
           <ul class="rules-list">
+
             <li>
               Діаметр основної волосіні —
               <strong>не менше 0,25 мм.</strong>
@@ -1406,25 +1888,34 @@
               виключно на сподових
               та маркерних вудилищах.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>4.5. Монтажі</h3>
 
           <div class="rules-dual">
 
             <div class="rules-status rules-status--allowed">
+
               <h4>✓ ДОЗВОЛЕНО</h4>
 
               <ul>
                 <li>Класичні коропові монтажі.</li>
                 <li>Flat Feeder.</li>
-                <li>Безпечні монтажі зі звільненням риби від вантажу або годівниці при обриві.</li>
+                <li>
+                  Безпечні монтажі зі звільненням риби
+                  від вантажу або годівниці при обриві.
+                </li>
               </ul>
+
             </div>
 
             <div class="rules-status rules-status--forbidden">
+
               <h4>✕ ЗАБОРОНЕНО</h4>
 
               <ul>
@@ -1433,6 +1924,7 @@
                 <li>Оснастка «гарбуз».</li>
                 <li>Монтажі, що не забезпечують безпечного звільнення риби.</li>
               </ul>
+
             </div>
 
           </div>
@@ -1445,9 +1937,11 @@
             по лідкору та скидатися
             у разі обриву оснастки.
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>4.6. Плавзасоби</h3>
 
           <div class="rules-danger">
@@ -1455,11 +1949,15 @@
             човнів та будь-яких плавзасобів
             для завезення оснасток і прикорму.
           </div>
+
         </div>
 
       </section>
 
-      <!-- SECTION 5 -->
+
+      <!-- ===================================================
+           SECTION 5
+           =================================================== -->
 
       <section class="rules-section" id="section-5">
 
@@ -1469,9 +1967,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>5.1. Використання спомба</h3>
 
           <ul class="rules-list">
+
             <li>
               Годування спомбом дозволено
               лише у світлий час доби,
@@ -1497,24 +1997,30 @@
               Використання спомба
               <strong>Large заборонено.</strong>
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>5.2. Використання кобри</h3>
 
           <div class="rules-highlight">
             Годування за допомогою кобри
             <strong>дозволено цілодобово.</strong>
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>5.3. Насадки та прикорм</h3>
 
           <div class="rules-dual">
 
             <div class="rules-status rules-status--allowed">
+
               <h4>✓ ДОЗВОЛЕНО</h4>
 
               <ul>
@@ -1522,13 +2028,18 @@
                 <li>Пелетс.</li>
                 <li>Зернові суміші.</li>
                 <li>Варені та пропарені зерна.</li>
-                <li>Тигровий горіх лише в меленому вигляді, пропущений через м'ясорубку.</li>
+                <li>
+                  Тигровий горіх лише в меленому вигляді,
+                  пропущений через м'ясорубку.
+                </li>
                 <li>Рідкі та сухі атрактанти.</li>
                 <li>Діпи та ароматизатори.</li>
               </ul>
+
             </div>
 
             <div class="rules-status rules-status--forbidden">
+
               <h4>✕ ЗАБОРОНЕНО</h4>
 
               <ul>
@@ -1538,14 +2049,19 @@
                 <li>Ікра у будь-якому вигляді.</li>
                 <li>Жива насадка.</li>
               </ul>
+
             </div>
 
           </div>
+
         </div>
 
       </section>
 
-      <!-- SECTION 6 -->
+
+      <!-- ===================================================
+           SECTION 6
+           =================================================== -->
 
       <section class="rules-section" id="section-6">
 
@@ -1555,17 +2071,17 @@
         </div>
 
         <div class="rules-group">
+
           <h3>6.1. Обов'язкове обладнання</h3>
 
           <ul class="rules-list">
+
             <li>
               Антисептик для обробки риби.
             </li>
 
             <li>
-              <strong>
-                Мінімум 10 коропових мішків.
-              </strong>
+              <strong>Мінімум 10 коропових мішків.</strong>
             </li>
 
             <li>
@@ -1590,13 +2106,17 @@
               учасників короповими матами,
               команда зобов'язана мати власний мат.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>6.2. Порядок зважування</h3>
 
           <ul class="rules-list">
+
             <li>
               Кількість і час зважувань
               визначаються організатором.
@@ -1642,18 +2162,29 @@
               на мінімальній висоті
               виключно над короповим матом.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>6.3. Обов'язковий виклик судді</h3>
 
           <div class="rules-highlight">
+
             <strong>СУДДЮ НЕОБХІДНО ВИКЛИКАТИ:</strong>
+
             <br><br>
-            • якщо вага риби становить 10 кг або більше;<br>
-            • за наявності двох амурів;<br>
+
+            • якщо вага риби становить 10 кг або більше;
+            <br>
+
+            • за наявності двох амурів;
+            <br>
+
             • за наявності 10 мішків із рибою.
+
           </div>
 
           <p>
@@ -1668,11 +2199,15 @@
             Офіційне зважування
             здійснюється суддею.
           </p>
+
         </div>
 
       </section>
 
-      <!-- SECTION 7 -->
+
+      <!-- ===================================================
+           SECTION 7
+           =================================================== -->
 
       <section class="rules-section" id="section-7">
 
@@ -1682,9 +2217,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>7.1. Основний залік</h3>
 
           <ul class="rules-list">
+
             <li>
               Основний залік визначається
               за загальною вагою улову
@@ -1701,14 +2238,19 @@
               перевага надається команді,
               яка має більшу рибу (Big Fish).
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>7.2. Призові місця</h3>
 
           <div class="rules-table-wrap">
+
             <table class="rules-table">
+
               <thead>
                 <tr>
                   <th>Зона</th>
@@ -1717,6 +2259,7 @@
               </thead>
 
               <tbody>
+
                 <tr>
                   <td><strong>Зона A</strong></td>
                   <td>1, 2, 3 місце</td>
@@ -1731,15 +2274,21 @@
                   <td><strong>Зона C</strong></td>
                   <td>1, 2, 3 місце</td>
                 </tr>
+
               </tbody>
+
             </table>
+
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>7.3. Номінації Big Fish</h3>
 
           <ul class="rules-list">
+
             <li>
               Окремо визначається
               найбільший короп турніру.
@@ -1749,13 +2298,17 @@
               Окремо визначається
               найбільший амур турніру.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>7.4. Призовий фонд</h3>
 
           <ul class="rules-list">
+
             <li>
               Призовий фонд формується
               організаторами та спонсорами.
@@ -1771,12 +2324,17 @@
               призи від спонсорів
               у відповідних зонах.
             </li>
+
           </ul>
+
         </div>
 
       </section>
 
-      <!-- SECTION 8 -->
+
+      <!-- ===================================================
+           SECTION 8
+           =================================================== -->
 
       <section class="rules-section" id="section-8">
 
@@ -1786,9 +2344,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>8.1. Завершення змагань</h3>
 
           <ul class="rules-list">
+
             <li>
               Після сигналу фінішу
               команда має
@@ -1809,13 +2369,17 @@
               не було, риба
               до заліку не зараховується.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>8.2. Взаємодія між секторами</h3>
 
           <ul class="rules-list">
+
             <li>
               Якщо риба зайшла
               в сектор сусідньої команди,
@@ -1830,13 +2394,17 @@
                 виключно у своєму секторі.
               </strong>
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>8.3. Гості та глядачі</h3>
 
           <ul class="rules-list">
+
             <li>
               Відвідування секторів гостями
               дозволено лише у світлий час доби.
@@ -1862,12 +2430,17 @@
               Переміщення автотранспортом
               між секторами заборонене.
             </li>
+
           </ul>
+
         </div>
 
       </section>
 
-      <!-- SECTION 9 -->
+
+      <!-- ===================================================
+           SECTION 9
+           =================================================== -->
 
       <section class="rules-section" id="section-9">
 
@@ -1877,9 +2450,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>9.1. Загальні вимоги</h3>
 
           <ul class="rules-list">
+
             <li>
               Учасники зобов'язані
               підтримувати тишу,
@@ -1903,124 +2478,166 @@
               або одна червона картка
               означають дискваліфікацію команди.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>9.2. Таблиця дисциплінарних санкцій</h3>
 
           <div class="rules-table-wrap">
+
             <table class="rules-table">
 
               <thead>
+
                 <tr>
                   <th>Порушення</th>
                   <th>Санкція</th>
                 </tr>
+
               </thead>
 
               <tbody>
 
                 <tr>
+
                   <td>
                     Порушення встановленого
                     часу годування
                   </td>
+
                   <td>
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА КАРТКА
                     </span>
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Годування цілим тигровим горіхом
                   </td>
+
                   <td>
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА КАРТКА
                     </span>
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Ловля або годування
                     за межами сектора чи зони
                   </td>
+
                   <td>
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА КАРТКА
                     </span>
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Недбале поводження з рибою
                   </td>
+
                   <td>
+
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА
                     </span>
+
                     /
+
                     <span class="rules-badge rules-badge--red">
                       ЧЕРВОНА
                     </span>
+
                     <br>
                     За рішенням судді
+
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Використання забороненої оснастки
                     або порушення правил годування
                   </td>
+
                   <td>
+
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА
                     </span>
+
                     /
+
                     <span class="rules-badge rules-badge--red">
                       ЧЕРВОНА
                     </span>
+
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Фотографування риби
                     без присутності судді
                   </td>
+
                   <td>
                     <span class="rules-badge rules-badge--yellow">
                       ЖОВТА КАРТКА
                     </span>
                   </td>
+
                 </tr>
 
                 <tr>
+
                   <td>
                     Надмірне вживання алкоголю,
                     агресивна поведінка
                   </td>
+
                   <td>
                     <span class="rules-badge rules-badge--red">
                       ДИСКВАЛІФІКАЦІЯ
                     </span>
                   </td>
+
                 </tr>
 
               </tbody>
+
             </table>
+
           </div>
+
         </div>
 
       </section>
 
-      <!-- SECTION 10 -->
+
+      <!-- ===================================================
+           SECTION 10
+           =================================================== -->
 
       <section class="rules-section" id="section-10">
 
@@ -2030,9 +2647,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>10.1. Дії під час грози</h3>
 
           <ul class="rules-list">
+
             <li>
               Змагання призупиняються
               на час, визначений організатором.
@@ -2046,29 +2665,41 @@
 
             <li>
               Під час призупинення заборонено:
+
               <ul>
                 <li>тримати вудилища в руках;</li>
                 <li>здійснювати закидання;</li>
                 <li>проводити маркеріння;</li>
                 <li>здійснювати підгодовування;</li>
-                <li>виконувати будь-які дії, пов'язані з ловлею.</li>
+                <li>
+                  виконувати будь-які дії,
+                  пов'язані з ловлею.
+                </li>
               </ul>
+
             </li>
+
           </ul>
 
           <div class="rules-danger">
+
             <strong>КРИТИЧНЕ ПОРУШЕННЯ:</strong>
+
             невиконання вимоги витягнути снасті
             під час призупинення змагань через грозу
             карається червоною карткою
             та дискваліфікацією команди.
+
           </div>
+
         </div>
 
         <div class="rules-group">
+
           <h3>10.2. Алкоголь та заборонені речовини</h3>
 
           <ul class="rules-list">
+
             <li>
               Перебування в стані алкогольного
               або наркотичного сп'яніння заборонено.
@@ -2078,13 +2709,17 @@
               Зафіксовані суддями порушення
               розглядаються суддівською колегією.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>10.3. Снасті та особисті речі</h3>
 
           <ul class="rules-list">
+
             <li>
               Заборонено залишати
               робочі снасті без нагляду.
@@ -2096,10 +2731,13 @@
               за втрачені або пошкоджені
               особисті речі учасників.
             </li>
+
           </ul>
+
         </div>
 
         <div class="rules-group">
+
           <h3>10.4. Переміщення в темний час доби</h3>
 
           <p>
@@ -2107,11 +2745,15 @@
             в темний час доби дозволяється
             лише з увімкненими ліхтарями.
           </p>
+
         </div>
 
       </section>
 
-      <!-- SECTION 11 -->
+
+      <!-- ===================================================
+           SECTION 11
+           =================================================== -->
 
       <section class="rules-section" id="section-11">
 
@@ -2121,9 +2763,11 @@
         </div>
 
         <div class="rules-group">
+
           <h3>11.1. Подання протесту</h3>
 
           <ul class="rules-list">
+
             <li>
               Протест подається
               головному судді або організатору.
@@ -2144,12 +2788,17 @@
               Рішення суддів є остаточними
               та оскарженню не підлягають.
             </li>
+
           </ul>
+
         </div>
 
       </section>
 
-      <!-- SECTION 12 -->
+
+      <!-- ===================================================
+           SECTION 12
+           =================================================== -->
 
       <section class="rules-section" id="section-12">
 
@@ -2159,6 +2808,7 @@
         </div>
 
         <div class="rules-group">
+
           <p>
             Для отримання інформації
             щодо участі, реєстрації,
@@ -2169,35 +2819,47 @@
 
           <div class="rules-contacts">
 
-            <a class="rules-contact"
-               href="tel:+380631731116">
+            <a
+              class="rules-contact"
+              href="tel:+380631731116"
+            >
 
               <small>Контактний телефон</small>
 
               <strong>
                 +38 (063) 173-11-16
               </strong>
+
             </a>
 
-            <a class="rules-contact"
-               href="tel:+380978824845">
+            <a
+              class="rules-contact"
+              href="tel:+380978824845"
+            >
 
               <small>Контактний телефон</small>
 
               <strong>
                 +38 (097) 882-48-45
               </strong>
+
             </a>
 
           </div>
+
         </div>
 
       </section>
 
+
     </div>
+
   </div>
 
-  <!-- FINAL BLOCK -->
+
+  <!-- =======================================================
+       FINAL BLOCK
+       ======================================================= -->
 
   <div class="rules-bottom">
 
@@ -2209,6 +2871,7 @@
       Участь у змаганнях передбачає
       ознайомлення з чинним регламентом
       та його дотримання.
+
       Повага до суперників, суддів,
       водойми та риби є основою
       спортивної культури STOLAR CARP.
@@ -2220,132 +2883,175 @@
 
   </div>
 
+
 </div>
+
 </main>
 
+
+<!-- =========================================================
+     FOOTER
+     ========================================================= -->
+
 <footer class="footer">
+
   <div class="container footer__row">
 
     <div>
-      © <span id="rulesYear">2026</span>
+      © <span id="footerYear">2025–2026</span>
       STOLAR CARP · Львів
     </div>
 
     <div class="footer__links">
 
-      <a href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
-         target="_blank"
-         rel="noopener noreferrer">
+      <a
+        href="https://invite.viber.com/?g=8R04gUEhdVSnX6sr_DxGGGqAXTus0Ygh"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         Viber
       </a>
 
-      <a href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
-         target="_blank"
-         rel="noopener noreferrer">
+      <a
+        href="https://youtube.com/@dk-stolarcarp?si=H-BUK2msCiKXdcA9"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         YouTube
       </a>
 
     </div>
+
   </div>
+
 </footer>
+
+
+<!-- =========================================================
+     RULES PAGE INTERACTIONS
+
+     ВАЖЛИВО:
+     - рік оновлює config.js;
+     - burger відкриває config.js;
+     - тут лише навігація всередині регламенту.
+     ========================================================= -->
 
 <script>
 (function () {
   "use strict";
 
   /* =========================================================
-     STOLAR CARP • RULES PAGE INTERACTIONS
+     MOBILE TABLE OF CONTENTS
      ========================================================= */
 
-  const yearEl = document.getElementById("rulesYear");
-
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
-
-  /* MOBILE TABLE OF CONTENTS */
-
-  const mobileToc = document.getElementById("mobileRulesToc");
+  const mobileToc =
+    document.getElementById("mobileRulesToc");
 
   if (mobileToc) {
-    mobileToc.querySelectorAll('a[href^="#"]').forEach(function (link) {
-      link.addEventListener("click", function () {
-        mobileToc.open = false;
+
+    mobileToc
+      .querySelectorAll('a[href^="#"]')
+      .forEach(function (link) {
+
+        link.addEventListener(
+          "click",
+          function () {
+            mobileToc.open = false;
+          }
+        );
+
       });
-    });
+
   }
 
-  /* ACTIVE SECTION TRACKING */
 
-  const sections = document.querySelectorAll(".rules-section");
-  const tocLinks = document.querySelectorAll(
-    '.rules-sidebar .rules-toc a[href^="#"]'
-  );
+  /* =========================================================
+     ACTIVE SECTION TRACKING
+     ========================================================= */
 
-  if ("IntersectionObserver" in window && sections.length) {
+  const sections =
+    document.querySelectorAll(".rules-section");
+
+  const tocLinks =
+    document.querySelectorAll(
+      '.rules-sidebar .rules-toc a[href^="#"]'
+    );
+
+  if (
+    "IntersectionObserver" in window &&
+    sections.length
+  ) {
+
     const observer = new IntersectionObserver(
+
       function (entries) {
+
         const visible = entries
+
           .filter(function (entry) {
             return entry.isIntersecting;
           })
+
           .sort(function (a, b) {
-            return a.boundingClientRect.top -
-                   b.boundingClientRect.top;
+            return (
+              a.boundingClientRect.top -
+              b.boundingClientRect.top
+            );
           });
 
-        if (!visible.length) return;
+        if (!visible.length) {
+          return;
+        }
 
-        const activeId = visible[0].target.id;
+        const activeId =
+          visible[0].target.id;
 
         tocLinks.forEach(function (link) {
-          const isActive =
-            link.getAttribute("href") === "#" + activeId;
 
-          link.classList.toggle("is-active", isActive);
+          const isActive =
+            link.getAttribute("href") ===
+            "#" + activeId;
+
+          link.classList.toggle(
+            "is-active",
+            isActive
+          );
 
           if (isActive) {
-            link.setAttribute("aria-current", "location");
+
+            link.setAttribute(
+              "aria-current",
+              "location"
+            );
+
           } else {
-            link.removeAttribute("aria-current");
+
+            link.removeAttribute(
+              "aria-current"
+            );
+
           }
+
         });
+
       },
+
       {
         rootMargin: "-10% 0px -70% 0px",
         threshold: 0
       }
+
     );
 
     sections.forEach(function (section) {
       observer.observe(section);
     });
-  }
 
-  /* MOBILE HEADER */
-
-  const burger = document.getElementById("burger");
-  const nav = document.getElementById("nav");
-
-  if (burger && nav) {
-    burger.addEventListener("click", function () {
-      const isOpen = nav.classList.toggle("nav--open");
-
-      burger.classList.toggle("burger--open", isOpen);
-      burger.setAttribute("aria-expanded", String(isOpen));
-    });
-
-    nav.querySelectorAll("a").forEach(function (link) {
-      link.addEventListener("click", function () {
-        nav.classList.remove("nav--open");
-        burger.classList.remove("burger--open");
-        burger.setAttribute("aria-expanded", "false");
-      });
-    });
   }
 
 })();
 </script>
+
 
 </body>
 </html>

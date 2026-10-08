@@ -1,6 +1,6 @@
 // ============================================================
 // STOLAR CARP • Карти архівних етапів
-// Версія: 1.4 • 08.10.2026
+// Версія: 1.5 • 08.10.2026
 //
 // Джерело:
 // seasonResults/{year}/stages/{stageDocId}
@@ -16,9 +16,12 @@
 // - Коректна перевірка адміністратора
 // - Без нескінченного "Перевіряю доступ..."
 //
-// MAP:
+// MAP v1.5:
 // - Лелехівка: фізичні сектори 1–26
 // - Сектори 27–30 не відображаються
+// - Сектор №21 зміщено праворуч
+// - Менші кружечки секторів
+// - Компактніші написи всередині кружечків
 // - Кольори зон A/B/C
 // - Золотий вибраний сектор
 // - Масштабування 100–250%
@@ -51,10 +54,18 @@
   const FIREBASE_TIMEOUT = 15000;
   const FIRESTORE_TIMEOUT = 20000;
 
-  const VERSION = "1.4";
+  const VERSION = "1.5";
 
   // ==========================================================
   // PHYSICAL SECTORS • LELEHIVKA
+  //
+  // Координати у відсотках від розміру карти.
+  //
+  // v1.5:
+  // Сектор №21 зміщено праворуч:
+  // 33.47 → 36.00
+  //
+  // Решта координат без змін.
   // ==========================================================
 
   const POINTS = [
@@ -83,7 +94,8 @@
     [19, 25.40, 77.40],
     [20, 29.17, 81.78],
 
-    [21, 33.47, 81.70],
+    // v1.5 • сектор №21 правіше
+    [21, 36.00, 81.70],
 
     [22, 63.22, 81.85],
     [23, 67.79, 82.00],
@@ -611,7 +623,7 @@
       status.style.whiteSpace = "pre-line";
 
       console.log(
-        "[Sector maps v1.4]",
+        "[Sector maps v1.5]",
         value
       );
 
@@ -619,14 +631,14 @@
     }
 
     console.log(
-      "[Sector maps v1.4]",
+      "[Sector maps v1.5]",
       value
     );
   }
 
   function fatal(value) {
     console.error(
-      "[Sector maps v1.4]",
+      "[Sector maps v1.5]",
       value
     );
 
@@ -693,7 +705,7 @@
 
     if (missing.length) {
       throw new Error(
-        "HTML сторінки не відповідає JavaScript v1.4.\n" +
+        "HTML сторінки не відповідає JavaScript v1.5.\n" +
         "Відсутні елементи:\n" +
         missing.map(id => `• #${id}`).join("\n")
       );
@@ -835,7 +847,7 @@
       await task();
     } catch (error) {
       console.error(
-        "[Sector maps v1.4]",
+        "[Sector maps v1.5]",
         error
       );
 
@@ -1206,7 +1218,13 @@
   }
 
   // ==========================================================
-  // PIN STYLES
+  // PIN STYLES • v1.5
+  //
+  // Менші кружечки:
+  // Комп'ютер: 18–30 px
+  // Телефон: 17 px
+  //
+  // Кружечки залишаються круглими.
   // ==========================================================
 
   function installPinStyles() {
@@ -1235,8 +1253,8 @@
         position: absolute;
         z-index: 2;
 
-        width: clamp(20px, 3.2vw, 38px);
-        height: clamp(20px, 3.2vw, 38px);
+        width: clamp(18px, 2.5vw, 30px);
+        height: clamp(18px, 2.5vw, 30px);
 
         padding: 0;
         margin: 0;
@@ -1248,33 +1266,41 @@
         align-items: center;
         justify-content: center;
 
+        gap: 0;
+
         border-radius: 50%;
 
-        border: 2px solid #ffffff;
+        border: 1.5px solid #ffffff;
 
         background: #172033;
         color: #ffffff;
 
         box-shadow:
-          0 2px 8px rgba(0, 0, 0, .8),
-          0 0 0 1px rgba(0, 0, 0, .55);
+          0 1px 5px rgba(0, 0, 0, .8),
+          0 0 0 1px rgba(0, 0, 0, .4);
 
         font-family: Arial, sans-serif;
         font-weight: 900;
 
         cursor: pointer;
         pointer-events: auto;
+
         touch-action: manipulation;
       }
 
       #mapPins .map-pin > span {
         display: block;
 
-        font-size: clamp(10px, 1.5vw, 17px);
+        font-size: clamp(9px, 1.2vw, 14px);
         font-weight: 900;
 
-        line-height: 1.05;
+        line-height: 1;
+        letter-spacing: -.3px;
+
         color: #ffffff;
+
+        text-shadow:
+          0 1px 2px rgba(0, 0, 0, .65);
       }
 
       #mapPins .map-pin > small {
@@ -1282,7 +1308,7 @@
 
         max-width: 100%;
 
-        font-size: clamp(6px, .85vw, 10px);
+        font-size: clamp(5px, .7vw, 8px);
         font-weight: 800;
 
         line-height: 1;
@@ -1316,27 +1342,52 @@
       #mapPins .map-pin[aria-pressed="true"] {
         z-index: 10;
 
-        border: 3px solid #ffd21c;
+        border: 2px solid #ffd21c;
 
         box-shadow:
-          0 0 0 3px rgba(255, 210, 28, .55),
-          0 0 15px rgba(255, 210, 28, .85),
-          0 3px 9px rgba(0, 0, 0, .85);
+          0 0 0 2px rgba(255, 210, 28, .5),
+          0 0 7px rgba(255, 210, 28, .75),
+          0 2px 5px rgba(0, 0, 0, .7);
+      }
+
+      #mapPins .map-pin:focus-visible {
+        outline: 2px solid #ffd21c;
+        outline-offset: 2px;
       }
 
       @media (max-width: 640px) {
+
         #mapPins .map-pin {
-          width: 22px;
-          height: 22px;
-          border-width: 1.5px;
+          width: 17px;
+          height: 17px;
+
+          border-width: 1px;
+
+          box-shadow:
+            0 1px 3px rgba(0, 0, 0, .85);
         }
 
         #mapPins .map-pin > span {
-          font-size: 11px;
+          font-size: 9px;
+          font-weight: 900;
+
+          line-height: 1;
+          letter-spacing: -.3px;
         }
 
         #mapPins .map-pin > small {
-          font-size: 6px;
+          font-size: 5px;
+          font-weight: 800;
+
+          line-height: 1;
+        }
+
+        #mapPins .map-pin[aria-pressed="true"] {
+          border-width: 1.5px;
+
+          box-shadow:
+            0 0 0 2px rgba(255, 210, 28, .5),
+            0 0 5px rgba(255, 210, 28, .7);
         }
       }
     `;

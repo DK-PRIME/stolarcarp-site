@@ -18,12 +18,15 @@
 
   <link rel="stylesheet" href="assets/css/main.css">
 
-  <script defer src="assets/js/config.js"></script>
+  <!-- Спільне меню та автоматичний рік у підвалі -->
+  <script
+    defer
+    src="assets/js/config.js?v=20261008-footer-year"
+  ></script>
 
   <style>
     /* =========================================================
-       STOLAR CARP
-       PREMIUM TOURNAMENT FORMATS
+       STOLAR CARP • PREMIUM TOURNAMENT FORMATS
        ========================================================= */
 
     :root {
@@ -248,12 +251,12 @@
     }
 
     /* =========================================================
-       STATS
+       STATS • 3 КАРТКИ
        ========================================================= */
 
     .formats-stats {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 14px;
 
       margin-top: 20px;
@@ -1153,7 +1156,7 @@
 
     @media (max-width: 850px) {
       .formats-stats {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
       .format-content-grid {
@@ -1189,8 +1192,14 @@
         font-size: 13px;
       }
 
+      /* Три картки в один стовпчик на вузьких екранах */
+      .formats-stats {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
       .formats-stat {
-        padding: 19px 10px;
+        padding: 16px 12px;
       }
 
       .formats-stat__value {
@@ -1355,7 +1364,10 @@
     </a>
 
     <nav class="nav" id="nav">
-      <a href="/index.html" class="nav__link">Головна</a>
+
+      <a href="/index.html" class="nav__link">
+        Головна
+      </a>
 
       <a href="/rules.html" class="nav__link">
         Регламент
@@ -1369,13 +1381,34 @@
         Формат змагань
       </a>
 
-      <a href="/register.html" class="nav__link">Реєстрація</a>
-      <a href="/live.html" class="nav__link">Live</a>
-      <a href="/rating.html" class="nav__link">Рейтинг</a>
-      <a href="/lakes.html" class="nav__link">Водойми</a>
-      <a href="/sponsors.html" class="nav__link">Спонсори</a>
-      <a href="/events/index.html" class="nav__link">Архів</a>
-      <a href="/cabinet.html" class="nav__link">Мій кабінет</a>
+      <a href="/register.html" class="nav__link">
+        Реєстрація
+      </a>
+
+      <a href="/live.html" class="nav__link">
+        Live
+      </a>
+
+      <a href="/rating.html" class="nav__link">
+        Рейтинг
+      </a>
+
+      <a href="/lakes.html" class="nav__link">
+        Водойми
+      </a>
+
+      <a href="/sponsors.html" class="nav__link">
+        Спонсори
+      </a>
+
+      <a href="/events/index.html" class="nav__link">
+        Архів
+      </a>
+
+      <a href="/cabinet.html" class="nav__link">
+        Мій кабінет
+      </a>
+
     </nav>
 
     <button
@@ -1422,15 +1455,23 @@
       </p>
 
       <div class="formats-hero__tags">
-        <span class="formats-hero__tag">SPORT FISHING</span>
-        <span class="formats-hero__tag">CATCH &amp; RELEASE</span>
-        <span class="formats-hero__tag">FAIR PLAY</span>
+        <span class="formats-hero__tag">
+          SPORT FISHING
+        </span>
+
+        <span class="formats-hero__tag">
+          CATCH &amp; RELEASE
+        </span>
+
+        <span class="formats-hero__tag">
+          FAIR PLAY
+        </span>
       </div>
 
     </section>
 
     <!-- =====================================================
-         STATS
+         STATS • БЕЗ 48–72 ГОДИН
          ===================================================== -->
 
     <div class="formats-stats">
@@ -1446,13 +1487,6 @@
         <span class="formats-stat__value">3</span>
         <span class="formats-stat__label">
           Зони A · B · C
-        </span>
-      </div>
-
-      <div class="formats-stat">
-        <span class="formats-stat__value">48–72</span>
-        <span class="formats-stat__label">
-          Годин змагань
         </span>
       </div>
 
@@ -1535,15 +1569,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 3 500 грн / етап
               </span>
+
               <span class="format-tag">
                 Фінал: 5 000 грн
               </span>
+
               <span class="format-tag">
                 TOP-18
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -1577,9 +1615,11 @@
 
               <div class="format-step">
                 <span class="format-step__number">01</span>
+
                 <span class="format-step__title">
                   Відбіркові етапи
                 </span>
+
                 <span class="format-step__description">
                   Команди змагаються у зонах A, B, C
                   та отримують рейтингові бали.
@@ -1588,9 +1628,11 @@
 
               <div class="format-step">
                 <span class="format-step__number">02</span>
+
                 <span class="format-step__title">
                   Вихід у фінал
                 </span>
+
                 <span class="format-step__description">
                   18 найкращих команд відбіркового
                   рейтингу отримують право на фінал.
@@ -1599,9 +1641,11 @@
 
               <div class="format-step">
                 <span class="format-step__number">03</span>
+
                 <span class="format-step__title">
                   Головний фінал
                 </span>
+
                 <span class="format-step__description">
                   Визначаються переможці фіналу
                   та остаточний рейтинг турніру.
@@ -1664,6 +1708,7 @@
                     <strong>Big Carp</strong> —
                     найбільший короп етапу.
                   </li>
+
                   <li>
                     <strong>Big Amur</strong> —
                     найбільший амур етапу.
@@ -1686,10 +1731,12 @@
                   <li><strong>1 місце = 1 бал</strong></li>
                   <li><strong>2 місце = 2 бали</strong></li>
                   <li><strong>3 місце = 3 бали</strong></li>
+
                   <li>
                     Далі — відповідно
                     до зайнятого місця.
                   </li>
+
                   <li>
                     Якщо команда має лише один
                     результат — додається
@@ -1717,6 +1764,7 @@
             </div>
 
             <div class="format-highlight">
+
               <span class="format-highlight__label">
                 КВАЛІФІКАЦІЯ ДО ФІНАЛУ
               </span>
@@ -1733,6 +1781,7 @@
                 не враховуються під час
                 визначення фіналістів.
               </p>
+
             </div>
 
             <div class="format-content-grid">
@@ -1755,6 +1804,7 @@
                 </p>
 
                 <div class="format-highlight">
+
                   <span class="format-highlight__label">
                     ВНЕСОК ЗА ФІНАЛ
                   </span>
@@ -1762,6 +1812,7 @@
                   <span class="format-highlight__value">
                     5 000 грн
                   </span>
+
                 </div>
 
                 <ul class="format-list">
@@ -1769,10 +1820,12 @@
                     Жеребкування у четвер
                     перед стартом.
                   </li>
+
                   <li>
                     Спільна вечеря
                     для учасників.
                   </li>
+
                   <li>
                     Урочиста церемонія
                     нагородження після фіналу.
@@ -1790,18 +1843,22 @@
                     <strong>«Топи озера»</strong> —
                     кубки за 1, 2, 3 місця.
                   </li>
+
                   <li>
                     <strong>9 зональних кубків</strong> —
                     зони A, B, C.
                   </li>
+
                   <li>
                     <strong>Big Carp</strong> —
                     окремий кубок.
                   </li>
+
                   <li>
                     <strong>Big Amur</strong> —
                     окремий кубок.
                   </li>
+
                   <li>
                     <strong>Медалі</strong> —
                     усім учасникам фіналу.
@@ -1862,10 +1919,12 @@
                     <strong>1 місце рейтингу</strong> —
                     кубок.
                   </li>
+
                   <li>
                     <strong>2 місце рейтингу</strong> —
                     кубок.
                   </li>
+
                   <li>
                     <strong>3 місце рейтингу</strong> —
                     кубок.
@@ -1918,6 +1977,7 @@
             <span class="format-trigger__number">02</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 БАЛОВА СИСТЕМА
               </span>
@@ -1925,6 +1985,7 @@
               <span class="format-trigger__title">
                 3 Таблиці
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -1941,15 +2002,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 6 000 грн
               </span>
+
               <span class="format-tag">
                 3 таблиці
               </span>
+
               <span class="format-tag">
                 TOP-3 озера
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -2184,7 +2249,10 @@
            03 • STALKER SOLO
            =================================================== -->
 
-      <article class="format-item format-item--green" id="format-solo">
+      <article
+        class="format-item format-item--green"
+        id="format-solo"
+      >
 
         <button
           class="format-trigger"
@@ -2198,6 +2266,7 @@
             <span class="format-trigger__number">03</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 ІНДИВІДУАЛЬНИЙ ФОРМАТ
               </span>
@@ -2205,6 +2274,7 @@
               <span class="format-trigger__title">
                 STALKER SOLO SC
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -2221,15 +2291,9 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
-              <span class="format-tag">
-                SOLO
-              </span>
-              <span class="format-tag">
-                3 зони
-              </span>
-              <span class="format-tag">
-                TOP озера
-              </span>
+              <span class="format-tag">SOLO</span>
+              <span class="format-tag">3 зони</span>
+              <span class="format-tag">TOP озера</span>
             </span>
 
             <span class="format-trigger__action">
@@ -2331,7 +2395,10 @@
            04 • STALKER TEAMS
            =================================================== -->
 
-      <article class="format-item format-item--blue" id="format-teams">
+      <article
+        class="format-item format-item--blue"
+        id="format-teams"
+      >
 
         <button
           class="format-trigger"
@@ -2345,6 +2412,7 @@
             <span class="format-trigger__number">04</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 КОМАНДНА СТРАТЕГІЯ
               </span>
@@ -2352,6 +2420,7 @@
               <span class="format-trigger__title">
                 STALKER TEAMS
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -2368,15 +2437,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 19 500 грн / команда
               </span>
+
               <span class="format-tag">
                 3 учасники
               </span>
+
               <span class="format-tag">
                 Балова система
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -2508,6 +2581,7 @@
               <div class="format-metrics">
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     6 500
                   </span>
@@ -2515,9 +2589,11 @@
                   <span class="format-metric__label">
                     грн з учасника
                   </span>
+
                 </div>
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     3
                   </span>
@@ -2525,9 +2601,11 @@
                   <span class="format-metric__label">
                     учасники в команді
                   </span>
+
                 </div>
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     19 500
                   </span>
@@ -2535,6 +2613,7 @@
                   <span class="format-metric__label">
                     грн з команди
                   </span>
+
                 </div>
 
               </div>
@@ -2627,7 +2706,10 @@
            05 • BIG FISH CHALLENGE
            =================================================== -->
 
-      <article class="format-item format-item--orange" id="format-bigfish">
+      <article
+        class="format-item format-item--orange"
+        id="format-bigfish"
+      >
 
         <button
           class="format-trigger"
@@ -2641,6 +2723,7 @@
             <span class="format-trigger__number">05</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 ТРОФЕЙНИЙ ТУРНІР
               </span>
@@ -2648,6 +2731,7 @@
               <span class="format-trigger__title">
                 Big Fish Challenge — TOP-30
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -2665,15 +2749,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 7 000 грн
               </span>
+
               <span class="format-tag">
                 48 годин
               </span>
+
               <span class="format-tag">
                 90 000 грн / TOP-30
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -2834,6 +2922,7 @@
             <span class="format-trigger__number">06</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 КЛАСИЧНИЙ ТУРНІР
               </span>
@@ -2841,6 +2930,7 @@
               <span class="format-trigger__title">
                 Осінній Короп
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -2858,15 +2948,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 4 000 грн
               </span>
+
               <span class="format-tag">
                 48 годин
               </span>
+
               <span class="format-tag">
                 21 команда
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -2904,14 +2998,17 @@
                     <strong>Тривалість:</strong>
                     48 годин.
                   </li>
+
                   <li>
                     <strong>Кількість команд:</strong>
                     21.
                   </li>
+
                   <li>
                     <strong>Кількість зон:</strong>
                     3 — A, B, C.
                   </li>
+
                   <li>
                     <strong>Внесок:</strong>
                     4 000 грн з команди.
@@ -2981,7 +3078,10 @@
            07 • TROPHY 15 COBRA
            =================================================== -->
 
-      <article class="format-item format-item--rose" id="format-cobra">
+      <article
+        class="format-item format-item--rose"
+        id="format-cobra"
+      >
 
         <button
           class="format-trigger"
@@ -2995,6 +3095,7 @@
             <span class="format-trigger__number">07</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 ТРОФЕЙНИЙ МАРАФОН
               </span>
@@ -3002,6 +3103,7 @@
               <span class="format-trigger__title">
                 Трофейні 15 · Cobra
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -3019,15 +3121,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag format-tag--gold">
                 8 900 грн
               </span>
+
               <span class="format-tag">
                 72 години
               </span>
+
               <span class="format-tag">
                 100 000 грн / TOP-3
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -3141,36 +3247,46 @@
               <div class="format-metrics">
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     72
                   </span>
+
                   <span class="format-metric__label">
                     Години змагань
                   </span>
+
                 </div>
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     21
                   </span>
+
                   <span class="format-metric__label">
                     Команда
                   </span>
+
                 </div>
 
                 <div class="format-metric">
+
                   <span class="format-metric__number">
                     4
                   </span>
+
                   <span class="format-metric__label">
                     Учасники максимум
                     у команді
                   </span>
+
                 </div>
 
               </div>
 
               <div class="format-highlight">
+
                 <span class="format-highlight__label">
                   ВНЕСОК З КОМАНДИ
                 </span>
@@ -3178,6 +3294,7 @@
                 <span class="format-highlight__value">
                   8 900 грн
                 </span>
+
               </div>
 
             </div>
@@ -3299,7 +3416,10 @@
            08 • PRIZE POOLS
            =================================================== -->
 
-      <article class="format-item format-item--green" id="format-pools">
+      <article
+        class="format-item format-item--green"
+        id="format-pools"
+      >
 
         <button
           class="format-trigger"
@@ -3313,6 +3433,7 @@
             <span class="format-trigger__number">08</span>
 
             <span class="format-trigger__main">
+
               <span class="format-trigger__category">
                 ДОДАТКОВІ ПРИЗОВІ ФОНДИ
               </span>
@@ -3320,6 +3441,7 @@
               <span class="format-trigger__title">
                 Шапки · Prize Pools
               </span>
+
             </span>
 
             <span class="format-trigger__arrow" aria-hidden="true">
@@ -3337,15 +3459,19 @@
           <span class="format-trigger__bottom">
 
             <span class="format-trigger__tags">
+
               <span class="format-tag">
                 BigFish Total
               </span>
+
               <span class="format-tag">
                 Трофейна Десятка
               </span>
+
               <span class="format-tag">
                 Добровільна участь
               </span>
+
             </span>
 
             <span class="format-trigger__action">
@@ -3386,6 +3512,7 @@
                 </p>
 
                 <div class="format-highlight">
+
                   <span class="format-highlight__label">
                     ОДНОРАЗОВИЙ ВНЕСОК
                   </span>
@@ -3393,9 +3520,11 @@
                   <span class="format-highlight__value">
                     1 500 грн
                   </span>
+
                 </div>
 
                 <ul class="format-list">
+
                   <li>
                     <strong>Big Fish Day 1</strong> —
                     найбільша риба першої доби,
@@ -3413,6 +3542,7 @@
                     найбільша риба серед усіх
                     учасників BigFish Total.
                   </li>
+
                 </ul>
 
               </section>
@@ -3429,6 +3559,7 @@
                 </p>
 
                 <div class="format-highlight">
+
                   <span class="format-highlight__label">
                     МІНІМАЛЬНА ВАГА РИБИ
                   </span>
@@ -3436,9 +3567,11 @@
                   <span class="format-highlight__value">
                     5.000 кг
                   </span>
+
                 </div>
 
                 <ul class="format-list">
+
                   <li>
                     У кожному зважуванні
                     формується окремий TOP-10.
@@ -3461,6 +3594,7 @@
                     приносить виплату
                     за одне призове місце.
                   </li>
+
                 </ul>
 
               </section>
@@ -3468,8 +3602,9 @@
             </div>
 
             <div class="format-note">
-              <strong>Призовий фонд
-              «Трофейної Десятки»</strong>
+              <strong>
+                Призовий фонд «Трофейної Десятки»
+              </strong>
               формується з внесків учасників.
               Сума виплати залежить
               від кількості команд,
@@ -3533,10 +3668,11 @@
      ========================================================= -->
 
 <footer class="footer">
+
   <div class="container footer__row">
 
     <div>
-      © <span id="formatsYear">2026</span>
+      © <span id="footerYear">2025–2026</span>
       STOLAR CARP · Львів
     </div>
 
@@ -3561,56 +3697,76 @@
     </div>
 
   </div>
+
 </footer>
+
+<!-- =========================================================
+     FORMAT ACCORDION
+     Мобільне меню та рік обробляє config.js
+     ========================================================= -->
 
 <script>
 (function () {
   "use strict";
 
-  /* =========================================================
-     FOOTER YEAR
-     ========================================================= */
-
-  const yearEl = document.getElementById("formatsYear");
-
-  if (yearEl) {
-    yearEl.textContent = new Date().getFullYear();
-  }
-
-  /* =========================================================
-     FORMAT ACCORDION
-     ========================================================= */
-
   const formatItems = Array.from(
     document.querySelectorAll(".format-item")
   );
+
+  /* =========================================================
+     CLOSE FORMAT
+     ========================================================= */
 
   function closeFormat(item) {
     const trigger = item.querySelector(".format-trigger");
     const panel = item.querySelector(".format-panel");
 
-    if (!trigger || !panel) return;
+    if (!trigger || !panel) {
+      return;
+    }
 
     item.classList.remove("is-open");
-    trigger.setAttribute("aria-expanded", "false");
+
+    trigger.setAttribute(
+      "aria-expanded",
+      "false"
+    );
+
     panel.hidden = true;
   }
+
+  /* =========================================================
+     OPEN FORMAT
+     ========================================================= */
 
   function openFormat(item) {
     const trigger = item.querySelector(".format-trigger");
     const panel = item.querySelector(".format-panel");
 
-    if (!trigger || !panel) return;
+    if (!trigger || !panel) {
+      return;
+    }
 
     item.classList.add("is-open");
-    trigger.setAttribute("aria-expanded", "true");
+
+    trigger.setAttribute(
+      "aria-expanded",
+      "true"
+    );
+
     panel.hidden = false;
   }
+
+  /* =========================================================
+     CLICK HANDLERS
+     ========================================================= */
 
   formatItems.forEach(function (item) {
     const trigger = item.querySelector(".format-trigger");
 
-    if (!trigger) return;
+    if (!trigger) {
+      return;
+    }
 
     trigger.addEventListener("click", function () {
       const wasOpen = item.classList.contains("is-open");
@@ -3625,60 +3781,56 @@
 
   /* =========================================================
      OPEN FORMAT BY URL HASH
-     Example: formats.html#format-three-tables
+
+     Example:
+     formats.html#format-three-tables
      ========================================================= */
 
   function openFormatFromHash() {
     const hash = window.location.hash;
 
-    if (!hash || hash.length < 2) return;
+    if (!hash || hash.length < 2) {
+      return;
+    }
 
-    const id = decodeURIComponent(hash.slice(1));
+    let id;
+
+    try {
+      id = decodeURIComponent(hash.slice(1));
+    } catch (error) {
+      return;
+    }
+
     const target = document.getElementById(id);
 
-    if (!target || !target.classList.contains("format-item")) {
+    if (
+      !target ||
+      !target.classList.contains("format-item")
+    ) {
       return;
     }
 
     formatItems.forEach(closeFormat);
+
     openFormat(target);
 
     requestAnimationFrame(function () {
       target.scrollIntoView({
-        behavior: "smooth",
+        behavior: window.matchMedia(
+          "(prefers-reduced-motion: reduce)"
+        ).matches ? "auto" : "smooth",
         block: "start"
       });
     });
   }
 
-  window.addEventListener("hashchange", openFormatFromHash);
+  window.addEventListener(
+    "hashchange",
+    openFormatFromHash
+  );
 
   if (window.location.hash) {
     openFormatFromHash();
-  }
-
-  /* =========================================================
-     MOBILE NAVIGATION
-     ========================================================= */
-
-  const burger = document.getElementById("burger");
-  const nav = document.getElementById("nav");
-
-  if (burger && nav) {
-    burger.addEventListener("click", function () {
-      const isOpen = nav.classList.toggle("nav--open");
-
-      burger.classList.toggle("burger--open", isOpen);
-      burger.setAttribute("aria-expanded", String(isOpen));
-    });
-
-    nav.querySelectorAll("a").forEach(function (link) {
-      link.addEventListener("click", function () {
-        nav.classList.remove("nav--open");
-        burger.classList.remove("burger--open");
-        burger.setAttribute("aria-expanded", "false");
-      });
-    });
   }
 
 })();

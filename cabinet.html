@@ -14,12 +14,12 @@
   <link
     rel="icon"
     type="image/png"
-    href="assets/favicon.png"
+    href="/assets/favicon.png"
   >
 
   <link
     rel="apple-touch-icon"
-    href="assets/favicon.png"
+    href="/assets/favicon.png"
   >
 
   <meta
@@ -28,29 +28,27 @@
   >
 
   <!-- =====================================================
-       СПІЛЬНИЙ CSS ДЛЯ ВСЬОГО САЙТУ
+       GLOBAL CSS
        ===================================================== -->
 
   <link
     rel="stylesheet"
-    href="assets/css/main.css?v=20261008-4"
+    href="/assets/css/main.css?v=20261008-5"
   >
+
+  <!-- =====================================================
+       GLOBAL CONFIG
+       ===================================================== -->
 
   <script
     defer
-    src="assets/js/config.js?v=20261008"
+    src="/assets/js/config.js?v=20261008-2"
   ></script>
 
   <style>
 
     /* =========================================================
        STOLAR CARP • COMPACT CABINET
-
-       ВАЖЛИВО:
-       HEADER, LOGO, BURGER, NAV
-       ПОВНІСТЮ КЕРУЮТЬСЯ main.css.
-
-       Тут немає окремих стилів для меню.
        ========================================================= */
 
     body.cabinet-page {
@@ -68,6 +66,297 @@
     .cabinet-page *::before,
     .cabinet-page *::after {
       box-sizing:border-box;
+    }
+
+    /* =========================================================
+       HEADER • SAME AS HOME
+       ========================================================= */
+
+    body.cabinet-page .header {
+      position:sticky;
+      top:0;
+      z-index:2000;
+
+      overflow:visible;
+
+      background:rgba(11,11,15,.97);
+
+      backdrop-filter:none;
+      -webkit-backdrop-filter:none;
+    }
+
+    body.cabinet-page .header__row {
+      position:relative;
+
+      display:flex;
+      align-items:center;
+
+      overflow:visible;
+    }
+
+    /* =========================================================
+       HOME / LOGOUT BUTTONS
+       ========================================================= */
+
+    .cabinet-header-actions {
+      display:flex;
+      align-items:center;
+      gap:8px;
+
+      margin-left:auto;
+      flex-shrink:0;
+    }
+
+    .cabinet-header-home,
+    .cabinet-header-logout {
+      width:44px;
+      height:44px;
+
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+
+      flex:0 0 44px;
+
+      padding:0;
+
+      border-radius:50%;
+
+      font-family:inherit;
+      font-size:1.12rem;
+      line-height:1;
+
+      text-decoration:none;
+
+      cursor:pointer;
+    }
+
+    .cabinet-header-home {
+      border:1px solid rgba(148,163,184,.45);
+
+      background:rgba(15,23,42,.88);
+
+      color:#fff;
+    }
+
+    .cabinet-header-logout {
+      border:1px solid rgba(248,113,113,.42);
+
+      background:rgba(127,29,29,.18);
+
+      color:#fff;
+    }
+
+    .cabinet-header-home:hover {
+      border-color:#facc15;
+    }
+
+    .cabinet-header-logout:hover {
+      border-color:#f87171;
+    }
+
+    .cabinet-header-logout:disabled {
+      opacity:.55;
+      cursor:wait;
+    }
+
+    /* =========================================================
+       BURGER • SAME AS HOME
+       ========================================================= */
+
+    body.cabinet-page #burger {
+      position:relative;
+      z-index:2100;
+
+      flex-shrink:0;
+
+      width:48px;
+      height:48px;
+
+      padding:10px;
+
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+
+      background:transparent;
+
+      border:0;
+      border-radius:12px;
+
+      cursor:pointer;
+
+      touch-action:manipulation;
+    }
+
+    body.cabinet-page #burger span {
+      display:block;
+
+      width:26px;
+      height:3px;
+
+      margin:3px 0;
+
+      border-radius:3px;
+
+      background:#fff;
+
+      pointer-events:none;
+    }
+
+    /* =========================================================
+       MOBILE MENU • FORCE CORRECT VISIBILITY
+       ========================================================= */
+
+    @media (max-width:860px) {
+
+      body.cabinet-page #burger {
+        display:flex;
+      }
+
+      body.cabinet-page #nav {
+        position:absolute;
+
+        top:calc(100% + 8px);
+        left:0;
+        right:0;
+
+        z-index:2050;
+
+        display:flex !important;
+
+        flex-direction:column;
+        align-items:center;
+        justify-content:flex-start;
+
+        width:100%;
+        height:auto;
+
+        max-height:calc(100vh - 100px);
+        max-height:calc(100dvh - 100px);
+
+        padding:16px 14px;
+        gap:10px;
+
+        overflow-y:auto;
+        overflow-x:hidden;
+
+        border:1px solid rgba(255,255,255,.12);
+        border-radius:24px;
+
+        background:
+          linear-gradient(
+            rgba(0,0,0,.55),
+            rgba(0,0,0,.75)
+          ),
+          url("/assets/dk-dva-kuma-banner.jpg")
+          center/cover no-repeat,
+          #0b0b0f;
+
+        box-shadow:
+          0 22px 60px rgba(0,0,0,.65);
+
+        opacity:0;
+        visibility:hidden;
+        pointer-events:none;
+
+        transform:translateY(-14px);
+
+        transition:
+          transform .22s ease,
+          opacity .22s ease,
+          visibility .22s ease;
+      }
+
+      /* MENU OPEN */
+
+      body.cabinet-page #nav.open,
+      body.cabinet-page #nav.active {
+        display:flex !important;
+
+        opacity:1 !important;
+        visibility:visible !important;
+        pointer-events:auto !important;
+
+        transform:translateY(0) !important;
+      }
+
+      /* LINKS */
+
+      body.cabinet-page #nav .nav__link {
+        display:inline-flex;
+
+        align-items:center;
+        justify-content:center;
+
+        width:auto;
+        min-width:min(190px,100%);
+        max-width:100%;
+
+        padding:12px 18px;
+
+        border:1px solid rgba(255,255,255,.2);
+        border-radius:999px;
+
+        background:rgba(0,0,0,.3);
+
+        color:#f2f3f5;
+
+        font-size:1.02rem;
+        text-align:center;
+
+        white-space:normal;
+
+        backdrop-filter:blur(6px);
+        -webkit-backdrop-filter:blur(6px);
+      }
+
+      body.cabinet-page #nav .nav__link--active {
+        border-color:rgba(250,204,21,.55);
+
+        background:rgba(250,204,21,.12);
+
+        color:#facc15;
+      }
+
+    }
+
+    @media (max-width:420px) {
+
+      .cabinet-header-actions {
+        gap:6px;
+      }
+
+      .cabinet-header-home,
+      .cabinet-header-logout {
+        width:40px;
+        height:40px;
+
+        flex-basis:40px;
+
+        font-size:1rem;
+      }
+
+      body.cabinet-page #burger {
+        width:44px;
+        height:44px;
+
+        padding:8px;
+      }
+
+      body.cabinet-page #nav {
+        padding:14px 10px;
+        gap:8px;
+
+        border-radius:18px;
+      }
+
+      body.cabinet-page #nav .nav__link {
+        padding:10px 15px;
+
+        font-size:.95rem;
+      }
+
     }
 
     /* =========================================================
@@ -949,24 +1238,18 @@
 
 <!-- =========================================================
      HEADER
-
-     УСІ СТИЛІ БЕРУТЬСЯ З main.css
      ========================================================= -->
 
 <header class="header">
 
   <div class="container header__row">
 
-    <!-- LOGO -->
-
     <a
       class="logo"
-      href="index.html"
+      href="/index.html"
     >
 
-      <span class="logo__mark">
-        SC
-      </span>
+      <span class="logo__mark">SC</span>
 
       <span class="logo__text">
         STOLAR CARP
@@ -982,71 +1265,44 @@
       aria-label="Основна навігація"
     >
 
-      <a
-        href="index.html"
-        class="nav__link"
-      >
+      <a href="/index.html" class="nav__link">
         Головна
       </a>
 
-      <a
-        href="rules.html"
-        class="nav__link"
-      >
+      <a href="/rules.html" class="nav__link">
         Регламент
       </a>
 
-      <a
-        href="formats.html"
-        class="nav__link"
-      >
+      <a href="/formats.html" class="nav__link">
         Формат змагань
       </a>
 
-      <a
-        href="register.html"
-        class="nav__link"
-      >
+      <a href="/register.html" class="nav__link">
         Реєстрація
       </a>
 
-      <a
-        href="live.html"
-        class="nav__link"
-      >
+      <a href="/live.html" class="nav__link">
         Live
       </a>
 
-      <a
-        href="rating.html"
-        class="nav__link"
-      >
+      <a href="/rating.html" class="nav__link">
         Рейтинг
       </a>
 
-      <a
-        href="lakes.html"
-        class="nav__link"
-      >
+      <a href="/lakes.html" class="nav__link">
         Водойми
       </a>
 
-      <a
-        href="sponsors.html"
-        class="nav__link"
-      >
+      <a href="/sponsors.html" class="nav__link">
         Спонсори
       </a>
 
-      <a
-        href="events/index.html"
-        class="nav__link"
-      >
+      <a href="/events/index.html" class="nav__link">
         Архів
       </a>
 
       <a
-        href="cabinet.html"
+        href="/cabinet.html"
         class="nav__link nav__link--active"
         aria-current="page"
       >
@@ -1055,7 +1311,32 @@
 
     </nav>
 
-    <!-- BURGER: СТАНДАРТНИЙ ІЗ main.css -->
+    <!-- HEADER ACTIONS -->
+
+    <div class="cabinet-header-actions">
+
+      <a
+        href="/cabinet.html"
+        class="cabinet-header-home"
+        title="Мій кабінет"
+        aria-label="Мій кабінет"
+      >
+        🏠
+      </a>
+
+      <button
+        type="button"
+        class="cabinet-header-logout"
+        id="cabinetHeaderLogout"
+        title="Вийти з акаунта"
+        aria-label="Вийти з акаунта"
+      >
+        🚪
+      </button>
+
+    </div>
+
+    <!-- BURGER -->
 
     <button
       class="burger"
@@ -1065,11 +1346,9 @@
       aria-controls="nav"
       aria-expanded="false"
     >
-
       <span></span>
       <span></span>
       <span></span>
-
     </button>
 
   </div>
@@ -1084,8 +1363,6 @@
 
   <section class="container cabinet-shell">
 
-    <!-- STATUS -->
-
     <div
       id="cabinetStatus"
       role="status"
@@ -1093,8 +1370,6 @@
     >
       Перевірка доступу…
     </div>
-
-    <!-- CABINET CONTENT -->
 
     <div
       id="cabinetContent"
@@ -1125,8 +1400,6 @@
             </div>
 
           </div>
-
-          <!-- AVATAR + NAME -->
 
           <div class="profile-identity">
 
@@ -1180,8 +1453,6 @@
 
           </div>
 
-          <!-- ACTIONS -->
-
           <div class="profile-actions">
 
             <button
@@ -1223,8 +1494,6 @@
             </div>
 
           </div>
-
-          <!-- EDIT FORM -->
 
           <div
             class="profile-editbox"
@@ -1339,9 +1608,7 @@
              2. MY PARTICIPATION
              ================================================= -->
 
-        <section
-          class="cabinet-card cabinet-card--participation"
-        >
+        <section class="cabinet-card cabinet-card--participation">
 
           <div class="cabinet-card-head">
 
@@ -1362,11 +1629,6 @@
             </div>
 
           </div>
-
-          <!--
-            ТІЛЬКИ my_participation.js
-            працює з цим контейнером.
-          -->
 
           <div id="myCompetitions">
 
@@ -1441,8 +1703,6 @@
 
           </div>
 
-          <!-- MEMBERS -->
-
           <details class="members-details">
 
             <summary>
@@ -1465,9 +1725,7 @@
              4. ACHIEVEMENTS
              ================================================= -->
 
-        <section
-          class="cabinet-card cabinet-card--achievements"
-        >
+        <section class="cabinet-card cabinet-card--achievements">
 
           <div class="cabinet-card-head">
 
@@ -1535,9 +1793,7 @@
              5. QUICK LINKS
              ================================================= -->
 
-        <section
-          class="cabinet-card cabinet-card--navigation"
-        >
+        <section class="cabinet-card cabinet-card--navigation">
 
           <div class="cabinet-card-head">
 
@@ -1558,63 +1814,35 @@
           <div class="cabinet-quick-links">
 
             <a
-              href="register.html"
+              href="/register.html"
               class="cabinet-quick-link"
             >
-
-              <span>
-                🏆 Реєстрація
-              </span>
-
-              <span class="cabinet-quick-link-arrow">
-                →
-              </span>
-
+              <span>🏆 Реєстрація</span>
+              <span class="cabinet-quick-link-arrow">→</span>
             </a>
 
             <a
-              href="live.html"
+              href="/live.html"
               class="cabinet-quick-link"
             >
-
-              <span>
-                🔴 Live
-              </span>
-
-              <span class="cabinet-quick-link-arrow">
-                →
-              </span>
-
+              <span>🔴 Live</span>
+              <span class="cabinet-quick-link-arrow">→</span>
             </a>
 
             <a
-              href="rating.html"
+              href="/rating.html"
               class="cabinet-quick-link"
             >
-
-              <span>
-                📊 Рейтинг
-              </span>
-
-              <span class="cabinet-quick-link-arrow">
-                →
-              </span>
-
+              <span>📊 Рейтинг</span>
+              <span class="cabinet-quick-link-arrow">→</span>
             </a>
 
             <a
-              href="events/index.html"
+              href="/events/index.html"
               class="cabinet-quick-link"
             >
-
-              <span>
-                🗂️ Архів
-              </span>
-
-              <span class="cabinet-quick-link-arrow">
-                →
-              </span>
-
+              <span>🗂️ Архів</span>
+              <span class="cabinet-quick-link-arrow">→</span>
             </a>
 
           </div>
@@ -1638,12 +1866,8 @@
   <div class="container footer__row">
 
     <div>
-
-      ©
-      <span id="footerYear">2026</span>
-
+      © 2025–<span id="footerYear">2026</span>
       STOLAR CARP · Львів
-
     </div>
 
   </div>
@@ -1674,11 +1898,8 @@
      ========================================================= -->
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
 <!-- =========================================================
@@ -1688,46 +1909,46 @@
 <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
 
 <!-- =========================================================
-     STOLAR CARP JS
+     FIREBASE INIT
      ========================================================= -->
 
-<script src="assets/js/firebase-init.js?v=20260215-1"></script>
+<script src="/assets/js/firebase-init.js?v=20260215-1"></script>
 
 <!-- =========================================================
      CABINET CORE
      ========================================================= -->
 
-<script src="assets/js/cabinet.js?v=20261008-10"></script>
+<script src="/assets/js/cabinet.js?v=20261008-10"></script>
 
 <!-- =========================================================
      MY PARTICIPATION
      ========================================================= -->
 
-<script src="assets/js/my_participation.js?v=20260916-9"></script>
+<script src="/assets/js/my_participation.js?v=20260916-9"></script>
 
 <!-- =========================================================
      FINAL INVITE
      ========================================================= -->
 
-<script src="assets/js/final_invite.js?v=20260215-1"></script>
+<script src="/assets/js/final_invite.js?v=20260215-1"></script>
 
 <!-- =========================================================
      ACHIEVEMENTS
      ========================================================= -->
 
-<script src="assets/js/cabinet_achievements.js?v=20260215-1"></script>
+<script src="/assets/js/cabinet_achievements.js?v=20260215-1"></script>
 
 <!-- =========================================================
-     UI HELPERS
+     CABINET UI HELPERS
      ========================================================= -->
 
 <script>
 (function () {
   "use strict";
 
-  // =========================================================
-  // FOOTER YEAR
-  // =========================================================
+  /* =========================================================
+     FOOTER YEAR
+     ========================================================= */
 
   const yearEl =
     document.getElementById("footerYear");
@@ -1737,15 +1958,13 @@
       new Date().getFullYear();
   }
 
-  // =========================================================
-  // MOBILE MENU
-  //
-  // cabinet.js уже перемикає клас nav.open.
-  //
-  // Тут НЕ додаємо другого перемикача.
-  //
-  // Використовуємо спільні стилі main.css.
-  // =========================================================
+  /* =========================================================
+     MOBILE MENU • SINGLE CONTROLLER
+     
+     Перехоплюємо натискання в capture phase,
+     щоб старі обробники config.js / cabinet.js
+     не перемикали меню вдруге.
+     ========================================================= */
 
   const burger =
     document.getElementById("burger");
@@ -1753,156 +1972,238 @@
   const nav =
     document.getElementById("nav");
 
-  if (!burger || !nav) {
-    console.warn(
-      "[STOLAR CARP] Елементи меню не знайдено"
+  if (burger && nav) {
+
+    const isOpen = () =>
+      nav.classList.contains("open");
+
+    function setMenuOpen(open) {
+
+      nav.classList.toggle("open", open);
+      nav.classList.remove("active");
+
+      burger.classList.toggle("active", open);
+
+      burger.setAttribute(
+        "aria-expanded",
+        String(open)
+      );
+
+      burger.setAttribute(
+        "aria-label",
+        open
+          ? "Закрити меню"
+          : "Відкрити меню"
+      );
+
+      document.documentElement.classList.toggle(
+        "nav-open",
+        open
+      );
+
+      document.body.classList.toggle(
+        "nav-open",
+        open
+      );
+
+    }
+
+    function closeMenu() {
+      setMenuOpen(false);
+    }
+
+    burger.addEventListener(
+      "click",
+      function (event) {
+
+        event.preventDefault();
+
+        /*
+          Не даємо старим click-обробникам
+          повторно перемикати nav.open.
+        */
+
+        event.stopImmediatePropagation();
+
+        setMenuOpen(!isOpen());
+
+      },
+      true
     );
 
-    return;
-  }
+    nav.addEventListener(
+      "click",
+      function (event) {
 
-  // =========================================================
-  // SYNC STATE
-  // =========================================================
+        if (
+          event.target.closest("a")
+        ) {
+          closeMenu();
+        }
 
-  function syncMenuState() {
-
-    const isOpen =
-      nav.classList.contains("open") ||
-      nav.classList.contains("active");
-
-    burger.setAttribute(
-      "aria-expanded",
-      String(isOpen)
+      }
     );
 
-    burger.setAttribute(
-      "aria-label",
-      isOpen
-        ? "Закрити меню"
-        : "Відкрити меню"
+    document.addEventListener(
+      "click",
+      function (event) {
+
+        if (!isOpen()) {
+          return;
+        }
+
+        if (
+          burger.contains(event.target) ||
+          nav.contains(event.target)
+        ) {
+          return;
+        }
+
+        closeMenu();
+
+      }
+    );
+
+    document.addEventListener(
+      "keydown",
+      function (event) {
+
+        if (event.key === "Escape") {
+          closeMenu();
+        }
+
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      function () {
+
+        if (window.innerWidth > 860) {
+          closeMenu();
+        }
+
+      }
+    );
+
+    /*
+      config.js надає __scCloseMenu.
+      Синхронізуємо його з цим контролером.
+    */
+
+    window.__scCloseMenu = closeMenu;
+
+    setMenuOpen(false);
+
+    console.log(
+      "✅ STOLAR CARP cabinet burger ready"
     );
 
   }
 
-  // =========================================================
-  // CLOSE MENU
-  // =========================================================
+  /* =========================================================
+     HEADER LOGOUT
+     ========================================================= */
 
-  function closeMenu() {
+  const logoutBtn =
+    document.getElementById("cabinetHeaderLogout");
 
-    nav.classList.remove("open");
-    nav.classList.remove("active");
+  if (logoutBtn) {
 
-    burger.classList.remove("open");
-    burger.classList.remove("active");
+    logoutBtn.addEventListener(
+      "click",
+      async function () {
 
-    syncMenuState();
+        if (
+          !window.confirm("Вийти з акаунта?")
+        ) {
+          return;
+        }
+
+        logoutBtn.disabled = true;
+
+        try {
+
+          const auth =
+            window.scAuth ||
+            (
+              window.firebase &&
+              window.firebase.apps &&
+              window.firebase.apps.length
+                ? window.firebase.auth()
+                : null
+            );
+
+          if (!auth) {
+            throw new Error(
+              "Firebase Auth недоступний"
+            );
+          }
+
+          await auth.signOut();
+
+          /*
+            Очищуємо тільки кеш команди,
+            не зачіпаючи інші дані сайту.
+          */
+
+          try {
+
+            const keys = [];
+
+            for (
+              let i = 0;
+              i < localStorage.length;
+              i++
+            ) {
+
+              const key =
+                localStorage.key(i);
+
+              if (
+                key &&
+                key.startsWith("sc_team_cache_")
+              ) {
+                keys.push(key);
+              }
+
+            }
+
+            keys.forEach(key =>
+              localStorage.removeItem(key)
+            );
+
+          } catch (cacheError) {
+
+            console.warn(
+              "Team cache cleanup:",
+              cacheError
+            );
+
+          }
+
+          window.location.href =
+            "/index.html";
+
+        } catch (error) {
+
+          console.error(
+            "Logout error:",
+            error
+          );
+
+          alert(
+            "Не вдалося вийти з акаунта. Спробуйте ще раз."
+          );
+
+          logoutBtn.disabled = false;
+
+        }
+
+      }
+    );
 
   }
-
-  // =========================================================
-  // SYNC AFTER cabinet.js
-  // =========================================================
-
-  burger.addEventListener(
-    "click",
-    function () {
-
-      // cabinet.js перемикає nav.open.
-      // Тут лише синхронізуємо стан.
-
-      syncMenuState();
-
-    }
-  );
-
-  // =========================================================
-  // CLOSE AFTER NAVIGATION
-  // =========================================================
-
-  nav.addEventListener(
-    "click",
-    function (event) {
-
-      const link =
-        event.target.closest(".nav__link");
-
-      if (link) {
-        closeMenu();
-      }
-
-    }
-  );
-
-  // =========================================================
-  // CLOSE OUTSIDE
-  // =========================================================
-
-  document.addEventListener(
-    "click",
-    function (event) {
-
-      const isOpen =
-        nav.classList.contains("open") ||
-        nav.classList.contains("active");
-
-      if (!isOpen) {
-        return;
-      }
-
-      if (burger.contains(event.target)) {
-        return;
-      }
-
-      if (nav.contains(event.target)) {
-        return;
-      }
-
-      closeMenu();
-
-    }
-  );
-
-  // =========================================================
-  // ESCAPE
-  // =========================================================
-
-  document.addEventListener(
-    "keydown",
-    function (event) {
-
-      if (event.key === "Escape") {
-        closeMenu();
-      }
-
-    }
-  );
-
-  // =========================================================
-  // RESIZE
-  // =========================================================
-
-  window.addEventListener(
-    "resize",
-    function () {
-
-      if (window.innerWidth > 860) {
-        closeMenu();
-      }
-
-    }
-  );
-
-  // =========================================================
-  // INITIAL STATE
-  // =========================================================
-
-  syncMenuState();
-
-  console.log(
-    "✅ STOLAR CARP cabinet uses shared main.css menu"
-  );
 
 })();
 </script>

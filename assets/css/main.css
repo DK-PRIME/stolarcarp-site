@@ -1,7 +1,11 @@
-/* =========================
-   STOLAR CARP • main.css
-   STABLE HEADER + BURGER PANEL
-   ========================= */
+/* =========================================================
+   STOLAR CARP • MAIN.CSS
+   STABLE HEADER + MOBILE BURGER PANEL
+   ========================================================= */
+
+/* =========================================================
+   1. ROOT VARIABLES
+   ========================================================= */
 
 :root{
   --bg:#0b0b0f;
@@ -15,15 +19,36 @@
   --header-h:72px;
 }
 
-*{box-sizing:border-box;}
+/* =========================================================
+   2. BASE
+   ========================================================= */
 
-html,body{
+*,
+*::before,
+*::after{
+  box-sizing:border-box;
+}
+
+html,
+body{
   margin:0;
   padding:0;
+
   background:var(--bg);
   color:var(--text);
-  font-family:Inter,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+
   line-height:1.55;
+
   max-width:100%;
   overflow-x:hidden;
 }
@@ -48,33 +73,61 @@ img{
   display:none !important;
 }
 
-/* === HEADER === */
+/* =========================================================
+   3. HEADER
+   ========================================================= */
+
 .header{
   position:sticky;
   top:0;
+
   z-index:2000;
-  background:rgba(11,11,15,.75);
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+
+  background:rgba(11,11,15,.97);
+
   border-bottom:1px solid #222;
+
   overflow:visible;
+
+  /*
+    Без backdrop-filter на header.
+
+    Це важливо для коректного позиціонування
+    мобільного меню на Android та iPhone.
+  */
+
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
 }
 
 .header__row{
+  position:relative;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
+
   gap:12px;
+
   padding:12px 0;
+
   min-height:var(--header-h);
 }
 
-/* LOGO */
+/* =========================================================
+   4. LOGO
+   ========================================================= */
+
 .logo{
   display:flex;
   align-items:center;
+
   gap:10px;
+
+  min-width:0;
+
   color:var(--text);
+
   font-weight:900;
   letter-spacing:.5px;
 }
@@ -82,191 +135,398 @@ img{
 .logo__mark{
   width:44px;
   height:44px;
+
   min-width:44px;
+
   border-radius:12px;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      var(--accent-2)
+    );
+
   color:#000;
+
   box-shadow:var(--shadow);
+
   display:inline-flex;
   align-items:center;
   justify-content:center;
+
   line-height:1;
+
   font-weight:900;
   font-size:16px;
 }
 
 .logo__text{
+  min-width:0;
+
   font-weight:900;
   line-height:1.1;
+
   white-space:nowrap;
 }
 
-/* NAV DESKTOP */
+/* =========================================================
+   5. DESKTOP NAVIGATION
+   ========================================================= */
+
 .nav{
   display:flex;
-  gap:16px;
   align-items:center;
+
+  gap:16px;
+
+  min-width:0;
 }
 
 .nav__link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
   padding:10px 12px;
+
   border-radius:12px;
+
   color:var(--text);
+
   opacity:.9;
+
   border:1px solid transparent;
+
+  text-align:center;
 }
 
 .nav__link:hover{
   opacity:1;
+
   background:rgba(255,255,255,.06);
 }
 
 .nav__link--active{
   border-color:#333;
-  background:linear-gradient(180deg,#14141c,#0f0f15);
+
+  background:
+    linear-gradient(
+      180deg,
+      #14141c,
+      #0f0f15
+    );
 }
 
-/* LOGIN BUTTON */
+/* =========================================================
+   6. LOGIN BUTTON
+   ========================================================= */
+
 .header-login{
   padding:6px 14px;
+
   border-radius:999px;
+
   border:1px solid rgba(148,163,184,.6);
+
   background:rgba(15,23,42,.85);
+
   color:#e5e7eb;
+
   font-size:.85rem;
+
   text-decoration:none;
+
   white-space:nowrap;
 }
 
 .header-login:hover{
   border-color:rgba(255,204,0,.9);
+
   color:rgba(255,204,0,.95);
 }
 
-/* BURGER */
+/* =========================================================
+   7. BURGER BUTTON
+   ========================================================= */
+
 .burger{
   display:none;
-  background:transparent;
-  border:0;
-  cursor:pointer;
+
+  position:relative;
+
+  z-index:2100;
+
+  flex-shrink:0;
+
+  width:48px;
+  height:48px;
+
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+
   padding:10px;
+
+  background:transparent;
+
+  border:0;
   border-radius:12px;
+
+  cursor:pointer;
+
+  pointer-events:auto;
+
+  touch-action:manipulation;
+
   -webkit-tap-highlight-color:transparent;
 }
 
 .burger span{
   display:block;
+
   width:26px;
   height:3px;
-  background:#fff;
-  margin:5px 0;
+
+  margin:3px 0;
+
   border-radius:3px;
-  transition:.22s ease;
+
+  background:#fff;
+
+  pointer-events:none;
+
+  transition:
+    transform .22s ease,
+    opacity .22s ease;
 }
 
-.burger.active span:nth-child(1){
-  transform:translateY(8px) rotate(45deg);
+/* BURGER OPEN */
+
+.burger.active span:nth-child(1),
+.burger.open span:nth-child(1),
+.burger[aria-expanded="true"] span:nth-child(1){
+  transform:translateY(9px) rotate(45deg);
 }
 
-.burger.active span:nth-child(2){
+.burger.active span:nth-child(2),
+.burger.open span:nth-child(2),
+.burger[aria-expanded="true"] span:nth-child(2){
   opacity:0;
 }
 
-.burger.active span:nth-child(3){
-  transform:translateY(-8px) rotate(-45deg);
+.burger.active span:nth-child(3),
+.burger.open span:nth-child(3),
+.burger[aria-expanded="true"] span:nth-child(3){
+  transform:translateY(-9px) rotate(-45deg);
 }
 
-.header *:focus,
-.header *:focus-visible,
-.header a:focus,
+/* ACCESSIBILITY */
+
 .header a:focus-visible,
-.header button:focus,
 .header button:focus-visible{
-  outline:none !important;
+  outline:2px solid var(--accent);
+  outline-offset:3px;
 }
 
-/* =========================
-   MOBILE BURGER PANEL
-   Працює і з .open, і з .active
-   ========================= */
+/* =========================================================
+   8. MOBILE BURGER PANEL
+   ========================================================= */
+
 @media (max-width:860px){
+
+  .header__row{
+    position:relative;
+  }
+
   .burger{
-    display:block;
+    display:flex;
   }
 
   .nav{
-    position:fixed;
-    left:12px;
-    right:12px;
-    top:calc(var(--header-h) + env(safe-area-inset-top) + 10px);
-    bottom:auto;
-    z-index:1900;
+    position:absolute;
+
+    top:calc(100% + 8px);
+
+    left:0;
+    right:0;
+
+    z-index:2050;
+
+    width:100%;
 
     height:auto;
-    max-height:calc(100dvh - var(--header-h) - env(safe-area-inset-top) - 24px);
-    overflow:auto;
+
+    max-height:calc(100vh - 100px);
+    max-height:calc(100dvh - 100px);
+
+    overflow-y:auto;
+    overflow-x:hidden;
+
     -webkit-overflow-scrolling:touch;
 
     display:flex;
+
     flex-direction:column;
+
     align-items:center;
     justify-content:flex-start;
 
     padding:16px 14px;
+
     gap:10px;
 
     border-radius:24px;
+
     border:1px solid rgba(255,255,255,.12);
-    box-shadow:0 22px 60px rgba(0,0,0,.65);
+
+    box-shadow:
+      0 22px 60px rgba(0,0,0,.65);
 
     background:
-      linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.70)),
-      url("../dk-dva-kuma-banner.jpg") center/cover no-repeat;
+      linear-gradient(
+        rgba(0,0,0,.55),
+        rgba(0,0,0,.75)
+      ),
+      url("../dk-dva-kuma-banner.jpg")
+      center/cover no-repeat,
+      #0b0b0f;
+
+    opacity:0;
+
+    visibility:hidden;
+
+    pointer-events:none;
 
     transform:translateY(-14px);
-    opacity:0;
-    pointer-events:none;
-    transition:transform .22s ease, opacity .22s ease;
-    backdrop-filter:blur(2px);
-    -webkit-backdrop-filter:blur(2px);
+
+    transition:
+      transform .22s ease,
+      opacity .22s ease,
+      visibility .22s ease;
   }
+
+  /* MENU OPEN */
 
   .nav.open,
   .nav.active{
     transform:translateY(0);
+
     opacity:1;
+
+    visibility:visible;
+
     pointer-events:auto;
   }
 
+  /* MOBILE LINKS */
+
   .nav__link{
     display:inline-flex;
+
     align-items:center;
     justify-content:center;
 
     width:auto;
-    min-width:190px;
-    max-width:78vw;
+
+    min-width:min(190px,100%);
+
+    max-width:100%;
 
     padding:12px 18px;
+
     border-radius:999px;
 
-    background:rgba(0,0,0,.22);
-    border:1px solid rgba(255,255,255,.20);
+    background:rgba(0,0,0,.3);
+
+    border:1px solid rgba(255,255,255,.2);
+
+    color:#f2f3f5;
+
+    font-size:1.02rem;
+
+    white-space:normal;
+
+    text-align:center;
+
+    overflow-wrap:anywhere;
+
     backdrop-filter:blur(6px);
     -webkit-backdrop-filter:blur(6px);
 
-    font-size:1.02rem;
-    white-space:nowrap;
-    text-align:center;
+    touch-action:manipulation;
   }
 
   .nav__link:hover{
-    background:rgba(0,0,0,.30);
+    background:rgba(0,0,0,.5);
+
     border-color:rgba(246,195,76,.35);
   }
+
+  .nav__link--active{
+    border-color:rgba(250,204,21,.55);
+
+    background:rgba(250,204,21,.12);
+
+    color:#facc15;
+  }
+
 }
 
-/* === LAYOUT === */
+/* =========================================================
+   9. SMALL MOBILE HEADER
+   ========================================================= */
+
+@media (max-width:420px){
+
+  .header__row{
+    gap:8px;
+  }
+
+  .logo{
+    gap:8px;
+  }
+
+  .logo__mark{
+    width:40px;
+    height:40px;
+
+    min-width:40px;
+
+    font-size:15px;
+  }
+
+  .logo__text{
+    font-size:.92rem;
+  }
+
+  .burger{
+    width:44px;
+    height:44px;
+
+    padding:8px;
+  }
+
+  .nav{
+    padding:14px 10px;
+
+    gap:8px;
+
+    border-radius:18px;
+  }
+
+  .nav__link{
+    font-size:.95rem;
+
+    padding:10px 15px;
+  }
+
+}
+
+/* =========================================================
+   10. LAYOUT
+   ========================================================= */
+
 .main{
   padding:28px 0 60px;
 }
@@ -277,21 +537,30 @@ img{
 
 .card{
   background:var(--panel);
+
   border:1px solid #262636;
+
   border-radius:16px;
+
   padding:18px;
 }
 
-/* === TABLES === */
+/* =========================================================
+   11. TABLES
+   ========================================================= */
+
 .table{
   width:100%;
+
   border-collapse:collapse;
 }
 
 .table th,
 .table td{
   border:1px solid #262636;
+
   padding:10px 12px;
+
   text-align:left;
 }
 
@@ -305,160 +574,265 @@ img{
 
 .table-wrap{
   max-width:100%;
+
   overflow-x:auto;
+
   -webkit-overflow-scrolling:touch;
 }
 
-/* === GRID === */
+/* =========================================================
+   12. GRID
+   ========================================================= */
+
 .grid{
   display:grid;
+
   gap:16px;
 }
 
 .grid-2{
-  grid-template-columns:repeat(2,1fr);
+  grid-template-columns:repeat(2,minmax(0,1fr));
 }
 
 .grid-3{
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(3,minmax(0,1fr));
 }
 
 @media (max-width:900px){
+
   .grid-2,
   .grid-3{
     grid-template-columns:1fr;
   }
+
 }
 
-/* === BUTTONS === */
+/* =========================================================
+   13. BUTTONS
+   ========================================================= */
+
 .btn{
   display:inline-flex;
+
   align-items:center;
   justify-content:center;
+
   gap:8px;
+
   padding:12px 16px;
+
   border-radius:12px;
+
   text-decoration:none;
+
   font-weight:800;
+
   border:1px solid #333;
-  transition:transform .05s ease, box-shadow .2s ease, opacity .2s ease;
+
+  transition:
+    transform .05s ease,
+    box-shadow .2s ease,
+    opacity .2s ease;
 }
 
 .btn:hover{
   transform:translateY(-1px);
+
   box-shadow:var(--shadow);
 }
 
 .btn--primary{
-  background:linear-gradient(135deg,var(--accent),#ffd84d);
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      #ffd84d
+    );
+
   color:#000;
+
   border-color:transparent;
 }
 
 .btn--accent{
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      var(--accent-2)
+    );
+
   color:#000;
+
   border-color:transparent;
 }
 
 .btn--danger{
-  background:linear-gradient(135deg,var(--accent-2),#8b1020);
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent-2),
+      #8b1020
+    );
+
   color:#fff;
+
   border-color:transparent;
 }
 
 .btn--ghost{
   background:#0d0d13;
+
   color:var(--text);
 }
 
-/* === BADGES === */
+/* =========================================================
+   14. BADGES
+   ========================================================= */
+
 .badge{
   display:inline-block;
+
   padding:4px 10px;
+
   border-radius:999px;
+
   font-size:12px;
+
   border:1px solid #333;
+
   color:#ddd;
 }
 
-/* === INPUTS === */
+/* =========================================================
+   15. INPUTS
+   ========================================================= */
+
 .input,
 .select,
 .textarea{
   width:100%;
+
   padding:12px 14px;
+
   border-radius:12px;
+
   border:1px solid #2b2b36;
+
   background:#0d0d14;
+
   color:#fff;
 }
 
-/* === FOOTER === */
+/* =========================================================
+   16. FOOTER
+   ========================================================= */
+
 .footer{
   border-top:1px solid #222;
+
   background:#0c0c12;
 }
 
 .footer__row{
   display:flex;
+
   align-items:center;
   justify-content:space-between;
+
   padding:18px 0;
+
   color:#aab;
 }
 
 .footer__links{
   display:flex;
+
   gap:12px;
 }
 
-/* === HERO === */
+/* =========================================================
+   17. HERO
+   ========================================================= */
+
 .hero{
   display:grid;
-  grid-template-columns:1.2fr .8fr;
+
+  grid-template-columns:
+    minmax(0,1.2fr)
+    minmax(0,.8fr);
+
   gap:26px;
+
   align-items:center;
+
   margin-top:18px;
 }
 
 .hero__card{
-  background:linear-gradient(180deg,#161620,#0d0d13);
+  background:
+    linear-gradient(
+      180deg,
+      #161620,
+      #0d0d13
+    );
+
   border:1px solid #262636;
+
   border-radius:20px;
+
   padding:26px;
+
   box-shadow:var(--shadow);
 }
 
 .hero__kicker{
   display:inline-block;
+
   font-weight:800;
+
   letter-spacing:.08em;
+
   color:#000;
-  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--accent),
+      var(--accent-2)
+    );
+
   padding:6px 10px;
+
   border-radius:999px;
+
   margin-bottom:12px;
 }
 
 .hero h1{
   font-size:40px;
+
   line-height:1.1;
+
   margin:0 0 12px;
 }
 
 .hero p{
   color:var(--muted);
+
   margin:0 0 18px;
 }
 
 .cta-row{
   display:flex;
+
   gap:12px;
+
   flex-wrap:wrap;
 }
 
 @media (max-width:900px){
+
   .hero{
     grid-template-columns:1fr;
   }
@@ -466,13 +840,20 @@ img{
   .hero h1{
     font-size:34px;
   }
+
 }
 
-/* === CABINET small fixes === */
+/* =========================================================
+   18. CABINET • AVATAR FIXES
+   ========================================================= */
+
 .avatar-actions{
   display:flex;
+
   gap:10px;
+
   align-items:center;
+
   flex-wrap:wrap;
 }
 
@@ -480,7 +861,22 @@ img{
   max-width:100%;
 }
 
+body.cabinet-page .avatar-upload{
+  display:flex;
+
+  gap:10px;
+
+  align-items:center;
+
+  flex-wrap:wrap;
+}
+
+body.cabinet-page .avatar-upload input[type="file"]{
+  max-width:100% !important;
+}
+
 @media (max-width:560px){
+
   .avatar-actions{
     align-items:stretch;
   }
@@ -491,24 +887,13 @@ img{
 
   .avatar-small-btn{
     width:100%;
+
     justify-content:center;
   }
-}
 
-body.cabinet-page .avatar-upload{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-}
-
-body.cabinet-page .avatar-upload input[type="file"]{
-  max-width:100% !important;
-}
-
-@media (max-width:560px){
   body.cabinet-page .avatar-upload{
     flex-direction:column;
+
     align-items:stretch;
   }
 
@@ -518,25 +903,42 @@ body.cabinet-page .avatar-upload input[type="file"]{
 
   body.cabinet-page .avatar-small-btn{
     width:100%;
+
     justify-content:center;
   }
+
 }
 
-/* =========================
-   REGISTER • stage cards
-   ========================= */
+/* =========================================================
+   19. REGISTER • STAGE CARDS
+   ========================================================= */
+
 .stage-card{
   position:relative;
+
   display:block;
+
   border-radius:22px;
+
   padding:14px;
+
   border:1px solid rgba(255,255,255,.10);
+
   background:rgba(10,10,16,.45);
+
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
+
   cursor:pointer;
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
-  transition:transform .12s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.35);
+
+  transition:
+    transform .12s ease,
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
 }
 
 .stage-card + .stage-card{
@@ -545,6 +947,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
 
 .stage-card:hover{
   border-color:rgba(246,195,76,.28);
+
   background:rgba(10,10,16,.55);
 }
 
@@ -554,57 +957,93 @@ body.cabinet-page .avatar-upload input[type="file"]{
 
 .stage-card[role="button"]{
   cursor:pointer;
+
   user-select:none;
 }
 
 .stage-card.is-selected,
 .stage-card:has(input[name="stagePick"]:checked){
   border-color:rgba(255,204,0,.55);
-  box-shadow:0 12px 35px rgba(0,0,0,.45);
-  background:linear-gradient(180deg, rgba(255,204,0,.06), rgba(0,0,0,.45));
+
+  box-shadow:
+    0 12px 35px rgba(0,0,0,.45);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255,204,0,.06),
+      rgba(0,0,0,.45)
+    );
 }
 
 .stage-card:has(input[name="stagePick"]:checked)::after{
   content:"✓";
+
   position:absolute;
+
   top:12px;
   right:14px;
+
   width:28px;
   height:28px;
+
   display:grid;
+
   place-items:center;
+
   border-radius:999px;
-  background:linear-gradient(135deg, #ffcc00, #ffd84d);
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffcc00,
+      #ffd84d
+    );
+
   color:#000;
+
   font-weight:900;
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
+
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.35);
 }
 
-.stage-card:has(input[name="stagePick"]:checked) .stage-title::after{
+.stage-card:has(input[name="stagePick"]:checked)
+.stage-title::after{
   content:" • ОБРАНО";
+
   font-weight:800;
+
   color:rgba(255,204,0,.95);
 }
 
 .stage-card.is-disabled,
 .stage-card:has(input[name="stagePick"]:disabled){
   opacity:.65;
+
   filter:saturate(.9);
+
   cursor:not-allowed;
 }
 
 .stage-head{
   display:flex;
+
   align-items:center;
+
   gap:12px;
+
   min-width:0;
 }
 
 .lamp{
   width:12px;
   height:12px;
+
   border-radius:50%;
+
   flex-shrink:0;
+
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(0,0,0,.25);
@@ -612,6 +1051,7 @@ body.cabinet-page .avatar-upload input[type="file"]{
 
 .lamp-red{
   background:#d72638;
+
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 10px rgba(215,38,56,.75);
@@ -619,65 +1059,93 @@ body.cabinet-page .avatar-upload input[type="file"]{
 
 .lamp-yellow{
   background:#ffcc00;
+
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(255,204,0,.75);
-  animation:lampPulse 1.3s ease-in-out infinite;
+
+  animation:
+    lampPulse 1.3s ease-in-out infinite;
 }
 
 .lamp-green{
   background:#2ecc71;
+
   box-shadow:
     0 0 0 2px rgba(255,255,255,.08),
     0 0 12px rgba(46,204,113,.75);
-  animation:lampPulse 1.6s ease-in-out infinite;
+
+  animation:
+    lampPulse 1.6s ease-in-out infinite;
 }
 
 @keyframes lampPulse{
-  0%,100%{
+
+  0%,
+  100%{
     transform:scale(1);
+
     filter:brightness(1);
   }
 
   50%{
     transform:scale(1.08);
+
     filter:brightness(1.12);
   }
+
 }
 
 .stage-info{
   min-width:0;
+
   display:flex;
+
   flex-direction:column;
+
   gap:4px;
 }
 
 .stage-title{
   font-weight:800;
+
   font-size:.98rem;
+
   color:#f2f3f5;
+
   letter-spacing:.01em;
+
   white-space:normal;
+
   overflow:visible;
+
   text-overflow:unset;
+
   line-height:1.25;
 }
 
 .stage-dates{
   font-size:.88rem;
+
   color:rgba(226,232,240,.78);
+
   display:flex;
+
   align-items:center;
+
   gap:8px;
+
   flex-wrap:wrap;
 }
 
 .stage-sub{
   font-size:.78rem;
+
   color:rgba(148,163,184,.85);
 }
 
 @media (max-width:420px){
+
   .stage-card{
     padding:12px;
   }
@@ -689,23 +1157,31 @@ body.cabinet-page .avatar-upload input[type="file"]{
   .stage-dates{
     font-size:.84rem;
   }
+
 }
 
 /* =========================================================
-   LIVE TABLE FIX
+   20. LIVE TABLE FIX
    ========================================================= */
+
 #totalTable{
   width:100%;
+
   max-width:100%;
+
   table-layout:auto;
+
   border-collapse:collapse;
 }
 
 #totalTable th,
 #totalTable td{
   border:1px solid #262636;
+
   padding:4px 6px;
+
   white-space:nowrap;
+
   vertical-align:middle;
 }
 
@@ -720,7 +1196,9 @@ body.cabinet-page .avatar-upload input[type="file"]{
 #totalTable th:nth-child(1),
 #totalTable td:nth-child(1){
   width:32px;
+
   text-align:center;
+
   padding-left:2px;
   padding-right:2px;
 }
@@ -728,7 +1206,9 @@ body.cabinet-page .avatar-upload input[type="file"]{
 #totalTable th:nth-child(2),
 #totalTable td:nth-child(2){
   max-width:140px;
+
   overflow:hidden;
+
   text-overflow:ellipsis;
 }
 
@@ -740,22 +1220,43 @@ body.cabinet-page .avatar-upload input[type="file"]{
 #totalTable .fish-th,
 #totalTable .fish-td{
   text-align:center;
+
   white-space:nowrap;
+
   font-size:11px;
+
   min-width:28px;
+
   font-variant-numeric:tabular-nums;
 }
 
-/* =========================
-   LIVE PAGE BACKGROUND
-   ========================= */
+/* =========================================================
+   21. LIVE PAGE BACKGROUND
+   ========================================================= */
+
 body.live-page{
   background:
-    radial-gradient(1200px 700px at 20% 10%, rgba(255,204,0,.10), transparent 55%),
-    radial-gradient(900px 600px at 85% 20%, rgba(215,38,56,.10), transparent 60%),
-    linear-gradient(180deg, #07070b 0%, #0b0b0f 55%, #07070b 100%),
-    url("../dk-dva-kuma-banner.jpg") center/cover no-repeat fixed;
+    radial-gradient(
+      1200px 700px at 20% 10%,
+      rgba(255,204,0,.10),
+      transparent 55%
+    ),
+    radial-gradient(
+      900px 600px at 85% 20%,
+      rgba(215,38,56,.10),
+      transparent 60%
+    ),
+    linear-gradient(
+      180deg,
+      #07070b 0%,
+      #0b0b0f 55%,
+      #07070b 100%
+    ),
+    url("../dk-dva-kuma-banner.jpg")
+    center/cover no-repeat fixed;
+
   background-color:var(--bg);
+
   overflow-x:hidden;
 }
 
@@ -767,149 +1268,232 @@ body.live-page .container{
 
 body.live-page .table-wrap{
   max-width:100%;
+
   overflow-x:auto;
+
   -webkit-overflow-scrolling:touch;
 }
 
-/* ===== Judge zone title ===== */
+/* =========================================================
+   22. JUDGE ZONE TITLE
+   ========================================================= */
+
 #zoneTitle.zoneTitle{
   font-size:36px;
+
   font-weight:1000;
+
   letter-spacing:.02em;
+
   line-height:1.05;
+
   padding:10px 14px;
+
   border-radius:16px;
+
   border:1px solid rgba(255,255,255,.14);
+
   background:rgba(2,6,23,.55);
+
   display:inline-flex;
+
   align-items:center;
+
   gap:10px;
 }
 
 #zoneTitle.zone-a{
   color:#22c55e;
-  box-shadow:0 0 18px rgba(34,197,94,.18);
+
+  box-shadow:
+    0 0 18px rgba(34,197,94,.18);
 }
 
 #zoneTitle.zone-b{
   color:#3b82f6;
-  box-shadow:0 0 18px rgba(59,130,246,.18);
+
+  box-shadow:
+    0 0 18px rgba(59,130,246,.18);
 }
 
 #zoneTitle.zone-c{
   color:#f59e0b;
-  box-shadow:0 0 18px rgba(245,158,11,.18);
+
+  box-shadow:
+    0 0 18px rgba(245,158,11,.18);
 }
 
-/* === STOLAR CARP • Premium Rules === */
+/* =========================================================
+   23. PREMIUM RULES
+   ========================================================= */
+
 body.rules-page{
-  background:radial-gradient(circle at top, #111827 0%, #05060a 55%);
+  background:
+    radial-gradient(
+      circle at top,
+      #111827 0%,
+      #05060a 55%
+    );
 }
 
 .rules-page .section{
   max-width:980px;
+
   margin:0 auto;
 }
 
 .rules-page h3{
   margin:26px 0 12px;
+
   font-weight:900;
+
   letter-spacing:.2px;
+
   font-size:1.05rem;
+
   line-height:1.2;
+
   position:relative;
+
   padding-left:14px;
 }
 
-.rules-page h3:before{
+.rules-page h3::before{
   content:"";
+
   position:absolute;
+
   left:0;
   top:.15em;
+
   width:6px;
   height:1.1em;
+
   border-radius:999px;
-  background:linear-gradient(180deg, #facc15 0%, #b91c1c 100%);
-  box-shadow:0 8px 22px rgba(250,204,21,.18);
+
+  background:
+    linear-gradient(
+      180deg,
+      #facc15 0%,
+      #b91c1c 100%
+    );
+
+  box-shadow:
+    0 8px 22px rgba(250,204,21,.18);
 }
 
 .rules-page .section > ul,
 .rules-page .section > p{
   background:rgba(15,23,42,.78);
+
   border:1px solid rgba(148,163,184,.18);
+
   border-radius:16px;
+
   padding:14px;
+
   margin:10px 0 0;
-  box-shadow:0 14px 40px rgba(0,0,0,.35);
+
+  box-shadow:
+    0 14px 40px rgba(0,0,0,.35);
 }
 
 .rules-page .section > p{
   color:#cbd5e1;
+
   line-height:1.55;
 }
 
 .rules-page ul{
   list-style:none;
+
   margin:0;
+
   padding:0;
 }
 
 .rules-page ul > li{
   position:relative;
+
   padding-left:22px;
+
   margin:10px 0;
+
   color:#e5e7eb;
+
   line-height:1.55;
 }
 
-.rules-page ul > li:before{
+.rules-page ul > li::before{
   content:"";
+
   position:absolute;
+
   left:4px;
   top:.62em;
+
   width:8px;
   height:8px;
+
   border-radius:999px;
+
   background:rgba(250,204,21,.95);
-  box-shadow:0 0 0 4px rgba(250,204,21,.12);
+
+  box-shadow:
+    0 0 0 4px rgba(250,204,21,.12);
 }
 
 .rules-page ul ul{
   margin-top:10px;
+
   padding-left:10px;
+
   border-left:1px solid rgba(148,163,184,.18);
 }
 
 .rules-page ul ul > li{
   padding-left:20px;
+
   color:#d1d5db;
+
   margin:8px 0;
 }
 
-.rules-page ul ul > li:before{
+.rules-page ul ul > li::before{
   width:6px;
   height:6px;
+
   top:.68em;
+
   background:rgba(148,163,184,.9);
+
   box-shadow:none;
 }
 
 .rules-page strong{
   color:#f8fafc;
+
   font-weight:800;
 }
 
 .rules-page .table{
   background:rgba(15,23,42,.78);
+
   border:1px solid rgba(148,163,184,.18);
+
   border-radius:16px;
+
   overflow:hidden;
-  box-shadow:0 14px 40px rgba(0,0,0,.35);
+
+  box-shadow:
+    0 14px 40px rgba(0,0,0,.35);
 }
 
 .rules-page .table th{
   background:rgba(2,6,23,.55);
+
   color:#f8fafc;
+
   font-weight:800;
 }
 
@@ -919,42 +1503,67 @@ body.rules-page{
 
 .rules-page .form__hint{
   border-radius:16px;
+
   border:1px solid rgba(250,204,21,.18);
-  background:linear-gradient(180deg, rgba(250,204,21,.10), rgba(185,28,28,.06));
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(250,204,21,.10),
+      rgba(185,28,28,.06)
+    );
 }
 
-.live-fish-amur {
-  color: #4ade80;
-  font-weight: 900;
-  text-shadow: 0 0 8px rgba(74, 222, 128, .45);
+/* =========================================================
+   24. LIVE • AMUR
+   ========================================================= */
+
+.live-fish-amur{
+  color:#4ade80;
+
+  font-weight:900;
+
+  text-shadow:
+    0 0 8px rgba(74,222,128,.45);
 }
 
-/* =========================
-   LIVE • FINAL BIG FISH BLOCK
-   Big Fish Короп / Амур після W4
-   ========================= */
+/* =========================================================
+   25. LIVE • FINAL BIG FISH BLOCK
+   ========================================================= */
 
 .final-bigfish-box{
   margin:18px 0 22px;
+
   padding:14px;
+
   border:1px solid #262636;
+
   border-radius:16px;
+
   background:rgba(19,19,26,.82);
-  box-shadow:0 10px 30px rgba(0,0,0,.25);
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.25);
 }
 
 .final-bigfish-box .muted{
   color:var(--muted);
+
   font-size:15px;
 }
 
 .final-bigfish-line{
   display:flex;
+
   align-items:center;
   justify-content:space-between;
+
   gap:12px;
+
   padding:11px 0;
-  border-bottom:1px solid rgba(255,255,255,.08);
+
+  border-bottom:
+    1px solid rgba(255,255,255,.08);
 }
 
 .final-bigfish-line:last-child{
@@ -963,13 +1572,17 @@ body.rules-page{
 
 .final-bigfish-line strong{
   color:#ffcc00;
+
   font-weight:900;
+
   white-space:nowrap;
 }
 
 .final-bigfish-line span{
   text-align:right;
+
   color:#f2f3f5;
+
   font-weight:700;
 }
 
@@ -982,13 +1595,37 @@ body.rules-page{
 }
 
 @media (max-width:560px){
+
   .final-bigfish-line{
     align-items:flex-start;
+
     flex-direction:column;
+
     gap:4px;
   }
 
   .final-bigfish-line span{
     text-align:left;
   }
+
+}
+
+/* =========================================================
+   26. REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion:reduce){
+
+  .burger span,
+  .nav,
+  .btn,
+  .stage-card{
+    transition:none;
+  }
+
+  .lamp-yellow,
+  .lamp-green{
+    animation:none;
+  }
+
 }

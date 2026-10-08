@@ -12,15 +12,38 @@
   <link rel="stylesheet" href="assets/css/main.css">
 
   <style>
-    body{ background:#020617; }
-    .wrap{ max-width:980px; margin:0 auto; padding:18px 12px 80px; }
+    /* =========================================================
+       STOLAR CARP • PARTICIPATION
+       COMPACT MOBILE DESIGN
+       ========================================================= */
+
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      background:#020617;
+    }
+
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:10px 12px 45px;
+    }
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
 
     .header{
-      position:sticky; top:0; z-index:20;
-      backdrop-filter: blur(10px);
-      background: rgba(2,6,23,.65);
-      border-bottom: 1px solid rgba(148,163,184,.12);
-      padding:10px 12px;
+      position:sticky;
+      top:0;
+      z-index:20;
+      backdrop-filter:blur(10px);
+      background:rgba(2,6,23,.88);
+      border-bottom:1px solid rgba(148,163,184,.12);
+      padding:6px 12px;
     }
 
     .headerInner{
@@ -33,23 +56,34 @@
     .btnBack{
       display:inline-flex;
       align-items:center;
-      gap:8px;
-      padding:10px 12px;
-      border-radius:14px;
+      gap:6px;
+      padding:7px 11px;
+      border-radius:10px;
       text-decoration:none;
       color:#e5e7eb;
       border:1px solid rgba(148,163,184,.22);
       background:rgba(15,23,42,.55);
+      font-size:13px;
+      font-weight:800;
+      min-height:34px;
     }
 
+    /* =========================================================
+       TITLE
+       ========================================================= */
+
     .pageTitle{
-      margin:18px 0 8px;
+      margin:9px 0 3px;
       text-align:center;
       font-weight:950;
-      letter-spacing:.6px;
+      letter-spacing:.3px;
       line-height:1.15;
-      font-size:1.9rem;
-      background:linear-gradient(90deg,#facc15 0%, #7f1d1d 100%);
+      font-size:1.45rem;
+      background:linear-gradient(
+        90deg,
+        #facc15 0%,
+        #7f1d1d 100%
+      );
       -webkit-background-clip:text;
       background-clip:text;
       color:transparent;
@@ -60,53 +94,73 @@
       text-align:center;
       color:#94a3b8;
       font-weight:800;
-      margin-bottom:14px;
+      font-size:12px;
+      margin-bottom:6px;
     }
 
+    .pageSub:empty{
+      display:none;
+    }
+
+    /* =========================================================
+       PARTICIPANTS LIST
+       ========================================================= */
+
     .list{
-      margin-top:8px;
+      margin-top:4px;
       display:flex;
       flex-direction:column;
-      gap:10px;
+      gap:0;
     }
 
     .row{
       display:flex;
       align-items:center;
-      gap:10px;
-      padding:10px 4px;
-      border-bottom:1px solid rgba(148,163,184,.16);
+      gap:8px;
+      padding:8px 6px;
+      min-height:38px;
+      border-bottom:1px solid rgba(148,163,184,.13);
       cursor:pointer;
       transition:background .2s;
-      border-radius:8px;
+      border-radius:5px;
     }
 
-    .row:hover{ background:rgba(250,204,21,.05); }
+    .row:hover{
+      background:rgba(250,204,21,.05);
+    }
 
     .lamp{
-      width:10px;
-      height:10px;
+      width:8px;
+      height:8px;
       border-radius:999px;
-      flex:0 0 10px;
-      box-shadow: 0 0 0 3px rgba(255,255,255,.03);
+      flex:0 0 8px;
+      box-shadow:0 0 0 2px rgba(255,255,255,.03);
     }
 
-    .lamp--green{ background:#22c55e; }
-    .lamp--red{ background:#ef4444; }
+    .lamp--green{
+      background:#22c55e;
+    }
+
+    .lamp--red{
+      background:#ef4444;
+    }
 
     .idx{
-      width:32px;
+      width:25px;
       text-align:right;
       color:#94a3b8;
       font-weight:900;
-      flex:0 0 32px;
+      font-size:13px;
+      flex:0 0 25px;
     }
 
     .name{
       flex:1;
       min-width:0;
       color:#e5e7eb;
-      font-weight:900;
+      font-weight:850;
+      font-size:13px;
+      line-height:1.25;
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
@@ -115,89 +169,112 @@
     .status{
       flex:0 0 auto;
       font-weight:900;
+      font-size:11px;
       white-space:nowrap;
       color:#94a3b8;
     }
 
-    .status--paid{ color:#22c55e; }
-    .status--unpaid{ color:#ef4444; }
+    .status--paid{
+      color:#22c55e;
+    }
+
+    .status--unpaid{
+      color:#ef4444;
+    }
 
     .mutedCenter{
       text-align:center;
       color:#94a3b8;
       font-weight:800;
-      margin-top:14px;
+      font-size:13px;
+      margin-top:10px;
     }
 
     .dividerLabel{
-      margin-top:14px;
-      color:#94a3b8;
+      margin-top:12px;
+      padding:7px 4px 5px;
+      color:#facc15;
       font-weight:900;
       text-transform:uppercase;
-      letter-spacing:.08em;
-      font-size:.85rem;
+      letter-spacing:.07em;
+      font-size:11px;
+      border-bottom:1px solid rgba(250,204,21,.25);
     }
+
+    /* =========================================================
+       MEAL OPEN
+       ========================================================= */
 
     .mealOpenWrap{
       display:flex;
       justify-content:center;
-      margin:12px 0 16px;
+      margin:7px 0 9px;
     }
 
     .mealOpenBtn{
       border:none;
       width:100%;
       max-width:420px;
-      border-radius:18px;
-      padding:13px 18px;
+      border-radius:12px;
+      padding:10px 14px;
       font-weight:950;
-      font-size:1rem;
+      font-size:13px;
       cursor:pointer;
       color:#111827;
       background:linear-gradient(90deg,#facc15,#f97316);
-      box-shadow:0 16px 34px rgba(0,0,0,.35);
+      box-shadow:0 8px 20px rgba(0,0,0,.25);
     }
 
+    /* =========================================================
+       MEAL BOX
+       ========================================================= */
+
     .mealBox{
-      margin:10px 0 12px;
-      padding:14px;
-      border-radius:18px;
+      margin:6px 0 9px;
+      padding:10px;
+      border-radius:13px;
       border:1px solid rgba(250,204,21,.35);
       background:
-        radial-gradient(circle at top left,rgba(250,204,21,.12),transparent 38%),
+        radial-gradient(
+          circle at top left,
+          rgba(250,204,21,.10),
+          transparent 38%
+        ),
         rgba(15,23,42,.65);
-      box-shadow:0 16px 34px rgba(0,0,0,.35);
+      box-shadow:0 8px 22px rgba(0,0,0,.25);
     }
 
     .mealHead{
       display:flex;
       justify-content:space-between;
       align-items:flex-start;
-      gap:12px;
-      margin-bottom:10px;
+      gap:8px;
+      margin-bottom:0;
     }
 
     .mealTitle{
       font-weight:950;
       color:#facc15;
-      letter-spacing:.04em;
+      letter-spacing:.03em;
+      font-size:14px;
     }
 
     .mealActions{
       display:flex;
       flex-wrap:wrap;
-      gap:8px;
+      gap:6px;
     }
 
     .mealBtn{
       border:1px solid rgba(148,163,184,.24);
       background:#0f172a;
       color:#e5e7eb;
-      border-radius:14px;
-      padding:10px 12px;
+      border-radius:10px;
+      padding:8px 10px;
       font-weight:900;
       cursor:pointer;
-      font-size:.9rem;
+      font-size:12px;
+      min-height:34px;
     }
 
     .mealBtn--primary{
@@ -221,13 +298,27 @@
 
     .mealStatus{
       color:#94a3b8;
-      font-size:.85rem;
-      margin-top:8px;
-      min-height:18px;
+      font-size:11px;
+      margin-top:4px;
+      min-height:0;
+      line-height:1.3;
     }
 
-    .mealStatus.ok{ color:#22c55e; }
-    .mealStatus.err{ color:#ef4444; }
+    .mealStatus:empty{
+      display:none;
+    }
+
+    .mealStatus.ok{
+      color:#22c55e;
+    }
+
+    .mealStatus.err{
+      color:#ef4444;
+    }
+
+    /* =========================================================
+       MEAL POPUP
+       ========================================================= */
 
     #mealPopup{
       display:none;
@@ -286,7 +377,9 @@
       color:#e5e7eb;
     }
 
-    #mealPopupBody{ padding:4px; }
+    #mealPopupBody{
+      padding:4px;
+    }
 
     .mealGrid{
       display:grid;
@@ -333,6 +426,10 @@
       font-weight:950;
       margin:14px 0 6px;
     }
+
+    /* =========================================================
+       MEAL TABLE
+       ========================================================= */
 
     .mealScreenTableWrap{
       width:100%;
@@ -383,10 +480,14 @@
     }
 
     .mealScreenTable th:nth-child(1),
-    .mealScreenTable td:nth-child(1){ width:40px; }
+    .mealScreenTable td:nth-child(1){
+      width:40px;
+    }
 
     .mealScreenTable th:nth-child(n+3),
-    .mealScreenTable td:nth-child(n+3){ width:28px; }
+    .mealScreenTable td:nth-child(n+3){
+      width:28px;
+    }
 
     .mealScreenTable tfoot td{
       background:#1e293b;
@@ -395,38 +496,35 @@
       height:18px;
     }
 
-    @media(max-width:720px){
-      .mealHead{ flex-direction:column; }
-      .mealActions{ width:100%; }
-      .mealBtn{ flex:1 1 auto; }
-      .mealGrid{ grid-template-columns:1fr; }
-    }
+    /* =========================================================
+       TEAM POPUP
+       ========================================================= */
 
     #teamPopup{
       display:none;
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,0.9);
+      background:rgba(0,0,0,.9);
       backdrop-filter:blur(6px);
       z-index:9999;
       align-items:center;
       justify-content:center;
-      padding:20px;
+      padding:12px;
     }
 
     #teamPopupContent{
       background:#0f172a;
-      border-radius:18px;
+      border-radius:15px;
       border:1px solid #1f2937;
       max-width:500px;
       width:100%;
-      max-height:80vh;
+      max-height:85vh;
       overflow-y:auto;
       box-shadow:0 25px 50px rgba(0,0,0,.8);
     }
 
     #teamPopupHeader{
-      padding:16px;
+      padding:12px;
       border-bottom:1px solid #1f2937;
       display:flex;
       align-items:center;
@@ -434,7 +532,7 @@
     }
 
     #teamPopupTitle{
-      font-size:1.1rem;
+      font-size:1rem;
       font-weight:800;
       color:#facc15;
     }
@@ -460,81 +558,336 @@
       color:#e5e7eb;
     }
 
-    #teamPopupBody{ padding:16px; }
+    #teamPopupBody{
+      padding:12px;
+    }
 
     .team-loading{
       text-align:center;
       color:#94a3b8;
-      padding:20px;
+      padding:16px;
     }
+
+    /* =========================================================
+       MOBILE
+       ========================================================= */
+
+    @media(max-width:720px){
+
+      .wrap{
+        padding:7px 9px 35px;
+      }
+
+      .header{
+        padding:5px 9px;
+      }
+
+      .pageTitle{
+        font-size:1.3rem;
+        margin:8px 0 3px;
+      }
+
+      .pageSub{
+        font-size:11px;
+        margin-bottom:5px;
+      }
+
+      .list{
+        margin-top:2px;
+      }
+
+      .row{
+        gap:6px;
+        padding:7px 4px;
+        min-height:35px;
+      }
+
+      .lamp{
+        width:7px;
+        height:7px;
+        flex-basis:7px;
+      }
+
+      .idx{
+        width:23px;
+        flex-basis:23px;
+        font-size:12px;
+      }
+
+      .name{
+        font-size:12px;
+        font-weight:850;
+      }
+
+      .status{
+        font-size:10px;
+      }
+
+      .mealBox{
+        padding:9px;
+        margin:5px 0 7px;
+      }
+
+      .mealHead{
+        flex-direction:column;
+        gap:5px;
+      }
+
+      .mealActions{
+        width:100%;
+        gap:5px;
+      }
+
+      .mealBtn{
+        flex:1 1 auto;
+        padding:7px 8px;
+        font-size:11px;
+        min-height:32px;
+      }
+
+      .mealGrid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media(max-width:380px){
+
+      .row{
+        gap:5px;
+        padding:6px 3px;
+        min-height:33px;
+      }
+
+      .name{
+        font-size:11.5px;
+      }
+
+      .status{
+        font-size:9.5px;
+      }
+
+      .idx{
+        width:21px;
+        flex-basis:21px;
+      }
+
+      .pageTitle{
+        font-size:1.2rem;
+      }
+    }
+
   </style>
 </head>
 
 <body>
+
+  <!-- =====================================================
+       HEADER
+       ===================================================== -->
+
   <header class="header">
     <div class="headerInner">
-      <a href="cabinet.html" class="btnBack">← Назад</a>
+
+      <a
+        href="cabinet.html"
+        class="btnBack"
+      >
+        ← Назад
+      </a>
+
     </div>
   </header>
 
-  <main class="wrap">
-    <h1 id="pageTitle" class="pageTitle">Змагання</h1>
-    <div id="pageSub" class="pageSub"></div>
+  <!-- =====================================================
+       MAIN
+       ===================================================== -->
 
-    <div id="mealOpenWrap" class="mealOpenWrap" hidden>
-      <button id="btnMealGateOpen" class="mealOpenBtn" type="button">🍽 Відкрити харчування</button>
+  <main class="wrap">
+
+    <h1
+      id="pageTitle"
+      class="pageTitle"
+    >
+      Змагання
+    </h1>
+
+    <div
+      id="pageSub"
+      class="pageSub"
+    ></div>
+
+    <!-- =================================================
+         OPEN MEAL
+         ================================================= -->
+
+    <div
+      id="mealOpenWrap"
+      class="mealOpenWrap"
+      hidden
+    >
+
+      <button
+        id="btnMealGateOpen"
+        class="mealOpenBtn"
+        type="button"
+      >
+        🍽 Відкрити харчування
+      </button>
+
     </div>
 
-    <div id="mealBox" class="mealBox" hidden>
+    <!-- =================================================
+         MEAL BOX
+         ================================================= -->
+
+    <div
+      id="mealBox"
+      class="mealBox"
+      hidden
+    >
+
       <div class="mealHead">
+
         <div>
-          <div class="mealTitle">🍽 Харчування</div>
-          <div id="mealStatus" class="mealStatus"></div>
+
+          <div class="mealTitle">
+            🍽 Харчування
+          </div>
+
+          <div
+            id="mealStatus"
+            class="mealStatus"
+          ></div>
+
         </div>
 
-        <div id="mealActions" class="mealActions">
-          <button id="btnOpenMealOrder" class="mealBtn mealBtn--primary" type="button" hidden>
+        <div
+          id="mealActions"
+          class="mealActions"
+        >
+
+          <button
+            id="btnOpenMealOrder"
+            class="mealBtn mealBtn--primary"
+            type="button"
+            hidden
+          >
             Подати / змінити заявку
           </button>
 
-          <button id="btnOpenMealList" class="mealBtn" type="button" hidden>
+          <button
+            id="btnOpenMealList"
+            class="mealBtn"
+            type="button"
+            hidden
+          >
             Список заявок
           </button>
 
-          <button id="btnClearMealOrders" class="mealBtn mealBtn--danger" type="button" hidden>
+          <button
+            id="btnClearMealOrders"
+            class="mealBtn mealBtn--danger"
+            type="button"
+            hidden
+          >
             Очистити харчування
           </button>
+
         </div>
+
       </div>
+
     </div>
 
-    <div id="teamsList" class="list"></div>
-    <div id="msg" class="mutedCenter"></div>
+    <!-- =================================================
+         PARTICIPANTS
+         ================================================= -->
+
+    <div
+      id="teamsList"
+      class="list"
+    ></div>
+
+    <div
+      id="msg"
+      class="mutedCenter"
+    ></div>
+
   </main>
 
+  <!-- =====================================================
+       TEAM POPUP
+       ===================================================== -->
+
   <div id="teamPopup">
+
     <div id="teamPopupContent">
+
       <div id="teamPopupHeader">
-        <div id="teamPopupTitle">Склад команди</div>
-        <button id="teamPopupClose" type="button">×</button>
+
+        <div id="teamPopupTitle">
+          Склад команди
+        </div>
+
+        <button
+          id="teamPopupClose"
+          type="button"
+        >
+          ×
+        </button>
+
       </div>
+
       <div id="teamPopupBody">
-        <div class="team-loading">Завантаження…</div>
+
+        <div class="team-loading">
+          Завантаження…
+        </div>
+
       </div>
+
     </div>
+
   </div>
 
+  <!-- =====================================================
+       MEAL POPUP
+       ===================================================== -->
+
   <div id="mealPopup">
+
     <div id="mealPopupContent">
+
       <div id="mealPopupHeader">
-        <div id="mealPopupTitle">Харчування</div>
-        <button id="mealPopupClose" type="button">×</button>
+
+        <div id="mealPopupTitle">
+          Харчування
+        </div>
+
+        <button
+          id="mealPopupClose"
+          type="button"
+        >
+          ×
+        </button>
+
       </div>
+
       <div id="mealPopupBody">
-        <div class="team-loading">Завантаження…</div>
+
+        <div class="team-loading">
+          Завантаження…
+        </div>
+
       </div>
+
     </div>
+
   </div>
+
+  <!-- =====================================================
+       FIREBASE
+       ===================================================== -->
 
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -543,5 +896,6 @@
   <script src="assets/js/firebase-init.js?v=20260610-2"></script>
   <script src="assets/js/participation.js?v=20260610-7"></script>
   <script src="assets/js/meal_orders.js?v=20260611-5"></script>
+
 </body>
 </html>

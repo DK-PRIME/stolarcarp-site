@@ -1,15 +1,26 @@
 // assets/js/live_firebase.js
 // STOLAR CARP • Live public
-// TEAM + SOLO; stageResults = жереб, public_participants = актуальні ПІБ.
-// SOLO: Прізвище Ім'я. Legacy-імена з двох слів не переставляємо.
+//
+// TEAM + SOLO.
+// stageResults = основне джерело жеребу.
+// public_participants = актуальні публічні ПІБ.
+//
+// SOLO: Прізвище Ім'я.
+// Прізвища на -евич / -ович не відкидаємо.
+// Legacy-імена з двох слів не переставляємо.
+//
 // live-3tables.js підключити ПЕРЕД цим файлом.
 
 (function () {
   "use strict";
 
-  console.log("✅ live_firebase.js LOADED v20261009-solo-public-name-v9");
+  console.log("✅ live_firebase.js LOADED v20261009-name-v10");
 
   const db = window.scDb;
+
+  // =========================================================
+  // DOM
+  // =========================================================
 
   const stageEl = document.getElementById("liveStageName");
   const zonesWrap = document.getElementById("zonesContainer");
@@ -26,13 +37,23 @@
   const wBtn3 = document.getElementById("wBtn3");
   const wBtn4 = document.getElementById("wBtn4");
 
+  // =========================================================
+  // CONSTANTS
+  // =========================================================
+
   const FORMAT_CLASSIC = "classic";
   const FORMAT_3TABLES = "3tables";
+
   const ENTRY_TEAM = "team";
   const ENTRY_SOLO = "solo";
 
+  // =========================================================
+  // STATE
+  // =========================================================
+
   let activeFormat = FORMAT_CLASSIC;
   let activeEntryType = ENTRY_TEAM;
+
   let activeCompId = "";
   let activeStageId = "";
   let activeDocId = "";
@@ -43,10 +64,16 @@
   let regRows = [];
   let weighByTeam = new Map();
   let allWeighDocs = [];
+
   let needAutoZones = false;
 
   let currentStageTeamsRaw = [];
-  let currentStageZonesData = { A: [], B: [], C: [] };
+
+  let currentStageZonesData = {
+    A: [],
+    B: [],
+    C: []
+  };
 
   let publicSoloNameByUid = new Map();
   let publicSoloRows = [];
@@ -66,7 +93,9 @@
   // =========================================================
 
   const fmt = value => (
-    value === null || value === undefined || value === ""
+    value === null ||
+    value === undefined ||
+    value === ""
       ? "—"
       : String(value)
   );
@@ -82,7 +111,9 @@
   }
 
   function norm(value) {
-    return String(value ?? "").replace(/\s+/g, " ").trim();
+    return String(value ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function normLower(value) {
@@ -115,7 +146,9 @@
 
     if (!Number.isFinite(number)) return null;
 
-    return number.toFixed(2).replace(/\.?0+$/, "");
+    return number
+      .toFixed(2)
+      .replace(/\.?0+$/, "");
   }
 
   function kgShort(value) {
@@ -123,7 +156,9 @@
 
     if (!Number.isFinite(number)) return "0";
 
-    return number.toFixed(2).replace(/\.?0+$/, "");
+    return number
+      .toFixed(2)
+      .replace(/\.?0+$/, "");
   }
 
   function weightOrDash(value) {
@@ -135,7 +170,11 @@
   }
 
   function valueOrDash(value) {
-    return value === null || value === undefined || value === ""
+    return (
+      value === null ||
+      value === undefined ||
+      value === ""
+    )
       ? "—"
       : String(value);
   }
@@ -146,7 +185,9 @@
     return (...args) => {
       if (timer) clearTimeout(timer);
 
-      timer = setTimeout(() => fn(...args), ms);
+      timer = setTimeout(() => {
+        fn(...args);
+      }, ms);
     };
   }
 
@@ -156,14 +197,27 @@
       errorEl.textContent = text;
     }
 
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
+    if (loadingEl) {
+      loadingEl.style.display = "none";
+    }
+
+    if (contentEl) {
+      contentEl.style.display = "grid";
+    }
   }
 
   function showContent() {
-    if (errorEl) errorEl.style.display = "none";
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) contentEl.style.display = "grid";
+    if (errorEl) {
+      errorEl.style.display = "none";
+    }
+
+    if (loadingEl) {
+      loadingEl.style.display = "none";
+    }
+
+    if (contentEl) {
+      contentEl.style.display = "grid";
+    }
   }
 
   // =========================================================
@@ -171,15 +225,25 @@
   // =========================================================
 
   function getFishKg(fish) {
-    if (typeof fish === "number" || typeof fish === "string") {
+    if (
+      typeof fish === "number" ||
+      typeof fish === "string"
+    ) {
       return Number(fish);
     }
 
-    return Number(fish?.kg ?? fish?.weight ?? fish?.value ?? 0);
+    return Number(
+      fish?.kg ??
+      fish?.weight ??
+      fish?.value ??
+      0
+    );
   }
 
   function isAmurFish(fish) {
-    if (!fish || typeof fish !== "object") return false;
+    if (!fish || typeof fish !== "object") {
+      return false;
+    }
 
     return (
       fish.isAmur === true ||
@@ -194,7 +258,9 @@
     return arr.map(fish => {
       const kg = getFishKg(fish);
 
-      if (!Number.isFinite(kg) || kg <= 0) return null;
+      if (!Number.isFinite(kg) || kg <= 0) {
+        return null;
+      }
 
       const isAmur = isAmurFish(fish);
 
@@ -332,7 +398,10 @@
       competition?.entryType
     );
 
-    if (explicit === ENTRY_SOLO || explicit === ENTRY_TEAM) {
+    if (
+      explicit === ENTRY_SOLO ||
+      explicit === ENTRY_TEAM
+    ) {
       return explicit;
     }
 
@@ -401,6 +470,18 @@
     return /(?:ович|евич|євич|йович|івна|ївна|овна|евна|євна)$/i.test(s);
   }
 
+  /*
+   * ВИПРАВЛЕНО:
+   *
+   * Не шукаємо перше слово на -евич / -ович через findIndex.
+   * Таке закінчення може бути у справжнього прізвища.
+   *
+   * Мазуркевич Роман Миколайович
+   * -> Мазуркевич Роман
+   *
+   * Роман Миколайович Мазуркевич
+   * -> Мазуркевич Роман
+   */
   function normalizeLegacySoloName(value) {
     const raw = cleanSoloName(value);
 
@@ -408,25 +489,41 @@
 
     const parts = raw.split(" ").filter(Boolean);
 
-    // Порядок двох слів не вгадуємо.
-    if (parts.length === 2) return raw;
+    // Два слова та інші формати не переставляємо.
+    if (parts.length !== 3) return raw;
 
-    if (parts.length === 3) {
-      const index = parts.findIndex(isPatronymicPart);
+    const firstLooksPatronymic =
+      isPatronymicPart(parts[0]);
 
-      if (index === 2) {
-        return `${parts[0]} ${parts[1]}`;
-      }
+    const middleLooksPatronymic =
+      isPatronymicPart(parts[1]);
 
-      if (index === 1) {
-        return `${parts[2]} ${parts[0]}`;
-      }
+    const lastLooksPatronymic =
+      isPatronymicPart(parts[2]);
 
-      if (index === 0) {
-        return `${parts[2]} ${parts[1]}`;
-      }
+    /*
+     * Прізвище Ім'я По-батькові.
+     *
+     * Прізвище також може закінчуватися на -евич / -ович.
+     */
+    if (
+      lastLooksPatronymic &&
+      !middleLooksPatronymic
+    ) {
+      return `${parts[0]} ${parts[1]}`;
     }
 
+    /*
+     * Ім'я По-батькові Прізвище.
+     */
+    if (
+      middleLooksPatronymic &&
+      !firstLooksPatronymic
+    ) {
+      return `${parts[2]} ${parts[0]}`;
+    }
+
+    // Неоднозначний запис залишаємо без перестановок.
     return raw;
   }
 
@@ -456,6 +553,7 @@
       d.last_name
     );
 
+    // Окремі поля імені та прізвища використовуємо напряму.
     if (firstName && lastName) {
       return `${lastName} ${firstName}`;
     }
@@ -473,14 +571,23 @@
       if (name) return name;
     }
 
-    const teamName = normLower(d.teamName || d.team);
+    const teamName = normLower(
+      d.teamName ||
+      d.team
+    );
 
-    for (const value of [d.displayName, d.captain]) {
+    for (const value of [
+      d.displayName,
+      d.captain
+    ]) {
       const name = normalizeLegacySoloName(value);
 
       if (
         name &&
-        (!teamName || normLower(name) !== teamName)
+        (
+          !teamName ||
+          normLower(name) !== teamName
+        )
       ) {
         return name;
       }
@@ -489,14 +596,15 @@
     return "";
   }
 
-  // UID учасника.
-  // registeredByUid може бути UID адміністратора,
-  // тому для оновлення ПІБ його не використовуємо.
+  /*
+   * UID учасника для пошуку ПІБ.
+   *
+   * registeredByUid може належати адміністратору,
+   * тому для оновлення ПІБ його не використовуємо.
+   */
   function soloNameUid(item, documentId = "") {
     if (!item) return "";
 
-    // Зберігаємо UID із вихідного запису
-    // до legacy-нормалізації identity.
     if (
       Object.prototype.hasOwnProperty.call(
         item,
@@ -543,18 +651,18 @@
   function rawSoloFullName(item) {
     if (!item) return "";
 
-    // ГОЛОВНЕ ВИПРАВЛЕННЯ:
-    // публічне ПІБ перевіряємо ПЕРШИМ.
+    // Публічне ПІБ перевіряємо першим.
     const uid = soloNameUid(item);
 
     const publicName = uid
-      ? cleanSoloName(publicSoloNameByUid.get(uid))
+      ? cleanSoloName(
+          publicSoloNameByUid.get(uid)
+        )
       : "";
 
     if (publicName) return publicName;
 
-    // teamId не використовуємо для пошуку ПІБ SOLO:
-    // два учасники можуть належати до однієї команди.
+    // teamId не ідентифікує окремого SOLO-учасника.
     return canonicalSoloNameFromData(item);
   }
 
@@ -568,7 +676,9 @@
 
     if (parts.length < 2) return full;
 
-    const initial = parts[1].charAt(0).toUpperCase();
+    const initial = parts[1]
+      .charAt(0)
+      .toUpperCase();
 
     return initial
       ? `${parts[0]} ${initial}.`
@@ -592,7 +702,9 @@
   }
 
   function participantColumnTitle() {
-    return isSoloEntry() ? "Учасник" : "Команда";
+    return isSoloEntry()
+      ? "Учасник"
+      : "Команда";
   }
 
   function participantCountText(count) {
@@ -608,7 +720,7 @@
   }
 
   // =========================================================
-  // ENTITY IDS — наявна сумісність зважувань
+  // ENTITY IDS
   // =========================================================
 
   function entityCandidates(item) {
@@ -619,7 +731,9 @@
     const addId = value => {
       const id = norm(value);
 
-      if (id && !ids.includes(id)) ids.push(id);
+      if (id && !ids.includes(id)) {
+        ids.push(id);
+      }
     };
 
     if (isSoloItem(item)) {
@@ -1005,7 +1119,12 @@
       "threeTablesContainer"
     );
 
-    if (threeTablesSection && threeTablesContainer) return;
+    if (
+      threeTablesSection &&
+      threeTablesContainer
+    ) {
+      return;
+    }
 
     threeTablesSection = document.createElement("section");
     threeTablesSection.id = "threeTablesSection";
@@ -1408,7 +1527,12 @@
   // =========================================================
 
   function buildZonesAuto(regRowsArg, weighDocs) {
-    const zones = { A: [], B: [], C: [] };
+    const zones = {
+      A: [],
+      B: [],
+      C: []
+    };
+
     const byEntity = new Map();
 
     const emptyBucket = () => ({
@@ -1445,9 +1569,13 @@
         }
       }
 
-      if (!bucket) bucket = emptyBucket();
+      if (!bucket) {
+        bucket = emptyBucket();
+      }
 
-      ids.forEach(id => byEntity.set(id, bucket));
+      ids.forEach(id => {
+        byEntity.set(id, bucket);
+      });
 
       bucket.has[weighNo] = true;
 
@@ -1471,7 +1599,9 @@
         }
       }
 
-      if (!bucket) bucket = emptyBucket();
+      if (!bucket) {
+        bucket = emptyBucket();
+      }
 
       let totalCount = 0;
       let totalWeight = 0;
@@ -1501,10 +1631,14 @@
         ...row,
 
         entryType: row.entryType || (
-          isSoloEntry() ? ENTRY_SOLO : ENTRY_TEAM
+          isSoloEntry()
+            ? ENTRY_SOLO
+            : ENTRY_TEAM
         ),
 
-        entityId: row.entityId || primaryEntityId(row),
+        entityId:
+          row.entityId ||
+          primaryEntityId(row),
 
         displayLabel: displayName(row),
         fullDisplayLabel: fullDisplayName(row),
@@ -1516,8 +1650,13 @@
 
         total: totalCount,
 
-        big: bigFish ? kgShort(bigFish) : "—",
-        weight: totalWeight ? kgShort(totalWeight) : "—",
+        big: bigFish
+          ? kgShort(bigFish)
+          : "—",
+
+        weight: totalWeight
+          ? kgShort(totalWeight)
+          : "—",
 
         _totalWeight: totalWeight,
         _bigFish: bigFish,
@@ -1544,7 +1683,9 @@
       ));
 
       zones[zone].forEach((row, index) => {
-        row.place = hasAnyResult ? index + 1 : "—";
+        row.place = hasAnyResult
+          ? index + 1
+          : "—";
       });
     });
 
@@ -1563,8 +1704,17 @@
     if (typeof value === "string") return value;
     if (typeof value === "number") return String(value);
 
-    const count = value.count ?? value.c ?? value.qty ?? "";
-    const weight = value.weight ?? value.kg ?? value.w ?? "";
+    const count =
+      value.count ??
+      value.c ??
+      value.qty ??
+      "";
+
+    const weight =
+      value.weight ??
+      value.kg ??
+      value.w ??
+      "";
 
     return count === "" && weight === ""
       ? "—"
@@ -1572,8 +1722,16 @@
   }
 
   function normZoneItem(item) {
-    const zoneRaw = item.zone ?? item.drawZone ?? "";
-    const sector = item.drawSector ?? item.sector ?? null;
+    const zoneRaw =
+      item.zone ??
+      item.drawZone ??
+      "";
+
+    const sector =
+      item.drawSector ??
+      item.sector ??
+      null;
+
     const drawKey = item.drawKey || "";
 
     const zoneLabel = item.zoneLabel || (
@@ -1587,14 +1745,18 @@
     let shownName = "";
     let fullName = "";
 
-    // Для SOLO збережений displayLabel
-    // також не перекриває свіже ПІБ.
-    if (isSoloItem(item) && rawSoloFullName(item)) {
+    if (
+      isSoloItem(item) &&
+      rawSoloFullName(item)
+    ) {
       shownName = displayName(item);
       fullName = fullDisplayName(item);
     } else if (item.displayLabel) {
       shownName = norm(item.displayLabel);
-      fullName = norm(item.fullDisplayLabel) || shownName;
+
+      fullName =
+        norm(item.fullDisplayLabel) ||
+        shownName;
     } else {
       shownName = displayName(item);
       fullName = fullDisplayName(item);
@@ -1604,7 +1766,11 @@
       zoneLabel,
 
       team: shownName || "—",
-      fullName: fullName || shownName || "—",
+
+      fullName:
+        fullName ||
+        shownName ||
+        "—",
 
       w1: item.w1 ?? item.W1 ?? null,
       w2: item.w2 ?? item.W2 ?? null,
@@ -1645,7 +1811,11 @@
       Array.isArray(teamsRaw) &&
       teamsRaw.length
     ) {
-      const fallback = { A: [], B: [], C: [] };
+      const fallback = {
+        A: [],
+        B: [],
+        C: []
+      };
 
       teamsRaw.forEach(team => {
         const drawKey = String(team.drawKey || "")
@@ -1677,7 +1847,9 @@
 
           _soloNameUid: soloNameUid(team),
 
-          entryType: rowSolo ? ENTRY_SOLO : ENTRY_TEAM,
+          entryType: rowSolo
+            ? ENTRY_SOLO
+            : ENTRY_TEAM,
 
           entityId: norm(team.entityId),
 
@@ -1701,11 +1873,14 @@
             : norm(team.teamName || team.team),
 
           zone,
+
           drawZone: zone,
           drawSector: sector,
 
           drawKey: drawKey || (
-            zone && sector ? `${zone}${sector}` : zone
+            zone && sector
+              ? `${zone}${sector}`
+              : zone
           ),
 
           place: "—",
@@ -1813,7 +1988,10 @@
     }).join("");
   }
 
-  const renderZonesDebounced = debounce(renderZones, 70);
+  const renderZonesDebounced = debounce(
+    renderZones,
+    70
+  );
 
   // =========================================================
   // STAGE TEAMS / PARTICIPANTS
@@ -1849,7 +2027,9 @@
     }
 
     const label = rawDrawKey || (
-      zone && sector ? `${zone}${sector}` : zone || "—"
+      zone && sector
+        ? `${zone}${sector}`
+        : zone || "—"
     );
 
     const zoneOrder = zone === "A"
@@ -1914,12 +2094,16 @@
         team.drawSector ?? team.sector
       );
 
-      if (!["A", "B", "C"].includes(parsed.zone)) return;
+      if (!["A", "B", "C"].includes(parsed.zone)) {
+        return;
+      }
 
       rows.push({
         entityId,
 
-        entryType: rowSolo ? ENTRY_SOLO : ENTRY_TEAM,
+        entryType: rowSolo
+          ? ENTRY_SOLO
+          : ENTRY_TEAM,
 
         _soloNameUid: soloNameUid(team),
 
@@ -1938,7 +2122,9 @@
         displayName: norm(team.displayName),
         captain: norm(team.captain),
 
-        teamId: rowSolo ? teamId : entityId,
+        teamId: rowSolo
+          ? teamId
+          : entityId,
 
         teamName: rowSolo
           ? ""
@@ -1985,7 +2171,9 @@
   function refreshClassicZones() {
     const hasStageZones = hasCurrentStageZones();
 
-    needAutoZones = isSoloEntry() || !hasStageZones;
+    needAutoZones =
+      isSoloEntry() ||
+      !hasStageZones;
 
     if (!isSoloEntry() && hasStageZones) {
       renderZonesDebounced(
@@ -2028,7 +2216,9 @@
     finalBigFishBox.style.display = "";
 
     const entityIds = new Set(
-      regRows.map(primaryEntityId).filter(Boolean)
+      regRows
+        .map(primaryEntityId)
+        .filter(Boolean)
     );
 
     if (!entityIds.size) {
@@ -2042,6 +2232,7 @@
     }
 
     const w4Done = new Set();
+
     const bigCarp = [];
     const bigAmur = [];
 
@@ -2050,7 +2241,9 @@
 
       if (!participant) return;
 
-      const participantId = primaryEntityId(participant);
+      const participantId = primaryEntityId(
+        participant
+      );
 
       if (
         Number(doc.weighNo) === 4 &&
@@ -2258,7 +2451,13 @@
   );
 
   function startWeighingsFor(weighNo) {
-    if (!db || !activeCompId || !activeStageId) return;
+    if (
+      !db ||
+      !activeCompId ||
+      !activeStageId
+    ) {
+      return;
+    }
 
     if (unsubWeigh) {
       unsubWeigh();
@@ -2307,8 +2506,18 @@
     }
   }
 
+  // =========================================================
+  // ALL WEIGHINGS
+  // =========================================================
+
   function startAllWeighingsSub() {
-    if (!db || !activeCompId || !activeStageId) return;
+    if (
+      !db ||
+      !activeCompId ||
+      !activeStageId
+    ) {
+      return;
+    }
 
     if (unsubAllWeigh) {
       unsubAllWeigh();
@@ -2334,9 +2543,16 @@
 
           renderFinalBigFishTables();
 
-          if (needAutoZones && regRows.length) {
+          if (
+            needAutoZones &&
+            regRows.length
+          ) {
             renderZonesDebounced(
-              buildZonesAuto(regRows, allWeighDocs),
+              buildZonesAuto(
+                regRows,
+                allWeighDocs
+              ),
+
               currentStageTeamsRaw
             );
           }
@@ -2373,13 +2589,23 @@
     const rows = [];
 
     currentPublicParticipantsRaw.forEach(({ id, data }) => {
-      if (!stageMatches(data.stageId, activeStageId)) {
+      if (
+        !stageMatches(
+          data.stageId,
+          activeStageId
+        )
+      ) {
         return;
       }
 
       const status = normLower(data.status);
 
-      if (status && status !== "confirmed") return;
+      if (
+        status &&
+        status !== "confirmed"
+      ) {
+        return;
+      }
 
       const entryType = normLower(data.entryType);
 
@@ -2388,7 +2614,12 @@
         id.includes("__solo__") ||
         isSoloEntry();
 
-      if (!looksSolo || entryType === ENTRY_TEAM) return;
+      if (
+        !looksSolo ||
+        entryType === ENTRY_TEAM
+      ) {
+        return;
+      }
 
       const nameUid = soloNameUid(data, id);
 
@@ -2401,8 +2632,13 @@
         ""
       );
 
-      if (!uid && id.includes("__solo__")) {
-        uid = norm(id.split("__solo__").pop());
+      if (
+        !uid &&
+        id.includes("__solo__")
+      ) {
+        uid = norm(
+          id.split("__solo__").pop()
+        );
       }
 
       const name = canonicalSoloNameFromData(data);
@@ -2533,7 +2769,10 @@
     stopStageSub();
 
     if (!docId) {
-      showError("Нема активного етапу (settings/app).");
+      showError(
+        "Нема активного етапу (settings/app)."
+      );
+
       return;
     }
 
@@ -2607,8 +2846,7 @@
               C: []
             };
 
-            // Повторно обробляємо вже отримані public-записи:
-            // stageResults може першим повідомити, що це SOLO.
+            // stageResults може першим визначити тип SOLO.
             rebuildPublicSoloData();
 
             applyFormatVisibility();
@@ -2696,10 +2934,7 @@
               });
             }
 
-            // Без повторного запиту:
-            // перебудовуємо кеш після визначення типу.
             rebuildPublicSoloData();
-
             applyFormatVisibility();
             refreshParticipantViews();
           } catch (error) {
@@ -2734,7 +2969,7 @@
   }
 
   // =========================================================
-  // SETTINGS / APP + INIT
+  // SETTINGS / APP
   // =========================================================
 
   function stageDocIdFromApp(app) {
@@ -2742,7 +2977,9 @@
       app?.activeKey ||
       app?.activeStageResultsId;
 
-    if (explicitKey) return String(explicitKey);
+    if (explicitKey) {
+      return String(explicitKey);
+    }
 
     const compId =
       app?.activeCompetitionId ||
@@ -2787,8 +3024,15 @@
     }
   }
 
+  // =========================================================
+  // INIT
+  // =========================================================
+
   if (!db) {
-    showError("Firebase init не завантажився.");
+    showError(
+      "Firebase init не завантажився."
+    );
+
     return;
   }
 
@@ -2813,7 +3057,9 @@
           const stageKey =
             `${activeCompId}||${activeStageId}||${activeDocId}`;
 
-          if (stageKey === previousStageKey) return;
+          if (stageKey === previousStageKey) {
+            return;
+          }
 
           previousStageKey = stageKey;
 

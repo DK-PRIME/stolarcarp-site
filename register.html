@@ -525,6 +525,56 @@
     }
 
     /* =========================================================
+       HOLIDAY GREETINGS
+       ========================================================= */
+
+    .reg-holiday {
+      width: 100%;
+      padding: 18px 12px;
+      text-align: center;
+
+      border: 1px solid rgba(232, 191, 104, .3);
+      border-radius: 12px;
+
+      background: linear-gradient(
+        135deg,
+        rgba(232, 191, 104, .12),
+        rgba(232, 191, 104, .025)
+      );
+
+      animation: reg-holiday-in .5s ease both;
+    }
+
+    .reg-holiday__title {
+      margin: 0;
+      color: #ffe3a0;
+
+      font-size: clamp(15px, 3.5vw, 20px);
+      font-weight: 900;
+      line-height: 1.45;
+    }
+
+    .reg-holiday__subtitle {
+      margin-top: 5px;
+      color: #e2e8f0;
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.5;
+    }
+
+    @keyframes reg-holiday-in {
+      from {
+        opacity: 0;
+        transform: translateY(5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* =========================================================
        RULES
        ========================================================= */
 
@@ -903,6 +953,14 @@
       .register-page #submitBtn {
         min-height: 46px;
       }
+
+      .reg-holiday {
+        padding: 15px 10px;
+      }
+
+      .reg-holiday__subtitle {
+        font-size: 12px;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1230,6 +1288,152 @@
 
     </div>
   </footer>
+
+  <!-- =====================================================
+       AUTOMATIC HOLIDAY GREETINGS
+       ===================================================== -->
+
+  <script>
+  (function () {
+    "use strict";
+
+    const container = document.getElementById("eventOptions");
+
+    if (!container) return;
+
+    const holidays = {
+      "12-25": {
+        title: "🎄 Христос народився!",
+        subtitle: "Славімо Його!"
+      },
+
+      "12-31": {
+        title: "🎆 З прийдешнім Новим роком!",
+        subtitle: ""
+      },
+
+      "01-01": {
+        title: "🎉 З Новим роком!",
+        subtitle: ""
+      },
+
+      "01-06": {
+        title: "💧 Христос хрещається!",
+        subtitle: "У ріці Йордані!"
+      }
+    };
+
+    function getKyivDateKey() {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Europe/Kyiv",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(new Date());
+
+      const month = parts.find(
+        part => part.type === "month"
+      )?.value;
+
+      const day = parts.find(
+        part => part.type === "day"
+      )?.value;
+
+      return `${month}-${day}`;
+    }
+
+    function getHoliday() {
+      return holidays[getKyivDateKey()] || null;
+    }
+
+    function isEmptyMessage(text) {
+      const value = String(text || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+      return (
+        value.includes("немає доступних змагань") ||
+        value.includes("доступних змагань немає") ||
+        value.includes("немає доступних турнірів") ||
+        value.includes("наразі доступних змагань немає") ||
+        value.includes("наразі немає доступних змагань")
+      );
+    }
+
+    function updateHoliday() {
+      const holiday = getHoliday();
+
+      // Не святкова дата — нічого не змінюємо.
+      if (!holiday) return;
+
+      // Якщо Firebase показав змагання,
+      // не втручаємося в реєстрацію.
+      if (
+        container.querySelector(
+          ".event-item, input[type='radio']"
+        )
+      ) {
+        return;
+      }
+
+      // Якщо привітання вже показане,
+      // не створюємо його повторно.
+      if (container.querySelector(".reg-holiday")) {
+        return;
+      }
+
+      const text = container.textContent || "";
+
+      // Не змінюємо завантаження, помилки
+      // або інші повідомлення Firebase.
+      if (!isEmptyMessage(text)) {
+        return;
+      }
+
+      const box = document.createElement("div");
+      box.className = "reg-holiday";
+      box.setAttribute("role", "status");
+
+      const title = document.createElement("div");
+      title.className = "reg-holiday__title";
+      title.textContent = holiday.title;
+
+      box.appendChild(title);
+
+      if (holiday.subtitle) {
+        const subtitle = document.createElement("div");
+        subtitle.className = "reg-holiday__subtitle";
+        subtitle.textContent = holiday.subtitle;
+
+        box.appendChild(subtitle);
+      }
+
+      // Замінюємо тільки повідомлення
+      // про відсутність змагань.
+      container.replaceChildren(box);
+    }
+
+    // Firebase заповнює список асинхронно.
+    // Спостерігаємо лише за змінами контейнера.
+    const observer = new MutationObserver(updateHoliday);
+
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+
+    updateHoliday();
+
+    // Перевірка після повернення на вкладку.
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) {
+        updateHoliday();
+      }
+    });
+
+  })();
+  </script>
 
 </body>
 </html>

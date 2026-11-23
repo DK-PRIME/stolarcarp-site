@@ -213,12 +213,20 @@
     26: [2, 3]
   };
 
+  // Умовний розподіл відомої кількості осетрів за фізичними секторами.
+  const modeledSturgeon = {
+    "season:2026:season-2026__stage-2": { 2: 1, 7: 1, 13: 1, 21: 2, 23: 1, 25: 2, 26: 1 },
+    "season:2026:season-2026__stage-3": { 2: 2, 5: 1, 11: 1, 18: 1, 21: 1, 22: 2, 24: 1, 25: 2 },
+    "season:2026:season-2026__final": { 3: 1, 19: 1, 21: 1, 22: 2, 26: 1 }
+  };
+
   function sectorSummary(entries) {
     const weights = [];
     const places = [];
     const counts = { carp: 0, amur: 0, sturgeon: 0 };
     let unknown = 0;
     let estimatedSpecies = false;
+    let modeledSpecies = false;
     let weighedFish = 0;
     let fishWeight = 0;
     for (const { row, fish, zonePlace, tournament, number } of entries) {
@@ -227,9 +235,14 @@
       if (zonePlace > 0) places.push(zonePlace);
 
       let identified = 0;
+      let unverifiedCarp = 0;
+      let hasRecordedSturgeon = false;
       for (const type of Object.keys(counts)) {
         const recorded = metric(row[type + "Count"]);
-        const count = Math.max(recorded ?? 0, fish.filter(item => item.type === type).length);
+        const individualCount = fish.filter(item => item.type === type).length;
+        const count = Math.max(recorded ?? 0, individualCount);
+        if (type === "carp") unverifiedCarp = count - individualCount;
+        if (type === "sturgeon") hasRecordedSturgeon = count > 0;
         counts[type] += count;
         identified += count;
       }
@@ -247,11 +260,17 @@
         counts.carp += total - amur - sturgeon;
         estimatedSpecies = true;
       } else {
+        const provisional = modeledSturgeon[tournament]?.[number] ?? 0;
+        if (provisional > 0 && !hasRecordedSturgeon && unverifiedCarp >= provisional) {
+          counts.carp -= provisional;
+          counts.sturgeon += provisional;
+          modeledSpecies = true;
+        }
         unknown += Math.max(0, total - identified);
       }
     }
     const place = average(places);
-    return { weights, counts, unknown, estimatedSpecies, averageFishWeight: weighedFish ? fishWeight / weighedFish : null,
+    return { weights, counts, unknown, estimatedSpecies, modeledSpecies, averageFishWeight: weighedFish ? fishWeight / weighedFish : null,
       place: place === null ? null : Math.trunc(place * 100) / 100 };
   }
 
@@ -412,7 +431,7 @@
 
     function renderCatchDetails(entries) {
       const records = entries.map(entry => ({ ...entry, fish: individualFish(entry.row) }));
-      const { weights, counts, unknown, estimatedSpecies, averageFishWeight, place } = sectorSummary(records);
+      const { weights, counts, unknown, estimatedSpecies, modeledSpecies, averageFishWeight, place } = sectorSummary(records);
       const summary = root.querySelector("[data-catch-summary]");
       const fishCounts = root.querySelector("[data-species-counts]");
       const metricCell = (label, value) => {
@@ -427,6 +446,7 @@
         metricCell("Середнє місце в зоні", formatMetric(place))
       );
       root.querySelector("[data-species-estimate]").hidden = !estimatedSpecies;
+      root.querySelector("[data-species-modeled]").hidden = !modeledSpecies;
       fishCounts.replaceChildren(
         ...Object.entries(fishTypes)
           .filter(([type]) => type !== "sturgeon" || counts[type] > 0)

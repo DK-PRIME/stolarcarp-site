@@ -277,9 +277,24 @@
       .zone-day-switch { display: flex; gap: 6px; margin-bottom: 8px; }
       #zonesContainer[data-visible-day="1"] .zone-day-2,
       #zonesContainer[data-visible-day="2"] .zone-day-1 { display: none; }
-      .live-zone table.table { min-width: 360px; }
-      .live-zone th,
-      .live-zone td { padding: 3px !important; font-size: 10px !important; }
+      #zonesContainer .table-wrap { min-width: 0; }
+      #zonesContainer table.table {
+        min-width: 0;
+        table-layout: fixed;
+      }
+      #zonesContainer th,
+      #zonesContainer td {
+        padding: 3px 1px !important;
+        font-size: 10px !important;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      #zonesContainer thead tr:first-child th:nth-child(1) { width: 8%; }
+      #zonesContainer thead tr:first-child th:nth-child(2) { width: 21%; }
+      #zonesContainer thead tr:first-child th:nth-child(5),
+      #zonesContainer thead tr:first-child th:nth-child(8) { width: 9%; }
+      #zonesContainer thead tr:first-child th:nth-child(6) { width: 11%; }
+      #zonesContainer thead tr:first-child th:nth-child(7) { width: 13%; }
     }
 
     .live-left > .card {

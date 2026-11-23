@@ -820,8 +820,16 @@
         c
       );
 
+    const eventLakeId = normalize(ev.lakeId || ev.lake?.id);
+    const competitionLakeId = normalize(c.lakeId || c.lake?.id);
+    const eventLakeName = normalize(ev.lake?.name || ev.lakeName);
+    const competitionLakeName = normalize(c.lake?.name || c.lakeName);
+    const lakeName = eventLakeName ||
+      ((!eventLakeId || eventLakeId === competitionLakeId) ? competitionLakeName : "");
+
     return {
       compId,
+      lakeName,
 
       year:
         normalize(
@@ -1974,6 +1982,12 @@
                 )
               )}
             </div>
+
+            ${item.lakeName ? `
+              <div style="margin-top:5px;color:var(--muted);font-size:13px">
+                Водойма: ${escapeHtml(item.lakeName)}
+              </div>
+            ` : ""}
 
             <div
               style="

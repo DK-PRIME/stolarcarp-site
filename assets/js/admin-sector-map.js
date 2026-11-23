@@ -69,7 +69,8 @@
     sourceHash: "",
     selected: 1,
     zoom: 1,
-    lastZone: "A"
+    lastZone: "A",
+    quickZone: ""
   };
 
   // Helpers
@@ -500,7 +501,7 @@
       "mapStage", "mapStageLabel", "mapEditor",
       "editFields", "selectedStageTitle",
       "currentMapModeBadge", "mapViewport",
-      "mapCanvas", "mapPins", "mappingSection",
+      "mapCanvas", "mapPins", "quickZones", "quickZoneHint", "mappingSection",
       "lakeImage", "lakeSector", "archiveSlot",
       "manualSlot", "manualZone", "manualNumber",
       "slotPreview", "assignSlot", "removeSlot",
@@ -563,6 +564,9 @@
         button.classList.toggle("active", active);
         button.setAttribute("aria-pressed", String(active));
       });
+
+    setHidden("quickZones", !prepare);
+    updateQuickZones();
 
     setHidden("stageLoaderSection", history);
     setHidden("historicalSection", !history);
@@ -681,6 +685,7 @@
     S.selected = 1;
     S.zoom = 1;
     S.lastZone = "A";
+    S.quickZone = "";
 
     S.dirty = false;
     S.metaDirty = false;
@@ -1415,6 +1420,7 @@
 
   function render() {
     if (!S.current) return;
+    updateQuickZones();
 
     setText(
       "selectedStageTitle",
@@ -1757,8 +1763,41 @@
     controls();
   }
 
-  function assign() {
-    const slot = chosenSlot();
+  function nextQuickSlot() {
+    const last = S.assignments.reduce((max, item) =>
+      item.zone === S.quickZone ? Math.max(max, item.sector) : max, 0
+    );
+    return parseSlot(S.quickZone, last + 1);
+  }
+
+  function updateQuickZones() {
+    $("quickZones").querySelectorAll("[data-quick-zone]").forEach(button => {
+      button.setAttribute("aria-pressed", String(button.dataset.quickZone === S.quickZone));
+    });
+    const next = nextQuickSlot();
+    setText("quickZoneHint", !S.quickZone
+      ? "Обери зону для швидкого призначення."
+      : next
+        ? `Наступне позначення: ${next.drawKey}. Натисни вільний сектор на карті.`
+        : `У зоні ${S.quickZone} досягнуто межі нумерації.`);
+  }
+
+  function pickMapSector(sector) {
+    selectSector(sector);
+    if (S.mode !== MODE.PREPARE || !S.quickZone || S.selected !== sector) return;
+
+    const previous = S.assignments.find(item => item.lakeSectorNumber === sector);
+    if (previous) {
+      message(`Сектор №${sector} уже має позначення ${previous.drawKey}.`, "ok");
+      return;
+    }
+
+    const slot = nextQuickSlot();
+    if (!slot) throw new Error("Досягнуто межі нумерації в цій зоні.");
+    assign(slot);
+  }
+
+  function assign(slot = chosenSlot()) {
 
     if (!slot) {
       throw new Error("Обери правильне позначення.");
@@ -2747,12 +2786,22 @@
       });
     });
 
+    on("quickZones", "click", event => {
+      const button = event.target.closest("[data-quick-zone]");
+      if (button && S.mode === MODE.PREPARE) {
+        edit(() => {
+          S.quickZone = button.dataset.quickZone;
+          updateQuickZones();
+        });
+      }
+    });
+
     on("mapPins", "click", event => {
       const button = event.target.closest("[data-lake]");
 
       if (button) {
         edit(() => {
-          selectSector(Number(button.dataset.lake));
+          pickMapSector(Number(button.dataset.lake));
         });
       }
     });

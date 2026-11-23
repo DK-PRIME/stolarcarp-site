@@ -161,3 +161,141 @@
   display: inline-block;
   margin-top: .75rem;
 }
+
+.sector-sort-mobile {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .sector-history.archive-card {
+    padding: .65rem;
+    min-width: 0;
+  }
+
+  .sector-history .sector-view-title {
+    font-size: clamp(1.3rem, 6vw, 1.8rem);
+    overflow-wrap: anywhere;
+  }
+
+  .sector-history p {
+    font-size: .86rem;
+  }
+
+  .sector-sort-mobile {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: .65rem 0;
+    font-size: .84rem;
+  }
+
+  .sector-sort-mobile select {
+    max-width: 100%;
+    padding: .4rem;
+    border: 1px solid #84958b;
+    border-radius: .4rem;
+    color: #fff;
+    background: #172820;
+    font: inherit;
+  }
+
+  .sector-history .sector-results-scroll,
+  .sector-history .sector-map-scroll {
+    overflow: visible;
+  }
+
+  .sector-history .sector-ranking {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: clamp(.58rem, 2.65vw, .78rem);
+  }
+
+  .sector-ranking th:first-child,
+  .sector-ranking th:last-child {
+    width: 9%;
+  }
+
+  .sector-history .sector-ranking th,
+  .sector-history .sector-ranking td {
+    padding: .42rem .12rem;
+    text-align: center;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+  }
+
+  .sector-ranking thead button {
+    padding: 0;
+  }
+
+  .sector-ranking tbody button {
+    min-height: 2rem;
+  }
+
+  .sector-map {
+    min-width: 0;
+  }
+
+  .sector-map button {
+    width: clamp(12px, 3.5vw, 24px);
+    height: clamp(12px, 3.5vw, 24px);
+    font-size: clamp(7px, 1.95vw, 11px);
+  }
+
+  .sector-history [data-sector-results]:not([hidden]),
+  .sector-history [data-catch-table] table {
+    display: block;
+  }
+
+  .sector-history [data-sector-results] thead,
+  .sector-history [data-catch-table] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .sector-history [data-sector-results] tbody,
+  .sector-history [data-catch-table] tbody {
+    display: grid;
+    gap: .45rem;
+  }
+
+  .sector-history [data-sector-results] tr,
+  .sector-history [data-catch-table] tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .4rem .55rem;
+    border: 1px solid #3a5048;
+    border-radius: .55rem;
+    padding: .5rem;
+  }
+
+  .sector-history [data-sector-results] td,
+  .sector-history [data-catch-table] td {
+    display: block;
+    border: 0;
+    padding: 0;
+    font-size: .84rem;
+    overflow-wrap: anywhere;
+  }
+
+  .sector-history [data-sector-results] td::before,
+  .sector-history [data-catch-table] td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .7rem;
+    color: #b8ccc5;
+  }
+
+  .sector-history [data-sector-results] td:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  .sector-history [data-catch-table] caption {
+    display: block;
+    text-align: left;
+    margin-block: .75rem .35rem;
+    font-weight: 700;
+  }
+}

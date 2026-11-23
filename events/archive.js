@@ -44,8 +44,23 @@
   const params =
     new URLSearchParams(window.location.search);
 
-  const seasonYear =
-    params.get("year") || "2026";
+  const yearParam = params.get("year");
+  const seasonYear = /^(19|20)\d{2}$/.test(yearParam ?? "") ? yearParam : "2026";
+  const sectorsOnly = params.get("view") === "sectors";
+
+  const historyRoot = $("sectorHistory");
+  const sectorHistory = historyRoot && window.scSectorHistory?.create({
+    root: historyRoot, db, year: seasonYear
+  });
+  if (sectorsOnly) {
+    await sectorHistory?.loadAllYears(yearParam ? seasonYear : "");
+    return;
+  }
+
+  zonesWrap?.addEventListener("click", event => {
+    const button = event.target.closest("[data-physical-sector]");
+    if (button) sectorHistory?.open(Number(button.dataset.physicalSector));
+  });
 
   const FINALISTS_COUNT = 18;
   const BEST_COUNT_FOR_FINAL = 2;
@@ -2638,6 +2653,7 @@
           b.sortValue
       );
 
+      sectorHistory?.setStages(stages);
       renderArchiveSnapshot();
 
       if (!stages.length) {
@@ -2818,6 +2834,7 @@
         });
 
     } catch (error) {
+      sectorHistory?.setStages(stages);
       console.error(
         "[Archive] load:",
         error
@@ -2833,7 +2850,10 @@
     }
   }
 
+  let visibleStage;
+
   function renderStage(item) {
+    visibleStage = item;
     const rows =
       Array.isArray(
         item?.data?.standings
@@ -2905,6 +2925,15 @@
         );
     }
 
+    if (sectorHistory && zonesWrap) {
+      sectorHistory.getNumbers(item.id).then(numbers => {
+        if (!numbers?.size || visibleStage !== item) return;
+        zonesWrap.innerHTML = Object.entries(zones).map(([zone, zoneRows]) =>
+          renderZone(zone, zoneRows, numbers)
+        ).join("");
+      }).catch(error => console.warn("[Archive] Physical sectors:", error));
+    }
+
     resultSection
       ?.scrollIntoView({
         behavior: "smooth",
@@ -2933,7 +2962,8 @@
 
   function renderZone(
     zone,
-    rows
+    rows,
+    physicalSectors
   ) {
     const sorted =
       rows
@@ -2998,6 +3028,12 @@
                       row.sector
                     )
                   )}
+                  ${physicalSectors?.has(row) ? `
+                    <button class="sector-result-link" type="button"
+                      data-physical-sector="${physicalSectors.get(row)}"
+                      aria-label="Історія сектора №${physicalSectors.get(row)}">
+                      №${physicalSectors.get(row)}
+                    </button>` : ""}
                 </td>
 
                 <td

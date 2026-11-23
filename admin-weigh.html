@@ -356,10 +356,16 @@
       <div style="flex:0 0 200px;">
         <div class="muted" style="margin-bottom:6px;">Номер зважування</div>
         <select id="wSelect">
-          <option value="W1">W1</option>
-          <option value="W2">W2</option>
-          <option value="W3">W3</option>
-          <option value="W4">W4</option>
+          <optgroup label="1-ша доба">
+            <option value="W1">W1</option>
+            <option value="W2">W2</option>
+            <option value="W3">W3</option>
+          </optgroup>
+          <optgroup label="2-га доба">
+            <option value="W4">W4</option>
+            <option value="W5">W5</option>
+            <option value="W6">W6</option>
+          </optgroup>
         </select>
       </div>
 
@@ -424,7 +430,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script src="assets/js/firebase-init.js"></script>
-<script src="assets/js/admin-weighings.js?v=20260611-1"></script>
+<script src="assets/js/admin-weighings.js?v=20261123-admin-w6"></script>
 
 </body>
 </html>

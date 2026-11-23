@@ -212,7 +212,7 @@
 
     return {
       kg,
-      fishType: isAmur ? "amur" : "carp",
+      fishType: fish?.fishType === "sturgeon" ? "sturgeon" : isAmur ? "amur" : "carp",
       isAmur
     };
   }
@@ -1767,6 +1767,11 @@
 
         </label>
 
+        <label class="amurCheck">
+          <input type="checkbox" data-sturgeon ${fish.fishType === "sturgeon" ? "checked" : ""}>
+          <span>Осетер</span>
+        </label>
+
       </div>
     `;
   }
@@ -1979,11 +1984,12 @@
 
       if (kg <= 0) return;
 
-      const isAmur = !!checkbox?.checked;
+      const isSturgeon = !!line.querySelector("input[data-sturgeon]")?.checked;
+      const isAmur = !isSturgeon && !!checkbox?.checked;
 
       result.push({
         kg,
-        fishType: isAmur ? "amur" : "carp",
+        fishType: isSturgeon ? "sturgeon" : isAmur ? "amur" : "carp",
         isAmur
       });
     });
@@ -2092,7 +2098,7 @@
       sums: {}
     };
 
-    for (let i = 1; i <= 4; i++) {
+    for (let i = 1; i <= 6; i++) {
       const key = `W${i}`;
       const slot = weighings[key] || {};
 
@@ -2170,7 +2176,7 @@
       wKey.replace("W", "")
     );
 
-    if (![1, 2, 3, 4].includes(wNo)) {
+    if (![1, 2, 3, 4, 5, 6].includes(wNo)) {
       throw new Error(
         "Невірний номер зважування."
       );
@@ -2358,6 +2364,8 @@
         w2: liveWSlot(weighings.W2),
         w3: liveWSlot(weighings.W3),
         w4: liveWSlot(weighings.W4),
+        w5: liveWSlot(weighings.W5),
+        w6: liveWSlot(weighings.W6),
 
         totalWeight: totals.totalWeight,
         bigFish: totals.bigFish,
@@ -2595,7 +2603,7 @@
       "change",
       event => {
         if (!event.target.matches(
-          "input[data-amur]"
+          "input[data-amur], input[data-sturgeon]"
         )) {
           return;
         }
@@ -2609,10 +2617,12 @@
         );
 
         if (line) {
-          line.classList.toggle(
-            "fishLine-amur",
-            event.target.checked
-          );
+          const amur = line.querySelector("input[data-amur]");
+          const sturgeon = line.querySelector("input[data-sturgeon]");
+          if (event.target.checked) {
+            (event.target === amur ? sturgeon : amur).checked = false;
+          }
+          line.classList.toggle("fishLine-amur", amur.checked);
         }
 
         if (tr) recalcRowSum(tr);
@@ -2901,6 +2911,8 @@
       w2: slot(2),
       w3: slot(3),
       w4: slot(4),
+      w5: slot(5),
+      w6: slot(6),
 
       totalWeight: num(t.totalWeight),
       bigFish: num(t.bigFish),
@@ -2955,7 +2967,7 @@
 
       const weighNo = Number(w.weighNo);
 
-      if (![1, 2, 3, 4].includes(weighNo)) {
+      if (![1, 2, 3, 4, 5, 6].includes(weighNo)) {
         return;
       }
 

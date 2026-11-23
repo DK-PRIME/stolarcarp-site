@@ -99,7 +99,7 @@
         ? [Math.min(2, weights[index] / entry.average - 1)] : []
     );
     const known = values => values.filter(value => value !== null);
-    const places = known(entries.map(entry => metric(entry.row.zonePlace))).filter(place => place > 0);
+    const places = known(entries.map(entry => entry.zonePlace ?? null)).filter(place => place > 0);
     const bigFish = known(entries.map(({ row }) => metric(row.bigFish ?? row.bigFishKg)));
     const prizes = places.filter(place => place <= 3).length;
     return {
@@ -124,6 +124,43 @@
     const prefix = match[1] || zone;
     const number = Number(match[2]);
     return /^[ABC]$/.test(prefix) && number > 0 ? prefix + number : "";
+  }
+
+  function zonePlaces(rows) {
+    const groups = new Map();
+    for (const row of rows) {
+      if (!row) continue;
+      const zone = drawKey(row)[0];
+      if (!zone) continue;
+      if (!groups.has(zone)) groups.set(zone, []);
+      groups.get(zone).push(row);
+    }
+
+    const places = new Map();
+    const value = (row, primary, alternate) => metric(row[primary] ?? row[alternate]) ?? 0;
+    const name = row => clean(row.team || row.teamName || row.participantName);
+    for (const group of groups.values()) {
+      group.sort((a, b) =>
+        value(b, "totalWeight", "totalWeightKg") - value(a, "totalWeight", "totalWeightKg") ||
+        value(b, "bigFish", "bigFishKg") - value(a, "bigFish", "bigFishKg") ||
+        value(b, "totalCount", "fishCount") - value(a, "totalCount", "fishCount") ||
+        name(a).localeCompare(name(b), "uk")
+      );
+      group.forEach((row, index) => {
+        const saved = metric(row.zonePlace);
+        places.set(row, Number.isInteger(saved) && saved > 0 && saved <= group.length ? saved : index + 1);
+      });
+    }
+    return places;
+  }
+
+  function resultCells(table, values) {
+    const headings = table.tHead.rows[0].cells;
+    return values.map((value, index) => {
+      const cell = element("td", value);
+      cell.dataset.label = headings[index].textContent.trim();
+      return cell;
+    });
   }
 
   function element(tag, text) {
@@ -245,12 +282,25 @@
     let sort = "rating";
     let ascending = false;
     let stats = [];
+    const mobileSort = root.querySelector("[data-sector-sort]");
+    for (const button of sortButtons) {
+      const option = element("option", button.textContent.trim());
+      option.value = button.dataset.sort;
+      mobileSort.append(option);
+    }
+    mobileSort.value = sort;
+    mobileSort.addEventListener("change", () => {
+      sort = mobileSort.value;
+      ascending = sort === "number";
+      renderRanking();
+    });
 
     for (const button of sortButtons) {
       button.addEventListener("click", () => {
         const next = button.dataset.sort;
         ascending = next === sort ? !ascending : next === "number";
         sort = next;
+        mobileSort.value = next;
         renderRanking();
       });
     }
@@ -284,7 +334,7 @@
         sectorCell.append(button);
         tr.append(element("td", stat.rank || "—"), sectorCell);
         for (const value of [
-          stat.count < 3 ? "Недостатньо даних" : formatMetric(stat.rating, percent),
+          stat.count < 3 ? "Мало даних" : formatMetric(stat.rating, percent),
           formatMetric(stat.weight), formatMetric(stat.fish),
           stat.knownPlaces ? `${stat.prizes} / ${stat.knownPlaces}` : "—",
           formatMetric(stat.bigFish), stat.count
@@ -356,7 +406,7 @@
         target.hidden = !rows.length;
         target.querySelector("tbody").replaceChildren(...rows.map(values => {
           const tr = element("tr");
-          tr.append(...values.map(value => element("td", value)));
+          tr.append(...resultCells(target.querySelector("table"), values));
           return tr;
         }));
       }
@@ -379,7 +429,7 @@
       const fragments = entries.map(entry => {
         const tr = element("tr");
         const row = entry.row;
-        for (const value of [
+        tr.append(...resultCells(table, [
           entry.year,
           entry.title,
           entry.date ? calendar.format(entry.date) : "—",
@@ -388,8 +438,8 @@
           formatMetric(metric(row.totalWeight ?? row.totalWeightKg)),
           formatMetric(metric(row.totalCount ?? row.fishCount)),
           formatMetric(metric(row.bigFish ?? row.bigFishKg)),
-          entry.place || "—"
-        ]) tr.append(element("td", value));
+          entry.zonePlace ? `${entry.zonePlace} · зона ${entry.key[0]}` : "—"
+        ]));
         return tr;
       });
       results.replaceChildren(...fragments);
@@ -443,6 +493,8 @@
         !wasAbsent(row) &&
         !empty.has(sectorNumber(row?.lakeSectorNumber) || mapping.get(row && drawKey(row)))
       ));
+      const places = zonePlaces(rows.filter(row => !wasAbsent(row) &&
+        !empty.has(sectorNumber(row?.lakeSectorNumber) || mapping.get(row && drawKey(row)))));
       const byPhysicalSector = new Map();
       for (const row of rows) {
         if (!row || wasAbsent(row) || (row.lakeId && row.lakeId !== lake)) continue;
@@ -457,9 +509,7 @@
         byPhysicalSector.set(number, {
           number, row, key, title: item.title,
           tournament: `season:${year}:${item.id}`, year, average: fieldAverage,
-          place: item.isFinal && row.overallPlace
-            ? `${row.overallPlace} загальне`
-            : row.zonePlace ? `${row.zonePlace} у зоні` : row.place
+          zonePlace: places.get(row)
         });
       }
 
@@ -489,7 +539,7 @@
             tournament: `history:${year}:${doc.id}`, year, average: fieldAverage,
             title: data.title || "Історичний турнір",
             date: asDate(data.startDate),
-            place: row.place
+            zonePlace: metric(row.zonePlace) || null
           }] : [];
         });
       });

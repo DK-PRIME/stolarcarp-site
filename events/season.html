@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=3">
+  <link rel="stylesheet" href="sector-history.css?v=4">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -831,10 +831,11 @@
       </select></label>
     </div>
     <p data-sector-coverage role="status"></p>
+    <label class="sector-sort-mobile">Сортувати <select data-sector-sort></select></label>
     <div class="sector-results-scroll">
       <table class="sector-ranking" data-sector-ranking aria-label="Порівняння секторів Лелехівки">
         <thead><tr>
-          <th scope="col">Місце</th>
+          <th scope="col">№ рейтингу</th>
           <th scope="col"><button type="button" data-sort="number">Сектор</button></th>
           <th scope="col" aria-sort="descending"><button type="button" data-sort="rating">Рейтинг</button></th>
           <th scope="col"><button type="button" data-sort="weight">Середня вага, кг</button></th>
@@ -866,7 +867,7 @@
         <thead><tr>
           <th scope="col">Рік</th><th scope="col">Турнір</th><th scope="col">Дата старту</th><th scope="col">Жереб</th>
           <th scope="col">Команда / учасник</th><th scope="col">Вага, кг</th>
-          <th scope="col">Риб</th><th scope="col">Big Fish, кг</th><th scope="col">Місце</th>
+          <th scope="col">Риб</th><th scope="col">Big Fish, кг</th><th scope="col">Місце в зоні</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -1016,7 +1017,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=6"
+  src="sector-history.js?v=7"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

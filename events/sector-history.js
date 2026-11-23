@@ -151,8 +151,11 @@
       place: average(group.flatMap(start => start.place > 0 ? [start.place] : []))
     });
 
-    return [...teams.values()].sort((a, b) => a.name.localeCompare(b.name, "uk"))
-      .map(({ name, hard, strong }) => ({ name, hard: summarizeStarts(hard), strong: summarizeStarts(strong) }));
+    return [...teams.values()].map(({ name, hard, strong }) => ({
+      name, hard: summarizeStarts(hard), strong: summarizeStarts(strong),
+      overall: summarizeStarts([...hard, ...strong])
+    })).filter(team => team.overall.count >= 2)
+      .sort((a, b) => b.overall.score - a.overall.score || a.name.localeCompare(b.name, "uk"));
   }
 
   function drawKey(row) {
@@ -450,17 +453,19 @@
       const table = root.querySelector("[data-team-performance]");
       const teams = teamPerformance(entries);
       const placeFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
-      const unique = new Intl.NumberFormat("uk-UA");
       const status = root.querySelector("[data-team-performance-status]");
-      status.textContent = teams.length ? `Команд з оціненими стартами: ${unique.format(teams.length)}`
-        : "За вибраний період недостатньо результатів для порівняння.";
+      status.textContent = teams.length ? `Команд у рейтингу: ${teams.length}`
+        : "Поки немає команд із двома оціненими стартами.";
       table.hidden = !teams.length;
-      table.tBodies[0].replaceChildren(...teams.map(team => {
+      let rank = 0;
+      table.tBodies[0].replaceChildren(...teams.map((team, index) => {
         const tr = element("tr");
-        const name = element("th", team.name);
+        if (team.overall.score !== teams[index - 1]?.overall.score) rank = index + 1;
+        const name = element("th");
+        name.append(element("small", `№${rank}`), element("span", team.name));
         name.scope = "row";
         tr.append(name);
-        for (const group of [team.hard, team.strong]) {
+        for (const group of [team.overall, team.hard, team.strong]) {
           const cell = element("td");
           if (group.count) {
             const score = element("strong", percent.format(group.score));
@@ -493,7 +498,6 @@
         stat.rank = stat.rating === ranked[index - 1]?.rating ? ranked[index - 1].rank : index + 1;
       });
       renderRanking();
-      renderTeamPerformance(entries);
     }
 
     for (const [number, x, y] of POINTS) {
@@ -768,6 +772,8 @@
           updateRanking();
           render();
         };
+        renderTeamPerformance(history);
+        root.querySelector(".team-performance").hidden = false;
         chooseYear(initialYear);
         yearSelect.disabled = false;
         yearSelect.addEventListener("change", () => {

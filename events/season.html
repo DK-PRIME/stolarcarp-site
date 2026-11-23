@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=10">
+  <link rel="stylesheet" href="sector-history.css?v=11">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -849,14 +849,16 @@
         <tbody></tbody>
       </table>
     </div>
-    <details class="sector-method team-performance">
-      <summary>Статистика команд</summary>
-      <p>Складність сектора оцінюємо за щонайменше двома виступами інших команд на ньому у вибраному періоді. Улов нижче середнього по водоймі вказує на складний сектор, вище середнього — на сильний.</p>
-      <p>Відсоток показує, наскільки команда перевершила або не дотягнула до очікуваного улову на цьому секторі. У кожній колонці також є кількість оцінених стартів і середнє місце в зоні.</p>
+    <details class="sector-method team-performance" hidden>
+      <summary>Рейтинг команд · Усі роки</summary>
+      <p>Складність сектора оцінюємо за щонайменше двома виступами інших команд на ньому за весь доступний архів. Улов нижче середнього по водоймі вказує на складний сектор, вище середнього — на сильний.</p>
+      <p>У загальний рейтинг входять команди з двома або більше оціненими стартами. Відсоток — середнє відхилення від очікуваного улову за всі ці старти, від найбільшого до найменшого. Фільтр року над таблицею секторів на цей рейтинг не впливає.</p>
+      <p>Окремі колонки показують відхилення для складних і сильних секторів, кількість стартів і середнє місце в зоні.</p>
       <p data-team-performance-status role="status"></p>
-      <table data-team-performance hidden aria-label="Результати команд на складних і сильних секторах">
+      <table data-team-performance hidden aria-label="Рейтинг команд за весь час">
         <thead><tr>
           <th scope="col">Команда</th>
+          <th scope="col">Рейтинг</th>
           <th scope="col">Складні</th>
           <th scope="col">Сильні</th>
         </tr></thead>
@@ -1022,7 +1024,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=18"
+  src="sector-history.js?v=19"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

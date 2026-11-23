@@ -177,6 +177,12 @@
       font-size:12px;
     }
 
+    .quick-zones { margin:0 0 12px; }
+    .quick-zones button { min-width:44px; min-height:44px; }
+    .quick-zones [aria-pressed="true"] {
+      box-shadow:inset 0 0 0 2px currentColor;
+    }
+
     .zone-a { color:#86efac; }
     .zone-b { color:#93c5fd; }
     .zone-c { color:#fca5a5; }
@@ -505,6 +511,14 @@
 
           </div>
 
+          <div id="quickZones" class="maps-row quick-zones" role="group" aria-label="Швидке призначення секторів" hidden>
+            <button type="button" class="zone-a" data-quick-zone="A" aria-pressed="false">A</button>
+            <button type="button" class="zone-b" data-quick-zone="B" aria-pressed="false">B</button>
+            <button type="button" class="zone-c" data-quick-zone="C" aria-pressed="false">C</button>
+            <button type="button" data-quick-zone="" aria-pressed="true">Вручну</button>
+            <span id="quickZoneHint" class="maps-muted" aria-live="polite">Обери зону для швидкого призначення.</span>
+          </div>
+
           <div id="mapViewport" class="maps-viewport">
             <div id="mapCanvas" class="maps-canvas">
 
@@ -757,7 +771,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
 <script src="assets/js/firebase-init.js?v=20260813"></script>
-<script src="assets/js/admin-sector-map.js?v=20261008-v22"></script>
+<script src="assets/js/admin-sector-map.js?v=20261123-quick"></script>
 
 </body>
 </html>

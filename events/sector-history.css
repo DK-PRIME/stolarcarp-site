@@ -433,3 +433,13 @@
 }
 .team-performance-positive { color: #9ce1b7; }
 .team-performance-negative { color: #f0b5a1; }
+
+
+.team-performance [data-team-performance] th:first-child { width: 31%; }
+.team-performance [data-team-performance] tbody th small {
+  margin: 0 0 .15rem;
+  color: #f5ddb0;
+}
+.team-performance [data-team-performance] td:nth-child(2) {
+  background: rgb(220 169 67 / 9%);
+}

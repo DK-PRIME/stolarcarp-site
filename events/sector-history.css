@@ -408,9 +408,3 @@
 .sector-ranking tr > :nth-child(2) {
   border-right: 1px solid #8a7146;
 }
-
-.sector-history .sector-provisional {
-  margin: .4rem 0 0;
-  font-size: .75rem;
-  color: #b8ccc5;
-}

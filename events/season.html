@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=8">
+  <link rel="stylesheet" href="sector-history.css?v=9">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -849,11 +849,10 @@
         <tbody></tbody>
       </table>
     </div>
-    <p class="sector-provisional" data-sector-provisional hidden>* Попередній рейтинг за 2 змагання. Такі сектори йдуть після секторів із 3 або більше порівняннями.</p>
     <details class="sector-method">
       <summary>Як рахуємо статистику</summary>
       <p>Рейтинг показує відхилення від середнього улову за те саме змагання. Вище середнього на 50% означає улов у півтора раза більший за середній.</p>
-      <p>Відхилення за змагання обмежуємо зверху на +200%, а суму відхилень ділимо на кількість порівнянь плюс два. Основний рейтинг використовує щонайменше три порівняння. Змагання з нульовим середнім уловом враховуємо в статистиці улову й участі.</p>
+      <p>Відхилення за змагання обмежуємо зверху на +200%, а суму відхилень ділимо на кількість порівнянь плюс два. Рейтинг показуємо від двох порівнянь. Змагання з нульовим середнім уловом враховуємо в статистиці улову й участі.</p>
       <p>Золотим позначено лідера рейтингу, найвищий середній улов і найбільшу рибу. Призові рахуємо за місцями 1–3 у зоні, якщо місце в зоні відоме.</p>
     </details>
     <h3>Карта секторів</h3>
@@ -1009,7 +1008,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=15"
+  src="sector-history.js?v=17"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

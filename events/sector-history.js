@@ -101,7 +101,6 @@
     const prizes = places.filter(place => place <= 3).length;
     return {
       count,
-      provisional: comparable.length === 2,
       rating: comparable.length >= 2 ? average(comparable) * comparable.length / (comparable.length + 2) : null,
       weight: average(known(weights)),
       fish: average(known(entries.map(({ row }) => metric(row.totalCount ?? row.fishCount)))),
@@ -355,9 +354,6 @@
       }
 
       const sorted = [...stats].sort((a, b) => {
-        if (sort === "rating" && a.provisional !== b.provisional && a.rating !== null && b.rating !== null) {
-          return Number(a.provisional) - Number(b.provisional);
-        }
         if (a[sort] == null) return b[sort] == null ? a.number - b.number : 1;
         if (b[sort] == null) return -1;
         return (ascending ? a[sort] - b[sort] : b[sort] - a[sort]) || a.number - b.number;
@@ -382,13 +378,13 @@
         if (stat.rank && stat.rank <= 3) rankCell.dataset.podiumRank = stat.rank;
         tr.append(rankCell, sectorCell);
         const values = [
-          formatMetric(stat.rating, percent) + (stat.provisional ? "*" : ""),
+          formatMetric(stat.rating, percent),
           formatMetric(stat.weight), formatMetric(stat.fish),
           stat.knownPlaces ? `${stat.prizes} / ${stat.knownPlaces}` : "—",
           formatMetric(stat.bigFish), stat.count
         ];
         const highlights = [
-          stat.rank === 1 && !stat.provisional ? "Лідер рейтингу" : "",
+          stat.rank === 1 ? "Лідер рейтингу" : "",
           bestWeight > 0 && stat.weight === bestWeight ? "Найвищий середній улов" : "",
           "", "",
           bestFish > 0 && stat.bigFish === bestFish ? "Найбільша риба" : ""
@@ -416,11 +412,10 @@
         ? `Змагань: ${tournaments.size} · Секторів: ${stats.length}`
         : `Немає результатів ${period()}.`;
       const ranked = stats.filter(stat => stat.rating !== null)
-        .sort((a, b) => Number(a.provisional) - Number(b.provisional) || b.rating - a.rating || a.number - b.number);
+        .sort((a, b) => b.rating - a.rating || a.number - b.number);
       ranked.forEach((stat, index) => {
-        stat.rank = stat.rating === ranked[index - 1]?.rating && stat.provisional === ranked[index - 1]?.provisional ? ranked[index - 1].rank : index + 1;
+        stat.rank = stat.rating === ranked[index - 1]?.rating ? ranked[index - 1].rank : index + 1;
       });
-      root.querySelector("[data-sector-provisional]").hidden = !stats.some(stat => stat.provisional);
       renderRanking();
     }
 

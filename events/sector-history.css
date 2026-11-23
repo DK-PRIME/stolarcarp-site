@@ -162,41 +162,72 @@
   margin-top: .75rem;
 }
 
-.sector-sort-mobile {
+.sector-sort-mobile,
+.sector-ranking thead small {
   display: none;
 }
 
 @media (max-width: 820px) {
+  .sector-archive-view .season-archive-main {
+    padding-top: .35rem;
+  }
+
+  .sector-archive-view .back-link {
+    margin-bottom: .4rem;
+  }
+
   .sector-history.archive-card {
-    padding: .65rem;
+    padding: .4rem;
     min-width: 0;
+    border-radius: .6rem;
   }
 
   .sector-history .sector-view-title {
-    font-size: clamp(1.3rem, 6vw, 1.8rem);
-    overflow-wrap: anywhere;
+    margin: 0 0 .25rem;
+    font-size: clamp(1.05rem, 4.6vw, 1.5rem);
+    line-height: 1.12;
   }
 
   .sector-history p {
-    font-size: .86rem;
+    font-size: .82rem;
+  }
+
+  .sector-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .25rem .65rem;
+  }
+
+  .sector-archive-view .sector-year-controls {
+    margin: 0;
   }
 
   .sector-sort-mobile {
     display: flex;
     align-items: center;
-    gap: .5rem;
-    margin: .65rem 0;
-    font-size: .84rem;
+    gap: .2rem;
+    margin: 0;
   }
 
-  .sector-sort-mobile select {
-    max-width: 100%;
-    padding: .4rem;
-    border: 1px solid #84958b;
-    border-radius: .4rem;
+  .sector-toolbar label {
+    font-size: .72rem;
+  }
+
+  .sector-toolbar select {
+    max-width: 9rem;
+    padding: .15rem .25rem;
+    border: 1px solid #657f73;
+    border-radius: .3rem;
     color: #fff;
     background: #172820;
     font: inherit;
+  }
+
+  .sector-history [data-sector-coverage] {
+    margin: .2rem 0 .25rem;
+    font-size: .72rem;
+    line-height: 1.15;
   }
 
   .sector-history .sector-results-scroll,
@@ -207,20 +238,33 @@
   .sector-history .sector-ranking {
     min-width: 0;
     table-layout: fixed;
-    font-size: clamp(.58rem, 2.65vw, .78rem);
+    font-size: clamp(.58rem, 2.65vw, .75rem);
   }
 
-  .sector-ranking th:first-child,
-  .sector-ranking th:last-child {
-    width: 9%;
-  }
+  .sector-ranking th:first-child { width: 7%; }
+  .sector-ranking th:nth-child(4) { width: 16%; }
+  .sector-ranking th:last-child { width: 9%; }
 
   .sector-history .sector-ranking th,
   .sector-history .sector-ranking td {
-    padding: .42rem .12rem;
+    padding: .1rem .04rem;
     text-align: center;
-    overflow-wrap: anywhere;
-    line-height: 1.2;
+    white-space: nowrap;
+    line-height: 1.16;
+    border-bottom-color: #34443e;
+  }
+
+  .sector-ranking tbody tr:nth-child(even) {
+    background: rgb(255 255 255 / 4%);
+  }
+
+  .sector-ranking thead span {
+    display: none;
+  }
+
+  .sector-ranking thead small {
+    display: inline;
+    font-size: inherit;
   }
 
   .sector-ranking thead button {
@@ -228,7 +272,10 @@
   }
 
   .sector-ranking tbody button {
-    min-height: 2rem;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    line-height: inherit;
   }
 
   .sector-map {

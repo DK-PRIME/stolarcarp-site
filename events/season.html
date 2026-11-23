@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=4">
+  <link rel="stylesheet" href="sector-history.css?v=5">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -824,25 +824,27 @@
     <summary id="sector-history" class="archive-card-title">Статистика секторів · Лелехівка</summary>
     <h1 class="archive-title sector-view-title">Статистика секторів Лелехівки</h1>
     <a class="sector-full-link" href="season.html?view=sectors">Відкрити статистику за всі роки →</a>
+    <div class="sector-toolbar">
     <div class="sector-year-controls">
       <label>Рік <select id="sectorHistoryYear" disabled>
         <option value="">Усі роки</option>
         <option value="2026">2026</option>
       </select></label>
     </div>
+    <label class="sector-sort-mobile">Сортування <select data-sector-sort></select></label>
+    </div>
     <p data-sector-coverage role="status"></p>
-    <label class="sector-sort-mobile">Сортувати <select data-sector-sort></select></label>
     <div class="sector-results-scroll">
       <table class="sector-ranking" data-sector-ranking aria-label="Порівняння секторів Лелехівки">
         <thead><tr>
-          <th scope="col">№ рейтингу</th>
-          <th scope="col"><button type="button" data-sort="number">Сектор</button></th>
-          <th scope="col" aria-sort="descending"><button type="button" data-sort="rating">Рейтинг</button></th>
-          <th scope="col"><button type="button" data-sort="weight">Середня вага, кг</button></th>
-          <th scope="col"><button type="button" data-sort="fish">Риб / турнір</button></th>
-          <th scope="col"><button type="button" data-sort="podium">Призові у зоні</button></th>
-          <th scope="col"><button type="button" data-sort="bigFish">Big Fish, кг</button></th>
-          <th scope="col"><button type="button" data-sort="count">Турнірів</button></th>
+          <th scope="col" aria-label="Номер у рейтингу"><span>№ рейтингу</span><small aria-hidden="true">№</small></th>
+          <th scope="col"><button type="button" data-sort="number" aria-label="Сектор"><span>Сектор</span><small aria-hidden="true">Сект.</small></button></th>
+          <th scope="col" aria-sort="descending"><button type="button" data-sort="rating" aria-label="Рейтинг"><span>Рейтинг</span><small aria-hidden="true">Рейт.</small></button></th>
+          <th scope="col"><button type="button" data-sort="weight" aria-label="Середня вага, кг"><span>Середня вага, кг</span><small aria-hidden="true">Сер. кг</small></button></th>
+          <th scope="col"><button type="button" data-sort="fish" aria-label="Риб / турнір"><span>Риб / турнір</span><small aria-hidden="true">Риб/тур.</small></button></th>
+          <th scope="col"><button type="button" data-sort="podium" aria-label="Призові у зоні"><span>Призові у зоні</span><small aria-hidden="true">Топ-3</small></button></th>
+          <th scope="col"><button type="button" data-sort="bigFish" aria-label="Big Fish, кг"><span>Big Fish, кг</span><small aria-hidden="true">Big, кг</small></button></th>
+          <th scope="col"><button type="button" data-sort="count" aria-label="Турнірів"><span>Турнірів</span><small aria-hidden="true">Турн.</small></button></th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -1017,7 +1019,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=8"
+  src="sector-history.js?v=9"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

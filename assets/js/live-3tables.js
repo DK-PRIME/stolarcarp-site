@@ -127,9 +127,7 @@
       kg,
 
       fishType:
-        isAmur
-          ? "amur"
-          : "carp",
+        fish?.fishType === "sturgeon" ? "sturgeon" : isAmur ? "amur" : "carp",
 
       isAmur
     };

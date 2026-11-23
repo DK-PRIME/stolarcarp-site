@@ -113,6 +113,7 @@
     ).toLowerCase() === "edit";
 
   let currentSavedCompId = "";
+  let saveInProgress = false;
 
   // =========================================================
   // DOM
@@ -1171,76 +1172,72 @@
     };
   }
 
-  function buildEvents(
-    form,
-    reg,
-    payment
-  ) {
-    if (
-      form.type !== "season"
-    ) {
-      return [];
+  function isFinalEvent(event) {
+    const label = [event.key, event.stageId, event.id, event.title, event.name, event.label]
+      .join(" ").toLowerCase();
+    return event.isFinal === true || label.includes("final") || label.includes("фінал");
+  }
+
+  function buildEvents(form, reg, payment, existingEvents) {
+    if (form.type !== "season") return existingEvents;
+
+    const regularCount = existingEvents.filter(event => !isFinalEvent(event)).length;
+    const hasFinal = existingEvents.some(isFinalEvent);
+    const count = Math.max(1, form.stagesCount);
+
+    if (count < regularCount || (hasFinal && !form.hasFinal)) {
+      throw new Error("Збережені етапи та фінал не можна видалити цією формою.");
     }
 
-    const result = [];
+    if (count === regularCount && form.hasFinal === hasFinal) return existingEvents;
 
-    const count =
-      Math.max(
-        1,
-        Number(
-          form.stagesCount || 1
-        )
-      );
+    const newStages = [];
+    const usedKeys = existingEvents.flatMap(event => [event.key, event.stageId, event.id]);
+    let stageNumber = usedKeys.reduce((max, key) => {
+      const match = /^stage-(\d+)$/.exec(key);
+      return match ? Math.max(max, Number(match[1])) : max;
+    }, 0);
+    let order = existingEvents.reduce((max, event) => {
+      if (isFinalEvent(event)) return max;
+      return Math.max(max, Number(event.order) || 0);
+    }, regularCount);
 
-    for (
-      let i = 1;
-      i <= count;
-      i++
-    ) {
-      result.push(
-        makeEvent({
-          key:
-            `stage-${i}`,
-
-          title:
-            `Етап ${i}`,
-
-          order:
-            i,
-
-          entryType:
-            form.entryType,
-
-          form,
-          reg,
-          payment
-        })
-      );
+    for (let total = regularCount; total < count; total++) {
+      const key = `stage-${++stageNumber}`;
+      newStages.push(makeEvent({
+        key,
+        title: `Етап ${stageNumber}`,
+        order: ++order,
+        entryType: form.entryType,
+        form,
+        reg,
+        payment
+      }));
     }
 
-    if (form.hasFinal) {
-      result.push(
-        makeEvent({
-          key:
-            "final",
+    const result = [...existingEvents];
+    const finalIndex = result.findIndex(isFinalEvent);
+    if (finalIndex !== -1) {
+      const final = result[finalIndex];
+      result.splice(finalIndex, 1, ...newStages, {
+        ...final,
+        order: Math.max(Number(final.order) || 0, order + 1)
+      });
+    } else {
+      result.push(...newStages);
+    }
 
-          title:
-            "Фінал",
-
-          order:
-            count + 1,
-
-          entryType:
-            "team",
-
-          form,
-          reg,
-          payment,
-
-          isFinal:
-            true
-        })
-      );
+    if (form.hasFinal && !hasFinal) {
+      result.push(makeEvent({
+        key: "final",
+        title: "Фінал",
+        order: order + 1,
+        entryType: "team",
+        form,
+        reg,
+        payment,
+        isFinal: true
+      }));
     }
 
     return result;
@@ -1307,9 +1304,6 @@
       db
         .collection("competitions")
         .doc(compId);
-
-    const oldSnap =
-      await ref.get();
 
     const lake =
       await getLake(
@@ -1484,46 +1478,38 @@
       isOpen:
         status === "open",
 
-      events:
-        buildEvents(
-          {
-            ...form,
-            entryType
-          },
-          reg,
-          payment
-        ),
-
       updatedAt:
         fb.firestore
           .FieldValue
           .serverTimestamp()
     };
 
-    if (!oldSnap.exists) {
-      data.createdAt =
-        fb.firestore
-          .FieldValue
-          .serverTimestamp();
-    }
+    await db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(ref);
+      const previous = snapshot.data() || {};
 
-    /*
-     * Для EDIT merge лишаємо,
-     * щоб не стерти специфічні
-     * дані формату.
-     *
-     * Але entryType / engine
-     * все одно перепишуться правильно.
-     */
-    await ref.set(
-      data,
-      {
-        merge: true
+      if (editingId && !snapshot.exists) {
+        throw new Error("Змагання більше не існує.");
       }
-    );
+      if (snapshot.exists && (previous.type || "season") !== form.type) {
+        throw new Error("Тип збереженого змагання змінити не можна.");
+      }
 
-    currentSavedCompId =
-      compId;
+      const existingEvents = Array.isArray(previous.events) ? previous.events : [];
+      const events = buildEvents({ ...form, entryType }, reg, payment, existingEvents);
+      const update = { ...data };
+
+      if (!snapshot.exists) {
+        update.createdAt = fb.firestore.FieldValue.serverTimestamp();
+      }
+      if (!snapshot.exists || events.length !== existingEvents.length) {
+        update.events = events;
+      }
+
+      transaction.set(ref, update, { merge: true });
+    });
+
+    if (!isEditMode) currentSavedCompId = compId;
 
     clearCompetitionCaches();
 
@@ -1538,6 +1524,7 @@
     compId
   ) {
     if (!compId) return;
+    currentSavedCompId = "";
 
     const snap =
       await db
@@ -1551,8 +1538,17 @@
       );
     }
 
-    const data =
-      snap.data() || {};
+    if (selCompetition?.value !== compId) return;
+
+    const data = snap.data() || {};
+    const events = Array.isArray(data.events) ? data.events : [];
+    const regularCount = events.filter(event => !isFinalEvent(event)).length;
+
+    if (regularCount && !Array.from(inpStagesCount.options).some(
+      option => Number(option.value) === regularCount
+    )) {
+      inpStagesCount.add(new Option(String(regularCount), String(regularCount)));
+    }
 
     const start =
       timestampToDate(
@@ -1603,11 +1599,10 @@
         dateTimeLocal(finish),
 
       stagesCount:
-        data.stagesCount ||
-        3,
+        regularCount || data.stagesCount || 3,
 
       hasFinal:
-        data.hasFinal === true,
+        events.length ? events.some(isFinalEvent) : data.hasFinal === true,
 
       regMode:
         reg.mode ||
@@ -1653,8 +1648,8 @@
       data.engine || {}
     );
 
-    currentSavedCompId =
-      compId;
+    if (selCompetition?.value !== compId) return;
+    currentSavedCompId = compId;
 
     setSeasonVisibility();
     updateDurationUI();
@@ -2021,6 +2016,8 @@
       isEditMode
     );
 
+    if (inpType) inpType.disabled = isEditMode;
+
     if (isEditMode) {
       show(editPicker);
       show(deleteWrap);
@@ -2193,6 +2190,7 @@
       });
 
     if (btnResetDraft) {
+      if (isEditMode) hide(btnResetDraft);
       btnResetDraft.onclick =
         resetForm;
     }
@@ -2218,6 +2216,10 @@
     if (btnSave) {
       btnSave.onclick =
         async () => {
+          if (saveInProgress) return;
+          saveInProgress = true;
+          btnSave.disabled = true;
+
           try {
             setStatus(
               "Збереження…"
@@ -2234,6 +2236,10 @@
                       ?.value || ""
                   )
                 : "";
+
+            if (isEditMode && (!editingId || editingId !== currentSavedCompId)) {
+              throw new Error("Вибери змагання й дочекайся завантаження форми.");
+            }
 
             const id =
               await saveCompetition(
@@ -2266,6 +2272,9 @@
             setDebug(
               error.message
             );
+          } finally {
+            saveInProgress = false;
+            btnSave.disabled = false;
           }
         };
     }
@@ -2273,6 +2282,10 @@
     if (btnMakeActive) {
       btnMakeActive.onclick =
         async () => {
+          if (saveInProgress) return;
+          saveInProgress = true;
+          btnMakeActive.disabled = true;
+
           try {
             let id =
               isEditMode
@@ -2281,6 +2294,10 @@
                       ?.value || ""
                   )
                 : currentSavedCompId;
+
+            if (isEditMode && (!id || id !== currentSavedCompId)) {
+              throw new Error("Вибери змагання й дочекайся завантаження форми.");
+            }
 
             if (!id) {
               id =
@@ -2304,6 +2321,9 @@
                 error.message
               )}</span>`
             );
+          } finally {
+            saveInProgress = false;
+            btnMakeActive.disabled = false;
           }
         };
     }

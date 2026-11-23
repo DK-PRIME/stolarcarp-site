@@ -1630,9 +1630,6 @@
         ...Object.fromEntries(weighRounds.map(round => [
           `w${round}`, wCell(Boolean(bucket.weights[round]), bucket.weights[round] || [])
         ])),
-        sturgeonRounds: weighRounds.filter(round =>
-          bucket.weights[round]?.some(fish => fish.fishType === "sturgeon")
-        ),
 
         total: totalCount,
 
@@ -1764,7 +1761,6 @@
       w4: item.w4 ?? item.W4 ?? null,
       w5: item.w5 ?? item.W5 ?? null,
       w6: item.w6 ?? item.W6 ?? null,
-      sturgeonRounds: item.sturgeonRounds || [],
 
       total: item.total ?? item.sum ?? null,
 
@@ -1921,14 +1917,7 @@
             ${esc(fmt(row.team))}
           </td>
 
-          ${weighRounds.map(round => {
-            const hasSturgeon = row.sturgeonRounds.includes(round);
-            return `<td class="zone-round">
-              <span${hasSturgeon ? ' class="live-fish-sturgeon" title="У зважуванні є осетер"' : ""}>
-                ${esc(fmtW(row[`w${round}`]).replace(" / ", "/"))}
-              </span>
-            </td>`;
-          }).join("")}
+          ${weighRounds.map(round => `<td class="zone-round">${esc(fmtW(row[`w${round}`]).replace(" / ", "/"))}</td>`).join("")}
 
           <td>${esc(fmtW(row.total))}</td>
           <td>${esc(fmt(row.big))}</td>

@@ -209,6 +209,8 @@
     const places = [];
     const counts = { carp: 0, amur: 0, sturgeon: 0 };
     let unknown = 0;
+    let weighedFish = 0;
+    let fishWeight = 0;
     for (const { row, fish, zonePlace } of entries) {
       const weight = metric(row.totalWeight ?? row.totalWeightKg);
       if (weight !== null) weights.push(weight);
@@ -221,11 +223,17 @@
         counts[type] += count;
         identified += count;
       }
-      const total = metric(row.totalCount ?? row.fishCount) ?? fish.length;
+      const recordedTotal = metric(row.totalCount ?? row.fishCount);
+      if (Number.isInteger(recordedTotal) && recordedTotal > 0 && weight > 0) {
+        weighedFish += recordedTotal;
+        fishWeight += weight;
+      }
+      const total = recordedTotal ?? fish.length;
       unknown += Math.max(0, total - identified);
     }
     const place = average(places);
-    return { weights, counts, unknown, place: place === null ? null : Math.trunc(place * 100) / 100 };
+    return { weights, counts, unknown, averageFishWeight: weighedFish ? fishWeight / weighedFish : null,
+      place: place === null ? null : Math.trunc(place * 100) / 100 };
   }
 
   function create({ root, db, year }) {
@@ -385,7 +393,7 @@
 
     function renderCatchDetails(entries) {
       const records = entries.map(entry => ({ ...entry, fish: individualFish(entry.row) }));
-      const { weights, counts, unknown, place } = sectorSummary(records);
+      const { weights, counts, unknown, averageFishWeight, place } = sectorSummary(records);
       const summary = root.querySelector("[data-catch-summary]");
       const fishCounts = root.querySelector("[data-species-counts]");
       const metricCell = (label, value) => {
@@ -396,6 +404,7 @@
       summary.replaceChildren(
         metricCell("Середній улов, кг", formatMetric(average(weights))),
         metricCell("Найбільший улов, кг", formatMetric(weights.length ? Math.max(...weights) : null)),
+        metricCell("Середня вага риби, кг", formatMetric(averageFishWeight)),
         metricCell("Середнє місце в зоні", formatMetric(place))
       );
       fishCounts.replaceChildren(

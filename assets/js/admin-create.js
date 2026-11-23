@@ -805,6 +805,9 @@
           lakeId:
             form.lakeId,
 
+          lakeName:
+            selectedLake(form.lakeId).name,
+
           startAt:
             inpStartAt?.value ||
             "",
@@ -888,8 +891,11 @@
     }
 
     if (inpLake) {
-      inpLake.value =
-        data.lakeId || "";
+      const lakeId = data.lakeId || "";
+      if (lakeId && !Array.from(inpLake.options).some(option => option.value === lakeId)) {
+        inpLake.add(new Option(data.lakeName || lakeId, lakeId));
+      }
+      inpLake.value = lakeId;
     }
 
     if (inpStartAt) {
@@ -1036,75 +1042,31 @@
   async function loadLakes() {
     if (!inpLake) return;
 
-    const snap =
-      await db
-        .collection("lakes")
-        .get();
+    try {
+      const snapshot = await db.collection("lakes").get();
+      const selected = inpLake.value;
+      const lakes = new Map(Array.from(inpLake.options)
+        .filter(option => option.value)
+        .map(option => [option.value, option.text]));
 
-    const lakes =
-      snap.docs
-        .map(doc => ({
-          id: doc.id,
-          name:
-            doc.data()?.name ||
-            doc.id
-        }))
-        .sort((a, b) =>
-          a.name.localeCompare(
-            b.name,
-            "uk"
-          )
-        );
+      for (const doc of snapshot.docs) {
+        lakes.set(doc.id, normalize(doc.data()?.name) || lakes.get(doc.id) || doc.id);
+      }
 
-    inpLake.innerHTML =
-      '<option value="">— вибери водойму —</option>' +
-      lakes
-        .map(
-          lake =>
-            `<option value="${esc(
-              lake.id
-            )}">${esc(
-              lake.name
-            )}</option>`
-        )
-        .join("");
+      const sorted = Array.from(lakes).sort((a, b) => a[1].localeCompare(b[1], "uk"));
+      inpLake.replaceChildren(
+        new Option("— вибери водойму —", ""),
+        ...sorted.map(([id, name]) => new Option(name, id))
+      );
+      inpLake.value = selected;
+    } catch (error) {
+      console.warn("Не вдалося оновити каталог водойм із Firestore.", error);
+    }
   }
 
-  async function getLake(lakeId) {
-    if (!lakeId) {
-      return {
-        id: "",
-        name: ""
-      };
-    }
-
-    try {
-      const snap =
-        await db
-          .collection("lakes")
-          .doc(lakeId)
-          .get();
-
-      return {
-        id:
-          lakeId,
-
-        name:
-          snap.exists
-            ? (
-                snap.data()?.name ||
-                lakeId
-              )
-            : lakeId
-      };
-    } catch {
-      return {
-        id:
-          lakeId,
-        name:
-          lakeId
-      };
-    }
+  function selectedLake(lakeId) {
+    const option = Array.from(inpLake?.options || []).find(item => item.value === lakeId);
+    return { id: lakeId, name: lakeId ? (option?.text || lakeId) : "" };
   }
 
   // =========================================================
@@ -1305,10 +1267,7 @@
         .collection("competitions")
         .doc(compId);
 
-    const lake =
-      await getLake(
-        form.lakeId
-      );
+    const lake = selectedLake(form.lakeId);
 
     const reg =
       registrationDates(form);
@@ -1591,6 +1550,9 @@
         data.lakeId ||
         data.lake?.id ||
         "",
+
+      lakeName:
+        data.lake?.name || data.lakeName || "",
 
       startAt:
         dateTimeLocal(start),
@@ -2408,7 +2370,7 @@
 
           setModeUI();
 
-          await loadLakes();
+          void loadLakes();
 
           if (isEditMode) {
             await loadCompetitionsList();

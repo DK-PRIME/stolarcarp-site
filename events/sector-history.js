@@ -2,6 +2,13 @@
   "use strict";
 
   const lake = "lelehivka";
+  // Розстановка Фіналу 2026 підтверджена картою і протоколом.
+  // Команда C5 не з’явилася, фізичний сектор №25 пустував.
+  const final2026Sectors = new Map([
+    ["A1", 3], ["A2", 4], ["A3", 5], ["A4", 6], ["A5", 7], ["A6", 8],
+    ["B1", 10], ["B2", 11], ["B3", 12], ["B4", 13], ["B5", 14], ["B6", 19],
+    ["C1", 21], ["C2", 22], ["C3", 23], ["C4", 24], ["C5", 25], ["C6", 26]
+  ]);
   const POINTS = [
     [1, 84.54, 13.14], [2, 80.24, 13.58],
     [3, 74.78, 14.03], [4, 70.30, 14.32],
@@ -293,12 +300,20 @@
         }
       }
 
+      const isFinal2026 = year === "2026" && item.id === "season-2026__final";
+      if (isFinal2026) {
+        for (const [key, number] of final2026Sectors) {
+          if (!mapping.has(key)) mapping.set(key, number);
+        }
+      }
+      const wasAbsent = row => isFinal2026 && row && drawKey(row) === "C5";
       const fieldAverage = tournamentAverage(rows.filter(row =>
+        !wasAbsent(row) &&
         !empty.has(sectorNumber(row?.lakeSectorNumber) || mapping.get(row && drawKey(row)))
       ));
       const byPhysicalSector = new Map();
       for (const row of rows) {
-        if (!row || (row.lakeId && row.lakeId !== lake)) continue;
+        if (!row || wasAbsent(row) || (row.lakeId && row.lakeId !== lake)) continue;
         const key = drawKey(row);
         const number = ((row.lakeId || stageLake) === lake && sectorNumber(row.lakeSectorNumber))
           || mapping.get(key);

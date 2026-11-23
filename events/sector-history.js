@@ -204,14 +204,24 @@
     return fish;
   }
 
+  // Оцінки за фізичними секторами першого етапу: [амур, осетер].
+  const firstStageSpecies = {
+    2: [4, 3], 3: [2, 2], 4: [2, 0], 5: [4, 0], 6: [2, 1],
+    7: [5, 3], 8: [5, 2], 10: [2, 0], 11: [1, 1], 12: [2, 0],
+    13: [3, 0], 14: [10, 0], 18: [2, 0], 19: [7, 1], 20: [2, 0],
+    21: [4, 0], 22: [2, 0], 23: [1, 0], 24: [3, 1], 25: [3, 4],
+    26: [2, 3]
+  };
+
   function sectorSummary(entries) {
     const weights = [];
     const places = [];
     const counts = { carp: 0, amur: 0, sturgeon: 0 };
     let unknown = 0;
+    let estimatedSpecies = false;
     let weighedFish = 0;
     let fishWeight = 0;
-    for (const { row, fish, zonePlace } of entries) {
+    for (const { row, fish, zonePlace, tournament, number } of entries) {
       const weight = metric(row.totalWeight ?? row.totalWeightKg);
       if (weight !== null) weights.push(weight);
       if (zonePlace > 0) places.push(zonePlace);
@@ -229,10 +239,19 @@
         fishWeight += weight;
       }
       const total = recordedTotal ?? fish.length;
-      unknown += Math.max(0, total - identified);
+      const estimate = tournament === "season:2026:season-2026__stage-1" && firstStageSpecies[number];
+      if (estimate && identified === 0 && Number.isInteger(total) && total >= estimate[0] + estimate[1]) {
+        const [amur, sturgeon] = estimate;
+        counts.amur += amur;
+        counts.sturgeon += sturgeon;
+        counts.carp += total - amur - sturgeon;
+        estimatedSpecies = true;
+      } else {
+        unknown += Math.max(0, total - identified);
+      }
     }
     const place = average(places);
-    return { weights, counts, unknown, averageFishWeight: weighedFish ? fishWeight / weighedFish : null,
+    return { weights, counts, unknown, estimatedSpecies, averageFishWeight: weighedFish ? fishWeight / weighedFish : null,
       place: place === null ? null : Math.trunc(place * 100) / 100 };
   }
 
@@ -393,7 +412,7 @@
 
     function renderCatchDetails(entries) {
       const records = entries.map(entry => ({ ...entry, fish: individualFish(entry.row) }));
-      const { weights, counts, unknown, averageFishWeight, place } = sectorSummary(records);
+      const { weights, counts, unknown, estimatedSpecies, averageFishWeight, place } = sectorSummary(records);
       const summary = root.querySelector("[data-catch-summary]");
       const fishCounts = root.querySelector("[data-species-counts]");
       const metricCell = (label, value) => {
@@ -407,6 +426,7 @@
         metricCell("Середня вага риби, кг", formatMetric(averageFishWeight)),
         metricCell("Середнє місце в зоні", formatMetric(place))
       );
+      root.querySelector("[data-species-estimate]").hidden = !estimatedSpecies;
       fishCounts.replaceChildren(
         ...Object.entries(fishTypes)
           .filter(([type]) => type !== "sturgeon" || counts[type] > 0)

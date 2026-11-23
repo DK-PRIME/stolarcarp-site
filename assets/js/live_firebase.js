@@ -1923,14 +1923,9 @@
 
           ${weighRounds.map(round => {
             const hasSturgeon = row.sturgeonRounds.includes(round);
-            const score = fmtW(row[`w${round}`]);
-            const parts = score.split(" / ");
-            const displayScore = parts.length === 2
-              ? `<span class="zone-round-count">${esc(parts[0])}</span><span class="zone-round-separator"> / </span><span class="zone-round-weight">${esc(parts[1])}</span>`
-              : esc(score);
-            return `<td class="zone-day-${round <= 3 ? 1 : 2}">
+            return `<td class="zone-round">
               <span${hasSturgeon ? ' class="live-fish-sturgeon" title="У зважуванні є осетер"' : ""}>
-                ${displayScore}
+                ${esc(fmtW(row[`w${round}`]).replace(" / ", "/"))}
               </span>
             </td>`;
           }).join("")}
@@ -1965,17 +1960,13 @@
             <table class="table table-sm">
               <thead>
                 <tr>
-                  <th rowspan="2">Зона</th>
-                  <th rowspan="2">${esc(participantColumnTitle())}</th>
-                  <th class="zone-day-1" colspan="3" scope="colgroup">1-ша доба</th>
-                  <th class="zone-day-2" colspan="3" scope="colgroup">2-га доба</th>
-                  <th rowspan="2">Разом</th>
-                  <th rowspan="2">BIG</th>
-                  <th rowspan="2">Вага</th>
-                  <th rowspan="2">Місце</th>
-                </tr>
-                <tr>
-                  ${weighRounds.map(round => `<th scope="col" class="zone-day-${round <= 3 ? 1 : 2}">W${round}</th>`).join("")}
+                  <th scope="col">Зона</th>
+                  <th scope="col">${esc(participantColumnTitle())}</th>
+                  ${weighRounds.map(round => `<th scope="col" class="zone-round">W${round}</th>`).join("")}
+                  <th scope="col">Риб</th>
+                  <th scope="col">BIG</th>
+                  <th scope="col">Вага</th>
+                  <th scope="col">Місце</th>
                 </tr>
               </thead>
 

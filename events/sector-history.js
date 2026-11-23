@@ -132,16 +132,99 @@
     return node;
   }
 
+  const fishTypes = { carp: "Короп", amur: "Амур", sturgeon: "Осетер" };
+  const calendar = new Intl.DateTimeFormat("uk-UA", {
+    timeZone: "Europe/Kyiv", year: "numeric", month: "2-digit", day: "2-digit"
+  });
+  const clock = new Intl.DateTimeFormat("uk-UA", {
+    timeZone: "Europe/Kyiv", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  });
+  const monthFormat = new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv", month: "numeric" });
+
+  function asDate(value) {
+    if (!value) return null;
+    const date = value.toDate ? value.toDate() : new Date(value);
+    return Number.isFinite(date.getTime()) ? date : null;
+  }
+
+  function seasonOf(date) {
+    const seasons = ["Зима", "Весна", "Літо", "Осінь"];
+    return date ? seasons[Math.floor(Number(monthFormat.format(date)) % 12 / 3)] : "Дата невідома";
+  }
+
+  function catchDetails(entry) {
+    const { row } = entry;
+    const fish = [];
+    for (let index = 1; index <= 6; index++) {
+      const slot = row["w" + index];
+      const source = [slot?.fish, slot?.weights, slot?.fishKg].find(Array.isArray) || [];
+      for (const item of source) {
+        const kg = metric(typeof item === "object" ? item?.kg : item);
+        if (!kg) continue;
+        const type = item?.fishType || item?.type || (item?.isAmur === true ? "amur" : "");
+        fish.push({ kg, type: Object.hasOwn(fishTypes, type) ? type : "",
+          caughtAt: asDate(item?.caughtAt), slot: "W" + index });
+      }
+    }
+    const count = metric(row.totalCount ?? row.fishCount) ?? (fish.length || null);
+    const weight = metric(row.totalWeight ?? row.totalWeightKg) ??
+      (fish.length ? fish.reduce((sum, item) => sum + item.kg, 0) : null);
+    return { fish, count, weight,
+      minimum: fish.length && fish.length === count ? Math.min(...fish.map(item => item.kg))
+        : count === 1 && weight > 0 ? weight : null,
+      maximum: metric(row.bigFish ?? row.bigFishKg) ||
+        (fish.length && fish.length === count ? Math.max(...fish.map(item => item.kg)) : null)
+    };
+  }
+
+  function groupedCatch(entries, group) {
+    const totals = new Map();
+    for (const entry of entries) {
+      const label = group(entry);
+      if (!totals.has(label)) totals.set(label, []);
+      totals.get(label).push(entry);
+    }
+    return [...totals].map(([label, records]) => {
+      const known = records.filter(record => record.count !== null && record.weight !== null);
+      const count = records.reduce((sum, record) => sum + (record.count ?? 0), 0);
+      const weighedCount = known.reduce((sum, record) => sum + record.count, 0);
+      const weight = known.reduce((sum, record) => sum + record.weight, 0);
+      const maximums = records.map(record => record.maximum).filter(value => value > 0);
+      const minimums = records.map(record => record.minimum).filter(value => value > 0);
+      const caught = records.filter(record => record.count !== 0);
+      return [label, records.some(record => record.count !== null) ? count : "—",
+        weighedCount ? formatMetric(weight / weighedCount) : "—",
+        formatMetric(caught.length && minimums.length === caught.length ? Math.min(...minimums) : null),
+        formatMetric(maximums.length ? Math.max(...maximums) : null)];
+    });
+  }
+
   function create({ root, db, year }) {
     const buttons = new Map();
     const stageSectors = new Map();
     const history = [];
     let seasonStages;
     const stageLoads = new Map();
+    const competitionLoads = new Map();
+
+    async function tournamentDate(data) {
+      const start = record => asDate(record?.startAt ?? record?.startDate ?? record?.schedule?.startAt);
+      const direct = start(data);
+      if (direct || !data.compId || !data.stageId) return direct;
+      if (!competitionLoads.has(data.compId)) {
+        competitionLoads.set(data.compId, db.collection("competitions").doc(data.compId)
+          .get().then(snapshot => snapshot.data()).catch(() => null));
+      }
+      const competition = await competitionLoads.get(data.compId);
+      const events = Array.isArray(competition?.events) ? competition.events : [];
+      const event = events.find((item, index) =>
+        (item.key || item.stageId || item.id || `stage-${index + 1}`) === data.stageId);
+      return start(event) || (events.length <= 1 ? start(competition) : null);
+    }
     let selected = sectorNumber(new URLSearchParams(location.search).get("sector")) || 1;
     let pending = false;
     let started = false;
-    let limited = false;
+    let limited = Boolean(db.limited);
     let selectedYear = year;
     let discovering = false;
     const yearSelect = root.querySelector("#sectorHistoryYear");
@@ -236,6 +319,53 @@
       map.append(button);
     }
 
+    function renderCatchDetails(entries) {
+      const records = entries.map(entry => ({ ...entry, ...catchDetails(entry) }));
+      const tables = {
+        seasons: groupedCatch(records, entry => seasonOf(entry.date)),
+        species: [],
+        fish: []
+      };
+      const speciesRecords = [];
+      for (const entry of records) {
+        for (const fish of entry.fish) {
+          tables.fish.push([entry.title, fish.type ? fishTypes[fish.type] : "Вид невідомий",
+            formatMetric(fish.kg), fish.slot,
+            fish.caughtAt ? `${calendar.format(fish.caughtAt)} ${clock.format(fish.caughtAt)}` : "—"]);
+        }
+        for (const [type, label] of Object.entries(fishTypes)) {
+          const fish = entry.fish.filter(item => item.type === type);
+          const count = metric(entry.row[type + "Count"]);
+          if (fish.length && (fish.length === entry.count || fish.length === count)) {
+            const weights = fish.map(item => item.kg);
+            speciesRecords.push({ label, count: fish.length,
+              weight: weights.reduce((sum, kg) => sum + kg, 0),
+              minimum: Math.min(...weights), maximum: Math.max(...weights) });
+          } else if (count > 0) {
+            const capital = type[0].toUpperCase() + type.slice(1);
+            const weight = metric(entry.row[type + "Weight"]);
+            speciesRecords.push({ label, count, weight: weight > 0 ? weight : null,
+              minimum: count === 1 && weight > 0 ? weight : null,
+              maximum: metric(entry.row["big" + capital]) || null });
+          }
+        }
+      }
+      tables.species = groupedCatch(speciesRecords, entry => entry.label);
+      for (const [key, rows] of Object.entries(tables)) {
+        const target = root.querySelector(`[data-catch-table="${key}"]`);
+        target.hidden = !rows.length;
+        target.querySelector("tbody").replaceChildren(...rows.map(values => {
+          const tr = element("tr");
+          tr.append(...values.map(value => element("td", value)));
+          return tr;
+        }));
+      }
+      root.querySelector("[data-catch-details]").hidden = !records.length;
+      root.querySelector("[data-catch-time]").textContent = records.some(record => record.fish.some(fish => fish.caughtAt))
+        ? "Час клювання показано за Києвом для риб із записаним часом."
+        : "Точний час клювання у вибраних протоколах не записано. W1–W6 — номери зважувань.";
+    }
+
     function render() {
       const scoped = scopedHistory();
       const entries = scoped.filter(row => row.number === selected)
@@ -252,6 +382,7 @@
         for (const value of [
           entry.year,
           entry.title,
+          entry.date ? calendar.format(entry.date) : "—",
           entry.key || "—",
           row.teamName || row.team || row.participantName || "—",
           formatMetric(metric(row.totalWeight ?? row.totalWeightKg)),
@@ -263,6 +394,7 @@
       });
       results.replaceChildren(...fragments);
       table.hidden = !entries.length;
+      renderCatchDetails(entries);
       const count = entries.length ? `Протоколів ${period()}: ${entries.length}.` :
         `Для цього сектора ${period()} результатів немає.`;
       status.textContent = pending ? "Завантажую результати секторів…" :
@@ -331,12 +463,13 @@
         });
       }
 
+      const date = byPhysicalSector.size ? await tournamentDate(item.data) : null;
       const numbers = new Map();
       const entries = [];
       for (const entry of byPhysicalSector.values()) {
         if (!entry) continue;
         numbers.set(entry.row, entry.number);
-        entries.push(entry);
+        entries.push({ ...entry, date });
       }
       stageSectors.set(item.id, numbers);
       return entries;
@@ -355,6 +488,7 @@
             number, row, key: drawKey(row),
             tournament: `history:${year}:${doc.id}`, year, average: fieldAverage,
             title: data.title || "Історичний турнір",
+            date: asDate(data.startDate),
             place: row.place
           }] : [];
         });
@@ -412,17 +546,13 @@
         if (initialYear) years.add(initialYear);
         const validYear = value => /^(19|20)\d{2}$/.test(value);
         const sources = await Promise.allSettled([
-          ...["seasonArchives", "seasonRating", "seasonResults", "historicalSectorResults"]
-            .map(name => db.collection(name).get()),
-          db.collectionGroup("tournaments").where("lakeId", "==", lake)
-            .where("status", "==", "ready").get()
+          ...["seasonArchives", "seasonRating", "historicalSectorResults"]
+            .map(name => db.collection(name).get())
         ]);
-        for (const [index, source] of sources.entries()) {
+        for (const source of sources) {
           if (source.status !== "fulfilled") continue;
           source.value.forEach(doc => {
-            const candidate = index === 4
-              ? (doc.ref.parent.parent?.parent.id === "historicalSectorResults" ? doc.ref.parent.parent.id : "")
-              : doc.id;
+            const candidate = doc.id;
             if (validYear(candidate)) years.add(candidate);
           });
         }
@@ -432,7 +562,8 @@
             Promise.all(snapshot.docs.map(doc => {
               const data = doc.data();
               return loadStage({
-                id: doc.id, data, title: data.stageName || data.title || doc.id,
+                id: doc.id, data, title: data.isFinal || /__final$/i.test(doc.id)
+                  ? "Фінал" : data.stageName || data.title || doc.id.replace(/^.*__stage-(\d+)$/, "Етап $1"),
                 isFinal: data.isFinal === true
               }, year);
             }))

@@ -363,7 +363,10 @@
     }
 
     const db =
-      window.scDb;
+      await window.scPublicArchive().catch(error => {
+        console.warn("[Final qualification] Public snapshot:", error);
+        return null;
+      });
 
     if (!db) {
       throw new Error(
@@ -2762,7 +2765,7 @@
         .doc(
           SEASON_YEAR
         )
-        .onSnapshot(
+        .get().then(
 
           async snapshot => {
 
@@ -2820,7 +2823,7 @@
           error => {
 
             console.error(
-              "[Final qualification] onSnapshot:",
+              "[Final qualification] snapshot:",
               error
             );
 

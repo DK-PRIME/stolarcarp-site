@@ -31,12 +31,20 @@
     return;
   }
 
-  const db = window.scDb;
+  const db = await window.scPublicArchive().catch(error => {
+    console.warn("[Archive] Public snapshot:", error);
+    return null;
+  });
 
   if (!db) {
     if (msg) {
-      msg.textContent = "Firestore не знайдено.";
+      msg.textContent = "Публічний архів тимчасово недоступний.";
       msg.className = "err";
+    }
+    if (document.documentElement.classList.contains("sector-archive-view")) {
+      $("sectorHistory").open = true;
+      document.querySelector("[data-sector-coverage]").textContent =
+        "Публічний архів тимчасово недоступний.";
     }
     return;
   }

@@ -408,3 +408,28 @@
 .sector-ranking tr > :nth-child(2) {
   border-right: 1px solid #8a7146;
 }
+
+
+.team-performance {
+  border: 1px solid #625135;
+  border-radius: .6rem;
+  padding: .55rem;
+}
+
+.team-performance > summary { color: #f5ddb0; font-weight: 700; }
+.team-performance p { margin: .55rem 0; }
+.team-performance table { table-layout: fixed; }
+.team-performance thead { background: #30291e; color: #f5ddb0; }
+.team-performance [data-team-performance] th,
+.team-performance [data-team-performance] td {
+  padding: .35rem .25rem;
+  font-size: .82rem;
+  overflow-wrap: anywhere;
+}
+.team-performance [data-team-performance] small {
+  display: block;
+  margin-top: .15rem;
+  color: #c4cec9;
+}
+.team-performance-positive { color: #9ce1b7; }
+.team-performance-negative { color: #f0b5a1; }

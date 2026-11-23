@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=9">
+  <link rel="stylesheet" href="sector-history.css?v=10">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -849,6 +849,20 @@
         <tbody></tbody>
       </table>
     </div>
+    <details class="sector-method team-performance">
+      <summary>Статистика команд</summary>
+      <p>Складність сектора оцінюємо за щонайменше двома виступами інших команд на ньому у вибраному періоді. Улов нижче середнього по водоймі вказує на складний сектор, вище середнього — на сильний.</p>
+      <p>Відсоток показує, наскільки команда перевершила або не дотягнула до очікуваного улову на цьому секторі. У кожній колонці також є кількість оцінених стартів і середнє місце в зоні.</p>
+      <p data-team-performance-status role="status"></p>
+      <table data-team-performance hidden aria-label="Результати команд на складних і сильних секторах">
+        <thead><tr>
+          <th scope="col">Команда</th>
+          <th scope="col">Складні</th>
+          <th scope="col">Сильні</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
     <details class="sector-method">
       <summary>Як рахуємо статистику</summary>
       <p>Рейтинг показує відхилення від середнього улову за те саме змагання. Вище середнього на 50% означає улов у півтора раза більший за середній.</p>
@@ -1008,7 +1022,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=17"
+  src="sector-history.js?v=18"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

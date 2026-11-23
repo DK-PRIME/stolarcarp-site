@@ -189,12 +189,36 @@
     return date ? seasons[Math.floor(Number(monthFormat.format(date)) % 12 / 3)] : "Дата невідома";
   }
 
+  function stageTitle(item) {
+    const { data, id } = item;
+    const title = clean(item.title || data.stageName || data.title);
+    if (item.isFinal || data.isFinal || /(?:^|__)final$/i.test(id)) return "Фінал";
+    const technical = /^(?:.*__)?stage[-_\s]*(\d+)$/i;
+    const stage = title.match(technical) || clean(data.stageId).match(technical) || id.match(technical);
+    return title && !technical.test(title) ? title : stage ? `Етап ${Number(stage[1])}` : "Турнір";
+  }
+
+  function minimumFromTotals(count, weight, biggest) {
+    if (weight > 0 && count === 1) return weight;
+    if (count === 2 && biggest > 0 && biggest < weight && biggest >= weight / 2) {
+      return Number((weight - biggest).toFixed(3));
+    }
+    return null;
+  }
+
+  function minimumLabel(minimum, knownMinimum) {
+    return minimum > 0 ? formatMetric(minimum) : knownMinimum > 0
+      ? `≤ ${formatMetric(knownMinimum)}` : "—";
+  }
+
   function catchDetails(entry) {
     const { row } = entry;
     const fish = [];
+    const slots = [];
     for (let index = 1; index <= 6; index++) {
       const slot = row["w" + index];
       const source = [slot?.fish, slot?.weights, slot?.fishKg].find(Array.isArray) || [];
+      const start = fish.length;
       for (const item of source) {
         const kg = metric(typeof item === "object" ? item?.kg : item);
         if (!kg) continue;
@@ -202,13 +226,25 @@
         fish.push({ kg, type: Object.hasOwn(fishTypes, type) ? type : "",
           caughtAt: asDate(item?.caughtAt), slot: "W" + index });
       }
+      const weights = fish.slice(start).map(item => item.kg);
+      const count = metric(slot?.c ?? slot?.count) ?? weights.length;
+      const minimum = metric(slot?.minFish ?? slot?.minFishKg) ||
+        (weights.length && weights.length === count ? Math.min(...weights) : null) ||
+        minimumFromTotals(count, metric(slot?.w ?? slot?.total), metric(slot?.bigFish ?? slot?.big));
+      slots.push({ count, minimum, knownMinimum: minimum || (weights.length ? Math.min(...weights) : null) });
     }
     const count = metric(row.totalCount ?? row.fishCount) ?? (fish.length || null);
     const weight = metric(row.totalWeight ?? row.totalWeightKg) ??
       (fish.length ? fish.reduce((sum, item) => sum + item.kg, 0) : null);
-    return { fish, count, weight,
-      minimum: fish.length && fish.length === count ? Math.min(...fish.map(item => item.kg))
-        : count === 1 && weight > 0 ? weight : null,
+    const landed = slots.filter(slot => slot.count > 0);
+    const known = slots.map(slot => slot.knownMinimum).filter(value => value > 0);
+    const complete = landed.length && landed.every(slot => slot.minimum > 0) &&
+      landed.reduce((sum, slot) => sum + slot.count, 0) === count;
+    const minimum = metric(row.minFish ?? row.minFishKg) ||
+      minimumFromTotals(count, weight, metric(row.bigFish ?? row.bigFishKg)) ||
+      (complete ? Math.min(...landed.map(slot => slot.minimum)) : null);
+    return { fish, count, weight, minimum,
+      knownMinimum: minimum || (known.length ? Math.min(...known) : null),
       maximum: metric(row.bigFish ?? row.bigFishKg) ||
         (fish.length && fish.length === count ? Math.max(...fish.map(item => item.kg)) : null)
     };
@@ -229,9 +265,11 @@
       const maximums = records.map(record => record.maximum).filter(value => value > 0);
       const minimums = records.map(record => record.minimum).filter(value => value > 0);
       const caught = records.filter(record => record.count !== 0);
+      const knownMinimums = records.map(record => record.knownMinimum || record.minimum).filter(value => value > 0);
       return [label, records.some(record => record.count !== null) ? count : "—",
         weighedCount ? formatMetric(weight / weighedCount) : "—",
-        formatMetric(caught.length && minimums.length === caught.length ? Math.min(...minimums) : null),
+        minimumLabel(caught.length && minimums.length === caught.length ? Math.min(...minimums) : null,
+          knownMinimums.length ? Math.min(...knownMinimums) : null),
         formatMetric(maximums.length ? Math.max(...maximums) : null)];
     });
   }
@@ -395,7 +433,7 @@
             const capital = type[0].toUpperCase() + type.slice(1);
             const weight = metric(entry.row[type + "Weight"]);
             speciesRecords.push({ label, count, weight: weight > 0 ? weight : null,
-              minimum: count === 1 && weight > 0 ? weight : null,
+              minimum: minimumFromTotals(count, weight, metric(entry.row["big" + capital])),
               maximum: metric(entry.row["big" + capital]) || null });
           }
         }
@@ -429,6 +467,7 @@
       const fragments = entries.map(entry => {
         const tr = element("tr");
         const row = entry.row;
+        const { minimum, knownMinimum } = catchDetails(entry);
         tr.append(...resultCells(table, [
           entry.year,
           entry.title,
@@ -438,6 +477,7 @@
           formatMetric(metric(row.totalWeight ?? row.totalWeightKg)),
           formatMetric(metric(row.totalCount ?? row.fishCount)),
           formatMetric(metric(row.bigFish ?? row.bigFishKg)),
+          minimumLabel(minimum, knownMinimum),
           entry.zonePlace ? `${entry.zonePlace} · зона ${entry.key[0]}` : "—"
         ]));
         return tr;
@@ -507,7 +547,7 @@
           continue;
         }
         byPhysicalSector.set(number, {
-          number, row, key, title: item.title,
+          number, row, key, title: stageTitle(item),
           tournament: `season:${year}:${item.id}`, year, average: fieldAverage,
           zonePlace: places.get(row)
         });
@@ -612,9 +652,7 @@
             Promise.all(snapshot.docs.map(doc => {
               const data = doc.data();
               return loadStage({
-                id: doc.id, data, title: data.isFinal || /__final$/i.test(doc.id)
-                  ? "Фінал" : data.stageName || data.title || doc.id.replace(/^.*__stage-(\d+)$/, "Етап $1"),
-                isFinal: data.isFinal === true
+                id: doc.id, data
               }, year);
             }))
           ).then(entries => entries.flatMap(rows => rows || [])),

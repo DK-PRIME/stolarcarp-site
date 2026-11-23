@@ -196,7 +196,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: .25rem .65rem;
+    gap: .35rem .7rem;
   }
 
   .sector-archive-view .sector-year-controls {
@@ -225,7 +225,7 @@
   }
 
   .sector-history [data-sector-coverage] {
-    margin: .2rem 0 .25rem;
+    margin: .3rem 0 .4rem;
     font-size: .72rem;
     line-height: 1.15;
   }
@@ -247,7 +247,7 @@
 
   .sector-history .sector-ranking th,
   .sector-history .sector-ranking td {
-    padding: .1rem .04rem;
+    padding: .24rem .08rem;
     text-align: center;
     white-space: nowrap;
     line-height: 1.16;
@@ -268,7 +268,7 @@
   }
 
   .sector-ranking thead button {
-    padding: 0;
+    padding: .1rem 0;
   }
 
   .sector-ranking tbody button {
@@ -345,4 +345,29 @@
     margin-block: .75rem .35rem;
     font-weight: 700;
   }
+}
+
+
+.sector-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.25rem), 1fr));
+  gap: .4rem;
+  margin: .4rem 0 .7rem;
+}
+
+.sector-summary > div {
+  padding: .45rem .5rem;
+  border: 1px solid #3a5048;
+  border-radius: .45rem;
+}
+
+.sector-summary dt {
+  font-size: .75rem;
+  color: #b8ccc5;
+}
+
+.sector-summary dd {
+  margin: .2rem 0 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }

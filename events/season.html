@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=5">
+  <link rel="stylesheet" href="sector-history.css?v=6">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -864,34 +864,21 @@
     </div>
     <h3 data-sector-heading tabindex="-1">Сектор №1</h3>
     <p data-sector-status role="status"></p>
+    <section data-catch-details hidden>
+      <h4>Підсумок сектора</h4>
+      <dl class="sector-summary" data-catch-summary></dl>
+      <dl class="sector-summary" data-species-counts></dl>
+    </section>
     <div class="sector-results-scroll">
       <table data-sector-results hidden aria-label="Історія результатів сектора">
         <thead><tr>
           <th scope="col">Рік</th><th scope="col">Турнір</th><th scope="col">Дата старту</th><th scope="col">Жереб</th>
           <th scope="col">Команда / учасник</th><th scope="col">Вага, кг</th>
-          <th scope="col">Риб</th><th scope="col">Big Fish, кг</th><th scope="col">Мін., кг</th><th scope="col">Місце в зоні</th>
+          <th scope="col">Риб</th><th scope="col">Big Fish, кг</th><th scope="col">Місце в зоні</th>
         </tr></thead>
         <tbody></tbody>
       </table>
     </div>
-    <section data-catch-details hidden>
-      <h4>Деталі улову</h4>
-      <p>Пору року визначено за датою початку турніру. Середня вага рахується за відомими вагами. Позначка ≤ показує найменшу відому вагу, коли частина ваг відсутня. Риска означає, що даних бракує.</p>
-      <p data-catch-time></p>
-      <div class="sector-results-scroll" data-catch-table="seasons" hidden>
-        <table>
-          <caption>Улов за порою року</caption>
-          <thead><tr><th scope="col">Пора року</th><th scope="col">Риб</th><th scope="col">Середня, кг</th><th scope="col">Мін., кг</th><th scope="col">Макс., кг</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div class="sector-results-scroll" data-catch-table="species" hidden>
-        <table>
-          <caption>Улов за видами</caption>
-          <thead><tr><th scope="col">Вид</th><th scope="col">Риб</th><th scope="col">Середня, кг</th><th scope="col">Мін., кг</th><th scope="col">Макс., кг</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
       <div class="sector-results-scroll" data-catch-table="fish" hidden>
         <table>
           <caption>Окремі риби</caption>
@@ -899,7 +886,7 @@
           <tbody></tbody>
         </table>
       </div>
-    </section>
+
   </details>
 
   <!-- ====================================================
@@ -1019,7 +1006,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=9"
+  src="sector-history.js?v=10"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

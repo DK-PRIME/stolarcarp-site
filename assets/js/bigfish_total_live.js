@@ -6,7 +6,7 @@
 // ✅ TEAM -> teamId.
 // ✅ SOLO -> UID.
 // ✅ stageId null = main.
-// ✅ W1/W2 -> 1 доба; W3/W4 -> 2 доба.
+// ✅ W1–W3 -> 1 доба; W4–W6 -> 2 доба.
 // ✅ Старі числові та нові об'єктні weights.
 // ✅ eligible: status == confirmed + bigFishTotal == true.
 // ✅ Прізвища на -евич / -ович обробляються коректно.
@@ -69,7 +69,7 @@
 
   function fmtKg(value) {
     return Number.isFinite(value) && value > 0
-      ? value.toFixed(2)
+      ? value.toFixed(3)
       : "—";
   }
 
@@ -495,12 +495,12 @@
         if (
           !Number.isInteger(weighNo) ||
           weighNo < 1 ||
-          weighNo > 4
+          weighNo > 6
         ) {
           return;
         }
 
-        const day = weighNo <= 2
+        const day = weighNo <= 3
           ? 1
           : 2;
 

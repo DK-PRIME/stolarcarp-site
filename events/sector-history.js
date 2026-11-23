@@ -111,6 +111,50 @@
     };
   }
 
+  function teamPerformance(entries) {
+    const teamName = row => clean(row.teamName || row.team);
+    const teamId = row => clean(row.teamId);
+    const teamKey = row => teamId(row) ? `id:${teamId(row)}` :
+      teamName(row) ? `name:${teamName(row).toLocaleLowerCase("uk")}` : "";
+    const starts = entries.flatMap(entry => {
+      const weight = metric(entry.row.totalWeight ?? entry.row.totalWeightKg);
+      const key = teamKey(entry.row);
+      return weight !== null && entry.average > 0 && key && teamName(entry.row) && entry.row.entryType !== "solo"
+        ? [{ ...entry, key, name: teamName(entry.row), ratio: weight / entry.average }]
+        : [];
+    });
+
+    const bySector = new Map();
+    for (const start of starts) {
+      if (!bySector.has(start.number)) bySector.set(start.number, []);
+      bySector.get(start.number).push(start);
+    }
+
+    const teams = new Map();
+    for (const start of starts) {
+      const reference = bySector.get(start.number).filter(other =>
+        other.tournament !== start.tournament && other.key !== start.key &&
+        other.name.toLocaleLowerCase("uk") !== start.name.toLocaleLowerCase("uk"));
+      if (reference.length < 2) continue;
+      const baseline = average(reference.map(other => other.ratio));
+      if (baseline <= 0 || Math.abs(baseline - 1) < 1e-9) continue;
+
+      if (!teams.has(start.key)) teams.set(start.key, { name: start.name, hard: [], strong: [] });
+      teams.get(start.key)[baseline < 1 ? "hard" : "strong"].push({
+        score: start.ratio / baseline - 1, place: start.zonePlace
+      });
+    }
+
+    const summarizeStarts = group => ({
+      count: group.length,
+      score: average(group.map(start => start.score)),
+      place: average(group.flatMap(start => start.place > 0 ? [start.place] : []))
+    });
+
+    return [...teams.values()].sort((a, b) => a.name.localeCompare(b.name, "uk"))
+      .map(({ name, hard, strong }) => ({ name, hard: summarizeStarts(hard), strong: summarizeStarts(strong) }));
+  }
+
   function drawKey(row) {
     const latin = value => clean(value).toUpperCase()
       .replace(/[АВС]/g, letter => ({ А: "A", В: "B", С: "C" })[letter]);
@@ -402,6 +446,38 @@
       }));
     }
 
+    function renderTeamPerformance(entries) {
+      const table = root.querySelector("[data-team-performance]");
+      const teams = teamPerformance(entries);
+      const placeFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
+      const unique = new Intl.NumberFormat("uk-UA");
+      const status = root.querySelector("[data-team-performance-status]");
+      status.textContent = teams.length ? `Команд з оціненими стартами: ${unique.format(teams.length)}`
+        : "За вибраний період недостатньо результатів для порівняння.";
+      table.hidden = !teams.length;
+      table.tBodies[0].replaceChildren(...teams.map(team => {
+        const tr = element("tr");
+        const name = element("th", team.name);
+        name.scope = "row";
+        tr.append(name);
+        for (const group of [team.hard, team.strong]) {
+          const cell = element("td");
+          if (group.count) {
+            const score = element("strong", percent.format(group.score));
+            if (group.score > 0) score.className = "team-performance-positive";
+            if (group.score < 0) score.className = "team-performance-negative";
+            const starts = `Стартів: ${group.count}`;
+            const place = group.place === null ? "" : ` · Місце: ${placeFormat.format(group.place)}`;
+            cell.append(score, element("small", starts + place));
+          } else {
+            cell.textContent = "—";
+          }
+          tr.append(cell);
+        }
+        return tr;
+      }));
+    }
+
     function updateRanking() {
       const entries = scopedHistory();
       const tournaments = new Set(entries.map(entry => entry.tournament));
@@ -417,6 +493,7 @@
         stat.rank = stat.rating === ranked[index - 1]?.rating ? ranked[index - 1].rank : index + 1;
       });
       renderRanking();
+      renderTeamPerformance(entries);
     }
 
     for (const [number, x, y] of POINTS) {

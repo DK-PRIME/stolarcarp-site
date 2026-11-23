@@ -2831,7 +2831,11 @@
       ];
 
       if (fromWeighings) {
-        return liveWSlot(fromWeighings);
+        const fish = fromWeighings.fish ?? fromWeighings.weights;
+        return {
+          ...liveWSlot(fromWeighings),
+          ...(Array.isArray(fish) ? { fish } : {})
+        };
       }
 
       const legacy = t[`w${index}`] || {};

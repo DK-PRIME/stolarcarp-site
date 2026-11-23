@@ -864,13 +864,39 @@
     <div class="sector-results-scroll">
       <table data-sector-results hidden aria-label="Історія результатів сектора">
         <thead><tr>
-          <th scope="col">Рік</th><th scope="col">Турнір</th><th scope="col">Жереб</th>
+          <th scope="col">Рік</th><th scope="col">Турнір</th><th scope="col">Дата старту</th><th scope="col">Жереб</th>
           <th scope="col">Команда / учасник</th><th scope="col">Вага, кг</th>
           <th scope="col">Риб</th><th scope="col">Big Fish, кг</th><th scope="col">Місце</th>
         </tr></thead>
         <tbody></tbody>
       </table>
     </div>
+    <section data-catch-details hidden>
+      <h4>Деталі улову</h4>
+      <p>Пору року визначено за датою початку турніру. Середня вага рахується за відомими вагами. Риска означає, що даних для показника бракує.</p>
+      <p data-catch-time></p>
+      <div class="sector-results-scroll" data-catch-table="seasons" hidden>
+        <table>
+          <caption>Улов за порою року</caption>
+          <thead><tr><th scope="col">Пора року</th><th scope="col">Риб</th><th scope="col">Середня, кг</th><th scope="col">Мін., кг</th><th scope="col">Макс., кг</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="sector-results-scroll" data-catch-table="species" hidden>
+        <table>
+          <caption>Улов за видами</caption>
+          <thead><tr><th scope="col">Вид</th><th scope="col">Риб</th><th scope="col">Середня, кг</th><th scope="col">Мін., кг</th><th scope="col">Макс., кг</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="sector-results-scroll" data-catch-table="fish" hidden>
+        <table>
+          <caption>Окремі риби</caption>
+          <thead><tr><th scope="col">Турнір</th><th scope="col">Вид</th><th scope="col">Вага, кг</th><th scope="col">Зважування</th><th scope="col">Час клювання</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
   </details>
 
   <!-- ====================================================
@@ -989,7 +1015,7 @@
      ====================================================== -->
 
 <script
-  src="sector-history.js?v=4"
+  src="sector-history.js?v=5"
 ></script>
 <script
   src="archive.js?v=20261123-sector-years"

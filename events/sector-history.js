@@ -322,7 +322,7 @@
     let stats = [];
     const mobileSort = root.querySelector("[data-sector-sort]");
     for (const button of sortButtons) {
-      const option = element("option", button.textContent.trim());
+      const option = element("option", button.querySelector("span").textContent.trim());
       option.value = button.dataset.sort;
       mobileSort.append(option);
     }
@@ -372,7 +372,7 @@
         sectorCell.append(button);
         tr.append(element("td", stat.rank || "—"), sectorCell);
         for (const value of [
-          stat.count < 3 ? "Мало даних" : formatMetric(stat.rating, percent),
+          stat.count < 3 ? "—" : formatMetric(stat.rating, percent),
           formatMetric(stat.weight), formatMetric(stat.fish),
           stat.knownPlaces ? `${stat.prizes} / ${stat.knownPlaces}` : "—",
           formatMetric(stat.bigFish), stat.count

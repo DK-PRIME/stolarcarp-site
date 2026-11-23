@@ -268,15 +268,10 @@
       text-align: left;
     }
 
-    .zone-day-switch { display: none; }
-    .zone-day-switch [aria-pressed="true"] { border-color: #f6c34c; color: #f6c34c; }
     .weigh-day-buttons { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .live-fish-sturgeon { color: #ffe066; font-weight: 800; }
 
     @media (max-width: 760px) {
-      .zone-day-switch { display: flex; gap: 6px; margin-bottom: 8px; }
-      #zonesContainer[data-visible-day="1"] .zone-day-2,
-      #zonesContainer[data-visible-day="2"] .zone-day-1 { display: none; }
       #zonesContainer .table-wrap { min-width: 0; }
       #zonesContainer table.table {
         min-width: 0;
@@ -285,16 +280,22 @@
       #zonesContainer th,
       #zonesContainer td {
         padding: 3px 1px !important;
-        font-size: 10px !important;
+        font-size: 9px !important;
         white-space: normal;
         overflow-wrap: anywhere;
       }
-      #zonesContainer thead tr:first-child th:nth-child(1) { width: 8%; }
-      #zonesContainer thead tr:first-child th:nth-child(2) { width: 21%; }
-      #zonesContainer thead tr:first-child th:nth-child(5),
-      #zonesContainer thead tr:first-child th:nth-child(8) { width: 9%; }
-      #zonesContainer thead tr:first-child th:nth-child(6) { width: 11%; }
-      #zonesContainer thead tr:first-child th:nth-child(7) { width: 13%; }
+      #zonesContainer .zone-round {
+        white-space: nowrap;
+        font-size: clamp(6px, 1.9vw, 10px) !important;
+        padding-inline: 0 !important;
+      }
+      #zonesContainer tbody .zone-round { text-overflow: clip; }
+      #zonesContainer thead th:nth-child(1),
+      #zonesContainer thead th:nth-child(9) { width: 6%; }
+      #zonesContainer thead th:nth-child(2) { width: 13%; }
+      #zonesContainer thead th:nth-child(10),
+      #zonesContainer thead th:nth-child(11) { width: 8%; }
+      #zonesContainer thead th:nth-child(12) { width: 7%; }
     }
 
     .live-left > .card {
@@ -752,11 +753,7 @@
               Зони A / B / C
             </h2>
 
-            <div class="zone-day-switch" role="group" aria-label="Доба зважування">
-              <button class="btn btn--ghost" type="button" data-zone-day="1" aria-pressed="true">1-ша доба</button>
-              <button class="btn btn--ghost" type="button" data-zone-day="2" aria-pressed="false">2-га доба</button>
-            </div>
-            <div class="live-zones-grid" id="zonesContainer" data-visible-day="1"></div>
+            <div class="live-zones-grid" id="zonesContainer"></div>
 
             <p class="live-note">
               Місця у зоні.
@@ -984,7 +981,7 @@
 
   <script
     defer
-    src="/assets/js/live_firebase.js?v=20261123-live-w6"
+    src="/assets/js/live_firebase.js?v=20261123-live-w6-inline"
   ></script>
 
 </body>

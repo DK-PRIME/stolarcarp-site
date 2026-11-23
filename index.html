@@ -1898,6 +1898,66 @@
         transition: none;
       }
     }
+
+    .home-install {
+      display: flex;
+      justify-content: center;
+      gap: .55rem;
+      flex-wrap: wrap;
+      margin: 1rem 0;
+    }
+
+    .home-install__button {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      min-height: 44px;
+      padding: .5rem .8rem;
+      border: 1px solid rgba(246, 195, 76, .35);
+      border-radius: 10px;
+      color: #f6c34c;
+      background: rgba(246, 195, 76, .07);
+      font: inherit;
+      font-size: .875rem;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    a.home-install__button:hover,
+    a.home-install__button:focus-visible {
+      background: rgba(246, 195, 76, .16);
+    }
+
+    .home-install__button[aria-disabled="true"] {
+      color: #c7c3b7;
+    }
+
+    .home-install__button svg {
+      flex: none;
+    }
+
+    .home-install__instructions {
+      display: none;
+      flex: 0 1 36rem;
+      text-align: left;
+      padding: .8rem 1rem;
+      border: 1px solid rgba(246, 195, 76, .35);
+      border-radius: 10px;
+    }
+
+    .home-install__instructions:target {
+      display: block;
+      width: 100%;
+    }
+
+    .home-install__instructions ol {
+      margin: .4rem 0 .4rem 1.2rem;
+    }
+
+    .home-install__instructions a {
+      color: #f6c34c;
+    }
+
   </style>
 </head>
 
@@ -2163,6 +2223,36 @@
 
       </a>
 
+    </div>
+
+
+    <div class="home-install" id="install-app" role="group" aria-label="STOLAR CARP на телефоні">
+      <span class="home-install__button" role="link" aria-disabled="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 18v-3a7 7 0 0 1 14 0v3ZM8 9 6 5m10 4 2-4M9 14h.01m6 0h.01"/>
+        </svg>
+        Android · APK недоступний
+      </span>
+      <a class="home-install__button" href="#install-iphone">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
+          <rect x="6" y="2.5" width="12" height="19" rx="2.5"/>
+          <path d="M10 18.5h4"/>
+        </svg>
+        Додати на iPhone
+      </a>
+
+      <section class="home-install__instructions" id="install-iphone" tabindex="-1"
+               aria-labelledby="install-iphone-title">
+        <h2 id="install-iphone-title">STOLAR CARP на iPhone</h2>
+        <ol>
+          <li>Відкрийте головну сторінку STOLAR CARP у Safari. Якщо зайшли з Viber, відкрийте сайт окремо в Safari.</li>
+          <li>Натисніть «Поширити» та виберіть «На початковий екран».</li>
+          <li>Увімкніть «Відкрити як вебпрограму», якщо є такий перемикач, і натисніть «Додати».</li>
+        </ol>
+        <a href="#install-app">Закрити інструкцію</a>
+      </section>
     </div>
 
     <!-- =====================================================

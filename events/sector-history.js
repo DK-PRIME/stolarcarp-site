@@ -176,17 +176,10 @@
   const clock = new Intl.DateTimeFormat("uk-UA", {
     timeZone: "Europe/Kyiv", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
   });
-  const monthFormat = new Intl.DateTimeFormat("uk-UA", { timeZone: "Europe/Kyiv", month: "numeric" });
-
   function asDate(value) {
     if (!value) return null;
     const date = value.toDate ? value.toDate() : new Date(value);
     return Number.isFinite(date.getTime()) ? date : null;
-  }
-
-  function seasonOf(date) {
-    const seasons = ["Зима", "Весна", "Літо", "Осінь"];
-    return date ? seasons[Math.floor(Number(monthFormat.format(date)) % 12 / 3)] : "Дата невідома";
   }
 
   function stageTitle(item) {
@@ -198,27 +191,11 @@
     return title && !technical.test(title) ? title : stage ? `Етап ${Number(stage[1])}` : "Турнір";
   }
 
-  function minimumFromTotals(count, weight, biggest) {
-    if (weight > 0 && count === 1) return weight;
-    if (count === 2 && biggest > 0 && biggest < weight && biggest >= weight / 2) {
-      return Number((weight - biggest).toFixed(3));
-    }
-    return null;
-  }
-
-  function minimumLabel(minimum, knownMinimum) {
-    return minimum > 0 ? formatMetric(minimum) : knownMinimum > 0
-      ? `≤ ${formatMetric(knownMinimum)}` : "—";
-  }
-
-  function catchDetails(entry) {
-    const { row } = entry;
+  function individualFish(row) {
     const fish = [];
-    const slots = [];
     for (let index = 1; index <= 6; index++) {
       const slot = row["w" + index];
-      const source = [slot?.fish, slot?.weights, slot?.fishKg].find(Array.isArray) || [];
-      const start = fish.length;
+      const source = [slot?.fish, slot?.weights, slot?.fishKg].find(items => Array.isArray(items) && items.length) || [];
       for (const item of source) {
         const kg = metric(typeof item === "object" ? item?.kg : item);
         if (!kg) continue;
@@ -226,52 +203,32 @@
         fish.push({ kg, type: Object.hasOwn(fishTypes, type) ? type : "",
           caughtAt: asDate(item?.caughtAt), slot: "W" + index });
       }
-      const weights = fish.slice(start).map(item => item.kg);
-      const count = metric(slot?.c ?? slot?.count) ?? weights.length;
-      const minimum = metric(slot?.minFish ?? slot?.minFishKg) ||
-        (weights.length && weights.length === count ? Math.min(...weights) : null) ||
-        minimumFromTotals(count, metric(slot?.w ?? slot?.total), metric(slot?.bigFish ?? slot?.big));
-      slots.push({ count, minimum, knownMinimum: minimum || (weights.length ? Math.min(...weights) : null) });
     }
-    const count = metric(row.totalCount ?? row.fishCount) ?? (fish.length || null);
-    const weight = metric(row.totalWeight ?? row.totalWeightKg) ??
-      (fish.length ? fish.reduce((sum, item) => sum + item.kg, 0) : null);
-    const landed = slots.filter(slot => slot.count > 0);
-    const known = slots.map(slot => slot.knownMinimum).filter(value => value > 0);
-    const complete = landed.length && landed.every(slot => slot.minimum > 0) &&
-      landed.reduce((sum, slot) => sum + slot.count, 0) === count;
-    const minimum = metric(row.minFish ?? row.minFishKg) ||
-      minimumFromTotals(count, weight, metric(row.bigFish ?? row.bigFishKg)) ||
-      (complete ? Math.min(...landed.map(slot => slot.minimum)) : null);
-    return { fish, count, weight, minimum,
-      knownMinimum: minimum || (known.length ? Math.min(...known) : null),
-      maximum: metric(row.bigFish ?? row.bigFishKg) ||
-        (fish.length && fish.length === count ? Math.max(...fish.map(item => item.kg)) : null)
-    };
+    return fish;
   }
 
-  function groupedCatch(entries, group) {
-    const totals = new Map();
-    for (const entry of entries) {
-      const label = group(entry);
-      if (!totals.has(label)) totals.set(label, []);
-      totals.get(label).push(entry);
+  function sectorSummary(entries) {
+    const weights = [];
+    const places = [];
+    const counts = { carp: 0, amur: 0, sturgeon: 0 };
+    let unknown = 0;
+    for (const { row, fish, zonePlace } of entries) {
+      const weight = metric(row.totalWeight ?? row.totalWeightKg);
+      if (weight !== null) weights.push(weight);
+      if (zonePlace > 0) places.push(zonePlace);
+
+      let identified = 0;
+      for (const type of Object.keys(counts)) {
+        const recorded = metric(row[type + "Count"]);
+        const count = Math.max(recorded ?? 0, fish.filter(item => item.type === type).length);
+        counts[type] += count;
+        identified += count;
+      }
+      const total = metric(row.totalCount ?? row.fishCount) ?? fish.length;
+      unknown += Math.max(0, total - identified);
     }
-    return [...totals].map(([label, records]) => {
-      const known = records.filter(record => record.count !== null && record.weight !== null);
-      const count = records.reduce((sum, record) => sum + (record.count ?? 0), 0);
-      const weighedCount = known.reduce((sum, record) => sum + record.count, 0);
-      const weight = known.reduce((sum, record) => sum + record.weight, 0);
-      const maximums = records.map(record => record.maximum).filter(value => value > 0);
-      const minimums = records.map(record => record.minimum).filter(value => value > 0);
-      const caught = records.filter(record => record.count !== 0);
-      const knownMinimums = records.map(record => record.knownMinimum || record.minimum).filter(value => value > 0);
-      return [label, records.some(record => record.count !== null) ? count : "—",
-        weighedCount ? formatMetric(weight / weighedCount) : "—",
-        minimumLabel(caught.length && minimums.length === caught.length ? Math.min(...minimums) : null,
-          knownMinimums.length ? Math.min(...knownMinimums) : null),
-        formatMetric(maximums.length ? Math.max(...maximums) : null)];
-    });
+    const place = average(places);
+    return { weights, counts, unknown, place: place === null ? null : Math.trunc(place * 100) / 100 };
   }
 
   function create({ root, db, year }) {
@@ -408,50 +365,40 @@
     }
 
     function renderCatchDetails(entries) {
-      const records = entries.map(entry => ({ ...entry, ...catchDetails(entry) }));
-      const tables = {
-        seasons: groupedCatch(records, entry => seasonOf(entry.date)),
-        species: [],
-        fish: []
+      const records = entries.map(entry => ({ ...entry, fish: individualFish(entry.row) }));
+      const { weights, counts, unknown, place } = sectorSummary(records);
+      const summary = root.querySelector("[data-catch-summary]");
+      const fishCounts = root.querySelector("[data-species-counts]");
+      const metricCell = (label, value) => {
+        const cell = element("div");
+        cell.append(element("dt", label), element("dd", value));
+        return cell;
       };
-      const speciesRecords = [];
-      for (const entry of records) {
-        for (const fish of entry.fish) {
-          tables.fish.push([entry.title, fish.type ? fishTypes[fish.type] : "Вид невідомий",
-            formatMetric(fish.kg), fish.slot,
-            fish.caughtAt ? `${calendar.format(fish.caughtAt)} ${clock.format(fish.caughtAt)}` : "—"]);
-        }
-        for (const [type, label] of Object.entries(fishTypes)) {
-          const fish = entry.fish.filter(item => item.type === type);
-          const count = metric(entry.row[type + "Count"]);
-          if (fish.length && (fish.length === entry.count || fish.length === count)) {
-            const weights = fish.map(item => item.kg);
-            speciesRecords.push({ label, count: fish.length,
-              weight: weights.reduce((sum, kg) => sum + kg, 0),
-              minimum: Math.min(...weights), maximum: Math.max(...weights) });
-          } else if (count > 0) {
-            const capital = type[0].toUpperCase() + type.slice(1);
-            const weight = metric(entry.row[type + "Weight"]);
-            speciesRecords.push({ label, count, weight: weight > 0 ? weight : null,
-              minimum: minimumFromTotals(count, weight, metric(entry.row["big" + capital])),
-              maximum: metric(entry.row["big" + capital]) || null });
-          }
-        }
-      }
-      tables.species = groupedCatch(speciesRecords, entry => entry.label);
-      for (const [key, rows] of Object.entries(tables)) {
-        const target = root.querySelector(`[data-catch-table="${key}"]`);
-        target.hidden = !rows.length;
-        target.querySelector("tbody").replaceChildren(...rows.map(values => {
-          const tr = element("tr");
-          tr.append(...resultCells(target.querySelector("table"), values));
-          return tr;
-        }));
-      }
+      summary.replaceChildren(
+        metricCell("Середній улов, кг", formatMetric(average(weights))),
+        metricCell("Найбільший улов, кг", formatMetric(weights.length ? Math.max(...weights) : null)),
+        metricCell("Середнє місце в зоні", formatMetric(place))
+      );
+      fishCounts.replaceChildren(
+        ...Object.entries(fishTypes)
+          .filter(([type]) => type !== "sturgeon" || counts[type] > 0)
+          .map(([type, name]) => metricCell(name, `${counts[type]} шт`)),
+        ...(unknown ? [metricCell("Вид невідомий", `${unknown} шт`)] : [])
+      );
+
+      const target = root.querySelector('[data-catch-table="fish"]');
+      const fishTable = target.querySelector("table");
+      const rows = records.flatMap(entry => entry.fish.map(fish => {
+        const tr = element("tr");
+        tr.append(...resultCells(fishTable, [
+          entry.title, fishTypes[fish.type] || "Вид невідомий", formatMetric(fish.kg), fish.slot,
+          fish.caughtAt ? `${calendar.format(fish.caughtAt)} ${clock.format(fish.caughtAt)}` : "—"
+        ]));
+        return tr;
+      }));
+      target.hidden = !rows.length;
+      fishTable.tBodies[0].replaceChildren(...rows);
       root.querySelector("[data-catch-details]").hidden = !records.length;
-      root.querySelector("[data-catch-time]").textContent = records.some(record => record.fish.some(fish => fish.caughtAt))
-        ? "Час клювання показано за Києвом для риб із записаним часом."
-        : "Точний час клювання у вибраних протоколах не записано. W1–W6 — номери зважувань.";
     }
 
     function render() {
@@ -467,7 +414,6 @@
       const fragments = entries.map(entry => {
         const tr = element("tr");
         const row = entry.row;
-        const { minimum, knownMinimum } = catchDetails(entry);
         tr.append(...resultCells(table, [
           entry.year,
           entry.title,
@@ -477,7 +423,6 @@
           formatMetric(metric(row.totalWeight ?? row.totalWeightKg)),
           formatMetric(metric(row.totalCount ?? row.fishCount)),
           formatMetric(metric(row.bigFish ?? row.bigFishKg)),
-          minimumLabel(minimum, knownMinimum),
           entry.zonePlace ? `${entry.zonePlace} · зона ${entry.key[0]}` : "—"
         ]));
         return tr;

@@ -268,7 +268,25 @@
       text-align: left;
     }
 
-    .weigh-day-buttons { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .weigh-round-controls {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: clamp(3px, 1vw, 8px);
+      margin: 18px 0 8px;
+    }
+
+    .weigh-round-controls .btn {
+      min-width: 0;
+      min-height: 36px;
+      padding: 6px 0;
+      font-size: clamp(11px, 3vw, 13px);
+      white-space: nowrap;
+    }
+
+    #weighInfo {
+      display: block;
+      margin-bottom: 12px;
+    }
     .live-fish-sturgeon { color: #ffe066; font-weight: 800; }
 
     @media (max-width: 760px) {
@@ -771,34 +789,16 @@
               Таблиця зважувань
             </h2>
 
-            <div
-              class="bf-toggle"
-              style="margin-top:18px;margin-bottom:12px;"
-            >
-
-              <div class="weigh-day-buttons" role="group" aria-label="1-ша доба">
-                <span class="form__hint">1-ша доба</span>
-                <button class="btn btn--accent" id="wBtn1" type="button" aria-pressed="true">W1</button>
-                <button class="btn btn--ghost" id="wBtn2" type="button" aria-pressed="false">W2</button>
-                <button class="btn btn--ghost" id="wBtn3" type="button" aria-pressed="false">W3</button>
-              </div>
-
-              <div class="weigh-day-buttons" role="group" aria-label="2-га доба">
-                <span class="form__hint">2-га доба</span>
-                <button class="btn btn--ghost" id="wBtn4" type="button" aria-pressed="false">W4</button>
-                <button class="btn btn--ghost" id="wBtn5" type="button" aria-pressed="false">W5</button>
-                <button class="btn btn--ghost" id="wBtn6" type="button" aria-pressed="false">W6</button>
-              </div>
-
-              <span
-                id="weighInfo"
-                class="form__hint"
-                style="margin-left:auto;"
-              >
-                перегляд зважування
-              </span>
-
+            <div class="weigh-round-controls" role="group" aria-label="Номер зважування">
+              <button class="btn btn--accent" id="wBtn1" type="button" aria-pressed="true">W1</button>
+              <button class="btn btn--ghost" id="wBtn2" type="button" aria-pressed="false">W2</button>
+              <button class="btn btn--ghost" id="wBtn3" type="button" aria-pressed="false">W3</button>
+              <button class="btn btn--ghost" id="wBtn4" type="button" aria-pressed="false">W4</button>
+              <button class="btn btn--ghost" id="wBtn5" type="button" aria-pressed="false">W5</button>
+              <button class="btn btn--ghost" id="wBtn6" type="button" aria-pressed="false">W6</button>
             </div>
+
+            <span id="weighInfo" class="form__hint">перегляд зважування</span>
 
             <div
               class="table-wrap weigh-scroll"

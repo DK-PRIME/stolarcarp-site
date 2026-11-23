@@ -922,6 +922,7 @@
      Логіка поточного та завершених сезонів
      ====================================================== -->
 
+<script src="/assets/js/public-archive.js?v=1"></script>
 <script>
 
 (async function () {
@@ -1029,7 +1030,10 @@
 
 
   const db =
-    window.scDb;
+    await window.scPublicArchive().catch(error => {
+      console.warn("[Archive Index] Public snapshot:", error);
+      return null;
+    });
 
 
   if (!db) {
@@ -1037,7 +1041,7 @@
     if (status) {
 
       status.textContent =
-        "Не вдалося підключитися до Firestore.";
+        "Публічний архів тимчасово недоступний.";
 
       status.className =
         "archive-status is-error";

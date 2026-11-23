@@ -224,7 +224,7 @@
     let selected = sectorNumber(new URLSearchParams(location.search).get("sector")) || 1;
     let pending = false;
     let started = false;
-    let limited = false;
+    let limited = Boolean(db.limited);
     let selectedYear = year;
     let discovering = false;
     const yearSelect = root.querySelector("#sectorHistoryYear");
@@ -546,17 +546,13 @@
         if (initialYear) years.add(initialYear);
         const validYear = value => /^(19|20)\d{2}$/.test(value);
         const sources = await Promise.allSettled([
-          ...["seasonArchives", "seasonRating", "seasonResults", "historicalSectorResults"]
-            .map(name => db.collection(name).get()),
-          db.collectionGroup("tournaments").where("lakeId", "==", lake)
-            .where("status", "==", "ready").get()
+          ...["seasonArchives", "seasonRating", "historicalSectorResults"]
+            .map(name => db.collection(name).get())
         ]);
-        for (const [index, source] of sources.entries()) {
+        for (const source of sources) {
           if (source.status !== "fulfilled") continue;
           source.value.forEach(doc => {
-            const candidate = index === 4
-              ? (doc.ref.parent.parent?.parent.id === "historicalSectorResults" ? doc.ref.parent.parent.id : "")
-              : doc.id;
+            const candidate = doc.id;
             if (validYear(candidate)) years.add(candidate);
           });
         }

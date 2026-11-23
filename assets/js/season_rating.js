@@ -109,9 +109,6 @@
   let archiveInProgress =
     false;
 
-  let ratingUnsubscribe =
-    null;
-
   let authUnsubscribe =
     null;
 
@@ -5625,29 +5622,18 @@
     installArchiveButtonHandler();
 
     try {
-      const db =
-        await waitReady();
+      const firestore = await waitReady();
+      await initAdminAccess(firestore);
+      const db = await window.scPublicArchive();
 
-      await initAdminAccess(
-        db
-      );
-
-      if (
-        typeof ratingUnsubscribe ===
-        "function"
-      ) {
-        ratingUnsubscribe();
-      }
-
-      ratingUnsubscribe =
-        db
+      await db
           .collection(
             "seasonRating"
           )
           .doc(
             SEASON_YEAR
           )
-          .onSnapshot(
+          .get().then(
             async snap => {
               if (
                 !snap.exists
@@ -5825,13 +5811,6 @@
   window.addEventListener(
     "beforeunload",
     () => {
-      if (
-        typeof ratingUnsubscribe ===
-        "function"
-      ) {
-        ratingUnsubscribe();
-      }
-
       if (
         typeof authUnsubscribe ===
         "function"

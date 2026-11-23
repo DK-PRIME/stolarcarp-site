@@ -101,7 +101,6 @@
     const prizes = places.filter(place => place <= 3).length;
     return {
       count,
-      provisional: comparable.length === 2,
       rating: comparable.length >= 2 ? average(comparable) * comparable.length / (comparable.length + 2) : null,
       weight: average(known(weights)),
       fish: average(known(entries.map(({ row }) => metric(row.totalCount ?? row.fishCount)))),
@@ -379,7 +378,7 @@
         if (stat.rank && stat.rank <= 3) rankCell.dataset.podiumRank = stat.rank;
         tr.append(rankCell, sectorCell);
         const values = [
-          formatMetric(stat.rating, percent) + (stat.provisional ? "*" : ""),
+          formatMetric(stat.rating, percent),
           formatMetric(stat.weight), formatMetric(stat.fish),
           stat.knownPlaces ? `${stat.prizes} / ${stat.knownPlaces}` : "—",
           formatMetric(stat.bigFish), stat.count
@@ -417,7 +416,6 @@
       ranked.forEach((stat, index) => {
         stat.rank = stat.rating === ranked[index - 1]?.rating ? ranked[index - 1].rank : index + 1;
       });
-      root.querySelector("[data-sector-provisional]").hidden = !stats.some(stat => stat.provisional);
       renderRanking();
     }
 

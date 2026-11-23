@@ -32,10 +32,9 @@
   const contentEl = document.getElementById("liveContent");
   const errorEl = document.getElementById("liveError");
 
-  const wBtn1 = document.getElementById("wBtn1");
-  const wBtn2 = document.getElementById("wBtn2");
-  const wBtn3 = document.getElementById("wBtn3");
-  const wBtn4 = document.getElementById("wBtn4");
+  const weighRounds = [1, 2, 3, 4, 5, 6];
+  const weighButtons = weighRounds.map(round => document.getElementById(`wBtn${round}`));
+  const zoneDayButtons = document.querySelectorAll("[data-zone-day]");
 
   // =========================================================
   // CONSTANTS
@@ -147,7 +146,7 @@
     if (!Number.isFinite(number)) return null;
 
     return number
-      .toFixed(2)
+      .toFixed(3)
       .replace(/\.?0+$/, "");
   }
 
@@ -157,7 +156,7 @@
     if (!Number.isFinite(number)) return "0";
 
     return number
-      .toFixed(2)
+      .toFixed(3)
       .replace(/\.?0+$/, "");
   }
 
@@ -266,7 +265,7 @@
 
       return {
         kg,
-        fishType: isAmur ? "amur" : "carp",
+        fishType: fish?.fishType === "sturgeon" ? "sturgeon" : isAmur ? "amur" : "carp",
         isAmur
       };
     }).filter(Boolean);
@@ -280,6 +279,8 @@
     const value = fmtNum(normalized.kg);
 
     if (!value) return "—";
+
+    if (normalized.fishType === "sturgeon") return `<span class="live-fish-sturgeon" title="Осетер" aria-label="${esc(value)} кг, осетер">${esc(value)}</span>`;
 
     return normalized.isAmur
       ? `<span class="live-fish-amur">${esc(value)}</span>`
@@ -1535,21 +1536,7 @@
 
     const byEntity = new Map();
 
-    const emptyBucket = () => ({
-      has: {
-        1: false,
-        2: false,
-        3: false,
-        4: false
-      },
-
-      weights: {
-        1: [],
-        2: [],
-        3: [],
-        4: []
-      }
-    });
+    const emptyBucket = () => ({ weights: {} });
 
     (weighDocs || []).forEach(doc => {
       const ids = entityCandidates(doc);
@@ -1558,7 +1545,7 @@
 
       const weighNo = Number(doc.weighNo);
 
-      if (weighNo < 1 || weighNo > 4) return;
+      if (!weighRounds.includes(weighNo)) return;
 
       let bucket = null;
 
@@ -1576,8 +1563,6 @@
       ids.forEach(id => {
         byEntity.set(id, bucket);
       });
-
-      bucket.has[weighNo] = true;
 
       bucket.weights[weighNo] = normalizeFishArray(
         doc.weights || []
@@ -1607,8 +1592,8 @@
       let totalWeight = 0;
       let bigFish = 0;
 
-      [1, 2, 3, 4].forEach(number => {
-        if (!bucket.has[number]) return;
+      weighRounds.forEach(number => {
+        if (!bucket.weights[number]) return;
 
         const fish = bucket.weights[number] || [];
 
@@ -1643,10 +1628,12 @@
         displayLabel: displayName(row),
         fullDisplayLabel: fullDisplayName(row),
 
-        w1: wCell(bucket.has[1], bucket.weights[1]),
-        w2: wCell(bucket.has[2], bucket.weights[2]),
-        w3: wCell(bucket.has[3], bucket.weights[3]),
-        w4: wCell(bucket.has[4], bucket.weights[4]),
+        ...Object.fromEntries(weighRounds.map(round => [
+          `w${round}`, wCell(Boolean(bucket.weights[round]), bucket.weights[round] || [])
+        ])),
+        sturgeonRounds: weighRounds.filter(round =>
+          bucket.weights[round]?.some(fish => fish.fishType === "sturgeon")
+        ),
 
         total: totalCount,
 
@@ -1776,6 +1763,9 @@
       w2: item.w2 ?? item.W2 ?? null,
       w3: item.w3 ?? item.W3 ?? null,
       w4: item.w4 ?? item.W4 ?? null,
+      w5: item.w5 ?? item.W5 ?? null,
+      w6: item.w6 ?? item.W6 ?? null,
+      sturgeonRounds: item.sturgeonRounds || [],
 
       total: item.total ?? item.sum ?? null,
 
@@ -1932,10 +1922,14 @@
             ${esc(fmt(row.team))}
           </td>
 
-          <td>${esc(fmtW(row.w1))}</td>
-          <td>${esc(fmtW(row.w2))}</td>
-          <td>${esc(fmtW(row.w3))}</td>
-          <td>${esc(fmtW(row.w4))}</td>
+          ${weighRounds.map(round => {
+            const hasSturgeon = row.sturgeonRounds.includes(round);
+            return `<td class="zone-day-${round <= 3 ? 1 : 2}">
+              <span${hasSturgeon ? ' class="live-fish-sturgeon" title="У зважуванні є осетер"' : ""}>
+                ${esc(fmtW(row[`w${round}`]))}
+              </span>
+            </td>`;
+          }).join("")}
 
           <td>${esc(fmtW(row.total))}</td>
           <td>${esc(fmt(row.big))}</td>
@@ -1967,16 +1961,17 @@
             <table class="table table-sm">
               <thead>
                 <tr>
-                  <th>Зона</th>
-                  <th>${esc(participantColumnTitle())}</th>
-                  <th>W1</th>
-                  <th>W2</th>
-                  <th>W3</th>
-                  <th>W4</th>
-                  <th>Разом</th>
-                  <th>BIG</th>
-                  <th>Вага</th>
-                  <th>Місце</th>
+                  <th rowspan="2">Зона</th>
+                  <th rowspan="2">${esc(participantColumnTitle())}</th>
+                  <th class="zone-day-1" colspan="3" scope="colgroup">1-ша доба</th>
+                  <th class="zone-day-2" colspan="3" scope="colgroup">2-га доба</th>
+                  <th rowspan="2">Разом</th>
+                  <th rowspan="2">BIG</th>
+                  <th rowspan="2">Вага</th>
+                  <th rowspan="2">Місце</th>
+                </tr>
+                <tr>
+                  ${weighRounds.map(round => `<th scope="col" class="zone-day-${round <= 3 ? 1 : 2}">W${round}</th>`).join("")}
                 </tr>
               </thead>
 
@@ -2231,7 +2226,7 @@
       return;
     }
 
-    const w4Done = new Set();
+    const w6Done = new Set();
 
     const bigCarp = [];
     const bigAmur = [];
@@ -2246,10 +2241,10 @@
       );
 
       if (
-        Number(doc.weighNo) === 4 &&
+        Number(doc.weighNo) === 6 &&
         participantId
       ) {
-        w4Done.add(participantId);
+        w6Done.add(participantId);
       }
 
       normalizeFishArray(doc.weights || []).forEach(item => {
@@ -2270,20 +2265,20 @@
           item.isAmur === true
         ) {
           bigAmur.push(row);
-        } else {
+        } else if (item.fishType === "carp") {
           bigCarp.push(row);
         }
       });
     });
 
-    if (w4Done.size < entityIds.size) {
+    if (w6Done.size < entityIds.size) {
       finalBigFishBox.innerHTML = `
         <div class="muted">
           Big Fish Короп / Амур зʼявиться
-          після завершення W4.
+          після завершення W6.
 
-          Готово W4:
-          ${w4Done.size}/${entityIds.size}
+          Готово W6:
+          ${w6Done.size}/${entityIds.size}
         </div>
       `;
 
@@ -2319,17 +2314,15 @@
   }
 
   // =========================================================
-  // W1–W4
+  // W1–W6
   // =========================================================
 
   function setWeighButtons(activeKey) {
-    Object.entries({
-      W1: wBtn1,
-      W2: wBtn2,
-      W3: wBtn3,
-      W4: wBtn4
-    }).forEach(([key, button]) => {
+    weighButtons.forEach((button, index) => {
+      const key = `W${weighRounds[index]}`;
       if (!button) return;
+
+      button.setAttribute("aria-pressed", String(key === activeKey));
 
       button.classList.toggle(
         "btn--accent",
@@ -2346,7 +2339,7 @@
   function setActiveWeigh(number) {
     const parsed = Number(number);
 
-    currentWeighNo = parsed >= 1 && parsed <= 4
+    currentWeighNo = weighRounds.includes(parsed)
       ? parsed
       : 1;
 
@@ -3117,33 +3110,19 @@
       }
     );
 
-  if (wBtn1) {
-    wBtn1.addEventListener(
-      "click",
-      () => setActiveWeigh(1)
-    );
-  }
+  weighButtons.forEach((button, index) => {
+    button?.addEventListener("click", () => setActiveWeigh(weighRounds[index]));
+  });
 
-  if (wBtn2) {
-    wBtn2.addEventListener(
-      "click",
-      () => setActiveWeigh(2)
-    );
-  }
-
-  if (wBtn3) {
-    wBtn3.addEventListener(
-      "click",
-      () => setActiveWeigh(3)
-    );
-  }
-
-  if (wBtn4) {
-    wBtn4.addEventListener(
-      "click",
-      () => setActiveWeigh(4)
-    );
-  }
+  zoneDayButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      if (!zonesWrap) return;
+      zonesWrap.dataset.visibleDay = button.dataset.zoneDay;
+      zoneDayButtons.forEach(choice => {
+        choice.setAttribute("aria-pressed", String(choice === button));
+      });
+    });
+  });
 
   setActiveWeigh(1);
 })();

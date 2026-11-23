@@ -224,14 +224,8 @@
 
     .live-zones-grid {
       display: grid;
-      grid-template-columns: repeat(3,1fr);
-      gap: 0;
-    }
-
-    @media (max-width: 980px) {
-      .live-zones-grid {
-        grid-template-columns: 1fr;
-      }
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
     }
 
     .live-zone.card {
@@ -254,68 +248,53 @@
 
     .live-zone table.table {
       width: 100%;
-      table-layout: fixed;
+      min-width: 620px;
+      table-layout: auto;
       border-collapse: collapse;
     }
 
     .live-zone th,
     .live-zone td {
-      font-size: 7px !important;
-      line-height: 1.05 !important;
-      padding: 2px !important;
-      text-align: center !important;
-      vertical-align: middle !important;
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: clip !important;
+      font-size: 11px !important;
+      padding: 4px !important;
+      text-align: center;
+      white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
 
-    .live-zone th:nth-child(1),
-    .live-zone td:nth-child(1) {
-      width: 20px !important;
+    .live-zone .team-col {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: left;
     }
 
-    .live-zone th:nth-child(2),
-    .live-zone td:nth-child(2) {
-      width: 45px !important;
-      text-align: left !important;
-      padding-left: 3px !important;
-      text-overflow: ellipsis !important;
-    }
+    .zone-day-switch { display: none; }
+    .zone-day-switch [aria-pressed="true"] { border-color: #f6c34c; color: #f6c34c; }
+    .weigh-day-buttons { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .live-fish-sturgeon { color: #ffe066; font-weight: 800; }
 
-    .live-zone th:nth-child(3),
-    .live-zone td:nth-child(3),
-    .live-zone th:nth-child(4),
-    .live-zone td:nth-child(4),
-    .live-zone th:nth-child(5),
-    .live-zone td:nth-child(5),
-    .live-zone th:nth-child(6),
-    .live-zone td:nth-child(6) {
-      width: 40px !important;
-    }
-
-    .live-zone th:nth-child(7),
-    .live-zone td:nth-child(7) {
-      width: 23px !important;
-      font-weight: 700 !important;
-    }
-
-    .live-zone th:nth-child(8),
-    .live-zone td:nth-child(8) {
-      width: 25px !important;
-    }
-
-    .live-zone th:nth-child(9),
-    .live-zone td:nth-child(9) {
-      width: 30px !important;
-      font-weight: 700 !important;
-    }
-
-    .live-zone th:nth-child(10),
-    .live-zone td:nth-child(10) {
-      width: 20px !important;
-      font-weight: 800 !important;
+    @media (max-width: 760px) {
+      .zone-day-switch { display: flex; gap: 6px; margin-bottom: 8px; }
+      #zonesContainer[data-visible-day="1"] .zone-day-2,
+      #zonesContainer[data-visible-day="2"] .zone-day-1 { display: none; }
+      #zonesContainer .table-wrap { min-width: 0; }
+      #zonesContainer table.table {
+        min-width: 0;
+        table-layout: fixed;
+      }
+      #zonesContainer th,
+      #zonesContainer td {
+        padding: 3px 1px !important;
+        font-size: 10px !important;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      #zonesContainer thead tr:first-child th:nth-child(1) { width: 8%; }
+      #zonesContainer thead tr:first-child th:nth-child(2) { width: 21%; }
+      #zonesContainer thead tr:first-child th:nth-child(5),
+      #zonesContainer thead tr:first-child th:nth-child(8) { width: 9%; }
+      #zonesContainer thead tr:first-child th:nth-child(6) { width: 11%; }
+      #zonesContainer thead tr:first-child th:nth-child(7) { width: 13%; }
     }
 
     .live-left > .card {
@@ -406,7 +385,7 @@
     }
 
     /* =====================================================
-       WEIGHINGS W1–W4
+       WEIGHINGS W1–W6
        ===================================================== */
 
     .table-wrap.weigh-scroll {
@@ -773,10 +752,11 @@
               Зони A / B / C
             </h2>
 
-            <div
-              class="live-zones-grid"
-              id="zonesContainer"
-            ></div>
+            <div class="zone-day-switch" role="group" aria-label="Доба зважування">
+              <button class="btn btn--ghost" type="button" data-zone-day="1" aria-pressed="true">1-ша доба</button>
+              <button class="btn btn--ghost" type="button" data-zone-day="2" aria-pressed="false">2-га доба</button>
+            </div>
+            <div class="live-zones-grid" id="zonesContainer" data-visible-day="1"></div>
 
             <p class="live-note">
               Місця у зоні.
@@ -799,37 +779,19 @@
               style="margin-top:18px;margin-bottom:12px;"
             >
 
-              <button
-                class="btn btn--accent"
-                id="wBtn1"
-                type="button"
-              >
-                W1
-              </button>
+              <div class="weigh-day-buttons" role="group" aria-label="1-ша доба">
+                <span class="form__hint">1-ша доба</span>
+                <button class="btn btn--accent" id="wBtn1" type="button" aria-pressed="true">W1</button>
+                <button class="btn btn--ghost" id="wBtn2" type="button" aria-pressed="false">W2</button>
+                <button class="btn btn--ghost" id="wBtn3" type="button" aria-pressed="false">W3</button>
+              </div>
 
-              <button
-                class="btn btn--ghost"
-                id="wBtn2"
-                type="button"
-              >
-                W2
-              </button>
-
-              <button
-                class="btn btn--ghost"
-                id="wBtn3"
-                type="button"
-              >
-                W3
-              </button>
-
-              <button
-                class="btn btn--ghost"
-                id="wBtn4"
-                type="button"
-              >
-                W4
-              </button>
+              <div class="weigh-day-buttons" role="group" aria-label="2-га доба">
+                <span class="form__hint">2-га доба</span>
+                <button class="btn btn--ghost" id="wBtn4" type="button" aria-pressed="false">W4</button>
+                <button class="btn btn--ghost" id="wBtn5" type="button" aria-pressed="false">W5</button>
+                <button class="btn btn--ghost" id="wBtn6" type="button" aria-pressed="false">W6</button>
+              </div>
 
               <span
                 id="weighInfo"
@@ -928,7 +890,7 @@
   <script src="/assets/js/firebase-init.js"></script>
 
   <!-- BigFish Total -->
-  <script src="/assets/js/bigfish_total_live.js"></script>
+  <script src="/assets/js/bigfish_total_live.js?v=20261123-live-w6"></script>
 
   <!-- =====================================================
        DRAG / SWIPE SCROLL
@@ -1017,12 +979,12 @@
 
   <script
     defer
-    src="/assets/js/live-3tables.js"
+    src="/assets/js/live-3tables.js?v=20261123-live-w6"
   ></script>
 
   <script
     defer
-    src="/assets/js/live_firebase.js"
+    src="/assets/js/live_firebase.js?v=20261123-live-w6"
   ></script>
 
 </body>

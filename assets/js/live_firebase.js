@@ -34,7 +34,6 @@
 
   const weighRounds = [1, 2, 3, 4, 5, 6];
   const weighButtons = weighRounds.map(round => document.getElementById(`wBtn${round}`));
-  const zoneDayButtons = document.querySelectorAll("[data-zone-day]");
 
   // =========================================================
   // CONSTANTS
@@ -1924,9 +1923,14 @@
 
           ${weighRounds.map(round => {
             const hasSturgeon = row.sturgeonRounds.includes(round);
+            const score = fmtW(row[`w${round}`]);
+            const parts = score.split(" / ");
+            const displayScore = parts.length === 2
+              ? `<span class="zone-round-count">${esc(parts[0])}</span><span class="zone-round-separator"> / </span><span class="zone-round-weight">${esc(parts[1])}</span>`
+              : esc(score);
             return `<td class="zone-day-${round <= 3 ? 1 : 2}">
               <span${hasSturgeon ? ' class="live-fish-sturgeon" title="У зважуванні є осетер"' : ""}>
-                ${esc(fmtW(row[`w${round}`]))}
+                ${displayScore}
               </span>
             </td>`;
           }).join("")}
@@ -3112,16 +3116,6 @@
 
   weighButtons.forEach((button, index) => {
     button?.addEventListener("click", () => setActiveWeigh(weighRounds[index]));
-  });
-
-  zoneDayButtons.forEach(button => {
-    button.addEventListener("click", () => {
-      if (!zonesWrap) return;
-      zonesWrap.dataset.visibleDay = button.dataset.zoneDay;
-      zoneDayButtons.forEach(choice => {
-        choice.setAttribute("aria-pressed", String(choice === button));
-      });
-    });
   });
 
   setActiveWeigh(1);

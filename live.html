@@ -284,17 +284,18 @@
         white-space: normal;
         overflow-wrap: anywhere;
       }
-      #zonesContainer .zone-round-count,
-      #zonesContainer .zone-round-weight { display: block; }
-      #zonesContainer .zone-round-separator { display: none; }
-      #zonesContainer thead tr:first-child th:nth-child(1),
-      #zonesContainer thead tr:first-child th:nth-child(5) { width: 7%; }
-      #zonesContainer thead tr:first-child th:nth-child(2) { width: 19%; }
-      #zonesContainer thead tr:first-child th:nth-child(3),
-      #zonesContainer thead tr:first-child th:nth-child(4) { width: 21%; }
-      #zonesContainer thead tr:first-child th:nth-child(6) { width: 8%; }
-      #zonesContainer thead tr:first-child th:nth-child(7) { width: 10%; }
-      #zonesContainer thead tr:first-child th:nth-child(8) { width: 7%; }
+      #zonesContainer .zone-round {
+        white-space: nowrap;
+        font-size: clamp(6px, 1.9vw, 10px) !important;
+        padding-inline: 0 !important;
+      }
+      #zonesContainer tbody .zone-round { text-overflow: clip; }
+      #zonesContainer thead th:nth-child(1),
+      #zonesContainer thead th:nth-child(9) { width: 6%; }
+      #zonesContainer thead th:nth-child(2) { width: 13%; }
+      #zonesContainer thead th:nth-child(10),
+      #zonesContainer thead th:nth-child(11) { width: 8%; }
+      #zonesContainer thead th:nth-child(12) { width: 7%; }
     }
 
     .live-left > .card {
@@ -980,7 +981,7 @@
 
   <script
     defer
-    src="/assets/js/live_firebase.js?v=20261123-live-w6-all"
+    src="/assets/js/live_firebase.js?v=20261123-live-w6-inline"
   ></script>
 
 </body>

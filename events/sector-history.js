@@ -90,9 +90,6 @@
 
   function summarize(entries) {
     const count = entries.length;
-    const data = { count, rating: null, weight: null, fish: null, podium: null, bigFish: null };
-    if (count < 3) return data;
-
     const weights = entries.map(({ row }) => metric(row.totalWeight ?? row.totalWeightKg));
     const comparable = entries.flatMap((entry, index) =>
       entry.average > 0 && weights[index] !== null
@@ -110,7 +107,7 @@
       podium: places.length ? prizes / places.length : null,
       prizes,
       knownPlaces: places.length,
-      bigFish: bigFish.length ? Math.max(...bigFish) : null
+      bigFish: bigFish.some(weight => weight > 0) ? Math.max(...bigFish) : null
     };
   }
 
@@ -315,6 +312,9 @@
         if (b[sort] == null) return -1;
         return (ascending ? a[sort] - b[sort] : b[sort] - a[sort]) || a.number - b.number;
       });
+      const bestWeight = Math.max(0, ...stats.map(stat => stat.weight ?? 0));
+      const bestFish = Math.max(0, ...stats.map(stat => stat.bigFish ?? 0));
+      ranking.hidden = !sorted.length;
       ranking.querySelector("tbody").replaceChildren(...sorted.map(stat => {
         const tr = element("tr");
         const sectorCell = element("th");
@@ -327,13 +327,30 @@
           heading.scrollIntoView({ block: "nearest" });
         });
         sectorCell.append(button);
-        tr.append(element("td", stat.rank || "—"), sectorCell);
-        for (const value of [
-          stat.count < 3 ? "—" : formatMetric(stat.rating, percent),
+        const rankCell = element("td", stat.rank || "—");
+        if (stat.rank && stat.rank <= 3) rankCell.dataset.podiumRank = stat.rank;
+        tr.append(rankCell, sectorCell);
+        const values = [
+          formatMetric(stat.rating, percent),
           formatMetric(stat.weight), formatMetric(stat.fish),
           stat.knownPlaces ? `${stat.prizes} / ${stat.knownPlaces}` : "—",
           formatMetric(stat.bigFish), stat.count
-        ]) tr.append(element("td", value));
+        ];
+        const highlights = [
+          stat.rank === 1 ? "Лідер рейтингу" : "",
+          bestWeight > 0 && stat.weight === bestWeight ? "Найвищий середній улов" : "",
+          "", "",
+          bestFish > 0 && stat.bigFish === bestFish ? "Найбільша риба" : ""
+        ];
+        values.forEach((value, index) => {
+          const cell = element("td", value);
+          if (highlights[index]) {
+            cell.className = "sector-record";
+            cell.title = highlights[index];
+            cell.setAttribute("aria-label", `${highlights[index]}: ${value}`);
+          }
+          tr.append(cell);
+        });
         return tr;
       }));
     }
@@ -341,10 +358,12 @@
     function updateRanking() {
       const entries = scopedHistory();
       const tournaments = new Set(entries.map(entry => entry.tournament));
-      coverage.textContent = `Турнірів із прив’язаними результатами ${period()}: ${tournaments.size}.`;
       stats = POINTS.map(([number]) => ({
         number, ...summarize(entries.filter(entry => entry.number === number))
-      }));
+      })).filter(stat => stat.count > 0);
+      coverage.textContent = stats.length
+        ? `Турнірів: ${tournaments.size} · Секторів: ${stats.length}`
+        : `Немає результатів ${period()}.`;
       const ranked = stats.filter(stat => stat.rating !== null)
         .sort((a, b) => b.rating - a.rating || a.number - b.number);
       ranked.forEach((stat, index) => {

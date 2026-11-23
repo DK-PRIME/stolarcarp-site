@@ -97,8 +97,8 @@
 }
 
 .sector-ranking thead {
-  background: #263e34;
-  color: #fff;
+  background: linear-gradient(100deg, #322a1a, #252e2b);
+  color: #f5ddb0;
 }
 
 .sector-ranking button {
@@ -247,7 +247,7 @@
 
   .sector-history .sector-ranking th,
   .sector-history .sector-ranking td {
-    padding: .24rem .08rem;
+    padding: .32rem .08rem;
     text-align: center;
     white-space: nowrap;
     line-height: 1.16;
@@ -370,4 +370,36 @@
   margin: .2rem 0 0;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+
+.sector-ranking:not([hidden]) {
+  border: 1px solid #3b413d;
+}
+
+.sector-ranking thead th {
+  border-bottom-color: #8a7146;
+}
+
+.sector-ranking tbody th button {
+  color: #f0dbad;
+}
+
+.sector-ranking tbody tr:focus-within,
+.sector-ranking tbody tr:hover {
+  background: #29281f;
+}
+
+.sector-ranking td[data-podium-rank] {
+  color: #ebce90;
+  font-weight: 700;
+}
+
+.sector-ranking td[data-podium-rank="2"] { color: #d6dce3; }
+.sector-ranking td[data-podium-rank="3"] { color: #e0ae89; }
+
+.sector-ranking td.sector-record {
+  color: #ffe19b;
+  background: rgb(220 169 67 / 13%);
+  font-weight: 700;
 }

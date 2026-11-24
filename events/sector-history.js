@@ -544,37 +544,61 @@
     }
 
     const speciesTable = root.querySelector("[data-sector-species]");
-    const speciesSort = root.querySelector("[data-species-sort]");
-    speciesSort.addEventListener("change", () => renderSpeciesRanking(scopedHistory()));
+    const speciesButtons = [...root.querySelectorAll("[data-species-type]")];
+    let activeSpecies = "carp";
+    for (const button of speciesButtons) {
+      button.addEventListener("click", () => {
+        activeSpecies = button.dataset.speciesType;
+        renderSpeciesRanking(scopedHistory());
+      });
+    }
 
     function renderSpeciesRanking(entries) {
-      const rows = POINTS.map(([number]) => {
-        const starts = entries.filter(entry => entry.number === number);
-        const summary = sectorSummary(starts.map(entry => ({ ...entry, fish: individualFish(entry.row) })));
-        const observed = Object.values(summary.counts).some(count => count > 0);
-        return { number, starts: starts.length, observed, ...summary };
-      }).filter(row => row.starts > 0);
-      const perStartFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
-      const type = speciesSort.value;
-      const rate = row => row.observed ? row.counts[type] / row.starts : -1;
-      if (type !== "number") rows.sort((a, b) => rate(b) - rate(a) || a.number - b.number);
+      for (const button of speciesButtons) {
+        button.setAttribute("aria-pressed", String(button.dataset.speciesType === activeSpecies));
+      }
+      const sectors = new Map();
+      for (const entry of entries) {
+        const fish = individualFish(entry.row);
+        const summary = sectorSummary([{ ...entry, fish }]);
+        const count = summary.counts[activeSpecies];
+        const total = metric(entry.row.totalCount ?? entry.row.fishCount);
+        const classified = (total !== null && summary.unknown === 0) ||
+          (metric(entry.row[activeSpecies + "Count"]) !== null);
+        const observed = count > 0 || classified;
+        const approximate = summary.estimatedSpecies ||
+          (activeSpecies !== "amur" && (summary.modeledSpecies ||
+            (activeSpecies === "sturgeon" && Object.hasOwn(modeledSturgeon, entry.tournament))));
+        if (!sectors.has(entry.number)) {
+          sectors.set(entry.number, { number: entry.number, used: 0, known: 0, catches: 0, fish: 0, approximate: false });
+        }
+        const sector = sectors.get(entry.number);
+        sector.used++;
+        if (!observed) continue;
+        sector.known++;
+        sector.catches += Number(count > 0);
+        sector.fish += count;
+        sector.approximate ||= approximate;
+      }
+      const rows = [...sectors.values()].map(row => ({
+        ...row, frequency: row.known ? row.catches / row.known : null
+      })).sort((a, b) => (b.frequency ?? -1) - (a.frequency ?? -1) ||
+        b.known - a.known || b.fish - a.fish || a.number - b.number);
 
       speciesTable.hidden = !rows.length;
       root.querySelector("[data-species-empty]").hidden = Boolean(rows.length);
-      speciesTable.tBodies[0].replaceChildren(...rows.map(row => {
+      root.querySelector("[data-species-estimated]").hidden = !rows.some(row => row.approximate);
+      root.querySelector("[data-species-coverage]").hidden = !rows.some(row => row.known !== row.used);
+      speciesTable.tBodies[0].replaceChildren(...rows.map((row, index) => {
         const tr = element("tr");
         const sector = element("th", row.number);
         sector.scope = "row";
-        if (row.estimatedSpecies || row.modeledSpecies) sector.append(element("small", "оцінка"));
-        tr.append(sector, element("td", row.starts));
-        for (const count of Object.values(row.counts)) {
-          const cell = element("td", row.observed ? count : "—");
-          if (row.observed) {
-            const perStart = perStartFormat.format(count / row.starts);
-            cell.append(element("small", perStart + " / старт"));
-          }
-          tr.append(cell);
-        }
+        if (row.approximate) sector.append(element("small", "оцінка"));
+        const frequency = element("td", formatMetric(row.frequency, percent));
+        if (index === 0 && row.frequency > 0) frequency.className = "sector-record";
+        tr.append(element("td", row.known ? index + 1 : "—"), sector, frequency,
+          element("td", row.known ? `${row.catches}/${row.known}` : "—"),
+          element("td", row.known ? row.fish : "—"));
         return tr;
       }));
     }

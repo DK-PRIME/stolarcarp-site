@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=14">
+  <link rel="stylesheet" href="sector-history.css?v=15">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -849,6 +849,23 @@
         <tbody></tbody>
       </table>
     </div>
+    <details class="sector-method team-performance sector-species">
+      <summary>Риба за секторами</summary>
+      <p>У клітинці — кількість риб і середнє за старт. «Оцінка» позначає сектори з орієнтовним або умовним розподілом за видами у 2026 році. Риби з невідомим видом до видових підсумків не входять.</p>
+      <label>Сортування <select data-species-sort>
+        <option value="number">За сектором</option>
+        <option value="carp">Коропів за старт</option>
+        <option value="amur">Амурів за старт</option>
+        <option value="sturgeon">Осетрів за старт</option>
+      </select></label>
+      <table data-sector-species aria-label="Короп, амур та осетер по секторах Лелехівки">
+        <thead><tr>
+          <th scope="col">Сектор</th><th scope="col">Стартів</th><th scope="col">Короп</th>
+          <th scope="col">Амур</th><th scope="col">Осетер</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
     <details class="sector-method team-performance" hidden>
       <summary>Рейтинг команд · Усі роки</summary>
       <p>За рейтингом секторів кожного року ділимо їх на три групи. У 2026 році це 7 сильних, 7 середніх і 7 складних.</p>
@@ -1025,7 +1042,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=23"
+  src="sector-history.js?v=24"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

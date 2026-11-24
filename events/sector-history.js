@@ -508,12 +508,12 @@
             const score = element("strong", formatMetric(group.score, percent));
             if (group.score > 0) score.className = "team-performance-positive";
             if (group.score < 0) score.className = "team-performance-negative";
-            const starts = index === 0 ? `Оцінено: ${group.evaluated} із ${team.total}` : `Стартів: ${group.count}`;
-            const place = group.place === null ? "" : ` · Місце: ${placeFormat.format(group.place)}`;
-            cell.append(score, element("small", starts + place));
+            const starts = index === 0 ? `${group.evaluated}/${team.total} стартів` : `Стартів: ${group.count}`;
+            cell.append(score, element("small", starts));
+            if (group.place !== null) cell.append(element("small", `Місце: ${placeFormat.format(group.place)}`));
           } else {
             cell.textContent = "—";
-            if (index === 0) cell.append(element("small", `Оцінено: 0 із ${team.total}`));
+            if (index === 0) cell.append(element("small", `0/${team.total} стартів`));
           }
           tr.append(cell);
         }

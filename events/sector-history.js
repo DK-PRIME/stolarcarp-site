@@ -553,12 +553,14 @@
         const summary = sectorSummary(starts.map(entry => ({ ...entry, fish: individualFish(entry.row) })));
         const observed = Object.values(summary.counts).some(count => count > 0);
         return { number, starts: starts.length, observed, ...summary };
-      });
+      }).filter(row => row.starts > 0);
       const perStartFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
       const type = speciesSort.value;
       const rate = row => row.observed ? row.counts[type] / row.starts : -1;
       if (type !== "number") rows.sort((a, b) => rate(b) - rate(a) || a.number - b.number);
 
+      speciesTable.hidden = !rows.length;
+      root.querySelector("[data-species-empty]").hidden = Boolean(rows.length);
       speciesTable.tBodies[0].replaceChildren(...rows.map(row => {
         const tr = element("tr");
         const sector = element("th", row.number);

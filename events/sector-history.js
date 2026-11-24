@@ -116,11 +116,16 @@
     const teamId = row => clean(row.teamId);
     const teamKey = row => teamId(row) ? `id:${teamId(row)}` :
       teamName(row) ? `name:${teamName(row).toLocaleLowerCase("uk")}` : "";
+    const teams = new Map();
     const starts = entries.flatMap(entry => {
       const weight = metric(entry.row.totalWeight ?? entry.row.totalWeightKg);
       const key = teamKey(entry.row);
-      return weight !== null && entry.average > 0 && key && teamName(entry.row) && entry.row.entryType !== "solo"
-        ? [{ ...entry, key, name: teamName(entry.row), ratio: weight / entry.average }]
+      const name = teamName(entry.row);
+      if (!key || !name || entry.row.entryType === "solo") return [];
+      if (!teams.has(key)) teams.set(key, { name, total: new Set(), hard: [], medium: [], strong: [], overall: [], results: new Map() });
+      teams.get(key).total.add(entry.tournament);
+      return entry.number && weight !== null && entry.average > 0
+        ? [{ ...entry, key, name, ratio: weight / entry.average }]
         : [];
     });
 
@@ -130,32 +135,58 @@
       bySector.get(start.number).push(start);
     }
 
-    const teams = new Map();
-    for (const start of starts) {
-      const reference = bySector.get(start.number).filter(other =>
-        other.tournament !== start.tournament && other.key !== start.key &&
-        other.name.toLocaleLowerCase("uk") !== start.name.toLocaleLowerCase("uk"));
-      if (reference.length < 2) continue;
-      const baseline = average(reference.map(other => other.ratio));
-      if (baseline <= 0 || Math.abs(baseline - 1) < 1e-9) continue;
-
-      if (!teams.has(start.key)) teams.set(start.key, { name: start.name, hard: [], strong: [] });
-      teams.get(start.key)[baseline < 1 ? "hard" : "strong"].push({
-        score: start.ratio / baseline - 1, place: start.zonePlace
+    const byYear = new Map();
+    for (const entry of entries) {
+      if (!entry.number) continue;
+      if (!byYear.has(entry.year)) byYear.set(entry.year, new Map());
+      const sectors = byYear.get(entry.year);
+      if (!sectors.has(entry.number)) sectors.set(entry.number, []);
+      sectors.get(entry.number).push(entry);
+    }
+    const tiers = new Map();
+    for (const [year, sectors] of byYear) {
+      const ranked = [...sectors].map(([number, records]) => ({ number, ...summarize(records) }))
+        .sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity) || a.number - b.number);
+      const edge = Math.floor(ranked.length / 3);
+      ranked.forEach((sector, index) => {
+        if (sector.rating === null) return;
+        tiers.set(`${year}:${sector.number}`, index < edge ? "strong" :
+          index >= ranked.length - edge ? "hard" : "medium");
       });
+    }
+
+    for (const start of entries) {
+      const key = teamKey(start.row);
+      const team = teams.get(key);
+      if (!team || start.row.entryType === "solo" || team.results.has(start.tournament)) continue;
+      const weight = metric(start.row.totalWeight ?? start.row.totalWeightKg);
+      const tier = tiers.get(`${start.year}:${start.number}`);
+      const reference = (bySector.get(start.number) || []).filter(other =>
+        other.tournament !== start.tournament && other.key !== key &&
+        other.name.toLocaleLowerCase("uk") !== team.name.toLocaleLowerCase("uk"));
+      const baseline = average(reference.map(other => other.ratio));
+      const expected = start.average > 0 ? start.average * (baseline > 0 ? baseline : 1) : null;
+      const score = expected && weight !== null ? weight / expected - 1 : null;
+      const result = { ...start, tier, weight, expected, score, place: start.zonePlace,
+        usedFieldAverage: expected !== null && !(baseline > 0) };
+      team.results.set(start.tournament, result);
+      team.overall.push(result);
+      if (tier) team[tier].push(result);
     }
 
     const summarizeStarts = group => ({
       count: group.length,
-      score: average(group.map(start => start.score)),
+      evaluated: group.filter(start => start.score !== null).length,
+      score: average(group.flatMap(start => start.score === null ? [] : [start.score])),
       place: average(group.flatMap(start => start.place > 0 ? [start.place] : []))
     });
 
-    return [...teams.values()].map(({ name, hard, strong }) => ({
-      name, hard: summarizeStarts(hard), strong: summarizeStarts(strong),
-      overall: summarizeStarts([...hard, ...strong])
-    })).filter(team => team.overall.count >= 2)
-      .sort((a, b) => b.overall.score - a.overall.score || a.name.localeCompare(b.name, "uk"));
+    return [...teams.values()].map(({ name, total, hard, medium, strong, overall, results }) => ({
+      name, total: total.size, hard: summarizeStarts(hard), medium: summarizeStarts(medium),
+      strong: summarizeStarts(strong), results: [...results.values()],
+      overall: summarizeStarts(overall)
+    })).sort((a, b) => Number(b.overall.evaluated > 0) - Number(a.overall.evaluated > 0) ||
+      b.overall.score - a.overall.score || a.name.localeCompare(b.name, "uk"));
   }
 
   function drawKey(row) {
@@ -325,6 +356,7 @@
     const buttons = new Map();
     const stageSectors = new Map();
     const history = [];
+    const unlinkedTeamStarts = [];
     let seasonStages;
     const stageLoads = new Map();
     const competitionLoads = new Map();
@@ -454,32 +486,57 @@
       const teams = teamPerformance(entries);
       const placeFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
       const status = root.querySelector("[data-team-performance-status]");
-      status.textContent = teams.length ? `Команд у рейтингу: ${teams.length}`
-        : "Поки немає команд із двома оціненими стартами.";
+      const rankedCount = teams.filter(team => team.overall.evaluated).length;
+      status.textContent = teams.length ? `Команд з оцінкою: ${rankedCount} із ${teams.length}`
+        : "Немає командних стартів в архіві.";
       table.hidden = !teams.length;
       let rank = 0;
-      table.tBodies[0].replaceChildren(...teams.map((team, index) => {
+      table.tBodies[0].replaceChildren(...teams.flatMap((team, index) => {
         const tr = element("tr");
         if (team.overall.score !== teams[index - 1]?.overall.score) rank = index + 1;
         const name = element("th");
-        name.append(element("small", `№${rank}`), element("span", team.name));
+        if (team.overall.evaluated) name.append(element("small", `№${rank}`));
+        const toggle = element("button", team.name + " ▾");
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", "false");
+        name.append(toggle);
         name.scope = "row";
         tr.append(name);
-        for (const group of [team.overall, team.hard, team.strong]) {
+        for (const [index, group] of [team.overall, team.strong, team.medium, team.hard].entries()) {
           const cell = element("td");
           if (group.count) {
-            const score = element("strong", percent.format(group.score));
+            const score = element("strong", formatMetric(group.score, percent));
             if (group.score > 0) score.className = "team-performance-positive";
             if (group.score < 0) score.className = "team-performance-negative";
-            const starts = `Стартів: ${group.count}`;
+            const starts = index === 0 ? `Оцінено: ${group.evaluated} із ${team.total}` : `Стартів: ${group.count}`;
             const place = group.place === null ? "" : ` · Місце: ${placeFormat.format(group.place)}`;
             cell.append(score, element("small", starts + place));
           } else {
             cell.textContent = "—";
+            if (index === 0) cell.append(element("small", `Оцінено: 0 із ${team.total}`));
           }
           tr.append(cell);
         }
-        return tr;
+        const details = element("tr");
+        details.hidden = true;
+        const detailCell = element("td");
+        detailCell.colSpan = 5;
+        const list = element("ul");
+        const tierNames = { strong: "сильний", medium: "середній", hard: "складний" };
+        for (const start of team.results) {
+          const sector = start.number ? `Сектор ${start.number} · ${tierNames[start.tier] || "без групи"}` : "Сектор невідомий";
+          const result = element("li", `${start.year} · ${start.title} · ${sector} · Місце в зоні: ${start.place ?? "—"}`);
+          const expected = start.usedFieldAverage ? "Середній улов змагання" : "Очікувано";
+          result.append(element("small", `Улов: ${formatMetric(start.weight)} кг · ${expected}: ${formatMetric(start.expected)} кг · ${formatMetric(start.score, percent)}`));
+          list.append(result);
+        }
+        detailCell.append(list);
+        details.append(detailCell);
+        toggle.addEventListener("click", () => {
+          details.hidden = !details.hidden;
+          toggle.setAttribute("aria-expanded", String(!details.hidden));
+        });
+        return [tr, details];
       }));
     }
 
@@ -656,6 +713,13 @@
         numbers.set(entry.row, entry.number);
         entries.push({ ...entry, date });
       }
+      if (stageLake === lake || mapping.size || rows.some(row => row?.lakeId === lake)) {
+        for (const row of rows) {
+          if (!row || numbers.has(row) || wasAbsent(row) || (row.lakeId && row.lakeId !== lake)) continue;
+          const number = sectorNumber(row.lakeSectorNumber) || mapping.get(drawKey(row));
+          if (!empty.has(number)) unlinkedTeamStarts.push({ row, year, title: stageTitle(item), average: fieldAverage, zonePlace: places.get(row), tournament: `season:${year}:${item.id}` });
+        }
+      }
       stageSectors.set(item.id, numbers);
       return entries;
     }
@@ -669,6 +733,7 @@
         const fieldAverage = tournamentAverage(data.results);
         return data.results.flatMap(row => {
           const number = sectorNumber(row?.lakeSectorNumber);
+          if (row && !number) unlinkedTeamStarts.push({ row, year, title: data.title || "Історичне змагання", average: fieldAverage, zonePlace: metric(row.zonePlace), tournament: `history:${year}:${doc.id}` });
           return number ? [{
             number, row, key: drawKey(row),
             tournament: `history:${year}:${doc.id}`, year, average: fieldAverage,
@@ -772,7 +837,7 @@
           updateRanking();
           render();
         };
-        renderTeamPerformance(history);
+        renderTeamPerformance([...history, ...unlinkedTeamStarts]);
         root.querySelector(".team-performance").hidden = false;
         chooseYear(initialYear);
         yearSelect.disabled = false;

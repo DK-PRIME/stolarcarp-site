@@ -543,6 +543,40 @@
       }));
     }
 
+    const speciesTable = root.querySelector("[data-sector-species]");
+    const speciesSort = root.querySelector("[data-species-sort]");
+    speciesSort.addEventListener("change", () => renderSpeciesRanking(scopedHistory()));
+
+    function renderSpeciesRanking(entries) {
+      const rows = POINTS.map(([number]) => {
+        const starts = entries.filter(entry => entry.number === number);
+        const summary = sectorSummary(starts.map(entry => ({ ...entry, fish: individualFish(entry.row) })));
+        const observed = Object.values(summary.counts).some(count => count > 0);
+        return { number, starts: starts.length, observed, ...summary };
+      });
+      const perStartFormat = new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 });
+      const type = speciesSort.value;
+      const rate = row => row.observed ? row.counts[type] / row.starts : -1;
+      if (type !== "number") rows.sort((a, b) => rate(b) - rate(a) || a.number - b.number);
+
+      speciesTable.tBodies[0].replaceChildren(...rows.map(row => {
+        const tr = element("tr");
+        const sector = element("th", row.number);
+        sector.scope = "row";
+        if (row.estimatedSpecies || row.modeledSpecies) sector.append(element("small", "оцінка"));
+        tr.append(sector, element("td", row.starts));
+        for (const count of Object.values(row.counts)) {
+          const cell = element("td", row.observed ? count : "—");
+          if (row.observed) {
+            const perStart = perStartFormat.format(count / row.starts);
+            cell.append(element("small", perStart + " / старт"));
+          }
+          tr.append(cell);
+        }
+        return tr;
+      }));
+    }
+
     function updateRanking() {
       const entries = scopedHistory();
       const tournaments = new Set(entries.map(entry => entry.tournament));
@@ -558,6 +592,7 @@
         stat.rank = stat.rating === ranked[index - 1]?.rating ? ranked[index - 1].rank : index + 1;
       });
       renderRanking();
+      renderSpeciesRanking(entries);
     }
 
     for (const [number, x, y] of POINTS) {

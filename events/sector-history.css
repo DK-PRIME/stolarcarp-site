@@ -492,3 +492,29 @@
     line-height: 1.1;
   }
 }
+
+
+.sector-species select {
+  margin: .35rem 0 .55rem;
+  max-width: 100%;
+  font: inherit;
+}
+
+.sector-species [data-sector-species] :is(th, td) {
+  padding: .3rem .15rem;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.sector-species small {
+  display: block;
+  color: #c4cec9;
+}
+
+.sector-species tbody tr:nth-child(even) { background: rgb(255 255 255 / 4%); }
+
+@media (max-width: 820px) {
+  .sector-species table {
+    font-size: clamp(.6rem, 2.7vw, .77rem);
+  }
+}

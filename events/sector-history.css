@@ -454,3 +454,42 @@
 }
 .team-performance ul { margin: .3rem 0; padding-left: 1rem; }
 .team-performance li { margin: .35rem 0; }
+
+
+.team-performance tbody tr:nth-child(4n + 3) { background: rgb(255 255 255 / 4%); }
+.team-performance tbody th { border-right: 1px solid #625135; }
+
+@media (max-width: 820px) {
+  .team-performance {
+    min-width: 0;
+    padding: .4rem .2rem;
+  }
+
+  .team-performance > summary,
+  .team-performance > p {
+    margin-inline: .25rem;
+  }
+
+  .team-performance [data-team-performance] { width: 100%; }
+  .team-performance [data-team-performance] th:first-child { width: 29%; }
+
+  .team-performance [data-team-performance] th,
+  .team-performance [data-team-performance] td {
+    padding: .32rem .13rem;
+    font-size: clamp(.6rem, 2.7vw, .77rem);
+    line-height: 1.22;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .team-performance [data-team-performance] tbody th,
+  .team-performance [data-team-performance] td[colspan] {
+    padding-inline: .25rem;
+    text-align: left;
+  }
+
+  .team-performance [data-team-performance] small {
+    font-size: .9em;
+    line-height: 1.18;
+  }
+}

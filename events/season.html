@@ -516,7 +516,7 @@
 
   </style>
 
-  <link rel="stylesheet" href="sector-history.css?v=15">
+  <link rel="stylesheet" href="sector-history.css?v=16">
   <script>
     if (new URLSearchParams(location.search).get("view") === "sectors") {
       document.documentElement.classList.add("sector-archive-view");
@@ -851,18 +851,19 @@
     </div>
     <details class="sector-method team-performance sector-species">
       <summary>Риба за секторами</summary>
-      <p>У клітинці — кількість риб і середнє за старт. «Оцінка» позначає сектори з орієнтовним або умовним розподілом за видами у 2026 році. Риби з невідомим видом до видових підсумків не входять.</p>
-      <label>Сортування <select data-species-sort>
-        <option value="number">За сектором</option>
-        <option value="carp">Коропів за старт</option>
-        <option value="amur">Амурів за старт</option>
-        <option value="sturgeon">Осетрів за старт</option>
-      </select></label>
+      <div class="species-switch" role="group" aria-label="Вид риби">
+        <button type="button" data-species-type="carp" aria-pressed="true">Короп</button>
+        <button type="button" data-species-type="amur" aria-pressed="false">Амур</button>
+        <button type="button" data-species-type="sturgeon" aria-pressed="false">Осетер</button>
+      </div>
+      <p>Відсоток — частка стартів, на яких спіймали хоча б одну рибу вибраного виду. За однакового відсотка вище сектор із більшою кількістю оцінених стартів, а далі — з більшою кількістю риб.</p>
+      <p data-species-coverage hidden>Старти без даних про вибраний вид пропускаємо.</p>
+      <p data-species-estimated hidden>«Оцінка» біля сектора означає, що частина даних про цей вид за 2026 рік орієнтовна або умовна.</p>
       <p data-species-empty hidden>За вибраний період немає задіяних секторів.</p>
-      <table data-sector-species hidden aria-label="Короп, амур та осетер по секторах Лелехівки">
+      <table data-sector-species hidden aria-label="Частота улову вибраного виду риби за секторами">
         <thead><tr>
-          <th scope="col">Сектор</th><th scope="col">Стартів</th><th scope="col">Короп</th>
-          <th scope="col">Амур</th><th scope="col">Осетер</th>
+          <th scope="col">№</th><th scope="col">Сектор</th><th scope="col">Частота</th>
+          <th scope="col">Старти з уловом</th><th scope="col">Риб, шт</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -1043,7 +1044,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=25"
+  src="sector-history.js?v=26"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

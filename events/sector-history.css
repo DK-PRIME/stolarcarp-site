@@ -494,10 +494,32 @@
 }
 
 
-.sector-species select {
-  margin: .35rem 0 .55rem;
-  max-width: 100%;
+.species-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .35rem;
+  margin-top: .65rem;
+}
+
+.species-switch button {
+  padding: .45rem .15rem;
+  border: 1px solid #625135;
+  border-radius: .35rem;
+  background: #161c27;
+  color: #f0dbad;
   font: inherit;
+}
+
+.species-switch button[aria-pressed="true"] {
+  background: #e6c782;
+  color: #201a12;
+  font-weight: 700;
+}
+
+.sector-species td.sector-record {
+  color: #ffe19b;
+  background: rgb(220 169 67 / 13%);
+  font-weight: 700;
 }
 
 .sector-species [data-sector-species] :is(th, td) {

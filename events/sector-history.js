@@ -88,6 +88,12 @@
     return weights.includes(null) ? null : average(weights);
   }
 
+  function sectorRating(comparisons) {
+    return comparisons.length >= 2
+      ? comparisons.reduce((sum, difference) => sum + difference, 0) / (comparisons.length + 2)
+      : null;
+  }
+
   function summarize(entries) {
     const count = entries.length;
     const weights = entries.map(({ row }) => metric(row.totalWeight ?? row.totalWeightKg));
@@ -101,7 +107,7 @@
     const prizes = places.filter(place => place <= 3).length;
     return {
       count,
-      rating: comparable.length >= 2 ? average(comparable) * comparable.length / (comparable.length + 2) : null,
+      rating: sectorRating(comparable),
       weight: average(known(weights)),
       fish: average(known(entries.map(({ row }) => metric(row.totalCount ?? row.fishCount)))),
       podium: places.length ? prizes / places.length : null,
@@ -558,6 +564,8 @@
         button.setAttribute("aria-pressed", String(button.dataset.speciesType === activeSpecies));
       }
       const sectors = new Map();
+      const fieldCounts = new Map();
+      const results = [];
       for (const entry of entries) {
         const fish = individualFish(entry.row);
         const summary = sectorSummary([{ ...entry, fish }]);
@@ -570,19 +578,28 @@
           (activeSpecies !== "amur" && (summary.modeledSpecies ||
             (activeSpecies === "sturgeon" && Object.hasOwn(modeledSturgeon, entry.tournament))));
         if (!sectors.has(entry.number)) {
-          sectors.set(entry.number, { number: entry.number, used: 0, known: 0, catches: 0, fish: 0, approximate: false });
+          sectors.set(entry.number, { number: entry.number, used: 0, known: 0, catches: 0, fish: 0, comparisons: [], approximate: false });
         }
         const sector = sectors.get(entry.number);
         sector.used++;
         if (!observed) continue;
+        if (!fieldCounts.has(entry.tournament)) fieldCounts.set(entry.tournament, []);
+        fieldCounts.get(entry.tournament).push(count);
+        results.push({ sector, tournament: entry.tournament, count });
         sector.known++;
         sector.catches += Number(count > 0);
         sector.fish += count;
         sector.approximate ||= approximate;
       }
+      const fieldAverages = new Map([...fieldCounts].map(([tournament, counts]) =>
+        [tournament, counts.length >= 2 ? average(counts) : null]));
+      for (const { sector, tournament, count } of results) {
+        const baseline = fieldAverages.get(tournament);
+        if (baseline > 0) sector.comparisons.push(Math.min(2, count / baseline - 1));
+      }
       const rows = [...sectors.values()].map(row => ({
-        ...row, frequency: row.known ? row.catches / row.known : null
-      })).sort((a, b) => (b.frequency ?? -1) - (a.frequency ?? -1) ||
+        ...row, rating: sectorRating(row.comparisons)
+      })).sort((a, b) => (b.rating ?? -Infinity) - (a.rating ?? -Infinity) ||
         b.known - a.known || b.fish - a.fish || a.number - b.number);
 
       speciesTable.hidden = !rows.length;
@@ -594,9 +611,9 @@
         const sector = element("th", row.number);
         sector.scope = "row";
         if (row.approximate) sector.append(element("small", "оцінка"));
-        const frequency = element("td", formatMetric(row.frequency, percent));
-        if (index === 0 && row.frequency > 0) frequency.className = "sector-record";
-        tr.append(element("td", row.known ? index + 1 : "—"), sector, frequency,
+        const rating = element("td", formatMetric(row.rating, percent));
+        if (index === 0 && row.rating > 0) rating.className = "sector-record";
+        tr.append(element("td", row.rating !== null ? index + 1 : "—"), sector, rating,
           element("td", row.known ? `${row.catches}/${row.known}` : "—"),
           element("td", row.known ? row.fish : "—"));
         return tr;

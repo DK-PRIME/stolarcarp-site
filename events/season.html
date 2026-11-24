@@ -849,25 +849,25 @@
         <tbody></tbody>
       </table>
     </div>
-    <details class="sector-method team-performance sector-species">
-      <summary>Риба за секторами</summary>
+    <section class="sector-method team-performance sector-species" aria-labelledby="sector-species-title">
+      <h3 id="sector-species-title">Рейтинг за видами риб</h3>
       <div class="species-switch" role="group" aria-label="Вид риби">
         <button type="button" data-species-type="carp" aria-pressed="true">Короп</button>
         <button type="button" data-species-type="amur" aria-pressed="false">Амур</button>
         <button type="button" data-species-type="sturgeon" aria-pressed="false">Осетер</button>
       </div>
-      <p>Відсоток — частка стартів, на яких спіймали хоча б одну рибу вибраного виду. За однакового відсотка вище сектор із більшою кількістю оцінених стартів, а далі — з більшою кількістю риб.</p>
+      <p>Рейтинг порівнює кількість риб вибраного виду на секторі із середньою кількістю на тому самому змаганні. Плюс означає результат вище середнього, мінус — нижче. Як і в рейтингу секторів, потрібно щонайменше два порівняння.</p>
       <p data-species-coverage hidden>Старти без даних про вибраний вид пропускаємо.</p>
       <p data-species-estimated hidden>«Оцінка» біля сектора означає, що частина даних про цей вид за 2026 рік орієнтовна або умовна.</p>
       <p data-species-empty hidden>За вибраний період немає задіяних секторів.</p>
-      <table data-sector-species hidden aria-label="Частота улову вибраного виду риби за секторами">
+      <table data-sector-species hidden aria-label="Рейтинг секторів за вибраним видом риби">
         <thead><tr>
-          <th scope="col">№</th><th scope="col">Сектор</th><th scope="col">Частота</th>
+          <th scope="col">№</th><th scope="col">Сектор</th><th scope="col">Рейтинг</th>
           <th scope="col">Старти з уловом</th><th scope="col">Риб, шт</th>
         </tr></thead>
         <tbody></tbody>
       </table>
-    </details>
+    </section>
     <details class="sector-method team-performance" hidden>
       <summary>Рейтинг команд · Усі роки</summary>
       <p>За рейтингом секторів кожного року ділимо їх на три групи. У 2026 році це 7 сильних, 7 середніх і 7 складних.</p>
@@ -1044,7 +1044,7 @@
 
 <script src="/assets/js/public-archive.js?v=1"></script>
 <script
-  src="sector-history.js?v=26"
+  src="sector-history.js?v=27"
 ></script>
 <script
   src="archive.js?v=20261123-public-cache"

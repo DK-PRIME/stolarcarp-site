@@ -436,10 +436,6 @@
 
 
 .team-performance [data-team-performance] th:first-child { width: 27%; }
-.team-performance [data-team-performance] tbody th small {
-  margin: 0 0 .15rem;
-  color: #f5ddb0;
-}
 .team-performance [data-team-performance] td:nth-child(2) {
   background: rgb(220 169 67 / 9%);
 }
@@ -452,6 +448,8 @@
   font: inherit;
   text-align: left;
 }
+.team-performance tbody button::after { content: " ▾"; }
+.team-performance tbody button[aria-expanded="true"]::after { content: " ▴"; }
 .team-performance ul { margin: .3rem 0; padding-left: 1rem; }
 .team-performance li { margin: .35rem 0; }
 
@@ -475,9 +473,9 @@
 
   .team-performance [data-team-performance] th,
   .team-performance [data-team-performance] td {
-    padding: .32rem .13rem;
+    padding: .19rem .12rem;
     font-size: clamp(.6rem, 2.7vw, .77rem);
-    line-height: 1.22;
+    line-height: 1.1;
     text-align: center;
     vertical-align: middle;
   }
@@ -489,7 +487,8 @@
   }
 
   .team-performance [data-team-performance] small {
-    font-size: .9em;
-    line-height: 1.18;
+    margin-top: .06rem;
+    font-size: .86em;
+    line-height: 1.1;
   }
 }

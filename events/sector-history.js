@@ -495,8 +495,7 @@
         const tr = element("tr");
         if (team.overall.score !== teams[index - 1]?.overall.score) rank = index + 1;
         const name = element("th");
-        if (team.overall.evaluated) name.append(element("small", `№${rank}`));
-        const toggle = element("button", team.name + " ▾");
+        const toggle = element("button", (team.overall.evaluated ? `${rank}. ` : "") + team.name);
         toggle.type = "button";
         toggle.setAttribute("aria-expanded", "false");
         name.append(toggle);
@@ -508,12 +507,11 @@
             const score = element("strong", formatMetric(group.score, percent));
             if (group.score > 0) score.className = "team-performance-positive";
             if (group.score < 0) score.className = "team-performance-negative";
-            const starts = index === 0 ? `${group.evaluated}/${team.total} стартів` : `Стартів: ${group.count}`;
+            const starts = index === 0 ? `${group.evaluated}/${team.total}` : `${group.count} ст.`;
             cell.append(score, element("small", starts));
-            if (group.place !== null) cell.append(element("small", `Місце: ${placeFormat.format(group.place)}`));
           } else {
             cell.textContent = "—";
-            if (index === 0) cell.append(element("small", `0/${team.total} стартів`));
+            if (index === 0) cell.append(element("small", `0/${team.total}`));
           }
           tr.append(cell);
         }
@@ -530,6 +528,11 @@
           result.append(element("small", `Улов: ${formatMetric(start.weight)} кг · ${expected}: ${formatMetric(start.expected)} кг · ${formatMetric(start.score, percent)}`));
           list.append(result);
         }
+        const averages = [
+          ["Усі старти", team.overall], ["Сильні", team.strong],
+          ["Середні", team.medium], ["Складні", team.hard]
+        ].flatMap(([label, group]) => group.place === null ? [] : [`${label}: ${placeFormat.format(group.place)}`]);
+        if (averages.length) detailCell.append(element("small", `Середнє місце в зоні · ${averages.join(" · ")}`));
         detailCell.append(list);
         details.append(detailCell);
         toggle.addEventListener("click", () => {
